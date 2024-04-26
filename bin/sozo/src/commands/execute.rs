@@ -11,8 +11,6 @@ use super::options::world::WorldOptions;
 use crate::utils;
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::execute";
-
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
 pub struct ExecuteArgs {
@@ -58,7 +56,6 @@ impl ExecuteArgs {
             let tx_config = self.transaction.into();
 
             trace!(
-                target: LOG_TARGET,
                 contract=?self.contract,
                 entrypoint=self.entrypoint,
                 calldata=?self.calldata,

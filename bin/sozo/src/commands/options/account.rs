@@ -12,8 +12,6 @@ use super::signer::SignerOptions;
 use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::account";
-
 // INVARIANT:
 // - For commandline: we can either specify `private_key` or `keystore_path` along with
 //   `keystore_password`. This is enforced by Clap.
@@ -45,32 +43,32 @@ impl AccountOptions {
     where
         P: Provider + Send + Sync,
     {
-        trace!(target: LOG_TARGET, account_options=?self, "Creating account.", );
+        trace!(account_options=?self, "Creating account.");
         let account_address = self.account_address(env_metadata)?;
-        trace!(target: LOG_TARGET, ?account_address, "Account address determined.");
+        trace!(?account_address, "Account address determined.");
 
         let signer = self.signer.signer(env_metadata, false)?;
-        trace!(target: LOG_TARGET, ?signer, "Signer obtained.");
+        trace!(?signer, "Signer obtained.");
 
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
-        trace!(target: LOG_TARGET, ?chain_id, "Chain ID obtained.");
+        trace!(?chain_id, "Chain ID obtained.");
         let encoding = if self.legacy { 
             ExecutionEncoding::Legacy 
         } else { 
             ExecutionEncoding::New 
         };
 
-        trace!(target: LOG_TARGET, ?encoding, "Creating SingleOwnerAccount.");
+        trace!(?encoding, "Creating SingleOwnerAccount.");
         Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
     }
 
     fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         if let Some(address) = self.account_address {
-            trace!(target: LOG_TARGET, ?address, "Account address found.");
+            trace!(?address, "Account address found.");
             Ok(address)
         } else if let Some(address) = env_metadata.and_then(|env| env.account_address()) {
-            trace!(target: LOG_TARGET, address, "Account address found in environment metadata.");
+            trace!(address, "Account address found in environment metadata.");
             Ok(FieldElement::from_str(address)?)
         } else {
             Err(anyhow!(

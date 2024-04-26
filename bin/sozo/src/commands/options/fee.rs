@@ -7,8 +7,6 @@ use starknet::macros::felt;
 use starknet_crypto::FieldElement;
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::fee";
-
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Fee options")]
 pub struct FeeOptions {
@@ -28,7 +26,6 @@ pub struct FeeOptions {
 impl FeeOptions {
     pub fn into_setting(self) -> Result<FeeSetting> {
         trace!(
-            target: LOG_TARGET, 
             max_fee=?self.max_fee,
             max_fee_raw=?self.max_fee_raw,
             estimate_only=self.estimate_only,
@@ -41,7 +38,6 @@ impl FeeOptions {
                 // The user is most likely making a mistake for using a max fee higher than 1 ETH
                 if max_fee_felt > felt!("1000000000000000000") {
                     trace!(
-                        target: LOG_TARGET, 
                         ?max_fee_felt,
                         "Max fee in Ether is higher than 1 ETH."
                     );
@@ -54,15 +50,15 @@ impl FeeOptions {
                 Ok(FeeSetting::Manual(max_fee_felt))
             }
             (None, Some(max_fee_raw), false) => {
-                trace!(target: LOG_TARGET, ?max_fee_raw, "Using raw max_fee in Wei.");
+                trace!(?max_fee_raw, "Using raw max_fee in Wei.");
                 Ok(FeeSetting::Manual(max_fee_raw))
             }
             (None, None, true) => {
-                trace!(target: LOG_TARGET, "Only estimating the fee.");
+                trace!("Only estimating the fee.");
                 Ok(FeeSetting::EstimateOnly)
             }
             (None, None, false) => {
-                trace!(target: LOG_TARGET, "No fee options specified.");
+                trace!("No fee options specified.");
                 Ok(FeeSetting::None)
             }
             _ => Err(anyhow::anyhow!(
@@ -86,7 +82,7 @@ where
     let mut biguint = match bigint.to_biguint() {
         Some(value) => value,
         None => {
-            trace!(target: LOG_TARGET, "Could not convert bigint to biguint, too many decimal places.");
+            trace!("Could not convert bigint to biguint, too many decimal places.");
             anyhow::bail!("too many decimal places")
         }
     };
@@ -99,7 +95,7 @@ where
         for _ in 0..(exponent - decimals) {
             let (quotient, remainder) = biguint.div_rem(&10u32.into());
             if !remainder.is_zero() {
-                trace!(target: LOG_TARGET, "Found non-zero remainder during scaling down.");
+                trace!("Found non-zero remainder during scaling down.");
                 anyhow::bail!("too many decimal places")
             }
             biguint = quotient;

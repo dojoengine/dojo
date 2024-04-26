@@ -3,8 +3,6 @@ use dojo_world::migration::TxnConfig;
 use tracing::trace;
 use starknet::core::types::FieldElement;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::transaction";
-
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Transaction options")]
 pub struct TransactionOptions {
@@ -43,7 +41,6 @@ pub struct TransactionOptions {
 impl From<TransactionOptions> for TxnConfig {
     fn from(value: TransactionOptions) -> Self {
         trace!(
-            target: LOG_TARGET,
             fee_estimate_multiplier=value.fee_estimate_multiplier,
             wait=value.wait,
             receipt=value.receipt,

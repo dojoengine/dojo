@@ -29,8 +29,6 @@ use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::dev";
-
 #[derive(Debug, Args)]
 pub struct DevArgs {
     #[arg(long)]
@@ -56,7 +54,7 @@ impl DevArgs {
         let env_metadata = if config.manifest_path().exists() {
             dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
-            trace!(target: LOG_TARGET, "Manifest path does not exist.");
+            trace!("Manifest path does not exist.");
             None
         };
 
@@ -105,7 +103,7 @@ impl DevArgs {
             }
             Err(error) => {
                 error!(
-                    target: LOG_TARGET,
+                    
                     error = ?error,
                     address = ?world_address,
                     "Migrating world."
@@ -121,7 +119,7 @@ impl DevArgs {
                     .unwrap_or(DevAction::None),
                 Ok(Err(_)) => DevAction::None,
                 Err(error) => {
-                    error!(target: LOG_TARGET, error = ?error, "Receiving dev action.");
+                    error!( error = ?error, "Receiving dev action.");
                     break;
                 }
             };
@@ -140,7 +138,7 @@ impl DevArgs {
                     }
                     Err(error) => {
                         error!(
-                            target: LOG_TARGET,
+                            
                             error = ?error,
                             address = ?world_address,
                             "Migrating world.",
@@ -178,7 +176,7 @@ fn handle_event(event: &DebouncedEvent) -> DevAction {
         _ => DevAction::None,
     };
 
-    trace!(target: LOG_TARGET, ?action, "Determined action.");
+    trace!(?action, "Determined action.");
     action
 }
 
@@ -199,7 +197,7 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
 
     // we have only 1 unit in projects
     // TODO: double check if we always have one with the new version and the order if many.
-    trace!(target: LOG_TARGET, unit_count=compilation_units.len(), "Gathering compilation units.");
+    trace!(unit_count=compilation_units.len(), "Gathering compilation units.");
     let unit = compilation_units.first().unwrap();
     let db = build_scarb_root_database(unit).unwrap();
     Ok(DevContext { db, unit: unit.clone(), ws })
@@ -215,7 +213,7 @@ fn build(context: &mut DevContext<'_>) -> Result<()> {
         anyhow!("could not compile `{package_name}` due to previous error")
     })?;
     ws.config().ui().print("📦 Rebuild done");
-    trace!(target: LOG_TARGET, ?package_name, "Build completed.");
+    trace!(?package_name, "Build completed.");
     Ok(())
 }
 
@@ -272,7 +270,7 @@ where
 }
 
 fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAction {
-    trace!(target: LOG_TARGET, event=?event, "Processing event.");
+    trace!(event=?event, "Processing event.");
     let action = handle_event(event);
     match &action {
         DevAction::None => {}
@@ -282,7 +280,7 @@ fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAct
         }
     }
 
-    trace!(target: LOG_TARGET, action=?action, "Processed action.");
+    trace!(action=?action, "Processed action.");
     action
 }
 
@@ -299,10 +297,10 @@ fn handle_build_action(path: &Path, context: &mut DevContext<'_>) {
 }
 
 fn handle_reload_action(context: &mut DevContext<'_>) {
-    trace!(target: LOG_TARGET, "Reloading context.");
+    trace!("Reloading context.");
     let config = context.ws.config();
     config.ui().print("Reloading project");
     let new_context = load_context(config).expect("Failed to load context");
     let _ = mem::replace(context, new_context);
-    trace!(target: LOG_TARGET, "Context reloaded.");
+    trace!("Context reloaded.");
 }

@@ -7,8 +7,6 @@ use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
 use scarb::core::Config;
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::clean";
-
 #[derive(Debug, Args)]
 pub struct CleanArgs {
     #[arg(short, long)]
@@ -24,12 +22,12 @@ impl CleanArgs {
     ///
     /// * `profile_dir` - The directory where the profile files are located.
     pub fn clean_manifests(&self, profile_dir: &Utf8PathBuf) -> Result<()> {
-        trace!(target: LOG_TARGET, ?profile_dir, "Cleaning manifests.");
+        trace!(?profile_dir, "Cleaning manifests.");
         let dirs = vec![profile_dir.join(BASE_DIR), profile_dir.join(ABIS_DIR).join(BASE_DIR)];
 
         for d in dirs {
             if d.exists() {
-                trace!(target: LOG_TARGET, directory=?d, "Removing directory.");
+                trace!(directory=?d, "Removing directory.");
                 fs::remove_dir_all(d)?;
             }
         }
@@ -39,7 +37,7 @@ impl CleanArgs {
 
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        trace!(target: LOG_TARGET, ws=?ws, "Workspace read successfully.");
+        trace!(ws=?ws, "Workspace read successfully.");
 
         let profile_name =
             ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
@@ -51,12 +49,12 @@ impl CleanArgs {
         let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
 
         // By default, this command cleans the build manifests and scarb artifacts.
-        trace!(target: LOG_TARGET, "Cleaning Scarb artifacts and build manifests.");
+        trace!("Cleaning Scarb artifacts and build manifests.");
         scarb::ops::clean(config)?;
         self.clean_manifests(&profile_dir)?;
 
         if self.all && profile_dir.exists() {
-            trace!(target: LOG_TARGET, ?profile_dir, "Removing entire profile directory.");
+            trace!(?profile_dir, "Removing entire profile directory.");
             fs::remove_dir_all(profile_dir)?;
         }
 

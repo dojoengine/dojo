@@ -9,8 +9,6 @@ use tracing::trace;
 
 use super::{DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::signer";
-
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Signer options")]
 // INVARIANT:
@@ -47,7 +45,6 @@ impl SignerOptions {
             self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
         {
             trace!(
-                target: LOG_TARGET, 
                 private_key,
                 "Signing using private key."
             );
@@ -71,7 +68,7 @@ impl SignerOptions {
                 } else if no_wait {
                     return Err(anyhow!("Could not find password. Please specify the password."));
                 } else {
-                    trace!(target: LOG_TARGET, "Prompting user for keystore password.");
+                    trace!("Prompting user for keystore password.");
                     rpassword::prompt_password("Enter password: ")?
                 }
             };

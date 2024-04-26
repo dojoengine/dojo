@@ -8,8 +8,6 @@ use super::options::world::WorldOptions;
 use crate::utils;
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::call";
-
 #[derive(Debug, Args)]
 #[command(about = "Call a system with the given calldata.")]
 pub struct CallArgs {
@@ -38,10 +36,10 @@ pub struct CallArgs {
 
 impl CallArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(target: LOG_TARGET, contract=?self.contract, entrypoint=self.entrypoint, calldata=?self.calldata, block_id=self.block_id, "Executing Call command.");
+        trace!(contract=?self.contract, entrypoint=self.entrypoint, calldata=?self.calldata, block_id=self.block_id, "Executing Call command.");
 
         let env_metadata = utils::load_metadata_from_config(config)?;
-        trace!(target: LOG_TARGET, ?env_metadata, "Fetched environment metadata.");
+        trace!(?env_metadata, "Fetched environment metadata.");
         config.tokio_handle().block_on(async {
 
             let world_reader =

@@ -13,8 +13,6 @@ use super::options::starknet::StarknetOptions;
 use crate::utils;
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::account";
-
 #[derive(Debug, Args)]
 pub struct AccountArgs {
     #[clap(subcommand)]
@@ -86,20 +84,20 @@ pub enum AccountCommand {
 
 impl AccountArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(target: LOG_TARGET, command=?self.command, "Executing command.");
+        trace!(command=?self.command, "Executing command.");
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         config.tokio_handle().block_on(async {
             match self.command {
                 AccountCommand::New { signer, force, file } => {
-                    trace!(
-                        target: LOG_TARGET,
+                    
+                    let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
+                    trace!(  
                         ?signer,
                         force,
                         ?file,
                         "Executing New command."
                     );
-                    let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
                     account::new(signer, force, file).await
                 }
                 AccountCommand::Deploy {
@@ -112,11 +110,14 @@ impl AccountArgs {
                     file,
                     no_confirmation,
                 } => {
+                    
+                    let provider = starknet.provider(env_metadata.as_ref())?;
+                    let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
+                    let fee_setting = fee.into_setting()?;
                     trace!(
-                        target: LOG_TARGET,
                         ?starknet,
                         ?signer,
-                        ?fee,
+                        ?fee_setting,
                         simulate,
                         ?nonce,
                         poll_interval,
@@ -124,9 +125,6 @@ impl AccountArgs {
                         no_confirmation,
                         "Executing Deploy command."
                     );
-                    let provider = starknet.provider(env_metadata.as_ref())?;
-                    let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
-                    let fee_setting = fee.into_setting()?;
                     account::deploy(
                         provider,
                         signer,
@@ -141,7 +139,6 @@ impl AccountArgs {
                 }
                 AccountCommand::Fetch { starknet, force, output, address } => {
                     trace!(
-                        target: LOG_TARGET,
                         ?starknet,
                         force,
                         ?output,

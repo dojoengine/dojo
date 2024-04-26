@@ -13,8 +13,6 @@ use super::options::world::WorldOptions;
 use crate::utils;
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::register";
-
 #[derive(Debug, Args)]
 pub struct RegisterArgs {
     #[command(subcommand)]
@@ -47,18 +45,18 @@ pub enum RegisterCommand {
 
 impl RegisterArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(target: LOG_TARGET, command=?self.command, "Executing Register command.");
+        trace!(command=?self.command, "Executing Register command.");
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         let (starknet, world, account, transaction, models) = match self.command {
             RegisterCommand::Model { starknet, world, account, transaction, models } => {
-                trace!(target: LOG_TARGET, ?models, "Registering models.");
+                trace!(?models, "Registering models.");
                 (starknet, world, account, transaction, models)
             }
         };
 
         let world_address = world.world_address.unwrap_or_default();
-        trace!(target: LOG_TARGET, ?world_address, "Using world address");
+        trace!(?world_address, "Using world address");
 
         config.tokio_handle().block_on(async {
             let world =

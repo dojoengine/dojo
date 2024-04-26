@@ -8,8 +8,6 @@ use clap::Args;
 use scarb::core::Config;
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::init";
-
 #[derive(Debug, Args)]
 pub struct InitArgs {
     #[arg(help = "Target directory")]
@@ -33,7 +31,7 @@ impl InitArgs {
             }
             None => current_dir().unwrap(),
         };
-        trace!(target: LOG_TARGET, ?target_dir, "Executing Init command.");
+        trace!(?target_dir, "Executing Init command.");
 
         if target_dir.exists() {
             ensure!(
@@ -71,7 +69,7 @@ impl InitArgs {
              `sozo build`",
         );
 
-        trace!(target: LOG_TARGET, "Project initialization completed.");
+        trace!("Project initialization completed.");
 
         Ok(())
     }
@@ -80,18 +78,15 @@ impl InitArgs {
 fn clone_repo(url: &str, path: &Path, config: &Config) -> Result<()> {
     config.ui().print(format!("Cloning project template from {}...", url));
     Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
-    trace!(target: LOG_TARGET, "Repository cloned successfully.");
+    trace!("Repository cloned successfully.");
     Ok(())
 }
 
 fn modify_git_history(url: &str) -> Result<()> {
-    trace!(target: LOG_TARGET, "Modifying Git history.");
+    trace!("Modifying Git history.");
     let git_output = Command::new("git").args(["rev-parse", "--short", "HEAD"]).output()?.stdout;
     let commit_hash = String::from_utf8(git_output)?;
-    trace!(
-        target: LOG_TARGET,
-        commit_hash=commit_hash.trim()
-    );
+    trace!(commit_hash=commit_hash.trim());
 
     fs::remove_dir_all(".git")?;
 
@@ -101,6 +96,6 @@ fn modify_git_history(url: &str) -> Result<()> {
     let commit_msg = format!("chore: init from {} at {}", url, commit_hash.trim());
     Command::new("git").args(["commit", "-m", &commit_msg]).output()?;
 
-    trace!(target: LOG_TARGET, "Git history modified.");
+    trace!("Git history modified.");
     Ok(())
 }

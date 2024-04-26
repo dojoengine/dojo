@@ -9,8 +9,6 @@ use scarb::ops::CompileOpts;
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::build";
-
 #[derive(Debug, Args)]
 pub struct BuildArgs {
     #[arg(long)]
@@ -39,7 +37,7 @@ impl BuildArgs {
             config,
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
         )?;
-        trace!(target: LOG_TARGET, ?compile_info, "Compiled workspace.");
+        trace!(?compile_info, "Compiled workspace.");
 
         let mut builtin_plugins = vec![];
         if self.typescript {
@@ -58,7 +56,7 @@ impl BuildArgs {
             let target_dir = &compile_info.target_dir;
             let contracts_statistics = get_contract_statistics_for_dir(target_dir)
                 .context("Error getting contracts stats")?;
-            trace!(target: LOG_TARGET, ?contracts_statistics, ?target_dir, "Fetched contract statistics for target directory.");
+            trace!(?contracts_statistics, ?target_dir, "Fetched contract statistics for target directory.");
 
             let table = create_stats_table(contracts_statistics);
             table.printstd()
@@ -75,7 +73,7 @@ impl BuildArgs {
             plugins: vec![],
             builtin_plugins,
         };
-        trace!(target: LOG_TARGET, pluginManager=?bindgen, "Generating bindings.");
+        trace!(pluginManager=?bindgen, "Generating bindings.");
 
         tokio::runtime::Runtime::new()
             .unwrap()

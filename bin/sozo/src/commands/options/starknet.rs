@@ -8,8 +8,6 @@ use tracing::trace;
 
 use super::STARKNET_RPC_URL_ENV_VAR;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::starknet";
-
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Starknet options")]
 pub struct StarknetOptions {
@@ -26,7 +24,7 @@ impl StarknetOptions {
         env_metadata: Option<&Environment>,
     ) -> Result<JsonRpcClient<HttpTransport>> {
         let url = self.url(env_metadata)?;
-        trace!(target: LOG_TARGET, ?url, "Creating JsonRpcClient with given RPC URL.");
+        trace!(?url, "Creating JsonRpcClient with given RPC URL.");
         Ok(JsonRpcClient::new(HttpTransport::new(url)))
     }
 
@@ -34,15 +32,15 @@ impl StarknetOptions {
     // This function is made public because [`JsonRpcClient`] does not expose
     // the raw rpc url.
     pub fn url(&self, env_metadata: Option<&Environment>) -> Result<Url> {
-        trace!(target: LOG_TARGET, "Retrieving RPC URL for StarknetOptions.");
+        trace!("Retrieving RPC URL for StarknetOptions.");
         if let Some(url) = self.rpc_url.as_ref() {
-            trace!(target: LOG_TARGET, ?url, "Using RPC URL from command line.");
+            trace!(?url, "Using RPC URL from command line.");
             Ok(url.clone())
         } else if let Some(url) = env_metadata.and_then(|env| env.rpc_url()) {
-            trace!(target: LOG_TARGET, url, "Using RPC URL from environment metadata.");
+            trace!(url, "Using RPC URL from environment metadata.");
             Ok(Url::parse(url)?)
         } else {
-            trace!(target: LOG_TARGET, "Using default RPC URL: http://localhost:5050.");
+            trace!("Using default RPC URL: http://localhost:5050.");
             Ok(Url::parse("http://localhost:5050").unwrap())
         }
     }
