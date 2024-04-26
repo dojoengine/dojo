@@ -1,21 +1,14 @@
-// Required modules and traits for future and async handling.
-use super::{prove, stone_image::prove_stone, ProgramInput, ProverIdentifier};
+use super::{prove, ProgramInput, ProverIdentifier};
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use tracing::level_filters::STATIC_MAX_LEVEL;
 use tracing::{info, trace};
-type Proof = String;
-use serde_json::Value;
 
-/// Asynchronously combines two proofs into a single proof.
-/// It simulates a delay to mimic a time-consuming process and combines the proofs.
 async fn combine_proofs(
     first: Vec<String>,
     second: Vec<String>,
     _input: &ProgramInput,
 ) -> anyhow::Result<Vec<String>> {
     return Ok(first.into_iter().chain(second.into_iter()).collect());
-    //extendowanie wektorow
 }
 
 /// Simulates the proving process with a placeholder function.
@@ -56,14 +49,9 @@ pub fn prove_recursively(
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, Instant};
-
-    use katana_primitives::FieldElement;
-    use serde::de::Expected;
-
     use super::*;
+    use katana_primitives::FieldElement;
 
-    /// Test case for a single input.
     #[tokio::test]
     async fn test_one() {
         let inputs = (0..1)
@@ -89,7 +77,6 @@ mod tests {
         assert_eq!(proof, expected);
     }
 
-    //Test case for combined inputs.
     #[tokio::test]
     async fn test_combined() {
         let inputs = (0..2)
@@ -115,7 +102,6 @@ mod tests {
         assert_eq!(proof.0[1], expected2);
     }
 
-    /// Test case to verify recursive division and combination with many inputs.
     #[tokio::test]
     async fn test_many() {
         let inputs = (0..4)
@@ -146,35 +132,3 @@ mod tests {
         assert_eq!(proof.0[3], expected4);
     }
 }
-//     /// Test to measure the time taken for a large number of proofs.
-//     #[tokio::test]
-//     async fn time_test() {
-//         let inputs = (0..512)
-//             .map(|i| ProverInput {
-//                 prev_state_root: FieldElement::from(i),
-//                 block_number: i,
-//                 block_hash: FieldElement::from(i),
-//                 config_hash: FieldElement::from(i),
-//                 message_to_appchain_segment: Default::default(),
-//                 message_to_starknet_segment: Default::default(),
-//                 state_updates: Default::default(),
-//             })
-//             .collect::<Vec<_>>();
-
-//         let start = Instant::now();
-//         let _proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
-//         let elapsed = start.elapsed();
-//         println!("Time elapsed: {:?}", elapsed);
-
-//         let expected_duration = Duration::from_secs(9);
-//         let tolerance = 0.1;
-//         let lower_bound = expected_duration
-//             - Duration::from_secs_f64(tolerance * expected_duration.as_secs_f64());
-//         let upper_bound = expected_duration
-//             + Duration::from_secs_f64(tolerance * expected_duration.as_secs_f64());
-//         assert!(
-//             elapsed >= lower_bound && elapsed <= upper_bound,
-//             "Test failed: elapsed time is not within the expected range"
-//         );
-//     }
-// }

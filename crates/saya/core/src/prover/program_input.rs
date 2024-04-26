@@ -1,19 +1,14 @@
-use std::collections::HashMap;
-use std::str::FromStr;
-
-use super::state_diff::state_updates_to_json_like;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
 use num_traits::cast::ToPrimitive;
-use serde::{
-    de::Error as DeError, de::SeqAccess, de::Visitor, ser::SerializeSeq, ser::Serializer,
-    Deserializer,
-};
+use serde::{de::Error as DeError, ser::SerializeSeq, ser::Serializer, Deserializer};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
+use std::collections::HashMap;
+use std::str::FromStr;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by the prover.
