@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714119998533,
+  "lastUpdate": 1714146657829,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6415,6 +6415,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16940700,
             "range": "± 206509",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5f421e17ab1868a9bac3d16ad9eee6516a3d89a0",
+          "message": "fix: event message subscription subscription broker (#1885)\n\n* fix: updates bug. use own eventmessage type for broker\r\n\r\n* fmt",
+          "timestamp": "2024-04-26T09:42:50-06:00",
+          "tree_id": "e351655026644761193ee5e33f74f6ad6890bcd3",
+          "url": "https://github.com/dojoengine/dojo/commit/5f421e17ab1868a9bac3d16ad9eee6516a3d89a0"
+        },
+        "date": 1714146657294,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17050222,
+            "range": "± 194607",
             "unit": "ns/iter"
           }
         ]
