@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714026901289,
+  "lastUpdate": 1714119998533,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6385,6 +6385,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16696862,
             "range": "± 203472",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "60488569+tcoratger@users.noreply.github.com",
+            "name": "Thomas Coratger",
+            "username": "tcoratger"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c8815a9d2a33974270e48f13ee731f5f2b80de5b",
+          "message": "Bump `alloy` to 0.7.0 (#1881)\n\n* Bump alloy to 0.7.0\r\n\r\n* fix clippy",
+          "timestamp": "2024-04-26T16:18:28+08:00",
+          "tree_id": "68ab688e25472f86a1e82d33a406318ca0905a5e",
+          "url": "https://github.com/dojoengine/dojo/commit/c8815a9d2a33974270e48f13ee731f5f2b80de5b"
+        },
+        "date": 1714119997996,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16940700,
+            "range": "± 206509",
             "unit": "ns/iter"
           }
         ]
