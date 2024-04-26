@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use camino::Utf8PathBuf;
-use dojo_test_utils::compiler::build_full_test_config;
+use dojo_test_utils::compiler;
 use scarb::ops;
 use url::Url;
 
@@ -109,7 +109,7 @@ website = "https://dojoengine.org"
 
 #[tokio::test]
 async fn get_full_dojo_metadata_from_workspace() {
-    let config = build_full_test_config("../../examples/spawn-and-move/Scarb.toml", false).unwrap();
+    let config = compiler::build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 

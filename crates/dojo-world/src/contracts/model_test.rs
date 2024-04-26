@@ -1,9 +1,7 @@
 use camino::Utf8PathBuf;
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+use katana_runner::KatanaRunner;
 use starknet::accounts::ConnectedAccount;
 use starknet::macros::felt;
 
@@ -13,12 +11,11 @@ use crate::contracts::world::WorldContractReader;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
-    let account = sequencer.account();
+    let runner = KatanaRunner::new().expect("Fail to set runner");
+    let account = runner.account(0);
     let provider = account.provider();
     let world_address = deploy_world(
-        &sequencer,
+        &runner,
         &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap(),
         &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
     )

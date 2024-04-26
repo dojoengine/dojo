@@ -107,6 +107,12 @@ pub struct TxnConfig {
     pub receipt: bool,
 }
 
+impl TxnConfig {
+    pub fn init_wait() -> Self {
+        Self { wait: true, ..Default::default() }
+    }
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Declarable {

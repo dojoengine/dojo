@@ -2,9 +2,7 @@ use std::time::Duration;
 
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
+use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::FieldElement;
 
@@ -16,12 +14,12 @@ use crate::migration::{Declarable, Deployable, TxnConfig};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
-    let account = sequencer.account();
+    let runner = KatanaRunner::new().expect("Fail to set runner");
+
+    let account = runner.account(0);
     let provider = account.provider();
     let world_address = deploy_world(
-        &sequencer,
+        &runner,
         &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap(),
         &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
     )
@@ -31,7 +29,7 @@ async fn test_world_contract_reader() {
 }
 
 pub async fn deploy_world(
-    sequencer: &TestSequencer,
+    sequencer: &KatanaRunner,
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
 ) -> FieldElement {
@@ -43,7 +41,7 @@ pub async fn deploy_world(
     )
     .unwrap();
     let world = WorldDiff::compute(manifest.clone(), None);
-    let account = sequencer.account();
+    let account = sequencer.account(0);
 
     let strategy = prepare_for_migration(
         None,
