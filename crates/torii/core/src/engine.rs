@@ -151,14 +151,14 @@ impl<P: Provider + Sync> Engine<P> {
 
         // Skip transactions that have been processed already
         // Our cursor is the last processed transaction
-        let mut pending_block_txn_cursor = pending_block_tx.clone();
+        let mut pending_block_tx_cursor = pending_block_tx;
         for transaction in block.transactions {
-            if let Some(tx) = pending_block_txn_cursor {
+            if let Some(tx) = pending_block_tx_cursor {
                 if transaction.transaction_hash() != &tx {
                     continue;
                 }
 
-                pending_block_txn_cursor = None;
+                pending_block_tx_cursor = None;
                 continue;
             }
 
