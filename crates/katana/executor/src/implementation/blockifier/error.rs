@@ -15,14 +15,14 @@ impl From<TransactionExecutionError> for ExecutionError {
                 Self::ClassAlreadyDeclared(class_hash.0.into())
             }
             TransactionExecutionError::ValidateTransactionError(e) => {
-                Self::TransactionValidationFailed(Box::new(Self::from(e)))
+                Self::TransactionValidationFailed(Box::new(e.into()))
             }
-            TransactionExecutionError::StateError(e) => Self::from(e),
-            TransactionExecutionError::TransactionPreValidationError(e) => Self::from(e),
-            TransactionExecutionError::TransactionFeeError(e) => Self::from(e),
-            TransactionExecutionError::ExecutionError(e) => Self::from(e),
+            TransactionExecutionError::StateError(e) => e.into(),
+            TransactionExecutionError::TransactionPreValidationError(e) => e.into(),
+            TransactionExecutionError::TransactionFeeError(e) => e.into(),
+            TransactionExecutionError::ExecutionError(e) => e.into(),
             TransactionExecutionError::ContractConstructorExecutionFailed(e) => {
-                Self::ConstructorExecutionFailed(Box::new(Self::from(e)))
+                Self::ConstructorExecutionFailed(Box::new(e.into()))
             }
             e => Self::Other(e.to_string()),
         }
@@ -39,8 +39,8 @@ impl From<EntryPointExecutionError> for ExecutionError {
                 Self::InvalidInput { input_descriptor, info }
             }
             EntryPointExecutionError::RecursionDepthExceeded => Self::RecursionDepthExceeded,
-            EntryPointExecutionError::StateError(e) => Self::from(e),
-            EntryPointExecutionError::PreExecutionError(e) => Self::from(e),
+            EntryPointExecutionError::StateError(e) => e.into(),
+            EntryPointExecutionError::PreExecutionError(e) => e.into(),
             e => Self::Other(e.to_string()),
         }
     }
@@ -55,7 +55,7 @@ impl From<PreExecutionError> for ExecutionError {
             PreExecutionError::UninitializedStorageAddress(address) => {
                 Self::ContractNotDeployed(to_address(address))
             }
-            PreExecutionError::StateError(e) => Self::from(e),
+            PreExecutionError::StateError(e) => e.into(),
             e => Self::Other(e.to_string()),
         }
     }
@@ -72,8 +72,8 @@ impl From<TransactionPreValidationError> for ExecutionError {
                 actual: account_nonce.0.into(),
                 expected: incoming_tx_nonce.0.into(),
             },
-            TransactionPreValidationError::TransactionFeeError(e) => Self::from(e),
-            TransactionPreValidationError::StateError(e) => Self::from(e),
+            TransactionPreValidationError::TransactionFeeError(e) => e.into(),
+            TransactionPreValidationError::StateError(e) => e.into(),
         }
     }
 }
@@ -87,7 +87,7 @@ impl From<TransactionFeeError> for ExecutionError {
             TransactionFeeError::MaxFeeTooLow { min_fee, max_fee } => {
                 Self::MaxFeeTooLow { min: min_fee.0, max_fee: max_fee.0 }
             }
-            TransactionFeeError::StateError(e) => Self::from(e),
+            TransactionFeeError::StateError(e) => e.into(),
             e => Self::Other(e.to_string()),
         }
     }
