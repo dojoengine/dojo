@@ -143,12 +143,6 @@ impl<P: Provider + Sync> Engine<P> {
             return Ok(None);
         };
 
-        // Should we emit pending block numbers? (for block subscriptions)
-        // Since pending blocks might be emitted multiple times
-        // if let Some(ref block_tx) = self.block_tx {
-        //     block_tx.send(block_number).await?;
-        // }
-
         // Skip transactions that have been processed already
         // Our cursor is the last processed transaction
         let mut pending_block_tx_cursor = pending_block_tx;
@@ -196,7 +190,7 @@ impl<P: Provider + Sync> Engine<P> {
         }
 
         // Set the head to the last processed pending transaction
-        // Head block number number should still be latest block number
+        // Head block number should still be latest block number
         self.db.set_head(block_number - 1, pending_block_tx);
 
         self.db.execute().await?;
