@@ -18,7 +18,7 @@ async fn test_world_contract_reader() {
     let runner = KatanaRunner::new().expect("Fail to set runner");
     let config = compiler::copy_tmp_config(
         &Utf8PathBuf::from("../../examples/spawn-and-move"),
-        &Utf8PathBuf::from("../../dojo-core"),
+        &Utf8PathBuf::from("../dojo-core"),
     );
 
     let manifest_dir = config.manifest_path().parent().unwrap();

@@ -212,7 +212,7 @@ async fn migration_with_mismatching_world_address_and_seed() {
     let config = setup::load_config();
 
     let base_dir = config.manifest_path().parent().unwrap().to_path_buf();
-    let target_dir = base_dir.join("{}/target/dev");
+    let target_dir = base_dir.join("target").join("dev");
 
     let result = prepare_migration_with_world_and_seed(
         base_dir,
@@ -221,11 +221,16 @@ async fn migration_with_mismatching_world_address_and_seed() {
         "sozo_test",
     );
 
-    assert!(result.is_err_and(|e| e.to_string().contains(
+    assert!(result.is_err());
+
+    let error_message = result.unwrap_err().to_string();
+
+    assert_eq!(
+        error_message,
         "Calculated world address doesn't match provided world address.\nIf you are deploying \
          with custom seed make sure `world_address` is correctly configured (or not set) \
          `Scarb.toml`"
-    )));
+    );
 }
 
 /// Get the hash from a IPFS URI
