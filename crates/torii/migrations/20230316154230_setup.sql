@@ -1,7 +1,6 @@
 CREATE TABLE indexers (
     id TEXT PRIMARY KEY NOT NULL,
     head BIGINT NOT NULL DEFAULT 0,
-    pending_block_tx TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
