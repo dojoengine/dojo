@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714146657829,
+  "lastUpdate": 1714172476966,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6445,6 +6445,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17050222,
             "range": "± 194607",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6a3cbaac6d1dfb817d21a8c614ce8b7f1508bdd4",
+          "message": "feat(torii): process pending block (#1798)\n\n* feat: process pending block\r\n\r\n* err\r\n\r\n* feat: process pending block with cursor\r\n\r\n* feat: update head\r\n\r\n* refactor: tx cursor use hash\r\n\r\n* refactor; migration\r\n\r\n* feat: optimized sync range with events pages & dedup logic\r\n\r\n* feat: correct logic\r\n\r\n* fix: skipping\r\n\r\n* fix: test\r\n\r\n* fix\r\n\r\n* refactor: dedup into for loop\r\n\r\n* refactor: dont error out if no p[ending block\r\n\r\n* fix: pending indexing inf loop\r\n\r\n* refactor: pending transaction fetch error feedback\r\n\r\n* fmt\r\n\r\n* chore: clippy\r\n\r\n* refactor: migrations\r\n\r\n* refacort: simplify migrations\r\n\r\n* chore: cleanup code",
+          "timestamp": "2024-04-26T18:52:27-04:00",
+          "tree_id": "14bf0f80fa946ac827c419ddfd204f4e159e06a8",
+          "url": "https://github.com/dojoengine/dojo/commit/6a3cbaac6d1dfb817d21a8c614ce8b7f1508bdd4"
+        },
+        "date": 1714172476179,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17416931,
+            "range": "± 841688",
             "unit": "ns/iter"
           }
         ]
