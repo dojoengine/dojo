@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
+use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::FieldElement;
@@ -15,15 +16,18 @@ use crate::migration::{Declarable, Deployable, TxnConfig};
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
     let runner = KatanaRunner::new().expect("Fail to set runner");
+    let config = compiler::copy_tmp_config(
+        &Utf8PathBuf::from("../../examples/spawn-and-move"),
+        &Utf8PathBuf::from("../../dojo-core"),
+    );
+
+    let manifest_dir = config.manifest_path().parent().unwrap();
+    let target_dir = manifest_dir.join("target").join("dev");
 
     let account = runner.account(0);
     let provider = account.provider();
-    let world_address = deploy_world(
-        &runner,
-        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap(),
-        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
-    )
-    .await;
+    let world_address =
+        deploy_world(&runner, &manifest_dir.to_path_buf(), &target_dir.to_path_buf()).await;
 
     let _world = WorldContractReader::new(world_address, provider);
 }
@@ -45,7 +49,7 @@ pub async fn deploy_world(
 
     let strategy = prepare_for_migration(
         None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        FieldElement::from_hex_be("0x12345").unwrap(),
         target_dir,
         world,
     )

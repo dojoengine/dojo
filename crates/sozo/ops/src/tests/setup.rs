@@ -1,7 +1,7 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
-use dojo_test_utils::migration::prepare_migration;
+use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::strategy::MigrationStrategy;
 use dojo_world::migration::TxnConfig;
@@ -31,18 +31,7 @@ pub fn load_config() -> Config {
     let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move/");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
-    let temp_project_dir = Utf8PathBuf::from(
-        assert_fs::TempDir::new().unwrap().to_path_buf().to_string_lossy().to_string(),
-    );
-
-    let temp_project_path = temp_project_dir.join("Scarb").with_extension("toml").to_string();
-
-    // Copy all the files, including manifests. As we will not re-build, mostly only migrate.
-    compiler::copy_project_temp(&source_project_dir, &temp_project_dir, &dojo_core_path, &[])
-        .unwrap();
-
-    compiler::build_test_config(&temp_project_path)
-        .unwrap_or_else(|c| panic!("Error loading config: {c:?}"))
+    compiler::copy_tmp_config(&source_project_dir, &dojo_core_path)
 }
 
 /// Setups the workspace for the spawn-and-moves project.
@@ -68,7 +57,7 @@ pub fn setup_migration(config: &Config) -> Result<MigrationStrategy> {
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    prepare_migration(base_dir.into(), target_dir.into())
+    prepare_migration_with_world_and_seed(base_dir.into(), target_dir.into(), None, "sozo_test")
 }
 
 /// Setups the project by migrating the full spawn-and-moves project.
@@ -87,14 +76,14 @@ pub async fn setup(
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration(&config)?;
+    let migration = setup_migration(&config)?;
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let output = migration::execute_strategy(
         &ws,
-        &mut migration,
+        &migration,
         &account,
         TxnConfig { wait: true, ..Default::default() },
     )

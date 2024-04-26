@@ -15,6 +15,24 @@ use scarb::ops::CompileOpts;
 use scarb_ui::Verbosity;
 use toml::{Table, Value};
 
+/// Copies a project into a temporary directory and loads a config from the copied project.
+///
+/// # Returns
+///
+/// A [`Config`] object loaded from the spawn-and-moves Scarb.toml file.
+pub fn copy_tmp_config(source_project_dir: &Utf8PathBuf, dojo_core_path: &Utf8PathBuf) -> Config {
+    let temp_project_dir = Utf8PathBuf::from(
+        assert_fs::TempDir::new().unwrap().to_path_buf().to_string_lossy().to_string(),
+    );
+
+    let temp_project_path = temp_project_dir.join("Scarb").with_extension("toml").to_string();
+
+    // Copy all the files, including manifests. As we will not re-build, mostly only migrate.
+    copy_project_temp(source_project_dir, &temp_project_dir, dojo_core_path, &[]).unwrap();
+
+    build_test_config(&temp_project_path).unwrap_or_else(|c| panic!("Error loading config: {c:?}"))
+}
+
 /// Copies a project to a new location, excluding the manifests
 /// and target directories, build the temporary project and
 /// return the temporary project directory.

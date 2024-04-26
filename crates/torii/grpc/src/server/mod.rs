@@ -41,6 +41,14 @@ use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
 use crate::types::ComparisonOperator;
 
+pub(crate) static ENTITIES_TABLE: &str = "entities";
+pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
+pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
+
+pub(crate) static EVENTS_MESSAGES_TABLE: &str = "events_messages";
+pub(crate) static EVENTS_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
+pub(crate) static EVENTS_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+
 #[derive(Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
@@ -73,6 +81,12 @@ impl DojoWorld {
         tokio::task::spawn(subscriptions::entity::Service::new(
             pool.clone(),
             Arc::clone(&entity_manager),
+            Arc::clone(&model_cache),
+        ));
+
+        tokio::task::spawn(subscriptions::event_message::Service::new(
+            pool.clone(),
+            Arc::clone(&event_message_manager),
             Arc::clone(&model_cache),
         ));
 
@@ -137,7 +151,15 @@ impl DojoWorld {
         limit: u32,
         offset: u32,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        self.query_by_hashed_keys("entities", "entity_model", None, limit, offset).await
+        self.query_by_hashed_keys(
+            ENTITIES_TABLE,
+            ENTITIES_MODEL_RELATION_TABLE,
+            ENTITIES_ENTITY_RELATION_COLUMN,
+            None,
+            limit,
+            offset,
+        )
+        .await
     }
 
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
@@ -158,6 +180,7 @@ impl DojoWorld {
         &self,
         table: &str,
         model_relation_table: &str,
+        entity_relation_column: &str,
         hashed_keys: Option<proto::types::HashedKeysClause>,
         limit: u32,
         offset: u32,
@@ -212,7 +235,10 @@ impl DojoWorld {
             let model_ids: Vec<&str> = models_str.split(',').collect();
             let schemas = self.model_cache.schemas(model_ids).await?;
 
-            let entity_query = format!("{} WHERE {table}.id = ?", build_sql_query(&schemas)?);
+            let entity_query = format!(
+                "{} WHERE {table}.id = ?",
+                build_sql_query(&schemas, table, entity_relation_column)?
+            );
             let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
 
             let models = schemas
@@ -239,6 +265,7 @@ impl DojoWorld {
         &self,
         table: &str,
         model_relation_table: &str,
+        entity_relation_column: &str,
         keys_clause: proto::types::KeysClause,
         limit: u32,
         offset: u32,
@@ -296,7 +323,7 @@ impl DojoWorld {
         // query to filter with limit and offset
         let entities_query = format!(
             "{} WHERE {table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?",
-            build_sql_query(&schemas)?
+            build_sql_query(&schemas, table, entity_relation_column)?
         );
         let db_entities = sqlx::query(&entities_query)
             .bind(&keys_pattern)
@@ -355,6 +382,7 @@ impl DojoWorld {
         &self,
         table: &str,
         model_relation_table: &str,
+        entity_relation_column: &str,
         member_clause: proto::types::MemberClause,
         _limit: u32,
         _offset: u32,
@@ -402,7 +430,7 @@ impl DojoWorld {
         let column_name = format!("external_{}", member_clause.member);
         let member_query = format!(
             "{} WHERE {table_name}.{column_name} {comparison_operator} ?",
-            build_sql_query(&schemas)?
+            build_sql_query(&schemas, table, entity_relation_column)?
         );
 
         let db_entities =
@@ -420,6 +448,7 @@ impl DojoWorld {
         &self,
         _table: &str,
         _model_relation_table: &str,
+        _entity_relation_column: &str,
         _composite: proto::types::CompositeClause,
         _limit: u32,
         _offset: u32,
@@ -510,8 +539,9 @@ impl DojoWorld {
                         }
 
                         self.query_by_hashed_keys(
-                            "entities",
-                            "entity_model",
+                            ENTITIES_TABLE,
+                            ENTITIES_MODEL_RELATION_TABLE,
+                            ENTITIES_ENTITY_RELATION_COLUMN,
                             Some(hashed_keys),
                             query.limit,
                             query.offset,
@@ -528,8 +558,9 @@ impl DojoWorld {
                         }
 
                         self.query_by_keys(
-                            "entities",
-                            "entity_model",
+                            ENTITIES_TABLE,
+                            ENTITIES_MODEL_RELATION_TABLE,
+                            ENTITIES_ENTITY_RELATION_COLUMN,
                             keys,
                             query.limit,
                             query.offset,
@@ -538,8 +569,9 @@ impl DojoWorld {
                     }
                     ClauseType::Member(member) => {
                         self.query_by_member(
-                            "entities",
-                            "entity_model",
+                            ENTITIES_TABLE,
+                            ENTITIES_MODEL_RELATION_TABLE,
+                            ENTITIES_ENTITY_RELATION_COLUMN,
                             member,
                             query.limit,
                             query.offset,
@@ -548,8 +580,9 @@ impl DojoWorld {
                     }
                     ClauseType::Composite(composite) => {
                         self.query_by_composite(
-                            "entities",
-                            "entity_model",
+                            ENTITIES_TABLE,
+                            ENTITIES_MODEL_RELATION_TABLE,
+                            ENTITIES_ENTITY_RELATION_COLUMN,
                             composite,
                             query.limit,
                             query.offset,
@@ -587,8 +620,9 @@ impl DojoWorld {
                         }
 
                         self.query_by_hashed_keys(
-                            "event_messages",
-                            "event_model",
+                            EVENTS_MESSAGES_TABLE,
+                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
                             Some(hashed_keys),
                             query.limit,
                             query.offset,
@@ -605,8 +639,9 @@ impl DojoWorld {
                         }
 
                         self.query_by_keys(
-                            "event_messages",
-                            "event_model",
+                            EVENTS_MESSAGES_TABLE,
+                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
                             keys,
                             query.limit,
                             query.offset,
@@ -615,8 +650,9 @@ impl DojoWorld {
                     }
                     ClauseType::Member(member) => {
                         self.query_by_member(
-                            "event_messages",
-                            "event_model",
+                            EVENTS_MESSAGES_TABLE,
+                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
                             member,
                             query.limit,
                             query.offset,
@@ -625,8 +661,9 @@ impl DojoWorld {
                     }
                     ClauseType::Composite(composite) => {
                         self.query_by_composite(
-                            "event_messages",
-                            "event_model",
+                            EVENTS_MESSAGES_TABLE,
+                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
+                            ENTITIES_ENTITY_RELATION_COLUMN,
                             composite,
                             query.limit,
                             query.offset,

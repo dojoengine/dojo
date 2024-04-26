@@ -83,10 +83,9 @@ mod tests {
             migration::migrate(
                 &ws,
                 None,
-                "chain_id".to_string(),
                 runner.endpoint(),
                 &runner.account(0),
-                Some("dojo_examples".to_string()),
+                "dojo_examples",
                 true,
                 TxnConfig::default(),
             )

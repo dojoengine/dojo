@@ -278,7 +278,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let base_path = "../types-test";
     let target_path = format!("{}/target/dev", base_path);
-    let mut migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
     let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
@@ -293,7 +293,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
 
     let manifest =
         DeploymentManifest::load_from_remote(&provider, migration.world_address().unwrap())

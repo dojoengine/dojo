@@ -1,4 +1,5 @@
 use camino::Utf8PathBuf;
+use dojo_test_utils::compiler;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use katana_runner::KatanaRunner;
@@ -14,12 +15,16 @@ async fn test_model() {
     let runner = KatanaRunner::new().expect("Fail to set runner");
     let account = runner.account(0);
     let provider = account.provider();
-    let world_address = deploy_world(
-        &runner,
-        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap(),
-        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
-    )
-    .await;
+
+    let config = compiler::copy_tmp_config(
+        &Utf8PathBuf::from("../../examples/spawn-and-move"),
+        &Utf8PathBuf::from("../../dojo-core"),
+    );
+
+    let manifest_dir = config.manifest_path().parent().unwrap();
+    let target_dir = manifest_dir.join("target").join("dev");
+
+    let world_address = deploy_world(&runner, &manifest_dir.into(), &target_dir).await;
 
     let world = WorldContractReader::new(world_address, provider);
     let position = world.model_reader("Position").await.unwrap();
