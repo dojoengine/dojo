@@ -60,6 +60,8 @@ mod Errors {
 
 #[starknet::contract]
 mod world {
+    use dojo::config::interface::IConfig;
+    use core::to_byte_array::FormatAsByteArray;
     use core::traits::TryInto;
     use array::{ArrayTrait, SpanTrait};
     use traits::Into;
@@ -70,7 +72,7 @@ mod world {
     use core::hash::{HashStateExTrait, HashStateTrait};
     use pedersen::{PedersenTrait, HashStateImpl, PedersenImpl};
     use starknet::{
-        get_caller_address, get_contract_address, get_tx_info,
+        contract_address_const, get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
         syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult,
         SyscallResultTrait, SyscallResultTraitImpl
@@ -79,7 +81,12 @@ mod world {
     use dojo::database;
     use dojo::database::introspect::Introspect;
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+    use dojo::config::component::Config;
     use dojo::model::Model;
+    use dojo::interfaces::{
+        IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherImpl, StorageUpdate,
+        ProgramOutput
+    };
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
     use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
@@ -87,6 +94,11 @@ mod world {
     use super::Errors;
 
     const WORLD: felt252 = 0;
+
+    component!(path: Config, storage: config, event: ConfigEvent);
+
+    #[abi(embed_v0)]
+    impl ConfigImpl = Config::ConfigImpl<ContractState>;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -101,6 +113,13 @@ mod world {
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
+        ConfigEvent: Config::Event,
+        StateUpdated: StateUpdated
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct StateUpdated {
+        da_hash: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -178,6 +197,8 @@ mod world {
         deployed_contracts: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
+        #[substorage(v0)]
+        config: Config::Storage,
     }
 
     #[constructor]
@@ -561,6 +582,54 @@ mod world {
 
             // emit Upgrade Event
             EventEmitter::emit(ref self, WorldUpgraded { class_hash: new_class_hash });
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableState of IUpgradeableState<ContractState> {
+        fn upgrade_state(
+            ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput
+        ) {
+            let mut da_hasher = PedersenImpl::new(0);
+            let mut i = 0;
+            loop {
+                if i == new_state.len() {
+                    break;
+                }
+                da_hasher = da_hasher.update(*new_state.at(i).key);
+                da_hasher = da_hasher.update(*new_state.at(i).value);
+                i += 1;
+            };
+            let da_hash = da_hasher.finalize();
+            assert(da_hash == program_output.world_da_hash, 'wrong output hash');
+
+            let mut program_output_array = array![];
+            program_output.serialize(ref program_output_array);
+            let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
+
+            let program_hash = self.config.get_program_hash();
+            let fact = poseidon::PoseidonImpl::new()
+                .update(program_hash)
+                .update(program_output_hash)
+                .finalize();
+            let fact_registry = IFactRegistryDispatcher {
+                contract_address: self.config.get_facts_registry()
+            };
+            assert(fact_registry.is_valid(fact), 'no state transition proof');
+
+            let mut i = 0;
+            loop {
+                if i >= new_state.len() {
+                    break;
+                }
+                let base = starknet::storage_base_address_from_felt252(*new_state.at(i).key);
+                starknet::storage_write_syscall(
+                    0, starknet::storage_address_from_base(base), *new_state.at(i).value
+                )
+                    .unwrap_syscall();
+                i += 2;
+            };
+            EventEmitter::emit(ref self, StateUpdated { da_hash: da_hash });
         }
     }
 

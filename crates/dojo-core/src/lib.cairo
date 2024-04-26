@@ -1,9 +1,11 @@
 mod base;
 #[cfg(test)]
 mod base_test;
+mod config;
 mod database;
 #[cfg(test)]
 mod database_test;
+mod interfaces;
 mod model;
 mod packing;
 #[cfg(test)]
