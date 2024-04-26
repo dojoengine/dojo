@@ -99,7 +99,7 @@ impl<P: Provider + Sync> Engine<P> {
                             backoff_delay = Duration::from_secs(1);
                         }
                         Err(e) => {
-                            error!(target: LOG_TARGET, error = %e, "Getting block.");
+                            error!(target: LOG_TARGET, error = %e, "Syncing to head.");
                             sleep(backoff_delay).await;
                             if backoff_delay < max_backoff_delay {
                                 backoff_delay *= 2;
@@ -162,14 +162,33 @@ impl<P: Provider + Sync> Engine<P> {
                 continue;
             }
 
-            self.process_transaction_and_receipt(
-                *transaction.transaction_hash(),
-                &transaction,
-                block_number,
-                block.timestamp,
-            )
-            .await?;
-            info!(target: LOG_TARGET, block_number = %block_number, transaction_hash = %transaction.transaction_hash(), "Processed pending transaction.");
+            match self
+                .process_transaction_and_receipt(
+                    *transaction.transaction_hash(),
+                    &transaction,
+                    block_number,
+                    block.timestamp,
+                )
+                .await
+            {
+                Err(e) => {
+                    match e.to_string().as_str() {
+                        "TransactionHashNotFound" => {
+                            warn!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processing pending transaction.");
+                            // We failed to fetch the transaction, which might be due to us indexing the pending transaction too fast.
+                            // We will fail silently and retry processing the transaction in the next iteration.
+                            return Ok(pending_block_tx);
+                        }
+                        _ => {
+                            error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processing pending transaction.");
+                            return Err(e);
+                        }
+                    }
+                }
+                Ok(_) => {
+                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending transaction.")
+                }
+            }
 
             pending_block_tx = Some(*transaction.transaction_hash());
         }
