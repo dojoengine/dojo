@@ -157,11 +157,7 @@ fn bench_simple_struct() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let mut foo = Foo {
-        caller,
-        a: 0x123456789abcdef,
-        b: 0x123456789abcdef,
-    };
+    let mut foo = Foo { caller, a: 0x123456789abcdef, b: 0x123456789abcdef, };
     end(gas, 'foo init');
 
     let gas = testing::get_available_gas();
@@ -277,17 +273,11 @@ fn bench_nested_struct() {
     gas::withdraw_gas().unwrap();
 
     let mut case = Case {
-        owner: caller,
-        sword: Sword {
-            swordsmith: caller,
-            damage: 0x12345678,
-        },
-        material: 'wooden',
+        owner: caller, sword: Sword { swordsmith: caller, damage: 0x12345678, }, material: 'wooden',
     };
     end(gas, 'case init');
     let _gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
@@ -391,16 +381,16 @@ fn bench_complex_struct() {
             finished: true,
             romances: 0x1234,
         },
-        weapon: Weapon::DualWield((
-            Sword {
-                swordsmith: starknet::contract_address_const::<0x69>(),
-                damage: 0x12345678,
-            },
-            Sword {
-                swordsmith: starknet::contract_address_const::<0x69>(),
-                damage: 0x12345678,
-            }
-        )),
+        weapon: Weapon::DualWield(
+            (
+                Sword {
+                    swordsmith: starknet::contract_address_const::<0x69>(), damage: 0x12345678,
+                },
+                Sword {
+                    swordsmith: starknet::contract_address_const::<0x69>(), damage: 0x12345678,
+                }
+            )
+        ),
         gold: 0x12345678,
     };
     end(gas, 'chars init');

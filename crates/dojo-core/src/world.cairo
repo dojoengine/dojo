@@ -13,15 +13,9 @@ trait IWorld<T> {
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
-    fn entity(
-        self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>
-    ) -> Span<felt252>;
+    fn entity(self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>) -> Span<felt252>;
     fn set_entity(
-        ref self: T,
-        model: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
-        layout: Span<u8>
+        ref self: T, model: felt252, keys: Span<felt252>, values: Span<felt252>, layout: Span<u8>
     );
     fn base(self: @T) -> ClassHash;
     fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, layout: Span<u8>);
@@ -185,10 +179,12 @@ mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
-        self.models.write(
-            RESOURCE_METADATA_MODEL,
-            (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
-        );
+        self
+            .models
+            .write(
+                RESOURCE_METADATA_MODEL,
+                (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
+            );
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -231,7 +227,10 @@ mod world {
             let key = poseidon::poseidon_hash_span(keys);
             database::set(model, key, values, layout);
 
-            EventEmitter::emit(ref self, MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri });
+            EventEmitter::emit(
+                ref self,
+                MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri }
+            );
         }
 
         /// Checks if the provided account is an owner of the resource.
@@ -257,7 +256,9 @@ mod world {
         /// * `resource` - The resource.
         fn grant_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
+            assert(
+                self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER
+            );
             self.owners.write((resource, address), true);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: true });
@@ -272,7 +273,9 @@ mod world {
         /// * `resource` - The resource.
         fn revoke_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
+            assert(
+                self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER
+            );
             self.owners.write((resource, address), false);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: false });
@@ -303,7 +306,8 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, model) || self.is_owner(caller, WORLD), Errors::NOT_OWNER_WRITER
+                self.is_owner(caller, model) || self.is_owner(caller, WORLD),
+                Errors::NOT_OWNER_WRITER
             );
             self.writers.write((model, system), true);
 
@@ -341,7 +345,8 @@ mod world {
             let caller = get_caller_address();
 
             let salt = self.models_count.read();
-            let (address, name) = dojo::model::deploy_and_get_name(salt.into(), class_hash).unwrap_syscall();
+            let (address, name) = dojo::model::deploy_and_get_name(salt.into(), class_hash)
+                .unwrap_syscall();
             self.models_count.write(salt + 1);
 
             let (mut prev_class_hash, mut prev_address) = (
@@ -366,7 +371,10 @@ mod world {
             };
 
             self.models.write(name, (class_hash, address));
-            EventEmitter::emit(ref self, ModelRegistered { name, prev_address, address, class_hash, prev_class_hash });
+            EventEmitter::emit(
+                ref self,
+                ModelRegistered { name, prev_address, address, class_hash, prev_class_hash }
+            );
         }
 
         /// Gets the class hash of a registered model.
@@ -522,10 +530,7 @@ mod world {
         ///
         /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
         fn entity(
-            self: @ContractState,
-            model: felt252,
-            keys: Span<felt252>,
-            layout: Span<u8>
+            self: @ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
         ) -> Span<felt252> {
             let key = poseidon::poseidon_hash_span(keys);
             database::get(model, key, layout)
