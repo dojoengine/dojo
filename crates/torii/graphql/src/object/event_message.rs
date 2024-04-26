@@ -75,14 +75,18 @@ impl ResolvableObject for EventMessageObject {
                         };
                         // if id is None, then subscribe to all entities
                         // if id is Some, then subscribe to only the entity with that id
-                        Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(move |entity: EventMessage| {
-                            if id.is_none() || id == Some(entity.id.clone()) {
-                                Some(Ok(Value::Object(EventMessageObject::value_mapping(entity))))
-                            } else {
-                                // id != entity.id , then don't send anything, still listening
-                                None
-                            }
-                        }))
+                        Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(
+                            move |entity: EventMessage| {
+                                if id.is_none() || id == Some(entity.id.clone()) {
+                                    Some(Ok(Value::Object(EventMessageObject::value_mapping(
+                                        entity,
+                                    ))))
+                                } else {
+                                    // id != entity.id , then don't send anything, still listening
+                                    None
+                                }
+                            },
+                        ))
                     })
                 },
             )

@@ -16,7 +16,10 @@ use super::World;
 use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
-use crate::types::{Entity as EntityUpdated, EventMessage as EventMessageUpdated, Event as EventEmitted, Model as ModelRegistered};
+use crate::types::{
+    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
+    Model as ModelRegistered,
+};
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
 pub const FELT_DELIMITER: &str = "/";
