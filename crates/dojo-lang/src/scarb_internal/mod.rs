@@ -24,11 +24,19 @@ use crate::plugin::dojo_plugin_suite;
 
 pub(crate) const LOG_TARGET: &str = "dojo_lang::scarb_internal";
 
+/// Compilation information of all the units found in the workspace.
+#[derive(Debug, Default)]
 pub struct CompileInfo {
+    /// The name of the profile used to compile.
     pub profile_name: String,
+    /// The path to the manifest file.
     pub manifest_path: Utf8PathBuf,
+    /// The path to the target directory.
     pub target_dir: Utf8PathBuf,
+    /// The name of the root package.
     pub root_package_name: Option<String>,
+    /// The list of units that failed to compile.
+    pub compile_error_units: Vec<String>,
 }
 
 pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCratesConfig {
@@ -83,12 +91,14 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
         .filter(|cu| packages.contains(&cu.main_package_id()))
         .collect::<Vec<_>>();
 
+    let mut compile_error_units = vec![];
     for unit in compilation_units {
         if let CompilationUnit::Cairo(unit) = unit {
             let mut db = build_scarb_root_database(&unit).unwrap();
 
             if let Err(err) = ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
-                ws.config().ui().anyhow(&err)
+                ws.config().ui().anyhow(&err);
+                compile_error_units.push(unit.name());
             }
         } else {
             tracing::warn!(target: LOG_TARGET, name = unit.name(), "Skipping compilation unit.");
@@ -110,7 +120,7 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
     let profile_name =
         if let Ok(p) = ws.current_profile() { p.to_string() } else { "NO_PROFILE".to_string() };
 
-    Ok(CompileInfo { manifest_path, target_dir, root_package_name, profile_name })
+    Ok(CompileInfo { manifest_path, target_dir, root_package_name, profile_name, compile_error_units })
 }
 
 fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
