@@ -140,7 +140,7 @@ impl<P: Provider + Sync> Engine<P> {
         {
             pending
         } else {
-            return Err(anyhow::anyhow!("No pending block."));
+            return Ok(None);
         };
 
         // Should we emit pending block numbers? (for block subscriptions)
