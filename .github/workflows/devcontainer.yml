@@ -1,6 +1,7 @@
 name: devcontainer
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - ".devcontainer/**"
@@ -40,7 +41,7 @@ jobs:
           echo "tag_name=$DOCKER_TAG" >> $GITHUB_OUTPUT
 
       - name: Set Docker tag for push event
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
           echo "DOCKER_TAG=$SHORT_SHA" >> $GITHUB_ENV
