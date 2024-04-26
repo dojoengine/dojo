@@ -241,25 +241,3 @@ impl From<starknet::providers::ProviderError> for error::Error {
         Self::KatanaClient(format!("Katana client RPC provider error: {e}"))
     }
 }
-
-// CI is not allowing to fetch images from inside the docker itself.
-// Need to be addressed, so tests by pulling prover and verifier are for now
-// disabled here, but can be uncommented to test locally.
-// #[cfg(test)]
-// mod tests {
-//     use crate::prover::state_diff::EXAMPLE_STATE_DIFF;
-//     use crate::prover::{prove, ProverIdentifier};
-//     use crate::verifier::{verify, VerifierIdentifier};
-
-//     #[tokio::test]
-//     async fn test_herodotus_verify() {
-//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-//         let _tx = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await.unwrap();
-//     }
-
-//     #[tokio::test]
-//     async fn test_local_verify() {
-//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-//         let _res = verify(proof, VerifierIdentifier::StoneLocal).await.unwrap();
-//     }
-// }
