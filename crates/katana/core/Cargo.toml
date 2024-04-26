@@ -40,11 +40,10 @@ tracing.workspace = true
 url.workspace = true
 
 alloy-primitives = { workspace = true, features = ["serde"] }
-
-alloy-sol-types = { version = "0.6.4", default-features = false, features = ["json"], optional = true }
+alloy-sol-types = {  workspace = true, default-features = false, features = ["json"], optional = true }
 
 alloy-transport = { version = "0.1.0", default-features = false, optional = true }
-alloy-provider = { version = "0.1.0", default-features = false, optional = true }
+alloy-provider = { version = "0.1.0", default-features = false, optional = true, features = ["reqwest"]}
 alloy-signer = { version = "0.1.0", default-features = false, optional = true }
 alloy-network = { version = "0.1.0", default-features = false, optional = true }
 alloy-rpc-types = { version = "0.1.0", default-features = false, optional = true }
