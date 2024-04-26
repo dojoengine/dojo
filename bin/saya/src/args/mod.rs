@@ -32,7 +32,7 @@ pub struct SayaArgs {
     #[arg(long)]
     #[arg(value_name = "PROVER URL")]
     #[arg(help = "The Prover URL for remote proving.")]
-    #[arg(default_value = "http://prover.visoft.dev:3618/prove/state-diff-commitment")]
+    #[arg(default_value = "https://prover.visoft.dev:3618/prove/state-diff-commitment")]
     pub prover_url: Url,
 
     /// Enable JSON logging.
