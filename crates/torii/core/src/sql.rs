@@ -16,7 +16,10 @@ use super::World;
 use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
-use crate::types::{Entity as EntityUpdated, Event as EventEmitted, Model as ModelRegistered};
+use crate::types::{
+    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
+    Model as ModelRegistered,
+};
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
 pub const FELT_DELIMITER: &str = "/";
@@ -212,7 +215,7 @@ impl Sql {
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, event_id=EXCLUDED.event_id RETURNING \
                                *";
-        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
+        let event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
@@ -231,7 +234,7 @@ impl Sql {
         );
         self.query_queue.execute_all().await?;
 
-        SimpleBroker::publish(entity_updated);
+        SimpleBroker::publish(event_message_updated);
 
         Ok(())
     }
