@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714186639906,
+  "lastUpdate": 1714241589864,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6565,6 +6565,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17111690,
             "range": "± 247114",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "19fb8e938988838563d0fe0a46bcf945316dcafb",
+          "message": "refactor(torii): don't use feature-only type in non-feature code (#1894)\n\n* put schema module under `client` feature\r\n\r\n* dont use client error in schema module",
+          "timestamp": "2024-04-27T12:05:01-06:00",
+          "tree_id": "a5db66465765b87efbdc0a342b466dd726832413",
+          "url": "https://github.com/dojoengine/dojo/commit/19fb8e938988838563d0fe0a46bcf945316dcafb"
+        },
+        "date": 1714241589123,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16607922,
+            "range": "± 729421",
             "unit": "ns/iter"
           }
         ]
