@@ -211,7 +211,11 @@ EOF
 
     # Build the repo and install the binaries locally to the .dojo bin directory.
     # --root appends /bin to the directory it is given, so we pass DOJO_DIR.
-    ensure cargo install --path ./dojo --bin dojo --locked --force --root "$DOJO_DIR"
+    # We should specify all the binaries that need to be built.
+    ensure cargo install --path ./bin/sozo --locked --force --root "$DOJO_DIR"
+    ensure cargo install --path ./bin/katana --locked --force --root "$DOJO_DIR"
+    ensure cargo install --path ./bin/dojo-language-server --locked --force --root "$DOJO_DIR"
+    # TODO: Torii is failing when installing..
 
     say "done"
     welcome_msg
