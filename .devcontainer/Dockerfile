@@ -60,10 +60,20 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
     rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly; \
     fi
 
+ARG DOJO_VERSION
+ARG DOJO_BRANCH
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
-RUN dojoup
+RUN if [ "$DOJO_VERSION" = "stable" ] ; then \
+        dojoup; \
+    elif [ -n "$DOJO_BRANCH"] ; then \
+        dojoup -b "$DOJO_BRANCH"; \
+    elif [ -n "$DOJO_VERSION" ] ; then \
+        dojoup -v "$DOJO_VERSION"; \
+    else \
+        dojoup; \
+    fi
 
 RUN chown -R root:root /usr/local/cargo
 RUN chmod -R 700 /usr/local/cargo

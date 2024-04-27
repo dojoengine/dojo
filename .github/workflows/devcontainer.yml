@@ -21,6 +21,7 @@ jobs:
 
     env:
       DOCKER_TAG: latest
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
     outputs:
       tag_name: ${{ steps.release_info.outputs.tag_name }}
@@ -62,6 +63,7 @@ jobs:
           echo "tag_name=${{ env.DOCKER_TAG }}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
+        if: github.event_name == 'release' || github.event_name == 'push'
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -70,6 +72,19 @@ jobs:
           build-args: |
             VARIANT=bookworm
             DOJO_VERSION=${{ github.event_name == 'release' && github.event.release.tag_name || 'stable' }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
+
+      - name: Build and push Docker image (manual)
+        if: github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          file: .devcontainer/Dockerfile
+          tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
+          build-args: |
+            VARIANT=bookworm
+            DOJO_BRANCH=${{ env.BRANCH_NAME }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 
