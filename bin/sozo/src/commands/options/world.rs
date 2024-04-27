@@ -19,10 +19,6 @@ pub struct WorldOptions {
 
 impl WorldOptions {
     pub fn address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
-        trace!(
-            ?env_metadata,
-            "Fetching World address."
-        );
         if let Some(world_address) = self.world_address {
             trace!(?world_address, "Fetched world_address.");
             Ok(world_address)

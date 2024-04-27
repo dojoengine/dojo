@@ -44,13 +44,13 @@ pub struct EventsArgs {
 impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = utils::load_metadata_from_config(config)?;
-        trace!("Fetched metadata from config.");
+        trace!(?env_metadata, "Metadata loaded from config.");
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        trace!(ws_members_count=ws.members().count(), "Fetched workspace.");
+        trace!(ws_members_count=ws.members().count(), "Read workspace.");
 
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-        trace!(?manifest_dir, "Fetched manifest directory.");
+        trace!(?manifest_dir, "Manifest directory defined from workspace.");
 
         let provider = self.starknet.provider(env_metadata.as_ref())?;
         trace!(?provider, "Starknet RPC client provider.");
@@ -70,7 +70,7 @@ impl EventsArgs {
         
         let profile_name =
             ws.current_profile().expect("Scarb profile expected at this point.").to_string();
-        trace!(profile_name, "Fetched profile name.");
+        trace!(profile_name, "Current profile.");
 
         config.tokio_handle().block_on(async {
             trace!("Starting async event parsing.");

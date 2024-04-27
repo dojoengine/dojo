@@ -56,7 +56,7 @@ impl BuildArgs {
             let target_dir = &compile_info.target_dir;
             let contracts_statistics = get_contract_statistics_for_dir(target_dir)
                 .context("Error getting contracts stats")?;
-            trace!(?contracts_statistics, ?target_dir, "Fetched contract statistics for target directory.");
+            trace!(?contracts_statistics, ?target_dir, "Read contract statistics for target directory.");
 
             let table = create_stats_table(contracts_statistics);
             table.printstd()

@@ -39,7 +39,7 @@ impl CallArgs {
         trace!(contract=?self.contract, entrypoint=self.entrypoint, calldata=?self.calldata, block_id=self.block_id, "Executing Call command.");
 
         let env_metadata = utils::load_metadata_from_config(config)?;
-        trace!(?env_metadata, "Fetched environment metadata.");
+        trace!(?env_metadata, "Loaded metadata from config.");
         config.tokio_handle().block_on(async {
 
             let world_reader =
