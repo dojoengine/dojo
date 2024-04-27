@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714241589864,
+  "lastUpdate": 1714242462689,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6595,6 +6595,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16607922,
             "range": "± 729421",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6b6219faf0a53b781b7fd83dabefc8e8f90b5995",
+          "message": "Fix `dojoup` script when installing from git (#1895)\n\nfix install cmd",
+          "timestamp": "2024-04-27T12:19:26-06:00",
+          "tree_id": "b74c43dfb8422187ac1e40c020227c42f940ee51",
+          "url": "https://github.com/dojoengine/dojo/commit/6b6219faf0a53b781b7fd83dabefc8e8f90b5995"
+        },
+        "date": 1714242461998,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16815833,
+            "range": "± 176353",
             "unit": "ns/iter"
           }
         ]
