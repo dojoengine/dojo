@@ -37,11 +37,17 @@ pub struct EngineConfig {
     pub block_time: Duration,
     pub start_block: u64,
     pub events_chunk_size: u64,
+    pub index_pending: bool,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        Self { block_time: Duration::from_secs(1), start_block: 0, events_chunk_size: 1000 }
+        Self {
+            block_time: Duration::from_secs(1),
+            start_block: 0,
+            events_chunk_size: 1000,
+            index_pending: false,
+        }
     }
 }
 
@@ -123,7 +129,7 @@ impl<P: Provider + Sync> Engine<P> {
             // if `from` == 0, then the block may or may not be processed yet.
             let from = if from == 0 { from } else { from + 1 };
             pending_block_tx = self.sync_range(from, latest_block_number, pending_block_tx).await?;
-        } else {
+        } else if self.config.index_pending {
             pending_block_tx = self.sync_pending(latest_block_number + 1, pending_block_tx).await?;
         }
 
@@ -235,7 +241,22 @@ impl<P: Provider + Sync> Engine<P> {
             for event in &events_page.events {
                 let block_number = match event.block_number {
                     Some(block_number) => block_number,
-                    None => return Err(anyhow::anyhow!("Event without block number.")),
+                    None => {
+                        match self.provider.get_transaction_receipt(event.transaction_hash).await? {
+                            MaybePendingTransactionReceipt::Receipt(
+                                TransactionReceipt::Invoke(receipt),
+                            ) => receipt.block_number,
+                            MaybePendingTransactionReceipt::Receipt(
+                                TransactionReceipt::L1Handler(receipt),
+                            ) => receipt.block_number,
+                            _ => {
+                                error!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", event.transaction_hash), "Invalid transaction state. Could not fetch block number for event.");
+                                return Err(anyhow::anyhow!(
+                                    "Expected finalized transaction receipt for event."
+                                ));
+                            }
+                        }
+                    }
                 };
 
                 // Keep track of last block number and fetch block timestamp
