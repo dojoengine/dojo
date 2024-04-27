@@ -4,7 +4,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
 
@@ -50,7 +50,14 @@ impl AccountOptions {
 
         let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
 
-        Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
+        let mut account =
+            SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding);
+
+        // The default is `Latest` in starknet-rs, which does not reflect
+        // the nonce changes in the pending block.
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        Ok(account)
     }
 
     fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {

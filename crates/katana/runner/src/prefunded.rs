@@ -3,6 +3,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::DevGenesisAccount;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
@@ -40,12 +41,16 @@ impl KatanaRunner {
         debug_assert_eq!(Environment::default().chain_id, ChainId::parse("KATANA").unwrap());
         let provider = self.owned_provider();
 
-        SingleOwnerAccount::new(
+        let mut account = SingleOwnerAccount::new(
             provider,
             signer,
             account.0.into(),
             chain_id.into(),
             ExecutionEncoding::New,
-        )
+        );
+
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        account
     }
 }
