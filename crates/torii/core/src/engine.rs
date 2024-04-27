@@ -241,6 +241,9 @@ impl<P: Provider + Sync> Engine<P> {
             for event in &events_page.events {
                 let block_number = match event.block_number {
                     Some(block_number) => block_number,
+                    // If the block number is not present, try to fetch it from the transaction
+                    // receipt Should not/rarely happen. Thus the additional
+                    // fetch is acceptable.
                     None => {
                         match self.provider.get_transaction_receipt(event.transaction_hash).await? {
                             MaybePendingTransactionReceipt::Receipt(
