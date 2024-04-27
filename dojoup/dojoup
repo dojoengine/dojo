@@ -209,9 +209,11 @@ EOF
       ensure git checkout "$DOJOUP_COMMIT"
     fi
 
-    # Build the repo and install the binaries locally to the .dojo bin directory.
-    # --root appends /bin to the directory it is given, so we pass DOJO_DIR.
-    ensure cargo install --path ./dojo --bin dojo --locked --force --root "$DOJO_DIR"
+    for bin in "${BINS[@]}"; do
+	    # Build the repo and install the binaries locally to the .dojo bin directory.
+	    # --root appends /bin to the directory it is given, so we pass DOJO_DIR.
+	    ensure cargo install --path ./bin/$bin $bin --locked --force --root "$DOJO_DIR"
+    done
 
     say "done"
     welcome_msg
