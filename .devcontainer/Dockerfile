@@ -67,7 +67,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/instal
 ENV PATH=${PATH}:/root/.dojo/bin
 RUN if [ "$DOJO_VERSION" = "stable" ] ; then \
         dojoup; \
-    elif [ -n "$DOJO_BRANCH"] ; then \
+    elif [ -n "$DOJO_BRANCH" ] ; then \
         dojoup -b "$DOJO_BRANCH"; \
     elif [ -n "$DOJO_VERSION" ] ; then \
         dojoup -v "$DOJO_VERSION"; \
