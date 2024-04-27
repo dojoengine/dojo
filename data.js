@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714183707974,
+  "lastUpdate": 1714186639906,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6535,6 +6535,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17014148,
             "range": "± 198444",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a3587b356d49bf6f836a4b0e0a5715d9158e4718",
+          "message": "CI: add workflow_dispatch for devcontainer.yml (#1882)\n\n* CI: add workflow_dispatch for devcontainer.yml\r\n\r\n* CI: add docker tag as input for manual dispatch of devcontainer",
+          "timestamp": "2024-04-26T20:49:05-06:00",
+          "tree_id": "3120e8ee43d889bbbd0a0efd29f04d66e693c173",
+          "url": "https://github.com/dojoengine/dojo/commit/a3587b356d49bf6f836a4b0e0a5715d9158e4718"
+        },
+        "date": 1714186639152,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17111690,
+            "range": "± 247114",
             "unit": "ns/iter"
           }
         ]
