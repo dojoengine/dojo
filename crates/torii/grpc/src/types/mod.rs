@@ -13,6 +13,7 @@ use strum_macros::{AsRefStr, EnumIter, FromRepr};
 
 use crate::proto::{self};
 
+#[cfg(feature = "client")]
 pub mod schema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
