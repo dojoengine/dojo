@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714172476966,
+  "lastUpdate": 1714180913549,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6475,6 +6475,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17416931,
             "range": "± 841688",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "66871571+Eikix@users.noreply.github.com",
+            "name": "Elias Tazartes",
+            "username": "Eikix"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a16158e2d5100ea947d7a7b01a2cd4f7ea76e34f",
+          "message": "Modified From<TransactionPreValidationError> for ExecutionError  to properly display actual and expected nonce (#1890)",
+          "timestamp": "2024-04-26T21:13:34-04:00",
+          "tree_id": "9967c473f481a73f9b1882d90eee17fafc91b684",
+          "url": "https://github.com/dojoengine/dojo/commit/a16158e2d5100ea947d7a7b01a2cd4f7ea76e34f"
+        },
+        "date": 1714180912798,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16489676,
+            "range": "± 208290",
             "unit": "ns/iter"
           }
         ]
