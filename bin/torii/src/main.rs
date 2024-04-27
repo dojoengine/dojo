@@ -93,7 +93,7 @@ struct Args {
 
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
     /// environment
-    #[arg(long)]
+    #[arg(long, value_parser = parse_url)]
     external_url: Option<Url>,
 
     /// Enable Prometheus metrics.
