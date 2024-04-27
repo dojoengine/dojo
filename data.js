@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714180913549,
+  "lastUpdate": 1714183707974,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6505,6 +6505,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16489676,
             "range": "± 208290",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cac60c3aa7d2ebe4e4722b75bc64fb9071ed006d",
+          "message": "fix: ensure account defaults to block pending (#1891)",
+          "timestamp": "2024-04-26T20:00:17-06:00",
+          "tree_id": "d4633b4ff2581856c709e8f76a3806b325fe1089",
+          "url": "https://github.com/dojoengine/dojo/commit/cac60c3aa7d2ebe4e4722b75bc64fb9071ed006d"
+        },
+        "date": 1714183707205,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17014148,
+            "range": "± 198444",
             "unit": "ns/iter"
           }
         ]
