@@ -1,14 +1,17 @@
 use std::str;
 
+use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::compiler::build_full_test_config;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
-use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::{BaseManifest, DeploymentManifest, WORLD_CONTRACT_NAME};
+use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::manifest::{
+    BaseManifest, DeploymentManifest, OverlayManifest, WORLD_CONTRACT_NAME,
+};
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,
     IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
@@ -18,11 +21,12 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
-use scarb_ui::{OutputFormat, Verbosity};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
+};
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -30,7 +34,7 @@ use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::FieldElement;
 
 use super::setup::{load_config, setup_migration, setup_ws};
-use crate::migration::{compute_models_contracts, execute_strategy, upload_metadata};
+use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -236,6 +240,59 @@ async fn migrate_with_metadata() {
             &dojo_metadata,
         )
         .await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn migrate_with_auto_authorize() {
+    let config = build_full_test_config("../../../examples/spawn-and-move/Scarb.toml", false)
+        .unwrap_or_else(|c| panic!("Error loading config: {c:?}"));
+    let ws = setup_ws(&config);
+
+    let migration = setup_migration().unwrap();
+
+    let manifest_base = config.manifest_path().parent().unwrap();
+    let mut manifest =
+        BaseManifest::load_from_path(&manifest_base.join(MANIFESTS_DIR).join("dev").join(BASE_DIR))
+            .unwrap();
+
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &manifest_base.join(MANIFESTS_DIR).join("dev").join(OVERLAYS_DIR),
+    )
+    .unwrap();
+
+    manifest.merge(overlay_manifest);
+
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
+    let mut account = sequencer.account();
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+
+    let world_address = migration.world_address().expect("must be present");
+    let world = WorldContract::new(world_address, account);
+    let res = auto_authorize(&ws, &world, &TxnConfig::default(), &manifest, &output).await;
+    assert!(res.is_ok());
+
+    let provider = sequencer.provider();
+    let world_reader = WorldContractReader::new(output.world_address, &provider);
+
+    // check contract metadata
+    for c in migration.contracts {
+        let contract_address =
+            get_contract_address_from_reader(&world_reader, c.diff.name.clone()).await.unwrap();
+
+        let contract = manifest.contracts.iter().find(|a| a.name == c.diff.name).unwrap();
+
+        for model in &contract.inner.writes {
+            let model = cairo_short_string_to_felt(&model).unwrap();
+            let contract_address = ContractAddress(contract_address);
+            dbg!(&model, &contract_address);
+            let is_writer = world_reader.is_writer(&model, &contract_address).call().await.unwrap();
+            assert!(is_writer);
+        }
     }
 }
 

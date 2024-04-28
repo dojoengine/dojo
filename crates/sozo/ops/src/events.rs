@@ -413,6 +413,7 @@ mod tests {
                         inner: Box::new(Token::CoreBasic(CoreBasic {
                             type_path: "core::felt252".to_string(),
                         })),
+                        is_legacy: false,
                     }),
                 },
             ],
@@ -550,6 +551,7 @@ mod tests {
                         inner: Box::new(Token::CoreBasic(CoreBasic {
                             type_path: "core::felt252".to_string(),
                         })),
+                        is_legacy: false,
                     }),
                 },
             ],

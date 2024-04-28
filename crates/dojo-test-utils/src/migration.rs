@@ -1,7 +1,7 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-use dojo_world::manifest::BaseManifest;
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
+use dojo_world::manifest::{BaseManifest, OverlayManifest};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use katana_primitives::FieldElement;
@@ -34,10 +34,17 @@ pub fn prepare_migration_with_world_and_seed(
     // In testing, profile name is always dev.
     let profile_name = "dev";
 
-    let manifest = BaseManifest::load_from_path(
+    let mut manifest = BaseManifest::load_from_path(
         &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
+
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
+    )
+    .unwrap();
+
+    manifest.merge(overlay_manifest);
 
     let world = WorldDiff::compute(manifest, None);
 
