@@ -9,14 +9,15 @@ use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
 
+mod auto_auth;
 mod migrate;
 mod ui;
 mod utils;
 
+pub use self::auto_auth::auto_authorize;
 use self::migrate::update_manifests_and_abis;
 pub use self::migrate::{
-    apply_diff, auto_authorize, execute_strategy, prepare_migration, print_strategy,
-    upload_metadata,
+    apply_diff, execute_strategy, prepare_migration, print_strategy, upload_metadata,
 };
 use self::ui::MigrationUi;
 

@@ -18,6 +18,7 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
+use scarb_ui::{OutputFormat, Verbosity};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::{BlockId, BlockTag};
@@ -29,7 +30,7 @@ use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::FieldElement;
 
 use super::setup::{load_config, setup_migration, setup_ws};
-use crate::migration::{execute_strategy, upload_metadata};
+use crate::migration::{compute_models_contracts, execute_strategy, upload_metadata};
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
