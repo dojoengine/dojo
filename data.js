@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714242462689,
+  "lastUpdate": 1714282223817,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6625,6 +6625,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16815833,
             "range": "± 176353",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "broody@gmail.com",
+            "name": "Yun",
+            "username": "broody"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af9cdf67bc27f4720e9f945405f2e8a96d81de55",
+          "message": "Torii external-url arg to support https (#1898)",
+          "timestamp": "2024-04-27T19:22:18-10:00",
+          "tree_id": "764def225e0cd0f34ca25e54d5d6cd55d01d3c33",
+          "url": "https://github.com/dojoengine/dojo/commit/af9cdf67bc27f4720e9f945405f2e8a96d81de55"
+        },
+        "date": 1714282222987,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16857107,
+            "range": "± 180073",
             "unit": "ns/iter"
           }
         ]
