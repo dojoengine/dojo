@@ -1,4 +1,4 @@
-use ethers::types::H256;
+use alloy_primitives::B256;
 
 use crate::contract::ContractAddress;
 use crate::FieldElement;
@@ -67,7 +67,7 @@ pub struct L1HandlerTxReceipt {
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// The hash of the L1 message
-    pub message_hash: H256,
+    pub message_hash: B256,
     /// Messages sent to L1.
     pub messages_sent: Vec<MessageToL1>,
     /// Revert error message if the transaction execution failed.
@@ -122,6 +122,7 @@ impl Receipt {
         }
     }
 
+    /// Returns the L1 messages sent.
     pub fn messages_sent(&self) -> &[MessageToL1] {
         match self {
             Receipt::Invoke(rct) => &rct.messages_sent,
@@ -131,12 +132,23 @@ impl Receipt {
         }
     }
 
+    /// Returns the events emitted.
     pub fn events(&self) -> &[Event] {
         match self {
             Receipt::Invoke(rct) => &rct.events,
             Receipt::Declare(rct) => &rct.events,
             Receipt::L1Handler(rct) => &rct.events,
             Receipt::DeployAccount(rct) => &rct.events,
+        }
+    }
+
+    /// Returns the execution resources used.
+    pub fn resources_used(&self) -> &TxExecutionResources {
+        match self {
+            Receipt::Invoke(rct) => &rct.execution_resources,
+            Receipt::Declare(rct) => &rct.execution_resources,
+            Receipt::L1Handler(rct) => &rct.execution_resources,
+            Receipt::DeployAccount(rct) => &rct.execution_resources,
         }
     }
 }

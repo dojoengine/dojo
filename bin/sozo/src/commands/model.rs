@@ -11,11 +11,11 @@ use crate::utils;
 #[derive(Debug, Args)]
 pub struct ModelArgs {
     #[command(subcommand)]
-    command: ModelCommands,
+    command: ModelCommand,
 }
 
 #[derive(Debug, Subcommand)]
-pub enum ModelCommands {
+pub enum ModelCommand {
     #[command(about = "Retrieve the class hash of a model")]
     ClassHash {
         #[arg(help = "The name of the model")]
@@ -80,22 +80,22 @@ impl ModelArgs {
 
         config.tokio_handle().block_on(async {
             match self.command {
-                ModelCommands::ClassHash { name, starknet, world } => {
+                ModelCommand::ClassHash { name, starknet, world } => {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
                     model::model_class_hash(name, world_address, provider).await
                 }
-                ModelCommands::ContractAddress { name, starknet, world } => {
+                ModelCommand::ContractAddress { name, starknet, world } => {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
                     model::model_contract_address(name, world_address, provider).await
                 }
-                ModelCommands::Schema { name, to_json, starknet, world } => {
+                ModelCommand::Schema { name, to_json, starknet, world } => {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
                     model::model_schema(name, world_address, provider, to_json).await
                 }
-                ModelCommands::Get { name, keys, starknet, world } => {
+                ModelCommand::Get { name, keys, starknet, world } => {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
                     model::model_get(name, keys, world_address, provider).await

@@ -5,6 +5,8 @@ use tonic::body::BoxBody;
 use tower::{Layer, Service};
 use tracing::info;
 
+pub(crate) const LOG_TARGET: &str = "torii::grpc::server::logger";
+
 #[derive(Debug, Clone, Default)]
 pub struct Logger<S> {
     inner: S,
@@ -42,7 +44,12 @@ where
             let uri = req.uri().path();
             let method = req.method();
 
-            info!(target: "grpc", ?method, ?uri);
+            info!(
+                target: LOG_TARGET,
+                method = ?method,
+                uri = ?uri,
+                "gRPC request."
+            );
             inner.call(req).await
         })
     }

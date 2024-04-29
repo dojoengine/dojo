@@ -49,6 +49,12 @@ struct OnlyKeyModel {
     id: felt252
 }
 
+#[derive(Model, Serde)]
+struct U256KeyModel {
+    #[key]
+    id: u256
+}
+
 use starknet::ContractAddress;
 
 #[derive(Model, Copy, Drop, Serde)]
@@ -536,6 +542,16 @@ error: Model must define at least one member that is not a key
 struct OnlyKeyModel {
        ^**********^
 
+error: Model must define at least one member that is not a key
+ --> test_src/lib.cairo:47:8
+struct U256KeyModel {
+       ^**********^
+
+error: Key is only supported for core types that are 1 felt long once serialized. `u256` is a struct of 2 u128, hence not supported.
+ --> test_src/lib.cairo:47:8
+struct U256KeyModel {
+       ^**********^
+
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:73:13
             #[starknet::contract]
@@ -548,6 +564,11 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:68:13
+            #[starknet::contract]
+            ^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[U256KeyModel]:68:13
             #[starknet::contract]
             ^*******************^
 
@@ -598,6 +619,21 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:104:17
+                #[abi(embed_v0)]
+                ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[U256KeyModel]:73:17
+                #[storage]
+                ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[U256KeyModel]:76:17
+                #[abi(embed_v0)]
+                ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[U256KeyModel]:104:17
                 #[abi(embed_v0)]
                 ^**************^
 
@@ -660,6 +696,12 @@ struct Roles {
 struct OnlyKeyModel {
     #[key]
     id: felt252
+}
+
+#[derive(Model, Serde)]
+struct U256KeyModel {
+    #[key]
+    id: u256
 }
 
 use starknet::ContractAddress;
@@ -1089,6 +1131,125 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
                 #[abi(embed_v0)]
                 impl only_key_modelImpl of Ionly_key_model<ContractState>{
                     fn ensure_abi(self: @ContractState, model: OnlyKeyModel) {
+                    }
+                }
+            }
+impl U256KeyModelSerde of core::serde::Serde::<U256KeyModel> {
+    fn serialize(self: @U256KeyModel, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.id, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<U256KeyModel> {
+        core::option::Option::Some(U256KeyModel {
+            id: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+
+            impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
+                #[inline(always)]
+                fn name(self: @U256KeyModel) -> felt252 {
+                    'U256KeyModel'
+                }
+
+                #[inline(always)]
+                fn keys(self: @U256KeyModel) -> Span<felt252> {
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::serde::Serde::serialize(self.id, ref serialized);
+                    core::array::ArrayTrait::span(@serialized)
+                }
+
+                #[inline(always)]
+                fn values(self: @U256KeyModel) -> Span<felt252> {
+                    let mut serialized = core::array::ArrayTrait::new();
+                    
+                    core::array::ArrayTrait::span(@serialized)
+                }
+
+                #[inline(always)]
+                fn layout(self: @U256KeyModel) -> Span<u8> {
+                    let mut layout = core::array::ArrayTrait::new();
+                    dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
+                    core::array::ArrayTrait::span(@layout)
+                }
+
+                #[inline(always)]
+                fn packed_size(self: @U256KeyModel) -> usize {
+                    let mut layout = self.layout();
+                    dojo::packing::calculate_packed_size(ref layout)
+                }
+            }
+
+            
+impl U256KeyModelIntrospect<> of dojo::database::introspect::Introspect<U256KeyModel<>> {
+    #[inline(always)]
+    fn size() -> usize {
+        0
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'U256KeyModel',
+            attrs: array![].span(),
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'id',
+                ty: dojo::database::introspect::Ty::Primitive('u256'),
+                attrs: array!['key'].span()
+            })].span()
+        })
+    }
+}
+        
+
+            #[starknet::interface]
+            trait Iu_256_key_model<T> {
+                fn ensure_abi(self: @T, model: U256KeyModel);
+            }
+
+            #[starknet::contract]
+            mod u_256_key_model {
+                use super::U256KeyModel;
+                use super::Iu_256_key_model;
+
+                #[storage]
+                struct Storage {}
+
+                #[abi(embed_v0)]
+                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
+                    fn name(self: @ContractState) -> felt252 {
+                        'U256KeyModel'
+                    }
+
+                    fn unpacked_size(self: @ContractState) -> usize {
+                        dojo::database::introspect::Introspect::<U256KeyModel>::size()
+                    }
+
+                    fn packed_size(self: @ContractState) -> usize {
+                        let mut layout = core::array::ArrayTrait::new();
+                        dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
+                        let mut layout_span = layout.span();
+                        dojo::packing::calculate_packed_size(ref layout_span)
+                    }
+
+                    fn layout(self: @ContractState) -> Span<u8> {
+                        let mut layout = core::array::ArrayTrait::new();
+                        dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
+                        core::array::ArrayTrait::span(@layout)
+                    }
+
+                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+                        dojo::database::introspect::Introspect::<U256KeyModel>::ty()
+                    }
+                }
+
+                #[abi(embed_v0)]
+                impl u_256_key_modelImpl of Iu_256_key_model<ContractState>{
+                    fn ensure_abi(self: @ContractState, model: U256KeyModel) {
                     }
                 }
             }

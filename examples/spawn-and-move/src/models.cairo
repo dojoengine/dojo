@@ -21,6 +21,22 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
+#[derive(Serde, Copy, Drop, Introspect)]
+enum Emote {
+    None,
+    Happy,
+    Sad,
+    Angry,
+    Love,
+}
+
+#[derive(Model, Copy, Drop, Serde)]
+struct EmoteMessage {
+    #[key]
+    identity: ContractAddress,
+    emote: Emote,
+}
+
 #[derive(Model, Copy, Drop, Serde)]
 struct Moves {
     #[key]

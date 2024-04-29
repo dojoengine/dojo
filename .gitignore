@@ -16,3 +16,4 @@ output.txt
 crates/benches/bench_results.txt
 **/generated
 .vscode
+bindings

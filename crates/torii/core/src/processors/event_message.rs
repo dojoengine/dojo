@@ -2,13 +2,15 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, TransactionReceipt};
+use starknet::core::types::{Event, MaybePendingTransactionReceipt};
 use starknet::providers::Provider;
 use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
+
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
 
 #[derive(Default)]
 pub struct EventMessageProcessor;
@@ -40,7 +42,7 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &TransactionReceipt,
+        _transaction_receipt: &MaybePendingTransactionReceipt,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
@@ -50,7 +52,11 @@ where
             Err(_) => return Ok(()),
         };
 
-        info!("store event message: {}", model.name());
+        info!(
+            target: LOG_TARGET,
+            model = %model.name(),
+            "Store event message."
+        );
 
         // skip the first key, as its the event selector
         // and dont include last key as its the system key

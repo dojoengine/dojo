@@ -9,18 +9,16 @@ use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass, FunctionCall,
+    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
     InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
 };
-use starknet::core::utils::{
-    get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
-};
+use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
 use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use starknet::signers::Signer;
 use thiserror::Error;
 
-use crate::utils::{TransactionWaiter, TransactionWaitingError};
+use crate::utils::{TransactionExt, TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
 pub mod contract;
@@ -35,12 +33,25 @@ pub struct DeployOutput {
     pub block_number: Option<u64>,
     pub contract_address: FieldElement,
     pub declare: Option<DeclareOutput>,
+    // base class hash at time of deployment
+    pub base_class_hash: FieldElement,
+    pub was_upgraded: bool,
+    pub name: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct UpgradeOutput {
+    pub transaction_hash: FieldElement,
+    pub block_number: Option<u64>,
+    pub contract_address: FieldElement,
+    pub declare: Option<DeclareOutput>,
 }
 
 #[derive(Debug)]
 pub struct RegisterOutput {
     pub transaction_hash: FieldElement,
     pub declare_output: Vec<DeclareOutput>,
+    pub registered_model_names: Vec<String>,
 }
 
 #[derive(Debug, Error)]
@@ -81,12 +92,13 @@ pub trait StateDiff {
 
 /// The transaction configuration to use when sending a transaction.
 #[derive(Debug, Copy, Clone, Default)]
-pub struct TxConfig {
+pub struct TxnConfig {
     /// The multiplier for how much the actual transaction max fee should be relative to the
     /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
     pub fee_estimate_multiplier: Option<f64>,
     pub wait: bool,
     pub receipt: bool,
+    pub max_fee_raw: Option<FieldElement>,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -95,7 +107,7 @@ pub trait Declarable {
     async fn declare<P, S>(
         &self,
         account: &SingleOwnerAccount<P, S>,
-        txn_config: TxConfig,
+        txn_config: &TxnConfig,
     ) -> Result<DeclareOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -114,14 +126,11 @@ pub trait Declarable {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        let mut txn = account.declare(Arc::new(flattened_class), casm_class_hash);
-
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
-            txn = txn.fee_estimate_multiplier(multiplier);
-        }
-
-        let DeclareTransactionResult { transaction_hash, class_hash } =
-            txn.send().await.map_err(MigrationError::Migrator)?;
+        let DeclareTransactionResult { transaction_hash, class_hash } = account
+            .declare(Arc::new(flattened_class), casm_class_hash)
+            .send_with_cfg(txn_config)
+            .await
+            .map_err(MigrationError::Migrator)?;
 
         TransactionWaiter::new(transaction_hash, account.provider())
             .await
@@ -136,12 +145,13 @@ pub trait Declarable {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
-    async fn world_deploy<P, S>(
+    async fn deploy_dojo_contract<P, S>(
         &self,
         world_address: FieldElement,
         class_hash: FieldElement,
+        base_class_hash: FieldElement,
         account: &SingleOwnerAccount<P, S>,
-        txn_config: TxConfig,
+        txn_config: &TxnConfig,
     ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -153,32 +163,25 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(e),
         };
 
-        let base_class_hash = account
-            .provider()
-            .call(
-                FunctionCall {
-                    contract_address: world_address,
-                    calldata: vec![],
-                    entry_point_selector: get_selector_from_name("base").unwrap(),
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await
-            .map_err(MigrationError::Provider)?;
-
         let contract_address =
-            get_contract_address(self.salt(), base_class_hash[0], &[], world_address);
+            get_contract_address(self.salt(), base_class_hash, &[], world_address);
+
+        let mut was_upgraded = false;
 
         let call = match account
             .provider()
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
             .await
         {
-            Ok(current_class_hash) if current_class_hash != class_hash => Call {
-                calldata: vec![contract_address, class_hash],
-                selector: selector!("upgrade_contract"),
-                to: world_address,
-            },
+            Ok(current_class_hash) if current_class_hash != class_hash => {
+                was_upgraded = true;
+
+                Call {
+                    calldata: vec![contract_address, class_hash],
+                    selector: selector!("upgrade_contract"),
+                    to: world_address,
+                }
+            }
 
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Call {
                 calldata: vec![self.salt(), class_hash],
@@ -193,19 +196,24 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(MigrationError::Provider(e)),
         };
 
-        let mut txn = account.execute(vec![call]);
-
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
-            txn = txn.fee_estimate_multiplier(multiplier);
-        }
-
-        let InvokeTransactionResult { transaction_hash } =
-            txn.send().await.map_err(MigrationError::Migrator)?;
+        let InvokeTransactionResult { transaction_hash } = account
+            .execute(vec![call])
+            .send_with_cfg(txn_config)
+            .await
+            .map_err(MigrationError::Migrator)?;
 
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
 
-        Ok(DeployOutput { transaction_hash, block_number, contract_address, declare })
+        Ok(DeployOutput {
+            transaction_hash,
+            block_number,
+            contract_address,
+            declare,
+            base_class_hash,
+            was_upgraded,
+            name: None,
+        })
     }
 
     async fn deploy<P, S>(
@@ -213,7 +221,7 @@ pub trait Deployable: Declarable + Sync {
         class_hash: FieldElement,
         constructor_calldata: Vec<FieldElement>,
         account: &SingleOwnerAccount<P, S>,
-        txn_config: TxConfig,
+        txn_config: &TxnConfig,
     ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -253,27 +261,84 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        let mut txn = account.execute(vec![Call {
+        let txn = account.execute(vec![Call {
             calldata,
             // devnet UDC address
             selector: selector!("deployContract"),
             to: felt!("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
         }]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
-            txn = txn.fee_estimate_multiplier(multiplier);
-        }
-
         let InvokeTransactionResult { transaction_hash } =
-            txn.send().await.map_err(MigrationError::Migrator)?;
+            txn.send_with_cfg(txn_config).await.map_err(MigrationError::Migrator)?;
 
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
 
-        Ok(DeployOutput { transaction_hash, block_number, contract_address, declare })
+        Ok(DeployOutput {
+            transaction_hash,
+            block_number,
+            contract_address,
+            declare,
+            base_class_hash: FieldElement::default(),
+            was_upgraded: false,
+            name: None,
+        })
     }
 
     fn salt(&self) -> FieldElement;
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+pub trait Upgradable: Deployable + Declarable + Sync {
+    async fn upgrade_world<P, S>(
+        &self,
+        class_hash: FieldElement,
+        original_class_hash: FieldElement,
+        original_base_class_hash: FieldElement,
+        account: &SingleOwnerAccount<P, S>,
+        txn_config: &TxnConfig,
+    ) -> Result<UpgradeOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
+    where
+        P: Provider + Sync + Send,
+        S: Signer + Sync + Send,
+    {
+        let declare = match self.declare(account, txn_config).await {
+            Ok(res) => Some(res),
+            Err(MigrationError::ClassAlreadyDeclared) => None,
+            Err(e) => return Err(e),
+        };
+
+        let original_constructor_calldata = vec![original_base_class_hash];
+        let contract_address = get_contract_address(
+            self.salt(),
+            original_class_hash,
+            &original_constructor_calldata,
+            FieldElement::ZERO,
+        );
+
+        match account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
+            .await
+        {
+            Ok(_) => {}
+            Err(e) => return Err(MigrationError::Provider(e)),
+        }
+
+        let calldata = vec![class_hash];
+
+        let InvokeTransactionResult { transaction_hash } = account
+            .execute(vec![Call { calldata, selector: selector!("upgrade"), to: contract_address }])
+            .send_with_cfg(txn_config)
+            .await
+            .map_err(MigrationError::Migrator)?;
+
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let block_number = get_block_number_from_receipt(receipt);
+
+        Ok(UpgradeOutput { transaction_hash, block_number, contract_address, declare })
+    }
 }
 
 fn prepare_contract_declaration_params(

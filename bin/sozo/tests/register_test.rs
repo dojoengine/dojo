@@ -5,6 +5,7 @@ use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
+use dojo_world::migration::TxnConfig;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use starknet::accounts::Account;
@@ -27,7 +28,7 @@ async fn reregister_models() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
     let world_address = &format!("0x{:x}", &migration.world_address().unwrap());
     let account_address = &format!("0x{:x}", account.address());
     let private_key = &format!("0x{:x}", sequencer.raw_account().private_key);
@@ -35,7 +36,7 @@ async fn reregister_models() {
 
     let moves_model =
         migration.models.iter().find(|m| m.diff.name == "dojo_examples::models::moves").unwrap();
-    let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local);
+    let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local_class_hash);
     let args_vec = [
         "register",
         "model",

@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use convert_case::{Case, Casing};
+use starknet_crypto::FieldElement;
 
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
@@ -29,8 +30,9 @@ impl WorldDiff {
             .iter()
             .map(|model| ClassDiff {
                 name: model.name.to_string(),
-                local: *model.inner.class_hash(),
-                remote: remote.as_ref().and_then(|m| {
+                local_class_hash: *model.inner.class_hash(),
+                original_class_hash: *model.inner.original_class_hash(),
+                remote_class_hash: remote.as_ref().and_then(|m| {
                     // Remote models are detected from events, where only the struct
                     // name (pascal case) is emitted.
                     // Local models uses the fully qualified name of the model,
@@ -51,28 +53,44 @@ impl WorldDiff {
         let contracts = local
             .contracts
             .iter()
-            .map(|contract| ContractDiff {
-                name: contract.name.to_string(),
-                local: *contract.inner.class_hash(),
-                remote: remote.as_ref().and_then(|m| {
-                    m.contracts
-                        .iter()
-                        .find(|r| r.inner.class_hash() == contract.inner.class_hash())
-                        .map(|r| *r.inner.class_hash())
-                }),
+            .map(|contract| {
+                let base_class_hash = {
+                    let class_hash = contract.inner.base_class_hash;
+                    if class_hash != FieldElement::ZERO {
+                        class_hash
+                    } else {
+                        *local.base.inner.class_hash()
+                    }
+                };
+
+                ContractDiff {
+                    name: contract.name.to_string(),
+                    local_class_hash: *contract.inner.class_hash(),
+                    original_class_hash: *contract.inner.original_class_hash(),
+                    base_class_hash,
+                    remote_class_hash: remote.as_ref().and_then(|m| {
+                        m.contracts
+                            .iter()
+                            .find(|r| r.inner.class_hash() == contract.inner.class_hash())
+                            .map(|r| *r.inner.class_hash())
+                    }),
+                }
             })
             .collect::<Vec<_>>();
 
         let base = ClassDiff {
             name: BASE_CONTRACT_NAME.into(),
-            local: *local.base.inner.class_hash(),
-            remote: remote.as_ref().map(|m| *m.base.inner.class_hash()),
+            local_class_hash: *local.base.inner.class_hash(),
+            original_class_hash: *local.base.inner.original_class_hash(),
+            remote_class_hash: remote.as_ref().map(|m| *m.base.inner.class_hash()),
         };
 
         let world = ContractDiff {
             name: WORLD_CONTRACT_NAME.into(),
-            local: *local.world.inner.class_hash(),
-            remote: remote.map(|m| *m.world.inner.class_hash()),
+            local_class_hash: *local.world.inner.class_hash(),
+            original_class_hash: *local.world.inner.original_class_hash(),
+            base_class_hash: *local.base.inner.class_hash(),
+            remote_class_hash: remote.map(|m| *m.world.inner.class_hash()),
         };
 
         WorldDiff { world, base, contracts, models }

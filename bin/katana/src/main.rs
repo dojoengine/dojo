@@ -5,6 +5,7 @@ use std::sync::Arc;
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
+use dojo_metrics::{metrics_process, prometheus_exporter};
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::get_default_vm_resource_fee_cost;
 use katana_core::sequencer::KatanaSequencer;
@@ -15,7 +16,6 @@ use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::{spawn, NodeHandle};
-use metrics::prometheus_exporter;
 use tokio::signal::ctrl_c;
 use tracing::info;
 
@@ -24,6 +24,8 @@ mod utils;
 
 use args::Commands::Completions;
 use args::KatanaArgs;
+
+pub(crate) const LOG_TARGET: &str = "katana::cli";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -75,6 +77,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    if let Some(listen_addr) = args.metrics {
+        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+
+        info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
+        prometheus_exporter::serve(
+            listen_addr,
+            prometheus_handle,
+            metrics_process::Collector::default(),
+        )
+        .await?;
+    }
+
     let sequencer =
         Arc::new(KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await?);
     let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
@@ -82,18 +96,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !args.silent {
         let genesis = &sequencer.backend().config.genesis;
         print_intro(&args, genesis, addr);
-    }
-
-    if let Some(listen_addr) = args.metrics {
-        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
-
-        info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
-        prometheus_exporter::serve(
-            listen_addr,
-            prometheus_handle,
-            metrics_process::Collector::default(),
-        )
-        .await?;
     }
 
     // Wait until Ctrl + C is pressed, then shutdown
@@ -116,6 +118,7 @@ fn print_intro(args: &KatanaArgs, genesis: &Genesis, address: SocketAddr) {
 
     if args.json_log {
         info!(
+            target: LOG_TARGET,
             "{}",
             serde_json::json!({
                 "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),

@@ -1,5 +1,4 @@
 mod error;
-mod output;
 mod state;
 mod utils;
 
@@ -16,12 +15,15 @@ use katana_provider::traits::state::StateProvider;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use tracing::info;
 
-use self::output::receipt_from_exec_info;
 use self::state::CachedState;
+use crate::utils::receipt_from_exec_info;
 use crate::{
-    BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult, ExecutorExt,
-    ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag, StateProviderDb,
+    BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
+    ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
+    StateProviderDb,
 };
+
+pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
 
 #[derive(Debug)]
 pub struct BlockifierFactory {
@@ -67,6 +69,7 @@ pub struct StarknetVMProcessor<'a> {
     state: CachedState<StateProviderDb<'a>>,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
     simulation_flags: SimulationFlag,
+    stats: ExecutionStats,
 }
 
 impl<'a> StarknetVMProcessor<'a> {
@@ -79,7 +82,7 @@ impl<'a> StarknetVMProcessor<'a> {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
         let state = state::CachedState::new(StateProviderDb(state));
-        Self { block_context, state, transactions, simulation_flags }
+        Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
     }
 
     fn fill_block_env_from_header(&mut self, header: &PartialHeader) {
@@ -157,14 +160,17 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                     crate::utils::log_resources(&trace.actual_resources);
                     crate::utils::log_events(receipt.events());
 
+                    self.stats.l1_gas_used += fee.gas_consumed;
+                    self.stats.cairo_steps_used += receipt.resources_used().steps as u128;
+
                     if let Some(reason) = receipt.revert_reason() {
-                        info!(target: "executor", "transaction reverted: {reason}");
+                        info!(target: LOG_TARGET, reason = %reason, "Transaction reverted.");
                     }
 
                     ExecutionResult::new_success(receipt, trace, fee)
                 }
                 Err(e) => {
-                    info!(target: "executor", "transaction execution failed: {e}");
+                    info!(target: LOG_TARGET, error = %e, "Executing transaction.");
                     ExecutionResult::new_failed(e)
                 }
             };
@@ -185,7 +191,8 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {
         let states = utils::state_update_from_cached_state(&self.state);
         let transactions = std::mem::take(&mut self.transactions);
-        Ok(ExecutionOutput { states, transactions })
+        let stats = std::mem::take(&mut self.stats);
+        Ok(ExecutionOutput { stats, states, transactions })
     }
 
     fn state(&self) -> Box<dyn StateProvider + 'a> {
@@ -238,14 +245,14 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
             Ok((info, fee)) => {
                 // if the transaction was reverted, return as error
                 if let Some(reason) = info.revert_error {
-                    info!(target: "executor", "fee estimation failed: {reason}");
+                    info!(target: LOG_TARGET, reason = %reason, "Estimating fee.");
                     Err(ExecutionError::TransactionReverted { revert_error: reason })
                 } else {
                     Ok(fee)
                 }
             }
             Err(e) => {
-                info!(target: "executor", "fee estimation failed: {e}");
+                info!(target: LOG_TARGET, error = %e, "Estimating fee.");
                 Err(e)
             }
         })
@@ -255,7 +262,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         let block_context = &self.block_context;
         let mut state = self.state.0.write();
         let state = MutRefState::new(&mut state.inner);
-        let retdata = utils::call(call, state, block_context, 100_000_000)?;
+        let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
         Ok(retdata)
     }
 }

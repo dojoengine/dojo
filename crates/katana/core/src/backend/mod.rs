@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
-use katana_executor::ExecutorFactory;
+use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
@@ -26,8 +25,10 @@ pub mod storage;
 use self::config::StarknetConfig;
 use self::storage::Blockchain;
 use crate::env::BlockContextGenerator;
-use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome, TxWithOutcome};
+use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome};
 use crate::utils::get_current_timestamp;
+
+pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 
 pub struct Backend<EF: ExecutorFactory> {
     /// The config used to generate the backend.
@@ -77,11 +78,11 @@ impl<EF: ExecutorFactory> Backend<EF> {
                 block.l1_gas_price.price_in_fri.try_into().expect("should fit in u128");
 
             trace!(
-                target: "backend",
-                "forking chain `{}` at block {} from {}",
-                parse_cairo_short_string(&forked_chain_id).unwrap(),
-                block.block_number,
-                forked_url
+                target: LOG_TARGET,
+                chain = %parse_cairo_short_string(&forked_chain_id).unwrap(),
+                block_number = %block.block_number,
+                forked_url = %forked_url,
+                "Forking chain.",
             );
 
             let blockchain = Blockchain::new_from_forked(
@@ -118,17 +119,20 @@ impl<EF: ExecutorFactory> Backend<EF> {
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
-        txs_outcomes: Vec<TxWithOutcome>,
-        state_updates: StateUpdatesWithDeclaredClasses,
+        execution_output: ExecutionOutput,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        let mut txs = vec![];
-        let mut receipts = vec![];
-        let mut execs = vec![];
+        // we optimistically allocate the maximum amount possible
+        let mut txs = Vec::with_capacity(execution_output.transactions.len());
+        let mut traces = Vec::with_capacity(execution_output.transactions.len());
+        let mut receipts = Vec::with_capacity(execution_output.transactions.len());
 
-        for t in txs_outcomes {
-            txs.push(t.tx);
-            receipts.push(t.receipt);
-            execs.push(t.exec_info);
+        // only include successful transactions in the block
+        for (tx, res) in execution_output.transactions {
+            if let ExecutionResult::Success { receipt, trace, .. } = res {
+                txs.push(tx);
+                traces.push(trace);
+                receipts.push(receipt);
+            }
         }
 
         let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider())?;
@@ -154,14 +158,19 @@ impl<EF: ExecutorFactory> Backend<EF> {
         BlockWriter::insert_block_with_states_and_receipts(
             self.blockchain.provider(),
             block,
-            state_updates,
+            execution_output.states,
             receipts,
-            execs,
+            traces,
         )?;
 
-        info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");
+        info!(
+            target: LOG_TARGET,
+            block_number = %block_number,
+            tx_count = %tx_count,
+            "Block mined.",
+        );
 
-        Ok(MinedBlockOutcome { block_number })
+        Ok(MinedBlockOutcome { block_number, stats: execution_output.stats })
     }
 
     pub fn update_block_env(&self, block_env: &mut BlockEnv) {
@@ -179,14 +188,13 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
         block_env.number += 1;
         block_env.timestamp = timestamp;
-        block_env.l1_gas_prices = self.config.env.gas_price.clone();
     }
 
     pub fn mine_empty_block(
         &self,
         block_env: &BlockEnv,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        self.do_mine_block(block_env, Default::default(), Default::default())
+        self.do_mine_block(block_env, Default::default())
     }
 }
 
@@ -204,8 +212,12 @@ mod tests {
     use crate::backend::config::{Environment, StarknetConfig};
 
     fn create_test_starknet_config() -> StarknetConfig {
+        let mut genesis = Genesis::default();
+        genesis.gas_prices.eth = 2100;
+        genesis.gas_prices.strk = 3100;
+
         StarknetConfig {
-            genesis: Genesis::default(),
+            genesis,
             disable_fee: true,
             env: Environment::default(),
             ..Default::default()
@@ -219,17 +231,26 @@ mod tests {
     #[tokio::test]
     async fn test_creating_blocks() {
         let backend = create_test_backend().await;
-
         let provider = backend.blockchain.provider();
 
-        assert_eq!(BlockNumberProvider::latest_number(provider).unwrap(), 0);
-
         let block_num = provider.latest_number().unwrap();
+        let block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+
+        assert_eq!(block_num, 0);
+        assert_eq!(block_env.number, 0);
+        assert_eq!(block_env.l1_gas_prices.eth, 2100);
+        assert_eq!(block_env.l1_gas_prices.strk, 3100);
+
         let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
         backend.update_block_env(&mut block_env);
         backend.mine_empty_block(&block_env).unwrap();
 
         let block_num = provider.latest_number().unwrap();
+        assert_eq!(block_num, 1);
+        assert_eq!(block_env.number, 1);
+        assert_eq!(block_env.l1_gas_prices.eth, 2100);
+        assert_eq!(block_env.l1_gas_prices.strk, 3100);
+
         let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
         backend.update_block_env(&mut block_env);
         backend.mine_empty_block(&block_env).unwrap();
@@ -237,8 +258,11 @@ mod tests {
         let block_num = provider.latest_number().unwrap();
         let block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
 
-        assert_eq!(BlockNumberProvider::latest_number(provider).unwrap(), 2);
+        let block_num = provider.latest_number().unwrap();
+        assert_eq!(block_num, 2);
         assert_eq!(block_env.number, 2);
+        assert_eq!(block_env.l1_gas_prices.eth, 2100);
+        assert_eq!(block_env.l1_gas_prices.strk, 3100);
 
         let block0 = BlockProvider::block_by_number(provider, 0).unwrap().unwrap();
         let block1 = BlockProvider::block_by_number(provider, 1).unwrap().unwrap();

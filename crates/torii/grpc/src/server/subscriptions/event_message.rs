@@ -16,11 +16,12 @@ use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Entity;
+use torii_core::types::EventMessage;
 use tracing::{error, trace};
 
 use crate::proto;
 
+pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
 pub struct EventMessagesSubscriber {
     /// Entity ids that the subscriber is interested in
     hashed_keys: HashSet<FieldElement>,
@@ -59,7 +60,7 @@ pub struct Service {
     pool: Pool<Sqlite>,
     subs_manager: Arc<EventMessageManager>,
     model_cache: Arc<ModelCache>,
-    simple_broker: Pin<Box<dyn Stream<Item = Entity> + Send>>,
+    simple_broker: Pin<Box<dyn Stream<Item = EventMessage> + Send>>,
 }
 
 impl Service {
@@ -72,7 +73,7 @@ impl Service {
             pool,
             subs_manager,
             model_cache,
-            simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()),
+            simple_broker: Box::pin(SimpleBroker::<EventMessage>::subscribe()),
         }
     }
 
@@ -89,19 +90,21 @@ impl Service {
             // publish all updates if ids is empty or only ids that are subscribed to
             if sub.hashed_keys.is_empty() || sub.hashed_keys.contains(&hashed) {
                 let models_query = r#"
-                    SELECT group_concat(event_model.model_id) as model_names
+                    SELECT group_concat(event_model.model_id) as model_ids
                     FROM event_messages
                     JOIN event_model ON event_messages.id = event_model.entity_id
                     WHERE event_messages.id = ?
                     GROUP BY event_messages.id
                 "#;
-                let (model_names,): (String,) =
+                let (model_ids,): (String,) =
                     sqlx::query_as(models_query).bind(hashed_keys).fetch_one(&pool).await?;
-                let model_names: Vec<&str> = model_names.split(',').collect();
-                let schemas = cache.schemas(model_names).await?;
+                let model_ids: Vec<&str> = model_ids.split(',').collect();
+                let schemas = cache.schemas(model_ids).await?;
 
-                let entity_query =
-                    format!("{} WHERE event_messages.id = ?", build_sql_query(&schemas)?);
+                let entity_query = format!(
+                    "{} WHERE event_messages.id = ?",
+                    build_sql_query(&schemas, "event_messages", "event_message_id")?
+                );
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
 
                 let models = schemas
@@ -129,7 +132,7 @@ impl Service {
         }
 
         for id in closed_stream {
-            trace!(target = "subscription", "closing entity stream idx: {id}");
+            trace!(target = LOG_TARGET, id = %id, "Closing entity stream.");
             subs.remove_subscriber(id).await
         }
 
@@ -149,7 +152,7 @@ impl Future for Service {
             let pool = pin.pool.clone();
             tokio::spawn(async move {
                 if let Err(e) = Service::publish_updates(subs, cache, pool, &entity.id).await {
-                    error!(target = "subscription", "error when publishing entity update: {e}");
+                    error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
                 }
             });
         }

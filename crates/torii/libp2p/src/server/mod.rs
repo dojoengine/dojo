@@ -9,7 +9,7 @@ use std::{fs, io};
 use chrono::Utc;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Member, Struct, Ty};
+use dojo_types::schema::{Struct, Ty};
 use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
@@ -21,8 +21,10 @@ use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, 
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use serde_json::Number;
-use starknet_crypto::{poseidon_hash_many, verify};
-use starknet_ff::FieldElement;
+use starknet::core::types::{BlockId, BlockTag, FunctionCall};
+use starknet::core::utils::get_selector_from_name;
+use starknet::providers::Provider;
+use starknet_crypto::{poseidon_hash_many, verify, FieldElement};
 use torii_core::sql::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
@@ -32,11 +34,13 @@ use crate::errors::Error;
 
 mod events;
 
-use sqlx::Row;
+use dojo_world::contracts::model::ModelReader;
 
 use crate::server::events::ServerEvent;
 use crate::typed_data::PrimitiveType;
 use crate::types::Message;
+
+pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -47,14 +51,16 @@ pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
 }
 
-pub struct Relay {
+pub struct Relay<P: Provider + Sync> {
     swarm: Swarm<Behaviour>,
     db: Sql,
+    provider: Box<P>,
 }
 
-impl Relay {
+impl<P: Provider + Sync> Relay<P> {
     pub fn new(
         pool: Sql,
+        provider: P,
         port: u16,
         port_webrtc: u16,
         local_key_path: Option<String>,
@@ -74,7 +80,7 @@ impl Relay {
             Certificate::generate(&mut thread_rng()).unwrap()
         };
 
-        info!(target: "torii::relay::server", peer_id = %PeerId::from(local_key.public()), "Relay peer id");
+        info!(target: LOG_TARGET, peer_id = %PeerId::from(local_key.public()), "Relay peer id.");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
@@ -86,7 +92,9 @@ impl Relay {
             })
             .expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {
-                let message_id_fn = |message: &gossipsub::Message| {
+                // Hash messages by their content. No two messages of the same content will be
+                // propagated.
+                let _message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();
                     message.data.hash(&mut s);
                     gossipsub::MessageId::from(s.finish().to_string())
@@ -94,7 +102,8 @@ impl Relay {
                 let gossipsub_config = gossipsub::ConfigBuilder::default()
                         .heartbeat_interval(Duration::from_secs(constants::GOSSIPSUB_HEARTBEAT_INTERVAL_SECS)) // This is set to aid debugging by not cluttering the log space
                         .validation_mode(gossipsub::ValidationMode::Strict) // This sets the kind of message validation. The default is Strict (enforce message signing)
-                        .message_id_fn(message_id_fn) // content-address messages. No two messages of the same content will be propagated.
+                        // TODO: Use this once we incorporate nonces in the message model?
+                        // .message_id_fn(message_id_fn) // content-address messages. No two messages of the same content will be propagated.
                         .build()
                         .map_err(|msg| io::Error::new(io::ErrorKind::Other, msg)).unwrap(); // Temporary hack because `build` does not return a proper `std::error::Error`.
 
@@ -144,7 +153,7 @@ impl Relay {
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
             .unwrap();
 
-        Ok(Self { swarm, db: pool })
+        Ok(Self { swarm, db: pool, provider: Box::new(provider) })
     }
 
     pub async fn run(&mut self) {
@@ -163,32 +172,32 @@ impl Relay {
                                 Ok(message) => message,
                                 Err(e) => {
                                     info!(
-                                        target: "torii::relay::server::gossipsub",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to deserialize message"
+                                        "Deserializing message."
                                     );
                                     continue;
                                 }
                             };
 
-                            let ty = match validate_message(&data.message.message) {
+                            let ty = match validate_message(&self.db, &data.message.message).await {
                                 Ok(parsed_message) => parsed_message,
                                 Err(e) => {
                                     info!(
-                                        target: "torii::relay::server::gossipsub",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to validate message"
+                                        "Validating message."
                                     );
                                     continue;
                                 }
                             };
 
                             info!(
-                                target: "torii::relay::server",
+                                target: LOG_TARGET,
                                 message_id = %message_id,
                                 peer_id = %peer_id,
                                 data = ?data,
-                                "Received message"
+                                "Received message."
                             );
 
                             // retrieve entity identity from db
@@ -196,9 +205,9 @@ impl Relay {
                                 Ok(pool) => pool,
                                 Err(e) => {
                                     warn!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to acquire pool"
+                                        "Acquiring pool."
                                     );
                                     continue;
                                 }
@@ -208,17 +217,18 @@ impl Relay {
                                 Ok(keys) => keys,
                                 Err(e) => {
                                     warn!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to get message model keys"
+                                        "Retrieving message model keys."
                                     );
                                     continue;
                                 }
                             };
 
                             // select only identity field, if doesn't exist, empty string
-                            let entity = match sqlx::query("SELECT * FROM ? WHERE id = ?")
-                                .bind(&ty.as_struct().unwrap().name)
+                            let query =
+                                format!("SELECT external_identity FROM {} WHERE id = ?", ty.name());
+                            let entity_identity: Option<String> = match sqlx::query_scalar(&query)
                                 .bind(format!("{:#x}", poseidon_hash_many(&keys)))
                                 .fetch_optional(&mut *pool)
                                 .await
@@ -226,15 +236,15 @@ impl Relay {
                                 Ok(entity_identity) => entity_identity,
                                 Err(e) => {
                                     warn!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to fetch entity"
+                                        "Fetching entity."
                                     );
                                     continue;
                                 }
                             };
 
-                            if entity.is_none() {
+                            if entity_identity.is_none() {
                                 // we can set the entity without checking identity
                                 if let Err(e) = self
                                     .db
@@ -246,80 +256,98 @@ impl Relay {
                                     .await
                                 {
                                     info!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to set message"
+                                        "Setting message."
                                     );
                                     continue;
                                 } else {
                                     info!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         message_id = %message_id,
                                         peer_id = %peer_id,
-                                        "Message set"
+                                        "Message set."
                                     );
                                     continue;
                                 }
                             }
 
-                            let entity = entity.unwrap();
-                            let identity = match FieldElement::from_str(&match entity
-                                .try_get::<String, _>("identity")
-                            {
-                                Ok(identity) => identity,
-                                Err(e) => {
-                                    warn!(
-                                        target: "torii::relay::server",
-                                        error = %e,
-                                        "Failed to get identity from model"
-                                    );
-                                    continue;
-                                }
-                            }) {
-                                Ok(identity) => identity,
-                                Err(e) => {
-                                    warn!(
-                                        target: "torii::relay::server",
-                                        error = %e,
-                                        "Failed to parse identity"
-                                    );
-                                    continue;
-                                }
-                            };
+                            let entity_identity =
+                                match FieldElement::from_str(&entity_identity.unwrap()) {
+                                    Ok(identity) => identity,
+                                    Err(e) => {
+                                        warn!(
+                                            target: LOG_TARGET,
+                                            error = %e,
+                                            "Parsing identity."
+                                        );
+                                        continue;
+                                    }
+                                };
 
                             // TODO: have a nonce in model to check
                             // against entity nonce and message nonce
                             // to prevent replay attacks.
 
                             // Verify the signature
-                            let message_hash = if let Ok(message) = data.message.encode(identity) {
-                                message
-                            } else {
-                                info!(
-                                    target: "torii::relay::server",
-                                    "Failed to encode message"
-                                );
-                                continue;
+                            let message_hash =
+                                if let Ok(message) = data.message.encode(entity_identity) {
+                                    message
+                                } else {
+                                    info!(
+                                        target: LOG_TARGET,
+                                        "Encoding message."
+                                    );
+                                    continue;
+                                };
+
+                            let public_key = match self
+                                .provider
+                                .call(
+                                    FunctionCall {
+                                        contract_address: entity_identity,
+                                        entry_point_selector: get_selector_from_name(
+                                            "getPublicKey",
+                                        )
+                                        .unwrap(),
+                                        calldata: vec![],
+                                    },
+                                    BlockId::Tag(BlockTag::Pending),
+                                )
+                                .await
+                            {
+                                Ok(res) => res[0],
+                                Err(e) => {
+                                    warn!(
+                                        target: LOG_TARGET,
+                                        error = %e,
+                                        "Fetching public key."
+                                    );
+                                    continue;
+                                }
                             };
 
-                            // for the public key used for verification; use identity from model
-                            if let Ok(valid) = verify(
-                                &identity,
+                            if !match verify(
+                                &public_key,
                                 &message_hash,
                                 &data.signature_r,
                                 &data.signature_s,
                             ) {
-                                if !valid {
-                                    info!(
-                                        target: "torii::relay::server",
-                                        "Invalid signature"
+                                Ok(valid) => valid,
+                                Err(e) => {
+                                    warn!(
+                                        target: LOG_TARGET,
+                                        error = %e,
+                                        "Verifying signature."
                                     );
                                     continue;
                                 }
-                            } else {
+                            } {
                                 info!(
-                                    target: "torii::relay::server",
-                                    "Failed to verify signature"
+                                    target: LOG_TARGET,
+                                    message_id = %message_id,
+                                    peer_id = %peer_id,
+                                    "Invalid signature."
                                 );
                                 continue;
                             }
@@ -335,25 +363,25 @@ impl Relay {
                                 .await
                             {
                                 info!(
-                                    target: "torii::relay::server",
+                                    target: LOG_TARGET,
                                     error = %e,
-                                    "Failed to set message"
+                                    "Setting message."
                                 );
                             }
 
                             info!(
-                                target: "torii::relay::server",
+                                target: LOG_TARGET,
                                 message_id = %message_id,
                                 peer_id = %peer_id,
-                                "Message verified and set"
+                                "Message verified and set."
                             );
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
                             info!(
-                                target: "torii::relay::server::gossipsub",
+                                target: LOG_TARGET,
                                 peer_id = %peer_id,
                                 topic = %topic,
-                                "Subscribed to topic"
+                                "Subscribed to topic."
                             );
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Unsubscribed {
@@ -361,10 +389,10 @@ impl Relay {
                             topic,
                         }) => {
                             info!(
-                                target: "torii::relay::server::gossipsub",
+                                target: LOG_TARGET,
                                 peer_id = %peer_id,
                                 topic = %topic,
-                                "Unsubscribed from topic"
+                                "Unsubscribed from topic."
                             );
                         }
                         ServerEvent::Identify(identify::Event::Received {
@@ -372,28 +400,30 @@ impl Relay {
                             peer_id,
                         }) => {
                             info!(
-                                target: "torii::relay::server::identify",
+                                target: LOG_TARGET,
                                 peer_id = %peer_id,
                                 observed_addr = %observed_addr,
-                                "Received identify event"
+                                "Received identify event."
                             );
                             self.swarm.add_external_address(observed_addr.clone());
                         }
                         ServerEvent::Ping(ping::Event { peer, result, .. }) => {
                             info!(
-                                target: "torii::relay::server::ping",
+                                target: LOG_TARGET,
                                 peer_id = %peer,
                                 result = ?result,
-                                "Received ping event"
+                                "Received ping event."
                             );
                         }
                         _ => {}
                     }
                 }
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    info!(target: "torii::relay::server", address = %address, "New listen address");
+                    info!(target: LOG_TARGET, address = %address, "New listen address.");
                 }
-                _ => {}
+                event => {
+                    info!(target: LOG_TARGET, event = ?event, "Unhandled event.");
+                }
             }
         }
     }
@@ -443,7 +473,7 @@ pub fn ty_to_string_type(ty: &Ty) -> String {
             Primitive::U64(_) => "u64".to_string(),
             Primitive::U128(_) => "u128".to_string(),
             Primitive::U256(_) => "u256".to_string(),
-            Primitive::Felt252(_) => "felt".to_string(),
+            Primitive::Felt252(_) => "felt252".to_string(),
             Primitive::ClassHash(_) => "class_hash".to_string(),
             Primitive::ContractAddress(_) => "contract_address".to_string(),
             Primitive::Bool(_) => "bool".to_string(),
@@ -494,162 +524,87 @@ pub fn parse_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
 }
 
 pub fn parse_object_to_ty(
-    name: String,
+    model: &mut Struct,
     object: &IndexMap<String, PrimitiveType>,
-) -> Result<Ty, Error> {
-    let mut ty_struct = Struct { name, children: vec![] };
-
+) -> Result<(), Error> {
     for (field_name, value) in object {
-        // value has to be of type object
-        let object = if let PrimitiveType::Object(object) = value {
-            object
-        } else {
-            return Err(Error::InvalidMessageError("Value is not an object".to_string()));
-        };
-
-        let r#type = if let Some(r#type) = object.get("type") {
-            if let PrimitiveType::String(r#type) = r#type {
-                r#type
-            } else {
-                return Err(Error::InvalidMessageError("Type is not a string".to_string()));
-            }
-        } else {
-            return Err(Error::InvalidMessageError("Type is missing".to_string()));
-        };
-
-        let value = if let Some(value) = object.get("value") {
-            value
-        } else {
-            return Err(Error::InvalidMessageError("Value is missing".to_string()));
-        };
-
-        let key = if let Some(key) = object.get("key") {
-            if let PrimitiveType::Bool(key) = key {
-                *key
-            } else {
-                return Err(Error::InvalidMessageError("Key is not a boolean".to_string()));
-            }
-        } else {
-            return Err(Error::InvalidMessageError("Key is missing".to_string()));
-        };
+        let field = model.children.iter_mut().find(|m| m.name == *field_name).ok_or_else(|| {
+            Error::InvalidMessageError(format!("Field {} not found in model", field_name))
+        })?;
 
         match value {
             PrimitiveType::Object(object) => {
-                let ty = parse_object_to_ty(field_name.clone(), object)?;
-                ty_struct.children.push(Member { name: field_name.clone(), ty, key });
+                parse_object_to_ty(model, object)?;
             }
             PrimitiveType::Array(_) => {
                 // tuples not supported yet
                 unimplemented!()
             }
-            PrimitiveType::Number(number) => {
-                ty_struct.children.push(Member {
-                    name: field_name.clone(),
-                    ty: match r#type.as_str() {
-                        "u8" => Ty::Primitive(Primitive::U8(Some(number.as_u64().unwrap() as u8))),
-                        "u16" => {
-                            Ty::Primitive(Primitive::U16(Some(number.as_u64().unwrap() as u16)))
-                        }
-                        "u32" => {
-                            Ty::Primitive(Primitive::U32(Some(number.as_u64().unwrap() as u32)))
-                        }
-                        "usize" => {
-                            Ty::Primitive(Primitive::USize(Some(number.as_u64().unwrap() as u32)))
-                        }
-                        "u64" => Ty::Primitive(Primitive::U64(Some(number.as_u64().unwrap()))),
-                        _ => {
-                            return Err(Error::InvalidMessageError(
-                                "Invalid number type".to_string(),
-                            ));
-                        }
-                    },
-                    key,
-                });
-            }
+            PrimitiveType::Number(number) => match &mut field.ty {
+                Ty::Primitive(primitive) => match *primitive {
+                    Primitive::U8(ref mut u8) => {
+                        *u8 = Some(number.as_u64().unwrap() as u8);
+                    }
+                    Primitive::U16(ref mut u16) => {
+                        *u16 = Some(number.as_u64().unwrap() as u16);
+                    }
+                    Primitive::U32(ref mut u32) => {
+                        *u32 = Some(number.as_u64().unwrap() as u32);
+                    }
+                    Primitive::USize(ref mut usize) => {
+                        *usize = Some(number.as_u64().unwrap() as u32);
+                    }
+                    Primitive::U64(ref mut u64) => {
+                        *u64 = Some(number.as_u64().unwrap());
+                    }
+                    _ => {
+                        return Err(Error::InvalidMessageError("Invalid number type".to_string()));
+                    }
+                },
+                Ty::Enum(enum_) => {
+                    enum_.option = Some(number.as_u64().unwrap() as u8);
+                }
+                _ => return Err(Error::InvalidMessageError("Invalid number type".to_string())),
+            },
             PrimitiveType::Bool(boolean) => {
-                ty_struct.children.push(Member {
-                    name: field_name.clone(),
-                    ty: Ty::Primitive(Primitive::Bool(Some(*boolean))),
-                    key,
-                });
+                field.ty = Ty::Primitive(Primitive::Bool(Some(*boolean)));
             }
-            PrimitiveType::String(string) => match r#type.as_str() {
-                "u8" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U8(Some(u8::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u16" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U16(Some(u16::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u32" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U32(Some(u32::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "usize" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::USize(Some(u32::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u64" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U64(Some(u64::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u128" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U128(Some(u128::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u256" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U256(Some(U256::from_be_hex(string)))),
-                        key,
-                    });
-                }
-                "felt" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::Felt252(Some(
-                            FieldElement::from_str(string).unwrap(),
-                        ))),
-                        key,
-                    });
-                }
-                "class_hash" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::ClassHash(Some(
-                            FieldElement::from_str(string).unwrap(),
-                        ))),
-                        key,
-                    });
-                }
-                "contract_address" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::ContractAddress(Some(
-                            FieldElement::from_str(string).unwrap(),
-                        ))),
-                        key,
-                    });
-                }
+            PrimitiveType::String(string) => match &mut field.ty {
+                Ty::Primitive(primitive) => match primitive {
+                    Primitive::U8(v) => {
+                        *v = Some(u8::from_str(string).unwrap());
+                    }
+                    Primitive::U16(v) => {
+                        *v = Some(u16::from_str(string).unwrap());
+                    }
+                    Primitive::U32(v) => {
+                        *v = Some(u32::from_str(string).unwrap());
+                    }
+                    Primitive::USize(v) => {
+                        *v = Some(u32::from_str(string).unwrap());
+                    }
+                    Primitive::U64(v) => {
+                        *v = Some(u64::from_str(string).unwrap());
+                    }
+                    Primitive::U128(v) => {
+                        *v = Some(u128::from_str(string).unwrap());
+                    }
+                    Primitive::U256(v) => {
+                        *v = Some(U256::from_be_hex(string));
+                    }
+                    Primitive::Felt252(v) => {
+                        *v = Some(FieldElement::from_str(string).unwrap());
+                    }
+                    Primitive::ClassHash(v) => {
+                        *v = Some(FieldElement::from_str(string).unwrap());
+                    }
+                    Primitive::ContractAddress(v) => {
+                        *v = Some(FieldElement::from_str(string).unwrap());
+                    }
+                    Primitive::Bool(v) => {
+                        *v = Some(bool::from_str(string).unwrap());
+                    }
+                },
                 _ => {
                     return Err(Error::InvalidMessageError("Invalid string type".to_string()));
                 }
@@ -657,12 +612,15 @@ pub fn parse_object_to_ty(
         }
     }
 
-    Ok(Ty::Struct(ty_struct))
+    Ok(())
 }
 
 // Validates the message model
 // and returns the identity and signature
-fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<Ty, Error> {
+async fn validate_message(
+    db: &Sql,
+    message: &IndexMap<String, PrimitiveType>,
+) -> Result<Ty, Error> {
     let model_name = if let Some(model_name) = message.get("model") {
         if let PrimitiveType::String(model_name) = model_name {
             model_name
@@ -672,10 +630,32 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<Ty, Err
     } else {
         return Err(Error::InvalidMessageError("Model name is missing".to_string()));
     };
+    let model_selector = get_selector_from_name(model_name).map_err(|e| {
+        Error::InvalidMessageError(format!("Failed to get selector from model name: {}", e))
+    })?;
 
-    let model = if let Some(object) = message.get(model_name) {
+    let mut ty = db
+        .model(&format!("{:#x}", model_selector))
+        .await
+        .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model_name, e)))?
+        .schema()
+        .await
+        .map_err(|e| {
+            Error::InvalidMessageError(format!(
+                "Failed to get schema for model {}: {}",
+                model_name, e
+            ))
+        })?;
+
+    let ty_struct = if let Ty::Struct(ty_struct) = &mut ty {
+        ty_struct
+    } else {
+        return Err(Error::InvalidMessageError("Model is not a struct".to_string()));
+    };
+
+    if let Some(object) = message.get(model_name) {
         if let PrimitiveType::Object(object) = object {
-            parse_object_to_ty(model_name.clone(), object)?
+            parse_object_to_ty(ty_struct, object)?
         } else {
             return Err(Error::InvalidMessageError("Model is not a struct".to_string()));
         }
@@ -683,14 +663,14 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<Ty, Err
         return Err(Error::InvalidMessageError("Model is missing".to_string()));
     };
 
-    Ok(model)
+    Ok(ty)
 }
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
     if path.exists() {
         let bytes = fs::read(path)?;
 
-        info!(target: "torii::relay::server", path = %path.display(), "Using existing identity");
+        info!(target: LOG_TARGET, path = %path.display(), "Using existing identity.");
 
         return Ok(identity::Keypair::from_protobuf_encoding(&bytes)?); // This only works for ed25519 but that is what we are using.
     }
@@ -699,7 +679,7 @@ fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
 
     fs::write(path, identity.to_protobuf_encoding()?)?;
 
-    info!(target: "torii::relay::server", path = %path.display(), "Generated new identity");
+    info!(target: LOG_TARGET, path = %path.display(), "Generated new identity.");
 
     Ok(identity)
 }
@@ -708,7 +688,7 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     if path.exists() {
         let pem = fs::read_to_string(path)?;
 
-        info!(target: "torii::relay::server", path = %path.display(), "Using existing certificate");
+        info!(target: LOG_TARGET, path = %path.display(), "Using existing certificate.");
 
         return Ok(Certificate::from_pem(&pem)?);
     }
@@ -716,7 +696,7 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     let cert = Certificate::generate(&mut rand::thread_rng())?;
     fs::write(path, cert.serialize_pem().as_bytes())?;
 
-    info!(target: "torii::relay::server", path = %path.display(), "Generated new certificate");
+    info!(target: LOG_TARGET, path = %path.display(), "Generated new certificate.");
 
     Ok(cert)
 }

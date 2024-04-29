@@ -67,6 +67,14 @@ However, papyrus and blockifier which we depend on are still in `-dev` version, 
 * cairo-lang (we should support `2.5` now)
 * scarb (breaking changes between 2.4 and 2.5 to be addresses, not required to only build saya and SNOS)
 
+## Local Testing
+
+```bash
+cargo run -r -p katana # Start an appchain
+cargo run -r -p sozo -- build --manifest-path examples/spawn-and-move/Scarb.toml
+cargo run -r -p sozo -- migrate --manifest-path examples/spawn-and-move/Scarb.toml # Make some transactions
+cargo run -r --bin saya -- --rpc-url http://localhost:5050 # Run Saya
+```
 ## Additional documentation
 
 [Hackmd note](https://hackmd.io/@glihm/saya)

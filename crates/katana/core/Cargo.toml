@@ -7,25 +7,27 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-katana-db = { path = "../storage/db" }
+katana-db.workspace = true
 katana-executor.workspace = true
-katana-primitives = { path = "../primitives" }
-katana-provider = { path = "../storage/provider" }
+katana-primitives.workspace = true
+katana-provider.workspace = true
 katana-tasks.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
+dojo-metrics.workspace = true
+metrics.workspace = true
 cairo-lang-casm = "2.3.1"
 cairo-lang-starknet = "2.3.1"
 cairo-vm.workspace = true
 convert_case.workspace = true
+k256 = { version = "0.13", default-features = false, features = ["ecdsa", "std"] }
+reqwest = { version = "0.11.22", features = [ "blocking", "rustls-tls" ], default-features = false }
 derive_more.workspace = true
-ethers = { version = "2.0.11", optional = true }
 flate2.workspace = true
 futures.workspace = true
 lazy_static = "1.4.0"
 parking_lot.workspace = true
-primitive-types = "0.12.2"
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
 serde_json.workspace = true
@@ -37,11 +39,31 @@ tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
 
+alloy-primitives = { workspace = true, features = ["serde"] }
+alloy-sol-types = {  workspace = true, default-features = false, features = ["json"], optional = true }
+
+alloy-transport = { version = "0.1.0", default-features = false, optional = true }
+alloy-provider = { version = "0.1.0", default-features = false, optional = true, features = ["reqwest"]}
+alloy-signer = { version = "0.1.0", default-features = false, optional = true }
+alloy-network = { version = "0.1.0", default-features = false, optional = true }
+alloy-rpc-types = { version = "0.1.0", default-features = false, optional = true }
+alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
+alloy-contract = { version = "0.1.0", default-features = false, optional = true }
+
 [dev-dependencies]
 assert_matches.workspace = true
 hex = "0.4.3"
 tempfile = "3.8.1"
 
 [features]
-messaging = [ "ethers" ]
-starknet-messaging = [  ]
+messaging = [
+    "alloy-sol-types",
+    "alloy-transport",
+    "alloy-provider",
+    "alloy-signer",
+    "alloy-network",
+    "alloy-rpc-types",
+    "alloy-signer-wallet",
+    "alloy-contract"
+]
+starknet-messaging = [ ]

@@ -126,14 +126,14 @@ lazy_static! {
 
     // Default fee token contract
     // pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/erc20.json")).unwrap();
-    pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../contracts/compiled/erc20.json"));
+    pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/erc20.json"));
 
     // Default universal deployer
-    pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../contracts/compiled/universal_deployer.json"));
+    pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/universal_deployer.json"));
 
     // Default account contract
-    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../contracts/compiled/oz_account_080.json")).unwrap();
-    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../contracts/compiled/oz_account_080.json"));
+    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../../contracts/compiled/oz_account_080.json")).unwrap();
+    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/oz_account_080.json"));
 
 }
 

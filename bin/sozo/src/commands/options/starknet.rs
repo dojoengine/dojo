@@ -13,6 +13,7 @@ pub struct StarknetOptions {
     #[arg(long, env = STARKNET_RPC_URL_ENV_VAR)]
     #[arg(value_name = "URL")]
     #[arg(help = "The Starknet RPC endpoint.")]
+    #[arg(global = true)]
     pub rpc_url: Option<Url>,
 }
 
@@ -24,8 +25,10 @@ impl StarknetOptions {
         Ok(JsonRpcClient::new(HttpTransport::new(self.url(env_metadata)?)))
     }
 
-    // we dont check the env var because that would be handled by `clap`
-    fn url(&self, env_metadata: Option<&Environment>) -> Result<Url> {
+    // We dont check the env var because that would be handled by `clap`.
+    // This function is made public because [`JsonRpcClient`] does not expose
+    // the raw rpc url.
+    pub fn url(&self, env_metadata: Option<&Environment>) -> Result<Url> {
         if let Some(url) = self.rpc_url.as_ref() {
             Ok(url.clone())
         } else if let Some(url) = env_metadata.and_then(|env| env.rpc_url()) {

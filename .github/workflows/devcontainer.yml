@@ -1,11 +1,19 @@
 name: devcontainer
 
 on:
+  workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: Descriptive name of the devcontainer for the Docker tag
+        required: true
+        type: string
   push:
     paths:
       - ".devcontainer/**"
       - ".github/workflows/devcontainer.yml"
       - "!.devcontainer/devcontainer.json"
+  release:
+    types: [created]
 
 jobs:
   build-and-push:
@@ -43,6 +51,11 @@ jobs:
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
           echo "DOCKER_TAG=$SHORT_SHA" >> $GITHUB_ENV
 
+      - name: Set Docker tag for workflow_dispatch event
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "DOCKER_TAG=${{ inputs.docker_tag }}" >> $GITHUB_ENV
+
       - name: Set outputs
         id: release_info
         run: |
@@ -56,6 +69,7 @@ jobs:
           tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
           build-args: |
             VARIANT=bookworm
+            DOJO_VERSION=${{ github.event_name == 'release' && github.event.release.tag_name || 'stable' }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 
@@ -85,8 +99,8 @@ jobs:
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
-          commit-message: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
+          title: "Update devcontainer image: ${{ needs.build-and-push.outputs.tag_name }}"
+          commit-message: "Update devcontainer image: ${{ needs.build-and-push.outputs.tag_name }}"
           branch: bump-devcontainer
           base: main
           delete-branch: true

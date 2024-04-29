@@ -13,14 +13,18 @@ use starknet::core::types::FieldElement;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
+use self::metrics::{BlockProducerMetrics, ServiceMetrics};
 use crate::pool::TransactionPool;
 
 pub mod block_producer;
 #[cfg(feature = "messaging")]
 pub mod messaging;
+mod metrics;
 
 #[cfg(feature = "messaging")]
 use self::messaging::{MessagingOutcome, MessagingService};
+
+pub(crate) const LOG_TARGET: &str = "node";
 
 /// The type that drives the blockchain's state
 ///
@@ -37,6 +41,28 @@ pub struct NodeService<EF: ExecutorFactory> {
     /// The messaging service
     #[cfg(feature = "messaging")]
     pub(crate) messaging: Option<MessagingService<EF>>,
+    /// Metrics for recording the service operations
+    metrics: ServiceMetrics,
+}
+
+impl<EF: ExecutorFactory> NodeService<EF> {
+    pub fn new(
+        pool: Arc<TransactionPool>,
+        miner: TransactionMiner,
+        block_producer: Arc<BlockProducer<EF>>,
+        #[cfg(feature = "messaging")] messaging: Option<MessagingService<EF>>,
+    ) -> Self {
+        let metrics = ServiceMetrics { block_producer: BlockProducerMetrics::default() };
+
+        Self {
+            pool,
+            miner,
+            block_producer,
+            metrics,
+            #[cfg(feature = "messaging")]
+            messaging,
+        }
+    }
 }
 
 impl<EF: ExecutorFactory> Future for NodeService<EF> {
@@ -50,10 +76,10 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
             while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
                 match outcome {
                     MessagingOutcome::Gather { msg_count, .. } => {
-                        info!(target: "node", "collected {msg_count} messages from settlement chain");
+                        info!(target: LOG_TARGET, msg_count = %msg_count, "Collected messages from settlement chain.");
                     }
                     MessagingOutcome::Send { msg_count, .. } => {
-                        info!(target: "node", "sent {msg_count} messages to the settlement chain");
+                        info!(target: LOG_TARGET,  msg_count = %msg_count, "Sent messages to the settlement chain.");
                     }
                 }
             }
@@ -65,11 +91,17 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
             while let Poll::Ready(Some(res)) = pin.block_producer.poll_next(cx) {
                 match res {
                     Ok(outcome) => {
-                        info!(target: "node", "mined block {}", outcome.block_number)
+                        info!(target: LOG_TARGET, block_number = %outcome.block_number, "Mined block.");
+
+                        let metrics = &pin.metrics.block_producer;
+                        let gas_used = outcome.stats.l1_gas_used;
+                        let steps_used = outcome.stats.cairo_steps_used;
+                        metrics.l1_gas_processed_total.increment(gas_used as u64);
+                        metrics.cairo_steps_processed_total.increment(steps_used as u64);
                     }
 
                     Err(err) => {
-                        error!(target: "node", "failed to mine block: {err}");
+                        error!(target: LOG_TARGET, error = %err, "Mining block.");
                     }
                 }
             }

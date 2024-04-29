@@ -10,22 +10,27 @@ use super::{Declarable, MigrationType, StateDiff};
 #[derive(Debug, Default, Clone)]
 pub struct ClassDiff {
     pub name: String,
-    pub local: FieldElement,
-    pub remote: Option<FieldElement>,
+    pub local_class_hash: FieldElement,
+    pub original_class_hash: FieldElement,
+    pub remote_class_hash: Option<FieldElement>,
 }
 
 impl StateDiff for ClassDiff {
     fn is_same(&self) -> bool {
-        if let Some(remote) = self.remote { self.local == remote } else { false }
+        if let Some(remote) = self.remote_class_hash {
+            self.local_class_hash == remote
+        } else {
+            false
+        }
     }
 }
 
 impl Display for ClassDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}:", self.name)?;
-        writeln!(f, "   Local: {:#x}", self.local)?;
+        writeln!(f, "   Local: {:#x}", self.local_class_hash)?;
 
-        if let Some(remote) = self.remote {
+        if let Some(remote) = self.remote_class_hash {
             writeln!(f, "   Remote: {remote:#x}")?;
         }
 
@@ -41,11 +46,11 @@ pub struct ClassMigration {
 
 impl ClassMigration {
     pub fn migration_type(&self) -> MigrationType {
-        let Some(remote) = self.diff.remote else {
+        let Some(remote) = self.diff.remote_class_hash else {
             return MigrationType::New;
         };
 
-        match self.diff.local == remote {
+        match self.diff.local_class_hash == remote {
             true => MigrationType::New,
             false => MigrationType::Update,
         }

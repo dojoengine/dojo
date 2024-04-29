@@ -23,7 +23,7 @@ ENV LLVM_SYS_170_PREFIX=/usr/lib/llvm-17
 ENV TABLEGEN_170_PREFIX=/usr/lib/llvm-17
 
 # To allow independent workflow of the container, the rust-toolchain is explicitely given.
-RUN echo "1.74.0" > rust_toolchain_version
+RUN echo "1.76.0" > rust_toolchain_version
 
 # Install cargo-binstall
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
@@ -60,10 +60,11 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
     rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly; \
     fi
 
+ARG DOJO_VERSION=stable
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
-RUN dojoup
+RUN dojoup -v $DOJO_VERSION
 
 RUN chown -R root:root /usr/local/cargo
 RUN chmod -R 700 /usr/local/cargo

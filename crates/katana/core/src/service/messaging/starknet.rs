@@ -66,7 +66,7 @@ impl StarknetMessaging {
         from_block: BlockId,
         to_block: BlockId,
     ) -> Result<HashMap<u64, Vec<EmittedEvent>>> {
-        trace!(target: LOG_TARGET, "Fetching blocks {:?} - {:?}.", from_block, to_block);
+        trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
         let mut block_to_events: HashMap<u64, Vec<EmittedEvent>> = HashMap::new();
 
@@ -118,7 +118,7 @@ impl StarknetMessaging {
             ExecutionEncoding::New,
         );
 
-        account.set_block_id(BlockId::Tag(BlockTag::Latest));
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
         // TODO: we need to have maximum fee configurable.
         let execution = account.execute(calls).fee_estimate_multiplier(10f64);
@@ -147,11 +147,11 @@ impl StarknetMessaging {
 
         match self.send_invoke_tx(vec![call]).await {
             Ok(tx_hash) => {
-                trace!(target: LOG_TARGET, "Hashes sending transaction {:#064x}", tx_hash);
+                trace!(target: LOG_TARGET, tx_hash = %format!("{:#064x}", tx_hash), "Hashes sending transaction.");
                 Ok(tx_hash)
             }
             Err(e) => {
-                error!("Error settling hashes on Starknet: {:?}", e);
+                error!(target: LOG_TARGET, error = %e, "Settling hashes on Starknet.");
                 Err(Error::SendError)
             }
         }
@@ -173,6 +173,7 @@ impl Messenger for StarknetMessaging {
             Ok(n) => n,
             Err(_) => {
                 warn!(
+                    target: LOG_TARGET,
                     "Couldn't fetch settlement chain last block number. \nSkipped, retry at the \
                      next tick."
                 );
@@ -202,9 +203,9 @@ impl Messenger for StarknetMessaging {
             .for_each(|(block_number, block_events)| {
                 debug!(
                     target: LOG_TARGET,
-                    "Converting events of block {} into L1HandlerTx ({} events)",
-                    block_number,
-                    block_events.len(),
+                    block_number = %block_number,
+                    events_count = %block_events.len(),
+                    "Converting events of block into L1HandlerTx."
                 );
 
                 block_events.iter().for_each(|e| {
@@ -230,10 +231,10 @@ impl Messenger for StarknetMessaging {
         if !calls.is_empty() {
             match self.send_invoke_tx(calls).await {
                 Ok(tx_hash) => {
-                    trace!(target: LOG_TARGET, "Invoke transaction hash {:#064x}", tx_hash);
+                    trace!(target: LOG_TARGET, tx_hash = %format!("{:#064x}", tx_hash), "Invoke transaction hash.");
                 }
                 Err(e) => {
-                    error!("Error sending invoke tx on Starknet: {:?}", e);
+                    error!(target: LOG_TARGET, error = %e, "Sending invoke tx on Starknet.");
                     return Err(Error::SendError);
                 }
             };
@@ -302,7 +303,7 @@ fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<FieldElement
             hashes.push(starknet_keccak(&buf));
         } else {
             // Skip the message if no valid magic number found.
-            warn!("Invalid message to_address magic value: {:?}", magic);
+            warn!(target: LOG_TARGET, magic = ?magic, "Invalid message to_address magic value.");
             continue;
         }
     }
@@ -314,13 +315,14 @@ fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L
     if event.keys[0] != selector!("MessageSentToAppchain") {
         debug!(
             target: LOG_TARGET,
-            "Event with key {:?} can't be converted into L1HandlerTx", event.keys[0],
+            event_key = ?event.keys[0],
+            "Event can't be converted into L1HandlerTx."
         );
         return Err(Error::GatherError.into());
     }
 
     if event.keys.len() != 4 || event.data.len() < 2 {
-        error!(target: LOG_TARGET, "Event MessageSentToAppchain is not well formatted");
+        error!(target: LOG_TARGET, "Event MessageSentToAppchain is not well formatted.");
     }
 
     // See contrat appchain_messaging.cairo for MessageSentToAppchain event.

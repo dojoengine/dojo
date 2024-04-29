@@ -40,6 +40,7 @@ dojo-lang.workspace = true
 dojo-test-utils = { path = "../dojo-test-utils" }
 similar-asserts.workspace = true
 tokio.workspace = true
+tempfile = "3.3.0"
 
 [features]
 contracts = [ "dep:dojo-types", "dep:http" ]

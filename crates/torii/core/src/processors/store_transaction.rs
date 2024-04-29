@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{Transaction, TransactionReceipt};
+use starknet::core::types::{MaybePendingTransactionReceipt, Transaction};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
@@ -18,7 +18,7 @@ impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
         _provider: &P,
         block_number: u64,
         block_timestamp: u64,
-        _receipt: &TransactionReceipt,
+        _receipt: &MaybePendingTransactionReceipt,
         transaction_hash: FieldElement,
         transaction: &Transaction,
     ) -> Result<(), Error> {

@@ -1,2 +1,0 @@
-name = "dojo_examples::actions::actions"
-reads = [ "Moves", "Position" ]

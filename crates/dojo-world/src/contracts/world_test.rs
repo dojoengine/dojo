@@ -12,7 +12,7 @@ use super::{WorldContract, WorldContractReader};
 use crate::manifest::BaseManifest;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
-use crate::migration::{Declarable, Deployable};
+use crate::migration::{Declarable, Deployable, TxnConfig};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
@@ -35,21 +35,26 @@ pub async fn deploy_world(
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
 ) -> FieldElement {
-    let manifest =
-        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR)).unwrap();
+    // Dev profile is used by default for testing:
+    let profile_name = "dev";
+
+    let manifest = BaseManifest::load_from_path(
+        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+    )
+    .unwrap();
     let world = WorldDiff::compute(manifest.clone(), None);
     let account = sequencer.account();
 
     let strategy = prepare_for_migration(
         None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        FieldElement::from_hex_be("0x12345").unwrap(),
         target_dir,
         world,
     )
     .unwrap();
 
     let base_class_hash =
-        strategy.base.unwrap().declare(&account, Default::default()).await.unwrap().class_hash;
+        strategy.base.unwrap().declare(&account, &TxnConfig::default()).await.unwrap().class_hash;
 
     // wait for the tx to be mined
     tokio::time::sleep(Duration::from_millis(250)).await;
@@ -61,7 +66,7 @@ pub async fn deploy_world(
             manifest.clone().world.inner.class_hash,
             vec![base_class_hash],
             &account,
-            Default::default(),
+            &TxnConfig::default(),
         )
         .await
         .unwrap()
@@ -69,7 +74,7 @@ pub async fn deploy_world(
 
     let mut declare_output = vec![];
     for model in strategy.models {
-        let res = model.declare(&account, Default::default()).await.unwrap();
+        let res = model.declare(&account, &TxnConfig::default()).await.unwrap();
         declare_output.push(res);
     }
 
@@ -89,9 +94,15 @@ pub async fn deploy_world(
     tokio::time::sleep(Duration::from_millis(250)).await;
 
     for contract in strategy.contracts {
-        let declare_res = contract.declare(&account, Default::default()).await.unwrap();
+        let declare_res = contract.declare(&account, &TxnConfig::default()).await.unwrap();
         contract
-            .world_deploy(world_address, declare_res.class_hash, &account, Default::default())
+            .deploy_dojo_contract(
+                world_address,
+                declare_res.class_hash,
+                base_class_hash,
+                &account,
+                &TxnConfig::default(),
+            )
             .await
             .unwrap();
     }

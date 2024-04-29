@@ -15,7 +15,7 @@ use katana_rpc::{spawn, NodeHandle};
 use katana_rpc_api::ApiKind;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
-use starknet::core::types::FieldElement;
+use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
@@ -92,13 +92,44 @@ impl TestSequencer {
     }
 
     pub fn account(&self) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
-        SingleOwnerAccount::new(
+        let mut account = SingleOwnerAccount::new(
             JsonRpcClient::new(HttpTransport::new(self.url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(self.account.private_key)),
             self.account.account_address,
             chain_id::TESTNET,
             ExecutionEncoding::New,
-        )
+        );
+
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        account
+    }
+
+    pub fn provider(&self) -> JsonRpcClient<HttpTransport> {
+        JsonRpcClient::new(HttpTransport::new(self.url.clone()))
+    }
+
+    pub fn account_at_index(
+        &self,
+        index: usize,
+    ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
+        let accounts: Vec<_> = self.sequencer.backend.config.genesis.accounts().collect::<_>();
+
+        let account = accounts[index];
+        let private_key = account.1.private_key().unwrap();
+        let address: FieldElement = (*(account.0)).into();
+
+        let mut account = SingleOwnerAccount::new(
+            JsonRpcClient::new(HttpTransport::new(self.url.clone())),
+            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
+            address,
+            chain_id::TESTNET,
+            ExecutionEncoding::New,
+        );
+
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        account
     }
 
     pub fn raw_account(&self) -> &TestAccount {

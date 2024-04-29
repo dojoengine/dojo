@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use cainome::parser::tokens::{Composite, CompositeType, Function};
+use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -26,6 +26,7 @@ impl UnityPlugin {
             "u256" => "BigInteger".to_string(),
             "usize" => "uint".to_string(),
             "felt252" => "FieldElement".to_string(),
+            "bytes31" => "string".to_string(),
             "ClassHash" => "FieldElement".to_string(),
             "ContractAddress" => "FieldElement".to_string(),
 
@@ -147,6 +148,10 @@ public class {} : ModelInstance {{
         let mut model_struct: Option<&Composite> = None;
         let tokens = &model.tokens;
         for token in &tokens.structs {
+            if handled_tokens.iter().any(|t| t.type_name() == token.type_name()) {
+                continue;
+            }
+
             handled_tokens.push(token.to_composite().unwrap().to_owned());
 
             // first index is our model struct
@@ -159,6 +164,10 @@ public class {} : ModelInstance {{
         }
 
         for token in &tokens.enums {
+            if handled_tokens.iter().any(|t| t.type_name() == token.type_name()) {
+                continue;
+            }
+
             handled_tokens.push(token.to_composite().unwrap().to_owned());
             out += UnityPlugin::format_enum(token.to_composite().unwrap()).as_str();
         }
@@ -174,10 +183,19 @@ public class {} : ModelInstance {{
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
+        fn map_type(token: &Token) -> String {
+            match token {
+                Token::CoreBasic(t) => UnityPlugin::map_type(&t.type_name()),
+                Token::Composite(t) => t.type_name().to_string(),
+                Token::Array(t) => format!("{}[]", map_type(&t.inner)),
+                _ => panic!("Unsupported token type: {:?}", token),
+            }
+        }
+
         let args = system
             .inputs
             .iter()
-            .map(|arg| format!("{} {}", UnityPlugin::map_type(&arg.1.type_name()), arg.0,))
+            .map(|arg| format!("{} {}", map_type(&arg.1), &arg.0))
             .collect::<Vec<String>>()
             .join(", ");
 
@@ -222,7 +240,7 @@ public class {} : ModelInstance {{
     // Call the `{system_name}` system with the specified Account and calldata
     // Returns the transaction hash. Use `WaitForTransaction` to wait for the transaction to be \
              confirmed.
-    public async Task<FieldElement> {pretty_system_name}(Account account{arg_sep}{args}) {{
+    public async Task<FieldElement> {system_name}(Account account{arg_sep}{args}) {{
         return await account.ExecuteRaw(new dojo.Call[] {{
             new dojo.Call{{
                 to = contractAddress,
@@ -236,21 +254,6 @@ public class {} : ModelInstance {{
             ",
             // selector for execute
             system_name = system.name,
-            // pretty system name
-            // snake case to camel case
-            // move_to -> MoveTo
-            pretty_system_name = system
-                .name
-                .split('_')
-                .map(|s| {
-                    let mut c = s.chars();
-                    match c.next() {
-                        None => String::new(),
-                        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(""),
             // add comma if we have args
             arg_sep = if !args.is_empty() { ", " } else { "" },
             // formatted args to use our mapped types
@@ -300,9 +303,9 @@ public class {} : MonoBehaviour {{
     {}
 }}
         ",
-            contract.contract_file_name,
+            contract.qualified_path,
             // capitalize contract name
-            UnityPlugin::formatted_contract_name(&contract.contract_file_name),
+            UnityPlugin::formatted_contract_name(&contract.qualified_path),
             systems
         );
 

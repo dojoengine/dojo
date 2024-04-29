@@ -13,6 +13,7 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use alloy_primitives::U256;
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
 use common::parse::parse_socket_address;
@@ -174,19 +175,25 @@ pub struct EnvironmentOptions {
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]
-    pub validate_max_steps: Option<u32>,
+    #[arg(default_value_t = DEFAULT_VALIDATE_MAX_STEPS)]
+    pub validate_max_steps: u32,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account execution logic.")]
-    pub invoke_max_steps: Option<u32>,
+    #[arg(default_value_t = DEFAULT_INVOKE_MAX_STEPS)]
+    pub invoke_max_steps: u32,
 
     #[arg(long = "eth-gas-price")]
-    #[arg(help = "The L1 ETH gas price.")]
-    pub l1_eth_gas_price: Option<u128>,
+    #[arg(conflicts_with = "genesis")]
+    #[arg(help = "The L1 ETH gas price. (denominated in wei)")]
+    #[arg(default_value_t = DEFAULT_ETH_L1_GAS_PRICE)]
+    pub l1_eth_gas_price: u128,
 
     #[arg(long = "strk-gas-price")]
-    #[arg(help = "The L1 STRK gas price.")]
-    pub l1_strk_gas_price: Option<u128>,
+    #[arg(conflicts_with = "genesis")]
+    #[arg(help = "The L1 STRK gas price. (denominated in fri)")]
+    #[arg(default_value_t = DEFAULT_STRK_L1_GAS_PRICE)]
+    pub l1_strk_gas_price: u128,
 }
 
 impl KatanaArgs {
@@ -233,21 +240,21 @@ impl KatanaArgs {
     }
 
     pub fn starknet_config(&self) -> StarknetConfig {
-        let gas_price = GasPrices {
-            eth: self.starknet.environment.l1_eth_gas_price.unwrap_or(DEFAULT_ETH_L1_GAS_PRICE),
-            strk: self.starknet.environment.l1_strk_gas_price.unwrap_or(DEFAULT_STRK_L1_GAS_PRICE),
-        };
-
         let genesis = match self.starknet.genesis.clone() {
             Some(genesis) => genesis,
             None => {
+                let gas_prices = GasPrices {
+                    eth: self.starknet.environment.l1_eth_gas_price,
+                    strk: self.starknet.environment.l1_strk_gas_price,
+                };
+
                 let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
                     .with_seed(parse_seed(&self.starknet.seed))
-                    .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+                    .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
                     .generate();
 
                 let mut genesis = Genesis {
-                    gas_prices: gas_price.clone(),
+                    gas_prices,
                     sequencer_address: *DEFAULT_SEQUENCER_ADDRESS,
                     ..Default::default()
                 };
@@ -263,18 +270,9 @@ impl KatanaArgs {
             fork_rpc_url: self.rpc_url.clone(),
             fork_block_number: self.fork_block_number,
             env: Environment {
-                gas_price,
                 chain_id: self.starknet.environment.chain_id,
-                invoke_max_steps: self
-                    .starknet
-                    .environment
-                    .invoke_max_steps
-                    .unwrap_or(DEFAULT_INVOKE_MAX_STEPS),
-                validate_max_steps: self
-                    .starknet
-                    .environment
-                    .validate_max_steps
-                    .unwrap_or(DEFAULT_VALIDATE_MAX_STEPS),
+                invoke_max_steps: self.starknet.environment.invoke_max_steps,
+                validate_max_steps: self.starknet.environment.validate_max_steps,
             },
             db_dir: self.db_dir.clone(),
             genesis,
@@ -287,32 +285,51 @@ mod test {
     use super::*;
 
     #[test]
-    fn default_block_context_from_args() {
+    fn test_starknet_config_default() {
         let args = KatanaArgs::parse_from(["katana"]);
-        let block_context = args.starknet_config().block_env();
-        assert_eq!(block_context.l1_gas_prices.eth, DEFAULT_ETH_L1_GAS_PRICE);
-        assert_eq!(block_context.l1_gas_prices.strk, DEFAULT_STRK_L1_GAS_PRICE);
+        let config = args.starknet_config();
+
+        assert!(!config.disable_fee);
+        assert!(!config.disable_validate);
+        assert_eq!(config.fork_rpc_url, None);
+        assert_eq!(config.fork_block_number, None);
+        assert_eq!(config.env.chain_id, ChainId::parse("KATANA").unwrap());
+        assert_eq!(config.env.invoke_max_steps, DEFAULT_INVOKE_MAX_STEPS);
+        assert_eq!(config.env.validate_max_steps, DEFAULT_VALIDATE_MAX_STEPS);
+        assert_eq!(config.db_dir, None);
+        assert_eq!(config.genesis.gas_prices.eth, DEFAULT_ETH_L1_GAS_PRICE);
+        assert_eq!(config.genesis.gas_prices.strk, DEFAULT_STRK_L1_GAS_PRICE);
+        assert_eq!(config.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
-    fn custom_block_context_from_args() {
+    fn test_starknet_config_custom() {
         let args = KatanaArgs::parse_from([
             "katana",
+            "--disable-fee",
+            "--disable-validate",
+            "--chain-id",
+            "SN_GOERLI",
+            "--invoke-max-steps",
+            "200",
+            "--validate-max-steps",
+            "100",
+            "--db-dir",
+            "/path/to/db",
             "--eth-gas-price",
             "10",
             "--strk-gas-price",
             "20",
-            "--chain-id",
-            "SN_GOERLI",
-            "--validate-max-steps",
-            "100",
-            "--invoke-max-steps",
-            "200",
         ]);
+        let config = args.starknet_config();
 
-        let block_context = args.starknet_config().block_env();
-
-        assert_eq!(block_context.l1_gas_prices.eth, 10);
-        assert_eq!(block_context.l1_gas_prices.strk, 20);
+        assert!(config.disable_fee);
+        assert!(config.disable_validate);
+        assert_eq!(config.env.chain_id, ChainId::GOERLI);
+        assert_eq!(config.env.invoke_max_steps, 200);
+        assert_eq!(config.env.validate_max_steps, 100);
+        assert_eq!(config.db_dir, Some(PathBuf::from("/path/to/db")));
+        assert_eq!(config.genesis.gas_prices.eth, 10);
+        assert_eq!(config.genesis.gas_prices.strk, 20);
     }
 }

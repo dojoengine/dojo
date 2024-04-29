@@ -13,23 +13,26 @@ use dojo_lang::scarb_internal::build_scarb_root_database;
 use dojo_world::manifest::{BaseManifest, DeploymentManifest};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::world::WorldDiff;
+use dojo_world::migration::TxnConfig;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::CompilationUnit;
 use scarb::core::{Config, Workspace};
-use sozo_ops::migration::{self, prepare_migration};
+use sozo_ops::migration;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
-use tracing_log::log;
+use tracing::error;
 
 use super::migrate::setup_env;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 
-#[derive(Args)]
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::dev";
+
+#[derive(Debug, Args)]
 pub struct DevArgs {
     #[arg(long)]
     #[arg(help = "Name of the World.")]
@@ -45,6 +48,108 @@ pub struct DevArgs {
 
     #[command(flatten)]
     pub account: AccountOptions,
+}
+
+impl DevArgs {
+    pub fn run(self, config: &Config) -> Result<()> {
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+
+        let env_metadata = if config.manifest_path().exists() {
+            dojo_metadata_from_workspace(&ws).env().cloned()
+        } else {
+            None
+        };
+
+        let mut context = load_context(config)?;
+        let (tx, rx) = channel();
+        let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
+
+        debouncer.watcher().watch(
+            config.manifest_path().parent().unwrap().as_std_path(),
+            RecursiveMode::Recursive,
+        )?;
+
+        let name = self.name.unwrap_or_else(|| ws.root_package().unwrap().id.name.to_string());
+
+        let mut previous_manifest: Option<DeploymentManifest> = Option::None;
+        let result = build(&mut context);
+
+        let Some((mut world_address, account, _)) = context
+            .ws
+            .config()
+            .tokio_handle()
+            .block_on(setup_env(
+                &context.ws,
+                self.account,
+                self.starknet,
+                self.world,
+                &name,
+                env_metadata.as_ref(),
+            ))
+            .ok()
+        else {
+            return Err(anyhow!("Failed to setup environment"));
+        };
+
+        match context.ws.config().tokio_handle().block_on(migrate(
+            world_address,
+            &account,
+            &name,
+            &context.ws,
+            previous_manifest.clone(),
+        )) {
+            Ok((manifest, address)) => {
+                previous_manifest = Some(manifest);
+                world_address = address;
+            }
+            Err(error) => {
+                error!(
+                    target: LOG_TARGET,
+                    error = ?error,
+                    address = ?world_address,
+                    "Migrating world."
+                );
+            }
+        }
+        loop {
+            let action = match rx.recv() {
+                Ok(Ok(events)) => events
+                    .iter()
+                    .map(|event| process_event(event, &mut context))
+                    .last()
+                    .unwrap_or(DevAction::None),
+                Ok(Err(_)) => DevAction::None,
+                Err(error) => {
+                    error!(target: LOG_TARGET, error = ?error, "Receiving dev action.");
+                    break;
+                }
+            };
+
+            if action != DevAction::None && build(&mut context).is_ok() {
+                match context.ws.config().tokio_handle().block_on(migrate(
+                    world_address,
+                    &account,
+                    &name,
+                    &context.ws,
+                    previous_manifest.clone(),
+                )) {
+                    Ok((manifest, address)) => {
+                        previous_manifest = Some(manifest);
+                        world_address = address;
+                    }
+                    Err(error) => {
+                        error!(
+                            target: LOG_TARGET,
+                            error = ?error,
+                            address = ?world_address,
+                            "Migrating world.",
+                        );
+                    }
+                }
+            }
+        }
+        result
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -112,7 +217,7 @@ fn build(context: &mut DevContext<'_>) -> Result<()> {
 async fn migrate<P, S>(
     mut world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
-    name: Option<String>,
+    name: &str,
     ws: &Workspace<'_>,
     previous_manifest: Option<DeploymentManifest>,
 ) -> Result<(DeploymentManifest, Option<FieldElement>)>
@@ -142,9 +247,9 @@ where
     }
 
     let ui = ws.config().ui();
-    let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let mut strategy = migration::prepare_migration(&target_dir, diff, name, world_address, &ui)?;
 
-    match migration::apply_diff(ws, account, None, &strategy).await {
+    match migration::apply_diff(ws, account, TxnConfig::default(), &mut strategy).await {
         Ok(migration_output) => {
             config.ui().print(format!(
                 "🎉 World at address {} updated!",
@@ -190,94 +295,4 @@ fn handle_reload_action(context: &mut DevContext<'_>) {
     config.ui().print("Reloading project");
     let new_context = load_context(config).expect("Failed to load context");
     let _ = mem::replace(context, new_context);
-}
-
-impl DevArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = if config.manifest_path().exists() {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
-        } else {
-            None
-        };
-
-        let mut context = load_context(config)?;
-        let (tx, rx) = channel();
-        let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
-
-        debouncer.watcher().watch(
-            config.manifest_path().parent().unwrap().as_std_path(),
-            RecursiveMode::Recursive,
-        )?;
-        let name = self.name.clone();
-        let mut previous_manifest: Option<DeploymentManifest> = Option::None;
-        let result = build(&mut context);
-
-        let Some((mut world_address, account, _)) = context
-            .ws
-            .config()
-            .tokio_handle()
-            .block_on(setup_env(
-                &context.ws,
-                self.account,
-                self.starknet,
-                self.world,
-                name.as_ref(),
-                env_metadata.as_ref(),
-            ))
-            .ok()
-        else {
-            return Err(anyhow!("Failed to setup environment"));
-        };
-
-        match context.ws.config().tokio_handle().block_on(migrate(
-            world_address,
-            &account,
-            name.clone(),
-            &context.ws,
-            previous_manifest.clone(),
-        )) {
-            Ok((manifest, address)) => {
-                previous_manifest = Some(manifest);
-                world_address = address;
-            }
-            Err(error) => {
-                log::error!("Error: {error:?}");
-            }
-        }
-        loop {
-            let action = match rx.recv() {
-                Ok(Ok(events)) => events
-                    .iter()
-                    .map(|event| process_event(event, &mut context))
-                    .last()
-                    .unwrap_or(DevAction::None),
-                Ok(Err(_)) => DevAction::None,
-                Err(error) => {
-                    log::error!("Error: {error:?}");
-                    break;
-                }
-            };
-
-            if action != DevAction::None && build(&mut context).is_ok() {
-                match context.ws.config().tokio_handle().block_on(migrate(
-                    world_address,
-                    &account,
-                    name.clone(),
-                    &context.ws,
-                    previous_manifest.clone(),
-                )) {
-                    Ok((manifest, address)) => {
-                        previous_manifest = Some(manifest);
-                        world_address = address;
-                    }
-                    Err(error) => {
-                        log::error!("Error: {error:?}");
-                    }
-                }
-            }
-        }
-        result
-    }
 }

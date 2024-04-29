@@ -21,6 +21,8 @@ use tracing::{error, trace};
 
 use crate::proto;
 
+pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
+
 pub struct EntitiesSubscriber {
     /// Entity ids that the subscriber is interested in
     hashed_keys: HashSet<FieldElement>,
@@ -89,18 +91,21 @@ impl Service {
             // publish all updates if ids is empty or only ids that are subscribed to
             if sub.hashed_keys.is_empty() || sub.hashed_keys.contains(&hashed) {
                 let models_query = r#"
-                    SELECT group_concat(entity_model.model_id) as model_names
+                    SELECT group_concat(entity_model.model_id) as model_ids
                     FROM entities
                     JOIN entity_model ON entities.id = entity_model.entity_id
                     WHERE entities.id = ?
                     GROUP BY entities.id
                 "#;
-                let (model_names,): (String,) =
+                let (model_ids,): (String,) =
                     sqlx::query_as(models_query).bind(hashed_keys).fetch_one(&pool).await?;
-                let model_names: Vec<&str> = model_names.split(',').collect();
-                let schemas = cache.schemas(model_names).await?;
+                let model_ids: Vec<&str> = model_ids.split(',').collect();
+                let schemas = cache.schemas(model_ids).await?;
 
-                let entity_query = format!("{} WHERE entities.id = ?", build_sql_query(&schemas)?);
+                let entity_query = format!(
+                    "{} WHERE entities.id = ?",
+                    build_sql_query(&schemas, "entities", "entity_id")?
+                );
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
 
                 let models = schemas
@@ -128,7 +133,7 @@ impl Service {
         }
 
         for id in closed_stream {
-            trace!(target = "subscription", "closing entity stream idx: {id}");
+            trace!(target = LOG_TARGET, id = %id, "Closing entity stream.");
             subs.remove_subscriber(id).await
         }
 
@@ -148,7 +153,7 @@ impl Future for Service {
             let pool = pin.pool.clone();
             tokio::spawn(async move {
                 if let Err(e) = Service::publish_updates(subs, cache, pool, &entity.id).await {
-                    error!(target = "subscription", "error when publishing entity update: {e}");
+                    error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
                 }
             });
         }
