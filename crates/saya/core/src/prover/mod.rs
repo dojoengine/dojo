@@ -30,10 +30,10 @@ pub enum ProverIdentifier {
     Dummy,
 }
 
-pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
+pub async fn prove(input: String, prover: ProverIdentifier,docker_image:&str) -> anyhow::Result<String> {
     match prover {
         ProverIdentifier::Sharp => todo!(),
-        ProverIdentifier::Stone => prove_stone(input).await,
+        ProverIdentifier::Stone => prove_stone(input,docker_image).await,
         ProverIdentifier::Platinum => todo!(),
         //#[cfg(test)]
         ProverIdentifier::Dummy => {

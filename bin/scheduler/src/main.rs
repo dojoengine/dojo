@@ -59,5 +59,5 @@ async fn main() {
         })
         .collect();
     let result = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
-    prove_to_json(result).await;
+    prove_to_json(vec![result]).await;
 }

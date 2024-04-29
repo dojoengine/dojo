@@ -11,13 +11,13 @@ use super::{ProverClient, ProverIdentifier};
 #[derive(Clone)]
 pub struct StoneProver(pub String);
 
-pub async fn prove_stone(input: String) -> anyhow::Result<String> {
-    let prover = StoneProver::new().await?;
+pub async fn prove_stone(input: String, docker_image: &str) -> anyhow::Result<String> {
+    let prover = StoneProver::new(docker_image).await?;
     prover.prove(input).await
 }
 
-pub async fn local_verify(input: String) -> anyhow::Result<String> {
-    let prover = StoneProver::new().await?;
+pub async fn local_verify(input: String, docker_image: &str) -> anyhow::Result<String> {
+    let prover = StoneProver::new(docker_image).await?;
     prover.local_verify(input).await?;
     Ok(String::from("ok"))
 }
