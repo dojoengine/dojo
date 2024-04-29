@@ -71,10 +71,10 @@ RUN if [ "$DOJO_VERSION" = "stable" ] ; then \
     elif [ -n "$DOJO_BRANCH" ] ; then \
         #dojoup -b "$DOJO_BRANCH"; \
         mkdir -p ~/.dojo/bin; \
-        cargo +1.76.0 install --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" katana --force --root ~/.dojo/ ; \
-        cargo +1.76.0 install --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" sozo --force --root ~/.dojo/ ; \
-        cargo +1.76.0 install --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" torii --force --root ~/.dojo/ ; \
-        cargo +1.76.0 install --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" dojo-language-server --force --root ~/.dojo/ ; \
+        cargo +1.76.0 install --locked --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" katana --force --root ~/.dojo/ ; \
+        cargo +1.76.0 install --locked --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" sozo --force --root ~/.dojo/ ; \
+        cargo +1.76.0 install --locked --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" torii --force --root ~/.dojo/ ; \
+        cargo +1.76.0 install --locked --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" dojo-language-server --force --root ~/.dojo/ ; \
    elif [ -n "$DOJO_VERSION" ] ; then \
         dojoup -v "$DOJO_VERSION"; \
     else \
