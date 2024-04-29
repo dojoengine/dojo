@@ -65,11 +65,17 @@ ARG DOJO_BRANCH
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
+
 RUN if [ "$DOJO_VERSION" = "stable" ] ; then \
         dojoup; \
     elif [ -n "$DOJO_BRANCH" ] ; then \
-        dojoup -b "$DOJO_BRANCH"; \
-    elif [ -n "$DOJO_VERSION" ] ; then \
+        #dojoup -b "$DOJO_BRANCH"; \
+        mkdir -p ~/.dojo/bin; \
+        cargo +1.76.0 install --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" katana --force --root ~/.dojo/ ; \
+        cargo +1.76.0 install --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" sozo --force --root ~/.dojo/ ; \
+        cargo +1.76.0 install --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" torii --force --root ~/.dojo/ ; \
+        cargo +1.76.0 install --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" dojo-language-server --force --root ~/.dojo/ ; \
+   elif [ -n "$DOJO_VERSION" ] ; then \
         dojoup -v "$DOJO_VERSION"; \
     else \
         dojoup; \
