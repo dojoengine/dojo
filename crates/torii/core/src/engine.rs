@@ -252,12 +252,8 @@ impl<P: Provider + Sync> Engine<P> {
                             MaybePendingTransactionReceipt::Receipt(
                                 TransactionReceipt::L1Handler(receipt),
                             ) => receipt.block_number,
-                            _ => {
-                                error!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", event.transaction_hash), "Invalid transaction state. Could not fetch block number for event.");
-                                return Err(anyhow::anyhow!(
-                                    "Expected finalized transaction receipt for event."
-                                ));
-                            }
+                            // If it's a pending transaction, we assume the block number is the latest + 1
+                            _ => to + 1,
                         }
                     }
                 };
