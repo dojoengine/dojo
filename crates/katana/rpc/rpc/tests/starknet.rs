@@ -7,7 +7,8 @@ use std::time::Duration;
 use anyhow::Context;
 use dojo_world::utils::TransactionWaiter;
 use ethers::contract::ContractFactory;
-use ethers::types::H160;
+use ethers::types::{H160, U256};
+use ethers_contract::abigen;
 use ethers_solc::{Artifact, Project, ProjectPathsConfig};
 use katana_runner::{AnvilRunner, KatanaRunner};
 use starknet::accounts::{Account, Call, ConnectedAccount};
@@ -177,6 +178,12 @@ async fn test_send_declare_and_deploy_legacy_contract() {
     drop(katana_runner)
 }
 
+abigen!(
+        Contract1_test,
+        "/Users/fabrobles/Fab/dojo_fork/crates/katana/rpc/rpc/tests/test_data/solidity/Contract1_abi2.json",
+        event_derives(serde::Serialize, serde::Deserialize)
+    );
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_messaging_l1_l2() {
     // Prepare Anvil + Messaging Contracts
@@ -198,12 +205,15 @@ async fn test_messaging_l1_l2() {
 
     let anvil_runner = AnvilRunner::new().await.unwrap();
 
-    let account = Arc::new(anvil_runner.account().await);
+    let eth_account = Arc::new(anvil_runner.account().await);
 
-    let factory_cstrk =
-        ContractFactory::new(abi_cstrk.clone().unwrap(), bytecode_cstrk.unwrap(), account.clone());
+    let factory_cstrk = ContractFactory::new(
+        abi_cstrk.clone().unwrap(),
+        bytecode_cstrk.unwrap(),
+        eth_account.clone(),
+    );
     let factory_c1 =
-        ContractFactory::new(abi_c1.clone().unwrap(), bytecode_c1.unwrap(), account.clone());
+        ContractFactory::new(abi_c1.clone().unwrap(), bytecode_c1.unwrap(), eth_account.clone());
 
     // Deploy to local node (anvil)
     let contract_strk =
@@ -228,23 +238,28 @@ async fn test_messaging_l1_l2() {
 
     // Prepare Katana + Messaging Contract
     let katana_runner = KatanaRunner::new().unwrap();
-    let account = katana_runner.account(0);
+    let starknet_account = katana_runner.account(0);
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo_l1_msg_contract.json");
     let (contract, compiled_class_hash) =
         common::prepare_contract_declaration_params(&path).unwrap();
 
     let class_hash = contract.class_hash();
-    let res = account.declare(Arc::new(contract), compiled_class_hash).send().await.unwrap();
+    let res =
+        starknet_account.declare(Arc::new(contract), compiled_class_hash).send().await.unwrap();
 
-    let receipt = TransactionWaiter::new(res.transaction_hash, account.provider())
+    let receipt = TransactionWaiter::new(res.transaction_hash, starknet_account.provider())
         .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
         .await
         .expect("Invalid tx receipt");
 
     assert_eq!(receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
 
-    assert!(account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await.is_ok());
+    assert!(starknet_account
+        .provider()
+        .get_class(BlockId::Tag(BlockTag::Latest), class_hash)
+        .await
+        .is_ok());
 
     let constructor_calldata = vec![FieldElement::from(1_u32), FieldElement::from(2_u32)];
 
@@ -262,6 +277,26 @@ async fn test_messaging_l1_l2() {
         )
         .unwrap()
     );
+
+    //Messaging between L1 -> L2
+
+    let contr1_test = Contract1_test::new(contract_c1.address(), eth_account.clone());
+    let address =
+        U256::from_str("0x0024f0deadb642bd4792c19da937758eb6bf4747d7d93a13ecc527bba82eb1f1")
+            .unwrap();
+    let selector =
+        U256::from_str("0x005421de947699472df434466845d68528f221a52fce7ad2934c5dae2e1f1cdc")
+            .unwrap();
+    let payload = vec![U256::from(123)];
+    let receipt = contr1_test
+        .send_message(address, selector, payload)
+        .gas(10000000)
+        .send()
+        .await
+        .unwrap()
+        .await
+        .unwrap();
+    println!("RECEIPT {:?}", receipt);
 
     drop(katana_runner);
     drop(anvil_runner);
