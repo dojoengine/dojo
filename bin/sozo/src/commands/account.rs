@@ -6,12 +6,12 @@ use scarb::core::Config;
 use sozo_ops::account;
 use starknet::signers::LocalWallet;
 use starknet_crypto::FieldElement;
+use tracing::trace;
 
 use super::options::fee::FeeOptions;
 use super::options::signer::SignerOptions;
 use super::options::starknet::StarknetOptions;
 use crate::utils;
-use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct AccountArgs {
@@ -84,20 +84,14 @@ pub enum AccountCommand {
 
 impl AccountArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(command=?self.command, "Executing command.");
+        trace!(command = ?self.command, "Executing command.");
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         config.tokio_handle().block_on(async {
             match self.command {
                 AccountCommand::New { signer, force, file } => {
-                    
                     let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
-                    trace!(  
-                        ?signer,
-                        force,
-                        ?file,
-                        "Executing New command."
-                    );
+                    trace!(?signer, force, ?file, "Executing New command.");
                     account::new(signer, force, file).await
                 }
                 AccountCommand::Deploy {
@@ -110,7 +104,6 @@ impl AccountArgs {
                     file,
                     no_confirmation,
                 } => {
-                    
                     let provider = starknet.provider(env_metadata.as_ref())?;
                     let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
                     let fee_setting = fee.into_setting()?;
@@ -138,13 +131,7 @@ impl AccountArgs {
                     .await
                 }
                 AccountCommand::Fetch { starknet, force, output, address } => {
-                    trace!(
-                        ?starknet,
-                        force,
-                        ?output,
-                        ?address,
-                        "Executing Fetch command."
-                    );
+                    trace!(?starknet, force, ?output, ?address, "Executing Fetch command.");
                     let provider = starknet.provider(env_metadata.as_ref())?;
                     account::fetch(provider, force, output, address).await
                 }

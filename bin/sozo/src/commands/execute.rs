@@ -3,13 +3,13 @@ use clap::Args;
 use scarb::core::Config;
 use sozo_ops::execute;
 use starknet::core::types::FieldElement;
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
-use tracing::trace;
 
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]

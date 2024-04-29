@@ -7,10 +7,10 @@ use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
+use tracing::trace;
 
 use super::signer::SignerOptions;
 use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
-use tracing::trace;
 
 // INVARIANT:
 // - For commandline: we can either specify `private_key` or `keystore_path` along with
@@ -53,12 +53,6 @@ impl AccountOptions {
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
         trace!(?chain_id, "Chain ID obtained.");
-        let encoding = if self.legacy { 
-            ExecutionEncoding::Legacy 
-        } else { 
-            ExecutionEncoding::New 
-        };
-
         let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
         trace!(?encoding, "Creating SingleOwnerAccount.");
         let mut account =

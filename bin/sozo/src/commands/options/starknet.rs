@@ -3,8 +3,8 @@ use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use url::Url;
 use tracing::trace;
+use url::Url;
 
 use super::STARKNET_RPC_URL_ENV_VAR;
 

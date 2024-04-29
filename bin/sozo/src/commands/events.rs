@@ -2,11 +2,11 @@ use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
 use sozo_ops::events;
+use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
-use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct EventsArgs {
@@ -47,7 +47,7 @@ impl EventsArgs {
         trace!(?env_metadata, "Metadata loaded from config.");
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        trace!(ws_members_count=ws.members().count(), "Read workspace.");
+        trace!(ws_members_count = ws.members().count(), "Read workspace.");
 
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
         trace!(?manifest_dir, "Manifest directory defined from workspace.");
@@ -61,13 +61,12 @@ impl EventsArgs {
             self.events,
             self.world.world_address,
         );
-        trace!( 
-            from_block=self.from_block,
-            to_block=self.to_block,
-            chunk_size=self.chunk_size,
+        trace!(
+            from_block = self.from_block,
+            to_block = self.to_block,
+            chunk_size = self.chunk_size,
             "Created event filter."
         );
-        
         let profile_name =
             ws.current_profile().expect("Scarb profile expected at this point.").to_string();
         trace!(profile_name, "Current profile.");

@@ -12,12 +12,12 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::LocalWallet;
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct MigrateArgs {

@@ -37,10 +37,7 @@ impl FeeOptions {
 
                 // The user is most likely making a mistake for using a max fee higher than 1 ETH
                 if max_fee_felt > felt!("1000000000000000000") {
-                    trace!(
-                        ?max_fee_felt,
-                        "Max fee in Ether is higher than 1 ETH."
-                    );
+                    trace!(?max_fee_felt, "Max fee in Ether is higher than 1 ETH.");
                     anyhow::bail!(
                         "the --max-fee value is too large. --max-fee expects a value in Ether (18 \
                          decimals). Use --max-fee-raw instead to use a raw max_fee amount in Wei."
@@ -101,6 +98,6 @@ where
             biguint = quotient;
         }
     }
-    
+
     Ok(FieldElement::from_byte_slice_be(&biguint.to_bytes_be())?)
 }

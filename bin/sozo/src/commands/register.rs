@@ -5,13 +5,13 @@ use scarb::core::Config;
 use sozo_ops::register;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
-use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct RegisterArgs {
@@ -64,7 +64,6 @@ impl RegisterArgs {
             let provider = world.account.provider();
             let world_reader = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
-            
             register::model_register(
                 models,
                 &world,

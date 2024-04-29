@@ -44,10 +44,7 @@ impl SignerOptions {
         if let Some(private_key) =
             self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
         {
-            trace!(
-                private_key,
-                "Signing using private key."
-            );
+            trace!(private_key, "Signing using private key.");
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 FieldElement::from_str(private_key)?,
             )));

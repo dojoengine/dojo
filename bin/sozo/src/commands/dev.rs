@@ -24,6 +24,7 @@ use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
 use tracing::{error, trace};
+
 use super::migrate::setup_env;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -103,7 +104,6 @@ impl DevArgs {
             }
             Err(error) => {
                 error!(
-                    
                     error = ?error,
                     address = ?world_address,
                     "Migrating world."
@@ -138,7 +138,6 @@ impl DevArgs {
                     }
                     Err(error) => {
                         error!(
-                            
                             error = ?error,
                             address = ?world_address,
                             "Migrating world.",
@@ -197,7 +196,7 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
 
     // we have only 1 unit in projects
     // TODO: double check if we always have one with the new version and the order if many.
-    trace!(unit_count=compilation_units.len(), "Gathering compilation units.");
+    trace!(unit_count = compilation_units.len(), "Gathering compilation units.");
     let unit = compilation_units.first().unwrap();
     let db = build_scarb_root_database(unit).unwrap();
     Ok(DevContext { db, unit: unit.clone(), ws })

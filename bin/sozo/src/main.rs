@@ -10,6 +10,7 @@ use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb_ui::{OutputFormat, Ui};
 use tracing::trace;
+
 use crate::commands::Commands;
 
 mod args;
@@ -18,7 +19,6 @@ mod utils;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli";
 fn main() {
-    
     let args = SozoArgs::parse();
     let _ = args.init_logging();
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
@@ -38,8 +38,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
             trace!(target: LOG_TARGET, "Adding DojoCompiler to compiler repository");
             compilers.add(Box::new(DojoCompiler)).unwrap()
         }
-        _ => {
-        }
+        _ => {}
     }
 
     let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
@@ -58,7 +57,6 @@ fn cli_main(args: SozoArgs) -> Result<()> {
     trace!(target: LOG_TARGET, "Configuration built successfully.");
 
     let _ = commands::run(args.command, &config);
-
 
     Ok(())
 }

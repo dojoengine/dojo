@@ -86,7 +86,7 @@ fn modify_git_history(url: &str) -> Result<()> {
     trace!("Modifying Git history.");
     let git_output = Command::new("git").args(["rev-parse", "--short", "HEAD"]).output()?.stdout;
     let commit_hash = String::from_utf8(git_output)?;
-    trace!(commit_hash=commit_hash.trim());
+    trace!(commit_hash = commit_hash.trim());
 
     fs::remove_dir_all(".git")?;
 
