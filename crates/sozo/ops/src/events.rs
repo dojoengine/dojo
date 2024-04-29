@@ -60,8 +60,9 @@ pub async fn parse(
 
     if let Some(events_map) = events_map {
         parse_and_print_events(res, events_map)?;
+    } else {
+        println!("{}", serde_json::to_string_pretty(&res)?);
     }
-
     Ok(())
 }
 
