@@ -252,7 +252,8 @@ impl<P: Provider + Sync> Engine<P> {
                             MaybePendingTransactionReceipt::Receipt(
                                 TransactionReceipt::L1Handler(receipt),
                             ) => receipt.block_number,
-                            // If it's a pending transaction, we assume the block number is the latest + 1
+                            // If it's a pending transaction, we assume the block number is the
+                            // latest + 1
                             _ => to + 1,
                         }
                     }
