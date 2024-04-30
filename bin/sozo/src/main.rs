@@ -55,7 +55,5 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     trace!(%manifest_path, "Configuration built successfully.");
 
-    let _ = commands::run(args.command, &config);
-
-    Ok(())
+    commands::run(args.command, &config)
 }
