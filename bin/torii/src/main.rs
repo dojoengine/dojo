@@ -205,8 +205,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to start libp2p relay server");
 
-    let proxy_server =
-        Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
+    let proxy_server = Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),

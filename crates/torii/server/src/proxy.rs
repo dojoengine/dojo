@@ -105,8 +105,8 @@ impl Proxy {
                         .collect::<Vec<HeaderName>>(),
                 );
 
-            let cors = allowed_origins.clone().map(|allowed_origins| {
-                match allowed_origins.as_slice() {
+            let cors =
+                allowed_origins.clone().map(|allowed_origins| match allowed_origins.as_slice() {
                     [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
                     origins => cors.allow_origin(
                         origins
@@ -114,19 +114,16 @@ impl Proxy {
                             .map(|o| o.parse().expect("valid origin"))
                             .collect::<Vec<_>>(),
                     ),
-                }
-            });
+                });
 
             let graphql_addr_clone = graphql_addr.clone();
-            let service = ServiceBuilder::new()
-                .option_layer(cors)
-                .service_fn(move |req| {
-                    let graphql_addr = graphql_addr_clone.clone();
-                    async move {
-                        let graphql_addr = graphql_addr.read().await;
-                        handle(remote_addr, grpc_addr, *graphql_addr, req).await
-                    }
-                });
+            let service = ServiceBuilder::new().option_layer(cors).service_fn(move |req| {
+                let graphql_addr = graphql_addr_clone.clone();
+                async move {
+                    let graphql_addr = graphql_addr.read().await;
+                    handle(remote_addr, grpc_addr, *graphql_addr, req).await
+                }
+            });
 
             async { Ok::<_, Infallible>(service) }
         });
