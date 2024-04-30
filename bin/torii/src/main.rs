@@ -89,7 +89,7 @@ struct Args {
     /// for all)
     #[arg(long, default_value = "*")]
     #[arg(value_delimiter = ',')]
-    allowed_origins: Vec<String>,
+    allowed_origins: Option<Vec<String>>,
 
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
     /// environment
@@ -109,10 +109,6 @@ struct Args {
     /// Chunk size of the events page when indexing using events
     #[arg(long, default_value = "1000")]
     events_chunk_size: u64,
-
-    /// Should cors be disabled
-    #[arg(long)]
-    no_cors: bool,
 }
 
 #[tokio::main]
@@ -210,7 +206,7 @@ async fn main() -> anyhow::Result<()> {
     .expect("Failed to start libp2p relay server");
 
     let proxy_server =
-        Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None, args.no_cors));
+        Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
