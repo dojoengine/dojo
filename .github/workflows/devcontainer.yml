@@ -11,10 +11,13 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest-8-cores
+    runs-on: ubuntu-latest-4-cores
+
+    # Currently linux/arm64 is being emulated on the runner,
+    # which causes a timeout after 6h.
     strategy:
       matrix:
-        platform: [linux/amd64, linux/arm64]
+        platform: [linux/amd64]
 
     env:
       DOCKER_TAG: latest
