@@ -12943,6 +12943,7 @@ version = "0.6.1-alpha.4"
 dependencies = [
  "anyhow",
  "async-trait",
+ "auto_impl",
  "base64 0.21.7",
  "camino",
  "chrono",
@@ -12961,6 +12962,7 @@ dependencies = [
  "scarb-ui",
  "serde",
  "serde_json",
+ "serde_with",
  "slab",
  "sozo",
  "sozo-ops",

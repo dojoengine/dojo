@@ -30,6 +30,7 @@ use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
+use torii_core::provider::KatanaClient;
 use torii_core::sql::Sql;
 
 mod entities_test;
@@ -329,11 +330,13 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     TransactionWaiter::new(transaction_hash, &provider).await?;
 
+    let katana_provider =
+        KatanaClient::new(torii_core::provider::http::HttpTransport::new(sequencer.url()));
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
         db,
-        &provider,
+        &katana_provider,
         Processors {
             event: vec![
                 Box::new(RegisterModelProcessor),
