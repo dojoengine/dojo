@@ -12,6 +12,9 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest-8-cores
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
 
     env:
       DOCKER_TAG: latest
@@ -61,7 +64,7 @@ jobs:
           build-args: |
             VARIANT=bookworm
             DOJO_VERSION=${{ github.event_name == 'release' && github.event.release.tag_name || 'stable' }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 
       - name: Build and push Docker image (push)
@@ -74,7 +77,7 @@ jobs:
           build-args: |
             VARIANT=bookworm
             DOJO_BRANCH=${{ env.BRANCH_NAME }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 
   propose-update-pr:
