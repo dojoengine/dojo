@@ -242,13 +242,7 @@ fn test_program_input() -> anyhow::Result<()> {
     // Serialize just the DA as calldata. The length is not included, only the array of
     // updates [key, value, key, value...].
     let da_calldata = input.da_as_calldata(FieldElement::from_str("113")?);
-    assert_eq!(
-        da_calldata,
-        vec![
-            FieldElement::from_str("114")?,
-            FieldElement::from_str("115")?
-        ]
-    );
+    assert_eq!(da_calldata, vec![FieldElement::from_str("114")?, FieldElement::from_str("115")?]);
 
     Ok(())
 }
