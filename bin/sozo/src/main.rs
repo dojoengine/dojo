@@ -17,7 +17,6 @@ mod args;
 mod commands;
 mod utils;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli";
 fn main() {
     let args = SozoArgs::parse();
     let _ = args.init_logging();
@@ -35,7 +34,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     match &args.command {
         Commands::Build(_) | Commands::Dev(_) | Commands::Migrate(_) => {
-            trace!(target: LOG_TARGET, "Adding DojoCompiler to compiler repository.");
+            trace!("Adding DojoCompiler to compiler repository.");
             compilers.add(Box::new(DojoCompiler)).unwrap()
         }
         _ => {}
@@ -45,7 +44,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     utils::verify_cairo_version_compatibility(&manifest_path)?;
 
-    let config = Config::builder(manifest_path)
+    let config = Config::builder(manifest_path.clone())
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .profile(args.profile_spec.determine()?)
         .offline(args.offline)
@@ -54,7 +53,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .compilers(compilers)
         .build()?;
 
-    trace!(target: LOG_TARGET, "Configuration built successfully.");
+    trace!(%manifest_path, "Configuration built successfully.");
 
     let _ = commands::run(args.command, &config);
 
