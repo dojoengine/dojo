@@ -41,15 +41,15 @@ type GetClassAtResult = BackendResult<RpcContractClass>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BackendError {
-    #[error("Failed to send request to backend: {0}")]
+    #[error("failed to send request to backend: {0}")]
     FailedSendRequest(#[from] SendError),
-    #[error("Failed to receive result from backend: {0}")]
+    #[error("failed to receive result from backend: {0}")]
     FailedReceiveResult(#[from] RecvError),
-    #[error("Compute class hash error: {0}")]
+    #[error("compute class hash error: {0}")]
     ComputeClassHashError(anyhow::Error),
-    #[error("Failed to spawn backend thread: {0}")]
+    #[error("failed to spawn backend thread: {0}")]
     BackendThreadInit(#[from] io::Error),
-    #[error("Rpc provider error: {0}")]
+    #[error("rpc provider error: {0}")]
     StarknetProvider(#[from] starknet::providers::ProviderError),
 }
 
@@ -161,6 +161,7 @@ where
             BlockHashOrNumber::Num(number) => BlockId::Number(number),
         };
 
+        // Create async channel to receive requests from the handle.
         let (tx, rx) = async_channel(100);
         let backend = Backend {
             block,
@@ -630,6 +631,11 @@ impl ContractClassProvider for SharedStateProvider {
     }
 }
 
+/// A helper function to convert a contract/class not found error returned by the RPC provider into
+/// a `Option::None`.
+///
+/// This is to follow the Katana's provider APIs where 'not found'/'non-existent' should be
+/// represented as `Option::None`.
 fn handle_contract_or_class_not_found_err<T>(
     result: Result<T, BackendError>,
 ) -> Result<Option<T>, BackendError> {
