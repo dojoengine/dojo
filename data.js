@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714452671102,
+  "lastUpdate": 1714495386948,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6685,6 +6685,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17106250,
             "range": "± 81901",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6427cdc2f3a47d2400c41b1eac4f076619ed9993",
+          "message": "fix(torii): fallback invalid events & flag indexing pending blocks (#1897)\n\n* feat: fallback for non block number events & flag for indx pending blocks\r\n\r\n* chore: comment\r\n\r\n* feat: pending transaction for event\r\n\r\n* fmt",
+          "timestamp": "2024-04-30T10:34:18-06:00",
+          "tree_id": "fb908b05b11c395d8b81fa6926c3b4326cd7cfd1",
+          "url": "https://github.com/dojoengine/dojo/commit/6427cdc2f3a47d2400c41b1eac4f076619ed9993"
+        },
+        "date": 1714495386373,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17945004,
+            "range": "± 202551",
             "unit": "ns/iter"
           }
         ]
