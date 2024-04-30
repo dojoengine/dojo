@@ -111,7 +111,11 @@ impl Proxy {
                     origins => cors.allow_origin(
                         origins
                             .iter()
-                            .map(|o| o.parse().expect("valid origin"))
+                            .map(|o| {
+                                let _ = o.parse::<http::Uri>().expect("Invalid URI");
+
+                                o.parse().expect("Invalid origin")
+                            })
                             .collect::<Vec<_>>(),
                     ),
                 });
