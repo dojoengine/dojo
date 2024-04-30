@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714282223817,
+  "lastUpdate": 1714452671102,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6655,6 +6655,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16857107,
             "range": "± 180073",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f7213c53003657001582ac9c38d2ca4e7685910d",
+          "message": "fix(katana): place import inside its feature scope (#1902)\n\nchore: fix feature code usage",
+          "timestamp": "2024-04-30T12:42:59+08:00",
+          "tree_id": "7e82e9c105cd0aad61dd4fa19ca5bc99130e0141",
+          "url": "https://github.com/dojoengine/dojo/commit/f7213c53003657001582ac9c38d2ca4e7685910d"
+        },
+        "date": 1714452670563,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17106250,
+            "range": "± 81901",
             "unit": "ns/iter"
           }
         ]
