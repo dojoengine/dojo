@@ -217,7 +217,7 @@ impl ProgramInput {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L16
-#[derive(Debug, Clone, Deserialize, Serialize,PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
 pub struct MessageToStarknet {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
@@ -306,7 +306,7 @@ impl MessageToStarknet {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L28
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq,Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
 pub struct MessageToAppchain {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
