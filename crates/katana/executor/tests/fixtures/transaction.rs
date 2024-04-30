@@ -7,7 +7,7 @@ use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::FieldElement;
 use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::BroadcastedInvokeTransaction;
+use starknet::core::types::{BlockId, BlockTag, BroadcastedInvokeTransaction};
 use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Url};
@@ -28,13 +28,15 @@ pub fn invoke_executable_tx(
     let provider = JsonRpcClient::new(HttpTransport::new(Url::try_from(url).unwrap()));
     let signer = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key));
 
-    let account = SingleOwnerAccount::new(
+    let mut account = SingleOwnerAccount::new(
         provider,
         signer,
         address.into(),
         chain_id.into(),
         ExecutionEncoding::New,
     );
+
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let calls = vec![Call {
         to: DEFAULT_FEE_TOKEN_ADDRESS.into(),

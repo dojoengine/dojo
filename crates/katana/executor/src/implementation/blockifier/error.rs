@@ -69,8 +69,8 @@ impl From<TransactionPreValidationError> for ExecutionError {
                 incoming_tx_nonce,
                 ..
             } => Self::InvalidNonce {
-                actual: account_nonce.0.into(),
-                expected: incoming_tx_nonce.0.into(),
+                actual: incoming_tx_nonce.0.into(),
+                expected: account_nonce.0.into(),
             },
             TransactionPreValidationError::TransactionFeeError(e) => Self::from(e),
             TransactionPreValidationError::StateError(e) => Self::from(e),
