@@ -9,13 +9,12 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_VERSION: 1.76.0
-  DOJO_DEV_CONTAINER: ghcr.io/dojoengine/dojo-dev:3153a80
 
 jobs:
   test:
     runs-on: ubuntu-latest-16-cores
     container:
-      image: ${{ env.DOJO_DEV_CONTAINER }}
+      image: ghcr.io/dojoengine/dojo-dev:0a16f65
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -33,7 +32,7 @@ jobs:
   ensure-wasm:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.DOJO_DEV_CONTAINER }}
+      image: ghcr.io/dojoengine/dojo-dev:0a16f65
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -67,7 +66,7 @@ jobs:
   dojo-core-test:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.DOJO_DEV_CONTAINER }}
+      image: ghcr.io/dojoengine/dojo-dev:0a16f65
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -76,7 +75,7 @@ jobs:
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.DOJO_DEV_CONTAINER }}
+      image: ghcr.io/dojoengine/dojo-dev:0a16f65
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -85,7 +84,7 @@ jobs:
   dojo-world-bindings-check:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.DOJO_DEV_CONTAINER }}
+      image: ghcr.io/dojoengine/dojo-dev:0a16f65
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -94,7 +93,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.DOJO_DEV_CONTAINER }}
+      image: ghcr.io/dojoengine/dojo-dev:0a16f65
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -103,7 +102,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.DOJO_DEV_CONTAINER }}
+      image: ghcr.io/dojoengine/dojo-dev:0a16f65
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -112,7 +111,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.DOJO_DEV_CONTAINER }}
+      image: ghcr.io/dojoengine/dojo-dev:0a16f65
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
