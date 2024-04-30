@@ -411,17 +411,10 @@ impl StateProvider for SharedStateProvider {
             return Ok(nonce);
         }
 
-        if let Some(nonce) = handle_contract_or_class_not_found_err(self.0.get_nonce(address))
-            .map_err(|e| {
-                error!(
-                    target: LOG_TARGET,
-                    contract_address = %address,
-                    error = %e,
-                    "Fetching nonce."
-                );
-                e
-            })?
-        {
+        if let Some(nonce) = handle_not_found_err(self.0.get_nonce(address)).map_err(|error| {
+            error!(target: LOG_TARGET, %address, %error, "Fetching nonce.");
+            error
+        })? {
             self.0.contract_state.write().entry(address).or_default().nonce = nonce;
             Ok(Some(nonce))
         } else {
@@ -441,17 +434,10 @@ impl StateProvider for SharedStateProvider {
         }
 
         let value =
-            handle_contract_or_class_not_found_err(self.0.get_storage(address, storage_key))
-                .map_err(|e| {
-                    error!(
-                        target: LOG_TARGET,
-                        address = %address,
-                        storage_key = %format!("{:#x}", storage_key),
-                        error = %e,
-                        "Fetching storage value."
-                    );
-                    e
-                })?;
+            handle_not_found_err(self.0.get_storage(address, storage_key)).map_err(|error| {
+                error!(target: LOG_TARGET, %address, storage_key = %format!("{storage_key:#x}"), %error, "Fetching storage value.");
+                error
+            })?;
 
         self.0
             .storage
@@ -479,18 +465,12 @@ impl StateProvider for SharedStateProvider {
             return Ok(hash);
         }
 
-        if let Some(hash) = handle_contract_or_class_not_found_err(
-            self.0.get_class_hash_at(address),
-        )
-        .map_err(|e| {
-            error!(
-                target: LOG_TARGET,
-                contract_address = %address,
-                error = %e,
-                "Fetching class hash."
-            );
-            e
-        })? {
+        if let Some(hash) =
+            handle_not_found_err(self.0.get_class_hash_at(address)).map_err(|error| {
+                error!(target: LOG_TARGET, %address, %error, "Fetching class hash.");
+                error
+            })?
+        {
             self.0.contract_state.write().entry(address).or_default().class_hash = hash;
             Ok(Some(hash))
         } else {
@@ -505,16 +485,10 @@ impl ContractClassProvider for SharedStateProvider {
             return Ok(class.cloned());
         }
 
-        let Some(class) = handle_contract_or_class_not_found_err(self.0.get_class_at(hash))
-            .map_err(|e| {
-                error!(
-                    target: LOG_TARGET,
-                    hash = %format!("{:#x}", hash),
-                    error = %e,
-                    "Fetching sierra class."
-                );
-                e
-            })?
+        let Some(class) = handle_not_found_err(self.0.get_class_at(hash)).map_err(|error| {
+            error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Fetching sierra class.");
+            error
+        })?
         else {
             return Ok(None);
         };
@@ -540,18 +514,12 @@ impl ContractClassProvider for SharedStateProvider {
             return Ok(hash.cloned());
         }
 
-        if let Some(hash) = handle_contract_or_class_not_found_err(
-            self.0.get_compiled_class_hash(hash),
-        )
-        .map_err(|e| {
-            error!(
-                target: LOG_TARGET,
-                hash = %format!("{:#x}", hash),
-                error = %e,
-                "Fetching compiled class hash."
-            );
-            e
-        })? {
+        if let Some(hash) =
+            handle_not_found_err(self.0.get_compiled_class_hash(hash)).map_err(|error| {
+                error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Fetching compiled class hash.");
+                error
+            })?
+        {
             self.0.compiled_class_hashes.write().insert(hash, hash);
             Ok(Some(hash))
         } else {
@@ -564,30 +532,19 @@ impl ContractClassProvider for SharedStateProvider {
             return Ok(Some(class.clone()));
         }
 
-        let Some(class) = handle_contract_or_class_not_found_err(self.0.get_class_at(hash))
-            .map_err(|e| {
-                error!(
-                    target: LOG_TARGET,
-                    hash = %format!("{:#x}", hash),
-                    error = %e,
-                    "Fetching class."
-                );
-                e
-            })?
+        let Some(class) = handle_not_found_err(self.0.get_class_at(hash)).map_err(|error| {
+            error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Fetching class.");
+            error
+        })?
         else {
             return Ok(None);
         };
 
         let (class_hash, compiled_class_hash, casm, sierra) = match class {
             RpcContractClass::Legacy(class) => {
-                let (_, compiled_class) = legacy_rpc_to_compiled_class(&class).map_err(|e| {
-                    error!(
-                        target: LOG_TARGET,
-                        hash = %format!("{:#x}", hash),
-                        error = %e,
-                        "Parsing legacy class."
-                    );
-                    ProviderError::ParsingError(e.to_string())
+                let (_, compiled_class) = legacy_rpc_to_compiled_class(&class).map_err(|error| {
+                    error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Parsing legacy class.");
+                    ProviderError::ParsingError(error.to_string())
                 })?;
 
                 (hash, hash, compiled_class, None)
@@ -595,14 +552,9 @@ impl ContractClassProvider for SharedStateProvider {
 
             RpcContractClass::Sierra(sierra_class) => {
                 let (_, compiled_class_hash, compiled_class) =
-                    flattened_sierra_to_compiled_class(&sierra_class).map_err(|e| {
-                        error!(
-                            target: LOG_TARGET,
-                            hash = %format!("{:#x}", hash),
-                            error = %e,
-                            "Parsing sierra class."
-                        );
-                        ProviderError::ParsingError(e.to_string())
+                    flattened_sierra_to_compiled_class(&sierra_class).map_err(|error| {
+                        error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Parsing sierra class.");
+                        ProviderError::ParsingError(error.to_string())
                     })?;
 
                 (hash, compiled_class_hash, compiled_class, Some(sierra_class))
@@ -636,9 +588,7 @@ impl ContractClassProvider for SharedStateProvider {
 ///
 /// This is to follow the Katana's provider APIs where 'not found'/'non-existent' should be
 /// represented as `Option::None`.
-fn handle_contract_or_class_not_found_err<T>(
-    result: Result<T, BackendError>,
-) -> Result<Option<T>, BackendError> {
+fn handle_not_found_err<T>(result: Result<T, BackendError>) -> Result<Option<T>, BackendError> {
     match result {
         Ok(value) => Ok(Some(value)),
 
