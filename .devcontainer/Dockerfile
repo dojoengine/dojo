@@ -4,6 +4,7 @@
 
 ARG VARIANT
 FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
+ARG VARIANT
 
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
