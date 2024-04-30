@@ -87,7 +87,7 @@ struct Args {
 
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
-    #[arg(long, default_value = "*")]
+    #[arg(long)]
     #[arg(value_delimiter = ',')]
     allowed_origins: Option<Vec<String>>,
 
