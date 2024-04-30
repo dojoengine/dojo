@@ -57,6 +57,7 @@ pub struct Proxy {
     allowed_origins: Vec<String>,
     grpc_addr: Option<SocketAddr>,
     graphql_addr: Arc<RwLock<Option<SocketAddr>>>,
+    no_cors: bool,
 }
 
 impl Proxy {
@@ -65,8 +66,9 @@ impl Proxy {
         allowed_origins: Vec<String>,
         grpc_addr: Option<SocketAddr>,
         graphql_addr: Option<SocketAddr>,
+        no_cors: bool,
     ) -> Self {
-        Self { addr, allowed_origins, grpc_addr, graphql_addr: Arc::new(RwLock::new(graphql_addr)) }
+        Self { addr, allowed_origins, grpc_addr, graphql_addr: Arc::new(RwLock::new(graphql_addr)), no_cors }
     }
 
     pub async fn set_graphql_addr(&self, addr: SocketAddr) {
