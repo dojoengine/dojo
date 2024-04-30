@@ -56,7 +56,7 @@ impl RegisterArgs {
         };
 
         let world_address = world.world_address.unwrap_or_default();
-        trace!(?world_address, "Using world address");
+        trace!(?world_address, "Using world address.");
 
         config.tokio_handle().block_on(async {
             let world =

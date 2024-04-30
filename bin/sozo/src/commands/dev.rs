@@ -119,7 +119,7 @@ impl DevArgs {
                     .unwrap_or(DevAction::None),
                 Ok(Err(_)) => DevAction::None,
                 Err(error) => {
-                    error!( error = ?error, "Receiving dev action.");
+                    error!(error = ?error, "Receiving dev action.");
                     break;
                 }
             };
@@ -212,7 +212,6 @@ fn build(context: &mut DevContext<'_>) -> Result<()> {
         anyhow!("could not compile `{package_name}` due to previous error")
     })?;
     ws.config().ui().print("📦 Rebuild done");
-    trace!(?package_name, "Build completed.");
     Ok(())
 }
 

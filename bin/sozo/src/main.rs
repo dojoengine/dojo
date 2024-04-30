@@ -35,7 +35,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     match &args.command {
         Commands::Build(_) | Commands::Dev(_) | Commands::Migrate(_) => {
-            trace!(target: LOG_TARGET, "Adding DojoCompiler to compiler repository");
+            trace!(target: LOG_TARGET, "Adding DojoCompiler to compiler repository.");
             compilers.add(Box::new(DojoCompiler)).unwrap()
         }
         _ => {}

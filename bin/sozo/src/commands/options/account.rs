@@ -52,7 +52,7 @@ impl AccountOptions {
 
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
-        trace!(?chain_id, "Chain ID obtained.");
+        trace!(?chain_id);
         let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
         trace!(?encoding, "Creating SingleOwnerAccount.");
         let mut account =
