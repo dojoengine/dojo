@@ -4,7 +4,6 @@
 
 ARG VARIANT
 FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
-ARG VARIANT
 
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
@@ -62,22 +61,32 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
 
 ARG DOJO_VERSION
 ARG DOJO_BRANCH
+
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
 
-RUN if [ "$DOJO_VERSION" = "stable" ] ; then \
+# Check if DOJO_VERSION is stable.
+RUN if [ "$DOJO_VERSION" = "stable" ]; then \
+        echo "Installing stable version of Dojo"; \
         dojoup; \
-    elif [ -n "$DOJO_BRANCH" ] ; then \
-        #dojoup -b "$DOJO_BRANCH"; \
-        mkdir -p ~/.dojo/bin; \
-        cargo +1.76.0 install --locked --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" katana --force --root ~/.dojo/ ; \
-        cargo +1.76.0 install --locked --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" sozo --force --root ~/.dojo/ ; \
-        cargo +1.76.0 install --locked --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" torii --force --root ~/.dojo/ ; \
-        cargo +1.76.0 install --locked --git https://github.com/dojoengine/dojo --branch "${DOJO_BRANCH}" dojo-language-server --force --root ~/.dojo/ ; \
-   elif [ -n "$DOJO_VERSION" ] ; then \
+    fi
+
+# Install specific branch if DOJO_BRANCH is set.
+RUN if [ -n "$DOJO_BRANCH" ]; then \
+        echo "Installing Dojo from branch $DOJO_BRANCH"; \
+        dojoup -b "$DOJO_BRANCH"; \
+    fi
+
+# Check if DOJO_VERSION is set to a specific version.
+RUN if [ -n "$DOJO_VERSION" ] && [ "$DOJO_VERSION" != "stable" ]; then \
+        echo "Installing Dojo version $DOJO_VERSION"; \
         dojoup -v "$DOJO_VERSION"; \
-    else \
+    fi
+
+# Default case if none of the above.
+RUN if [ -z "$DOJO_VERSION" ] && [ -z "$DOJO_BRANCH" ]; then \
+        echo "Installing stable version of Dojo (default)"; \
         dojoup; \
     fi
 
