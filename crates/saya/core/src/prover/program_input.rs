@@ -130,6 +130,10 @@ impl ProgramInput {
         Ok(result)
     }
 
+    /// Extracts the storage updates for the given world, and flattens them into a single vector
+    /// that represent the serialized DA. The length is not included as the array contains
+    /// serialiazed struct with two members: key and value.
+    /// TODO: migrate to cainome + simple rust vec for better devX in the future.
     pub fn da_as_calldata(&self, world: FieldElement) -> Vec<FieldElement> {
         let updates = self
             .state_updates
@@ -235,12 +239,12 @@ fn test_program_input() -> anyhow::Result<()> {
     println!("{}", expected);
     assert_eq!(serialized_with_da, expected);
 
-    // Serialize just the DA as calldata.
+    // Serialize just the DA as calldata. The length is not included, only the array of
+    // updates [key, value, key, value...].
     let da_calldata = input.da_as_calldata(FieldElement::from_str("113")?);
     assert_eq!(
         da_calldata,
         vec![
-            FieldElement::from_str("2")?,
             FieldElement::from_str("114")?,
             FieldElement::from_str("115")?
         ]
