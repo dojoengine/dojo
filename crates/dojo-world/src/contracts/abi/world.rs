@@ -869,5 +869,8 @@ abigen!(
       }
     ]
   }
-]"#
+]"#,
+type_aliases {
+dojo::config::component::Config::Event as DojoConfigEvent;
+}
 );
