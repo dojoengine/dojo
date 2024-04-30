@@ -302,30 +302,27 @@ impl Clone for BackendHandle {
 }
 
 impl BackendHandle {
-    pub fn get_nonce(&self, contract_address: ContractAddress) -> Result<Nonce, BackendError> {
-        trace!(target: LOG_TARGET, %contract_address, "Requesting contract nonce.");
-        let (req, rx) = BackendRequest::nonce(contract_address);
+    pub fn get_nonce(&self, address: ContractAddress) -> Result<Nonce, BackendError> {
+        trace!(target: LOG_TARGET, %address, "Requesting contract nonce.");
+        let (req, rx) = BackendRequest::nonce(address);
         self.request(req)?;
         rx.recv()?
     }
 
     pub fn get_storage(
         &self,
-        contract_address: ContractAddress,
+        address: ContractAddress,
         key: StorageKey,
     ) -> Result<StorageValue, BackendError> {
-        trace!(target: LOG_TARGET, %contract_address, key = %format!("{key:#x}"), "Requesting contract storage.");
-        let (req, rx) = BackendRequest::storage(contract_address, key);
+        trace!(target: LOG_TARGET, %address, key = %format!("{key:#x}"), "Requesting contract storage.");
+        let (req, rx) = BackendRequest::storage(address, key);
         self.request(req)?;
         rx.recv()?
     }
 
-    pub fn get_class_hash_at(
-        &self,
-        contract_address: ContractAddress,
-    ) -> Result<ClassHash, BackendError> {
-        trace!(target: LOG_TARGET, %contract_address, "Requesting contract class hash.");
-        let (req, rx) = BackendRequest::class_hash(contract_address);
+    pub fn get_class_hash_at(&self, address: ContractAddress) -> Result<ClassHash, BackendError> {
+        trace!(target: LOG_TARGET, %address, "Requesting contract class hash.");
+        let (req, rx) = BackendRequest::class_hash(address);
         self.request(req)?;
         rx.recv()?
     }
