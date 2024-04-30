@@ -19,44 +19,20 @@ fn program_input_from_program_output(output: Vec<FieldElement>) -> anyhow::Resul
     let num = decimal
         .to_u64()
         .ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
-    let mut index = 6;
+    let mut index = 5;
     match num {
-        0 => {
-            message_to_starknet =
-            MessageToStarknet {
-                from_address: Default::default(),
-                to_address: Default::default(),
-                payload: Default::default(),
-            };
-        },
-        1 => {
-            let from_address = ContractAddress::from(output[index].clone());
-            message_to_starknet =
-            MessageToStarknet {
-                from_address,
-                to_address: Default::default(),
-                payload: Default::default(),
-            };
-        },
-        2 | 3 => {
-            let from_address = ContractAddress::from(output[index].clone());
-            let to_address = ContractAddress::from(output[index+1].clone());
-            message_to_starknet =
-            MessageToStarknet {
-                from_address,
-                to_address,
-                payload: Default::default(),
-            };
+        0..=3=> {
+            message_to_starknet = Default::default();
         },
         4..=u64::MAX => {
-            let from_address = ContractAddress::from(output[index].clone());
-            let to_address = ContractAddress::from(output[index+1].clone());
-            let payload_size = output[index+2].clone().to_big_decimal(0).to_u64().unwrap();
+            let from_address = ContractAddress::from(output[index+1].clone());
+            let to_address = ContractAddress::from(output[index+2].clone());
+            let payload_size = output[index+3].clone().to_big_decimal(0).to_u64().unwrap();
             let mut payload = vec![];
             for i in 0..payload_size {
-                payload.push(output[index+3+(i as usize)].clone());
+                payload.push(output[index+4+(i as usize)].clone());
             }
-            index = index+num as usize;
+            index = index+1+num as usize;
             message_to_starknet = MessageToStarknet {
                 from_address,
                 to_address,
@@ -64,72 +40,13 @@ fn program_input_from_program_output(output: Vec<FieldElement>) -> anyhow::Resul
             };
         }
     }
-    
     decimal = output[index].clone().to_big_decimal(0); // Convert with no decimal places
     let num = decimal
         .to_u64()
         .ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
     match num {
-        0 => {
-            message_to_appchain =
-            MessageToAppchain {
-                from_address: Default::default(),
-                to_address: Default::default(),
-                nonce: Default::default(),
-                selector: Default::default(),
-                payload: Default::default(),
-            };
-        },
-        1 => {
-            let from_address = ContractAddress::from(output[index+1].clone());
-            message_to_appchain =
-            MessageToAppchain {
-                from_address,
-                to_address: Default::default(),
-                nonce: Default::default(),
-                selector: Default::default(),
-                payload: Default::default(),
-            };
-        },
-        2 => {
-            let from_address = ContractAddress::from(output[index+1].clone());
-            let to_address = ContractAddress::from(output[index+2].clone());
-            message_to_appchain =
-            MessageToAppchain {
-                from_address,
-                to_address,
-                nonce: Default::default(),
-                selector: Default::default(),
-                payload: Default::default(),
-            };
-        },
-        3 => {
-            let from_address = ContractAddress::from(output[index+1].clone());
-            let to_address = ContractAddress::from(output[index+2].clone());
-            let nonce = output[index+3].clone();
-            message_to_appchain =
-            MessageToAppchain {
-                from_address,
-                to_address,
-                nonce,
-                selector: Default::default(),
-                payload: Default::default(),
-            };
-            
-        },
-        4 => {
-            let from_address = ContractAddress::from(output[index+1].clone());
-            let to_address = ContractAddress::from(output[index+2].clone());
-            let nonce = output[index+3].clone();
-            let selector = output[index+4].clone();
-            message_to_appchain =
-            MessageToAppchain {
-                from_address,
-                to_address,
-                nonce,
-                selector,
-                payload: Default::default(),
-            };
+        0..=4 => {
+            message_to_appchain = Default::default();
         },
         5..=u64::MAX => {
             let from_address = ContractAddress::from(output[index+1].clone());
@@ -141,7 +58,6 @@ fn program_input_from_program_output(output: Vec<FieldElement>) -> anyhow::Resul
             for i in 0..payload_size {
                 payload.push(output[index+6+i as usize].clone());
             }
-            index = index+num as usize;
             message_to_appchain = MessageToAppchain {
                 from_address,
                 to_address,
@@ -158,9 +74,10 @@ fn program_input_from_program_output(output: Vec<FieldElement>) -> anyhow::Resul
         config_hash,
         message_to_starknet_segment: vec![message_to_starknet],
         message_to_appchain_segment: vec![message_to_appchain],
-        state_updates: Default::default(),
-})
+        state_updates: Default::default()})
 }
+
+
 async fn input_to_json(result: Vec<ProgramInput>) ->anyhow::Result<String> {
     let input1 = serde_json::to_string(&result.get(0).ok_or_else(|| anyhow::anyhow!("Index out of bounds")).unwrap()).unwrap();
     let input2 = serde_json::to_string(&result.get(1).ok_or_else(|| anyhow::anyhow!("Index out of bounds")).unwrap()).unwrap();
@@ -246,69 +163,14 @@ mod tests {
         let expected = prove_stone(serde_json::to_string(&inputs[0]).unwrap(),"piniom/state-diff-commitment").await.unwrap();
         assert_eq!(proof, expected);
     }       
-    // async fn test_combined() {
-    //     let input = ProgramInput {
-    //         prev_state_root: Default::default(),
-    //         block_number: Default::default(),
-    //         block_hash: Default::default(),
-    //         config_hash: Default::default(),
-    //         message_to_starknet_segment: vec![MessageToStarknet {
-    //             from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
-    //             to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
-    //             payload: vec![FieldElement::from_str("107").unwrap()],
-    //         }],
-    //         message_to_appchain_segment: vec![MessageToAppchain {
-    //             from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
-    //             to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
-    //             nonce: FieldElement::from_str("110").unwrap(),
-    //             selector: FieldElement::from_str("111").unwrap(),
-    //             payload: vec![FieldElement::from_str("112").unwrap()],
-    //         }],
-    //         state_updates: StateUpdates {
-    //             nonce_updates: std::collections::HashMap::new(),
-    //             storage_updates: std::collections::HashMap::new(),
-    //             contract_updates: std::collections::HashMap::new(),
-    //             declared_classes: std::collections::HashMap::new(),
-    //         },
-    //     };
-    //     let input2 = ProgramInput {
-    //         prev_state_root: FieldElement::from_str("101").unwrap(),
-    //         block_number: 103,
-    //         block_hash: FieldElement::from_str("103").unwrap(),
-    //         config_hash: FieldElement::from_str("104").unwrap(),
-    //         message_to_starknet_segment: vec![MessageToStarknet {
-    //             from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
-    //             to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
-    //             payload: vec![FieldElement::from_str("107").unwrap()],
-    //         }],
-    //         message_to_appchain_segment: vec![MessageToAppchain {
-    //             from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
-    //             to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
-    //             nonce: FieldElement::from_str("110").unwrap(),
 
-    //             selector: FieldElement::from_str("111").unwrap(),
-    //             payload: vec![FieldElement::from_str("112").unwrap()],
-    //         }],
-    //         state_updates: StateUpdates {
-    //             nonce_updates: std::collections::HashMap::new(),
-    //             storage_updates: std::collections::HashMap::new(),
-    //             contract_updates: std::collections::HashMap::new(),
-    //             declared_classes: std::collections::HashMap::new(),
-    //         },
-    //     };
-    //     let inputs = vec![input, input2];
-    //     let cloned_inputs = inputs.clone();
-    //     let proof = prove_recursively(cloned_inputs, ProverIdentifier::Stone).await.unwrap();
-    //     let program_output = extract_output(&proof.0).unwrap().program_output;
-    //     assert_eq!(inputs[0], program_input);
-    // }
     #[tokio::test]
     async fn test_program_input_from_program_output(){
         let input = ProgramInput {
-            prev_state_root: Default::default(),
-            block_number: Default::default(),
-            block_hash: Default::default(),
-            config_hash: Default::default(),
+            prev_state_root: FieldElement::from_str("101").unwrap(),
+            block_number: 102,
+            block_hash: FieldElement::from_str("103").unwrap(),
+            config_hash: FieldElement::from_str("104").unwrap(),
             message_to_starknet_segment: vec![MessageToStarknet {
                 from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
                 to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
@@ -328,73 +190,68 @@ mod tests {
                 declared_classes: std::collections::HashMap::new(),
             },
         };
-        let proof = prove_recursively(vec![input.clone()], ProverIdentifier::Stone).await.unwrap();
-        let program_output = extract_output(&proof.0).unwrap().program_output;
+        let proof = prove(serde_json::to_string(&input).unwrap(),ProverIdentifier::Stone,"piniom/state-diff-commitment").await.unwrap();
+        let program_output = extract_output(&proof).unwrap().program_output;
         let program_input = program_input_from_program_output(program_output).unwrap();
         assert_eq!(input, program_input);
     }
+    #[tokio::test]
+    async fn test_combine_proofs(){
+        let input1 = ProgramInput {
+            prev_state_root: FieldElement::from_str("101").unwrap(),
+            block_number: 102,
+            block_hash: FieldElement::from_str("103").unwrap(),
+            config_hash: FieldElement::from_str("104").unwrap(),
+            message_to_starknet_segment: vec![MessageToStarknet {
+                from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
+                to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
+                payload: vec![FieldElement::from_str("107").unwrap()],
+            }],
+            message_to_appchain_segment: vec![MessageToAppchain {
+                from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
+                to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
+                nonce: FieldElement::from_str("110").unwrap(),
+                selector: FieldElement::from_str("111").unwrap(),
+                payload: vec![FieldElement::from_str("112").unwrap()],
+            }],
+            state_updates: StateUpdates {
+                nonce_updates: std::collections::HashMap::new(),
+                storage_updates: std::collections::HashMap::new(),
+                contract_updates: std::collections::HashMap::new(),
+                declared_classes: std::collections::HashMap::new(),
+            },
+        };
+        let input2 = ProgramInput {
+            prev_state_root: FieldElement::from_str("201").unwrap(),
+            block_number: 202,
+            block_hash: FieldElement::from_str("203").unwrap(),
+            config_hash: FieldElement::from_str("204").unwrap(),
+            message_to_starknet_segment: vec![MessageToStarknet {
+                from_address: ContractAddress::from(FieldElement::from_str("205").unwrap()),
+                to_address: ContractAddress::from(FieldElement::from_str("206").unwrap()),
+                payload: vec![FieldElement::from_str("207").unwrap()],
+            }],
+            message_to_appchain_segment: vec![MessageToAppchain {
+                from_address: ContractAddress::from(FieldElement::from_str("208").unwrap()),
+                to_address: ContractAddress::from(FieldElement::from_str("209").unwrap()),
+                nonce: FieldElement::from_str("210").unwrap(),
+                selector: FieldElement::from_str("211").unwrap(),
+                payload: vec![FieldElement::from_str("207").unwrap()]}
+            ],
+            state_updates: StateUpdates {
+                nonce_updates: std::collections::HashMap::new(),
+                storage_updates: std::collections::HashMap::new(),
+                contract_updates: std::collections::HashMap::new(),
+                declared_classes: std::collections::HashMap::new(),
+            },
+        };
+        let inputs = vec![input1.clone(), input2];
+        let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
+        let extracted_output = extract_output(&proof).unwrap().program_output;
+        let left_proof = prove(serde_json::to_string(&input1).unwrap(),ProverIdentifier::Stone,"piniom/state-diff-commitment").await.unwrap();
+        let left_extracted_output = extract_output(&left_proof).unwrap().program_output;
+        let mut new_vector = left_extracted_output[..1].to_vec();  // Takes elements before index 1
+        new_vector.extend_from_slice(&left_extracted_output[2..]);
+        assert_eq!(extracted_output, new_vector);
+    }
 }
-
-
-//         let cloned_inputs = inputs.clone();
-//         let proof = prove_recursively(cloned_inputs, ProverIdentifier::Stone).await.unwrap();
-//         let expected1 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected2 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected3 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected4 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         assert_eq!(proof.0[0], expected1);
-//         assert_eq!(proof.0[1], expected2);
-//         assert_eq!(proof.0[2], expected3);
-//         assert_eq!(proof.0[3], expected4);
-        
-//         let cloned_inputs = inputs.clone();
-//         let proof = prove_recursively(cloned_inputs, ProverIdentifier::Stone).await.unwrap();
-//         let expected1 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected2 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected3 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected4 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         assert_eq!(proof.0[0], expected1);
-//         assert_eq!(proof.0[1], expected2);
-//         assert_eq!(proof.0[2], expected3);
-//         assert_eq!(proof.0[3], expected4);
-//     }
-// }
-
-//     #[tokio::test]
-//     async fn test_many() {
-//         let inputs = (0..4)
-//             .map(|i| ProgramInput {
-//                 prev_state_root: FieldElement::from(i),
-//                 block_number: i,
-//                 block_hash: FieldElement::from(i),
-//                 config_hash: FieldElement::from(i),
-//                 message_to_appchain_segment: Default::default(),
-//                 message_to_starknet_segment: Default::default(),
-//                 state_updates: Default::default(),
-//             })
-//             .collect::<Vec<_>>();
-
-//         let cloned_inputs = inputs.clone();
-//         let proof = prove_recursively(cloned_inputs, ProverIdentifier::Stone).await.unwrap();
-//         let expected1 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected2 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected3 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         let expected4 =
-//             prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
-//         assert_eq!(proof.0[0], expected1);
-//         assert_eq!(proof.0[1], expected2);
-//         assert_eq!(proof.0[2], expected3);
-//         assert_eq!(proof.0[3], expected4);
-//     }
-// }
