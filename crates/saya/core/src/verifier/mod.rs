@@ -24,13 +24,19 @@ pub enum VerifierIdentifier {
     StarkwareEthereum,
 }
 
-pub async fn verify(proof: String, verifier: VerifierIdentifier) -> anyhow::Result<String> {
+pub async fn verify(
+    proof: String,
+    verifier: VerifierIdentifier,
+    fact_registry_address: starknet_crypto::FieldElement,
+) -> anyhow::Result<String> {
     match verifier {
         VerifierIdentifier::HerodotusStarknetSepolia => {
-            let serialized_proof = parse_proof(proof).unwrap();
-            starknet::starknet_verify(serialized_proof).await
+            let serialized_proof = parse_proof(&proof).unwrap();
+            starknet::starknet_verify(fact_registry_address, serialized_proof).await
         }
-        VerifierIdentifier::StoneLocal => crate::prover::local_verify(proof,"piniom/verifier:latest").await,
+        VerifierIdentifier::StoneLocal => {
+            crate::prover::local_verify(proof, "piniom/verifier:latest").await
+        }
         VerifierIdentifier::StarkwareEthereum => {
             unimplemented!("Herodotus Starknet not yet supported")
         }

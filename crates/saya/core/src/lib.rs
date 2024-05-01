@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use starknet_crypto::poseidon_hash_many;
 use tracing::{error, info, trace};
 use url::Url;
+use verifier::VerifierIdentifier;
 
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
@@ -38,6 +39,8 @@ pub struct SayaConfig {
     pub katana_rpc: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
+    pub prover: ProverIdentifier,
+    pub verifier: VerifierIdentifier,
     pub world_address: FieldElement,
     pub fact_registry_address: FieldElement,
 }
