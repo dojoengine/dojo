@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
-use katana_primitives::contract::{
-    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
-};
+use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 
 use super::backend::SharedStateProvider;
 use crate::providers::in_memory::cache::CacheStateDb;
 use crate::providers::in_memory::state::StateSnapshot;
-use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
+use crate::traits::contract::ContractClassProvider;
 use crate::traits::state::StateProvider;
 use crate::ProviderResult;
 
@@ -21,15 +19,6 @@ impl ForkedStateDb {
             inner: self.create_snapshot_without_classes(),
             classes: Arc::clone(&self.shared_contract_classes),
         }
-    }
-}
-
-impl ContractInfoProvider for ForkedStateDb {
-    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
-        if let info @ Some(_) = self.contract_state.read().get(&address).cloned() {
-            return Ok(info);
-        }
-        ContractInfoProvider::contract(&self.db, address)
     }
 }
 
@@ -101,12 +90,6 @@ impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
 
 pub(super) struct LatestStateProvider(pub(super) Arc<ForkedStateDb>);
 
-impl ContractInfoProvider for LatestStateProvider {
-    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
-        ContractInfoProvider::contract(&self.0, address)
-    }
-}
-
 impl StateProvider for LatestStateProvider {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         StateProvider::nonce(&self.0, address)
@@ -142,15 +125,6 @@ impl ContractClassProvider for LatestStateProvider {
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.0, hash)
-    }
-}
-
-impl ContractInfoProvider for ForkedSnapshot {
-    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
-        if let info @ Some(_) = self.inner.contract_state.get(&address).cloned() {
-            return Ok(info);
-        }
-        ContractInfoProvider::contract(&self.inner.db, address)
     }
 }
 
