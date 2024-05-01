@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714495386948,
+  "lastUpdate": 1714531461627,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6715,6 +6715,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17945004,
             "range": "± 202551",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "41485330+btirth@users.noreply.github.com",
+            "name": "Tirth Bharatiya",
+            "username": "btirth"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "683620cee12e1de5efabdc6d4a33fb6425a4e262",
+          "message": "[sozo] add trace logs (#1867)\n\n* Added trace logs for Sozo.\r\n\r\n* Added Sozo trace logs.\r\n\r\n* Updated Sozo trace logs.\r\n\r\n* Updated Sozo trace logs.\r\n\r\n* Updated Sozo trace logs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Updated Sozo trace logs.\r\n\r\n* Updated Sozo trace logs\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>\r\n\r\n* Updated Sozo trace logs.\r\n\r\n* Removed json for Sozo log.\r\n\r\n* Removed LOG_TARGET for Sozo trace logs.\r\n\r\n* Updated Sozo trace logs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Updated Sozo trace logs - removed fetch keyword.\r\n\r\n* Resolved failing checks.\r\n\r\n* Updated Sozo trace logs.\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Updated Sozo trace logs.\r\n\r\n* fix: ensure sozo commands return expected Result\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-04-30T20:35:49-06:00",
+          "tree_id": "47d25d404e539606abc2ac5a463ec1e31c1c1843",
+          "url": "https://github.com/dojoengine/dojo/commit/683620cee12e1de5efabdc6d4a33fb6425a4e262"
+        },
+        "date": 1714531460899,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16949600,
+            "range": "± 523780",
             "unit": "ns/iter"
           }
         ]
