@@ -44,13 +44,18 @@ pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCra
         .components()
         .iter()
         .map(|component| {
+            // Ensure experimental features are only enable if required.
+            let experimental_features = component.package.manifest.experimental_features.clone();
+            let experimental_features = experimental_features.unwrap_or_default();
+
             (
                 component.cairo_package_name(),
                 CrateSettings {
                     edition: component.package.manifest.edition,
                     experimental_features: ExperimentalFeaturesConfig {
-                        negative_impls: true,
-                        coupons: true,
+                        negative_impls: experimental_features
+                            .contains(&SmolStr::new_inline("negative_impls")),
+                        coupons: experimental_features.contains(&SmolStr::new_inline("coupons")),
                     },
                     ..Default::default()
                 },
