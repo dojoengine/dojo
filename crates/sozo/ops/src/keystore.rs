@@ -5,13 +5,23 @@ use colored::Colorize;
 use starknet::signers::SigningKey;
 use starknet_crypto::FieldElement;
 
-pub fn new(password: Option<String>, force: bool, file: PathBuf) -> Result<()> {
+pub fn new(password: Option<String>, force: bool, file: PathBuf, retry: bool ) -> Result<()> {
     if file.exists() && !force {
         anyhow::bail!("keystore file already exists");
     }
 
     let password = get_password(password)?;
 
+    if retry {
+
+        let confirmpassword = get_password(password)?;
+
+        if password != confirmpassword {
+            anyhow::bail!("Passwords do not match");
+        }    
+
+    }
+   
     let key = SigningKey::from_random();
     key.save_as_keystore(&file, &password)?;
 
