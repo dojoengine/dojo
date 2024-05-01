@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714531461627,
+  "lastUpdate": 1714535117720,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6745,6 +6745,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16949600,
             "range": "± 523780",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d9a8d1e1c33ff1f6e0d08b7c5dc957757a2db32",
+          "message": "fix: allow ref self until sozo can handle starknet contracts (#1879)\n\n* fix: allow ref self until sozo can handle starknet contracts\r\n\r\n* fix: add test for attr extractor function\r\n\r\n* fix: ignore IPFS test for now\r\n\r\n* fix: remove test expansion test seems not detected by codecov",
+          "timestamp": "2024-04-30T21:37:00-06:00",
+          "tree_id": "b854d00811a971436f84157ecdc791a3b5b645a7",
+          "url": "https://github.com/dojoengine/dojo/commit/5d9a8d1e1c33ff1f6e0d08b7c5dc957757a2db32"
+        },
+        "date": 1714535116622,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16765331,
+            "range": "± 557015",
             "unit": "ns/iter"
           }
         ]
