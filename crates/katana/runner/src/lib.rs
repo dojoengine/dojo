@@ -88,7 +88,8 @@ impl KatanaRunner {
             .args(["-p", &port.to_string()])
             .args(["--json-log"])
             .args(["--max-connections", &format!("{}", 10000)])
-            .args(["--accounts", &format!("{}", n_accounts)]);
+            .args(["--accounts", &format!("{}", n_accounts)])
+            .args(["--messaging", &format!("/Users/fabrobles/Fab/dojo_fork/crates/katana/contracts/messaging/anvil.messaging.json")]);
 
         if with_blocks {
             command.args(["--block-time", &format!("{}", BLOCK_TIME_IF_ENABLED)]);
@@ -170,7 +171,8 @@ pub struct AnvilRunner {
 
 impl AnvilRunner {
     pub async fn new() -> Result<Self> {
-        let port = find_free_port();
+        let port = 8545u16;
+        // let port = find_free_port();
         let mut command = Command::new("Anvil");
         command
             .args(["-p", &port.to_string()])

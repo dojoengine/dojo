@@ -10,14 +10,17 @@ use ethers::contract::ContractFactory;
 use ethers::types::{H160, U256};
 use ethers_contract::abigen;
 use ethers_solc::{Artifact, Project, ProjectPathsConfig};
+use katana_primitives::FieldElement;
+use katana_rpc_types::FunctionCall;
 use katana_runner::{AnvilRunner, KatanaRunner};
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionReceipt, FieldElement, MaybePendingTransactionReceipt,
+    BlockId, BlockTag, DeclareTransactionReceipt, MaybePendingTransactionReceipt,
     TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
+use starknet::macros::{felt, selector};
 use starknet::providers::Provider;
 mod common;
 
@@ -180,7 +183,7 @@ async fn test_send_declare_and_deploy_legacy_contract() {
 
 abigen!(
         Contract1_test,
-        "/Users/fabrobles/Fab/dojo_fork/crates/katana/rpc/rpc/tests/test_data/solidity/Contract1_abi2.json",
+        "/Users/fabrobles/Fab/dojo_fork/crates/katana/rpc/rpc/tests/test_data/solidity/Contract1_abi.json",
         event_derives(serde::Serialize, serde::Deserialize)
     );
 
@@ -261,7 +264,18 @@ async fn test_messaging_l1_l2() {
         .await
         .is_ok());
 
-    let constructor_calldata = vec![FieldElement::from(1_u32), FieldElement::from(2_u32)];
+    let constructor_calldata = vec![];
+
+    let calldata = [
+        vec![
+            class_hash,                                     // class hash
+            FieldElement::ZERO,                             // salt
+            FieldElement::ZERO,                             // unique
+            FieldElement::from(constructor_calldata.len()), // constructor calldata len
+        ],
+        constructor_calldata.clone(),
+    ]
+    .concat();
 
     let contract_address = get_contract_address(
         FieldElement::ZERO,
@@ -270,10 +284,30 @@ async fn test_messaging_l1_l2() {
         FieldElement::ZERO,
     );
 
+    let transaction = starknet_account
+        .execute(vec![Call {
+            calldata,
+            // devnet UDC address
+            to: FieldElement::from_hex_be(
+                "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
+            )
+            .unwrap(),
+            selector: get_selector_from_name("deployContract").unwrap(),
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    // wait for the tx to be mined
+    TransactionWaiter::new(transaction.transaction_hash, starknet_account.provider())
+        .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
+        .await
+        .expect("Invalid tx receipt");
+
     assert_eq!(
         contract_address,
         FieldElement::from_str(
-            "0x0024f0deadb642bd4792c19da937758eb6bf4747d7d93a13ecc527bba82eb1f1"
+            "0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097"
         )
         .unwrap()
     );
@@ -282,22 +316,35 @@ async fn test_messaging_l1_l2() {
 
     let contr1_test = Contract1_test::new(contract_c1.address(), eth_account.clone());
     let address =
-        U256::from_str("0x0024f0deadb642bd4792c19da937758eb6bf4747d7d93a13ecc527bba82eb1f1")
+        U256::from_str("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
             .unwrap();
     let selector =
         U256::from_str("0x005421de947699472df434466845d68528f221a52fce7ad2934c5dae2e1f1cdc")
             .unwrap();
     let payload = vec![U256::from(123)];
-    let receipt = contr1_test
+    let _receipt = contr1_test
         .send_message(address, selector, payload)
-        .gas(10000000)
+        .gas(12000000)
+        .value(1)
         .send()
         .await
-        .unwrap()
+        .expect("Error Await pending transaction")
         .await
+        .expect("Error getting transaction receipt")
         .unwrap();
-    println!("RECEIPT {:?}", receipt);
 
-    drop(katana_runner);
+    // wait for the tx to be mined
+    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
+
+    assert_eq!(
+        starknet_account
+            .provider()
+            .get_block_transaction_count(BlockId::Number(3u64))
+            .await
+            .unwrap(),
+        1
+    );
+
     drop(anvil_runner);
+    drop(katana_runner);
 }
