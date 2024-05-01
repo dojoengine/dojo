@@ -4,11 +4,6 @@ struct FieldLayout {
     layout: Layout
 }
 
-// #[derive(Copy, Drop, Serde, Debug)]
-// struct ItemLayout {
-//     layout: Layout  // booo bad compiler ! bad !
-// }
-
 #[derive(Copy, Drop, Serde, Debug)]
 enum Layout {
     Fixed: Span<u8>,
@@ -36,9 +31,8 @@ enum Ty {
     Struct: Struct,
     Enum: Enum,
     Tuple: Span<Span<felt252>>,
-    // Store the capacity of the array.
-    FixedSizeArray: u32,
-    DynamicSizeArray,
+    Array: Span<felt252>,
+    ByteArray
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -188,7 +182,7 @@ impl Introspect_u256 of Introspect<u256> {
         Layout::Fixed(array![128, 128].span())
     }
     fn ty() -> Ty {
-        Ty::FixedSizeArray(2)
+        Ty::Primitive('u256')
     }
 }
 
@@ -225,6 +219,6 @@ impl Introspect_bytearray of Introspect<ByteArray> {
         Layout::ByteArray
     }
     fn ty() -> Ty {
-        Ty::DynamicSizeArray
+        Ty::ByteArray
     }
 }

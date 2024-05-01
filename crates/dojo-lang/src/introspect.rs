@@ -61,11 +61,7 @@ fn get_array_item_type(ty: String) -> String {
 /// * struct_ast: The AST of the struct.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_introspect_struct(
-    db: &dyn SyntaxGroup,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-    struct_ast: ItemStruct,
-) -> RewriteNode {
+pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {
     let name = struct_ast.name(db).text(db).into();
 
     let mut member_types: Vec<String> = vec![];
@@ -95,7 +91,16 @@ pub fn handle_introspect_struct(
                     attrs.join(","),
                 ));
             } else if is_byte_array(ty.clone()) {
-                // TODO for Ty
+                member_types.push(format!(
+                    "dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {{
+                            name: '{member_name}',
+                            ty: dojo::database::introspect::Ty::ByteArray,
+                            attrs: array![{}].span()
+                        }}
+                    )",
+                    attrs.join(","),
+                ));
             } else if is_array_type(ty.clone()) {
                 let item_type = get_array_item_type(ty);
 
@@ -103,7 +108,11 @@ pub fn handle_introspect_struct(
                     "dojo::database::introspect::serialize_member(
                         @dojo::database::introspect::Member {{
                         name: '{member_name}',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        ty: dojo::database::introspect::Ty::Array(
+                            dojo::database::introspect::serialize_member_type(
+                                @dojo::database::introspect::Introspect::<{item_type}>::ty()
+                            )
+                        ),
                         attrs: array![{}].span()
                     }})",
                     attrs.join(","),
@@ -114,23 +123,13 @@ pub fn handle_introspect_struct(
                 let tuple_items = (*tuple.expressions(db))
                     .elements(db)
                     .iter()
-                    .filter_map(|e| {
+                    .map(|e| {
                         let e_ty = e.as_syntax_node().get_text(db).trim().to_string();
-                        if primitive_sizes.get(&e_ty).is_some() {
-                            Some(format!(
-                                "dojo::database::introspect::serialize_member_type(
-                                    @dojo::database::introspect::Ty::Primitive('{e_ty}')
-                                )"
-                            ))
-                        } else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: member.stable_ptr().0,
-                                message: "Only primitive types are supported inside tuples."
-                                    .to_string(),
-                                severity: Severity::Error,
-                            });
-                            None
-                        }
+                        format!(
+                            "dojo::database::introspect::serialize_member_type(
+                                @dojo::database::introspect::Introspect::<{e_ty}>::ty()
+                            )"
+                        )
                     })
                     .collect::<Vec<_>>();
 

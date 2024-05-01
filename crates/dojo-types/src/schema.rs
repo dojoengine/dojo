@@ -40,6 +40,8 @@ pub enum Ty {
     Struct(Struct),
     Enum(Enum),
     Tuple(Vec<Ty>),
+    Array(Vec<Ty>),
+    ByteArray(String),
 }
 
 impl Ty {
@@ -49,6 +51,12 @@ impl Ty {
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.clone(),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
+            Ty::Array(ty) => {
+                let len_str =
+                    if ty.len() > 1 { format!(" (len: {})", ty.len()) } else { "".to_string() };
+                format!("Array<{}>{len_str}", ty[0].name())
+            }
+            Ty::ByteArray(_) => "ByteArray".to_string(),
         }
     }
 
@@ -118,6 +126,18 @@ impl Ty {
                         serialize_inner(ty, felts)?;
                     }
                 }
+                Ty::Array(items_ty) => {
+                    let _ = serialize_inner(
+                        &Ty::Primitive(Primitive::U32(Some(items_ty.len().try_into().unwrap()))),
+                        felts,
+                    );
+                    for item_ty in items_ty {
+                        serialize_inner(item_ty, felts)?;
+                    }
+                }
+                Ty::ByteArray(_) => {
+                    // TODO: serialize 'value'
+                }
             }
             Ok(())
         }
@@ -148,6 +168,25 @@ impl Ty {
                 for ty in tys {
                     ty.deserialize(felts)?;
                 }
+            }
+            Ty::Array(items_ty) => {
+                let arr_len: u32 =
+                    felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?;
+
+                if arr_len > 0 {
+                    let item_ty = items_ty[0].clone();
+
+                    items_ty.clear();
+
+                    for _ in 0..arr_len {
+                        let mut cur_item_ty = item_ty.clone();
+                        cur_item_ty.deserialize(felts)?;
+                        items_ty.push(cur_item_ty);
+                    }
+                }
+            }
+            Ty::ByteArray(_) => {
+                // TODO: deserialize 'value'
             }
         }
         Ok(())
@@ -203,12 +242,12 @@ impl std::fmt::Display for Ty {
                     Some(enum_str)
                 }
                 Ty::Tuple(tuple) => {
-                    if tuple.is_empty() {
-                        None
-                    } else {
-                        Some(ty.name())
-                    }
+                    Some(tuple.iter().fold("".to_string(), |acc, x| format!("{acc}{x}")))
                 }
+                Ty::Array(items_ty) => {
+                    Some(items_ty.iter().fold("".to_string(), |acc, x| format!("{acc}\n{x}")))
+                }
+                Ty::ByteArray(value) => Some(value.to_string()),
             })
             .collect::<Vec<_>>()
             .join("\n\n");

@@ -210,11 +210,11 @@ abigen!(
         "type": "core::array::Span::<core::array::Span::<core::felt252>>"
       },
       {
-        "name": "FixedSizeArray",
-        "type": "core::integer::u32"
+        "name": "Array",
+        "type": "core::array::Span::<core::felt252>"
       },
       {
-        "name": "DynamicSizeArray",
+        "name": "ByteArray",
         "type": "()"
       }
     ]

@@ -387,11 +387,8 @@ impl MacroPlugin for BuiltinDojoPlugin {
                                 rewrite_nodes.push(handle_print_struct(db, struct_ast.clone()));
                             }
                             "Introspect" => {
-                                rewrite_nodes.push(handle_introspect_struct(
-                                    db,
-                                    &mut diagnostics,
-                                    struct_ast.clone(),
-                                ));
+                                rewrite_nodes
+                                    .push(handle_introspect_struct(db, struct_ast.clone()));
                             }
                             _ => continue,
                         }

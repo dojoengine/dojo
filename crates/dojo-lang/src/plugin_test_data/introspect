@@ -1304,7 +1304,11 @@ dojo::database::introspect::serialize_member(
 dojo::database::introspect::serialize_member(
                         @dojo::database::introspect::Member {
                         name: 'after',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        ty: dojo::database::introspect::Ty::Array(
+                            dojo::database::introspect::serialize_member_type(
+                                @dojo::database::introspect::Introspect::<u32>::ty()
+                            )
+                        ),
                         attrs: array![].span()
                     })
 
@@ -1356,7 +1360,14 @@ dojo::database::introspect::serialize_member(
                 name: 'before',
                 ty: dojo::database::introspect::Ty::Primitive('u8'),
                 attrs: array![].span()
-            })
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                            name: 'after',
+                            ty: dojo::database::introspect::Ty::ByteArray,
+                            attrs: array![].span()
+                        }
+                    )
 
             ].span()
         })
@@ -1417,7 +1428,11 @@ dojo::database::introspect::serialize_member(
 dojo::database::introspect::serialize_member(
                         @dojo::database::introspect::Member {
                         name: 'after',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        ty: dojo::database::introspect::Ty::Array(
+                            dojo::database::introspect::serialize_member_type(
+                                @dojo::database::introspect::Introspect::<Vec2>::ty()
+                            )
+                        ),
                         attrs: array![].span()
                     })
 
@@ -1489,11 +1504,11 @@ dojo::database::introspect::serialize_member(
                         ty: dojo::database::introspect::Ty::Tuple(
                             array![
                                 dojo::database::introspect::serialize_member_type(
-                                    @dojo::database::introspect::Ty::Primitive('u8')
-                                ),
+                                @dojo::database::introspect::Introspect<u8>::ty()
+                            ),
 dojo::database::introspect::serialize_member_type(
-                                    @dojo::database::introspect::Ty::Primitive('u256')
-                                )
+                                @dojo::database::introspect::Introspect<u256>::ty()
+                            )
                             ].span()
                         ),
                         attrs: array![].span()
@@ -1582,8 +1597,14 @@ dojo::database::introspect::serialize_member(
                         ty: dojo::database::introspect::Ty::Tuple(
                             array![
                                 dojo::database::introspect::serialize_member_type(
-                                    @dojo::database::introspect::Ty::Primitive('u8')
-                                )
+                                @dojo::database::introspect::Introspect<u8>::ty()
+                            ),
+dojo::database::introspect::serialize_member_type(
+                                @dojo::database::introspect::Introspect<Vec2>::ty()
+                            ),
+dojo::database::introspect::serialize_member_type(
+                                @dojo::database::introspect::Introspect<EnumCustom>::ty()
+                            )
                             ].span()
                         ),
                         attrs: array![].span()
@@ -1649,13 +1670,3 @@ error: Dynamic arrays are not supported.
  --> test_src/lib.cairo:29:9
     Left: Array<u32>,
         ^**********^
-
-error: Only primitive types are supported inside tuples.
- --> test_src/lib.cairo:122:5
-    after: (u8, Vec2, EnumCustom),
-    ^***************************^
-
-error: Only primitive types are supported inside tuples.
- --> test_src/lib.cairo:122:5
-    after: (u8, Vec2, EnumCustom),
-    ^***************************^

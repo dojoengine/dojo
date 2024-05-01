@@ -133,9 +133,9 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
                     ),
                     dojo::database::introspect::serialize_member(
                         @dojo::database::introspect::Member {
-                        name: 'metadata_uri',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
-                        attrs: array![].span()
+                            name: 'metadata_uri',
+                            ty: dojo::database::introspect::Ty::ByteArray,
+                            attrs: array![].span()
                         }
                     )
                 ].span()

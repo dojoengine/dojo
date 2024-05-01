@@ -52,7 +52,6 @@ pub async fn model_schema(
     } else {
         println!("{schema}");
     }
-
     Ok(())
 }
 
