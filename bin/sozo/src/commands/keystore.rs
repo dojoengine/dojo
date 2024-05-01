@@ -68,7 +68,24 @@ pub enum KeystoreCommand {
 impl KeystoreArgs {
     pub fn run(self, _config: &Config) -> Result<()> {
         match self.command {
-            KeystoreCommand::New { password, force, file } => keystore::new(password, force, file),
+            KeystoreCommand::New { password, force, file } => {
+
+                let password = match password {
+                    Some(pass) => pass,
+                    None => {
+                        prompt_password("Enter password: ")?
+                    }
+                };
+            
+                let confirm_password = prompt_password("Confirm password: ")?;
+
+                // Check if passwords match
+                if password != confirm_password {
+                    return Err(anyhow!("Passwords do not match."));
+                }
+
+                keystore::new(password, force, file)
+            },
             KeystoreCommand::FromKey { force, private_key, password, file } => {
                 keystore::from_key(force, private_key, password, file)
             }
@@ -80,4 +97,16 @@ impl KeystoreArgs {
             }
         }
     }
+}
+
+fn prompt_password(prompt: &str) -> Result<String> {
+    print!("{}", prompt);
+    io::stdout().flush()?; 
+
+    let mut password = String::new();
+    io::stdin().read_line(&mut password)?; 
+
+    password = password.trim_end().to_string();
+
+    Ok(password)
 }
