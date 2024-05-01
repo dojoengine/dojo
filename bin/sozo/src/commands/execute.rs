@@ -3,6 +3,7 @@ use clap::Args;
 use scarb::core::Config;
 use sozo_ops::execute;
 use starknet::core::types::FieldElement;
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -53,6 +54,13 @@ impl ExecuteArgs {
             .await
             .unwrap();
             let tx_config = self.transaction.into();
+
+            trace!(
+                contract=?self.contract,
+                entrypoint=self.entrypoint,
+                calldata=?self.calldata,
+                "Executing Execute command."
+            );
 
             execute::execute(self.contract, self.entrypoint, self.calldata, &world, &tx_config)
                 .await
