@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714535117720,
+  "lastUpdate": 1714535125595,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6775,6 +6775,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16765331,
             "range": "± 557015",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e9d392a2ec01db5e192ef5963b9aee7a617c069",
+          "message": "feat: cli arg disable cors torii proxy server (#1904)\n\n* feat: torii cli arg for no cors\r\n\r\n* feat: cors layer into optional layer\r\n\r\n* fmt\r\n\r\n* refactor: try to parse url\r\n\r\n* fix: remove default value for allowed origins\r\n\r\n* chore: unused imports",
+          "timestamp": "2024-04-30T21:37:16-06:00",
+          "tree_id": "60519813baf90d0ffac259c3b271d6ef25a11d47",
+          "url": "https://github.com/dojoengine/dojo/commit/1e9d392a2ec01db5e192ef5963b9aee7a617c069"
+        },
+        "date": 1714535125055,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16783016,
+            "range": "± 400471",
             "unit": "ns/iter"
           }
         ]
