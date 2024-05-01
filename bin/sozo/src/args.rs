@@ -5,7 +5,9 @@ use scarb::compiler::Profile;
 use scarb_ui::Verbosity;
 use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
+use tracing::Subscriber;
 use tracing_log::AsTrace;
+use tracing_subscriber::{fmt, EnvFilter};
 
 use crate::commands::Commands;
 use crate::utils::generate_version;
@@ -49,6 +51,18 @@ impl SozoArgs {
         } else {
             Verbosity::Quiet
         }
+    }
+
+    pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
+        const DEFAULT_LOG_FILTER: &str = "info,hyper=off,scarb=off";
+
+        let builder = fmt::Subscriber::builder().with_env_filter(
+            EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
+        );
+
+        let subscriber: Box<dyn Subscriber + Send + Sync> = Box::new(builder.finish());
+
+        Ok(tracing::subscriber::set_global_default(subscriber)?)
     }
 }
 

@@ -1,6 +1,7 @@
 use clap::Args;
 use dojo_world::migration::TxnConfig;
 use starknet::core::types::FieldElement;
+use tracing::trace;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Transaction options")]
@@ -39,6 +40,12 @@ pub struct TransactionOptions {
 
 impl From<TransactionOptions> for TxnConfig {
     fn from(value: TransactionOptions) -> Self {
+        trace!(
+            fee_estimate_multiplier = value.fee_estimate_multiplier,
+            wait = value.wait,
+            receipt = value.receipt,
+            "Converting TransactionOptions to TxnConfig."
+        );
         Self {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait,

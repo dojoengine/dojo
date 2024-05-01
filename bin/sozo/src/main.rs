@@ -9,6 +9,7 @@ use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb_ui::{OutputFormat, Ui};
+use tracing::trace;
 
 use crate::commands::Commands;
 
@@ -18,7 +19,7 @@ mod utils;
 
 fn main() {
     let args = SozoArgs::parse();
-
+    let _ = args.init_logging();
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
     if let Err(err) = cli_main(args) {
@@ -33,6 +34,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     match &args.command {
         Commands::Build(_) | Commands::Dev(_) | Commands::Migrate(_) => {
+            trace!("Adding DojoCompiler to compiler repository.");
             compilers.add(Box::new(DojoCompiler)).unwrap()
         }
         _ => {}
@@ -42,7 +44,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     utils::verify_cairo_version_compatibility(&manifest_path)?;
 
-    let config = Config::builder(manifest_path)
+    let config = Config::builder(manifest_path.clone())
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .profile(args.profile_spec.determine()?)
         .offline(args.offline)
@@ -50,6 +52,8 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .ui_verbosity(args.ui_verbosity())
         .compilers(compilers)
         .build()?;
+
+    trace!(%manifest_path, "Configuration built successfully.");
 
     commands::run(args.command, &config)
 }

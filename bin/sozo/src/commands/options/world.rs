@@ -4,6 +4,7 @@ use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::core::types::FieldElement;
+use tracing::trace;
 
 use super::DOJO_WORLD_ADDRESS_ENV_VAR;
 
@@ -19,8 +20,10 @@ pub struct WorldOptions {
 impl WorldOptions {
     pub fn address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         if let Some(world_address) = self.world_address {
+            trace!(?world_address, "Loaded world_address.");
             Ok(world_address)
         } else if let Some(world_address) = env_metadata.and_then(|env| env.world_address()) {
+            trace!(world_address, "Loaded world_address from env metadata.");
             Ok(FieldElement::from_str(world_address)?)
         } else {
             Err(anyhow!(

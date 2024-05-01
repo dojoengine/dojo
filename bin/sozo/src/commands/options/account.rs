@@ -7,6 +7,7 @@ use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
+use tracing::trace;
 
 use super::signer::SignerOptions;
 use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
@@ -42,14 +43,18 @@ impl AccountOptions {
     where
         P: Provider + Send + Sync,
     {
+        trace!(account_options=?self, "Creating account.");
         let account_address = self.account_address(env_metadata)?;
+        trace!(?account_address, "Account address determined.");
+
         let signer = self.signer.signer(env_metadata, false)?;
+        trace!(?signer, "Signer obtained.");
 
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
-
+        trace!(?chain_id);
         let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
-
+        trace!(?encoding, "Creating SingleOwnerAccount.");
         let mut account =
             SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding);
 
@@ -62,8 +67,10 @@ impl AccountOptions {
 
     fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         if let Some(address) = self.account_address {
+            trace!(?address, "Account address found.");
             Ok(address)
         } else if let Some(address) = env_metadata.and_then(|env| env.account_address()) {
+            trace!(address, "Account address found in environment metadata.");
             Ok(FieldElement::from_str(address)?)
         } else {
             Err(anyhow!(
