@@ -109,6 +109,10 @@ async fn input_to_json(result: Vec<ProgramInput>) -> anyhow::Result<String> {
         &result.get(1).ok_or_else(|| anyhow::anyhow!("Index out of bounds")).unwrap(),
     )
     .unwrap();
+    input1.truncate(input1.len() - 1);
+    input1.push_str(r#", "world_da":["1", "11","2", "22"]}"#);
+    input2.truncate(input2.len() - 1);
+    input2.push_str(r#", "world_da":["1","11","2","22"]}"#);
     Ok(format!("{{\"1\":{},\"2\":{}}}", input1, input2))
 }
 async fn combine_proofs(
@@ -125,14 +129,10 @@ async fn combine_proofs(
     let program_input2 = program_input_from_program_output(program_output2).unwrap();
     //combine two inputs to 1 input.json
     let inputs = vec![program_input1, program_input2];
-    Ok(prove(
-        input_to_json(inputs).await?,
-        ProverIdentifier::Stone,
-        "neotheprogramist/merger:latest",
-    )
-    .await
-    .unwrap()
-    .to_string())
+    Ok(prove(input_to_json(inputs).await?, ProverIdentifier::Stone, "matzayonc/merger:latest")
+        .await
+        .unwrap()
+        .to_string())
 }
 
 /// Simulates the proving process with a placeholder function.
@@ -149,7 +149,6 @@ pub fn prove_recursively(
             let input = inputs.pop().unwrap();
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
-            println!("Proving block {block_number}");
             let proof =
                 prove(serde_json::to_string(&input)?, prover, "piniom/state-diff-commitment")
                     .await?;
@@ -181,6 +180,22 @@ mod tests {
     use katana_primitives::state::StateUpdates;
     use katana_primitives::FieldElement;
     use std::str::FromStr;
+    #[tokio::test]
+    async fn test_input_to_json() {
+        let inputs = (0..2)
+            .map(|i| ProgramInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
+        let result = input_to_json(inputs).await.unwrap();
+        dbg!(result);
+    }
     #[tokio::test]
     async fn test_one() {
         let inputs = (0..2)
