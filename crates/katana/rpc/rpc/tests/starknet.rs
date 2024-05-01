@@ -1,9 +1,3 @@
-use std::fs::{self};
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::time::Duration;
-
 use anyhow::Context;
 use dojo_world::utils::TransactionWaiter;
 use ethers::contract::ContractFactory;
@@ -11,8 +5,8 @@ use ethers::types::{H160, U256};
 use ethers_contract::abigen;
 use ethers_solc::{Artifact, Project, ProjectPathsConfig};
 use katana_primitives::FieldElement;
-use katana_rpc_types::FunctionCall;
 use katana_runner::{AnvilRunner, KatanaRunner};
+use serde_json::json;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
@@ -20,8 +14,13 @@ use starknet::core::types::{
     TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::macros::{felt, selector};
 use starknet::providers::Provider;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
 mod common;
 
 const WAIT_TX_DELAY_MILLIS: u64 = 1000;
@@ -240,7 +239,25 @@ async fn test_messaging_l1_l2() {
     );
 
     // Prepare Katana + Messaging Contract
-    let katana_runner = KatanaRunner::new().unwrap();
+    let messagin_config = json!({
+        "chain": "ethereum",
+        "rpc_url": anvil_runner.endpoint,
+        "contract_address": "0x5FbDB2315678afecb367f032d93F642f64180aa3", //Maybe with alloy-rs I can pass this in a variable, right know it uses a weird notation of 0x124...e43
+        "sender_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+        "interval": 2,
+        "from_block": 0
+    });
+    let serialized_json =
+        serde_json::to_string_pretty(&messagin_config).expect("Failed to serialize JSON");
+
+    // Write JSON string to a file
+    let mut file =
+        File::create("tests/test_data/anvil-messaging.json").expect("Failed to create file");
+    file.write_all(serialized_json.as_bytes()).expect("Failed to write to file");
+
+    let katana_runner =
+        KatanaRunner::new_with_messaging(format!("tests/test_data/anvil-messaging.json")).unwrap();
     let starknet_account = katana_runner.account(0);
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo_l1_msg_contract.json");
@@ -313,7 +330,6 @@ async fn test_messaging_l1_l2() {
     );
 
     //Messaging between L1 -> L2
-
     let contr1_test = Contract1_test::new(contract_c1.address(), eth_account.clone());
     let address =
         U256::from_str("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")

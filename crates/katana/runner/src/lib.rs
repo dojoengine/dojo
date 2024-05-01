@@ -41,6 +41,18 @@ impl KatanaRunner {
         Self::new_with_port(find_free_port())
     }
 
+    pub fn new_with_messaging(file_path: String) -> Result<Self> {
+        let port = find_free_port();
+        Self::new_with_port_and_filename(
+            "katana",
+            find_free_port(),
+            format!("logs/katana-{}.log", port),
+            2,
+            false,
+            file_path,
+        )
+    }
+
     pub fn new_with_name(name: &str) -> Result<Self> {
         Self::new_with_port_and_filename(
             "katana",
@@ -48,6 +60,7 @@ impl KatanaRunner {
             format!("logs/katana-{}.log", name),
             2,
             false,
+            "".to_string(),
         )
     }
 
@@ -63,6 +76,7 @@ impl KatanaRunner {
             format!("katana-logs/{}.log", name),
             n_accounts,
             with_blocks,
+            "".to_string(),
         )
     }
 
@@ -73,6 +87,7 @@ impl KatanaRunner {
             format!("katana-logs/{}.log", port),
             2,
             false,
+            "".to_string(),
         )
     }
 
@@ -82,17 +97,21 @@ impl KatanaRunner {
         log_filename: String,
         n_accounts: u16,
         with_blocks: bool,
+        messaging_file_config: String,
     ) -> Result<Self> {
         let mut command = Command::new(program);
         command
             .args(["-p", &port.to_string()])
             .args(["--json-log"])
             .args(["--max-connections", &format!("{}", 10000)])
-            .args(["--accounts", &format!("{}", n_accounts)])
-            .args(["--messaging", &format!("/Users/fabrobles/Fab/dojo_fork/crates/katana/contracts/messaging/anvil.messaging.json")]);
+            .args(["--accounts", &format!("{}", n_accounts)]);
 
         if with_blocks {
             command.args(["--block-time", &format!("{}", BLOCK_TIME_IF_ENABLED)]);
+        }
+
+        if !messaging_file_config.is_empty() {
+            command.args(["--messaging", &format!("{}", messaging_file_config)]);
         }
 
         let mut child =
@@ -164,15 +183,15 @@ impl Drop for KatanaRunner {
     }
 }
 
+#[derive(Debug)]
 pub struct AnvilRunner {
     process: Child,
-    endpoint: String,
+    pub endpoint: String,
 }
 
 impl AnvilRunner {
     pub async fn new() -> Result<Self> {
-        let port = 8545u16;
-        // let port = find_free_port();
+        let port = find_free_port();
         let mut command = Command::new("Anvil");
         command
             .args(["-p", &port.to_string()])
@@ -205,10 +224,6 @@ impl AnvilRunner {
         let chain_id: ethers::types::U256 =
             provider.get_chainid().await.expect("Error getting chain id");
         return SignerMiddleware::new(provider, wallet.with_chain_id(chain_id.as_u32()));
-    }
-
-    pub fn endpoint(self) -> String {
-        self.endpoint.clone()
     }
 }
 
