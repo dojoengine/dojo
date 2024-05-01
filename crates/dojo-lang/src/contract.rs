@@ -16,6 +16,8 @@ use dojo_types::system::Dependency;
 
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 
+const ALLOW_REF_SELF_ARG: &str = "allow_ref_self";
+
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,
@@ -468,10 +470,8 @@ impl DojoContract {
     }
 }
 
-const ALLOW_REF_SELF_ARG: &str = "allow_ref_self";
-
 /// Extract the allow_ref_self attribute.
-fn extract_allow_ref_self(
+pub(crate) fn extract_allow_ref_self(
     allow_ref_self_attr: Option<&Attribute>,
     db: &dyn SyntaxGroup,
 ) -> Option<bool> {
