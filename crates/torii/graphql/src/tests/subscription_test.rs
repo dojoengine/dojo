@@ -6,6 +6,7 @@ mod tests {
     use async_graphql::value;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+    use dojo_world::contracts::abi::model::Layout;
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
@@ -268,7 +269,7 @@ mod tests {
                     ty: Ty::Primitive(Primitive::U32(None)),
                 }],
             });
-            db.register_model(model, vec![], class_hash, contract_address, 0, 0, block_timestamp)
+            db.register_model(model, Layout::Fixed(vec![]), class_hash, contract_address, 0, 0, block_timestamp)
                 .await
                 .unwrap();
 
@@ -321,7 +322,7 @@ mod tests {
                     ty: Ty::Primitive(Primitive::U8(None)),
                 }],
             });
-            db.register_model(model, vec![], class_hash, contract_address, 0, 0, block_timestamp)
+            db.register_model(model, Layout::Fixed(vec![]), class_hash, contract_address, 0, 0, block_timestamp)
                 .await
                 .unwrap();
             // 3. fn publish() is called from state.set_entity()

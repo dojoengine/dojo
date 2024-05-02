@@ -479,7 +479,9 @@ pub fn ty_to_string_type(ty: &Ty) -> String {
             Primitive::Bool(_) => "bool".to_string(),
         },
         Ty::Struct(_) => "struct".to_string(),
-        Ty::Tuple(_) => "array".to_string(),
+        Ty::Tuple(_) => "tuple".to_string(),
+        Ty::Array(_) => "array".to_string(),
+        Ty::ByteArray(_) => "bytearray".to_string(),
         Ty::Enum(_) => "enum".to_string(),
     }
 }
