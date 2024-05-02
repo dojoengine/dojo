@@ -15,9 +15,7 @@ fn pack(ref packed: Array<felt252>, ref unpacked: Span<felt252>, ref layout: Spa
             Option::Some(item) => {
                 pack_inner(item, *layout.pop_front().unwrap(), ref packing, ref offset, ref packed);
             },
-            Option::None(_) => {
-                break;
-            }
+            Option::None(_) => { break; }
         };
     };
     packed.append(packing);
@@ -37,9 +35,7 @@ fn calculate_packed_size(ref layout: Span<u8>) -> usize {
                     partial = item_size;
                 }
             },
-            Option::None(_) => {
-                break;
-            }
+            Option::None(_) => { break; }
         };
     };
 
@@ -53,9 +49,7 @@ fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: S
         match layout.pop_front() {
             Option::Some(s) => {
                 match unpack_inner(*s, ref packed, ref unpacking, ref offset) {
-                    Option::Some(u) => {
-                        unpacked.append(u);
-                    },
+                    Option::Some(u) => { unpacked.append(u); },
                     Option::None(_) => {
                         // Layout value was successfully poped,
                         // we are then expecting an unpacked value.
@@ -63,9 +57,7 @@ fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: S
                     }
                 }
             },
-            Option::None(_) => {
-                break;
-            }
+            Option::None(_) => { break; }
         };
     }
 }
@@ -127,9 +119,7 @@ fn unpack_inner(
                 let result = val_256 & (shl(1, size) - 1);
                 return result.try_into();
             },
-            Option::None(()) => {
-                return Option::None(());
-            },
+            Option::None(()) => { return Option::None(()); },
         }
     }
 

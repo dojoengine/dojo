@@ -10,7 +10,9 @@ fn initial_address() -> starknet::ContractAddress {
 }
 
 fn initial_class_hash() -> starknet::ClassHash {
-    starknet::class_hash_const::<0x03f75587469e8101729b3b02a46150a3d99315bc9c5026d64f2e8a061e413255>()
+    starknet::class_hash_const::<
+        0x03f75587469e8101729b3b02a46150a3d99315bc9c5026d64f2e8a061e413255
+    >()
 }
 
 #[derive(Drop, Serde, PartialEq, Clone)]
@@ -74,19 +76,29 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'ResourceMetadata',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'resource_id',
-                ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                attrs: array!['key'].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'metadata_uri',
-                ty: dojo::database::introspect::Ty::Array(3),
-                attrs: array![].span()
-            })].span()
-        })
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'ResourceMetadata',
+                attrs: array![].span(),
+                children: array![
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                            name: 'resource_id',
+                            ty: dojo::database::introspect::Ty::Primitive('felt252'),
+                            attrs: array!['key'].span()
+                        }
+                    ),
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                            name: 'metadata_uri',
+                            ty: dojo::database::introspect::Ty::Array(3),
+                            attrs: array![].span()
+                        }
+                    )
+                ]
+                    .span()
+            }
+        )
     }
 }
 
@@ -128,6 +140,5 @@ mod resource_metadata {
     }
 
     #[external(v0)]
-    fn ensure_abi(self: @ContractState, model: ResourceMetadata) {
-    }
+    fn ensure_abi(self: @ContractState, model: ResourceMetadata) {}
 }
