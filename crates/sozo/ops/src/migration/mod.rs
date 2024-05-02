@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::{anyhow, Result};
 use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::contracts::WorldContract;
@@ -140,11 +142,21 @@ where
         )
         .await?;
 
+        let account = Arc::new(account);
+        let world = WorldContract::new(world_address, account.clone());
         if let Some(migration_output) = migration_output {
+            match auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output).await
+            {
+                Ok(()) => {
+                    ui.print_sub("Auto authorize completed successfully");
+                }
+                Err(e) => {
+                    ui.print_sub(format!("Failed to auto authorize with error: {e}"));
+                }
+            };
+
             if !ws.config().offline() {
                 upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
-                let world = WorldContract::new(world_address, account);
-                auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output).await?;
             }
         }
     };

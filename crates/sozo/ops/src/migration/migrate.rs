@@ -312,7 +312,7 @@ where
     let ui = ws.config().ui();
 
     ui.print(" ");
-    ui.print_step(6, "🌐", "Uploading metadata...");
+    ui.print_step(7, "🌐", "Uploading metadata...");
     ui.print(" ");
 
     let dojo_metadata = dojo_metadata_from_workspace(ws);

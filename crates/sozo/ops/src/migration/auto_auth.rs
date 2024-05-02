@@ -23,10 +23,10 @@ where
     let ui = ws.config().ui();
 
     ui.print(" ");
-    ui.print_step(7, "🌐", "Authorizing Models to Systems (based on overlay)...");
+    ui.print_step(6, "🖋️", "Authorizing Models to Systems (based on overlay)...");
     ui.print(" ");
     let models_contracts = compute_models_contracts(&ui, local_manifest, migration_output)?;
-    grant_writer(world, models_contracts, *txn_config).await
+    grant_writer(&ui, world, models_contracts, *txn_config).await
 }
 
 pub fn compute_models_contracts(

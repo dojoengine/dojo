@@ -3,6 +3,7 @@ use dojo_test_utils::sequencer::{
 };
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
+use scarb_ui::{OutputFormat, Ui};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::utils::cairo_short_string_to_felt;
 
@@ -41,6 +42,7 @@ async fn auth_grant_writer_ok() {
     };
 
     auth::grant_writer(
+        &Ui::new(scarb_ui::Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
@@ -81,6 +83,7 @@ async fn auth_revoke_writer_ok() {
 
     // Here we are granting the permission to write
     auth::grant_writer(
+        &Ui::new(scarb_ui::Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves_mc.clone(), position_mc.clone()],
         TxnConfig { wait: true, ..Default::default() },

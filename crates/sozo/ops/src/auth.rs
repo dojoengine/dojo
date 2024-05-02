@@ -6,6 +6,7 @@ use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::{cairo_utils, WorldContractReader};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
+use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::parse_cairo_short_string;
@@ -88,6 +89,7 @@ impl FromStr for OwnerResource {
 }
 
 pub async fn grant_writer<A>(
+    ui: &Ui,
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
     txn_config: TxnConfig,
@@ -109,7 +111,7 @@ where
             }
 
             Err(ModelError::ModelNotFound) => {
-                println!("Unknown model '{}' => IGNORED", model_name);
+                ui.print(format!("Unknown model '{}' => IGNORED", model_name));
             }
 
             Err(err) => {
@@ -119,7 +121,6 @@ where
     }
 
     if !calls.is_empty() {
-        dbg!(&calls);
         let res = world
             .account
             .execute(calls)
@@ -128,6 +129,7 @@ where
             .with_context(|| "Failed to send transaction")?;
 
         utils::handle_transaction_result(
+            ui,
             &world.account.provider(),
             res,
             txn_config.wait,
@@ -140,6 +142,7 @@ where
 }
 
 pub async fn grant_owner<A>(
+    ui: &Ui,
     world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
     txn_config: TxnConfig,
@@ -168,6 +171,7 @@ where
         .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
+        ui,
         &world.account.provider(),
         res,
         txn_config.wait,
@@ -179,6 +183,7 @@ where
 }
 
 pub async fn revoke_writer<A>(
+    ui: &Ui,
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
     txn_config: TxnConfig,
@@ -200,7 +205,7 @@ where
             }
 
             Err(ModelError::ModelNotFound) => {
-                println!("Unknown model '{}' => IGNORED", model_name);
+                ui.print(format!("Unknown model '{}' => IGNORED", model_name));
             }
 
             Err(err) => {
@@ -218,6 +223,7 @@ where
             .with_context(|| "Failed to send transaction")?;
 
         utils::handle_transaction_result(
+            &ui,
             &world.account.provider(),
             res,
             txn_config.wait,
@@ -230,6 +236,7 @@ where
 }
 
 pub async fn revoke_owner<A>(
+    ui: &Ui,
     world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
     txn_config: TxnConfig,
@@ -258,6 +265,7 @@ where
         .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
+        &ui,
         &world.account.provider(),
         res,
         txn_config.wait,

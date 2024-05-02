@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use dojo_world::metadata::Environment;
 use scarb::core::Config;
+use scarb_ui::Ui;
 use sozo_ops::auth;
 
 use super::options::account::AccountOptions;
@@ -59,12 +60,28 @@ impl AuthArgs {
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         match self.command {
-            AuthCommand::Grant { kind, world, starknet, account, transaction } => config
-                .tokio_handle()
-                .block_on(grant(world, account, starknet, env_metadata, kind, transaction)),
-            AuthCommand::Revoke { kind, world, starknet, account, transaction } => config
-                .tokio_handle()
-                .block_on(revoke(world, account, starknet, env_metadata, kind, transaction)),
+            AuthCommand::Grant { kind, world, starknet, account, transaction } => {
+                config.tokio_handle().block_on(grant(
+                    &config.ui(),
+                    world,
+                    account,
+                    starknet,
+                    env_metadata,
+                    kind,
+                    transaction,
+                ))
+            }
+            AuthCommand::Revoke { kind, world, starknet, account, transaction } => {
+                config.tokio_handle().block_on(revoke(
+                    &config.ui(),
+                    world,
+                    account,
+                    starknet,
+                    env_metadata,
+                    kind,
+                    transaction,
+                ))
+            }
         }
     }
 }
@@ -95,6 +112,7 @@ pub enum AuthKind {
 }
 
 pub async fn grant(
+    ui: &Ui,
     world: WorldOptions,
     account: AccountOptions,
     starknet: StarknetOptions,
@@ -107,15 +125,16 @@ pub async fn grant(
 
     match kind {
         AuthKind::Writer { models_contracts } => {
-            auth::grant_writer(&world, models_contracts, transaction.into()).await
+            auth::grant_writer(&ui, &world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
-            auth::grant_owner(&world, owners_resources, transaction.into()).await
+            auth::grant_owner(&ui, &world, owners_resources, transaction.into()).await
         }
     }
 }
 
 pub async fn revoke(
+    ui: &Ui,
     world: WorldOptions,
     account: AccountOptions,
     starknet: StarknetOptions,
@@ -127,10 +146,10 @@ pub async fn revoke(
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
     match kind {
         AuthKind::Writer { models_contracts } => {
-            auth::revoke_writer(&world, models_contracts, transaction.into()).await
+            auth::revoke_writer(ui, &world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
-            auth::revoke_owner(&world, owners_resources, transaction.into()).await
+            auth::revoke_owner(&ui, &world, owners_resources, transaction.into()).await
         }
     }
 }

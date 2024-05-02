@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::migration::strategy::generate_salt;
 use dojo_world::utils::{execution_status_from_maybe_pending_receipt, TransactionWaiter};
+use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
     BlockId, BlockTag, ExecutionResult, FieldElement, InvokeTransactionResult,
@@ -76,6 +77,7 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
 /// * `wait_for_tx` - Wait for the transaction to be mined.
 /// * `show_receipt` - If the receipt of the transaction should be displayed on stdout.
 pub async fn handle_transaction_result<P>(
+    ui: &Ui,
     provider: P,
     transaction_result: InvokeTransactionResult,
     wait_for_tx: bool,
@@ -84,22 +86,22 @@ pub async fn handle_transaction_result<P>(
 where
     P: Provider + Send,
 {
-    println!("Transaction hash: {:#x}", transaction_result.transaction_hash);
+    ui.print(format!("Transaction hash: {:#x}", transaction_result.transaction_hash));
 
     if wait_for_tx {
         let receipt =
             TransactionWaiter::new(transaction_result.transaction_hash, &provider).await?;
 
         if show_receipt {
-            println!("Receipt:\n{}", serde_json::to_string_pretty(&receipt)?);
+            ui.print(format!("Receipt:\n{}", serde_json::to_string_pretty(&receipt)?));
         } else {
             match execution_status_from_maybe_pending_receipt(&receipt) {
                 ExecutionResult::Succeeded => {
-                    println!("Status: OK");
+                    ui.print(format!("Status: OK"));
                 }
                 ExecutionResult::Reverted { reason } => {
-                    println!("Status: REVERTED");
-                    println!("Reason:\n{}", reason);
+                    ui.print(format!("Status: REVERTED"));
+                    ui.print(format!("Reason:\n{}", reason));
                 }
             };
         }

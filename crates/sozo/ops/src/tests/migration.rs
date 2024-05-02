@@ -269,11 +269,16 @@ async fn migrate_with_auto_authorize() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let output = execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+    let mut txn_config = TxnConfig::default();
+    // make sure to test the assumption after transaction has been confirmed
+    txn_config.wait = true;
+
+    let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
 
     let world_address = migration.world_address().expect("must be present");
     let world = WorldContract::new(world_address, account);
-    let res = auto_authorize(&ws, &world, &TxnConfig::default(), &manifest, &output).await;
+
+    let res = auto_authorize(&ws, &world, &txn_config, &manifest, &output).await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();
@@ -289,7 +294,6 @@ async fn migrate_with_auto_authorize() {
         for model in &contract.inner.writes {
             let model = cairo_short_string_to_felt(&model).unwrap();
             let contract_address = ContractAddress(contract_address);
-            dbg!(&model, &contract_address);
             let is_writer = world_reader.is_writer(&model, &contract_address).call().await.unwrap();
             assert!(is_writer);
         }

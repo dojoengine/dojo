@@ -54,8 +54,15 @@ impl ExecuteArgs {
             .unwrap();
             let tx_config = self.transaction.into();
 
-            execute::execute(self.contract, self.entrypoint, self.calldata, &world, &tx_config)
-                .await
+            execute::execute(
+                &config.ui(),
+                self.contract,
+                self.entrypoint,
+                self.calldata,
+                &world,
+                &tx_config,
+            )
+            .await
         })
     }
 }
