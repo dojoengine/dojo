@@ -29,6 +29,8 @@ pub mod abigen {
 pub enum ModelError {
     #[error("Model not found.")]
     ModelNotFound,
+    #[error("Invalid model metadata.")]
+    InvalidModelMetadata,
     #[error(transparent)]
     ProviderError(#[from] ProviderError),
     #[error(transparent)]
@@ -55,9 +57,10 @@ pub trait ModelReader<E> {
     fn class_hash(&self) -> FieldElement;
     fn contract_address(&self) -> FieldElement;
     async fn schema(&self) -> Result<Ty, E>;
-    async fn packed_size(&self) -> Result<FieldElement, E>;
-    async fn unpacked_size(&self) -> Result<FieldElement, E>;
-    async fn layout(&self) -> Result<Vec<FieldElement>, E>;
+    async fn packed_size(&self) -> Result<u32, E>;
+    async fn unpacked_size(&self) -> Result<u32, E>;
+    async fn layout(&self) -> Result<abigen::model::Layout, E>;
+    async fn layout_raw(&self) -> Result<Vec<FieldElement>, E>;
 }
 
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
@@ -170,12 +173,22 @@ where
         Ok(parse_ty(&res)?)
     }
 
-    async fn packed_size(&self) -> Result<FieldElement, ModelError> {
-        Ok(self.model_reader.packed_size().raw_call().await?[0])
+    async fn packed_size(&self) -> Result<u32, ModelError> {
+        self.model_reader
+            .packed_size()
+            .call()
+            .await?
+            .map(Ok)
+            .unwrap_or(Err(ModelError::InvalidModelMetadata))
     }
 
-    async fn unpacked_size(&self) -> Result<FieldElement, ModelError> {
-        Ok(self.model_reader.unpacked_size().raw_call().await?[0])
+    async fn unpacked_size(&self) -> Result<u32, ModelError> {
+        self.model_reader
+            .unpacked_size()
+            .call()
+            .await?
+            .map(Ok)
+            .unwrap_or(Err(ModelError::InvalidModelMetadata))
     }
 
     async fn layout(&self) -> Result<Vec<FieldElement>, ModelError> {
@@ -185,5 +198,9 @@ where
         // So inside the vec, we skip the first element, which is the length
         // of the span returned by `layout` entrypoint of the model code.
         Ok(self.model_reader.layout().raw_call().await?[1..].into())
+    }
+
+    async fn layout_raw(&self) -> Result<Vec<FieldElement>, ModelError> {
+        Ok(self.model_reader.layout().raw_call().await?)
     }
 }

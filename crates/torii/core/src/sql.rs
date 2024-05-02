@@ -2,9 +2,11 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
+use cainome::cairo_serde::CairoSerde;
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
+use dojo_world::contracts::abi::model::Layout;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
@@ -96,18 +98,14 @@ impl Sql {
     pub async fn register_model(
         &mut self,
         model: Ty,
-        layout: Vec<FieldElement>,
+        layout: Layout,
         class_hash: FieldElement,
         contract_address: FieldElement,
         packed_size: u32,
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
-        let layout_blob = layout
-            .iter()
-            .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
-            .collect::<Vec<u8>>();
-
+        let mimi = Layout::cairo_serialize(&layout, 0)?;
         let insert_models =
             "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
              unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
@@ -121,7 +119,7 @@ impl Sql {
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
             .bind(format!("{contract_address:#x}"))
-            .bind(hex::encode(&layout_blob))
+            .bind(serde_json::to_string(&layout)?)
             .bind(packed_size)
             .bind(unpacked_size)
             .bind(utc_dt_string_from_timestamp(block_timestamp))
