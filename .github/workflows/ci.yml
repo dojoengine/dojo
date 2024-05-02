@@ -70,7 +70,7 @@ jobs:
           scarb --manifest-path crates/dojo-core/Scarb.toml fmt --check
 
   dojo-core-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-2-cores
     container:
       image: ghcr.io/dojoengine/dojo-dev:bceec2e
     steps:
@@ -81,7 +81,7 @@ jobs:
       - run: cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-2-cores
     container:
       image: ghcr.io/dojoengine/dojo-dev:bceec2e
     steps:
@@ -92,7 +92,7 @@ jobs:
       - run: cargo run --bin sozo -- --manifest-path examples/spawn-and-move/Scarb.toml test
 
   dojo-world-bindings-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-2-cores
     container:
       image: ghcr.io/dojoengine/dojo-dev:bceec2e
     steps:
@@ -103,7 +103,7 @@ jobs:
       - run: cargo run --bin dojo-world-abigen -- --check
 
   clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-2-cores
     container:
       image: ghcr.io/dojoengine/dojo-dev:bceec2e
     steps:
