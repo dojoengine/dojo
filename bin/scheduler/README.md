@@ -1,7 +1,7 @@
 # `scheduler`
 
 ```sh
-cargo run --bin scheduler -- your_input.json your_input2.json ... your_input2^n
+cargo run --bin scheduler -- --world 42 your_input.json your_input2.json ... your_input2^n
 ```
 ## number of inputs have to be power of 2
 # input format example
@@ -15,7 +15,12 @@ cargo run --bin scheduler -- your_input.json your_input2.json ... your_input2^n
     "message_to_starknet_segment":[105,106,1,1], 
     "message_to_appchain_segment":[108,109,110,111,1,112],
     "nonce_updates":{},
-    "storage_updates":{},
+    "storage_updates":{
+        "42": {
+            "2010": 1200,
+            "2012": 1300
+        }
+    },
     "contract_updates":{},
     "declared_classes":{}
 }

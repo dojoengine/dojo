@@ -1,4 +1,5 @@
 use clap::Parser;
+use katana_primitives::FieldElement;
 use saya_core::prover::{scheduler::prove_recursively, ProgramInput, ProverIdentifier};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -9,6 +10,8 @@ use tokio::io::AsyncWriteExt;
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[clap(author, version, about, long_about = None)]
 pub struct CliInput {
+    #[arg(long)]
+    pub world: FieldElement,
     pub files: Vec<std::path::PathBuf>,
 }
 
@@ -58,6 +61,6 @@ async fn main() {
             program_input_from_json(json_data)
         })
         .collect();
-    let result = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
+    let result = prove_recursively(inputs, args.world, ProverIdentifier::Stone).await.unwrap().0;
     prove_to_json(vec![result]).await;
 }

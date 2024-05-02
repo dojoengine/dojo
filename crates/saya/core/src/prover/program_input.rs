@@ -1,3 +1,4 @@
+use anyhow::bail;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
@@ -33,6 +34,32 @@ pub struct ProgramInput {
     pub message_to_appchain_segment: Vec<MessageToAppchain>,
     #[serde(flatten)]
     pub state_updates: StateUpdates,
+    #[serde(serialize_with = "serialize_world_da")]
+    pub world_da: Option<Vec<FieldElement>>,
+}
+
+fn serialize_world_da<S>(
+    element: &Option<Vec<FieldElement>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    if let Some(da) = element {
+        let mut seq = serializer.serialize_seq(Some(da.len()))?;
+
+        for d in da {
+            let decimal = d.to_big_decimal(0); // Convert with no decimal places
+            let num = decimal.to_u64().ok_or_else(|| {
+                serde::ser::Error::custom("FieldElement conversion to u64 failed")
+            })?;
+            seq.serialize_element(&num)?;
+        }
+
+        seq.end()
+    } else {
+        Err(serde::ser::Error::custom("Compute `world_da` first"))
+    }
 }
 
 fn serialize_field_element_as_u64<S>(
@@ -48,6 +75,7 @@ where
         .ok_or_else(|| serde::ser::Error::custom("FieldElement conversion to u64 failed"))?;
     serializer.serialize_u64(num)
 }
+
 fn deserialize_field_element_from_u64<'de, D>(deserializer: D) -> Result<FieldElement, D::Error>
 where
     D: Deserializer<'de>,
@@ -55,6 +83,7 @@ where
     let num = u64::deserialize(deserializer)?;
     FieldElement::from_dec_str(&num.to_string()).map_err(DeError::custom)
 }
+
 fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToStarknet> {
     let mut messages = vec![];
 
@@ -165,7 +194,7 @@ impl ProgramInput {
     //     Ok(result)
     // }
 
-    pub fn da_as_calldata(&self, world: FieldElement) -> Vec<FieldElement> {
+    pub fn fill_da(&mut self, world: FieldElement) {
         let updates = self
             .state_updates
             .storage_updates
@@ -176,10 +205,10 @@ impl ProgramInput {
             .flatten()
             .collect::<Vec<_>>();
 
-        updates
+        self.world_da = Some(updates);
     }
 
-    pub fn combine(mut self, other: ProgramInput) -> ProgramInput {
+    pub fn combine(mut self, other: ProgramInput) -> anyhow::Result<ProgramInput> {
         self.message_to_appchain_segment.extend(other.message_to_appchain_segment);
         self.message_to_starknet_segment.extend(other.message_to_starknet_segment);
 
@@ -203,8 +232,28 @@ impl ProgramInput {
             });
         });
 
+        if self.world_da.is_none() || other.world_da.is_none() {
+            bail!("Both world_da must be present to combine them");
+        }
+
+        let mut world_da = self.world_da.unwrap_or_default();
+        for later in other.world_da.unwrap_or_default().chunks(2) {
+            let mut replaced = false;
+            for earlier in world_da.chunks_mut(2) {
+                if later[0] == earlier[0] {
+                    earlier[1] = later[1];
+                    replaced = true;
+                    continue;
+                }
+            }
+
+            if !replaced {
+                world_da.extend(later)
+            }
+        }
+
         // The block number is the one from the last block.
-        ProgramInput {
+        Ok(ProgramInput {
             prev_state_root: self.prev_state_root,
             block_number: other.block_number,
             block_hash: other.block_hash,
@@ -212,7 +261,8 @@ impl ProgramInput {
             message_to_appchain_segment: self.message_to_appchain_segment,
             message_to_starknet_segment: self.message_to_starknet_segment,
             state_updates: self.state_updates,
-        }
+            world_da: Some(world_da),
+        })
     }
 }
 

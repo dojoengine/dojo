@@ -151,7 +151,8 @@ impl Saya {
             }
 
             // Prove each of the leaf nodes of the recursion tree and merge them into one
-            let proof = prove_recursively(processed, self.config.prover).await?;
+            let proof =
+                prove_recursively(processed, self.config.world_address, self.config.prover).await?;
             println!("Proof: {:?}", proof.0);
         }
     }
@@ -219,7 +220,7 @@ impl Saya {
         let (message_to_starknet_segment, message_to_appchain_segment) =
             extract_messages(&exec_infos, transactions);
 
-        let state_diff_prover_input = ProgramInput {
+        let mut state_diff_prover_input = ProgramInput {
             prev_state_root,
             block_number,
             block_hash: block.block.header.hash,
@@ -227,7 +228,9 @@ impl Saya {
             message_to_starknet_segment,
             message_to_appchain_segment,
             state_updates: state_updates_to_prove,
+            world_da: None,
         };
+        state_diff_prover_input.fill_da(self.config.world_address);
 
         // let world_da = new_program_input.da_as_calldata(self.config.world_address);
         // let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
