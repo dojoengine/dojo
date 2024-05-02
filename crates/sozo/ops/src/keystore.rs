@@ -12,7 +12,6 @@ pub fn new(password: Option<String>, force: bool, file: PathBuf ) -> Result<()> 
 
     let password = get_password(password)?;
   
-   
     let key = SigningKey::from_random();
     key.save_as_keystore(&file, &password)?;
 
@@ -107,6 +106,7 @@ fn get_password(prompt_text: &str, retry: bool) -> io::Result<String> {
 fn get_password(password: Option<String>) -> std::io::Result<String> {
     if let Some(password) = password {
         Ok(password)
+
     } else {
 
         let password = rpassword::prompt_password("Enter password: ");
