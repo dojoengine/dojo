@@ -1,3 +1,10 @@
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
+
 use dojo_world::utils::TransactionWaiter;
 use katana_primitives::FieldElement;
 use katana_runner::{AnvilRunner, KatanaRunner};
@@ -10,18 +17,10 @@ use starknet::core::types::{
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::time::Duration;
 
 mod common;
-use alloy::{
-    primitives::{Address, Uint, U256},
-    sol,
-};
+use alloy::primitives::{Address, Uint, U256};
+use alloy::sol;
 
 const WAIT_TX_DELAY_MILLIS: u64 = 1000;
 
@@ -252,11 +251,13 @@ async fn test_messaging_l1_l2() {
 
     assert_eq!(receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
 
-    assert!(starknet_account
-        .provider()
-        .get_class(BlockId::Tag(BlockTag::Latest), class_hash)
-        .await
-        .is_ok());
+    assert!(
+        starknet_account
+            .provider()
+            .get_class(BlockId::Tag(BlockTag::Latest), class_hash)
+            .await
+            .is_ok()
+    );
 
     let constructor_calldata = vec![];
 
@@ -317,7 +318,7 @@ async fn test_messaging_l1_l2() {
         .gas(12000000)
         .value(Uint::from(1));
 
-    //Messaging between L1 -> L2
+    // Messaging between L1 -> L2
 
     let _receipt = builder
         .send()
@@ -327,7 +328,8 @@ async fn test_messaging_l1_l2() {
         .await
         .expect("Error getting transaction receipt");
 
-    // wait for the tx to be mined (Using delay cause the transaction is sent from L1 and is received in L2)
+    // wait for the tx to be mined (Using delay cause the transaction is sent from L1 and is
+    // received in L2)
     tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
 
     assert_eq!(

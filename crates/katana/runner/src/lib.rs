@@ -1,15 +1,20 @@
 mod logs;
 mod prefunded;
 mod utils;
-use alloy::{
-    network::{Ethereum, EthereumSigner},
-    providers::{
-        fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, SignerFiller},
-        Identity, ProviderBuilder, RootProvider,
-    },
-    signers::wallet::LocalWallet,
-    transports::http::Http,
+use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
+use std::str::FromStr;
+use std::sync::mpsc::{self};
+use std::thread;
+use std::time::Duration;
+
+use alloy::network::{Ethereum, EthereumSigner};
+use alloy::providers::fillers::{
+    ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, SignerFiller,
 };
+use alloy::providers::{Identity, ProviderBuilder, RootProvider};
+use alloy::signers::wallet::LocalWallet;
+use alloy::transports::http::Http;
 use anyhow::{Context, Result};
 use hyper::http::request;
 use hyper::{Client as HyperClient, Response, StatusCode};
@@ -20,11 +25,6 @@ use reqwest::Client;
 pub use runner_macro::{katana_test, runner};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use std::process::{Child, Command, Stdio};
-use std::sync::mpsc::{self};
-use std::thread;
-use std::time::Duration;
-use std::{path::PathBuf, str::FromStr};
 use tokio::sync::Mutex;
 use tokio::time;
 use url::Url;
