@@ -7,9 +7,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-ethers-contract = "2.0.14"
-ethers-solc = "2.0.14"
-ethers = "2.0.4"
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 dojo-metrics.workspace = true
 katana-core.workspace = true
@@ -38,6 +35,8 @@ tokio.workspace = true
 tower = { version = "0.4.13", features = [ "full" ] }
 tower-http = { version = "0.4.1", features = [ "full" ] }
 tracing.workspace = true
+
+alloy = { git = "https://github.com/alloy-rs/alloy", rev = "7128c53"}
 
 [dev-dependencies]
 assert_matches = "1.5.0"

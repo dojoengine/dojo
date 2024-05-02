@@ -1,9 +1,4 @@
-use anyhow::Context;
 use dojo_world::utils::TransactionWaiter;
-use ethers::contract::ContractFactory;
-use ethers::types::{H160, U256};
-use ethers_contract::abigen;
-use ethers_solc::{Artifact, Project, ProjectPathsConfig};
 use katana_primitives::FieldElement;
 use katana_runner::{AnvilRunner, KatanaRunner};
 use serde_json::json;
@@ -21,7 +16,12 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+
 mod common;
+use alloy::{
+    primitives::{Address, Uint, U256},
+    sol,
+};
 
 const WAIT_TX_DELAY_MILLIS: u64 = 1000;
 
@@ -180,69 +180,46 @@ async fn test_send_declare_and_deploy_legacy_contract() {
     drop(katana_runner)
 }
 
-abigen!(
-        Contract1_test,
-        "/Users/fabrobles/Fab/dojo_fork/crates/katana/rpc/rpc/tests/test_data/solidity/Contract1_abi.json",
-        event_derives(serde::Serialize, serde::Deserialize)
-    );
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    StarknetContract,
+    "tests/test_data/solidity/StarknetMessagingLocalCompiled.json"
+);
+
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    Contract1,
+    "tests/test_data/solidity/Contract1Compiled.json"
+);
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_messaging_l1_l2() {
     // Prepare Anvil + Messaging Contracts
-    let root =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("test_data").join("solidity");
-    let paths = ProjectPathsConfig::builder().root(&root).sources(&root).build().unwrap();
-
-    let project = Project::builder().paths(paths).ephemeral().no_artifacts().build().unwrap();
-
-    let output = project.compile().context("Error compiling project").unwrap();
-    output.assert_success();
-
-    let contract_starknet_messaging_local =
-        output.find_first("StarknetMessagingLocal").expect("could not find contract").clone();
-    let (abi_cstrk, bytecode_cstrk, _) = contract_starknet_messaging_local.into_parts();
-
-    let contract_1 = output.find_first("Contract1").expect("could not find contract").clone();
-    let (abi_c1, bytecode_c1, _) = contract_1.into_parts();
-
     let anvil_runner = AnvilRunner::new().await.unwrap();
 
-    let eth_account = Arc::new(anvil_runner.account().await);
-
-    let factory_cstrk = ContractFactory::new(
-        abi_cstrk.clone().unwrap(),
-        bytecode_cstrk.unwrap(),
-        eth_account.clone(),
-    );
-    let factory_c1 =
-        ContractFactory::new(abi_c1.clone().unwrap(), bytecode_c1.unwrap(), eth_account.clone());
-
-    // Deploy to local node (anvil)
-    let contract_strk =
-        factory_cstrk.deploy(()).expect("Failing deploying").send().await.expect("Failing sending");
+    let contract_strk = StarknetContract::deploy(anvil_runner.provider()).await.unwrap();
+    let strk_address = contract_strk.address();
 
     assert_eq!(
         contract_strk.address(),
-        H160::from_str("0x5fbdb2315678afecb367f032d93f642f64180aa3").unwrap()
+        &Address::from_str("0x5fbdb2315678afecb367f032d93f642f64180aa3").unwrap()
     );
 
-    let contract_c1 = factory_c1
-        .deploy(contract_strk.address())
-        .expect("Failing deploying")
-        .send()
-        .await
-        .expect("Failing sending");
+    let contract_c1 =
+        Contract1::deploy(anvil_runner.provider(), strk_address.clone()).await.unwrap();
 
     assert_eq!(
         contract_c1.address(),
-        H160::from_str("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512").unwrap()
+        &Address::from_str("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512").unwrap()
     );
 
     // Prepare Katana + Messaging Contract
     let messagin_config = json!({
         "chain": "ethereum",
         "rpc_url": anvil_runner.endpoint,
-        "contract_address": "0x5FbDB2315678afecb367f032d93F642f64180aa3", //Maybe with alloy-rs I can pass this in a variable, right know it uses a weird notation of 0x124...e43
+        "contract_address": contract_strk.address().to_string(),
         "sender_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
         "interval": 2,
@@ -329,27 +306,28 @@ async fn test_messaging_l1_l2() {
         .unwrap()
     );
 
-    //Messaging between L1 -> L2
-    let contr1_test = Contract1_test::new(contract_c1.address(), eth_account.clone());
-    let address =
-        U256::from_str("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
-            .unwrap();
-    let selector =
-        U256::from_str("0x005421de947699472df434466845d68528f221a52fce7ad2934c5dae2e1f1cdc")
-            .unwrap();
-    let payload = vec![U256::from(123)];
-    let _receipt = contr1_test
-        .send_message(address, selector, payload)
+    let builder = contract_c1
+        .sendMessage(
+            U256::from_str("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
+                .unwrap(),
+            U256::from_str("0x005421de947699472df434466845d68528f221a52fce7ad2934c5dae2e1f1cdc")
+                .unwrap(),
+            vec![U256::from(123)],
+        )
         .gas(12000000)
-        .value(1)
+        .value(Uint::from(1));
+
+    //Messaging between L1 -> L2
+
+    let _receipt = builder
         .send()
         .await
         .expect("Error Await pending transaction")
+        .get_receipt()
         .await
-        .expect("Error getting transaction receipt")
-        .unwrap();
+        .expect("Error getting transaction receipt");
 
-    // wait for the tx to be mined
+    // wait for the tx to be mined (Using delay cause the transaction is sent from L1 and is received in L2)
     tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
 
     assert_eq!(

@@ -1,24 +1,30 @@
 mod logs;
 mod prefunded;
 mod utils;
-use std::path::PathBuf;
+use alloy::{
+    network::{Ethereum, EthereumSigner},
+    providers::{
+        fillers::{ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, SignerFiller},
+        Identity, ProviderBuilder, RootProvider,
+    },
+    signers::wallet::LocalWallet,
+    transports::http::Http,
+};
+use anyhow::{Context, Result};
+use hyper::http::request;
+use hyper::{Client as HyperClient, Response, StatusCode};
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
+use katana_primitives::FieldElement;
+use reqwest::Client;
+pub use runner_macro::{katana_test, runner};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
-
-use anyhow::{Context, Result};
-use ethers::middleware::SignerMiddleware;
-use ethers::providers::{Http, Middleware, Provider as EthProvider};
-use ethers::signers::{LocalWallet as EthLocalWallet, Signer};
-use hyper::http::request;
-use hyper::{Client, Response, StatusCode};
-use katana_primitives::contract::ContractAddress;
-use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
-use katana_primitives::FieldElement;
-pub use runner_macro::{katana_test, runner};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use std::{path::PathBuf, str::FromStr};
 use tokio::sync::Mutex;
 use tokio::time;
 use url::Url;
@@ -186,19 +192,29 @@ impl Drop for KatanaRunner {
 #[derive(Debug)]
 pub struct AnvilRunner {
     process: Child,
+    provider: FillProvider<
+        JoinFill<
+            JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
+            SignerFiller<EthereumSigner>,
+        >,
+        RootProvider<Http<Client>>,
+        Http<Client>,
+        Ethereum,
+    >,
     pub endpoint: String,
 }
 
 impl AnvilRunner {
     pub async fn new() -> Result<Self> {
         let port = find_free_port();
-        let mut command = Command::new("Anvil");
-        command
-            .args(["-p", &port.to_string()])
-            .args(["--silent"])
-            .args(["--disable-block-gas-limit"])
+
+        let process = Command::new("anvil")
+            .arg("--port")
+            .arg(&port.to_string())
+            .arg("--silent")
+            .arg("--disable-block-gas-limit")
             .spawn()
-            .expect("Error executing Anvil");
+            .expect("Could not start background Anvil");
 
         let endpoint = format!("http://127.0.0.1:{port}");
 
@@ -206,24 +222,32 @@ impl AnvilRunner {
             panic!("Error bringing up Anvil")
         }
 
-        let process =
-            command.stdout(Stdio::piped()).spawn().context("failed to start subprocess")?;
-        return Ok(AnvilRunner { process, endpoint });
-    }
-
-    fn provider(&self) -> EthProvider<Http> {
-        return EthProvider::<Http>::try_from(&self.endpoint)
-            .expect("Error getting provider")
-            .interval(Duration::from_millis(10u64));
-    }
-
-    pub async fn account(&self) -> SignerMiddleware<EthProvider<Http>, EthLocalWallet> {
-        let provider = self.provider();
-        let wallet: EthLocalWallet =
+        let wallet: LocalWallet =
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".parse().unwrap();
-        let chain_id: ethers::types::U256 =
-            provider.get_chainid().await.expect("Error getting chain id");
-        return SignerMiddleware::new(provider, wallet.with_chain_id(chain_id.as_u32()));
+
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .signer(EthereumSigner::from(wallet))
+            .on_http(Url::from_str(&endpoint).unwrap());
+        return Ok(AnvilRunner { process, endpoint, provider });
+    }
+
+    pub fn provider(
+        &self,
+    ) -> &FillProvider<
+        JoinFill<
+            JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
+            SignerFiller<EthereumSigner>,
+        >,
+        RootProvider<Http<Client>>,
+        Http<Client>,
+        Ethereum,
+    > {
+        &self.provider
+    }
+
+    pub fn endpoint(&self) -> String {
+        self.endpoint.clone()
     }
 }
 
@@ -247,7 +271,7 @@ async fn post_dummy_request(url: &String) -> Result<Response<hyper::Body>, hyper
         ))
         .unwrap();
 
-    Client::new().request(req).await
+    HyperClient::new().request(req).await
 }
 
 async fn is_anvil_up(endpoint: &String) -> bool {
