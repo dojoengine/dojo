@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714554002747,
+  "lastUpdate": 1714614311545,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6865,6 +6865,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16792259,
             "range": "± 242378",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "048d6dc6cac60d5f272122eca4ae43b811d9c223",
+          "message": "feat: add allowed-origins to katana cli (#1909)\n\n* feat: add allowed-origins to katana cli\r\n\r\n* fix: testsequencer config",
+          "timestamp": "2024-05-01T21:37:01-04:00",
+          "tree_id": "ac240aa2e7c60597ab49346a80cb012acd4a2324",
+          "url": "https://github.com/dojoengine/dojo/commit/048d6dc6cac60d5f272122eca4ae43b811d9c223"
+        },
+        "date": 1714614310766,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16565532,
+            "range": "± 131317",
             "unit": "ns/iter"
           }
         ]
