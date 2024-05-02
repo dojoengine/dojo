@@ -4,27 +4,21 @@ use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
-use num_traits::cast::ToPrimitive;
-use serde::{de::Error as DeError, ser::SerializeSeq, ser::Serializer, Deserializer};
+use serde::{ser::SerializeSeq, ser::Serializer, Deserializer};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::vec;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by the prover.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
 
 pub struct ProgramInput {
-    #[serde(serialize_with = "serialize_field_element_as_u64")]
-    #[serde(deserialize_with = "deserialize_field_element_from_u64")]
     pub prev_state_root: FieldElement,
     pub block_number: u64,
-    #[serde(serialize_with = "serialize_field_element_as_u64")]
-    #[serde(deserialize_with = "deserialize_field_element_from_u64")]
     pub block_hash: FieldElement,
-    #[serde(serialize_with = "serialize_field_element_as_u64")]
-    #[serde(deserialize_with = "deserialize_field_element_from_u64")]
     pub config_hash: FieldElement,
     #[serde(serialize_with = "MessageToStarknet::serialize_message_to_starknet")]
     #[serde(deserialize_with = "MessageToStarknet::deserialize_message_to_starknet")]
@@ -58,28 +52,6 @@ where
     } else {
         Err(serde::ser::Error::custom("Compute `world_da` first"))
     }
-}
-
-fn serialize_field_element_as_u64<S>(
-    element: &FieldElement,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let decimal = element.to_big_decimal(0); // Convert with no decimal places
-    let num = decimal
-        .to_u64()
-        .ok_or_else(|| serde::ser::Error::custom("FieldElement conversion to u64 failed"))?;
-    serializer.serialize_u64(num)
-}
-
-fn deserialize_field_element_from_u64<'de, D>(deserializer: D) -> Result<FieldElement, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let num = u64::deserialize(deserializer)?;
-    FieldElement::from_dec_str(&num.to_string()).map_err(DeError::custom)
 }
 
 fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToStarknet> {
@@ -286,9 +258,7 @@ impl MessageToStarknet {
             // Instead of adding serialized as an array, add each element individually
             for field_element in serialized {
                 let decimal = field_element.to_big_decimal(0); // Assuming no decimal places for simplicity
-                let num = decimal.to_u64().ok_or_else(|| {
-                    serde::ser::Error::custom("Failed to convert BigDecimal to u64")
-                })?;
+                let num = decimal.to_string();
                 seq.serialize_element(&num)?;
             }
         }
@@ -322,18 +292,19 @@ impl MessageToStarknet {
             {
                 let mut messages = Vec::new();
                 while let Some(from_address) = seq
-                    .next_element::<u64>()?
+                    .next_element::<&str>()?
                     .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                 {
                     let to_address = seq
-                        .next_element::<u64>()?
+                        .next_element::<&str>()?
                         .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
-                    let payload_length = seq.next_element::<usize>()?.unwrap_or_default();
+                    let payload_length_str = seq.next_element::<&str>()?.unwrap_or_default();
+                    let payload_length: usize = payload_length_str.parse().unwrap_or_default();
                     let mut payload = Vec::new();
                     for _ in 0..payload_length {
                         if let Some(element) = seq
-                            .next_element::<u64>()?
+                            .next_element::<&str>()?
                             .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         {
                             payload.push(element);
@@ -376,9 +347,7 @@ impl MessageToAppchain {
             let serialized = message.serialize().unwrap();
             for field_element in serialized {
                 let decimal = field_element.to_big_decimal(0); // Assuming no decimal places for simplicity
-                let num = decimal.to_u64().ok_or_else(|| {
-                    serde::ser::Error::custom("Failed to convert BigDecimal to u64")
-                })?;
+                let num = decimal.to_string();
                 seq.serialize_element(&num)?;
             }
         }
@@ -412,26 +381,27 @@ impl MessageToAppchain {
             {
                 let mut messages = Vec::new();
                 while let Some(from_address) = seq
-                    .next_element::<u64>()?
+                    .next_element::<&str>()?
                     .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                 {
                     let to_address = seq
-                        .next_element::<u64>()?
+                        .next_element::<&str>()?
                         .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
                     let nonce = seq
-                        .next_element::<u64>()?
+                        .next_element::<&str>()?
                         .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
                     let selector = seq
-                        .next_element::<u64>()?
+                        .next_element::<&str>()?
                         .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
-                    let payload_length = seq.next_element::<usize>()?.unwrap_or_default();
+                    let payload_length_str = seq.next_element::<&str>()?.unwrap_or_default();
+                    let payload_length: usize = payload_length_str.parse().unwrap_or_default();
                     let mut payload = Vec::new();
                     for _ in 0..payload_length {
                         if let Some(element) = seq
-                            .next_element::<u64>()?
+                            .next_element::<&str>()?
                             .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         {
                             payload.push(element);
@@ -458,12 +428,12 @@ fn test_deserialize_input() -> anyhow::Result<()> {
     use std::str::FromStr;
 
     let input = r#"{
-        "prev_state_root":101, 
+        "prev_state_root":"101", 
         "block_number":102, 
-        "block_hash":103, 
-        "config_hash":104, 
-        "message_to_starknet_segment":[105,106,1,1], 
-        "message_to_appchain_segment":[108,109,110,111,1,112],
+        "block_hash":"103", 
+        "config_hash":"104", 
+        "message_to_starknet_segment":["105","106","1","1"], 
+        "message_to_appchain_segment":["108","109","110","111","1","112"],
         "storage_updates":{
             "42": {
                 "2010": "1200",
@@ -541,7 +511,6 @@ fn test_deserialize_input() -> anyhow::Result<()> {
         },
         world_da: None,
     };
-
     let mut deserialized = serde_json::from_str::<ProgramInput>(input)?;
     assert_eq!(expected, deserialized);
 
@@ -552,6 +521,81 @@ fn test_deserialize_input() -> anyhow::Result<()> {
         FieldElement::from_str("2012")?,
         FieldElement::from_str("1300")?,
     ]);
+
+    Ok(())
+}
+#[test]
+fn test_serialize_input() -> anyhow::Result<()> {
+    use std::str::FromStr;
+
+    let input = ProgramInput {
+        prev_state_root: FieldElement::from_str("101")?,
+        block_number: 102,
+        block_hash: FieldElement::from_str("103")?,
+        config_hash: FieldElement::from_str("104")?,
+        message_to_starknet_segment: vec![MessageToStarknet {
+            from_address: ContractAddress::from(FieldElement::from_str("105")?),
+            to_address: ContractAddress::from(FieldElement::from_str("106")?),
+            payload: vec![FieldElement::from_str("1")?],
+        }],
+        message_to_appchain_segment: vec![MessageToAppchain {
+            from_address: ContractAddress::from(FieldElement::from_str("108")?),
+            to_address: ContractAddress::from(FieldElement::from_str("109")?),
+            nonce: FieldElement::from_str("110")?,
+            selector: FieldElement::from_str("111")?,
+            payload: vec![FieldElement::from_str("112")?],
+        }],
+        state_updates: StateUpdates {
+            storage_updates: vec![(
+                ContractAddress::from(FieldElement::from_str("42")?),
+                vec![
+                    (FieldElement::from_str("2010")?, FieldElement::from_str("1200")?),
+                    (FieldElement::from_str("2012")?, FieldElement::from_str("1300")?),
+                ]
+                .into_iter()
+                .collect(),
+            )]
+            .into_iter()
+            .collect(),
+
+            nonce_updates: vec![
+                (
+                    ContractAddress::from(FieldElement::from_str("1111")?),
+                    FieldElement::from_str("22222")?,
+                ),
+                (
+                    ContractAddress::from(FieldElement::from_str("1116")?),
+                    FieldElement::from_str("22223")?,
+                ),
+            ]
+            .into_iter()
+            .collect(),
+
+            contract_updates: vec![(
+                ContractAddress::from(FieldElement::from_str("3")?),
+                FieldElement::from_str("437267489")?,
+            )]
+            .into_iter()
+            .collect(),
+
+            declared_classes: vec![(
+                FieldElement::from_str("1234")?,
+                FieldElement::from_str("12345")?,
+            )]
+            .into_iter()
+            .collect(),
+        },
+        world_da: Some(vec![
+            FieldElement::from_str("2010")?,
+            FieldElement::from_str("1200")?,
+            FieldElement::from_str("2012")?,
+            FieldElement::from_str("1300")?,
+        ]),
+    };
+
+    let serialized = serde_json::to_string::<ProgramInput>(&input.clone())?;
+    let deserialized = serde_json::from_str::<ProgramInput>(&serialized)?;
+    assert_eq!(input, deserialized);
 
     Ok(())
 }
