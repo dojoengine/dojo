@@ -456,10 +456,36 @@ impl MessageToAppchain {
 }
 
 #[test]
-fn test_program_input() -> anyhow::Result<()> {
+fn test_deserialize_input() -> anyhow::Result<()> {
     use std::str::FromStr;
 
-    let input = ProgramInput {
+    let input = r#"{
+            "prev_state_root":101, 
+            "block_number":102, 
+            "block_hash":103, 
+            "config_hash":104, 
+            "message_to_starknet_segment":[105,106,1,1], 
+            "message_to_appchain_segment":[108,109,110,111,1,112],
+            "storage_updates":{
+                "42": {
+                    "2010": "1200",
+                    "2012": "1300"
+                }
+            },
+            "nonce_updates":{
+                "1111": "22222",
+                "1116": "22223"
+            },
+            "contract_updates":{
+                "3": "437267489"
+            },
+            "declared_classes":{
+                "1234": "12345"
+            },
+            "world_da": []
+        }"#;
+
+    let expected = ProgramInput {
         prev_state_root: FieldElement::from_str("101")?,
         block_number: 102,
         block_hash: FieldElement::from_str("103")?,
@@ -467,7 +493,7 @@ fn test_program_input() -> anyhow::Result<()> {
         message_to_starknet_segment: vec![MessageToStarknet {
             from_address: ContractAddress::from(FieldElement::from_str("105")?),
             to_address: ContractAddress::from(FieldElement::from_str("106")?),
-            payload: vec![FieldElement::from_str("107")?],
+            payload: vec![FieldElement::from_str("1")?],
         }],
         message_to_appchain_segment: vec![MessageToAppchain {
             from_address: ContractAddress::from(FieldElement::from_str("108")?),
@@ -477,52 +503,50 @@ fn test_program_input() -> anyhow::Result<()> {
             payload: vec![FieldElement::from_str("112")?],
         }],
         state_updates: StateUpdates {
-            nonce_updates: std::collections::HashMap::new(),
             storage_updates: vec![(
-                ContractAddress::from(FieldElement::from_str("113")?),
-                vec![(FieldElement::from_str("114")?, FieldElement::from_str("115")?)]
-                    .into_iter()
-                    .collect(),
+                ContractAddress::from(FieldElement::from_str("42")?),
+                vec![
+                    (FieldElement::from_str("2010")?, FieldElement::from_str("1200")?),
+                    (FieldElement::from_str("2012")?, FieldElement::from_str("1300")?),
+                ]
+                .into_iter()
+                .collect(),
             )]
             .into_iter()
             .collect(),
-            contract_updates: std::collections::HashMap::new(),
-            declared_classes: std::collections::HashMap::new(),
+
+            nonce_updates: vec![
+                (
+                    ContractAddress::from(FieldElement::from_str("1111")?),
+                    FieldElement::from_str("22222")?,
+                ),
+                (
+                    ContractAddress::from(FieldElement::from_str("1116")?),
+                    FieldElement::from_str("22223")?,
+                ),
+            ]
+            .into_iter()
+            .collect(),
+
+            contract_updates: vec![(
+                ContractAddress::from(FieldElement::from_str("3")?),
+                FieldElement::from_str("437267489")?,
+            )]
+            .into_iter()
+            .collect(),
+
+            declared_classes: vec![(
+                FieldElement::from_str("1234")?,
+                FieldElement::from_str("12345")?,
+            )]
+            .into_iter()
+            .collect(),
         },
         world_da: Some(vec![]),
     };
 
-    // Serialize with the DA.
-    // let serialized_with_da = input.serialize(FieldElement::from_str("113")?).unwrap();
-    // println!("Serialized: {}", serialized_with_da);
-    // pub const EXPECTED_WITH_DA: &str = r#"{
-    //         "prev_state_root": 101,
-    //         "block_number": 102,
-    //         "block_hash": 103,
-    //         "config_hash": 104,
-    //         "message_to_starknet_segment": [105,106,1,107],
-    //         "message_to_appchain_segment": [108,109,110,111,1,112],
-    //         "nonce_updates": {},
-    //         "storage_updates": {"113":{"114":115}},
-    //         "contract_updates": {},
-    //         "declared_classes": {},
-    //         "world_da": [114, 115]
-    //     }"#;
-
-    // let expected = EXPECTED_WITH_DA.chars().filter(|c| !c.is_whitespace()).collect::<String>();
-    // println!("{}", expected);
-    // assert_eq!(serialized_with_da, expected);
-
-    // // Serialize just the DA as calldata.
-    // let da_calldata = input.da_as_calldata(FieldElement::from_str("113")?);
-    // assert_eq!(
-    //     da_calldata,
-    //     vec![
-    //         FieldElement::from_str("2")?,
-    //         FieldElement::from_str("114")?,
-    //         FieldElement::from_str("115")?
-    //     ]
-    // );
+    let deserialized = serde_json::from_str::<ProgramInput>(input)?;
+    assert_eq!(expected, deserialized);
 
     Ok(())
 }
