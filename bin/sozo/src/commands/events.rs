@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
 use sozo_ops::events;
+use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
@@ -43,9 +44,16 @@ pub struct EventsArgs {
 impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = utils::load_metadata_from_config(config)?;
+        trace!(?env_metadata, "Metadata loaded from config.");
+
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        trace!(ws_members_count = ws.members().count(), "Read workspace.");
+
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+        trace!(?manifest_dir, "Manifest directory defined from workspace.");
+
         let provider = self.starknet.provider(env_metadata.as_ref())?;
+        trace!(?provider, "Starknet RPC client provider.");
 
         let event_filter = events::get_event_filter(
             self.from_block,
@@ -53,11 +61,18 @@ impl EventsArgs {
             self.events,
             self.world.world_address,
         );
-
+        trace!(
+            from_block = self.from_block,
+            to_block = self.to_block,
+            chunk_size = self.chunk_size,
+            "Created event filter."
+        );
         let profile_name =
             ws.current_profile().expect("Scarb profile expected at this point.").to_string();
+        trace!(profile_name, "Current profile.");
 
         config.tokio_handle().block_on(async {
+            trace!("Starting async event parsing.");
             events::parse(
                 self.chunk_size,
                 provider,
