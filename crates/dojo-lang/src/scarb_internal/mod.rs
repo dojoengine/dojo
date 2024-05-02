@@ -24,6 +24,7 @@ use crate::plugin::dojo_plugin_suite;
 
 pub(crate) const LOG_TARGET: &str = "dojo_lang::scarb_internal";
 
+#[derive(Debug)]
 pub struct CompileInfo {
     pub profile_name: String,
     pub manifest_path: Utf8PathBuf,

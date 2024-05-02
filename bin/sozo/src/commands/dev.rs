@@ -23,14 +23,12 @@ use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
-use tracing::error;
+use tracing::{error, trace};
 
 use super::migrate::setup_env;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::dev";
 
 #[derive(Debug, Args)]
 pub struct DevArgs {
@@ -57,10 +55,12 @@ impl DevArgs {
         let env_metadata = if config.manifest_path().exists() {
             dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
+            trace!("Manifest path does not exist.");
             None
         };
 
         let mut context = load_context(config)?;
+
         let (tx, rx) = channel();
         let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
 
@@ -88,7 +88,7 @@ impl DevArgs {
             ))
             .ok()
         else {
-            return Err(anyhow!("Failed to setup environment"));
+            return Err(anyhow!("Failed to setup environment."));
         };
 
         match context.ws.config().tokio_handle().block_on(migrate(
@@ -104,7 +104,6 @@ impl DevArgs {
             }
             Err(error) => {
                 error!(
-                    target: LOG_TARGET,
                     error = ?error,
                     address = ?world_address,
                     "Migrating world."
@@ -120,7 +119,7 @@ impl DevArgs {
                     .unwrap_or(DevAction::None),
                 Ok(Err(_)) => DevAction::None,
                 Err(error) => {
-                    error!(target: LOG_TARGET, error = ?error, "Receiving dev action.");
+                    error!(error = ?error, "Receiving dev action.");
                     break;
                 }
             };
@@ -139,7 +138,6 @@ impl DevArgs {
                     }
                     Err(error) => {
                         error!(
-                            target: LOG_TARGET,
                             error = ?error,
                             address = ?world_address,
                             "Migrating world.",
@@ -152,7 +150,7 @@ impl DevArgs {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 enum DevAction {
     None,
     Reload,
@@ -176,6 +174,8 @@ fn handle_event(event: &DebouncedEvent) -> DevAction {
         }
         _ => DevAction::None,
     };
+
+    trace!(?action, "Determined action.");
     action
 }
 
@@ -196,6 +196,7 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
 
     // we have only 1 unit in projects
     // TODO: double check if we always have one with the new version and the order if many.
+    trace!(unit_count = compilation_units.len(), "Gathering compilation units.");
     let unit = compilation_units.first().unwrap();
     let db = build_scarb_root_database(unit).unwrap();
     Ok(DevContext { db, unit: unit.clone(), ws })
@@ -267,6 +268,7 @@ where
 }
 
 fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAction {
+    trace!(event=?event, "Processing event.");
     let action = handle_event(event);
     match &action {
         DevAction::None => {}
@@ -275,6 +277,8 @@ fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAct
             handle_reload_action(context);
         }
     }
+
+    trace!(action=?action, "Processed action.");
     action
 }
 
@@ -291,8 +295,10 @@ fn handle_build_action(path: &Path, context: &mut DevContext<'_>) {
 }
 
 fn handle_reload_action(context: &mut DevContext<'_>) {
+    trace!("Reloading context.");
     let config = context.ws.config();
     config.ui().print("Reloading project");
     let new_context = load_context(config).expect("Failed to load context");
     let _ = mem::replace(context, new_context);
+    trace!("Context reloaded.");
 }

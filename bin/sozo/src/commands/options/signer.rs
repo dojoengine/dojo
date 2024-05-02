@@ -5,6 +5,7 @@ use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::core::types::FieldElement;
 use starknet::signers::{LocalWallet, SigningKey};
+use tracing::trace;
 
 use super::{DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
@@ -43,6 +44,7 @@ impl SignerOptions {
         if let Some(private_key) =
             self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
         {
+            trace!(private_key, "Signing using private key.");
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 FieldElement::from_str(private_key)?,
             )));
@@ -63,6 +65,7 @@ impl SignerOptions {
                 } else if no_wait {
                     return Err(anyhow!("Could not find password. Please specify the password."));
                 } else {
+                    trace!("Prompting user for keystore password.");
                     rpassword::prompt_password("Enter password: ")?
                 }
             };
