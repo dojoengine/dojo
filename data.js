@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714664597274,
+  "lastUpdate": 1714671693767,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6925,6 +6925,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17302056,
             "range": "± 283904",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90035c1af328433667a4eeacce819227b545c497",
+          "message": "fix(sozo): events subcommand (#1915)\n\n* fix: dont ignore --json flag\r\n\r\n* fix events subcommand",
+          "timestamp": "2024-05-02T11:33:05-06:00",
+          "tree_id": "22e6da7839c81215fc7ce0b2ac6607224b0e6aaa",
+          "url": "https://github.com/dojoengine/dojo/commit/90035c1af328433667a4eeacce819227b545c497"
+        },
+        "date": 1714671692561,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16821913,
+            "range": "± 195201",
             "unit": "ns/iter"
           }
         ]
