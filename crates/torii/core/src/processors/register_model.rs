@@ -1,4 +1,4 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Error, Ok, Result, anyhow};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
@@ -51,10 +51,10 @@ where
 
         let model = world.model_reader(&name).await?;
         let schema = model.schema().await?;
-        let layout = model.layout().await?;
+        let layout = model.layout_raw().await?;
 
-        let unpacked_size: u32 = model.unpacked_size().await?.try_into()?;
-        let packed_size: u32 = model.packed_size().await?.try_into()?;
+        let unpacked_size: u32 = model.unpacked_size().await?;
+        let packed_size: u32 = model.packed_size().await?;
 
         let class_hash = event.data[1];
         let contract_address = event.data[3];
