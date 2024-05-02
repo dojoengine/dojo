@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714614311545,
+  "lastUpdate": 1714664597274,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6895,6 +6895,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16565532,
             "range": "± 131317",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "128649481+neotheprogramist@users.noreply.github.com",
+            "name": "Neo",
+            "username": "neotheprogramist"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8f8bdd35d0ea8cf78028067ef95038ee263d740c",
+          "message": "[saya] demo (#1883)\n\n* refactor in progress\r\n\r\n* proving pipeline\r\n\r\n* remove commented test\r\n\r\n* remove genesis init\r\n\r\n* remove unused imports\r\n\r\n* add https\r\n\r\n* Revert \"add https\"\r\n\r\nThis reverts commit 0397a014568e73205a422410d1cfa030f1abf260.\r\n\r\n* add world entrypoint function\r\n\r\n* fmt\r\n\r\n* enhance readme\r\n\r\n* add world tests\r\n\r\n* fmt\r\n\r\n* fix: fix tests and merge main\r\n\r\n* fix: bindings and fmt\r\n\r\n* fix: ensure type aliases are used for World config\r\n\r\n* docs: update readme\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-05-02T09:35:00-06:00",
+          "tree_id": "f0155498057ff65128643b721dc005742e8c821c",
+          "url": "https://github.com/dojoengine/dojo/commit/8f8bdd35d0ea8cf78028067ef95038ee263d740c"
+        },
+        "date": 1714664596660,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17302056,
+            "range": "± 283904",
             "unit": "ns/iter"
           }
         ]
