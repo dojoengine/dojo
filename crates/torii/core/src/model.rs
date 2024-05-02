@@ -25,7 +25,7 @@ pub struct ModelSQLReader {
     pool: Pool<Sqlite>,
     packed_size: u32,
     unpacked_size: u32,
-    layout: Layout
+    layout: Layout,
 }
 
 impl ModelSQLReader {
@@ -62,7 +62,7 @@ impl ModelReader<Error> for ModelSQLReader {
     fn name(&self) -> String {
         self.name.to_string()
     }
-    
+
     fn selector(&self) -> FieldElement {
         // this should never fail
         get_selector_from_name(&self.name).unwrap()
@@ -102,10 +102,6 @@ impl ModelReader<Error> for ModelSQLReader {
 
     async fn layout(&self) -> Result<Layout, Error> {
         Ok(self.layout.clone())
-    }
-
-    async fn layout_raw(&self) -> Result<Vec<FieldElement>, Error> {
-        Ok(Layout::cairo_serialize(&self.layout))
     }
 }
 

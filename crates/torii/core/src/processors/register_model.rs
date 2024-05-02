@@ -51,7 +51,7 @@ where
 
         let model = world.model_reader(&name).await?;
         let schema = model.schema().await?;
-        let layout = model.layout_raw().await?;
+        let layout = model.layout().await?;
 
         let unpacked_size: u32 = model.unpacked_size().await?;
         let packed_size: u32 = model.packed_size().await?;

@@ -105,7 +105,6 @@ impl Sql {
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
-        let mimi = Layout::cairo_serialize(&layout, 0)?;
         let insert_models =
             "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
              unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
