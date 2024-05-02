@@ -32,7 +32,6 @@ pub struct SayaArgs {
     #[arg(long)]
     #[arg(value_name = "PROVER URL")]
     #[arg(help = "The Prover URL for remote proving.")]
-    #[arg(default_value = "http://prover.visoft.dev:3618/prove/state-diff-commitment")]
     pub prover_url: Url,
 
     /// Enable JSON logging.
@@ -166,6 +165,7 @@ mod tests {
         let config: SayaConfig = args.try_into().unwrap();
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
+        assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
         assert_eq!(config.start_block, 0);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");
