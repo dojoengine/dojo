@@ -50,9 +50,7 @@ where
 
         for d in da {
             let decimal = d.to_big_decimal(0); // Convert with no decimal places
-            let num = decimal.to_u64().ok_or_else(|| {
-                serde::ser::Error::custom("FieldElement conversion to u64 failed")
-            })?;
+            let num = decimal.to_string();
             seq.serialize_element(&num)?;
         }
 

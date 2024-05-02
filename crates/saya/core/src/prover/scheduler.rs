@@ -21,17 +21,16 @@ fn program_input_from_program_output(
     let message_to_appchain_segment: Vec<MessageToAppchain>;
     let mut decimal = output[6].clone().to_big_decimal(0); // Convert with no decimal places
     let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
-    let mut index = 6;
     match num {
         0..=3 => {
             message_to_starknet_segment = Default::default();
         }
         4..=u64::MAX => {
             message_to_starknet_segment =
-                get_message_to_starknet_segment(&output[7..7 + num as usize].to_vec(), num)?
+                get_message_to_starknet_segment(&output[7..7 + num as usize].to_vec())?
         }
     }
-    index = 7 + num as usize;
+    let index = 7 + num as usize;
     decimal = output[index].clone().to_big_decimal(0);
     let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
     match num {
@@ -41,7 +40,6 @@ fn program_input_from_program_output(
         5..=u64::MAX => {
             message_to_appchain_segment = get_message_to_appchain_segment(
                 &output[index + 1..index + 1 + num as usize].to_vec(),
-                num,
             )?
         }
     }
@@ -62,7 +60,6 @@ fn program_input_from_program_output(
 }
 fn get_message_to_starknet_segment(
     output: &Vec<FieldElement>,
-    num: u64,
 ) -> anyhow::Result<Vec<MessageToStarknet>> {
     let mut message_to_starknet_segment: Vec<MessageToStarknet> = vec![];
     let mut index = 0;
@@ -72,7 +69,7 @@ fn get_message_to_starknet_segment(
         }
         let from_address = ContractAddress::from(output[index].clone());
         let to_address = ContractAddress::from(output[index + 1].clone());
-        let mut decimal = output[index + 2].clone().to_big_decimal(0);
+        let decimal = output[index + 2].clone().to_big_decimal(0);
         let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
         let payload = output[index + 3..index + 3 + num as usize].to_vec();
         message_to_starknet_segment.push(MessageToStarknet { from_address, to_address, payload });
@@ -82,7 +79,6 @@ fn get_message_to_starknet_segment(
 }
 fn get_message_to_appchain_segment(
     output: &Vec<FieldElement>,
-    num: u64,
 ) -> anyhow::Result<Vec<MessageToAppchain>> {
     let mut message_to_appchain_segment: Vec<MessageToAppchain> = vec![];
     let mut index = 0;
@@ -94,7 +90,7 @@ fn get_message_to_appchain_segment(
         let to_address = ContractAddress::from(output[index + 1].clone());
         let nonce = output[index + 2].clone();
         let selector = output[index + 3].clone();
-        let mut decimal = output[index + 4].clone().to_big_decimal(0);
+        let decimal = output[index + 4].clone().to_big_decimal(0);
         let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
         let payload = output[index + 5..index + 5 + num as usize].to_vec();
         message_to_appchain_segment.push(MessageToAppchain {
@@ -110,11 +106,11 @@ fn get_message_to_appchain_segment(
 }
 
 async fn input_to_json(result: Vec<ProgramInput>) -> anyhow::Result<String> {
-    let mut input1 = serde_json::to_string(
+    let input1 = serde_json::to_string(
         &result.get(0).ok_or_else(|| anyhow::anyhow!("Index out of bounds")).unwrap(),
     )
     .unwrap();
-    let mut input2 = serde_json::to_string(
+    let input2 = serde_json::to_string(
         &result.get(1).ok_or_else(|| anyhow::anyhow!("Index out of bounds")).unwrap(),
     )
     .unwrap();
@@ -196,7 +192,6 @@ pub fn prove_recursively(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_proof_parser::output;
     use katana_primitives::state::StateUpdates;
     use katana_primitives::FieldElement;
     use std::str::FromStr;
@@ -332,164 +327,137 @@ mod tests {
     }
     #[tokio::test]
     async fn test_combine_proofs() {
-        let input1 = ProgramInput {
-            prev_state_root: FieldElement::from_str("101").unwrap(),
-            block_number: 102,
-            block_hash: FieldElement::from_str("103").unwrap(),
-            config_hash: FieldElement::from_str("104").unwrap(),
-            message_to_starknet_segment: vec![MessageToStarknet {
-                from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
-                payload: vec![FieldElement::from_str("107").unwrap()],
-            }],
-            message_to_appchain_segment: vec![MessageToAppchain {
-                from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
-                nonce: FieldElement::from_str("110").unwrap(),
-                selector: FieldElement::from_str("111").unwrap(),
-                payload: vec![FieldElement::from_str("112").unwrap()],
-            }],
-            state_updates: StateUpdates {
-                nonce_updates: {
-                    let mut map = std::collections::HashMap::new();
-                    map.insert(
-                        ContractAddress::from(FieldElement::from_str("1234").unwrap()),
-                        FieldElement::from_str("22222").unwrap(),
-                    );
-                    map
-                },
-                storage_updates: vec![(
-                    ContractAddress::from(FieldElement::from_str("333").unwrap()),
-                    vec![(
-                        FieldElement::from_str("4444").unwrap(),
-                        FieldElement::from_str("555").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                )]
-                .into_iter()
-                .collect(),
-                contract_updates: {
-                    let mut map = std::collections::HashMap::new();
-                    map.insert(
-                        ContractAddress::from(FieldElement::from_str("66666").unwrap()),
-                        FieldElement::from_str("7777").unwrap(),
-                    );
-                    map
-                },
-                declared_classes: {
-                    let mut map = std::collections::HashMap::new();
-                    map.insert(
-                        FieldElement::from_str("88888").unwrap(),
-                        FieldElement::from_str("99999").unwrap(),
-                    );
-                    map
-                },
-            },
-            world_da: Some(Vec::new()),
-        };
-        let input2 = ProgramInput {
-            prev_state_root: FieldElement::from_str("201").unwrap(),
-            block_number: 202,
-            block_hash: FieldElement::from_str("203").unwrap(),
-            config_hash: FieldElement::from_str("204").unwrap(),
-            message_to_starknet_segment: vec![MessageToStarknet {
-                from_address: ContractAddress::from(FieldElement::from_str("205").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("206").unwrap()),
-                payload: vec![FieldElement::from_str("207").unwrap()],
-            }],
-            message_to_appchain_segment: vec![MessageToAppchain {
-                from_address: ContractAddress::from(FieldElement::from_str("208").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("209").unwrap()),
-                nonce: FieldElement::from_str("210").unwrap(),
-                selector: FieldElement::from_str("211").unwrap(),
-                payload: vec![FieldElement::from_str("207").unwrap()],
-            }],
-            state_updates: StateUpdates {
-                nonce_updates: {
-                    let mut map = std::collections::HashMap::new();
-                    map.insert(
-                        ContractAddress::from(FieldElement::from_str("1111").unwrap()),
-                        FieldElement::from_str("22222").unwrap(),
-                    );
-                    map
-                },
-                storage_updates: vec![(
-                    ContractAddress::from(FieldElement::from_str("333").unwrap()),
-                    vec![(
-                        FieldElement::from_str("4444").unwrap(),
-                        FieldElement::from_str("555").unwrap(),
-                    )]
-                    .into_iter()
-                    .collect(),
-                )]
-                .into_iter()
-                .collect(),
-                contract_updates: {
-                    let mut map = std::collections::HashMap::new();
-                    map.insert(
-                        ContractAddress::from(FieldElement::from_str("66666").unwrap()),
-                        FieldElement::from_str("7777").unwrap(),
-                    );
-                    map
-                },
-                declared_classes: {
-                    let mut map = std::collections::HashMap::new();
-                    map.insert(
-                        FieldElement::from_str("88888").unwrap(),
-                        FieldElement::from_str("99999").unwrap(),
-                    );
-                    map
-                },
-            },
-            world_da: Some(Vec::new()),
-        };
-        let expected = ProgramInput {
-            prev_state_root: FieldElement::from_str("101").unwrap(),
-            block_number: 202,
-            block_hash: FieldElement::from_str("203").unwrap(),
-            config_hash: FieldElement::from_str("104").unwrap(),
-            message_to_starknet_segment: vec![
-                MessageToStarknet {
-                    from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
-                    payload: vec![FieldElement::from_str("107").unwrap()],
-                },
-                MessageToStarknet {
-                    from_address: ContractAddress::from(FieldElement::from_str("205").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("206").unwrap()),
-                    payload: vec![FieldElement::from_str("207").unwrap()],
-                },
+        let input1 = r#"{
+            "prev_state_root": 101,
+            "block_number": 102,
+            "block_hash": 103,
+            "config_hash": 104,
+            "message_to_starknet_segment": [
+                105,
+                106,
+                1,
+                107
             ],
-            message_to_appchain_segment: vec![
-                MessageToAppchain {
-                    from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
-                    nonce: FieldElement::from_str("110").unwrap(),
-                    selector: FieldElement::from_str("111").unwrap(),
-                    payload: vec![FieldElement::from_str("112").unwrap()],
-                },
-                MessageToAppchain {
-                    from_address: ContractAddress::from(FieldElement::from_str("208").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("209").unwrap()),
-                    nonce: FieldElement::from_str("210").unwrap(),
-                    selector: FieldElement::from_str("211").unwrap(),
-                    payload: vec![FieldElement::from_str("207").unwrap()],
-                },
+            "message_to_appchain_segment": [
+                108,
+                109,
+                110,
+                111,
+                1,
+                112
             ],
-            state_updates: StateUpdates {
-                nonce_updates: std::collections::HashMap::new(),
-                storage_updates: std::collections::HashMap::new(),
-                contract_updates: std::collections::HashMap::new(),
-                declared_classes: std::collections::HashMap::new(),
+            "nonce_updates": {
+                "1111": "22222"
             },
-            world_da: Some(Vec::new()),
-        };
+            "storage_updates": {
+                "333": {
+                    "4444": "555"
+                }
+            },
+            "contract_updates": {
+                "66666": "7777"
+            },
+            "declared_classes": {
+                "88888": "99999"
+            },
+            "world_da": []
+        }"#;
+        let input2 = r#"{
+            "prev_state_root": 201,
+            "block_number": 202,
+            "block_hash": 203,
+            "config_hash": 204,
+            "message_to_starknet_segment": [
+                205,
+                206,
+                1,
+                207
+            ],
+            "message_to_appchain_segment": [
+                208,
+                209,
+                210,
+                211,
+                1,
+                207
+            ],
+            "nonce_updates": {
+                "12334": "214354"
+            },
+            "storage_updates": {
+                "333": {
+                    "44536346444": "565474555"
+                }
+            },
+            "contract_updates": {
+                "4356345": "775468977"
+            },
+            "declared_classes": {
+                "88556753888": "9995764599"
+            },
+            "world_da": []
+        }"#;
+        let expected = r#"{
+            "prev_state_root": 101,
+            "block_number": 202,
+            "block_hash": 203,
+            "config_hash": 104,
+            "message_to_starknet_segment": [
+                105,
+                106,
+                1,
+                107,
+                205,
+                206,
+                1,
+                207
+            ],
+            "message_to_appchain_segment": [
+                108,
+                109,
+                110,
+                111,
+                1,
+                112,
+                208,
+                209,
+                210,
+                211,
+                1,
+                207
+            ],
+            "nonce_updates": {
+                "12334": "214354",
+                "1111": "22222"
+            },
+            "storage_updates": {
+                "333": {
+                    "44536346444": "565474555",
+                    "4444": "555"
+                }
+            },
+            "contract_updates": {
+                "4356345": "775468977",
+                "66666": "7777"
+            },
+            "declared_classes": {
+                "88556753888": "9995764599",
+                "88888": "99999"
+            },
+            "world_da": ["4444","555","44536346444","565474555"]
+        }"#;
+        let input1: ProgramInput = serde_json::from_str(input1).unwrap();
+        let input2: ProgramInput = serde_json::from_str(input2).unwrap();
+        let expected: ProgramInput = serde_json::from_str(expected).unwrap();
         let inputs = vec![input1.clone(), input2.clone()];
-        let output = prove_recursively(inputs, FieldElement::default(), ProverIdentifier::Stone)
-            .await
-            .unwrap()
-            .1;
+        let output = prove_recursively(
+            inputs,
+            FieldElement::from_dec_str("333").unwrap(),
+            ProverIdentifier::Stone,
+        )
+        .await
+        .unwrap()
+        .1;
         assert_eq!(output, expected);
     }
     #[tokio::test]
