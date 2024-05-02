@@ -45,7 +45,8 @@ fn program_input_from_program_output(
             )?
         }
     }
-    Ok(ProgramInput {
+
+    let mut input = ProgramInput {
         prev_state_root,
         block_number,
         block_hash,
@@ -53,7 +54,11 @@ fn program_input_from_program_output(
         message_to_starknet_segment,
         message_to_appchain_segment,
         state_updates,
-    })
+        world_da: None,
+    };
+
+    input.fill_da(FieldElement::default());
+    Ok(input)
 }
 fn get_message_to_starknet_segment(
     output: &Vec<FieldElement>,
@@ -150,11 +155,13 @@ async fn combine_proofs(
 /// calls.
 pub fn prove_recursively(
     mut inputs: Vec<ProgramInput>,
+    world: FieldElement,
     prover: ProverIdentifier,
 ) -> BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>> {
     async move {
         if inputs.len() == 1 {
-            let input = inputs.pop().unwrap();
+            let mut input = inputs.pop().unwrap();
+            input.fill_da(world);
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
             let mut serialized_input = serde_json::to_string(&input).unwrap();
@@ -168,8 +175,8 @@ pub fn prove_recursively(
             let last = inputs.split_off(mid);
 
             let (earlier_result, later_result) = tokio::try_join!(
-                tokio::spawn(async move { prove_recursively(inputs, prover.clone()).await }),
-                tokio::spawn(async move { prove_recursively(last, prover).await }),
+                tokio::spawn(async move { prove_recursively(inputs, world, prover.clone()).await }),
+                tokio::spawn(async move { prove_recursively(last, world, prover).await }),
             )?;
 
             let ((earlier_result, earlier_input), (later_result, later_input)) =
@@ -185,6 +192,8 @@ pub fn prove_recursively(
             )
             .await?;
 
+            let input = earlier_result.1.combine(later_result.1)?;
+            let merged_proofs = combine_proofs(earlier_result.0, later_result.0, &input).await?;
             Ok((merged_proofs, input))
         }
     }
@@ -198,10 +207,11 @@ mod tests {
     use katana_primitives::state::StateUpdates;
     use katana_primitives::FieldElement;
     use starknet::core::serde;
+    use starknet_crypto::FieldElement;
     use std::str::FromStr;
     #[tokio::test]
     async fn test_input_to_json() {
-        let inputs = (0..2)
+        let mut inputs = (0..2)
             .map(|i| ProgramInput {
                 prev_state_root: FieldElement::from(i),
                 block_number: i,
@@ -210,6 +220,7 @@ mod tests {
                 message_to_appchain_segment: Default::default(),
                 message_to_starknet_segment: Default::default(),
                 state_updates: Default::default(),
+                world_da: Default::default(),
             })
             .collect::<Vec<_>>();
         let result = input_to_json(inputs).await.unwrap();
@@ -252,6 +263,7 @@ mod tests {
                     },
                 ],
                 state_updates: Default::default(),
+                world_da: Default::default(),
             })
             .collect::<Vec<_>>();
         // let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
@@ -334,6 +346,7 @@ mod tests {
                     map
                 },
             },
+            world_da: Default::default(),
         };
         let mut serialized_input = serde_json::to_string(&input).unwrap();
         serialized_input.truncate(serialized_input.len() - 1);
@@ -373,6 +386,7 @@ mod tests {
                 contract_updates: std::collections::HashMap::new(),
                 declared_classes: std::collections::HashMap::new(),
             },
+            world_da: Default::default(),
         };
         let input2 = ProgramInput {
             prev_state_root: FieldElement::from_str("201").unwrap(),
@@ -397,9 +411,13 @@ mod tests {
                 contract_updates: std::collections::HashMap::new(),
                 declared_classes: std::collections::HashMap::new(),
             },
+            world_da: Default::default(),
         };
         let inputs = vec![input1.clone(), input2];
-        let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
+        let proof = prove_recursively(inputs, &FieldElement::default(), ProverIdentifier::Stone)
+            .await
+            .unwrap()
+            .0;
 
         let extracted_output = extract_output(&proof).unwrap().program_output;
         let mut serialized_input = serde_json::to_string(&input1).unwrap();
@@ -433,6 +451,7 @@ mod tests {
                 payload: vec![FieldElement::from_str("1").unwrap()],
             }],
             state_updates: Default::default(),
+            world_da: Default::default(),
         };
         let input2 = ProgramInput {
             prev_state_root: FieldElement::from_str("2").unwrap(),
@@ -452,6 +471,7 @@ mod tests {
                 payload: vec![FieldElement::from_str("2").unwrap()],
             }],
             state_updates: Default::default(),
+            world_da: Default::default(),
         };
         let input3 = ProgramInput {
             prev_state_root: FieldElement::from_str("3").unwrap(),
@@ -471,6 +491,7 @@ mod tests {
                 payload: vec![FieldElement::from_str("3").unwrap()],
             }],
             state_updates: Default::default(),
+            world_da: Default::default(),
         };
         let input4 = ProgramInput {
             prev_state_root: FieldElement::from_str("4").unwrap(),
@@ -490,6 +511,7 @@ mod tests {
                 payload: vec![FieldElement::from_str("4").unwrap()],
             }],
             state_updates: Default::default(),
+            world_da: Default::default(),
         };
         let inputs = vec![input1.clone(), input2.clone(), input3.clone(), input4.clone()];
         let expected_input = ProgramInput {
@@ -550,8 +572,12 @@ mod tests {
                 },
             ],
             state_updates: Default::default(),
+            world_da: Default::default(),
         };
-        let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
+        let proof = prove_recursively(inputs, &FieldElement::default(), ProverIdentifier::Stone)
+            .await
+            .unwrap()
+            .0;
         let extracted_output = extract_output(&proof).unwrap().program_output;
         dbg!(extracted_output);
         //let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
