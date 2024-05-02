@@ -60,8 +60,9 @@ pub async fn parse(
 
     if let Some(events_map) = events_map {
         parse_and_print_events(res, events_map)?;
+    } else {
+        println!("{}", serde_json::to_string_pretty(&res)?);
     }
-
     Ok(())
 }
 
@@ -107,7 +108,7 @@ fn extract_events(
         }
     }
 
-    for model in &manifest.contracts {
+    for model in &manifest.models {
         if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
             let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
