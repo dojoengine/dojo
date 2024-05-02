@@ -192,9 +192,11 @@ pub fn prove_recursively(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cairo_proof_parser::output;
+    use itertools::Itertools;
     use katana_primitives::state::StateUpdates;
-    use katana_primitives::FieldElement;
     use std::str::FromStr;
+
     #[tokio::test]
     async fn test_input_to_json() {
         pub const EXPECTED: &str = r#"{
@@ -460,158 +462,128 @@ mod tests {
         .1;
         assert_eq!(output, expected);
     }
+
     #[tokio::test]
-    async fn test_4_combine_proofs() {
-        let input1 = ProgramInput {
-            prev_state_root: FieldElement::from_str("1").unwrap(),
-            block_number: 1,
-            block_hash: FieldElement::from_str("1").unwrap(),
-            config_hash: FieldElement::from_str("1").unwrap(),
-            message_to_starknet_segment: vec![MessageToStarknet {
-                from_address: ContractAddress::from(FieldElement::from_str("1").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("1").unwrap()),
-                payload: vec![FieldElement::from_str("1").unwrap()],
-            }],
-            message_to_appchain_segment: vec![MessageToAppchain {
-                from_address: ContractAddress::from(FieldElement::from_str("1").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("1").unwrap()),
-                nonce: FieldElement::from_str("1").unwrap(),
-                selector: FieldElement::from_str("1").unwrap(),
-                payload: vec![FieldElement::from_str("1").unwrap()],
-            }],
-            state_updates: Default::default(),
-            world_da: Default::default(),
-        };
-        let input2 = ProgramInput {
-            prev_state_root: FieldElement::from_str("2").unwrap(),
-            block_number: 2,
-            block_hash: FieldElement::from_str("2").unwrap(),
-            config_hash: FieldElement::from_str("2").unwrap(),
-            message_to_starknet_segment: vec![MessageToStarknet {
-                from_address: ContractAddress::from(FieldElement::from_str("2").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("2").unwrap()),
-                payload: vec![FieldElement::from_str("2").unwrap()],
-            }],
-            message_to_appchain_segment: vec![MessageToAppchain {
-                from_address: ContractAddress::from(FieldElement::from_str("2").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("2").unwrap()),
-                nonce: FieldElement::from_str("2").unwrap(),
-                selector: FieldElement::from_str("2").unwrap(),
-                payload: vec![FieldElement::from_str("2").unwrap()],
-            }],
-            state_updates: Default::default(),
-            world_da: Default::default(),
-        };
-        let input3 = ProgramInput {
-            prev_state_root: FieldElement::from_str("3").unwrap(),
-            block_number: 202,
-            block_hash: FieldElement::from_str("3").unwrap(),
-            config_hash: FieldElement::from_str("3").unwrap(),
-            message_to_starknet_segment: vec![MessageToStarknet {
-                from_address: ContractAddress::from(FieldElement::from_str("3").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("3").unwrap()),
-                payload: vec![FieldElement::from_str("3").unwrap()],
-            }],
-            message_to_appchain_segment: vec![MessageToAppchain {
-                from_address: ContractAddress::from(FieldElement::from_str("3").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("3").unwrap()),
-                nonce: FieldElement::from_str("3").unwrap(),
-                selector: FieldElement::from_str("3").unwrap(),
-                payload: vec![FieldElement::from_str("3").unwrap()],
-            }],
-            state_updates: Default::default(),
-            world_da: Default::default(),
-        };
-        let input4 = ProgramInput {
-            prev_state_root: FieldElement::from_str("4").unwrap(),
-            block_number: 4,
-            block_hash: FieldElement::from_str("4").unwrap(),
-            config_hash: FieldElement::from_str("4").unwrap(),
-            message_to_starknet_segment: vec![MessageToStarknet {
-                from_address: ContractAddress::from(FieldElement::from_str("4").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("4").unwrap()),
-                payload: vec![FieldElement::from_str("4").unwrap()],
-            }],
-            message_to_appchain_segment: vec![MessageToAppchain {
-                from_address: ContractAddress::from(FieldElement::from_str("4").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("4").unwrap()),
-                nonce: FieldElement::from_str("4").unwrap(),
-                selector: FieldElement::from_str("4").unwrap(),
-                payload: vec![FieldElement::from_str("4").unwrap()],
-            }],
-            state_updates: Default::default(),
-            world_da: Default::default(),
-        };
-        let inputs = vec![input1.clone(), input2.clone(), input3.clone(), input4.clone()];
-        let expected_input = ProgramInput {
-            prev_state_root: FieldElement::from_str("1").unwrap(),
-            block_number: 4,
-            block_hash: FieldElement::from_str("4").unwrap(),
-            config_hash: FieldElement::from_str("1").unwrap(),
-            message_to_starknet_segment: vec![
-                MessageToStarknet {
-                    from_address: ContractAddress::from(FieldElement::from_str("1").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("1").unwrap()),
-                    payload: vec![FieldElement::from_str("1").unwrap()],
-                },
-                MessageToStarknet {
-                    from_address: ContractAddress::from(FieldElement::from_str("2").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("2").unwrap()),
-                    payload: vec![FieldElement::from_str("2").unwrap()],
-                },
-                MessageToStarknet {
-                    from_address: ContractAddress::from(FieldElement::from_str("3").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("3").unwrap()),
-                    payload: vec![FieldElement::from_str("3").unwrap()],
-                },
-                MessageToStarknet {
-                    from_address: ContractAddress::from(FieldElement::from_str("4").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("4").unwrap()),
-                    payload: vec![FieldElement::from_str("4").unwrap()],
-                },
-            ],
-            message_to_appchain_segment: vec![
-                MessageToAppchain {
-                    from_address: ContractAddress::from(FieldElement::from_str("1").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("1").unwrap()),
-                    nonce: FieldElement::from_str("1").unwrap(),
-                    selector: FieldElement::from_str("1").unwrap(),
-                    payload: vec![FieldElement::from_str("1").unwrap()],
-                },
-                MessageToAppchain {
-                    from_address: ContractAddress::from(FieldElement::from_str("2").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("2").unwrap()),
-                    nonce: FieldElement::from_str("2").unwrap(),
-                    selector: FieldElement::from_str("2").unwrap(),
-                    payload: vec![FieldElement::from_str("2").unwrap()],
-                },
-                MessageToAppchain {
-                    from_address: ContractAddress::from(FieldElement::from_str("3").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("3").unwrap()),
-                    nonce: FieldElement::from_str("3").unwrap(),
-                    selector: FieldElement::from_str("3").unwrap(),
-                    payload: vec![FieldElement::from_str("3").unwrap()],
-                },
-                MessageToAppchain {
-                    from_address: ContractAddress::from(FieldElement::from_str("4").unwrap()),
-                    to_address: ContractAddress::from(FieldElement::from_str("4").unwrap()),
-                    nonce: FieldElement::from_str("4").unwrap(),
-                    selector: FieldElement::from_str("4").unwrap(),
-                    payload: vec![FieldElement::from_str("4").unwrap()],
-                },
-            ],
-            state_updates: Default::default(),
-            world_da: Default::default(),
-        };
-        let proof = prove_recursively(inputs, FieldElement::default(), ProverIdentifier::Stone)
-            .await
-            .unwrap()
-            .0;
-        let extracted_output = extract_output(&proof).unwrap().program_output;
-        dbg!(extracted_output);
-        //let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
-        //let extracted_output = extract_output(&proof).unwrap().program_output;
-        //let extracted_input = program_input_from_program_output(extracted_output).unwrap();
-        //assert_eq!(expected_input, extracted_input);
+    async fn test_4_combine_proofs() -> anyhow::Result<()> {
+        let world = FieldElement::from_dec_str("42")?;
+
+        let input_1 = r#"{
+            "prev_state_root":101, 
+            "block_number":101, 
+            "block_hash":103,
+            "message_to_starknet_segment":[105,106,1,1],
+            "message_to_appchain_segment":[108,109,110,111,1,112],
+            "config_hash":104, 
+            "storage_updates":{
+                "42": {
+                    "2010": "1200",
+                    "2012": "1300"
+                }
+            },
+            "nonce_updates":{},
+            "contract_updates":{},
+            "declared_classes":{}
+        }"#;
+
+        // "message_to_starknet_segment":[135,136,1,1],
+        // "message_to_appchain_segment":[158,159,150,151,1,152],
+        let input_2 = r#"{
+            "prev_state_root":1011, 
+            "block_number":102, 
+            "block_hash":1033, 
+            "config_hash":104, 
+            "message_to_starknet_segment":[], 
+            "message_to_appchain_segment":[],
+            "storage_updates":{
+                "42": {
+                    "2010": "1250",
+                    "2032": "1300"
+                }
+            },
+            "nonce_updates":{},
+            "contract_updates":{},
+            "declared_classes":{}
+        }"#;
+
+        let input_3 = r#"{
+            "prev_state_root":10111, 
+            "block_number":103, 
+            "block_hash":10333, 
+            "config_hash":104, 
+            "message_to_starknet_segment":[], 
+            "message_to_appchain_segment":[],
+            "storage_updates":{
+                "42": {
+                    "2013": "2"
+                }
+            },
+            "nonce_updates":{},
+            "contract_updates":{},
+            "declared_classes":{}
+        }"#;
+
+        // "message_to_starknet_segment":[165,166,1,1],
+        // "message_to_appchain_segment":[168,169,160,161,1,162],
+        let input_4 = r#"{
+            "prev_state_root":101111, 
+            "block_number":104, 
+            "block_hash":103333, 
+            "config_hash":104, 
+            "message_to_starknet_segment":[], 
+            "message_to_appchain_segment":[],
+            "storage_updates":{
+                "42": {
+                    "2010": "1700"
+                }
+            },
+            "nonce_updates":{},
+            "contract_updates":{},
+            "declared_classes":{}
+        }"#;
+
+        // "message_to_starknet_segment":[105,106,1,1,135,136,1,1,165,166,1,1],
+        // "message_to_appchain_segment":[108,109,110,111,1,112,158,159,150,151,1,152,168,169,160,161,1,162],
+        let expected = r#"{
+            "prev_state_root":101, 
+            "block_number":104, 
+            "block_hash":103333, 
+            "config_hash":104, 
+            "message_to_starknet_segment":[105,106,1,1], 
+            "message_to_appchain_segment":[108,109,110,111,1,112],
+            "storage_updates":{
+                "42": {
+                    "2010": "1700",
+                    "2012": "1300",
+                    "2032": "1300",
+                    "2013": "2"
+                }
+            },
+            "nonce_updates":{},
+            "contract_updates":{},
+            "declared_classes":{},
+            "world_da":["2012", "1300", "2010", "1700", "2032", "1300", "2013", "2"]
+        }"#;
+
+        let inputs = vec![input_1, input_2, input_3, input_4]
+            .into_iter()
+            .map(|input| {
+                let mut input = serde_json::from_str::<ProgramInput>(input).unwrap();
+                input.fill_da(world);
+                input
+            })
+            .collect_vec();
+
+        let expected = serde_json::from_str::<ProgramInput>(expected).unwrap();
+
+        let (_proof, output) = prove_recursively(inputs, world, ProverIdentifier::Stone).await?;
+
+        assert_eq!(expected.message_to_appchain_segment, output.message_to_appchain_segment);
+        assert_eq!(expected.message_to_starknet_segment, output.message_to_starknet_segment);
+        assert_eq!(expected.state_updates, output.state_updates);
+        assert_eq!(expected.world_da, output.world_da);
+
+        assert_eq!(expected, output);
+
+        Ok(())
     }
 }
