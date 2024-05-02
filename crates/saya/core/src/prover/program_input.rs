@@ -458,32 +458,31 @@ fn test_deserialize_input() -> anyhow::Result<()> {
     use std::str::FromStr;
 
     let input = r#"{
-            "prev_state_root":101, 
-            "block_number":102, 
-            "block_hash":103, 
-            "config_hash":104, 
-            "message_to_starknet_segment":[105,106,1,1], 
-            "message_to_appchain_segment":[108,109,110,111,1,112],
-            "storage_updates":{
-                "42": {
-                    "2010": "1200",
-                    "2012": "1300"
-                }
-            },
-            "nonce_updates":{
-                "1111": "22222",
-                "1116": "22223"
-            },
-            "contract_updates":{
-                "3": "437267489"
-            },
-            "declared_classes":{
-                "1234": "12345"
-            },
-            "world_da": []
-        }"#;
+        "prev_state_root":101, 
+        "block_number":102, 
+        "block_hash":103, 
+        "config_hash":104, 
+        "message_to_starknet_segment":[105,106,1,1], 
+        "message_to_appchain_segment":[108,109,110,111,1,112],
+        "storage_updates":{
+            "42": {
+                "2010": "1200",
+                "2012": "1300"
+            }
+        },
+        "nonce_updates":{
+            "1111": "22222",
+            "1116": "22223"
+        },
+        "contract_updates":{
+            "3": "437267489"
+        },
+        "declared_classes":{
+            "1234": "12345"
+        }
+    }"#;
 
-    let expected = ProgramInput {
+    let mut expected = ProgramInput {
         prev_state_root: FieldElement::from_str("101")?,
         block_number: 102,
         block_hash: FieldElement::from_str("103")?,
@@ -540,11 +539,19 @@ fn test_deserialize_input() -> anyhow::Result<()> {
             .into_iter()
             .collect(),
         },
-        world_da: Some(vec![]),
+        world_da: None,
     };
 
-    let deserialized = serde_json::from_str::<ProgramInput>(input)?;
+    let mut deserialized = serde_json::from_str::<ProgramInput>(input)?;
     assert_eq!(expected, deserialized);
+
+    deserialized.fill_da(FieldElement::from_str("42")?);
+    expected.world_da = Some(vec![
+        FieldElement::from_str("2010")?,
+        FieldElement::from_str("1200")?,
+        FieldElement::from_str("2012")?,
+        FieldElement::from_str("1300")?,
+    ]);
 
     Ok(())
 }
