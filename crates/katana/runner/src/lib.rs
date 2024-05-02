@@ -117,7 +117,7 @@ impl KatanaRunner {
         }
 
         if !messaging_file_config.is_empty() {
-            command.args(["--messaging", &format!("{}", messaging_file_config)]);
+            command.args(["--messaging", messaging_file_config.as_str()]);
         }
 
         let mut child =
@@ -189,18 +189,20 @@ impl Drop for KatanaRunner {
     }
 }
 
+type Provider = FillProvider<
+    JoinFill<
+        JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
+        SignerFiller<EthereumSigner>,
+    >,
+    RootProvider<Http<Client>>,
+    Http<Client>,
+    Ethereum,
+>;
+
 #[derive(Debug)]
 pub struct AnvilRunner {
     process: Child,
-    provider: FillProvider<
-        JoinFill<
-            JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
-            SignerFiller<EthereumSigner>,
-        >,
-        RootProvider<Http<Client>>,
-        Http<Client>,
-        Ethereum,
-    >,
+    provider: Provider,
     pub endpoint: String,
 }
 
@@ -229,20 +231,10 @@ impl AnvilRunner {
             .with_recommended_fillers()
             .signer(EthereumSigner::from(wallet))
             .on_http(Url::from_str(&endpoint).unwrap());
-        return Ok(AnvilRunner { process, endpoint, provider });
+        Ok(AnvilRunner { process, endpoint, provider })
     }
 
-    pub fn provider(
-        &self,
-    ) -> &FillProvider<
-        JoinFill<
-            JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
-            SignerFiller<EthereumSigner>,
-        >,
-        RootProvider<Http<Client>>,
-        Http<Client>,
-        Ethereum,
-    > {
+    pub fn provider(&self) -> &Provider {
         &self.provider
     }
 
@@ -278,7 +270,7 @@ async fn is_anvil_up(endpoint: &String) -> bool {
     let mut retries = 0;
     let max_retries = 10;
     while retries < max_retries {
-        if let Ok(anvil_block_rsp) = post_dummy_request(&endpoint).await {
+        if let Ok(anvil_block_rsp) = post_dummy_request(endpoint).await {
             assert_eq!(anvil_block_rsp.status(), StatusCode::OK);
             return true;
         }

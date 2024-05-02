@@ -7,7 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
+dojo-world = { workspace = true }
 dojo-metrics.workspace = true
 katana-core.workspace = true
 katana-executor.workspace = true

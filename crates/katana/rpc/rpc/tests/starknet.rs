@@ -206,8 +206,7 @@ async fn test_messaging_l1_l2() {
         &Address::from_str("0x5fbdb2315678afecb367f032d93f642f64180aa3").unwrap()
     );
 
-    let contract_c1 =
-        Contract1::deploy(anvil_runner.provider(), strk_address.clone()).await.unwrap();
+    let contract_c1 = Contract1::deploy(anvil_runner.provider(), *strk_address).await.unwrap();
 
     assert_eq!(
         contract_c1.address(),
@@ -233,7 +232,8 @@ async fn test_messaging_l1_l2() {
     file.write_all(serialized_json.as_bytes()).expect("Failed to write to file");
 
     let katana_runner =
-        KatanaRunner::new_with_messaging(format!("tests/test_data/anvil-messaging.json")).unwrap();
+        KatanaRunner::new_with_messaging("tests/test_data/anvil-messaging.json".to_string())
+            .unwrap();
     let starknet_account = katana_runner.account(0);
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo_l1_msg_contract.json");

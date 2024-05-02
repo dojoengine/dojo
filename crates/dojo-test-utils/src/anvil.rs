@@ -26,9 +26,9 @@ impl TestAnvil {
     }
 
     pub fn provider(&self) -> Provider<Http> {
-        return Provider::<Http>::try_from(&self.url)
+        Provider::<Http>::try_from(&self.url)
             .expect("Error getting provider")
-            .interval(Duration::from_millis(10u64));
+            .interval(Duration::from_millis(10u64))
     }
 
     pub fn account(&self) -> SignerMiddleware<Provider<Http>, LocalWallet> {
@@ -37,14 +37,14 @@ impl TestAnvil {
 
     pub fn wallet(&self) -> LocalWallet {
         let wallet: LocalWallet = self.anvil.keys()[0].clone().into();
-        return wallet;
+        wallet
     }
 
     pub fn url(self) -> String {
         self.url.clone()
     }
 
-    pub fn stop(self) -> () {
+    pub fn stop(self) {
         drop(self.anvil);
     }
 }
