@@ -1,4 +1,3 @@
-use cainome::cairo_serde::ByteArray;
 use crypto_bigint::{Encoding, U256};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{FieldElement, ValueOutOfRangeError};
