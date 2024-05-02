@@ -108,7 +108,7 @@ fn extract_events(
         }
     }
 
-    for model in &manifest.contracts {
+    for model in &manifest.models {
         if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
             let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;

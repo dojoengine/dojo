@@ -97,7 +97,7 @@ where
         update_manifests_and_abis(
             ws,
             local_manifest,
-            &profile_dir,
+            &manifest_dir,
             &profile_name,
             &rpc_url,
             world_address,
@@ -113,7 +113,7 @@ where
                 update_manifests_and_abis(
                     ws,
                     local_manifest,
-                    &profile_dir,
+                    &manifest_dir,
                     &profile_name,
                     &rpc_url,
                     world_address,
@@ -128,7 +128,7 @@ where
         update_manifests_and_abis(
             ws,
             local_manifest.clone(),
-            &profile_dir,
+            &manifest_dir,
             &profile_name,
             &rpc_url,
             world_address,
