@@ -485,16 +485,14 @@ mod tests {
             "declared_classes":{}
         }"#;
 
-        // "message_to_starknet_segment":[135,136,1,1],
-        // "message_to_appchain_segment":[158,159,150,151,1,152],
         let input_2 = r#"{
             "prev_state_root":1011, 
             "block_number":102, 
             "block_hash":1033, 
             "config_hash":104, 
-            "message_to_starknet_segment":[], 
-            "message_to_appchain_segment":[],
-            "storage_updates":{
+            "message_to_starknet_segment":[135,136,1,1],
+            "message_to_appchain_segment":[158,159,150,151,1,152],
+                "storage_updates":{
                 "42": {
                     "2010": "1250",
                     "2032": "1300"
@@ -522,15 +520,13 @@ mod tests {
             "declared_classes":{}
         }"#;
 
-        // "message_to_starknet_segment":[165,166,1,1],
-        // "message_to_appchain_segment":[168,169,160,161,1,162],
         let input_4 = r#"{
             "prev_state_root":101111, 
             "block_number":104, 
             "block_hash":103333, 
             "config_hash":104, 
-            "message_to_starknet_segment":[], 
-            "message_to_appchain_segment":[],
+            "message_to_starknet_segment":[165,166,1,1], 
+            "message_to_appchain_segment":[168,169,160,161,1,162],
             "storage_updates":{
                 "42": {
                     "2010": "1700"
@@ -541,15 +537,13 @@ mod tests {
             "declared_classes":{}
         }"#;
 
-        // "message_to_starknet_segment":[105,106,1,1,135,136,1,1,165,166,1,1],
-        // "message_to_appchain_segment":[108,109,110,111,1,112,158,159,150,151,1,152,168,169,160,161,1,162],
         let expected = r#"{
             "prev_state_root":101, 
             "block_number":104, 
             "block_hash":103333, 
             "config_hash":104, 
-            "message_to_starknet_segment":[105,106,1,1], 
-            "message_to_appchain_segment":[108,109,110,111,1,112],
+            "message_to_starknet_segment":[105,106,1,1,135,136,1,1,165,166,1,1], 
+            "message_to_appchain_segment":[108,109,110,111,1,112,158,159,150,151,1,152,168,169,160,161,1,162],
             "storage_updates":{
                 "42": {
                     "2010": "1700",
