@@ -192,7 +192,6 @@ pub fn prove_recursively(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_proof_parser::output;
     use itertools::Itertools;
     use katana_primitives::state::StateUpdates;
     use std::str::FromStr;
@@ -201,10 +200,10 @@ mod tests {
     async fn test_input_to_json() {
         pub const EXPECTED: &str = r#"{
             "1": {
-                "prev_state_root": 0,
+                "prev_state_root": "0",
                 "block_number": 0,
-                "block_hash": 0,
-                "config_hash": 0,
+                "block_hash": "0",
+                "config_hash": "0",
                 "message_to_starknet_segment": [],
                 "message_to_appchain_segment": [],
                 "nonce_updates": {},
@@ -214,10 +213,10 @@ mod tests {
                 "world_da": []
             },
             "2": {
-                "prev_state_root": 1,
+                "prev_state_root": "1",
                 "block_number": 1,
-                "block_hash": 1,
-                "config_hash": 1,
+                "block_hash": "1",
+                "config_hash": "1",
                 "message_to_starknet_segment": [],
                 "message_to_appchain_segment": [],
                 "nonce_updates": {},
