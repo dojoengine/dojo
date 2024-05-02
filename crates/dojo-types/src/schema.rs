@@ -1,3 +1,4 @@
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
@@ -51,11 +52,7 @@ impl Ty {
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.clone(),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
-            Ty::Array(ty) => {
-                let len_str =
-                    if ty.len() > 1 { format!(" (len: {})", ty.len()) } else { "".to_string() };
-                format!("Array<{}>{len_str}", ty[0].name())
-            }
+            Ty::Array(ty) => format!("Array<{}>", ty[0].name()),
             Ty::ByteArray(_) => "ByteArray".to_string(),
         }
     }
@@ -135,8 +132,10 @@ impl Ty {
                         serialize_inner(item_ty, felts)?;
                     }
                 }
-                Ty::ByteArray(_) => {
-                    // TODO: serialize 'value'
+                Ty::ByteArray(bytes) => {
+                    let bytearray = ByteArray::from_string(&bytes)?;
+
+                    felts.extend(ByteArray::cairo_serialize(&bytearray))
                 }
             }
             Ok(())
@@ -185,8 +184,11 @@ impl Ty {
                     }
                 }
             }
-            Ty::ByteArray(_) => {
-                // TODO: deserialize 'value'
+            Ty::ByteArray(bytes) => {
+                let bytearray = ByteArray::cairo_deserialize(felts, 0)?;
+                felts.drain(0..ByteArray::cairo_serialized_size(&bytearray));
+
+                *bytes = ByteArray::to_string(&bytearray)?;
             }
         }
         Ok(())
