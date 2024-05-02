@@ -1,3 +1,4 @@
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
@@ -49,6 +50,8 @@ impl Ty {
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.clone(),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
+            Ty::Array(ty) => format!("Array<{}>", ty[0].name()),
+            Ty::ByteArray(_) => "ByteArray".to_string(),
         }
     }
 
@@ -118,6 +121,20 @@ impl Ty {
                         serialize_inner(ty, felts)?;
                     }
                 }
+                Ty::Array(items_ty) => {
+                    let _ = serialize_inner(
+                        &Ty::Primitive(Primitive::U32(Some(items_ty.len().try_into().unwrap()))),
+                        felts,
+                    );
+                    for item_ty in items_ty {
+                        serialize_inner(item_ty, felts)?;
+                    }
+                }
+                Ty::ByteArray(bytes) => {
+                    let bytearray = ByteArray::from_string(&bytes)?;
+
+                    felts.extend(ByteArray::cairo_serialize(&bytearray))
+                }
             }
             Ok(())
         }
@@ -148,6 +165,28 @@ impl Ty {
                 for ty in tys {
                     ty.deserialize(felts)?;
                 }
+            }
+            Ty::Array(items_ty) => {
+                let arr_len: u32 =
+                    felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?;
+
+                if arr_len > 0 {
+                    let item_ty = items_ty[0].clone();
+
+                    items_ty.clear();
+
+                    for _ in 0..arr_len {
+                        let mut cur_item_ty = item_ty.clone();
+                        cur_item_ty.deserialize(felts)?;
+                        items_ty.push(cur_item_ty);
+                    }
+                }
+            }
+            Ty::ByteArray(bytes) => {
+                let bytearray = ByteArray::cairo_deserialize(felts, 0)?;
+                felts.drain(0..ByteArray::cairo_serialized_size(&bytearray));
+
+                *bytes = ByteArray::to_string(&bytearray)?;
             }
         }
         Ok(())

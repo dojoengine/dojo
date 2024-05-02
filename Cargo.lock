@@ -3802,6 +3802,7 @@ dependencies = [
 name = "dojo-types"
 version = "0.7.0-alpha.2"
 dependencies = [
+ "cainome 0.2.3",
  "crypto-bigint",
  "hex",
  "itertools 0.12.1",
