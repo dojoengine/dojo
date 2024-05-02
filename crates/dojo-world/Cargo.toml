@@ -9,7 +9,6 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-cainome.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true
@@ -26,6 +25,7 @@ starknet.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.5-serde.1", features = [ "abigen-rs" ] }
 dojo-types = { path = "../dojo-types", optional = true }
 http = { version = "0.2.9", optional = true }
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }

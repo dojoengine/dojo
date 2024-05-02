@@ -60,7 +60,6 @@ pub trait ModelReader<E> {
     async fn packed_size(&self) -> Result<u32, E>;
     async fn unpacked_size(&self) -> Result<u32, E>;
     async fn layout(&self) -> Result<abigen::model::Layout, E>;
-    async fn layout_raw(&self) -> Result<Vec<FieldElement>, E>;
 }
 
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
@@ -198,9 +197,5 @@ where
         // So inside the vec, we skip the first element, which is the length
         // of the span returned by `layout` entrypoint of the model code.
         Ok(self.model_reader.layout().raw_call().await?[1..].into())
-    }
-
-    async fn layout_raw(&self) -> Result<Vec<FieldElement>, ModelError> {
-        Ok(self.model_reader.layout().raw_call().await?)
     }
 }
