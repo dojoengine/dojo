@@ -118,10 +118,6 @@ async fn input_to_json(result: Vec<ProgramInput>) -> anyhow::Result<String> {
         &result.get(1).ok_or_else(|| anyhow::anyhow!("Index out of bounds")).unwrap(),
     )
     .unwrap();
-    input1.truncate(input1.len() - 1);
-    input1.push_str(r#", "world_da":["1","11","2","22"]}"#);
-    input2.truncate(input2.len() - 1);
-    input2.push_str(r#", "world_da":["1","11","2","22"]}"#);
     Ok(format!("{{\"1\":{},\"2\":{}}}", input1, input2))
 }
 async fn combine_proofs(
@@ -164,10 +160,9 @@ pub fn prove_recursively(
             input.fill_da(world);
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
-            let mut serialized_input = serde_json::to_string(&input).unwrap();
-            serialized_input.truncate(serialized_input.len() - 1);
-            serialized_input.push_str(r#", "world_da":["1","11","2","22"]}"#);
-            let proof = prove(serialized_input, prover, "matzayonc/differ:latest").await?;
+            let proof =
+                prove(serde_json::to_string(&input).unwrap(), prover, "matzayonc/differ:latest")
+                    .await?;
             info!(target: "saya_core", block_number, "Block proven");
             Ok((proof, input))
         } else {
@@ -201,13 +196,41 @@ pub fn prove_recursively(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prover::prove_stone;
+    use cairo_proof_parser::output;
     use katana_primitives::state::StateUpdates;
     use katana_primitives::FieldElement;
     use std::str::FromStr;
     #[tokio::test]
     async fn test_input_to_json() {
-        let mut inputs = (0..2)
+        pub const EXPECTED: &str = r#"{
+            "1": {
+                "prev_state_root": 0,
+                "block_number": 0,
+                "block_hash": 0,
+                "config_hash": 0,
+                "message_to_starknet_segment": [],
+                "message_to_appchain_segment": [],
+                "nonce_updates": {},
+                "storage_updates": {},
+                "contract_updates": {},
+                "declared_classes": {},
+                "world_da": []
+            },
+            "2": {
+                "prev_state_root": 1,
+                "block_number": 1,
+                "block_hash": 1,
+                "config_hash": 1,
+                "message_to_starknet_segment": [],
+                "message_to_appchain_segment": [],
+                "nonce_updates": {},
+                "storage_updates": {},
+                "contract_updates": {},
+                "declared_classes": {},
+                "world_da": []
+            }
+        }"#;
+        let inputs = (0..2)
             .map(|i| ProgramInput {
                 prev_state_root: FieldElement::from(i),
                 block_number: i,
@@ -216,63 +239,13 @@ mod tests {
                 message_to_appchain_segment: Default::default(),
                 message_to_starknet_segment: Default::default(),
                 state_updates: Default::default(),
-                world_da: Default::default(),
+                world_da: Some(Vec::new()),
             })
             .collect::<Vec<_>>();
+        let expected = EXPECTED.chars().filter(|c| !c.is_whitespace()).collect::<String>();
         let result = input_to_json(inputs).await.unwrap();
-        dbg!(result);
+        assert_eq!(result, expected);
     }
-    #[tokio::test]
-    async fn test_one() {
-        let inputs = (0..2)
-            .map(|i| ProgramInput {
-                prev_state_root: FieldElement::from(i),
-                block_number: i,
-                block_hash: FieldElement::from(i),
-                config_hash: FieldElement::from(i),
-                message_to_starknet_segment: vec![
-                    MessageToStarknet {
-                        from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
-                        to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
-                        payload: vec![FieldElement::from_str("107").unwrap()],
-                    },
-                    MessageToStarknet {
-                        from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
-                        to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
-                        payload: vec![FieldElement::from_str("107").unwrap()],
-                    },
-                ],
-                message_to_appchain_segment: vec![
-                    MessageToAppchain {
-                        from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
-                        to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
-                        nonce: FieldElement::from_str("110").unwrap(),
-                        selector: FieldElement::from_str("111").unwrap(),
-                        payload: vec![FieldElement::from_str("112").unwrap()],
-                    },
-                    MessageToAppchain {
-                        from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
-                        to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
-                        nonce: FieldElement::from_str("110").unwrap(),
-                        selector: FieldElement::from_str("111").unwrap(),
-                        payload: vec![FieldElement::from_str("112").unwrap()],
-                    },
-                ],
-                state_updates: Default::default(),
-                world_da: Default::default(),
-            })
-            .collect::<Vec<_>>();
-        // let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
-        // let extracted_output = extract_output(&proof).unwrap().program_output;
-        //dbg!(serde_json::to_string(&extracted_output).unwrap());
-        let mut input = serde_json::to_string(&inputs[0]).unwrap();
-        input.truncate(input.len() - 1);
-        input.push_str(r#", "world_da":["1","11","2","22"]}"#);
-        let test_proof = prove_stone(dbg!(input), "matzayonc/differ:latest").await.unwrap();
-        let extracted_output = extract_output(&test_proof).unwrap().program_output;
-        dbg!(serde_json::to_string(&extracted_output).unwrap());
-    }
-
     #[tokio::test]
     async fn test_program_input_from_program_output() -> anyhow::Result<()> {
         let input = ProgramInput {
@@ -342,19 +315,19 @@ mod tests {
                     map
                 },
             },
-            world_da: Default::default(),
+            world_da: Some(Vec::new()),
         };
-        let mut serialized_input = serde_json::to_string(&input).unwrap();
-        serialized_input.truncate(serialized_input.len() - 1);
-        serialized_input.push_str(r#", "world_da":["1","11","2","22"]}"#);
+        let serialized_input = serde_json::to_string(&input).unwrap();
         let proof = prove(serialized_input, ProverIdentifier::Stone, "matzayonc/differ:latest")
             .await
             .unwrap();
-        let program_output = extract_output(&proof).unwrap().program_output;
-        println!("{:?}", serde_json::to_string(&program_output));
-        let program_input =
-            program_input_from_program_output(program_output, input.clone().state_updates).unwrap();
-        assert_eq!(input, program_input);
+        let program_output_from_proof = extract_output(&proof).unwrap().program_output;
+        let program_input_from_proof = program_input_from_program_output(
+            program_output_from_proof,
+            input.clone().state_updates,
+        )
+        .unwrap();
+        assert_eq!(input, program_input_from_proof);
         Ok(())
     }
     #[tokio::test]
@@ -377,12 +350,43 @@ mod tests {
                 payload: vec![FieldElement::from_str("112").unwrap()],
             }],
             state_updates: StateUpdates {
-                nonce_updates: std::collections::HashMap::new(),
-                storage_updates: std::collections::HashMap::new(),
-                contract_updates: std::collections::HashMap::new(),
-                declared_classes: std::collections::HashMap::new(),
+                nonce_updates: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        ContractAddress::from(FieldElement::from_str("1234").unwrap()),
+                        FieldElement::from_str("22222").unwrap(),
+                    );
+                    map
+                },
+                storage_updates: vec![(
+                    ContractAddress::from(FieldElement::from_str("333").unwrap()),
+                    vec![(
+                        FieldElement::from_str("4444").unwrap(),
+                        FieldElement::from_str("555").unwrap(),
+                    )]
+                    .into_iter()
+                    .collect(),
+                )]
+                .into_iter()
+                .collect(),
+                contract_updates: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        ContractAddress::from(FieldElement::from_str("66666").unwrap()),
+                        FieldElement::from_str("7777").unwrap(),
+                    );
+                    map
+                },
+                declared_classes: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        FieldElement::from_str("88888").unwrap(),
+                        FieldElement::from_str("99999").unwrap(),
+                    );
+                    map
+                },
             },
-            world_da: Default::default(),
+            world_da: Some(Vec::new()),
         };
         let input2 = ProgramInput {
             prev_state_root: FieldElement::from_str("201").unwrap(),
@@ -402,30 +406,91 @@ mod tests {
                 payload: vec![FieldElement::from_str("207").unwrap()],
             }],
             state_updates: StateUpdates {
+                nonce_updates: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        ContractAddress::from(FieldElement::from_str("1111").unwrap()),
+                        FieldElement::from_str("22222").unwrap(),
+                    );
+                    map
+                },
+                storage_updates: vec![(
+                    ContractAddress::from(FieldElement::from_str("333").unwrap()),
+                    vec![(
+                        FieldElement::from_str("4444").unwrap(),
+                        FieldElement::from_str("555").unwrap(),
+                    )]
+                    .into_iter()
+                    .collect(),
+                )]
+                .into_iter()
+                .collect(),
+                contract_updates: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        ContractAddress::from(FieldElement::from_str("66666").unwrap()),
+                        FieldElement::from_str("7777").unwrap(),
+                    );
+                    map
+                },
+                declared_classes: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        FieldElement::from_str("88888").unwrap(),
+                        FieldElement::from_str("99999").unwrap(),
+                    );
+                    map
+                },
+            },
+            world_da: Some(Vec::new()),
+        };
+        let expected = ProgramInput {
+            prev_state_root: FieldElement::from_str("101").unwrap(),
+            block_number: 202,
+            block_hash: FieldElement::from_str("203").unwrap(),
+            config_hash: FieldElement::from_str("104").unwrap(),
+            message_to_starknet_segment: vec![
+                MessageToStarknet {
+                    from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
+                    to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
+                    payload: vec![FieldElement::from_str("107").unwrap()],
+                },
+                MessageToStarknet {
+                    from_address: ContractAddress::from(FieldElement::from_str("205").unwrap()),
+                    to_address: ContractAddress::from(FieldElement::from_str("206").unwrap()),
+                    payload: vec![FieldElement::from_str("207").unwrap()],
+                },
+            ],
+            message_to_appchain_segment: vec![
+                MessageToAppchain {
+                    from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
+                    to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
+                    nonce: FieldElement::from_str("110").unwrap(),
+                    selector: FieldElement::from_str("111").unwrap(),
+                    payload: vec![FieldElement::from_str("112").unwrap()],
+                },
+                MessageToAppchain {
+                    from_address: ContractAddress::from(FieldElement::from_str("208").unwrap()),
+                    to_address: ContractAddress::from(FieldElement::from_str("209").unwrap()),
+                    nonce: FieldElement::from_str("210").unwrap(),
+                    selector: FieldElement::from_str("211").unwrap(),
+                    payload: vec![FieldElement::from_str("207").unwrap()],
+                },
+            ],
+            state_updates: StateUpdates {
                 nonce_updates: std::collections::HashMap::new(),
                 storage_updates: std::collections::HashMap::new(),
                 contract_updates: std::collections::HashMap::new(),
                 declared_classes: std::collections::HashMap::new(),
             },
-            world_da: Default::default(),
+            world_da: Some(Vec::new()),
         };
-        let inputs = vec![input1.clone(), input2];
-        let proof = prove_recursively(inputs, FieldElement::default(), ProverIdentifier::Stone)
+        let inputs = vec![input1.clone(), input2.clone()];
+        let output = prove_recursively(inputs, FieldElement::default(), ProverIdentifier::Stone)
             .await
             .unwrap()
-            .0;
-
-        let extracted_output = extract_output(&proof).unwrap().program_output;
-        let mut serialized_input = serde_json::to_string(&input1).unwrap();
-        serialized_input.truncate(serialized_input.len() - 1);
-        serialized_input.push_str(r#", "world_da":["1","11","2","22"]}"#);
-        let left_proof =
-            prove(serialized_input, ProverIdentifier::Stone, "matzayonc/differ:latest")
-                .await
-                .unwrap();
-        let left_extracted_output = extract_output(&left_proof).unwrap().program_output;
-        let expected =
-            program_input_from_program_output(left_extracted_output, input1.state_updates).unwrap();
+            .1;
+        assert_eq!(output, expected);
     }
     #[tokio::test]
     async fn test_4_combine_proofs() {
