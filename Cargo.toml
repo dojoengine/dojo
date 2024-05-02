@@ -45,7 +45,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.6.1-alpha.3"
+version = "0.7.0-alpha.0"
 
 [profile.performance]
 codegen-units = 1
@@ -191,23 +191,18 @@ wasm-prost = { version = "0.11.9", package = "prost" }
 wasm-tonic = { version = "0.9.2", default-features = false, features = [ "codegen", "gzip", "prost" ], package = "tonic" }
 wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "prost" ], package = "tonic-build" }
 
-alloy-primitives = { version = "0.6.4", default-features = false }
+alloy-primitives = { version = "0.7.1", default-features = false }
+alloy-sol-types = { version = "0.7.1", default-features = false }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
 
-alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
-alloy-dyn-abi = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
-alloy-json-abi = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
-alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
-alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
-alloy-primitives = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
-alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
-alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
-alloy-sol-macro = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
-alloy-sol-types = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
-alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
-syn-solidity = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
+alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
+alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce"}
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
+alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
+alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }

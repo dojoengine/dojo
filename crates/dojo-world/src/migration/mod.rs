@@ -98,6 +98,7 @@ pub struct TxnConfig {
     pub fee_estimate_multiplier: Option<f64>,
     pub wait: bool,
     pub receipt: bool,
+    pub max_fee_raw: Option<FieldElement>,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]

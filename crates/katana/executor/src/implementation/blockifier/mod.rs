@@ -1,5 +1,4 @@
 mod error;
-mod output;
 mod state;
 mod utils;
 
@@ -16,8 +15,8 @@ use katana_provider::traits::state::StateProvider;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use tracing::info;
 
-use self::output::receipt_from_exec_info;
 use self::state::CachedState;
+use crate::utils::receipt_from_exec_info;
 use crate::{
     BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
     ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,

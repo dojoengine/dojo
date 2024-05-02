@@ -1,5 +1,6 @@
 use dojo_world::contracts::model::ModelError;
 use starknet::core::utils::{CairoShortStringToFeltError, ParseCairoShortStringError};
+use torii_grpc::types::schema::SchemaError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -22,6 +23,8 @@ pub enum Error {
     Model(#[from] ModelError),
     #[error("Unsupported query")]
     UnsupportedQuery,
+    #[error(transparent)]
+    Schema(#[from] SchemaError),
 }
 
 #[derive(Debug, thiserror::Error)]

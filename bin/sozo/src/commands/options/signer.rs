@@ -5,6 +5,7 @@ use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::core::types::FieldElement;
 use starknet::signers::{LocalWallet, SigningKey};
+use tracing::trace;
 
 use super::{DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
@@ -20,18 +21,21 @@ pub struct SignerOptions {
     #[arg(conflicts_with = "keystore_path")]
     #[arg(help_heading = "Signer options - RAW")]
     #[arg(help = "The raw private key associated with the account contract.")]
+    #[arg(global = true)]
     pub private_key: Option<String>,
 
     #[arg(long = "keystore", env = DOJO_KEYSTORE_PATH_ENV_VAR)]
     #[arg(value_name = "PATH")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "Use the keystore in the given folder or file.")]
+    #[arg(global = true)]
     pub keystore_path: Option<String>,
 
     #[arg(long = "password", env = DOJO_KEYSTORE_PASSWORD_ENV_VAR)]
     #[arg(value_name = "PASSWORD")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "The keystore password. Used with --keystore.")]
+    #[arg(global = true)]
     pub keystore_password: Option<String>,
 }
 
@@ -40,6 +44,7 @@ impl SignerOptions {
         if let Some(private_key) =
             self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
         {
+            trace!(private_key, "Signing using private key.");
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 FieldElement::from_str(private_key)?,
             )));
@@ -60,6 +65,7 @@ impl SignerOptions {
                 } else if no_wait {
                     return Err(anyhow!("Could not find password. Please specify the password."));
                 } else {
+                    trace!("Prompting user for keystore password.");
                     rpassword::prompt_password("Enter password: ")?
                 }
             };
