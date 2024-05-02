@@ -33,7 +33,7 @@ where
         .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
-        &ui,
+        ui,
         &world.account.provider(),
         res,
         txn_config.wait,

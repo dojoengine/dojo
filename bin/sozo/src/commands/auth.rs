@@ -125,10 +125,10 @@ pub async fn grant(
 
     match kind {
         AuthKind::Writer { models_contracts } => {
-            auth::grant_writer(&ui, &world, models_contracts, transaction.into()).await
+            auth::grant_writer(ui, &world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
-            auth::grant_owner(&ui, &world, owners_resources, transaction.into()).await
+            auth::grant_owner(ui, &world, owners_resources, transaction.into()).await
         }
     }
 }
@@ -149,7 +149,7 @@ pub async fn revoke(
             auth::revoke_writer(ui, &world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
-            auth::revoke_owner(&ui, &world, owners_resources, transaction.into()).await
+            auth::revoke_owner(ui, &world, owners_resources, transaction.into()).await
         }
     }
 }

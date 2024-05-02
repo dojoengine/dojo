@@ -97,10 +97,10 @@ where
         } else {
             match execution_status_from_maybe_pending_receipt(&receipt) {
                 ExecutionResult::Succeeded => {
-                    ui.print(format!("Status: OK"));
+                    ui.print("Status: OK".to_string());
                 }
                 ExecutionResult::Reverted { reason } => {
-                    ui.print(format!("Status: REVERTED"));
+                    ui.print("Status: REVERTED".to_string());
                     ui.print(format!("Reason:\n{}", reason));
                 }
             };
