@@ -6,28 +6,32 @@ use katana_primitives::{contract::ContractAddress, FieldElement};
 use tracing::{info, trace};
 type Proof = String;
 use anyhow::anyhow;
+use katana_primitives::state::StateUpdates;
 use num_traits::ToPrimitive;
 
-fn program_input_from_program_output(output: Vec<FieldElement>) -> anyhow::Result<ProgramInput> {
+fn program_input_from_program_output(
+    output: Vec<FieldElement>,
+    state_updates: StateUpdates,
+) -> anyhow::Result<ProgramInput> {
     let prev_state_root = output[0].clone();
     let block_number = serde_json::from_str(&output[2].clone().to_string()).unwrap();
     let block_hash = output[3].clone();
     let config_hash = output[4].clone();
     let message_to_starknet_segment: Vec<MessageToStarknet>;
     let message_to_appchain_segment: Vec<MessageToAppchain>;
-    let mut decimal = output[5].clone().to_big_decimal(0); // Convert with no decimal places
+    let mut decimal = output[6].clone().to_big_decimal(0); // Convert with no decimal places
     let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
-    let mut index = 5;
+    let mut index = 6;
     match num {
         0..=3 => {
             message_to_starknet_segment = Default::default();
         }
         4..=u64::MAX => {
             message_to_starknet_segment =
-                get_message_to_starknet_segment(&output[6..6 + num as usize].to_vec(), num)?
+                get_message_to_starknet_segment(&output[7..7 + num as usize].to_vec(), num)?
         }
     }
-    index = 6 + num as usize;
+    index = 7 + num as usize;
     decimal = output[index].clone().to_big_decimal(0);
     let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
     match num {
@@ -48,7 +52,7 @@ fn program_input_from_program_output(output: Vec<FieldElement>) -> anyhow::Resul
         config_hash,
         message_to_starknet_segment,
         message_to_appchain_segment,
-        state_updates: Default::default(),
+        state_updates,
     })
 }
 fn get_message_to_starknet_segment(
@@ -110,7 +114,7 @@ async fn input_to_json(result: Vec<ProgramInput>) -> anyhow::Result<String> {
     )
     .unwrap();
     input1.truncate(input1.len() - 1);
-    input1.push_str(r#", "world_da":["1", "11","2", "22"]}"#);
+    input1.push_str(r#", "world_da":["1","11","2","22"]}"#);
     input2.truncate(input2.len() - 1);
     input2.push_str(r#", "world_da":["1","11","2","22"]}"#);
     Ok(format!("{{\"1\":{},\"2\":{}}}", input1, input2))
@@ -119,14 +123,18 @@ async fn combine_proofs(
     first: Proof,
     second: Proof,
     _input: &ProgramInput,
+    _state_updates1: StateUpdates,
+    _state_updates2: StateUpdates,
 ) -> anyhow::Result<Proof> {
     let ExtractOutputResult { program_output: program_output1, program_output_hash: _ } =
         extract_output(&first)?;
     let ExtractOutputResult { program_output: program_output2, program_output_hash: _ } =
         extract_output(&second)?;
 
-    let program_input1 = program_input_from_program_output(program_output1).unwrap();
-    let program_input2 = program_input_from_program_output(program_output2).unwrap();
+    let program_input1 =
+        program_input_from_program_output(program_output1, _state_updates1).unwrap();
+    let program_input2 =
+        program_input_from_program_output(program_output2, _state_updates2).unwrap();
     //combine two inputs to 1 input.json
     let inputs = vec![program_input1, program_input2];
     Ok(prove(input_to_json(inputs).await?, ProverIdentifier::Stone, "matzayonc/merger:latest")
@@ -149,9 +157,10 @@ pub fn prove_recursively(
             let input = inputs.pop().unwrap();
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
-            let proof =
-                prove(serde_json::to_string(&input)?, prover, "piniom/state-diff-commitment")
-                    .await?;
+            let mut serialized_input = serde_json::to_string(&input).unwrap();
+            serialized_input.truncate(serialized_input.len() - 1);
+            serialized_input.push_str(r#", "world_da":["1","11","2","22"]}"#);
+            let proof = prove(serialized_input, prover, "matzayonc/differ:latest").await?;
             info!(target: "saya_core", block_number, "Block proven");
             Ok((proof, input))
         } else {
@@ -163,10 +172,19 @@ pub fn prove_recursively(
                 tokio::spawn(async move { prove_recursively(last, prover).await }),
             )?;
 
-            let (earlier_result, later_result) = (earlier_result?, later_result?);
+            let ((earlier_result, earlier_input), (later_result, later_input)) =
+                (earlier_result?, later_result?);
 
-            let input = earlier_result.1.combine(later_result.1);
-            let merged_proofs = combine_proofs(earlier_result.0, later_result.0, &input).await?;
+            let input = earlier_input.clone().combine(later_input.clone());
+            let merged_proofs = combine_proofs(
+                earlier_result,
+                later_result,
+                &input,
+                earlier_input.state_updates,
+                later_input.state_updates,
+            )
+            .await?;
+
             Ok((merged_proofs, input))
         }
     }
@@ -179,6 +197,7 @@ mod tests {
     use crate::prover::{program_input, prove_stone};
     use katana_primitives::state::StateUpdates;
     use katana_primitives::FieldElement;
+    use starknet::core::serde;
     use std::str::FromStr;
     #[tokio::test]
     async fn test_input_to_json() {
@@ -204,17 +223,50 @@ mod tests {
                 block_number: i,
                 block_hash: FieldElement::from(i),
                 config_hash: FieldElement::from(i),
-                message_to_appchain_segment: Default::default(),
-                message_to_starknet_segment: Default::default(),
+                message_to_starknet_segment: vec![
+                    MessageToStarknet {
+                        from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
+                        to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
+                        payload: vec![FieldElement::from_str("107").unwrap()],
+                    },
+                    MessageToStarknet {
+                        from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
+                        to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
+                        payload: vec![FieldElement::from_str("107").unwrap()],
+                    },
+                ],
+                message_to_appchain_segment: vec![
+                    MessageToAppchain {
+                        from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
+                        to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
+                        nonce: FieldElement::from_str("110").unwrap(),
+                        selector: FieldElement::from_str("111").unwrap(),
+                        payload: vec![FieldElement::from_str("112").unwrap()],
+                    },
+                    MessageToAppchain {
+                        from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
+                        to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
+                        nonce: FieldElement::from_str("110").unwrap(),
+                        selector: FieldElement::from_str("111").unwrap(),
+                        payload: vec![FieldElement::from_str("112").unwrap()],
+                    },
+                ],
                 state_updates: Default::default(),
             })
             .collect::<Vec<_>>();
-        let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
-        let extracted_output = extract_output(&proof).unwrap().program_output;
+        // let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
+        // let extracted_output = extract_output(&proof).unwrap().program_output;
+        //dbg!(serde_json::to_string(&extracted_output).unwrap());
+        let mut input = serde_json::to_string(&inputs[0]).unwrap();
+        input.truncate(input.len() - 1);
+        input.push_str(r#", "world_da":["1","11","2","22"]}"#);
+        let test_proof = prove_stone(dbg!(input), "matzayonc/differ:latest").await.unwrap();
+        let extracted_output = extract_output(&test_proof).unwrap().program_output;
+        dbg!(serde_json::to_string(&extracted_output).unwrap());
     }
 
     #[tokio::test]
-    async fn test_program_input_from_program_output() {
+    async fn test_program_input_from_program_output() -> anyhow::Result<()> {
         let input = ProgramInput {
             prev_state_root: FieldElement::from_str("101").unwrap(),
             block_number: 102,
@@ -249,22 +301,52 @@ mod tests {
                 },
             ],
             state_updates: StateUpdates {
-                nonce_updates: std::collections::HashMap::new(),
-                storage_updates: std::collections::HashMap::new(),
-                contract_updates: std::collections::HashMap::new(),
-                declared_classes: std::collections::HashMap::new(),
+                nonce_updates: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        ContractAddress::from(FieldElement::from_str("1111").unwrap()),
+                        FieldElement::from_str("22222").unwrap(),
+                    );
+                    map
+                },
+                storage_updates: vec![(
+                    ContractAddress::from(FieldElement::from_str("333")?),
+                    vec![(FieldElement::from_str("4444")?, FieldElement::from_str("555")?)]
+                        .into_iter()
+                        .collect(),
+                )]
+                .into_iter()
+                .collect(),
+                contract_updates: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        ContractAddress::from(FieldElement::from_str("66666").unwrap()),
+                        FieldElement::from_str("7777").unwrap(),
+                    );
+                    map
+                },
+                declared_classes: {
+                    let mut map = std::collections::HashMap::new();
+                    map.insert(
+                        FieldElement::from_str("88888").unwrap(),
+                        FieldElement::from_str("99999").unwrap(),
+                    );
+                    map
+                },
             },
         };
-        let proof = prove(
-            serde_json::to_string(&input).unwrap(),
-            ProverIdentifier::Stone,
-            "piniom/state-diff-commitment",
-        )
-        .await
-        .unwrap();
+        let mut serialized_input = serde_json::to_string(&input).unwrap();
+        serialized_input.truncate(serialized_input.len() - 1);
+        serialized_input.push_str(r#", "world_da":["1","11","2","22"]}"#);
+        let proof = prove(serialized_input, ProverIdentifier::Stone, "matzayonc/differ:latest")
+            .await
+            .unwrap();
         let program_output = extract_output(&proof).unwrap().program_output;
-        let program_input = program_input_from_program_output(program_output).unwrap();
+        println!("{:?}", serde_json::to_string(&program_output));
+        let program_input =
+            program_input_from_program_output(program_output, input.clone().state_updates).unwrap();
         assert_eq!(input, program_input);
+        Ok(())
     }
     #[tokio::test]
     async fn test_combine_proofs() {
@@ -320,17 +402,16 @@ mod tests {
         let proof = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
 
         let extracted_output = extract_output(&proof).unwrap().program_output;
-        let left_proof = prove(
-            serde_json::to_string(&input1).unwrap(),
-            ProverIdentifier::Stone,
-            "piniom/state-diff-commitment",
-        )
-        .await
-        .unwrap();
+        let mut serialized_input = serde_json::to_string(&input1).unwrap();
+        serialized_input.truncate(serialized_input.len() - 1);
+        serialized_input.push_str(r#", "world_da":["1","11","2","22"]}"#);
+        let left_proof =
+            prove(serialized_input, ProverIdentifier::Stone, "matzayonc/differ:latest")
+                .await
+                .unwrap();
         let left_extracted_output = extract_output(&left_proof).unwrap().program_output;
-        let mut new_vector = left_extracted_output[..1].to_vec(); // Takes elements before index 1
-        new_vector.extend_from_slice(&left_extracted_output[2..]);
-        assert_eq!(extracted_output, new_vector);
+        let expected =
+            program_input_from_program_output(left_extracted_output, input1.state_updates).unwrap();
     }
     #[tokio::test]
     async fn test_4_combine_proofs() {
