@@ -489,6 +489,7 @@ fn test_program_input() -> anyhow::Result<()> {
             contract_updates: std::collections::HashMap::new(),
             declared_classes: std::collections::HashMap::new(),
         },
+        world_da: Some(vec![]),
     };
 
     // Serialize with the DA.

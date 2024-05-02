@@ -182,7 +182,7 @@ pub fn prove_recursively(
             let ((earlier_result, earlier_input), (later_result, later_input)) =
                 (earlier_result?, later_result?);
 
-            let input = earlier_input.clone().combine(later_input.clone());
+            let input = earlier_input.clone().combine(later_input.clone())?;
             let merged_proofs = combine_proofs(
                 earlier_result,
                 later_result,
@@ -192,8 +192,6 @@ pub fn prove_recursively(
             )
             .await?;
 
-            let input = earlier_result.1.combine(later_result.1)?;
-            let merged_proofs = combine_proofs(earlier_result.0, later_result.0, &input).await?;
             Ok((merged_proofs, input))
         }
     }
@@ -203,11 +201,9 @@ pub fn prove_recursively(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prover::{program_input, prove_stone};
+    use crate::prover::prove_stone;
     use katana_primitives::state::StateUpdates;
     use katana_primitives::FieldElement;
-    use starknet::core::serde;
-    use starknet_crypto::FieldElement;
     use std::str::FromStr;
     #[tokio::test]
     async fn test_input_to_json() {
@@ -414,7 +410,7 @@ mod tests {
             world_da: Default::default(),
         };
         let inputs = vec![input1.clone(), input2];
-        let proof = prove_recursively(inputs, &FieldElement::default(), ProverIdentifier::Stone)
+        let proof = prove_recursively(inputs, FieldElement::default(), ProverIdentifier::Stone)
             .await
             .unwrap()
             .0;
@@ -574,7 +570,7 @@ mod tests {
             state_updates: Default::default(),
             world_da: Default::default(),
         };
-        let proof = prove_recursively(inputs, &FieldElement::default(), ProverIdentifier::Stone)
+        let proof = prove_recursively(inputs, FieldElement::default(), ProverIdentifier::Stone)
             .await
             .unwrap()
             .0;
