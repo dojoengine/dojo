@@ -1,3 +1,4 @@
+use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -5,13 +6,13 @@ use colored::Colorize;
 use starknet::signers::SigningKey;
 use starknet_crypto::FieldElement;
 
-pub fn new(password: Option<String>, force: bool, file: PathBuf ) -> Result<()> {
+pub fn new(password: Option<String>, force: bool, file: PathBuf) -> Result<()> {
     if file.exists() && !force {
         anyhow::bail!("keystore file already exists");
     }
 
-    let password = get_password(password)?;
-  
+    let password = get_password(password, true)?;
+
     let key = SigningKey::from_random();
     key.save_as_keystore(&file, &password)?;
 
@@ -38,7 +39,7 @@ pub fn from_key(
     };
     let private_key = FieldElement::from_hex_be(private_key.trim())?;
 
-    let password = get_password(password)?;
+    let password = get_password(password, false)?;
 
     let key = SigningKey::from_secret_scalar(private_key);
     key.save_as_keystore(&file, &password)?;
@@ -54,7 +55,7 @@ pub fn inspect(password: Option<String>, raw: bool, file: PathBuf) -> Result<()>
         anyhow::bail!("keystore file not found");
     }
 
-    let password = get_password(password)?;
+    let password = get_password(password, false)?;
 
     let key = SigningKey::from_keystore(file, &password)?;
 
@@ -72,7 +73,7 @@ pub fn inspect_private(password: Option<String>, raw: bool, file: PathBuf) -> Re
         anyhow::bail!("keystore file not found");
     }
 
-    let password = get_password(password)?;
+    let password = get_password(password, false)?;
 
     let key = SigningKey::from_keystore(file, &password)?;
 
@@ -85,37 +86,21 @@ pub fn inspect_private(password: Option<String>, raw: bool, file: PathBuf) -> Re
     Ok(())
 }
 
-fn get_password(prompt_text: &str, retry: bool) -> io::Result<String> {
-    let password = rpassword::prompt_password(prompt_text)?;
-
-    if retry {
-        let confirm_password = rpassword::prompt_password("Confirm password: ")?;
-
-        if password == confirm_password {
-            Ok(password)
-        } else {
-            println!("Passwords do not match. Please try again.");
-            get_password(prompt_text, true) // Recursive call for retry
-        }
-    } else {
-        Ok(password)
-    }
-}
-
-
-fn get_password(password: Option<String>) -> std::io::Result<String> {
+fn get_password(password: Option<String>, retry: bool) -> std::io::Result<String> {
     if let Some(password) = password {
         Ok(password)
-
     } else {
-
         let password = rpassword::prompt_password("Enter password: ");
-        let confirmpassword = rpassword::prompt_password("Confirm password: ")
 
-        if password != confirmpassword {
-            anyhow::bail!("Passwords do not match");
-        }  
-        Ok(password)  
+        if retry {
+            let confirmpassword = rpassword::prompt_password("Confirm password: ");
 
+            if password.clone()? != confirmpassword? {
+                return Err(Error::new(ErrorKind::InvalidData, "Passwords do not match"));
+            }
+            return Ok(password?);
+        };
+
+        return Ok(password?);
     }
 }
