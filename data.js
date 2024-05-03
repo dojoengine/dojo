@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714671693767,
+  "lastUpdate": 1714747913256,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6955,6 +6955,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16821913,
             "range": "± 195201",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "Mubarakaminu340@gmail.com",
+            "name": "Mubarak Muhammad Aminu",
+            "username": "mubarak23"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9843192ca1ef273f3020cef57b0bf65df0da5ae",
+          "message": "prompt user for double password check (#1912)\n\n* prompt user for double password check\r\n\r\n* revert work from here\r\n\r\n* check for confirm password on setting a new password\r\n\r\n* confirm password inside get_password function\r\n\r\n* clean up\r\n\r\n* return error for fail confirm\r\n\r\n* make changes base on review recieved\r\n\r\n* return anyhow::Result instead of io::Result\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-05-03T20:13:33+05:30",
+          "tree_id": "5ecc33abe451e4360c3265ca7605adc04e7988ff",
+          "url": "https://github.com/dojoengine/dojo/commit/d9843192ca1ef273f3020cef57b0bf65df0da5ae"
+        },
+        "date": 1714747912419,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16884276,
+            "range": "± 158419",
             "unit": "ns/iter"
           }
         ]
