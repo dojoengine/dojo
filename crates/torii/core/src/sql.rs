@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::Ty;
+use dojo_types::schema::{Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
@@ -457,59 +457,74 @@ impl Sql {
         block_timestamp: u64,
         is_event_message: bool,
     ) {
+        let update_members = |members: &[Member], query_queue: &mut QueryQueue| {
+            let table_id = path.join("$");
+            let mut columns = vec![
+                "id".to_string(),
+                "event_id".to_string(),
+                "executed_at".to_string(),
+                if is_event_message {
+                    "event_message_id".to_string()
+                } else {
+                    "entity_id".to_string()
+                },
+            ];
+            let mut arguments = vec![
+                Argument::String(if is_event_message {
+                    "event:".to_string() + entity_id
+                } else {
+                    entity_id.to_string()
+                }),
+                Argument::String(event_id.to_string()),
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(entity_id.to_string()),
+            ];
+
+            for member in members.iter() {
+                match &member.ty {
+                    Ty::Primitive(ty) => {
+                        columns.push(format!("external_{}", &member.name));
+                        arguments.push(Argument::String(ty.to_sql_value().unwrap()));
+                    }
+                    Ty::Enum(e) => {
+                        columns.push(format!("external_{}", &member.name));
+                        arguments.push(Argument::String(e.to_sql_value().unwrap()));
+                    }
+                    Ty::ByteArray(b) => {
+                        columns.push(format!("external_{}", &member.name));
+                        arguments.push(Argument::String(b.clone()));
+                    }
+                    _ => {}
+                }
+            }
+
+            let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
+            let statement = format!(
+                "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
+                columns.join(","),
+                placeholders.join(",")
+            );
+
+            query_queue.enqueue(statement, arguments);
+        };
+
         match entity {
             Ty::Struct(s) => {
-                let table_id = path.join("$");
-                let mut columns = vec![
-                    "id".to_string(),
-                    "event_id".to_string(),
-                    "executed_at".to_string(),
-                    if is_event_message {
-                        "event_message_id".to_string()
-                    } else {
-                        "entity_id".to_string()
-                    },
-                ];
-                let mut arguments = vec![
-                    Argument::String(if is_event_message {
-                        "event:".to_string() + entity_id
-                    } else {
-                        entity_id.to_string()
-                    }),
-                    Argument::String(event_id.to_string()),
-                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                    Argument::String(entity_id.to_string()),
-                ];
-
-                for member in s.children.iter() {
-                    match &member.ty {
-                        Ty::Primitive(ty) => {
-                            columns.push(format!("external_{}", &member.name));
-                            arguments.push(Argument::String(ty.to_sql_value().unwrap()));
-                        }
-                        Ty::Enum(e) => {
-                            columns.push(format!("external_{}", &member.name));
-                            arguments.push(Argument::String(e.to_sql_value().unwrap()));
-                        }
-                        Ty::ByteArray(b) => {
-                            columns.push(format!("external_{}", &member.name));
-                            arguments.push(Argument::String(b.clone()));
-                        }
-                        _ => {}
-                    }
-                }
-
-                let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-                let statement = format!(
-                    "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
-                    columns.join(","),
-                    placeholders.join(",")
-                );
-
-                self.query_queue.enqueue(statement, arguments);
+                update_members(&s.children, &mut self.query_queue);
 
                 for member in s.children.iter() {
                     if let Ty::Struct(_) = &member.ty {
+                        let mut path_clone = path.clone();
+                        path_clone.push(member.name.clone());
+                        self.build_set_entity_queries_recursive(
+                            path_clone,
+                            event_id,
+                            entity_id,
+                            &member.ty,
+                            block_timestamp,
+                            is_event_message,
+                        );
+                    } else if let Ty::Tuple(_) = &member.ty {
                         let mut path_clone = path.clone();
                         path_clone.push(member.name.clone());
                         self.build_set_entity_queries_recursive(
@@ -538,17 +553,39 @@ impl Sql {
                 }
             }
             Ty::Tuple(t) => {
+                update_members(
+                    t.iter()
+                        .enumerate()
+                        .map(|(idx, m)| Member { name: idx.to_string(), ty: m.clone(), key: false })
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                    &mut self.query_queue,
+                );
+
                 for (idx, member) in t.iter().enumerate() {
-                    let mut path_clone = path.clone();
-                    path_clone.push(idx.to_string());
-                    self.build_set_entity_queries_recursive(
-                        path_clone,
-                        event_id,
-                        entity_id,
-                        &member,
-                        block_timestamp,
-                        is_event_message,
-                    );
+                    if let Ty::Struct(_) = &member {
+                        let mut path_clone = path.clone();
+                        path_clone.push(idx.to_string());
+                        self.build_set_entity_queries_recursive(
+                            path_clone,
+                            event_id,
+                            entity_id,
+                            &member,
+                            block_timestamp,
+                            is_event_message,
+                        );
+                    } else if let Ty::Tuple(_) = &member {
+                        let mut path_clone = path.clone();
+                        path_clone.push(idx.to_string());
+                        self.build_set_entity_queries_recursive(
+                            path_clone,
+                            event_id,
+                            entity_id,
+                            &member,
+                            block_timestamp,
+                            is_event_message,
+                        );
+                    }
                 }
             }
             _ => {}
@@ -650,10 +687,11 @@ impl Sql {
                 for (member_idx, member) in s.children.iter().enumerate() {
                     let name = member.name.clone();
                     let mut options = None; // TEMP: doesnt support complex enums yet
-    
+
                     build_member(&name, &member.ty, &mut options);
-    
-                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
+
+                    let statement =
+                        "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
                                      member_idx, name, type, type_enum, enum_options, key, \
                                      executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     let arguments = vec![
@@ -672,40 +710,40 @@ impl Sql {
                         Argument::Bool(member.key),
                         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                     ];
-    
+
                     self.query_queue.enqueue(statement, arguments);
                 }
             }
             Ty::Tuple(tuple) => {
                 for (idx, member) in tuple.iter().enumerate() {
                     let mut options = None; // TEMP: doesnt support complex enums yet
-    
+
                     build_member(&idx.to_string(), &member, &mut options);
-    
-                    // Should we add the tuple members to model members?
-                    // let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
-                    //                  member_idx, name, type, type_enum, enum_options, key, \
-                    //                  executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    // let arguments = vec![
-                    //     Argument::String(table_id.clone()),
-                    //     // TEMP: this is temporary until the model hash is precomputed
-                    //     Argument::String(format!(
-                    //         "{:#x}",
-                    //         get_selector_from_name(&path[0].clone()).unwrap()
-                    //     )),
-                    //     Argument::Int(model_idx),
-                    //     Argument::Int(idx as i64),
-                    //     Argument::String(idx.to_string()),
-                    //     Argument::String(member.name()),
-                    //     Argument::String(member.as_ref().into()),
-                    //     options.unwrap_or(Argument::Null),
-                    //     // NOTE: should we consider the case where
-                    //     // a tuple is used as a key? should its members be keys? 
-                    //     Argument::Bool(false),
-                    //     Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                    // ];
-    
-                    // self.query_queue.enqueue(statement, arguments);
+
+                    let statement =
+                        "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
+                                     member_idx, name, type, type_enum, enum_options, key, \
+                                     executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    let arguments = vec![
+                        Argument::String(table_id.clone()),
+                        // TEMP: this is temporary until the model hash is precomputed
+                        Argument::String(format!(
+                            "{:#x}",
+                            get_selector_from_name(&path[0].clone()).unwrap()
+                        )),
+                        Argument::Int(model_idx),
+                        Argument::Int(idx as i64),
+                        Argument::String(idx.to_string()),
+                        Argument::String(member.name()),
+                        Argument::String(member.as_ref().into()),
+                        options.unwrap_or(Argument::Null),
+                        // NOTE: should we consider the case where
+                        // a tuple is used as a key? should its members be keys?
+                        Argument::Bool(false),
+                        Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    ];
+
+                    self.query_queue.enqueue(statement, arguments);
                 }
             }
             _ => {}
