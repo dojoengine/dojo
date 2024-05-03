@@ -446,10 +446,10 @@ impl Sql {
                 build_member(&idx.to_string(), &member);
             }
         } 
-        // else if let Ty::Array(array) = model {
-        //     let ty = &array[0];
-        //     build_member("data", &ty);
-        // }
+        else if let Ty::Array(array) = model {
+            let ty = &array[0];
+            build_member("data", &ty);
+        }
     }
 
     fn build_set_entity_queries_recursive(
@@ -592,6 +592,43 @@ impl Sql {
                     }
                 }
             }
+            // wip
+            // Ty::Array(array) => {
+            //     update_members(
+            //         array.iter()
+            //             .enumerate()
+            //             .map(|(idx, m)| Member { name: idx.to_string(), ty: m.clone(), key: false })
+            //             .collect::<Vec<_>>()
+            //             .as_slice(),
+            //         &mut self.query_queue,
+            //     );
+
+            //     for member in array.iter() {
+            //         if let Ty::Struct(_) = &member {
+            //             let mut path_clone = path.clone();
+            //             path_clone.push("data".to_string());
+            //             self.build_set_entity_queries_recursive(
+            //                 path_clone,
+            //                 event_id,
+            //                 entity_id,
+            //                 &member,
+            //                 block_timestamp,
+            //                 is_event_message,
+            //             );
+            //         } else if let Ty::Tuple(_) = &member {
+            //             let mut path_clone = path.clone();
+            //             path_clone.push("data".to_string());
+            //             self.build_set_entity_queries_recursive(
+            //                 path_clone,
+            //                 event_id,
+            //                 entity_id,
+            //                 &member,
+            //                 block_timestamp,
+            //                 is_event_message,
+            //             );
+            //         }
+            //     }
+            // }
             _ => {}
         }
     }
@@ -694,6 +731,8 @@ impl Sql {
 
                     build_member(&name, &member.ty, &mut options);
 
+                    // NOTE: this might cause some errors to fail silently
+                    // due to the ignore clause. check migrations for type_enum check
                     let statement =
                         "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
                                      member_idx, name, type, type_enum, enum_options, key, \
@@ -752,7 +791,6 @@ impl Sql {
                 }
             }
             Ty::Array(array) => {
-                println!("Array: {:?}", array);
 
                 let mut options = None; // TEMP: doesnt support complex enums yet
                 let ty = &array[0];

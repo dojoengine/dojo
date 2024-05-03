@@ -50,6 +50,7 @@ pub enum ScalarType {
 // basic types like ID and Int are handled by async-graphql
 #[derive(AsRefStr, Display, EnumIter, EnumString, Debug)]
 pub enum GraphqlType {
+    ByteArray,
     Tuple,
     Enum,
     Cursor,
