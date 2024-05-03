@@ -2,7 +2,6 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
-use cainome::cairo_serde::CairoSerde;
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
@@ -424,6 +423,24 @@ impl Sql {
             for member in s.children.iter() {
                 if let Ty::Primitive(_) = member.ty {
                     continue;
+                } else if let Ty::Tuple(t) = model {
+                    for (idx, member) in t.iter().enumerate() {
+                        if let Ty::Primitive(_) = member {
+                            continue;
+                        }
+
+                        let mut path_clone = path.clone();
+                        path_clone.push(idx.to_string());
+
+                        self.build_register_queries_recursive(
+                            member,
+                            path_clone,
+                            &mut (*model_idx + 1),
+                            block_timestamp,
+                        );
+
+                        continue;
+                    }
                 }
 
                 let mut path_clone = path.clone();
@@ -613,6 +630,19 @@ impl Sql {
                             .join(",")
                             .to_string(),
                     ));
+                } else if let Ty::Tuple(t) = &member.ty {
+                    for (idx, member) in t.iter().enumerate() {
+                        if let Ok(cairo_type) = Primitive::from_str(&member.name()) {
+                            create_table_query.push_str(&format!(
+                                "external_{name}_{idx} {}, ",
+                                cairo_type.to_sql_type()
+                            ));
+                            indices.push(format!(
+                                "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name}_{idx} ON [{table_id}] \
+                                 (external_{name}_{idx});"
+                            ));
+                        }
+                    }
                 }
 
                 let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
