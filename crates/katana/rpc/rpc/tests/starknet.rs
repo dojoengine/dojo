@@ -12,7 +12,7 @@ use serde_json::json;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionReceipt, MaybePendingTransactionReceipt,
+    BlockId, BlockTag, DeclareTransactionReceipt, MaybePendingTransactionReceipt, Transaction,
     TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
@@ -334,12 +334,25 @@ async fn test_messaging_l1_l2() {
     // received in L2)
     tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
 
-    assert_eq!(
-        starknet_account
-            .provider()
-            .get_block_transaction_count(BlockId::Number(3u64))
-            .await
-            .unwrap(),
-        1
-    );
+    let tx = starknet_account
+        .provider()
+        .get_transaction_by_block_id_and_index(BlockId::Tag(BlockTag::Latest), 0)
+        .await
+        .unwrap();
+
+    match tx {
+        Transaction::L1Handler(ref l1_handler_transaction) => {
+            let calldata = &l1_handler_transaction.calldata;
+
+            assert_eq!(
+                tx.transaction_hash(),
+                &felt!("0x00c33cc113afc56bc878034908472770cb13eda6ad8ad91feb25fd4e5c9196a0")
+            );
+
+            assert_eq!(FieldElement::to_string(&calldata[1]), "123")
+        }
+        _ => {
+            panic!("Error, No L1handler transaction")
+        }
+    }
 }
