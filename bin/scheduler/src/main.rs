@@ -1,6 +1,7 @@
 use clap::Parser;
 use katana_primitives::FieldElement;
-use saya_core::prover::{scheduler::prove_recursively, ProgramInput, ProverIdentifier};
+use saya_core::prover::Scheduler;
+use saya_core::prover::{ProgramInput, ProverIdentifier};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::fs;
@@ -61,6 +62,7 @@ async fn main() {
             program_input_from_json(json_data)
         })
         .collect();
-    let result = prove_recursively(inputs, args.world, ProverIdentifier::Stone).await.unwrap().0;
+    let result =
+        Scheduler::prove_recursively(inputs, args.world, ProverIdentifier::Stone).await.unwrap().0;
     prove_to_json(vec![result]).await;
 }

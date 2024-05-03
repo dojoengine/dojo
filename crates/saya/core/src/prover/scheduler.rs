@@ -6,7 +6,7 @@ use katana_primitives::{contract::ContractAddress, FieldElement};
 use tokio::sync::oneshot;
 use tracing::{info, trace};
 type Proof = String;
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use katana_primitives::state::StateUpdates;
 use num_traits::ToPrimitive;
 
@@ -16,21 +16,35 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
+    pub fn new(number_of_diifs: usize, world: FieldElement, prover: ProverIdentifier) -> Self {
+        let (senders, receivers): (Vec<_>, Vec<_>) =
+            (0..number_of_diifs).map(|_| oneshot::channel::<ProgramInput>()).unzip();
+
+        let root_task = prove_recursively(receivers, world, prover);
+
+        Scheduler { root_task, free_differs: senders }
+    }
+
+    pub fn push_diff(&mut self, input: ProgramInput) -> anyhow::Result<()> {
+        let sender = self.free_differs.remove(0);
+        if sender.send(input).is_err() {
+            bail!("Failed to send input to differ");
+        }
+        Ok(())
+    }
+
     pub async fn prove_recursively(
         inputs: Vec<ProgramInput>,
         world: FieldElement,
         prover: ProverIdentifier,
     ) -> anyhow::Result<(Proof, ProgramInput)> {
-        let (senders, receivers): (Vec<_>, Vec<_>) =
-            inputs.iter().map(|_| oneshot::channel::<ProgramInput>()).unzip();
+        let mut scheduler = Scheduler::new(inputs.len(), world, prover);
 
-        let root_task = prove_recursively(receivers, world, prover);
-
-        for (sender, input) in senders.into_iter().zip(inputs.into_iter()) {
-            sender.send(input).unwrap();
+        for input in inputs {
+            scheduler.push_diff(input)?;
         }
 
-        root_task.await
+        scheduler.root_task.await
     }
 }
 
@@ -269,6 +283,7 @@ mod tests {
         let result = input_to_json(inputs).await.unwrap();
         assert_eq!(result, expected);
     }
+
     #[tokio::test]
     async fn test_program_input_from_program_output() -> anyhow::Result<()> {
         let input = ProgramInput {
@@ -353,6 +368,7 @@ mod tests {
         assert_eq!(input, program_input_from_proof);
         Ok(())
     }
+
     #[tokio::test]
     async fn test_combine_proofs() {
         let input1 = r#"{
