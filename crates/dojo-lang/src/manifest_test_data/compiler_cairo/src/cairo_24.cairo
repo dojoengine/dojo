@@ -20,8 +20,8 @@ mod cairo_v240 {
     fn formatter(self: @ContractState) {
         let var = 5;
         let mut formatter: Formatter = Default::default();
-        write!(formatter, "test");
-        write!(formatter, "{var:?}");
+        write!(formatter, "test").unwrap();
+        write!(formatter, "{var:?}").unwrap();
         println!("{}", formatter.buffer); //prints test5
     }
 
@@ -29,9 +29,9 @@ mod cairo_v240 {
         let var1 = 5;
         let var2: ByteArray = "hello";
         let var3 = 5_u32;
-        let ba = format!("{},{},{}", var1, var2, var3);
-        let ba = format!("{var1}{var2}{var3}");
-        let ba = format!("{var1:?}{var2:?}{var3:?}");
+        let _ba = format!("{},{},{}", var1, var2, var3);
+        let _ba = format!("{var1}{var2}{var3}");
+        let _ba = format!("{var1:?}{var2:?}{var3:?}");
     }
 
     fn long_panic(self: @ContractState) {

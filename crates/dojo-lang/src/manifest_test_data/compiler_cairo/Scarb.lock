@@ -2,7 +2,7 @@
 version = 1
 
 [[package]]
-name = "cairo_v240"
+name = "compiler_cairo"
 version = "0.1.0"
 dependencies = [
  "dojo",
@@ -10,7 +10,7 @@ dependencies = [
 
 [[package]]
 name = "dojo"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "dojo_plugin",
 ]

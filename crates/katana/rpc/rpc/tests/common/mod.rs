@@ -2,9 +2,10 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use katana_primitives::conversion::rpc::CompiledClass;
+use katana_primitives::utils::class::MAX_BYTECODE_SIZE;
 use starknet::accounts::Call;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::{FieldElement, FlattenedSierraClass};
@@ -29,8 +30,9 @@ fn get_flattened_class(artifact_path: &PathBuf) -> Result<FlattenedSierraClass> 
 fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
-    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)
-        .map_err(|e| anyhow!("CasmContractClass from ContractClass error: {e}"))?;
+    let casm_contract =
+        CasmContractClass::from_contract_class(casm_contract_class, true, MAX_BYTECODE_SIZE)
+            .map_err(|e| anyhow!("CasmContractClass from ContractClass error: {e}"))?;
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)

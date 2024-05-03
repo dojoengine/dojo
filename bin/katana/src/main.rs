@@ -63,19 +63,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    cfg_if::cfg_if! {
-        if #[cfg(all(feature = "blockifier", feature = "sir"))] {
-            compile_error!("Cannot enable both `blockifier` and `sir` features at the same time");
-        } else if #[cfg(feature = "blockifier")] {
-            use katana_executor::implementation::blockifier::BlockifierFactory;
-            let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
-        } else if #[cfg(feature = "sir")] {
-            use katana_executor::implementation::sir::NativeExecutorFactory;
-            let executor_factory = NativeExecutorFactory::new(cfg_env, simulation_flags);
-        } else {
-            compile_error!("At least one of the following features must be enabled: blockifier, sir");
-        }
-    }
+    // TODO: Uncomment this once we enable the 'sir' feature again because it's not compatible with
+    // our current Cairo version (2.6.3). cfg_if::cfg_if! {
+    //     if #[cfg(all(feature = "blockifier", feature = "sir"))] {
+    //         compile_error!("Cannot enable both `blockifier` and `sir` features at the same
+    // time");     } else if #[cfg(feature = "blockifier")] {
+    //         use katana_executor::implementation::blockifier::BlockifierFactory;
+    //         let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
+    //     } else if #[cfg(feature = "sir")] {
+    //         use katana_executor::implementation::sir::NativeExecutorFactory;
+    //         let executor_factory = NativeExecutorFactory::new(cfg_env, simulation_flags);
+    //     } else {
+    //         compile_error!("At least one of the following features must be enabled: blockifier,
+    // sir");     }
+    // }
+
+    use katana_executor::implementation::blockifier::BlockifierFactory;
+    let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
 
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;

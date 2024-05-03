@@ -22,13 +22,14 @@ tracing.workspace = true
 alloy-primitives.workspace = true
 
 # blockifier deps
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979", optional = true }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "935292bb", features = [ "testing" ], optional = true }
 cairo-vm = { workspace = true, optional = true }
 
-# starknet_in_rust deps
-cairo-lang-sierra = { workspace = true, optional = true }
-sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "601a65e", optional = true }
-starknet-types-core = { version = "0.0.9", optional = true }
+# Disable SIR for now until they support Cairo 2.6.3
+# # starknet_in_rust deps
+# cairo-lang-sierra = { workspace = true, optional = true }
+# sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "601a65e", optional = true }
+# starknet-types-core = { version = "0.0.9", optional = true }
 
 [dev-dependencies]
 anyhow.workspace = true
@@ -42,8 +43,7 @@ similar-asserts.workspace = true
 tokio.workspace = true
 
 [features]
-default = [ "blockifier", "sir" ]
-
 blockifier = [ "dep:blockifier", "dep:cairo-vm" ]
+default = [ "blockifier" ]
 # native = [ "sir", "sir/cairo-native" ]
-sir = [ "dep:sir", "dep:starknet-types-core" ]
+# sir = [ "dep:sir", "dep:starknet-types-core" ]

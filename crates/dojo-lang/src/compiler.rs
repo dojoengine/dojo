@@ -11,10 +11,11 @@ use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_formatter::format_string;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_starknet::abi;
+use cairo_lang_starknet::compile::compile_prepared_db;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
-use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
+use cairo_lang_starknet_classes::abi;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_utils::UpcastMut;
 use camino::{Utf8Path, Utf8PathBuf};
 use convert_case::{Case, Casing};
@@ -24,7 +25,7 @@ use dojo_world::manifest::{
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
-use scarb::compiler::{CompilationUnit, Compiler};
+use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
 use scarb::core::{PackageName, TargetKind, Workspace};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -85,7 +86,7 @@ impl Compiler for DojoCompiler {
 
     fn compile(
         &self,
-        unit: CompilationUnit,
+        unit: CairoCompilationUnit,
         db: &mut RootDatabase,
         ws: &Workspace<'_>,
     ) -> Result<()> {

@@ -1,8 +1,6 @@
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
+use katana_runner::KatanaRunner;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
@@ -13,8 +11,7 @@ const ACTION_CONTRACT_NAME: &str = "dojo_examples::actions::actions";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_world() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
 
@@ -26,10 +23,9 @@ async fn get_contract_address_from_world() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_string() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
-    let account = sequencer.account();
+    let account = sequencer.account(0);
     let world = WorldContract::new(FieldElement::ZERO, account);
 
     let contract_address = utils::get_contract_address(&world, "0x1234".to_string()).await.unwrap();
@@ -39,11 +35,10 @@ async fn get_contract_address_from_string() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_world_with_world_reader() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
-    let account = sequencer.account();
+    let account = sequencer.account(0);
     let provider = account.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -57,10 +52,10 @@ async fn get_contract_address_from_world_with_world_reader() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_string_with_world_reader() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
-    let provider = sequencer.provider();
+    let account = sequencer.account(0);
+    let provider = account.provider();
     let world_reader = WorldContractReader::new(FieldElement::ZERO, provider);
 
     let contract_address =

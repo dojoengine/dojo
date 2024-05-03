@@ -43,7 +43,7 @@ sozo model get Moves 0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786b
 >   last_direction: Direction = None,
 > }
 
-# The returned value is 0 since we haven't spawned yet. 
+# The returned value is 0 since we haven't spawned yet.
 # We can spawn a player using the actions contract address.
 sozo execute 0x152dcff993befafe5001975149d2c50bd9621da7cbaed74f68e7d5e54e65abc spawn
 
@@ -55,7 +55,7 @@ sozo model get Moves 0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786b
 >   remaining: u8 = 1,
 >   last_direction: Direction = None,
 > }
-> 
+>
 > enum Direction {
 >   None
 >   Left
