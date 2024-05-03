@@ -10,6 +10,7 @@ use katana_primitives::FieldElement;
 use katana_runner::{AnvilRunner, KatanaRunner};
 use serde_json::json;
 use starknet::accounts::{Account, Call, ConnectedAccount};
+use starknet::contract::ContractFactory;
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionReceipt, MaybePendingTransactionReceipt, Transaction,
@@ -220,8 +221,8 @@ async fn test_messaging_l1_l2() {
         "chain": "ethereum",
         "rpc_url": anvil_runner.endpoint,
         "contract_address": contract_strk.address().to_string(),
-        "sender_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "private_key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+        "sender_address": anvil_runner.address(),
+        "private_key": anvil_runner.secret_key(),
         "interval": 2,
         "from_block": 0
     });
@@ -263,50 +264,27 @@ async fn test_messaging_l1_l2() {
             .is_ok()
     );
 
-    let constructor_calldata = vec![];
+    let contract_factory = ContractFactory::new(class_hash, &starknet_account);
 
-    let calldata = [
-        vec![
-            class_hash,                                     // class hash
-            FieldElement::ZERO,                             // salt
-            FieldElement::ZERO,                             // unique
-            FieldElement::from(constructor_calldata.len()), // constructor calldata len
-        ],
-        constructor_calldata.clone(),
-    ]
-    .concat();
-
-    let contract_address = get_contract_address(
-        FieldElement::ZERO,
-        res.class_hash,
-        &constructor_calldata,
-        FieldElement::ZERO,
-    );
-
-    assert_eq!(
-        contract_address,
-        felt!("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
-    );
-
-    let transaction = starknet_account
-        .execute(vec![Call {
-            calldata,
-            // devnet UDC address
-            to: FieldElement::from_hex_be(
-                "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
-            )
-            .unwrap(),
-            selector: get_selector_from_name("deployContract").unwrap(),
-        }])
+    let transaction = contract_factory
+        .deploy(vec![], FieldElement::ZERO, false)
         .send()
         .await
-        .unwrap();
+        .expect("Unable to deploy contract");
 
     // wait for the tx to be mined
     TransactionWaiter::new(transaction.transaction_hash, starknet_account.provider())
         .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
         .await
         .expect("Invalid tx receipt");
+
+    let contract_address =
+        get_contract_address(FieldElement::ZERO, res.class_hash, &[], FieldElement::ZERO);
+
+    assert_eq!(
+        contract_address,
+        felt!("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
+    );
 
     let builder = contract_c1
         .sendMessage(

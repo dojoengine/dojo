@@ -9,6 +9,7 @@ use std::thread;
 use std::time::Duration;
 
 use alloy::network::{Ethereum, EthereumSigner};
+use alloy::primitives::Address;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, SignerFiller,
 };
@@ -204,6 +205,8 @@ pub struct AnvilRunner {
     process: Child,
     provider: Provider,
     pub endpoint: String,
+    address: Address,
+    secret_key: String,
 }
 
 impl AnvilRunner {
@@ -223,15 +226,17 @@ impl AnvilRunner {
         if !is_anvil_up(&endpoint).await {
             panic!("Error bringing up Anvil")
         }
+        let secret_key =
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".to_string();
+        let wallet: LocalWallet = secret_key.parse().unwrap();
 
-        let wallet: LocalWallet =
-            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".parse().unwrap();
+        let address = wallet.address();
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .signer(EthereumSigner::from(wallet))
             .on_http(Url::from_str(&endpoint).unwrap());
-        Ok(AnvilRunner { process, endpoint, provider })
+        Ok(AnvilRunner { process, endpoint, provider, address, secret_key })
     }
 
     pub fn provider(&self) -> &Provider {
@@ -240,6 +245,14 @@ impl AnvilRunner {
 
     pub fn endpoint(&self) -> String {
         self.endpoint.clone()
+    }
+
+    pub fn address(&self) -> Address {
+        self.address
+    }
+
+    pub fn secret_key(&self) -> String {
+        self.secret_key.clone()
     }
 }
 
