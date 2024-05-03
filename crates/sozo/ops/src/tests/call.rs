@@ -1,7 +1,5 @@
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
 use dojo_world::contracts::WorldContractReader;
+use katana_runner::KatanaRunner;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -16,8 +14,7 @@ const ENTRYPOINT: &str = "tile_terrain";
 
 #[tokio::test]
 async fn call_with_bad_address() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
     let provider = sequencer.provider();
@@ -38,8 +35,7 @@ async fn call_with_bad_address() {
 
 #[tokio::test]
 async fn call_with_bad_name() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
     let provider = sequencer.provider();
@@ -60,8 +56,7 @@ async fn call_with_bad_name() {
 
 #[tokio::test]
 async fn call_with_bad_entrypoint() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
     let provider = sequencer.provider();
@@ -82,8 +77,7 @@ async fn call_with_bad_entrypoint() {
 
 #[tokio::test]
 async fn call_with_bad_calldata() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
     let provider = sequencer.provider();
@@ -98,8 +92,7 @@ async fn call_with_bad_calldata() {
 
 #[tokio::test]
 async fn call_with_contract_name() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
     let provider = sequencer.provider();
@@ -120,8 +113,7 @@ async fn call_with_contract_name() {
 
 #[tokio::test]
 async fn call_with_contract_address() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
     let provider = sequencer.provider();

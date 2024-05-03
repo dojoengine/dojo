@@ -1,4 +1,4 @@
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 
 use crate::FieldElement;
 
@@ -18,7 +18,7 @@ pub type DeprecatedCompiledClass = ::starknet_api::deprecated_contract_class::Co
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SierraProgram {
     pub program: cairo_lang_sierra::program::Program,
-    pub entry_points_by_type: cairo_lang_starknet::contract_class::ContractEntryPoints,
+    pub entry_points_by_type: cairo_lang_starknet_classes::contract_class::ContractEntryPoints,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

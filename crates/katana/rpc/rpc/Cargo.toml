@@ -38,6 +38,7 @@ tracing.workspace = true
 [dev-dependencies]
 assert_matches = "1.5.0"
 cairo-lang-starknet.workspace = true
+cairo-lang-starknet-classes.workspace = true
 dojo-test-utils.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-rpc-api = { workspace = true, features = [ "client" ] }

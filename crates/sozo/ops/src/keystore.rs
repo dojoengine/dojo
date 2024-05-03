@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use colored::Colorize;
 use starknet::signers::SigningKey;
 use starknet_crypto::FieldElement;
@@ -10,7 +10,7 @@ pub fn new(password: Option<String>, force: bool, file: PathBuf) -> Result<()> {
         anyhow::bail!("keystore file already exists");
     }
 
-    let password = get_password(password)?;
+    let password = get_password(password, true)?;
 
     let key = SigningKey::from_random();
     key.save_as_keystore(&file, &password)?;
@@ -38,7 +38,7 @@ pub fn from_key(
     };
     let private_key = FieldElement::from_hex_be(private_key.trim())?;
 
-    let password = get_password(password)?;
+    let password = get_password(password, false)?;
 
     let key = SigningKey::from_secret_scalar(private_key);
     key.save_as_keystore(&file, &password)?;
@@ -54,7 +54,7 @@ pub fn inspect(password: Option<String>, raw: bool, file: PathBuf) -> Result<()>
         anyhow::bail!("keystore file not found");
     }
 
-    let password = get_password(password)?;
+    let password = get_password(password, false)?;
 
     let key = SigningKey::from_keystore(file, &password)?;
 
@@ -72,7 +72,7 @@ pub fn inspect_private(password: Option<String>, raw: bool, file: PathBuf) -> Re
         anyhow::bail!("keystore file not found");
     }
 
-    let password = get_password(password)?;
+    let password = get_password(password, false)?;
 
     let key = SigningKey::from_keystore(file, &password)?;
 
@@ -85,10 +85,21 @@ pub fn inspect_private(password: Option<String>, raw: bool, file: PathBuf) -> Re
     Ok(())
 }
 
-fn get_password(password: Option<String>) -> std::io::Result<String> {
+fn get_password(password: Option<String>, retry: bool) -> Result<String> {
     if let Some(password) = password {
         Ok(password)
     } else {
-        rpassword::prompt_password("Enter password: ")
+        let password = rpassword::prompt_password("Enter password: ")?;
+
+        if retry {
+            let confirm_password = rpassword::prompt_password("Confirm password: ");
+
+            if password != confirm_password? {
+                bail!("Passwords do not match");
+            }
+            return Ok(password);
+        };
+
+        Ok(password)
     }
 }

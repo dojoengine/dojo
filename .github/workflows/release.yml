@@ -93,6 +93,9 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y gcc-aarch64-linux-gnu libssl-dev
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          # We build jemalloc with 64KB pagesize so that it works for all linux/arm64 pagesize variants
+          # See: https://github.com/jemalloc/jemalloc/issues/467
+          echo "JEMALLOC_SYS_WITH_LG_PAGE=16" >> $GITHUB_ENV
 
       - name: Build binaries
         run: cargo build --release --bins --target ${{ matrix.job.target }}

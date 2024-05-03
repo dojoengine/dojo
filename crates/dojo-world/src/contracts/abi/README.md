@@ -3,6 +3,7 @@
 To ease the re-use of `dojo-world` crate on other projects that are not aware of the whole dojo stack, the ABI used for binding generation are decoupled from the compilation process.
 
 To generate the ABI in `world.rs` or `executor.rs`, please consider to run:
+
 ```bash
 cargo run --bin dojo-world-abigen
 ```

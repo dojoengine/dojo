@@ -1,8 +1,8 @@
 {
   "world": {
     "kind": "WorldContract",
-    "class_hash": "0x5a8881181fc47d7cba049ce2861ce9327f33e04827d70233e22ce218a947ccf",
-    "original_class_hash": "0x5a8881181fc47d7cba049ce2861ce9327f33e04827d70233e22ce218a947ccf",
+    "class_hash": "0x301ba8a1a13cec9291b049dea531f73a600e0812908cefa26d17214da411e9c",
+    "original_class_hash": "0x301ba8a1a13cec9291b049dea531f73a600e0812908cefa26d17214da411e9c",
     "abi": [
       {
         "type": "impl",
@@ -869,8 +869,8 @@
         ]
       }
     ],
-    "address": "0x4fa69953c9f85a2a23244f3dbb7fb9b40d72928d075d9cd820bebd07cbb9901",
-    "transaction_hash": "0x276adccfe22c3267218badd836ac64c08d61ab8047ebabe49615a2dfb006ae9",
+    "address": "0x3898144a24151443f0c6501a1de46a6e9e27abd9fb5d08cdeeff5a5127d1d25",
+    "transaction_hash": "0x6c620a196cd78de62d766898b7a1deaf10b428471b5fb525a137d2d06e63490",
     "block_number": 3,
     "seed": "dojo_examples",
     "metadata": {
@@ -881,18 +881,18 @@
   },
   "base": {
     "kind": "Class",
-    "class_hash": "0x679177a2cb757694ac4f326d01052ff0963eac0bc2a17116a2b87badcdf6f76",
-    "original_class_hash": "0x679177a2cb757694ac4f326d01052ff0963eac0bc2a17116a2b87badcdf6f76",
+    "class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
+    "original_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
     "abi": null,
     "name": "dojo::base::base"
   },
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": "0x24314c016e77ba55f74ff52978c736030b4d146dc8063e3a0c175bae79e01c6",
-      "class_hash": "0x471a1a36581d24f68ae6984c714daa75d424c0a6581872a65e645eb11a8e45",
-      "original_class_hash": "0x471a1a36581d24f68ae6984c714daa75d424c0a6581872a65e645eb11a8e45",
-      "base_class_hash": "0x679177a2cb757694ac4f326d01052ff0963eac0bc2a17116a2b87badcdf6f76",
+      "address": "0x7361d19c9541e464a15a4cf1aa0d1d155f4982f6ec9bdf6fb6fa1d812ddda9f",
+      "class_hash": "0x491920188044edfc9bb9ba1d0f989b10e9791d91089a6a98413f5dbf54579cb",
+      "original_class_hash": "0x491920188044edfc9bb9ba1d0f989b10e9791d91089a6a98413f5dbf54579cb",
+      "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
       "abi": [
         {
           "type": "impl",
@@ -1159,8 +1159,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x52659850f9939482810d9f6b468b91dc99e0b7fa42c2016cf12833ec06ce911",
-      "original_class_hash": "0x52659850f9939482810d9f6b468b91dc99e0b7fa42c2016cf12833ec06ce911",
+      "class_hash": "0x91e05e8691a82229a17cf2b9b01b6f339fe704550151786b65734f0a9e45f1",
+      "original_class_hash": "0x91e05e8691a82229a17cf2b9b01b6f339fe704550151786b65734f0a9e45f1",
       "abi": [
         {
           "type": "impl",
@@ -1416,8 +1416,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x6d5aef0819f5267c840c57d37ff774b4e185fc7da4a10e58cb9f575aa2ed1c",
-      "original_class_hash": "0x6d5aef0819f5267c840c57d37ff774b4e185fc7da4a10e58cb9f575aa2ed1c",
+      "class_hash": "0x1080134c112da75344e02e4a6a9629778f5b7c0bf3f81055f1304bf75acaf75",
+      "original_class_hash": "0x1080134c112da75344e02e4a6a9629778f5b7c0bf3f81055f1304bf75acaf75",
       "abi": [
         {
           "type": "impl",
@@ -1678,8 +1678,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x511fbd833938f5c4b743eea1e67605a125d7ff60e8a09e8dc227ad2fb59ca54",
-      "original_class_hash": "0x511fbd833938f5c4b743eea1e67605a125d7ff60e8a09e8dc227ad2fb59ca54",
+      "class_hash": "0x2e9c87df132573ed64a84b5d18059ba86cabef0ae0a4ccd211ce90ecb3dfce3",
+      "original_class_hash": "0x2e9c87df132573ed64a84b5d18059ba86cabef0ae0a4ccd211ce90ecb3dfce3",
       "abi": [
         {
           "type": "impl",
@@ -1939,8 +1939,8 @@
           "key": false
         }
       ],
-      "class_hash": "0xb33ae053213ccb2a57967ffc4411901f3efab24781ca867adcd0b90f2fece5",
-      "original_class_hash": "0xb33ae053213ccb2a57967ffc4411901f3efab24781ca867adcd0b90f2fece5",
+      "class_hash": "0x151d4e1655053bc12c41f2e46ff6cb740c024320f129d92331cb1d2e59e4aa3",
+      "original_class_hash": "0x151d4e1655053bc12c41f2e46ff6cb740c024320f129d92331cb1d2e59e4aa3",
       "abi": [
         {
           "type": "impl",

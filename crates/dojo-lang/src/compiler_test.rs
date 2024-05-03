@@ -4,18 +4,15 @@ use scarb::ops::CompileOpts;
 
 use crate::scarb_internal;
 
-// TODO: Remove this ignore after issue mentioned in this PR is resolved:
-// https://github.com/dojoengine/dojo/pull/1485
-#[ignore]
 #[test]
-fn test_compiler() {
-    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
-    assert!(
-        scarb_internal::compile_workspace(
-            &config,
-            CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-        )
-        .is_ok(),
-        "compilation failed"
-    );
+fn test_compiler_cairo_features() {
+    let config = build_test_config("./src/manifest_test_data/compiler_cairo/Scarb.toml").unwrap();
+
+    let compile_info = scarb_internal::compile_workspace(
+        &config,
+        CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+    )
+    .unwrap();
+
+    assert_eq!(compile_info.compile_error_units, Vec::<String>::default());
 }

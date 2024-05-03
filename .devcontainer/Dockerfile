@@ -64,7 +64,13 @@ ARG DOJO_VERSION=stable
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
-RUN dojoup -v $DOJO_VERSION
+RUN if [ "$DOJO_VERSION" = "stable" ]; then \
+    echo "Installing latest stable version of Dojo"; \
+    dojoup; \
+    else \
+    echo "Installing Dojo version $DOJO_VERSION"; \
+    dojoup -v $DOJO_VERSION; \
+    fi
 
 RUN chown -R root:root /usr/local/cargo
 RUN chmod -R 700 /usr/local/cargo

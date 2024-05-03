@@ -25,7 +25,7 @@ pub type Log = TimedLog<Message>;
 
 impl KatanaRunner {
     pub fn blocks(&self) -> Vec<Log> {
-        BufReader::new(File::open(&self.log_filename).unwrap())
+        BufReader::new(File::open(&self.log_file_path).unwrap())
             .lines()
             .map_while(Result::ok)
             .filter_map(|line| match serde_json::from_str(&line) {
@@ -91,7 +91,7 @@ impl KatanaRunner {
 
     pub async fn steps(&self) -> Vec<u64> {
         let matching = "Transaction resource usage: Steps: ";
-        BufReader::new(File::open(&self.log_filename).unwrap())
+        BufReader::new(File::open(&self.log_file_path).unwrap())
             .lines()
             .filter_map(|line| {
                 let line = line.unwrap();

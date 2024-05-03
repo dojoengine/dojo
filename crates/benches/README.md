@@ -6,10 +6,9 @@ To run benchmarks one can use `cargo test --no-default-features`
 
 ## Prerequisites
 
--   `cargo` - for test case generation and runtime
--   `katana` - as a local RPC server
--   `sozo` - for contract compilation and deployment
-
+- `cargo` - for test case generation and runtime
+- `katana` - as a local RPC server
+- `sozo` - for contract compilation and deployment
 
 ## Katana Benchmarks
 
@@ -20,7 +19,7 @@ After the change to `u16` is released it should take the system installed versio
 cargo build -r --bin katana
 ```
 
-And to run the benchamarks 
+And to run the benchamarks
 
 ```bash
 cargo test --manifest-path crates/benches/Cargo.toml -- --nocapture
@@ -34,7 +33,6 @@ cargo test --manifest-path crates/benches/Cargo.toml -- --nocapture
 katana
 bash scripts/cargo_bench.sh
 ```
-
 
 ### Requirements for running
 
