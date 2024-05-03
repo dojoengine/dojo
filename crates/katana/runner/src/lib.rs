@@ -182,21 +182,24 @@ impl Drop for KatanaRunner {
     }
 }
 
-/// Determines the default program path for the katana runner.
-///
-/// If the CI environment variable is set, the default program path is "katana" to
-/// use the devcontainer version of katana.
-/// Otherwise, the default program path is determined by the KATANA_RUNNER_BIN environment variable
-/// that must be set by the developer.
+/// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
+/// environment variable. If not set, try to to use katana from the PATH.
 fn determine_default_program_path() -> String {
-    // GITHUB should define "CI". If not, we may use "GITHUB_ACTION".
-    match std::env::var("CI") {
-        Ok(_) => "katana".to_string(),
-        Err(_) => std::env::var("KATANA_RUNNER_BIN").unwrap_or_else(|_| {
-            panic!(
-                "KATANA_RUNNER_BIN environment variable is not set and required when not running \
-                 in CI."
-            )
-        }),
+    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_determine_default_program_path() {
+        // Set the environment variable to test the first branch
+        std::env::set_var("KATANA_RUNNER_BIN", "custom_katana_path");
+        assert_eq!(determine_default_program_path(), "custom_katana_path");
+
+        // Unset the environment variable to test the fallback branch
+        std::env::remove_var("KATANA_RUNNER_BIN");
+        assert_eq!(determine_default_program_path(), "katana");
     }
 }
