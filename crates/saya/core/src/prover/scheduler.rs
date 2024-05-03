@@ -3,11 +3,36 @@ use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use katana_primitives::{contract::ContractAddress, FieldElement};
+use tokio::sync::oneshot;
 use tracing::{info, trace};
 type Proof = String;
 use anyhow::anyhow;
 use katana_primitives::state::StateUpdates;
 use num_traits::ToPrimitive;
+
+pub struct Scheduler {
+    root_task: BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>>,
+    free_differs: Vec<oneshot::Sender<ProgramInput>>,
+}
+
+impl Scheduler {
+    pub async fn prove_recursively(
+        inputs: Vec<ProgramInput>,
+        world: FieldElement,
+        prover: ProverIdentifier,
+    ) -> anyhow::Result<(Proof, ProgramInput)> {
+        let (senders, receivers): (Vec<_>, Vec<_>) =
+            inputs.iter().map(|_| oneshot::channel::<ProgramInput>()).unzip();
+
+        let root_task = prove_recursively(receivers, world, prover);
+
+        for (sender, input) in senders.into_iter().zip(inputs.into_iter()) {
+            sender.send(input).unwrap();
+        }
+
+        root_task.await
+    }
+}
 
 fn program_input_from_program_output(
     output: Vec<FieldElement>,
@@ -58,6 +83,7 @@ fn program_input_from_program_output(
     input.fill_da(FieldElement::default());
     Ok(input)
 }
+
 fn get_message_to_starknet_segment(
     output: &Vec<FieldElement>,
 ) -> anyhow::Result<Vec<MessageToStarknet>> {
@@ -77,6 +103,7 @@ fn get_message_to_starknet_segment(
     }
     Ok(message_to_starknet_segment)
 }
+
 fn get_message_to_appchain_segment(
     output: &Vec<FieldElement>,
 ) -> anyhow::Result<Vec<MessageToAppchain>> {
@@ -146,13 +173,13 @@ async fn combine_proofs(
 /// It returns a BoxFuture to allow for dynamic dispatch of futures, useful in recursive async
 /// calls.
 pub fn prove_recursively(
-    mut inputs: Vec<ProgramInput>,
+    mut inputs: Vec<oneshot::Receiver<ProgramInput>>,
     world: FieldElement,
     prover: ProverIdentifier,
 ) -> BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>> {
     async move {
         if inputs.len() == 1 {
-            let mut input = inputs.pop().unwrap();
+            let mut input = inputs.pop().unwrap().await.unwrap();
             input.fill_da(world);
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
@@ -451,7 +478,7 @@ mod tests {
         let input2: ProgramInput = serde_json::from_str(input2).unwrap();
         let expected: ProgramInput = serde_json::from_str(expected).unwrap();
         let inputs = vec![input1.clone(), input2.clone()];
-        let output = prove_recursively(
+        let output = Scheduler::prove_recursively(
             inputs,
             FieldElement::from_dec_str("333").unwrap(),
             ProverIdentifier::Stone,
@@ -568,7 +595,8 @@ mod tests {
 
         let expected = serde_json::from_str::<ProgramInput>(expected).unwrap();
 
-        let (_proof, output) = prove_recursively(inputs, world, ProverIdentifier::Stone).await?;
+        let (_proof, output) =
+            Scheduler::prove_recursively(inputs, world, ProverIdentifier::Stone).await?;
 
         assert_eq!(expected.message_to_appchain_segment, output.message_to_appchain_segment);
         assert_eq!(expected.message_to_starknet_segment, output.message_to_starknet_segment);

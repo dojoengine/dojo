@@ -22,7 +22,7 @@ use verifier::VerifierIdentifier;
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::prover::{extract_messages, parse_proof, prove_stone, ProgramInput};
+use crate::prover::{extract_messages, parse_proof, prove_stone, ProgramInput, Scheduler};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -151,8 +151,12 @@ impl Saya {
             }
 
             // Prove each of the leaf nodes of the recursion tree and merge them into one
-            let proof =
-                prove_recursively(processed, self.config.world_address, self.config.prover).await?;
+            let proof = Scheduler::prove_recursively(
+                processed,
+                self.config.world_address,
+                self.config.prover,
+            )
+            .await?;
             println!("Proof: {:?}", proof.0);
         }
     }
