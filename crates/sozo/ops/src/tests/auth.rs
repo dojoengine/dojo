@@ -1,7 +1,7 @@
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
-use scarb_ui::{OutputFormat, Ui, Verbosity};
 use katana_runner::KatanaRunner;
+use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::utils::cairo_short_string_to_felt;
 
