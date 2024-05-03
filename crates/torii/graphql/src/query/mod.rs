@@ -73,6 +73,7 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
         "Primitive" => TypeData::Simple(TypeRef::named(&member.ty)),
         "Enum" => TypeData::Simple(TypeRef::named("Enum")),
         "Tuple" => TypeData::Simple(TypeRef::named("Tuple")),
+        "ByteArray" => TypeData::Simple(TypeRef::named("ByteArray")),
         _ => parse_nested_type(
             &member.model_id,
             &member.id,

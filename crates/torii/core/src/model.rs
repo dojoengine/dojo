@@ -168,9 +168,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                     ty: Ty::Tuple(
                         model_members_all
                             .iter()
-                            .filter(|member| {
-                                member.id == format!("{}${}", child.id, child.name)
-                            })
+                            .filter(|member| member.id == format!("{}${}", child.id, child.name))
                             .map(|member| {
                                 if member.type_enum == "Primitive" {
                                     Ty::Primitive(member.r#type.parse().unwrap())
@@ -185,16 +183,32 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                             .collect::<Vec<_>>(),
                     ),
                 },
-                "Array" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    // get T from Array<T>
-                    ty: Ty::Array(vec![parse_sql_model_members_impl(
-                        &format!("{}", child.id),
-                        &child.r#type[6..child.r#type.len() - 1],
-                        model_members_all,
-                    )]),
-                },
+                "Array" => {
+                    Member {
+                        key: child.key,
+                        name: child.name.to_owned(),
+                        // get T from Array<T>
+                        ty: Ty::Array(
+                            model_members_all
+                                .iter()
+                                .filter(|member| {
+                                    member.id == format!("{}${}", child.id, child.name)
+                                })
+                                .map(|member| {
+                                    if member.type_enum == "Primitive" {
+                                        Ty::Primitive(member.r#type.parse().unwrap())
+                                    } else {
+                                        parse_sql_model_members_impl(
+                                            &format!("{}${}${}", child.id, child.name, member.name),
+                                            &member.r#type,
+                                            model_members_all,
+                                        )
+                                    }
+                                })
+                                .collect::<Vec<_>>(),
+                        ),
+                    }
+                }
                 "ByteArray" => Member {
                     key: child.key,
                     name: child.name.to_owned(),
