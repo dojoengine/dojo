@@ -19,7 +19,7 @@ async-trait.workspace = true
 cairo-proof-parser.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
-dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
+dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration", "manifest" ] }
 flate2.workspace = true
 futures.workspace = true
 itertools.workspace = true
