@@ -445,7 +445,11 @@ impl Sql {
             for (idx, member) in t.iter().enumerate() {
                 build_member(&idx.to_string(), &member);
             }
-        }
+        } 
+        // else if let Ty::Array(array) = model {
+        //     let ty = &array[0];
+        //     build_member("data", &ty);
+        // }
     }
 
     fn build_set_entity_queries_recursive(
@@ -513,9 +517,9 @@ impl Sql {
                 update_members(&s.children, &mut self.query_queue);
 
                 for member in s.children.iter() {
-                    if let Ty::Struct(_) = &member.ty {
+                    if let Ty::Struct(_) = member.ty {
                         let mut path_clone = path.clone();
-                        path_clone.push(member.name.clone());
+                        path_clone.push(member.name.to_string());
                         self.build_set_entity_queries_recursive(
                             path_clone,
                             event_id,
@@ -524,9 +528,9 @@ impl Sql {
                             block_timestamp,
                             is_event_message,
                         );
-                    } else if let Ty::Tuple(_) = &member.ty {
+                    } else if let Ty::Tuple(_) = member.ty {
                         let mut path_clone = path.clone();
-                        path_clone.push(member.name.clone());
+                        path_clone.push(member.name.to_string());
                         self.build_set_entity_queries_recursive(
                             path_clone,
                             event_id,
@@ -694,6 +698,7 @@ impl Sql {
                         "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
                                      member_idx, name, type, type_enum, enum_options, key, \
                                      executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
@@ -745,6 +750,36 @@ impl Sql {
 
                     self.query_queue.enqueue(statement, arguments);
                 }
+            }
+            Ty::Array(array) => {
+                println!("Array: {:?}", array);
+
+                let mut options = None; // TEMP: doesnt support complex enums yet
+                let ty = &array[0];
+                build_member("data", &ty, &mut options);
+
+                let statement =
+                    "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
+                                 name, type, type_enum, enum_options, key, executed_at) VALUES (?, ?, \
+                                 ?, ?, ?, ?, ?, ?, ?, ?)";
+                let arguments = vec![
+                    Argument::String(table_id.clone()),
+                    // TEMP: this is temporary until the model hash is precomputed
+                    Argument::String(format!(
+                        "{:#x}",
+                        get_selector_from_name(&path[0].clone()).unwrap()
+                    )),
+                    Argument::Int(model_idx),
+                    Argument::Int(0),
+                    Argument::String("data".to_string()),
+                    Argument::String(ty.name()),
+                    Argument::String(ty.as_ref().into()),
+                    options.unwrap_or(Argument::Null),
+                    Argument::Bool(false),
+                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                ];
+
+                self.query_queue.enqueue(statement, arguments);
             }
             _ => {}
         }
