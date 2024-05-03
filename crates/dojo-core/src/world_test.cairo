@@ -8,6 +8,7 @@ use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_ad
 use starknet::syscalls::deploy_syscall;
 
 use dojo::benchmarks;
+use dojo::config::interface::{IConfigDispatcher, IConfigDispatcherImpl};
 use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
     IUpgradeableWorldDispatcherTrait, ResourceMetadata
@@ -15,6 +16,7 @@ use dojo::world::{
 use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
+use dojo::config::component::Config::{ProgramHashUpdate, FactsRegistryUpdate};
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
@@ -591,4 +593,42 @@ fn test_upgradeable_world_from_non_owner() {
         contract_address: world.contract_address
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+fn drop_all_events(address: ContractAddress) {
+    loop {
+        match starknet::testing::pop_log_raw(address) {
+            option::Option::Some(_) => {},
+            option::Option::None => { break; },
+        };
+    }
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_program_hash_event_emit() {
+    let world = deploy_world();
+    drop_all_events(world.contract_address);
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_program_hash(program_hash: 98758347158781475198374598718743);
+
+    assert_eq!(
+        starknet::testing::pop_log(world.contract_address),
+        Option::Some(ProgramHashUpdate { program_hash: 98758347158781475198374598718743 })
+    );
+}
+#[test]
+#[available_gas(6000000)]
+fn test_facts_registry_event_emit() {
+    let world = deploy_world();
+    drop_all_events(world.contract_address);
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_facts_registry(contract_address_const::<0x12>());
+
+    assert_eq!(
+        starknet::testing::pop_log(world.contract_address),
+        Option::Some(FactsRegistryUpdate { address: contract_address_const::<0x12>() })
+    );
 }

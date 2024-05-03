@@ -87,9 +87,9 @@ struct Args {
 
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
-    #[arg(long, default_value = "*")]
+    #[arg(long)]
     #[arg(value_delimiter = ',')]
-    allowed_origins: Vec<String>,
+    allowed_origins: Option<Vec<String>>,
 
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
     /// environment

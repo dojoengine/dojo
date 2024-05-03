@@ -1,8 +1,11 @@
 //! Saya core library.
 
 use std::sync::Arc;
+use std::time::Duration;
 
-use futures::future::join;
+use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
+use cairo_proof_parser::parse;
+use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
@@ -10,7 +13,8 @@ use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use tokio::io::AsyncWriteExt;
+use starknet_crypto::poseidon_hash_many;
+use tokio::time::sleep;
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
@@ -22,9 +26,9 @@ use crate::prover::{extract_messages, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
+pub mod dojo_os;
 pub mod error;
 pub mod prover;
-pub mod starknet_os;
 pub mod verifier;
 
 pub(crate) const LOG_TARGET: &str = "saya::core";
@@ -34,10 +38,12 @@ pub(crate) const LOG_TARGET: &str = "saya::core";
 pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
+    #[serde(deserialize_with = "url_deserializer")]
+    pub prover_url: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
-    pub prover: ProverIdentifier,
-    pub verifier: VerifierIdentifier,
+    pub world_address: FieldElement,
+    pub fact_registry_address: FieldElement,
 }
 
 fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -92,9 +98,7 @@ impl Saya {
         let poll_interval_secs = 1;
         let mut block = self.config.start_block.max(1); // Genesis block is not proven. We advance to block 1
 
-        let (genesis_block, block_before_the_first) =
-            join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
-        let genesis_state_hash = genesis_block?.header.header.state_root;
+        let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block = block_before_the_first?;
 
         loop {
@@ -115,7 +119,7 @@ impl Saya {
 
             let fetched_block = self.provider.fetch_block(block).await?;
 
-            self.process_block(block, (&fetched_block, previous_block, genesis_state_hash)).await?;
+            self.process_block(block, (&fetched_block, previous_block)).await?;
 
             previous_block = fetched_block;
             block += 1;
@@ -143,11 +147,11 @@ impl Saya {
     async fn process_block(
         &mut self,
         block_number: BlockNumber,
-        blocks: (&SealedBlock, SealedBlock, FieldElement),
+        blocks: (&SealedBlock, SealedBlock),
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        let (block, prev_block, _genesis_state_hash) = blocks;
+        let (block, prev_block) = blocks;
 
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
@@ -169,7 +173,7 @@ impl Saya {
         let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         if exec_infos.is_empty() {
-            trace!(target: "saya_core", block_number, "Skipping empty block.");
+            trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
             return Ok(());
         }
 
@@ -196,29 +200,40 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
-        println!("Program input: {}", new_program_input.serialize()?);
+        let world_da = new_program_input.da_as_calldata(self.config.world_address);
+        let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
+        trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.");
 
-        // let to_prove = ProvedStateDiff {
-        //     genesis_state_hash,
-        //     prev_state_hash: prev_block.header.header.state_root,
-        //     state_updates: state_updates_to_prove,
-        // };
+        trace!(target: LOG_TARGET, "Proving block {block_number}.");
+        let proof = prover::prove(
+            new_program_input.serialize(self.config.world_address)?,
+            ProverIdentifier::Http(self.config.prover_url.clone()),
+        )
+        .await?;
+        info!(target: LOG_TARGET, block_number, "Block proven.");
 
-        trace!(target: "saya_core", "Proving block {block_number}.");
-        let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
-        info!(target: "saya_core", block_number, "Block proven.");
+        let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
 
-        // save proof to file
-        tokio::fs::File::create(format!("proof_{}.json", block_number))
-            .await
-            .unwrap()
-            .write_all(proof.as_bytes())
-            .await
-            .unwrap();
+        trace!(target: LOG_TARGET, block_number, "Verifying block.");
+        let transaction_hash = verifier::verify(
+            VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
+            serialized_proof,
+        )
+        .await?;
+        info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
 
-        trace!(target: "saya_core", "Verifying block {block_number}.");
-        let transaction_hash = verifier::verify(proof, self.config.verifier).await?;
-        info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
+        let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
+        let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
+        let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
+        info!(target: LOG_TARGET, expected_fact, "Expected fact.");
+
+        sleep(Duration::from_millis(5000)).await;
+
+        trace!(target: LOG_TARGET, block_number, "Applying diffs.");
+        let transaction_hash =
+            dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
+                .await?;
+        info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
 
         Ok(())
     }
@@ -229,25 +244,3 @@ impl From<starknet::providers::ProviderError> for error::Error {
         Self::KatanaClient(format!("Katana client RPC provider error: {e}"))
     }
 }
-
-// CI is not allowing to fetch images from inside the docker itself.
-// Need to be addressed, so tests by pulling prover and verifier are for now
-// disabled here, but can be uncommented to test locally.
-// #[cfg(test)]
-// mod tests {
-//     use crate::prover::state_diff::EXAMPLE_STATE_DIFF;
-//     use crate::prover::{prove, ProverIdentifier};
-//     use crate::verifier::{verify, VerifierIdentifier};
-
-//     #[tokio::test]
-//     async fn test_herodotus_verify() {
-//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-//         let _tx = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await.unwrap();
-//     }
-
-//     #[tokio::test]
-//     async fn test_local_verify() {
-//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-//         let _res = verify(proof, VerifierIdentifier::StoneLocal).await.unwrap();
-//     }
-// }

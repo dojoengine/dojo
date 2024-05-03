@@ -314,11 +314,17 @@ impl<P: Provider + Sync> Engine<P> {
             .await?;
         }
 
-        self.db.set_head(to, pending_block_tx);
+        // We return None for the pending_block_tx because our sync_range
+        // retrieves only specific events from the world. so some transactions
+        // might get ignored and wont update the cursor.
+        // so once the sync range is done, we assume all of the tx of the block
+        // have been processed.
+
+        self.db.set_head(to, None);
 
         self.db.execute().await?;
 
-        Ok(pending_block_tx)
+        Ok(None)
     }
 
     async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {

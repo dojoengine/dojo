@@ -54,7 +54,7 @@ lazy_static::lazy_static! {
 
 pub struct Proxy {
     addr: SocketAddr,
-    allowed_origins: Vec<String>,
+    allowed_origins: Option<Vec<String>>,
     grpc_addr: Option<SocketAddr>,
     graphql_addr: Arc<RwLock<Option<SocketAddr>>>,
 }
@@ -62,7 +62,7 @@ pub struct Proxy {
 impl Proxy {
     pub fn new(
         addr: SocketAddr,
-        allowed_origins: Vec<String>,
+        allowed_origins: Option<Vec<String>>,
         grpc_addr: Option<SocketAddr>,
         graphql_addr: Option<SocketAddr>,
     ) -> Self {
@@ -103,15 +103,23 @@ impl Proxy {
                         .collect::<Vec<HeaderName>>(),
                 );
 
-            let cors = match allowed_origins.as_slice() {
-                [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
-                origins => cors.allow_origin(
-                    origins.iter().map(|o| o.parse().expect("valid origin")).collect::<Vec<_>>(),
-                ),
-            };
+            let cors =
+                allowed_origins.clone().map(|allowed_origins| match allowed_origins.as_slice() {
+                    [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
+                    origins => cors.allow_origin(
+                        origins
+                            .iter()
+                            .map(|o| {
+                                let _ = o.parse::<http::Uri>().expect("Invalid URI");
+
+                                o.parse().expect("Invalid origin")
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
+                });
 
             let graphql_addr_clone = graphql_addr.clone();
-            let service = ServiceBuilder::new().layer(cors).service_fn(move |req| {
+            let service = ServiceBuilder::new().option_layer(cors).service_fn(move |req| {
                 let graphql_addr = graphql_addr_clone.clone();
                 async move {
                     let graphql_addr = graphql_addr.read().await;

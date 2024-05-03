@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use config::ServerConfig;
-use hyper::Method;
+use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
@@ -27,7 +27,7 @@ use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_api::ApiKind;
 use metrics::RpcServerMetrics;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::dev::DevApi;
 use crate::katana::KatanaApi;
@@ -65,12 +65,25 @@ pub async fn spawn<EF: ExecutorFactory>(
     let cors = CorsLayer::new()
             // Allow `POST` when accessing the resource
             .allow_methods([Method::POST, Method::GET])
-            // Allow requests from any origin
-            .allow_origin(Any)
             .allow_headers([hyper::header::CONTENT_TYPE]);
 
+    let cors =
+        config.allowed_origins.clone().map(|allowed_origins| match allowed_origins.as_slice() {
+            [origin] if origin == "*" => cors.allow_origin(AllowOrigin::mirror_request()),
+            origins => cors.allow_origin(
+                origins
+                    .iter()
+                    .map(|o| {
+                        let _ = o.parse::<Uri>().expect("Invalid URI");
+
+                        o.parse().expect("Invalid origin")
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+        });
+
     let middleware = tower::ServiceBuilder::new()
-        .layer(cors)
+        .option_layer(cors)
         .layer(ProxyGetRequestLayer::new("/", "health")?)
         .timeout(Duration::from_secs(20));
 
