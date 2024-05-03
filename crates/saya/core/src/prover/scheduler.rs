@@ -25,12 +25,24 @@ impl Scheduler {
         Scheduler { root_task, free_differs: senders }
     }
 
+    pub fn is_full(&self) -> bool {
+        self.free_differs.is_empty()
+    }
+
     pub fn push_diff(&mut self, input: ProgramInput) -> anyhow::Result<()> {
+        if self.is_full() {
+            bail!("Scheduler is full");
+        }
+
         let sender = self.free_differs.remove(0);
         if sender.send(input).is_err() {
             bail!("Failed to send input to differ");
         }
         Ok(())
+    }
+
+    pub async fn proved(self) -> anyhow::Result<(Proof, ProgramInput)> {
+        self.root_task.await
     }
 
     pub async fn prove_recursively(
@@ -44,7 +56,7 @@ impl Scheduler {
             scheduler.push_diff(input)?;
         }
 
-        scheduler.root_task.await
+        scheduler.proved().await
     }
 }
 
@@ -186,7 +198,7 @@ async fn combine_proofs(
 /// Handles the recursive proving of blocks using asynchronous futures.
 /// It returns a BoxFuture to allow for dynamic dispatch of futures, useful in recursive async
 /// calls.
-pub fn prove_recursively(
+fn prove_recursively(
     mut inputs: Vec<oneshot::Receiver<ProgramInput>>,
     world: FieldElement,
     prover: ProverIdentifier,

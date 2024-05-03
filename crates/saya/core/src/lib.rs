@@ -10,7 +10,7 @@ use futures::future::{self, join};
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
-use prover::{prove_recursively, ProverIdentifier};
+use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
