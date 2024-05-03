@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714751478688,
+  "lastUpdate": 1714777741069,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7015,6 +7015,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16919898,
             "range": "± 1014276",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e95f86f77f44738f9816b86433a3e2c70f316fa3",
+          "message": "feat: add support for `Cairo 2.6` (#1865)\n\n* wip\r\n\r\n* make katana-primitives compilable\r\n\r\n* make dojo-lang compilable\r\n\r\n* make dojo-world compilable\r\n\r\n* bump blockifier\r\n\r\n* fix: start blockifier rework\r\n\r\n* fix: ensure sozo can build\r\n\r\n* fix: first dive into executor to have it compiling\r\n\r\n* fix: fix tests with CAIRO_TESTS=1\r\n\r\n* fix: use correct default value for profiler mode\r\n\r\n* fix: ensure dojo-core compat with 2.6\r\n\r\n* fix: fix some fields in tests\r\n\r\n* fix: some clippy fixes\r\n\r\n* make things compiled first\r\n\r\n* disable any reference to the `sir` feature\r\n\r\n* update test\r\n\r\n* allow nonzero gas prices for now\r\n\r\n* update test\r\n\r\n* update manifest of types-test project\r\n\r\n* fmt\r\n\r\n* fix: ensure profiler can run correctly\r\n\r\n* refacto testing for cairo compiler versions\r\n\r\n* rework katana runner to have more friendly API\r\n\r\n* rework dojo-world test to use KatanaRunner\r\n\r\n* avoid race condition by using tmp projects for build/migrate\r\n\r\n* use KatanaRunner for testing into sozo\r\n\r\n* add updated manifest for example\r\n\r\n* fmt / clippy\r\n\r\n* doc: add contributing details + refacto script for tests\r\n\r\n* fmt cairo code\r\n\r\n* enable cairofmt in CI\r\n\r\n* add fmt scripts\r\n\r\n* fmt\r\n\r\n* fix path for scarb fmt\r\n\r\n* fix test and attempt fix CI scarb action\r\n\r\n* fix CI again\r\n\r\n* ensure checkout before test\r\n\r\n* ci last try before disabling\r\n\r\n* remove reference\r\n\r\n* fix: remove type tests manifests\r\n\r\n* fix: uses last scarb version to fix experimental features\r\n\r\n* fix: ensure dojoup does not fail with invalid version\r\n\r\n* fix: dojoup script to be reworked with new cargo version\r\n\r\n* fix: devcontainer dockerfile and CI for new dojoup\r\n\r\n* fix: add missing space\r\n\r\n* CI: attempt CI debug\r\n\r\n* Update Dockerfile with missing locked\r\n\r\n* fix: attempt to remove dockerfile unfinite cycle\r\n\r\n* fix: re-add variant for several step build\r\n\r\n* ci: use more resources for devcontainer\r\n\r\n* ci: remove manual workflow and attempt on push\r\n\r\n* ci: change build docker to matrix and separated jobs\r\n\r\n* ci: disable build dockerfile from scratch for arm64\r\n\r\n* ci: update dev container\r\n\r\n* ci: restore container image\r\n\r\n* fix: re-enable experimental features as they seems to be needed again?\r\n\r\n* fix: fix new world address in test\r\n\r\n* ci: add again the manual trigger for devcontainer workflow\r\n\r\n* ci: bump dojo container dev\r\n\r\n* ci: add new prefix key for cache\r\n\r\n* ci: check witout cairo native deps\r\n\r\n* fix: enable experimental features only if required\r\n\r\n* ci: use new dev container without SiR deps\r\n\r\n* use larger runner for demanding jobs\r\n\r\n* ci: restore workflows and re-build Katana before running tests\r\n\r\n* fix: do not limit the runner bin to CI\r\n\r\n* change devcontainer image\r\n\r\n* fix: fix tests\r\n\r\n* ci: fix katana runner path\r\n\r\n* ci: attempt to have the katana runner bin correctly set\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-05-03T17:00:50-06:00",
+          "tree_id": "7bd2a3979d6761a58aebb8183d084fcb71713d72",
+          "url": "https://github.com/dojoengine/dojo/commit/e95f86f77f44738f9816b86433a3e2c70f316fa3"
+        },
+        "date": 1714777740345,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17228953,
+            "range": "± 155316",
             "unit": "ns/iter"
           }
         ]
