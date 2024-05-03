@@ -204,7 +204,7 @@ impl ProgramInput {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L16
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default, PartialOrd, Ord)]
 pub struct MessageToStarknet {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
@@ -260,19 +260,19 @@ impl MessageToStarknet {
             {
                 let mut messages = Vec::new();
                 while let Some(from_address) = seq
-                    .next_element::<&str>()?
+                    .next_element::<String>()?
                     .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                 {
                     let to_address = seq
-                        .next_element::<&str>()?
+                        .next_element::<String>()?
                         .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
-                    let payload_length_str = seq.next_element::<&str>()?.unwrap_or_default();
+                    let payload_length_str = seq.next_element::<String>()?.unwrap_or_default();
                     let payload_length: usize = payload_length_str.parse().unwrap_or_default();
                     let mut payload = Vec::new();
                     for _ in 0..payload_length {
                         if let Some(element) = seq
-                            .next_element::<&str>()?
+                            .next_element::<String>()?
                             .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         {
                             payload.push(element);
@@ -293,7 +293,7 @@ impl MessageToStarknet {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L28
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default, PartialOrd, Ord)]
 pub struct MessageToAppchain {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
@@ -350,27 +350,27 @@ impl MessageToAppchain {
             {
                 let mut messages = Vec::new();
                 while let Some(from_address) = seq
-                    .next_element::<&str>()?
+                    .next_element::<String>()?
                     .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                 {
                     let to_address = seq
-                        .next_element::<&str>()?
+                        .next_element::<String>()?
                         .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
                     let nonce = seq
-                        .next_element::<&str>()?
+                        .next_element::<String>()?
                         .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
                     let selector = seq
-                        .next_element::<&str>()?
+                        .next_element::<String>()?
                         .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
-                    let payload_length_str = seq.next_element::<&str>()?.unwrap_or_default();
+                    let payload_length_str = seq.next_element::<String>()?.unwrap_or_default();
                     let payload_length: usize = payload_length_str.parse().unwrap_or_default();
                     let mut payload = Vec::new();
                     for _ in 0..payload_length {
                         if let Some(element) = seq
-                            .next_element::<&str>()?
+                            .next_element::<String>()?
                             .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
                         {
                             payload.push(element);

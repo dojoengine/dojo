@@ -18,9 +18,9 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    pub fn new(number_of_diifs: usize, world: FieldElement, prover: ProverIdentifier) -> Self {
+    pub fn new(capacity: usize, world: FieldElement, prover: ProverIdentifier) -> Self {
         let (senders, receivers): (Vec<_>, Vec<_>) =
-            (0..number_of_diifs).map(|_| oneshot::channel::<ProgramInput>()).unzip();
+            (0..capacity).map(|_| oneshot::channel::<ProgramInput>()).unzip();
 
         let root_task = prove_recursively(receivers, world, prover);
 
@@ -383,23 +383,23 @@ mod tests {
     #[tokio::test]
     async fn test_combine_proofs() {
         let input1 = r#"{
-            "prev_state_root": 101,
+            "prev_state_root": "101",
             "block_number": 102,
-            "block_hash": 103,
-            "config_hash": 104,
+            "block_hash": "103",
+            "config_hash": "104",
             "message_to_starknet_segment": [
-                105,
-                106,
-                1,
-                107
+                "105",
+                "106",
+                "1",
+                "107"
             ],
             "message_to_appchain_segment": [
-                108,
-                109,
-                110,
-                111,
-                1,
-                112
+                "108",
+                "109",
+                "110",
+                "111",
+                "1",
+                "112"
             ],
             "nonce_updates": {
                 "1111": "22222"
@@ -418,23 +418,23 @@ mod tests {
             "world_da": []
         }"#;
         let input2 = r#"{
-            "prev_state_root": 201,
+            "prev_state_root": "201",
             "block_number": 202,
-            "block_hash": 203,
-            "config_hash": 204,
+            "block_hash": "203",
+            "config_hash": "204",
             "message_to_starknet_segment": [
-                205,
-                206,
-                1,
-                207
+                "205",
+                "206",
+                "1",
+                "207"
             ],
             "message_to_appchain_segment": [
-                208,
-                209,
-                210,
-                211,
-                1,
-                207
+                "208",
+                "209",
+                "210",
+                "211",
+                "1",
+                "207"
             ],
             "nonce_updates": {
                 "12334": "214354"
@@ -453,33 +453,33 @@ mod tests {
             "world_da": []
         }"#;
         let expected = r#"{
-            "prev_state_root": 101,
+            "prev_state_root": "101",
             "block_number": 202,
-            "block_hash": 203,
-            "config_hash": 104,
+            "block_hash": "203",
+            "config_hash": "104",
             "message_to_starknet_segment": [
-                105,
-                106,
-                1,
-                107,
-                205,
-                206,
-                1,
-                207
+                "105",
+                "106",
+                "1",
+                "107",
+                "205",
+                "206",
+                "1",
+                "207"
             ],
             "message_to_appchain_segment": [
-                108,
-                109,
-                110,
-                111,
-                1,
-                112,
-                208,
-                209,
-                210,
-                211,
-                1,
-                207
+                "108",
+                "109",
+                "110",
+                "111",
+                "1",
+                "112",
+                "208",
+                "209",
+                "210",
+                "211",
+                "1",
+                "207"
             ],
             "nonce_updates": {
                 "12334": "214354",
@@ -499,7 +499,12 @@ mod tests {
                 "88556753888": "9995764599",
                 "88888": "99999"
             },
-            "world_da": ["4444","555","44536346444","565474555"]
+            "world_da": [
+                "4444",
+                "555",
+                "44536346444",
+                "565474555"
+            ]
         }"#;
         let input1: ProgramInput = serde_json::from_str(input1).unwrap();
         let input2: ProgramInput = serde_json::from_str(input2).unwrap();
@@ -521,83 +526,85 @@ mod tests {
         let world = FieldElement::from_dec_str("42")?;
 
         let input_1 = r#"{
-            "prev_state_root":101, 
-            "block_number":101, 
-            "block_hash":103,
-            "message_to_starknet_segment":[105,106,1,1],
-            "message_to_appchain_segment":[108,109,110,111,1,112],
-            "config_hash":104, 
-            "storage_updates":{
+            "prev_state_root": "101",
+            "block_number": 101,
+            "block_hash": "103",
+            "config_hash": "104",
+            "message_to_starknet_segment": ["105", "106", "1", "1"],
+            "message_to_appchain_segment": ["108", "109", "110", "111", "1", "112"],
+            "storage_updates": {
                 "42": {
                     "2010": "1200",
                     "2012": "1300"
                 }
             },
-            "nonce_updates":{},
-            "contract_updates":{},
-            "declared_classes":{}
-        }"#;
+            "nonce_updates": {},
+            "contract_updates": {},
+            "declared_classes": {}
+        }
+        "#;
 
         let input_2 = r#"{
-            "prev_state_root":1011, 
-            "block_number":102, 
-            "block_hash":1033, 
-            "config_hash":104, 
-            "message_to_starknet_segment":[135,136,1,1],
-            "message_to_appchain_segment":[158,159,150,151,1,152],
-                "storage_updates":{
+            "prev_state_root": "1011",
+            "block_number": 102,
+            "block_hash": "1033",
+            "config_hash": "104",
+            "message_to_starknet_segment": ["135", "136", "1", "1"],
+            "message_to_appchain_segment": ["158", "159", "150", "151", "1", "152"],
+            "storage_updates": {
                 "42": {
                     "2010": "1250",
                     "2032": "1300"
                 }
             },
-            "nonce_updates":{},
-            "contract_updates":{},
-            "declared_classes":{}
+            "nonce_updates": {},
+            "contract_updates": {},
+            "declared_classes": {}
         }"#;
 
         let input_3 = r#"{
-            "prev_state_root":10111, 
-            "block_number":103, 
-            "block_hash":10333, 
-            "config_hash":104, 
-            "message_to_starknet_segment":[], 
-            "message_to_appchain_segment":[],
-            "storage_updates":{
+            "prev_state_root": "10111",
+            "block_number": 103,
+            "block_hash": "10333",
+            "config_hash": "104",
+            "message_to_starknet_segment": [],
+            "message_to_appchain_segment": [],
+            "storage_updates": {
                 "42": {
                     "2013": "2"
                 }
             },
-            "nonce_updates":{},
-            "contract_updates":{},
-            "declared_classes":{}
+            "nonce_updates": {},
+            "contract_updates": {},
+            "declared_classes": {}
         }"#;
 
         let input_4 = r#"{
-            "prev_state_root":101111, 
-            "block_number":104, 
-            "block_hash":103333, 
-            "config_hash":104, 
-            "message_to_starknet_segment":[165,166,1,1], 
-            "message_to_appchain_segment":[168,169,160,161,1,162],
-            "storage_updates":{
+            "prev_state_root": "101111",
+            "block_number": 104,
+            "block_hash": "103333",
+            "config_hash": "104",
+            "message_to_starknet_segment": ["165", "166", "1", "1"],
+            "message_to_appchain_segment": ["168", "169", "160", "161", "1", "162"],
+            "storage_updates": {
                 "42": {
                     "2010": "1700"
                 }
             },
-            "nonce_updates":{},
-            "contract_updates":{},
-            "declared_classes":{}
-        }"#;
+            "nonce_updates": {},
+            "contract_updates": {},
+            "declared_classes": {}
+        }
+        "#;
 
         let expected = r#"{
-            "prev_state_root":101, 
-            "block_number":104, 
-            "block_hash":103333, 
-            "config_hash":104, 
-            "message_to_starknet_segment":[105,106,1,1,135,136,1,1,165,166,1,1], 
-            "message_to_appchain_segment":[108,109,110,111,1,112,158,159,150,151,1,152,168,169,160,161,1,162],
-            "storage_updates":{
+            "prev_state_root": "101",
+            "block_number": 104,
+            "block_hash": "103333",
+            "config_hash": "104",
+            "message_to_starknet_segment": ["105", "106", "1", "1", "135", "136", "1", "1", "165", "166", "1", "1"],
+            "message_to_appchain_segment": ["108", "109", "110", "111", "1", "112", "158", "159", "150", "151", "1", "152", "168", "169", "160", "161", "1", "162"],
+            "storage_updates": {
                 "42": {
                     "2010": "1700",
                     "2012": "1300",
@@ -605,10 +612,10 @@ mod tests {
                     "2013": "2"
                 }
             },
-            "nonce_updates":{},
-            "contract_updates":{},
-            "declared_classes":{},
-            "world_da":["2012", "1300", "2010", "1700", "2032", "1300", "2013", "2"]
+            "nonce_updates": {},
+            "contract_updates": {},
+            "declared_classes": {},
+            "world_da": ["2012", "1300", "2010", "1700", "2032", "1300", "2013", "2"]
         }"#;
 
         let inputs = vec![input_1, input_2, input_3, input_4]
@@ -624,14 +631,22 @@ mod tests {
 
         let (_proof, output) =
             Scheduler::prove_recursively(inputs, world, ProverIdentifier::Stone).await?;
-
-        assert_eq!(expected.message_to_appchain_segment, output.message_to_appchain_segment);
-        assert_eq!(expected.message_to_starknet_segment, output.message_to_starknet_segment);
-        assert_eq!(expected.state_updates, output.state_updates);
-        assert_eq!(expected.world_da, output.world_da);
-
+        let mut expected_message_to_appchain = expected.clone().message_to_appchain_segment;
+        let mut output_message_to_appchain = output.clone().message_to_appchain_segment;
+        expected_message_to_appchain.sort();
+        output_message_to_appchain.sort();
+        assert_eq!(expected_message_to_appchain, output_message_to_appchain);
+        let mut expected_message_to_starknet = expected.clone().message_to_starknet_segment;
+        let mut output_message_to_starknet = output.clone().message_to_starknet_segment;
+        expected_message_to_starknet.sort();
+        output_message_to_starknet.sort();
+        assert_eq!(expected_message_to_starknet, output_message_to_starknet);
+        let mut expected_world_da = expected.clone().world_da.unwrap();
+        let mut output_world_da = output.clone().world_da.unwrap();
+        expected_world_da.sort();
+        output_world_da.sort();
+        assert_eq!(expected_world_da, output_world_da);
         assert_eq!(expected, output);
-
         Ok(())
     }
 }
