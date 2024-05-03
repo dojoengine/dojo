@@ -175,7 +175,6 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                                 if member.type_enum == "Primitive" {
                                     Ty::Primitive(member.r#type.parse().unwrap())
                                 } else {
-                                    println!("{}", format!("{}${}${}", child.id, child.name, member.name));
                                     parse_sql_model_members_impl(
                                         &format!("{}${}${}", child.id, child.name, member.name),
                                         &member.r#type,
@@ -186,6 +185,21 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                             .collect::<Vec<_>>(),
                     ),
                 },
+                "Array" => Member {
+                    key: child.key,
+                    name: child.name.to_owned(),
+                    // get T from Array<T>
+                    ty: Ty::Array(vec![parse_sql_model_members_impl(
+                        &format!("{}", child.id),
+                        &child.r#type[6..child.r#type.len() - 1],
+                        model_members_all,
+                    )]),
+                },
+                "ByteArray" => Member {
+                    key: child.key,
+                    name: child.name.to_owned(),
+                    ty: Ty::ByteArray("".to_string()),
+                },
 
                 ty => {
                     unimplemented!("unimplemented type_enum: {ty}");
@@ -193,7 +207,6 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
             })
             .collect::<Vec<Member>>();
 
-        println!("{:?}", Struct { name: r#type.into(), children: children.clone() });
         // refer to the sql table for `model_members`
         Ty::Struct(Struct { name: r#type.into(), children })
     }
