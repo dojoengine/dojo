@@ -90,17 +90,17 @@ fn get_password(password: Option<String>, retry: bool) -> std::io::Result<String
     if let Some(password) = password {
         Ok(password)
     } else {
-        let password = rpassword::prompt_password("Enter password: ");
+        let password = rpassword::prompt_password("Enter password: ")?;
 
         if retry {
-            let confirmpassword = rpassword::prompt_password("Confirm password: ");
+            let confirm_password = rpassword::prompt_password("Confirm password: ");
 
-            if password.clone()? != confirmpassword? {
+            if password != confirm_password? {
                 return Err(Error::new(ErrorKind::InvalidData, "Passwords do not match"));
             }
-            return Ok(password?);
+            return Ok(password);
         };
 
-        return Ok(password?);
+        Ok(password)
     }
 }
