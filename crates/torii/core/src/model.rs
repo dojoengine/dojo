@@ -162,12 +162,38 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                     }),
                 },
 
+                "Tuple" => Member {
+                    key: child.key,
+                    name: child.name.to_owned(),
+                    ty: Ty::Tuple(
+                        model_members_all
+                            .iter()
+                            .filter(|member| {
+                                member.id == format!("{}${}", child.id, child.name)
+                            })
+                            .map(|member| {
+                                if member.type_enum == "Primitive" {
+                                    Ty::Primitive(member.r#type.parse().unwrap())
+                                } else {
+                                    println!("{}", format!("{}${}${}", child.id, child.name, member.name));
+                                    parse_sql_model_members_impl(
+                                        &format!("{}${}${}", child.id, child.name, member.name),
+                                        &member.r#type,
+                                        model_members_all,
+                                    )
+                                }
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
+                },
+
                 ty => {
                     unimplemented!("unimplemented type_enum: {ty}");
                 }
             })
             .collect::<Vec<Member>>();
 
+        println!("{:?}", Struct { name: r#type.into(), children: children.clone() });
         // refer to the sql table for `model_members`
         Ty::Struct(Struct { name: r#type.into(), children })
     }
