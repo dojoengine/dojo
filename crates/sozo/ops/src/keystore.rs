@@ -1,7 +1,6 @@
-use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use colored::Colorize;
 use starknet::signers::SigningKey;
 use starknet_crypto::FieldElement;
@@ -86,7 +85,7 @@ pub fn inspect_private(password: Option<String>, raw: bool, file: PathBuf) -> Re
     Ok(())
 }
 
-fn get_password(password: Option<String>, retry: bool) -> std::io::Result<String> {
+fn get_password(password: Option<String>, retry: bool) -> Result<String> {
     if let Some(password) = password {
         Ok(password)
     } else {
@@ -96,7 +95,7 @@ fn get_password(password: Option<String>, retry: bool) -> std::io::Result<String
             let confirm_password = rpassword::prompt_password("Confirm password: ");
 
             if password != confirm_password? {
-                return Err(Error::new(ErrorKind::InvalidData, "Passwords do not match"));
+                bail!("Passwords do not match");
             }
             return Ok(password);
         };
