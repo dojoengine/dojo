@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714777741069,
+  "lastUpdate": 1714777811464,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7045,6 +7045,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17228953,
             "range": "± 155316",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "adf849694bacd126165e8be1d56160f57a1db432",
+          "message": "fix(docker): build `jemalloc` with 64KB pagesize for `linux/arm64` (#1916)\n\nbuild jemalloc with 64kb pagesize for linux/arm64",
+          "timestamp": "2024-05-03T17:02:00-06:00",
+          "tree_id": "5345bb4a8dc1a5fece64ca962d1357869c6a09b4",
+          "url": "https://github.com/dojoengine/dojo/commit/adf849694bacd126165e8be1d56160f57a1db432"
+        },
+        "date": 1714777810740,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17249822,
+            "range": "± 211253",
             "unit": "ns/iter"
           }
         ]
