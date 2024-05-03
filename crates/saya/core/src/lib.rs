@@ -12,7 +12,6 @@ use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
 use url::Url;
-use verifier::VerifierIdentifier;
 
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};

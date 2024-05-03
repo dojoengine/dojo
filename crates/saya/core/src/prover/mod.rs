@@ -45,7 +45,7 @@ pub async fn prove_merge(input: String, prover: ProverIdentifier) -> anyhow::Res
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Stone => prove_merge_stone(input).await,
         ProverIdentifier::Platinum => todo!(),
-        ProverIdentifier::Http(prover_url) => todo!(),
+        ProverIdentifier::Http(_prover_url) => todo!(),
     }
 }
 

@@ -1,7 +1,7 @@
 use clap::Args;
 use katana_primitives::FieldElement;
 
-#[derive(Default, Debug, Args, Clone)]
+#[derive(Debug, Args, Clone)]
 pub struct ProofOptions {
     #[arg(help = "The address of the World contract.")]
     #[arg(long = "world")]
