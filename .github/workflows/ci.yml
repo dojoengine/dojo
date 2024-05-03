@@ -20,8 +20,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo build --bin katana
-          KATANA_ABS_PATH=$(pwd)/target/debug/katana
-          echo "KATANA_RUNNER_BIN=$KATANA_ABS_PATH" >> $GITHUB_ENV
+          KATANA_RUNNER_BIN=$(pwd)/target/debug/katana
           cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 10
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
