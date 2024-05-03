@@ -18,9 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: |
+          cargo build --bin katana
+          KATANA_ABS_PATH=$(pwd)/target/debug/katana
+          echo "KATANA_RUNNER_BIN=$KATANA_ABS_PATH" >> $GITHUB_ENV
           cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 10
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
@@ -38,8 +39,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: cargo build -r --target wasm32-unknown-unknown -p torii-client
 
   ensure-windows:
@@ -51,8 +50,6 @@ jobs:
           toolchain: ${{ env.rust_version }}
           target: x86_64-pc-windows-msvc
       - uses: swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.github_token }}
@@ -70,47 +67,39 @@ jobs:
           scarb --manifest-path crates/dojo-core/Scarb.toml fmt --check
 
   dojo-core-test:
-    runs-on: ubuntu-latest-2-cores
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/dojoengine/dojo-dev:bceec2e
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
-    runs-on: ubuntu-latest-2-cores
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/dojoengine/dojo-dev:bceec2e
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: cargo run --bin sozo -- --manifest-path examples/spawn-and-move/Scarb.toml test
 
   dojo-world-bindings-check:
-    runs-on: ubuntu-latest-2-cores
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/dojoengine/dojo-dev:bceec2e
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: cargo run --bin dojo-world-abigen -- --check
 
   clippy:
-    runs-on: ubuntu-latest-2-cores
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/dojoengine/dojo-dev:bceec2e
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: scripts/clippy.sh
 
   fmt:
@@ -120,8 +109,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: scripts/rust_fmt.sh --check
 
   docs:
@@ -131,8 +118,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: >
           scripts/docs.sh
 
@@ -144,8 +129,6 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
       - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: dojo-v070
       - run: |
           curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/3.0.0/hurl_3.0.0_amd64.deb
           sudo apt update && sudo apt install ./hurl_3.0.0_amd64.deb

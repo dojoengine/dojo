@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       docker_tag:
-        description: Docker tag to build
+        description: Descriptive name of the devcontainer for the Docker tag
         required: true
         type: string
   push:
@@ -19,15 +19,8 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest-4-cores
 
-    # Currently linux/arm64 is being emulated on the runner,
-    # which causes a timeout after 6h.
-    strategy:
-      matrix:
-        platform: [linux/amd64]
-
     env:
       DOCKER_TAG: latest
-      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
     outputs:
       tag_name: ${{ steps.release_info.outputs.tag_name }}
@@ -58,13 +51,17 @@ jobs:
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
           echo "DOCKER_TAG=$SHORT_SHA" >> $GITHUB_ENV
 
+      - name: Set Docker tag for workflow_dispatch event
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "DOCKER_TAG=${{ inputs.docker_tag }}" >> $GITHUB_ENV
+
       - name: Set outputs
         id: release_info
         run: |
           echo "tag_name=${{ env.DOCKER_TAG }}" >> $GITHUB_OUTPUT
 
-      - name: Build and push Docker image (release)
-        if: github.event_name == 'release'
+      - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -73,20 +70,7 @@ jobs:
           build-args: |
             VARIANT=bookworm
             DOJO_VERSION=${{ github.event_name == 'release' && github.event.release.tag_name || 'stable' }}
-          platforms: ${{ matrix.platform }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
-
-      - name: Build and push Docker image (push)
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          file: .devcontainer/Dockerfile
-          tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
-          build-args: |
-            VARIANT=bookworm
-            DOJO_BRANCH=${{ env.BRANCH_NAME }}
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 
   propose-update-pr:
