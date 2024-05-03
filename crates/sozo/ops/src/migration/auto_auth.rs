@@ -37,9 +37,9 @@ pub fn compute_models_contracts(
     let mut res = vec![];
     let local_contracts = &local_manifest.contracts;
 
-    // from all the contracts that where migrated successfully
+    // From all the contracts that were migrated successfully.
     for migrated_contract in migration_output.contracts.iter().flatten() {
-        // find that contract from local_manifest based on its name
+        // Find that contract from local_manifest based on its name.
         let contract = local_contracts
             .iter()
             .find(|c| migrated_contract.name == c.name)
@@ -50,7 +50,8 @@ pub fn compute_models_contracts(
             contract.name, contract.inner.writes
         ));
 
-        // read all the models that its supposed to write to and
+        // Read all the models that its supposed to write and collect them in a Vec<ModelContract>
+        // so we can call `grant_writer` on all of them.
         for model in &contract.inner.writes {
             let model = cairo_utils::str_to_felt(model)?;
             let contract_addr_str = format!("{:#x}", migrated_contract.contract_address);
