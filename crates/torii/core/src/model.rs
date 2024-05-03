@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use cainome::cairo_serde::CairoSerde;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};

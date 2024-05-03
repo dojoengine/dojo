@@ -30,8 +30,6 @@ pub mod abigen {
 pub enum ModelError {
     #[error("Model not found.")]
     ModelNotFound,
-    #[error("Invalid model metadata.")]
-    InvalidModelMetadata,
     #[error(transparent)]
     ProviderError(#[from] ProviderError),
     #[error(transparent)]
@@ -163,22 +161,14 @@ where
         Ok(parse_ty(&res)?)
     }
 
+    // For non fixed layouts, packed and unpacked sizes are None.
+    // Therefore we return 0 in this case.
     async fn packed_size(&self) -> Result<u32, ModelError> {
-        self.model_reader
-            .packed_size()
-            .call()
-            .await?
-            .map(Ok)
-            .unwrap_or(Err(ModelError::InvalidModelMetadata))
+        Ok(self.model_reader.packed_size().call().await?.unwrap_or(0))
     }
 
     async fn unpacked_size(&self) -> Result<u32, ModelError> {
-        self.model_reader
-            .unpacked_size()
-            .call()
-            .await?
-            .map(Ok)
-            .unwrap_or(Err(ModelError::InvalidModelMetadata))
+        Ok(self.model_reader.unpacked_size().call().await?.unwrap_or(0))
     }
 
     async fn layout(&self) -> Result<abigen::model::Layout, ModelError> {
