@@ -8,11 +8,13 @@ use async_trait::async_trait;
 
 mod client;
 mod program_input;
+mod scheduler;
 pub mod state_diff;
 mod stone_image;
 mod vec252;
 
 pub use program_input::*;
+pub use scheduler::*;
 use serde::{Deserialize, Serialize};
 pub use stone_image::*;
 use url::Url;
@@ -32,9 +34,18 @@ pub enum ProverIdentifier {
 pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
     match prover {
         ProverIdentifier::Sharp => todo!(),
-        ProverIdentifier::Stone => todo!(),
+        ProverIdentifier::Stone => prove_stone(input).await,
         ProverIdentifier::Platinum => todo!(),
         ProverIdentifier::Http(prover_url) => http_prove(prover_url, input).await,
+    }
+}
+
+pub async fn prove_merge(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
+    match prover {
+        ProverIdentifier::Sharp => todo!(),
+        ProverIdentifier::Stone => prove_merge_stone(input).await,
+        ProverIdentifier::Platinum => todo!(),
+        ProverIdentifier::Http(prover_url) => todo!(),
     }
 }
 

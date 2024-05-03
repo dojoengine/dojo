@@ -45,3 +45,4 @@ celestia-types = "0.1.1"
 
 cairo-felt = "0.9.1"
 num-bigint = "0.4.4"
+num-traits = "0.2.18"

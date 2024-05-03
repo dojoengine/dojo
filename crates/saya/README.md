@@ -74,8 +74,8 @@ However, papyrus and blockifier which we depend on are still in `-dev` version, 
 ```bash
 cargo run -r -p katana # Start an appchain
 cargo run -r -p sozo -- build --manifest-path examples/spawn-and-move/Scarb.toml
-cargo run -r -p sozo -- migrate --manifest-path examples/spawn-and-move/Scarb.toml # Make some transactions
-cargo run -r --bin saya -- --rpc-url http://localhost:5050 # Run Saya
+cargo run -r -p sozo -- migrate apply --rpc-url http://localhost:5050 --manifest-path examples/spawn-and-move/Scarb.toml # Make some transactions
+cargo run -r --bin saya -- --rpc-url http://localhost:5050 --registry 0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb --world ... # Run Saya
 ```
 
 ## Additional documentation

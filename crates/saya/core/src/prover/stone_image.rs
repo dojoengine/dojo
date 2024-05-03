@@ -9,16 +9,30 @@ use tracing::warn;
 
 use super::{ProverClient, ProverIdentifier};
 
+enum ProveProgram {
+    SingleDiff,
+    Merge,
+}
+
+const DIFFER_IMAGE: &str = "matzayonc/differ:latest";
+const MERGER_IMAGE: &str = "matzayonc/merger:latest";
+const VERIFIER_IMAGE: &str = "piniom/verifier:latest";
+
 #[derive(Clone)]
 pub struct StoneProver(pub String);
 
 pub async fn prove_stone(input: String) -> anyhow::Result<String> {
-    let prover = StoneProver::new().await?;
+    let prover = StoneProver::new(ProveProgram::SingleDiff).await?;
+    prover.prove(input).await
+}
+
+pub async fn prove_merge_stone(input: String) -> anyhow::Result<String> {
+    let prover = StoneProver::new(ProveProgram::Merge).await?;
     prover.prove(input).await
 }
 
 pub async fn local_verify(input: String) -> anyhow::Result<String> {
-    let prover = StoneProver::new().await?;
+    let prover = StoneProver::new(ProveProgram::SingleDiff).await?;
     prover.local_verify(input).await?;
     Ok(String::from("ok"))
 }
@@ -47,20 +61,22 @@ impl ProverClient for StoneProver {
 }
 
 impl StoneProver {
-    async fn new() -> anyhow::Result<StoneProver> {
+    async fn new(prove: ProveProgram) -> anyhow::Result<StoneProver> {
         static STONE_PROVER: OnceCell<(anyhow::Result<String>, anyhow::Result<String>)> =
             OnceCell::const_new();
 
-        let source = "piniom/state-diff-commitment";
-        let verifier = "piniom/verifier:latest";
+        let prover_image = match prove {
+            ProveProgram::Merge => MERGER_IMAGE,
+            ProveProgram::SingleDiff => DIFFER_IMAGE,
+        };
 
         let result = STONE_PROVER
             .get_or_init(|| async {
                 let mut command = Command::new("podman");
-                command.arg("pull").arg(format!("docker.io/{}", source));
+                command.arg("pull").arg(format!("docker.io/{}", prover_image));
 
                 let mut verifier_command = Command::new("podman");
-                verifier_command.arg("pull").arg(format!("docker.io/{}", verifier));
+                verifier_command.arg("pull").arg(format!("docker.io/{}", VERIFIER_IMAGE));
 
                 (
                     run(command, None).await.context("Failed to pull prover"),
@@ -75,7 +91,7 @@ impl StoneProver {
             warn!("Failed to pull verifier");
         }
 
-        Ok(StoneProver(source.to_string()))
+        Ok(StoneProver(prover_image.to_string()))
     }
 }
 

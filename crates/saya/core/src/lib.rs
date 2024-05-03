@@ -1,11 +1,8 @@
 //! Saya core library.
 
 use std::sync::Arc;
-use std::time::Duration;
 
-use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
-use cairo_proof_parser::parse;
-use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
+use futures::future::{self, join};
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
@@ -13,16 +10,14 @@ use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use starknet_crypto::poseidon_hash_many;
-use tokio::time::sleep;
-use tracing::{error, info, trace};
+use tracing::{error, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
 
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::prover::{extract_messages, ProgramInput};
+use crate::prover::{extract_messages, ProgramInput, Scheduler};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -98,9 +93,10 @@ impl Saya {
         let poll_interval_secs = 1;
         let mut block = self.config.start_block.max(1); // Genesis block is not proven. We advance to block 1
 
-        let block_before_the_first = self.provider.fetch_block(block - 1).await;
-        let mut previous_block = block_before_the_first?;
-
+        let (genesis_block, block_before_the_first) =
+            join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
+        let genesis_state_hash = genesis_block?.header.header.state_root;
+        let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
         loop {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
@@ -117,12 +113,45 @@ impl Saya {
                 continue;
             }
 
-            let fetched_block = self.provider.fetch_block(block).await?;
+            // Fetch all blocks from the current block to the latest block
+            let fetched_blocks = future::try_join_all(
+                (block..latest_block).map(|block_number| self.provider.fetch_block(block_number)),
+            )
+            .await?;
 
-            self.process_block(block, (&fetched_block, previous_block)).await?;
+            // shift the state roots to the right by one, as proof of each block is based on the
+            // previous state root
+            let mut state_roots =
+                fetched_blocks.iter().map(|b| b.header.header.state_root).collect::<Vec<_>>();
+            state_roots.insert(0, previous_block_state_root);
+            previous_block_state_root = state_roots.pop().unwrap();
 
-            previous_block = fetched_block;
-            block += 1;
+            let params = fetched_blocks
+                .into_iter()
+                .zip(state_roots)
+                .map(|(b, s)| (b, s, genesis_state_hash))
+                .collect::<Vec<_>>();
+
+            let mut processed = Vec::with_capacity(params.len());
+            // Updating the local state sequentially, as there is only one instance of
+            // `self.blockchain` This part does no actual  proving, so should not be a
+            // problem
+            for p in params.clone() {
+                let prover_input = self.process_block(block, p).await?;
+                if let Some(input) = prover_input {
+                    processed.push(input);
+                }
+                block += 1;
+            }
+
+            // Prove each of the leaf nodes of the recursion tree and merge them into one
+            let proof = Scheduler::prove_recursively(
+                processed,
+                self.config.world_address,
+                ProverIdentifier::Stone,
+            )
+            .await?;
+            println!("Proof: {:?}", proof.0);
         }
     }
 
@@ -144,14 +173,16 @@ impl Saya {
     /// # Arguments
     ///
     /// * `block_number` - The block number.
+    /// * `blocks` - The block to process, along with the state roots of the previous block and the
+    ///   genesis block.
     async fn process_block(
         &mut self,
         block_number: BlockNumber,
-        blocks: (&SealedBlock, SealedBlock),
-    ) -> SayaResult<()> {
+        blocks: (SealedBlock, FieldElement, FieldElement),
+    ) -> SayaResult<Option<ProgramInput>> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        let (block, prev_block) = blocks;
+        let (block, prev_state_root, _genesis_state_hash) = blocks;
 
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
@@ -167,14 +198,14 @@ impl Saya {
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
         if block_number == 0 {
-            return Ok(());
+            return Ok(None);
         }
 
         let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         if exec_infos.is_empty() {
             trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
-            return Ok(());
+            return Ok(None);
         }
 
         let transactions = block
@@ -191,52 +222,54 @@ impl Saya {
         let (message_to_starknet_segment, message_to_appchain_segment) =
             extract_messages(&exec_infos, &transactions);
 
-        let new_program_input = ProgramInput {
-            prev_state_root: prev_block.header.header.state_root,
-            block_number: FieldElement::from(block_number),
+        let mut state_diff_prover_input = ProgramInput {
+            prev_state_root,
+            block_number,
             block_hash: block.block.header.hash,
             config_hash: FieldElement::from(0u64),
             message_to_starknet_segment,
             message_to_appchain_segment,
             state_updates: state_updates_to_prove,
+            world_da: None,
         };
+        state_diff_prover_input.fill_da(self.config.world_address);
 
-        let world_da = new_program_input.da_as_calldata(self.config.world_address);
-        let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
-        trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.");
+        // let world_da = new_program_input.da_as_calldata(self.config.world_address);
+        // let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
+        // trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.");
 
         trace!(target: LOG_TARGET, "Proving block {block_number}.");
-        let proof = prover::prove(
-            new_program_input.serialize(self.config.world_address)?,
-            ProverIdentifier::Http(self.config.prover_url.clone()),
-        )
-        .await?;
-        info!(target: LOG_TARGET, block_number, "Block proven.");
+        // let proof = prover::prove(
+        //     new_program_input.serialize(self.config.world_address)?,
+        //     ProverIdentifier::Http(self.config.prover_url.clone()),
+        // )
+        // .await?;
+        // info!(target: LOG_TARGET, block_number, "Block proven.");
 
-        let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
+        // let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
 
-        trace!(target: LOG_TARGET, block_number, "Verifying block.");
-        let transaction_hash = verifier::verify(
-            VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
-            serialized_proof,
-        )
-        .await?;
-        info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
+        // trace!(target: LOG_TARGET, block_number, "Verifying block.");
+        // let transaction_hash = verifier::verify(
+        //     VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
+        //     serialized_proof,
+        // )
+        // .await?;
+        // info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
 
-        let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
-        let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
-        let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
-        info!(target: LOG_TARGET, expected_fact, "Expected fact.");
+        // let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
+        // let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
+        // let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
+        // info!(target: LOG_TARGET, expected_fact, "Expected fact.");
 
-        sleep(Duration::from_millis(5000)).await;
+        // sleep(Duration::from_millis(5000)).await;
 
-        trace!(target: LOG_TARGET, block_number, "Applying diffs.");
-        let transaction_hash =
-            dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
-                .await?;
-        info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
+        // trace!(target: LOG_TARGET, block_number, "Applying diffs.");
+        // let transaction_hash =
+        //     dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
+        //         .await?;
+        // info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
 
-        Ok(())
+        Ok(Some(state_diff_prover_input))
     }
 }
 
