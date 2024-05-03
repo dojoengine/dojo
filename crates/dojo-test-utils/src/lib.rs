@@ -1,4 +1,3 @@
-pub mod anvil;
 pub mod compiler;
 pub mod migration;
 pub mod rpc;

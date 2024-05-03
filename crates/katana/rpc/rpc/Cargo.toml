@@ -18,6 +18,7 @@ katana-rpc-types-builder.workspace = true
 katana-rpc-types.workspace = true
 katana-tasks.workspace = true
 
+tempfile = "3.8.1"
 anyhow.workspace = true
 flate2.workspace = true
 futures.workspace = true

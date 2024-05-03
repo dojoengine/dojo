@@ -16,7 +16,9 @@ use starknet::core::types::{
     TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
+use starknet::macros::felt;
 use starknet::providers::Provider;
+use tempfile::tempdir;
 
 mod common;
 use alloy::primitives::{Address, Uint, U256};
@@ -223,17 +225,17 @@ async fn test_messaging_l1_l2() {
         "interval": 2,
         "from_block": 0
     });
-    let serialized_json =
-        serde_json::to_string_pretty(&messagin_config).expect("Failed to serialize JSON");
+    let serialized_json = &messagin_config.to_string();
 
-    // Write JSON string to a file
-    let mut file =
-        File::create("tests/test_data/anvil-messaging.json").expect("Failed to create file");
+    let dir = tempdir().expect("Error creating temp dir");
+    let file_path = dir.path().join("temp-anvil-messaging.json");
+
+    // Write JSON string to a tempfile
+    let mut file = File::create(&file_path).expect("Error creating temp file");
     file.write_all(serialized_json.as_bytes()).expect("Failed to write to file");
 
     let katana_runner =
-        KatanaRunner::new_with_messaging("tests/test_data/anvil-messaging.json".to_string())
-            .unwrap();
+        KatanaRunner::new_with_messaging(file_path.to_str().unwrap().to_string()).unwrap();
     let starknet_account = katana_runner.account(0);
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo_l1_msg_contract.json");
@@ -249,6 +251,8 @@ async fn test_messaging_l1_l2() {
         .await
         .expect("Invalid tx receipt");
 
+    // Following 2 asserts are to make sure contract declaration went through and was processed
+    // successfully
     assert_eq!(receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
 
     assert!(
@@ -279,6 +283,11 @@ async fn test_messaging_l1_l2() {
         FieldElement::ZERO,
     );
 
+    assert_eq!(
+        contract_address,
+        felt!("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
+    );
+
     let transaction = starknet_account
         .execute(vec![Call {
             calldata,
@@ -299,14 +308,6 @@ async fn test_messaging_l1_l2() {
         .await
         .expect("Invalid tx receipt");
 
-    assert_eq!(
-        contract_address,
-        FieldElement::from_str(
-            "0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097"
-        )
-        .unwrap()
-    );
-
     let builder = contract_c1
         .sendMessage(
             U256::from_str("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
@@ -319,14 +320,15 @@ async fn test_messaging_l1_l2() {
         .value(Uint::from(1));
 
     // Messaging between L1 -> L2
-
-    let _receipt = builder
+    let receipt = builder
         .send()
         .await
         .expect("Error Await pending transaction")
         .get_receipt()
         .await
         .expect("Error getting transaction receipt");
+
+    assert!(receipt.status());
 
     // wait for the tx to be mined (Using delay cause the transaction is sent from L1 and is
     // received in L2)
@@ -340,7 +342,4 @@ async fn test_messaging_l1_l2() {
             .unwrap(),
         1
     );
-
-    drop(anvil_runner);
-    drop(katana_runner);
 }
