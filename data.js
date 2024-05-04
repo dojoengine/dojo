@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714777811464,
+  "lastUpdate": 1714781653109,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7075,6 +7075,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17249822,
             "range": "± 211253",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "004708942269a2848c14f76b543f0a57a6f41dc7",
+          "message": "feat(sozo): automatically authorize models to migrated systems based on models specified in overlays (#1880)",
+          "timestamp": "2024-05-03T18:05:50-06:00",
+          "tree_id": "521f824e2ef4e3c498e77985869635226326f72c",
+          "url": "https://github.com/dojoengine/dojo/commit/004708942269a2848c14f76b543f0a57a6f41dc7"
+        },
+        "date": 1714781652565,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17092114,
+            "range": "± 329238",
             "unit": "ns/iter"
           }
         ]
