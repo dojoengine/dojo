@@ -4,6 +4,7 @@ mod utils;
 
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::str::FromStr;
 use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
@@ -13,12 +14,25 @@ use assert_fs::TempDir;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
 use katana_primitives::FieldElement;
+use reqwest::Client;
 pub use runner_macro::{katana_test, runner};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::sync::Mutex;
+use tokio::time;
 use url::Url;
 use utils::find_free_port;
+
+use alloy::network::{Ethereum, EthereumSigner};
+use alloy::primitives::Address;
+use alloy::providers::fillers::{
+    ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, SignerFiller,
+};
+use alloy::providers::{Identity, ProviderBuilder, RootProvider};
+use alloy::signers::wallet::LocalWallet;
+use alloy::transports::http::Http;
+use hyper::http::request;
+use hyper::{Client as HyperClient, Response, StatusCode};
 
 #[derive(Debug)]
 pub struct KatanaRunner {
@@ -45,6 +59,8 @@ pub struct KatanaRunnerConfig {
     pub block_time: Option<u64>,
     /// The port to run the katana runner on, if None, a random free port is chosen.
     pub port: Option<u16>,
+    /// The messaging config file
+    pub messaging: Option<String>,
 }
 
 impl Default for KatanaRunnerConfig {
@@ -56,6 +72,7 @@ impl Default for KatanaRunnerConfig {
             port: None,
             program_name: None,
             run_name: None,
+            messaging: None,
         }
     }
 }
@@ -95,6 +112,10 @@ impl KatanaRunner {
 
         if config.disable_fee {
             command.args(["--disable-fee"]);
+        }
+
+        if let Some(messaging_file) = config.messaging {
+            command.args(["--messaging", &format!("{}", messaging_file)]);
         }
 
         let mut child =
@@ -185,7 +206,114 @@ impl Drop for KatanaRunner {
 /// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
 /// environment variable. If not set, try to to use katana from the PATH.
 fn determine_default_program_path() -> String {
-    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
+    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") {
+        bin
+    } else {
+        "katana".to_string()
+    }
+}
+
+type Provider = FillProvider<
+    JoinFill<
+        JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
+        SignerFiller<EthereumSigner>,
+    >,
+    RootProvider<Http<Client>>,
+    Http<Client>,
+    Ethereum,
+>;
+
+#[derive(Debug)]
+pub struct AnvilRunner {
+    process: Child,
+    provider: Provider,
+    pub endpoint: String,
+    address: Address,
+    secret_key: String,
+}
+
+impl AnvilRunner {
+    pub async fn new() -> Result<Self> {
+        let port = find_free_port();
+
+        let process = Command::new("anvil")
+            .arg("--port")
+            .arg(&port.to_string())
+            .arg("--silent")
+            .arg("--disable-block-gas-limit")
+            .spawn()
+            .expect("Could not start background Anvil");
+
+        let endpoint = format!("http://127.0.0.1:{port}");
+
+        if !is_anvil_up(&endpoint).await {
+            panic!("Error bringing up Anvil")
+        }
+        let secret_key =
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".to_string();
+        let wallet: LocalWallet = secret_key.parse().unwrap();
+
+        let address = wallet.address();
+
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .signer(EthereumSigner::from(wallet))
+            .on_http(Url::from_str(&endpoint).unwrap());
+        Ok(AnvilRunner { process, endpoint, provider, address, secret_key })
+    }
+
+    pub fn provider(&self) -> &Provider {
+        &self.provider
+    }
+
+    pub fn endpoint(&self) -> String {
+        self.endpoint.clone()
+    }
+
+    pub fn address(&self) -> Address {
+        self.address
+    }
+
+    pub fn secret_key(&self) -> String {
+        self.secret_key.clone()
+    }
+}
+
+impl Drop for AnvilRunner {
+    fn drop(&mut self) {
+        self.process.kill().expect("Cannot kill process");
+    }
+}
+
+async fn post_dummy_request(url: &String) -> Result<Response<hyper::Body>, hyper::Error> {
+    let req = request::Request::post(url)
+        .header("content-type", "application/json")
+        .body(hyper::Body::from(
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "method": "eth_blockNumberfuiorhgorueh",
+                "params": [],
+                "id": "1"
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    HyperClient::new().request(req).await
+}
+
+async fn is_anvil_up(endpoint: &String) -> bool {
+    let mut retries = 0;
+    let max_retries = 10;
+    while retries < max_retries {
+        if let Ok(anvil_block_rsp) = post_dummy_request(endpoint).await {
+            assert_eq!(anvil_block_rsp.status(), StatusCode::OK);
+            return true;
+        }
+        retries += 1;
+        tokio::time::sleep(time::Duration::from_millis(500)).await;
+    }
+    false
 }
 
 #[cfg(test)]

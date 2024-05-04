@@ -7,6 +7,8 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+dojo-world = { workspace = true }
+alloy = { git = "https://github.com/alloy-rs/alloy", rev = "7128c53"}
 dojo-metrics.workspace = true
 katana-core.workspace = true
 katana-executor.workspace = true
@@ -16,7 +18,7 @@ katana-rpc-api.workspace = true
 katana-rpc-types-builder.workspace = true
 katana-rpc-types.workspace = true
 katana-tasks.workspace = true
-
+tempfile = "3.8.1"
 anyhow.workspace = true
 flate2.workspace = true
 futures.workspace = true
@@ -42,4 +44,5 @@ cairo-lang-starknet-classes.workspace = true
 dojo-test-utils.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-rpc-api = { workspace = true, features = [ "client" ] }
+katana-runner.workspace = true
 url.workspace = true

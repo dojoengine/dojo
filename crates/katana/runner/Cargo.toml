@@ -20,3 +20,28 @@ url.workspace = true
 chrono.workspace = true
 serde.workspace = true
 serde_json = "1.0.111"
+alloy = { git = "https://github.com/alloy-rs/alloy", rev = "7128c53", features = [
+    "contract",
+    "network",
+    "node-bindings",
+    "providers",
+    "provider-http",
+    "provider-ipc",
+    "provider-ws",
+    "rpc-client",
+    "rpc-client-ipc",
+    "rpc-client-ws",
+    "rpc-types-eth",
+    "rpc-types-trace",
+    "signers",
+    "signer-aws",
+    "signer-keystore",
+    "signer-ledger",
+    "signer-mnemonic",
+    "signer-trezor",
+    "signer-wallet",
+    "signer-yubihsm",
+] }
+
+reqwest = "0.12.4"
+hyper = "0.14.20"
