@@ -124,6 +124,35 @@ fn create_struct_complex_array_model() -> Span<felt252> {
     array![1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 0, 0, 123, 1, 'first', 'pending', 7].span()
 }
 
+#[derive(Introspect, Drop, Serde)]
+#[dojo::model]
+struct StructNestedModel {
+    #[key]
+    caller: ContractAddress,
+
+    x: (u8, u16, (u32, ByteArray, u8), Array<(u8, u16)>),
+    y: Array<Array<(u8, (u16, u256))>>
+}
+
+fn create_struct_nested_model() -> Span<felt252> {
+    array![
+        // -- x
+        1,                                  // u8
+        2,                                  // u16
+        3, 1, 'first', 'pending', 7, 9,     // (u32, ByteArra, u8)
+        3, 1, 2, 3, 4, 5, 6,                // Array<(u8, u16)> with 3 items
+
+        // -- y
+        2,                                  // Array<Array<(u8, (u16, u256))>> with 2 items
+        3,                                  // first array item - Array<(u8, (u16, u256))> of 3 items
+        1, 2, 0, 3,                         // first array item - (u8, (u16, u256))
+        4, 5, 0, 6,                         // second array item - (u8, (u16, u256))
+        8, 7, 9, 10,                        // third array item - (u8, (u16, u256))
+        1,                                  // second array item - Array<(u8, (u16, u256))> of 1 item
+        5, 4, 6, 7                          // first array item - (u8, (u16, u256))
+    ].span()
+}
+
 fn get_key_test() -> Span<felt252> {
     array![0x01234].span()
 }
@@ -779,6 +808,22 @@ fn test_set_entity_with_struct_layout_and_byte_array() {
     let keys = get_key_test();
     let values = create_struct_byte_array_model();
     let layout = dojo::model::Model::<StructByteArrayModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+    assert_array(read_values, values);
+}
+
+#[test]
+fn test_set_entity_with_nested_elements() {
+    let world = deploy_world();
+    world.register_model(struct_nested_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_nested_model");
+    let keys = get_key_test();
+    let values = create_struct_nested_model();
+    let layout = dojo::model::Model::<StructNestedModel>::layout();
 
     world.set_entity(selector, keys, values, layout);
 

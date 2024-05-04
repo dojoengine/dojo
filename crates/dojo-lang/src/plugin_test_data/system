@@ -619,22 +619,22 @@ error: Unsupported attribute.
                         ^*****^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:10:21
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:12:21
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:19:21
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:26:21
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
@@ -644,22 +644,22 @@ error: Unsupported attribute.
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:35:13
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:36:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:41:13
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:42:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:44:17
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:45:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[MyFaultyContract]:10:21
+ --> test_src/lib.cairo[MyFaultyContract]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 

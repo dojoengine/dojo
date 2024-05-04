@@ -128,6 +128,38 @@ struct StructWithComplexTuple {
     after: (u8, Vec2, EnumCustom),
 }
 
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedArrays {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<Array<Array<Vec2>>>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedTuples {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, EnumCustom)),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedTuplesAndByteArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, ByteArray)),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedEverything {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, EnumCustom), (Array<(u32, Vec2)>, EnumCustom), (u16,))
+}
+
 #[derive(Copy, Drop, Serde, Introspect)]
 struct GenericStruct<T> {
     t: T,
@@ -256,6 +288,38 @@ struct StructWithComplexTuple {
     player: ContractAddress,
     before: u8,
     after: (u8, Vec2, EnumCustom),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedArrays {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<Array<Array<Vec2>>>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedTuples {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, EnumCustom)),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedTuplesAndByteArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, ByteArray)),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithNestedEverything {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ((u8, u32), (Vec2, EnumCustom), (Array<(u32, Vec2)>, EnumCustom), (u16,))
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
@@ -1269,13 +1333,13 @@ impl StructWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect
 dojo::database::introspect::FieldLayout {
                             selector: selector!("after"),
                             layout: dojo::database::introspect::Layout::Array(
-                                array![
-                                    dojo::database::introspect::FieldLayout {
-                                        selector: '',
-                                        layout: dojo::database::introspect::Introspect::<u32>::layout()
-                                    }
-                                ].span()
-                            )
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u32>::layout()
+                    }
+                ].span()
+            )
                         }
 
                 ].span()
@@ -1382,13 +1446,13 @@ impl StructWithComplexArrayIntrospect<> of dojo::database::introspect::Introspec
 dojo::database::introspect::FieldLayout {
                             selector: selector!("after"),
                             layout: dojo::database::introspect::Layout::Array(
-                                array![
-                                    dojo::database::introspect::FieldLayout {
-                                        selector: '',
-                                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
-                                    }
-                                ].span()
-                            )
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    }
+                ].span()
+            )
                         }
 
                 ].span()
@@ -1445,19 +1509,17 @@ impl StructWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect
 dojo::database::introspect::FieldLayout {
                             selector: selector!("after"),
                             layout: dojo::database::introspect::Layout::Tuple(
-                                array![
-                                dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u8>::layout()
-                        }
-                        ,
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
 dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u256>::layout()
-                        }
-                        
-                                ].span()
-                            )
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u256>::layout()
+                    }
+                ].span()
+            )
                         }
 
                 ].span()
@@ -1533,24 +1595,21 @@ Option::Some(2)
 dojo::database::introspect::FieldLayout {
                             selector: selector!("after"),
                             layout: dojo::database::introspect::Layout::Tuple(
-                                array![
-                                dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u8>::layout()
-                        }
-                        ,
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
 dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<Vec2>::layout()
-                        }
-                        ,
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    },
 dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
-                        }
-                        
-                                ].span()
-                            )
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
+                    }
+                ].span()
+            )
                         }
 
                 ].span()
@@ -1584,6 +1643,416 @@ dojo::database::introspect::serialize_member(
                                 dojo::database::introspect::serialize_member_type(
                                     @dojo::database::introspect::Ty::Primitive('u8')
                                 )
+                            ].span()
+                        ),
+                        attrs: array![].span()
+                    })
+
+            ].span()
+        })
+    }
+}
+impl StructWithNestedArraysCopy of core::traits::Copy::<StructWithNestedArrays>;
+impl StructWithNestedArraysDrop of core::traits::Drop::<StructWithNestedArrays>;
+
+impl StructWithNestedArraysIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedArrays<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    }
+                ].span()
+            )
+                    }
+                ].span()
+            )
+                    }
+                ].span()
+            )
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithNestedArrays',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        attrs: array![].span()
+                    })
+
+            ].span()
+        })
+    }
+}
+impl StructWithNestedTuplesCopy of core::traits::Copy::<StructWithNestedTuples>;
+impl StructWithNestedTuplesDrop of core::traits::Drop::<StructWithNestedTuples>;
+
+impl StructWithNestedTuplesIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedTuples<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+dojo::database::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(3)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u32>::layout()
+                    }
+                ].span()
+            )
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
+                    }
+                ].span()
+            )
+                    }
+                ].span()
+            )
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithNestedTuples',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Ty::Tuple(
+                            array![
+                                
+                            ].span()
+                        ),
+                        attrs: array![].span()
+                    })
+
+            ].span()
+        })
+    }
+}
+impl StructWithNestedTuplesAndByteArrayCopy of core::traits::Copy::<StructWithNestedTuplesAndByteArray>;
+impl StructWithNestedTuplesAndByteArrayDrop of core::traits::Drop::<StructWithNestedTuplesAndByteArray>;
+
+impl StructWithNestedTuplesAndByteArrayIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedTuplesAndByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u32>::layout()
+                    }
+                ].span()
+            )
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
+                    }
+                ].span()
+            )
+                    }
+                ].span()
+            )
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithNestedTuplesAndByteArray',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Ty::Tuple(
+                            array![
+                                
+                            ].span()
+                        ),
+                        attrs: array![].span()
+                    })
+
+            ].span()
+        })
+    }
+}
+impl StructWithNestedEverythingCopy of core::traits::Copy::<StructWithNestedEverything>;
+impl StructWithNestedEverythingDrop of core::traits::Drop::<StructWithNestedEverything>;
+
+impl StructWithNestedEverythingIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedEverything<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u32>::layout()
+                    }
+                ].span()
+            )
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
+                    }
+                ].span()
+            )
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u32>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    }
+                ].span()
+            )
+                    }
+                ].span()
+            )
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
+                    }
+                ].span()
+            )
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u16>::layout()
+                    }
+                ].span()
+            )
+                    }
+                ].span()
+            )
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithNestedEverything',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Ty::Tuple(
+                            array![
+                                
                             ].span()
                         ),
                         attrs: array![].span()
@@ -1649,13 +2118,3 @@ error: Dynamic arrays are not supported.
  --> test_src/lib.cairo:29:9
     Left: Array<u32>,
         ^**********^
-
-error: Only primitive types are supported inside tuples.
- --> test_src/lib.cairo:122:5
-    after: (u8, Vec2, EnumCustom),
-    ^***************************^
-
-error: Only primitive types are supported inside tuples.
- --> test_src/lib.cairo:122:5
-    after: (u8, Vec2, EnumCustom),
-    ^***************************^

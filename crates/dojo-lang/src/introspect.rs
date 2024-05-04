@@ -38,20 +38,137 @@ fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
     ])
 }
 
-fn is_byte_array(ty: String) -> bool {
+fn is_byte_array(ty: &String) -> bool {
     ty.eq("ByteArray")
 }
 
-fn is_array_type(ty: String) -> bool {
+fn is_array(ty: &String) -> bool {
     ty.starts_with("Array<") || ty.starts_with("Span<")
 }
 
-fn get_array_item_type(ty: String) -> String {
-    // ByteArray case is handled separately.
+fn is_tuple(ty: &String) -> bool {
+    ty.starts_with("(")
+}
+
+fn get_array_item_type(ty: &String) -> String {
     if ty.starts_with("Array<") {
-        ty.replace("Array<", "").strip_suffix('>').unwrap().to_string()
+        ty.strip_prefix("Array<").unwrap().strip_suffix('>').unwrap().to_string()
     } else {
-        ty.replace("Span<", "").strip_suffix('>').unwrap().to_string()
+        ty.strip_prefix("Span<").unwrap().strip_suffix('>').unwrap().to_string()
+    }
+}
+
+// split a tuple in array of items (nested tuples are not splitted).
+// example (u8, (u16, u32), u128) -> ["u8", "(u16, u32)", "u128"]
+fn get_tuple_item_types(ty: &String) -> Vec<String> {
+    let tuple_str =
+        ty.strip_prefix("(").unwrap().strip_suffix(")").unwrap().to_string().replace(" ", "");
+    let mut items = vec![];
+    let mut current_item = "".to_string();
+    let mut level = 0;
+
+    for c in tuple_str.chars() {
+        if c == ',' {
+            if level > 0 {
+                current_item.push(c);
+            }
+
+            if level == 0 && current_item.len() > 0 {
+                items.push(current_item);
+                current_item = "".to_string();
+            }
+        } else {
+            current_item.push(c);
+
+            if c == '(' {
+                level += 1;
+            }
+            if c == ')' {
+                level -= 1;
+            }
+        }
+    }
+
+    if current_item.len() > 0 {
+        items.push(current_item);
+    }
+
+    items
+}
+
+fn build_array_layout_from_type(item_type: &String) -> String {
+    let item_type = get_array_item_type(item_type);
+    format!(
+        "dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {{
+                        selector: '',
+                        layout: {}
+                    }}
+                ].span()
+            )",
+        build_item_layout_from_type(&item_type)
+    )
+}
+
+fn compute_tuple_size(
+    item_type: &String,
+    precomputed_size: &mut usize,
+    introspected_size: &mut Vec<String>,
+) -> bool {
+    let primitive_sizes = primitive_type_introspection();
+    let items = get_tuple_item_types(item_type);
+
+    for item in items {
+        if is_array(&item) || is_byte_array(&item) {
+            return true;
+        } else if is_tuple(&item) {
+            let is_dynamic = compute_tuple_size(&item, precomputed_size, introspected_size);
+            if is_dynamic {
+                return true;
+            }
+        } else if let Some(primitive_ty) = primitive_sizes.get(&item) {
+            *precomputed_size += primitive_ty.0;
+        } else {
+            introspected_size
+                .push(format!("dojo::database::introspect::Introspect::<{}>::size()", item));
+        }
+    }
+
+    return false;
+}
+
+fn build_tuple_layout_from_type(item_type: &String) -> String {
+    let tuple_items = get_tuple_item_types(item_type)
+        .iter()
+        .map(|x| {
+            format!(
+                "dojo::database::introspect::FieldLayout {{
+                        selector: '',
+                        layout: {}
+                    }}",
+                build_item_layout_from_type(&x)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n");
+    format!(
+        "dojo::database::introspect::Layout::Tuple(
+                array![
+                    {}
+                ].span()
+            )",
+        tuple_items
+    )
+}
+
+fn build_item_layout_from_type(item_type: &String) -> String {
+    if is_array(item_type) {
+        build_array_layout_from_type(item_type)
+    } else if is_tuple(&item_type) {
+        build_tuple_layout_from_type(item_type)
+    } else {
+        format!("dojo::database::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
@@ -61,11 +178,7 @@ fn get_array_item_type(ty: String) -> String {
 /// * struct_ast: The AST of the struct.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_introspect_struct(
-    db: &dyn SyntaxGroup,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-    struct_ast: ItemStruct,
-) -> RewriteNode {
+pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {
     let name = struct_ast.name(db).text(db).into();
 
     let mut member_types: Vec<String> = vec![];
@@ -94,10 +207,10 @@ pub fn handle_introspect_struct(
             }})",
                     attrs.join(","),
                 ));
-            } else if is_byte_array(ty.clone()) {
+            } else if is_byte_array(&ty) {
                 // TODO for Ty
-            } else if is_array_type(ty.clone()) {
-                let item_type = get_array_item_type(ty);
+            } else if is_array(&ty) {
+                let item_type = get_array_item_type(&ty);
 
                 member_types.push(format!(
                     "dojo::database::introspect::serialize_member(
@@ -123,12 +236,7 @@ pub fn handle_introspect_struct(
                                 )"
                             ))
                         } else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: member.stable_ptr().0,
-                                message: "Only primitive types are supported inside tuples."
-                                    .to_string(),
-                                severity: Severity::Error,
-                            });
+                            // No need to handle other types as the Ty will be removed soon
                             None
                         }
                     })
@@ -241,7 +349,7 @@ pub fn handle_introspect_enum(
             let ty_name = type_path.as_syntax_node().get_text(db);
             let is_primitive = primitive_sizes.get(&ty_name).is_some();
 
-            if is_array_type(ty_name.clone()) {
+            if is_array(&ty_name) {
                 diagnostics.push(PluginDiagnostic {
                     stable_ptr: types_tuple.stable_ptr().0,
                     message: "Dynamic arrays are not supported.".to_string(),
@@ -336,13 +444,11 @@ fn handle_introspect_internal(
     let primitive_sizes = primitive_type_introspection();
     let mut layout = match composite_type {
         CompositeType::Enum => {
-            vec![
-                "dojo::database::introspect::FieldLayout {
+            vec!["dojo::database::introspect::FieldLayout {
                     selector: '',
                     layout: dojo::database::introspect::Introspect::<u8>::layout()
                 }"
-                .to_string(),
-            ]
+            .to_string()]
         }
         CompositeType::Struct => vec![],
     };
@@ -432,94 +538,56 @@ fn handle_introspect_internal(
             let item_type = m.ty.strip_prefix("dyn_array__").unwrap();
             dynamic_size = true;
 
+            let array_layout = format!(
+                "dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {{
+                        selector: '',
+                        layout: {}
+                    }}
+                ].span()
+            )",
+                build_item_layout_from_type(&item_type.to_string())
+            );
+
             match composite_type {
                 CompositeType::Enum => {
-                    layout.push(format!(
-                        "dojo::database::introspect::Layout::Array(
-                            array![
-                                dojo::database::introspect::FieldLayout {{
-                                    selector: '',
-                                    layout: dojo::database::introspect::Introspect::<{}>::layout()
-                                }}
-                            ].span()
-                        )",
-                        item_type
-                    ));
+                    layout.push(array_layout);
                 }
                 CompositeType::Struct => {
                     layout.push(format!(
                         "dojo::database::introspect::FieldLayout {{
                             selector: selector!(\"{}\"),
-                            layout: dojo::database::introspect::Layout::Array(
-                                array![
-                                    dojo::database::introspect::FieldLayout {{
-                                        selector: '',
-                                        layout: \
-                         dojo::database::introspect::Introspect::<{}>::layout()
-                                    }}
-                                ].span()
-                            )
+                            layout: {}
                         }}",
-                        m.name, item_type
+                        m.name, array_layout
                     ));
                 }
             }
-        } else if m.ty.starts_with('(') {
-            // this tuple contains primitive types only (checked before)
-            // so we can just split the tuple using the coma separator
-            let tuple_types =
-                m.ty.strip_prefix('(')
-                    .unwrap()
-                    .strip_suffix(')')
-                    .unwrap()
-                    .split(',')
-                    .collect::<Vec<_>>();
+        } else if is_tuple(&m.ty) {
+            let tuple_layout = build_item_layout_from_type(&m.ty);
 
-            let tuple_types = tuple_types
-                .iter()
-                .map(|t| {
-                    let type_name = t.trim().to_string();
+            let mut tuple_precomputed_size = 0;
+            let mut introspected_size = vec![];
+            let is_dynamic =
+                compute_tuple_size(&m.ty, &mut tuple_precomputed_size, &mut introspected_size);
 
-                    if let Some(p_ty) = primitive_sizes.get(&type_name) {
-                        size_precompute += p_ty.0;
-                    } else {
-                        size.push(format!(
-                            "dojo::database::introspect::Introspect::<{}>::size()",
-                            type_name
-                        ));
-                    }
-
-                    format!(
-                        "dojo::database::introspect::FieldLayout {{
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<{type_name}>::layout()
-                        }}
-                        "
-                    )
-                })
-                .collect::<Vec<_>>();
+            if is_dynamic {
+                dynamic_size = true;
+            } else {
+                size_precompute += tuple_precomputed_size;
+                size.extend(introspected_size);
+            }
 
             match composite_type {
-                CompositeType::Enum => layout.push(format!(
-                    "dojo::database::introspect::Layout::Tuple(
-                            array![
-                            {}
-                            ].span()
-                        )",
-                    tuple_types.join(",\n")
-                )),
+                CompositeType::Enum => layout.push(tuple_layout),
                 CompositeType::Struct => {
                     layout.push(format!(
                         "dojo::database::introspect::FieldLayout {{
                             selector: selector!(\"{}\"),
-                            layout: dojo::database::introspect::Layout::Tuple(
-                                array![
-                                {}
-                                ].span()
-                            )
+                            layout: {}
                         }}",
-                        m.name,
-                        tuple_types.join(",\n")
+                        m.name, tuple_layout
                     ));
                 }
             }
@@ -563,10 +631,7 @@ fn handle_introspect_internal(
         }
 
         match size.len() {
-            0 => {
-                // TODO: to verify
-                "Option::None".to_string()
-            }
+            0 => "Option::None".to_string(),
             1 => size[0].clone(),
             _ => {
                 format!(
@@ -635,4 +700,48 @@ impl $name$Introspect<$generics$> of \
             ("ty".to_string(), RewriteNode::Text(type_ty)),
         ]),
     )
+}
+
+#[test]
+fn test_get_tuple_item_types() {
+    fn assert_array(got: Vec<String>, expected: Vec<String>) {
+        fn format_array(arr: Vec<String>) -> String {
+            format!("[{}]", arr.join(", "))
+        }
+
+        assert!(
+            got.len() == expected.len(),
+            "arrays have not the same length (got: {}, expected: {})",
+            format_array(got),
+            format_array(expected)
+        );
+
+        for i in 0..got.len() {
+            assert!(
+                got[i] == expected[i],
+                "unexpected array item: (got: {} expected: {})",
+                got[i],
+                expected[i]
+            )
+        }
+    }
+
+    let test_cases = vec![
+        ("(u8,)", vec!["u8"]),
+        ("(u8, u16, u32)", vec!["u8", "u16", "u32"]),
+        ("(u8, (u16,), u32)", vec!["u8", "(u16,)", "u32"]),
+        ("(u8, (u16, (u8, u16)))", vec!["u8", "(u16,(u8,u16))"]),
+        ("(Array<(Points, Damage)>, ((u16,),)))", vec!["Array<(Points,Damage)>", "((u16,),))"]),
+        (
+            "(u8, (u16, (u8, u16), Array<(Points, Damage)>), ((u16,),)))",
+            vec!["u8", "(u16,(u8,u16),Array<(Points,Damage)>)", "((u16,),))"],
+        ),
+    ];
+
+    for (value, expected) in test_cases {
+        assert_array(
+            get_tuple_item_types(&value.to_string()),
+            expected.iter().map(|x| x.to_string()).collect::<Vec<_>>(),
+        )
+    }
 }

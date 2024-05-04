@@ -144,18 +144,6 @@ impl Introspect_u32 of Introspect<u32> {
     }
 }
 
-impl Introspect_usize of Introspect<usize> {
-    fn size() -> Option<usize> {
-        Introspect_u32::size()
-    }
-    fn layout() -> Layout {
-        Introspect_u32::layout()
-    }
-    fn ty() -> Ty {
-        Ty::Primitive('usize')
-    }
-}
-
 impl Introspect_u64 of Introspect<u64> {
     fn size() -> Option<usize> {
         Option::Some(1)

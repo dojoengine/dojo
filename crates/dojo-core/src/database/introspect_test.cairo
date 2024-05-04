@@ -12,15 +12,27 @@ struct WithArray {
 }
 
 #[derive(Drop, Introspect)]
-struct WithArrayWithFixedSizeItem {
+struct WithByteArray {
     value: u32,
-    arr: Array<Base>
+    arr: ByteArray
 }
 
 #[derive(Drop, Introspect)]
-struct WithArrayWithDynamicSizeItem {
+struct WithTuple {
     value: u32,
-    arr: Array<WithArray>
+    arr: (u8, u16, u32)
+}
+
+#[derive(Drop, Introspect)]
+struct WithNestedTuple {
+    value: u32,
+    arr: (u8, (u16, u128, u256), u32)
+}
+
+#[derive(Drop, Introspect)]
+struct WithNestedArrayInTuple {
+    value: u32,
+    arr: (u8, (u16, Array<u128>, u256), u32)
 }
 
 #[derive(Drop, Introspect)]
@@ -35,8 +47,38 @@ fn test_generic_introspect() {
 }
 
 #[test]
-fn test_base() {
+fn test_size_basic_struct() {
     let size = Introspect::<Base>::size();
     assert!(size.is_some());
     assert!(size.unwrap() == 1);
+}
+
+#[test]
+fn test_size_with_array() {
+    assert!(Introspect::<WithArray>::size().is_none());
+}
+
+#[test]
+fn test_size_with_byte_array() {
+    assert!(Introspect::<WithByteArray>::size().is_none());
+}
+
+#[test]
+fn test_size_with_tuple() {
+    let size = Introspect::<WithTuple>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 4);
+}
+
+#[test]
+fn test_size_with_nested_tuple() {
+    let size = Introspect::<WithNestedTuple>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 7);
+}
+
+#[test]
+fn test_size_with_nested_array_in_tuple() {
+    let size = Introspect::<WithNestedArrayInTuple>::size();
+    assert!(size.is_none());
 }
