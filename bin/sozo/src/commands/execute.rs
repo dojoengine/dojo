@@ -62,8 +62,15 @@ impl ExecuteArgs {
                 "Executing Execute command."
             );
 
-            execute::execute(self.contract, self.entrypoint, self.calldata, &world, &tx_config)
-                .await
+            execute::execute(
+                &config.ui(),
+                self.contract,
+                self.entrypoint,
+                self.calldata,
+                &world,
+                &tx_config,
+            )
+            .await
         })
     }
 }

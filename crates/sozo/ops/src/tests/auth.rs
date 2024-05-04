@@ -1,6 +1,7 @@
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
+use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::utils::cairo_short_string_to_felt;
 
@@ -38,6 +39,7 @@ async fn auth_grant_writer_ok() {
     };
 
     auth::grant_writer(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
@@ -77,6 +79,7 @@ async fn auth_revoke_writer_ok() {
 
     // Here we are granting the permission to write
     auth::grant_writer(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves_mc.clone(), position_mc.clone()],
         TxnConfig { wait: true, ..Default::default() },
@@ -89,6 +92,7 @@ async fn auth_revoke_writer_ok() {
 
     // Here we are revoking the access again.
     auth::revoke_writer(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
@@ -128,6 +132,7 @@ async fn auth_grant_owner_ok() {
     };
 
     auth::grant_owner(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves, position],
         TxnConfig { wait: true, ..Default::default() },
@@ -166,6 +171,7 @@ async fn auth_revoke_owner_ok() {
     };
 
     auth::grant_owner(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves.clone(), position.clone()],
         TxnConfig { wait: true, ..Default::default() },
@@ -175,6 +181,7 @@ async fn auth_revoke_owner_ok() {
 
     assert!(execute_spawn(&world_2).await);
     auth::revoke_owner(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves, position],
         TxnConfig { wait: true, ..Default::default() },
@@ -196,6 +203,7 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
     let system_spawn = "spawn".to_string();
 
     execute::execute(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         contract_actions,
         system_spawn,
         vec![],

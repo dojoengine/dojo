@@ -2,42 +2,42 @@
 resolver = "2"
 
 members = [
-  "bin/dojo-language-server",
-  "bin/katana",
-  "bin/saya",
-  "bin/sozo",
-  "bin/torii",
-  "crates/benches",
-  "crates/common",
-  "crates/dojo-bindgen",
-  "crates/dojo-core",
-  "crates/dojo-lang",
-  "crates/dojo-test-utils",
-  "crates/dojo-types",
-  "crates/dojo-world",
-  "crates/dojo-world/abigen",
-  "crates/katana/core",
-  "crates/katana/executor",
-  "crates/katana/primitives",
-  "crates/katana/rpc/rpc",
-  "crates/katana/rpc/rpc-api",
-  "crates/katana/rpc/rpc-types",
-  "crates/katana/rpc/rpc-types-builder",
-  "crates/katana/runner",
-  "crates/katana/runner/runner-macro",
-  "crates/katana/storage/codecs",
-  "crates/katana/storage/codecs/derive",
-  "crates/katana/storage/db",
-  "crates/katana/storage/provider",
-  "crates/katana/tasks",
-  "crates/metrics",
-  "crates/saya/core",
-  "crates/saya/provider",
-  "crates/sozo/signers",
-  "crates/torii/client",
-  "crates/torii/server",
-  "crates/torii/types-test",
-  "examples/spawn-and-move",
+    "bin/dojo-language-server",
+    "bin/katana",
+    "bin/saya",
+    "bin/sozo",
+    "bin/torii",
+    "crates/benches",
+    "crates/common",
+    "crates/dojo-bindgen",
+    "crates/dojo-core",
+    "crates/dojo-lang",
+    "crates/dojo-test-utils",
+    "crates/dojo-types",
+    "crates/dojo-world",
+    "crates/dojo-world/abigen",
+    "crates/katana/core",
+    "crates/katana/executor",
+    "crates/katana/primitives",
+    "crates/katana/rpc/rpc",
+    "crates/katana/rpc/rpc-api",
+    "crates/katana/rpc/rpc-types",
+    "crates/katana/rpc/rpc-types-builder",
+    "crates/katana/runner",
+    "crates/katana/runner/runner-macro",
+    "crates/katana/storage/codecs",
+    "crates/katana/storage/codecs/derive",
+    "crates/katana/storage/db",
+    "crates/katana/storage/provider",
+    "crates/katana/tasks",
+    "crates/metrics",
+    "crates/saya/core",
+    "crates/saya/provider",
+    "crates/sozo/signers",
+    "crates/torii/client",
+    "crates/torii/server",
+    "crates/torii/types-test",
+    "examples/spawn-and-move",
 ]
 
 [workspace.package]
@@ -54,6 +54,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.5", features = [ "abigen-rs" ] }
 common = { path = "crates/common" }
 
 # metrics
@@ -148,6 +149,7 @@ parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"
 rayon = "1.8.0"
 regex = "1.10.3"
+reqwest = "0.12.4"
 rpassword = "7.2.0"
 salsa = "0.16.1"
 scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.6.4" }
@@ -171,7 +173,6 @@ toml = "0.8.12"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 url = { version = "2.4.0", features = [ "serde" ] }
-reqwest = "0.12.4"
 
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
@@ -203,7 +204,7 @@ cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381"
 alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
 alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
 alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce"}
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
 alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }
 alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "5a5f29eb7d92a194bb2c67b1f879e84b2c6716ce" }

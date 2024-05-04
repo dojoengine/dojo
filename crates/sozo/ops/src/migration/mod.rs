@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use anyhow::{anyhow, Result};
 use dojo_lang::compiler::MANIFESTS_DIR;
+use dojo_world::contracts::WorldContract;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
@@ -8,10 +11,12 @@ use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
 
+mod auto_auth;
 mod migrate;
 mod ui;
 mod utils;
 
+pub use self::auto_auth::auto_authorize;
 use self::migrate::update_manifests_and_abis;
 pub use self::migrate::{
     apply_diff, execute_strategy, prepare_migration, print_strategy, upload_metadata,
@@ -43,7 +48,7 @@ pub async fn migrate<P, S>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
     rpc_url: String,
-    account: &SingleOwnerAccount<P, S>,
+    account: SingleOwnerAccount<P, S>,
     name: &str,
     dry_run: bool,
     txn_config: TxnConfig,
@@ -66,7 +71,7 @@ where
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
-        utils::load_world_manifests(&profile_dir, account, world_address, &ui).await.map_err(
+        utils::load_world_manifests(&profile_dir, &account, world_address, &ui).await.map_err(
             |e| {
                 ui.error(e.to_string());
                 anyhow!(
@@ -107,7 +112,7 @@ where
         .await?;
     } else {
         // Migrate according to the diff.
-        let migration_output = match apply_diff(ws, account, txn_config, &mut strategy).await {
+        let migration_output = match apply_diff(ws, &account, txn_config, &mut strategy).await {
             Ok(migration_output) => Some(migration_output),
             Err(e) => {
                 update_manifests_and_abis(
@@ -137,9 +142,21 @@ where
         )
         .await?;
 
+        let account = Arc::new(account);
+        let world = WorldContract::new(world_address, account.clone());
         if let Some(migration_output) = migration_output {
+            match auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output).await
+            {
+                Ok(()) => {
+                    ui.print_sub("Auto authorize completed successfully");
+                }
+                Err(e) => {
+                    ui.print_sub(format!("Failed to auto authorize with error: {e}"));
+                }
+            };
+
             if !ws.config().offline() {
-                upload_metadata(ws, account, migration_output, txn_config).await?;
+                upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
             }
         }
     };

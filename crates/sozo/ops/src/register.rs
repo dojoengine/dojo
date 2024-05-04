@@ -71,8 +71,14 @@ where
         .await
         .with_context(|| "Failed to send transaction")?;
 
-    handle_transaction_result(&world.account.provider(), res, txn_config.wait, txn_config.receipt)
-        .await?;
+    handle_transaction_result(
+        &config.ui(),
+        &world.account.provider(),
+        res,
+        txn_config.wait,
+        txn_config.receipt,
+    )
+    .await?;
 
     Ok(())
 }

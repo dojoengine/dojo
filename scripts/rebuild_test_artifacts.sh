@@ -9,10 +9,15 @@
 
 # Cleanup
 rm -rf examples/spawn-and-move/target
-rm -rf examples/spawn-and-move/manifests
+rm -rf examples/spawn-and-move/manifests/dev/abis
+rm -rf examples/spawn-and-move/manifests/dev/base
+rm -rf examples/spawn-and-move/manifests/dev/manifest.json
+rm -rf examples/spawn-and-move/manifests/dev/manifest.toml
 
 rm -rf crates/torii/types-test/target
 rm -rf crates/torii/types-test/manifests
+
+cargo run --bin dojo-world-abigen
 
 # Fix the cairo test to re-generate the code that is expected to be tested.
 CAIRO_FIX_TESTS=1 cargo test --package dojo-lang plugin && \

@@ -1,10 +1,13 @@
 use std::str;
 
+use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
-use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::{BaseManifest, DeploymentManifest, WORLD_CONTRACT_NAME};
+use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::manifest::{
+    BaseManifest, DeploymentManifest, OverlayManifest, WORLD_CONTRACT_NAME,
+};
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,
     IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
@@ -16,14 +19,16 @@ use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
+};
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 
 use super::setup;
-use crate::migration::{execute_strategy, upload_metadata};
+use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -206,6 +211,63 @@ async fn migrate_with_metadata() {
             &dojo_metadata,
         )
         .await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn migrate_with_auto_authorize() {
+    let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
+
+    let migration = setup::setup_migration(&config).unwrap();
+
+    let manifest_base = config.manifest_path().parent().unwrap();
+    let mut manifest =
+        BaseManifest::load_from_path(&manifest_base.join(MANIFESTS_DIR).join("dev").join(BASE_DIR))
+            .unwrap();
+
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &manifest_base.join(MANIFESTS_DIR).join("dev").join(OVERLAYS_DIR),
+    )
+    .unwrap();
+
+    manifest.merge(overlay_manifest);
+
+    let sequencer = KatanaRunner::new().expect("Fail to start runner");
+
+    let mut account = sequencer.account(0);
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+    let txn_config = TxnConfig {
+        // make sure to test the assumption after transaction has been confirmed
+        wait: true,
+        ..Default::default()
+    };
+
+    let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
+
+    let world_address = migration.world_address().expect("must be present");
+    let world = WorldContract::new(world_address, account);
+
+    let res = auto_authorize(&ws, &world, &txn_config, &manifest, &output).await;
+    assert!(res.is_ok());
+
+    let provider = sequencer.provider();
+    let world_reader = WorldContractReader::new(output.world_address, &provider);
+
+    // check contract metadata
+    for c in migration.contracts {
+        let contract_address =
+            get_contract_address_from_reader(&world_reader, c.diff.name.clone()).await.unwrap();
+
+        let contract = manifest.contracts.iter().find(|a| a.name == c.diff.name).unwrap();
+
+        for model in &contract.inner.writes {
+            let model = cairo_short_string_to_felt(model).unwrap();
+            let contract_address = ContractAddress(contract_address);
+            let is_writer = world_reader.is_writer(&model, &contract_address).call().await.unwrap();
+            assert!(is_writer);
+        }
     }
 }
 
