@@ -7723,6 +7723,7 @@ dependencies = [
  "alloy",
  "anyhow",
  "assert_matches",
+ "cainome",
  "cairo-lang-starknet",
  "cairo-lang-starknet-classes",
  "dojo-metrics",

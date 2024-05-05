@@ -5,6 +5,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use cainome::cairo_serde::EthAddress;
+use cainome::rs::abigen;
+
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use dojo_world::utils::TransactionWaiter;
 use katana_core::sequencer::SequencerConfig;
@@ -200,6 +203,8 @@ sol!(
     "tests/test_data/solidity/Contract1Compiled.json"
 );
 
+abigen!(CairoMessagingContract, "/Users/fabrobles/Fab/dojo_fork/crates/katana/rpc/rpc/tests/test_data/cairo_l1_msg_contract.json");
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_messaging_l1_l2() {
     // Prepare Anvil + Messaging Contracts
@@ -296,6 +301,7 @@ async fn test_messaging_l1_l2() {
         felt!("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
     );
 
+    // Messaging between L1 -> L2
     let builder = contract_c1
         .sendMessage(
             U256::from_str("0x033d18fcfd3ae75ae4e8a275ce649220ed718b68dc53425b388fedcdbeab5097")
@@ -307,7 +313,6 @@ async fn test_messaging_l1_l2() {
         .gas(12000000)
         .value(Uint::from(1));
 
-    // Messaging between L1 -> L2
     let receipt = builder
         .send()
         .await
@@ -343,4 +348,37 @@ async fn test_messaging_l1_l2() {
             panic!("Error, No L1handler transaction")
         }
     }
+
+    // Messaging between L2 -> L1
+    let cairo_messaging_contract = CairoMessagingContract::new(contract_address, &starknet_account);
+    let tx = cairo_messaging_contract
+        .send_message_value(
+            &EthAddress::from(
+                FieldElement::from_str(&contract_c1.address().to_string().as_str()).unwrap(),
+            ),
+            &FieldElement::from(2u8),
+        )
+        .send()
+        .await
+        .expect("Call to send_message_value failed");
+
+    TransactionWaiter::new(tx.transaction_hash, starknet_account.provider())
+        .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
+        .await
+        .expect("Invalid tx receipt");
+
+    let builder = contract_c1
+        .consumeMessage(
+            U256::from_str(contract_address.to_string().as_str()).unwrap(),
+            vec![U256::from(2)],
+        )
+        .value(Uint::from(1))
+        .gas(12000000)
+        .nonce(4);
+
+    //Wait for the message to reach L1
+    tokio::time::sleep(Duration::from_millis(8000)).await;
+
+    let tx_receipt = builder.send().await.unwrap().get_receipt().await.unwrap();
+    assert!(tx_receipt.status());
 }
