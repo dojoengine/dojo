@@ -694,11 +694,17 @@ where
     format!("deploy {}", contract.diff.name)
 }
 
-pub async fn print_strategy<P>(ui: &Ui, provider: &P, strategy: &MigrationStrategy)
+pub async fn print_strategy<P>(ui: &Ui, provider: &P, strategy: &MigrationStrategy, world_address: FieldElement, contract: &ContractMigration, base_class_hash: FieldElement)
 where
     P: Provider + Sync + Send + 'static,
 {
+
+    let contract_address =
+        get_contract_address(contract.salt, base_class_hash, &[], world_address);
+    
     ui.print("\n📋 Migration Strategy\n");
+    ui.print_sub(format!("World address: {:#x})\n", world_address));
+    ui.print_sub(format!("Contract address: {:#x})\n", contract_address));
 
     if let Some(base) = &strategy.base {
         ui.print_header("# Base Contract");

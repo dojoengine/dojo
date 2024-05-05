@@ -5,6 +5,7 @@ use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::contracts::WorldContract;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
+use dojo_world::migration::contract::ContractMigration;
 use scarb::core::Workspace;
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::FieldElement;
@@ -52,6 +53,8 @@ pub async fn migrate<P, S>(
     name: &str,
     dry_run: bool,
     txn_config: TxnConfig,
+    base_class_hash: FieldElement,
+    contract: &ContractMigration
 ) -> Result<()>
 where
     P: Provider + Sync + Send + 'static,
@@ -97,7 +100,7 @@ where
     let world_address = strategy.world_address().expect("world address must exist");
 
     if dry_run {
-        print_strategy(&ui, account.provider(), &strategy).await;
+        print_strategy(&ui, account.provider(), &strategy, world_address, contract, base_class_hash).await;
 
         update_manifests_and_abis(
             ws,
