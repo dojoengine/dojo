@@ -5,8 +5,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use colored::Colorize;
 use colored_json::{ColorMode, Output};
-use dojo_world::migration::TxnAction;
-use dojo_world::migration::TxnConfig;
+use dojo_world::migration::{TxnAction, TxnConfig};
 use dojo_world::utils::TransactionWaiter;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -295,7 +294,7 @@ pub async fn deploy(
             .await?;
 
             write_account_to_file(file, account)?;
-            return Ok(());
+            Ok(())
         }
         TxnAction::Estimate => {
             let estimated_fee = account_deployment
@@ -310,15 +309,16 @@ pub async fn deploy(
                 .overall_fee;
 
             println!("{} ETH", format!("{}", estimated_fee.to_big_decimal(18)).bright_yellow());
-            return Ok(());
+            Ok(())
         }
         TxnAction::Simulate => {
             simulate_account_deploy(&account_deployment).await?;
-            return Ok(());
+            Ok(())
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn do_account_deploy(
     max_fee: MaxFeeType,
     txn_config: TxnConfig,
