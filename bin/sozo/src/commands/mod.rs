@@ -16,6 +16,7 @@ pub(crate) mod keystore;
 pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
+pub(crate) mod print_env;
 pub(crate) mod register;
 pub(crate) mod test;
 
@@ -32,6 +33,7 @@ use init::InitArgs;
 use keystore::KeystoreArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
+use print_env::PrintEnvArgs;
 use register::RegisterArgs;
 use test::TestArgs;
 
@@ -68,6 +70,8 @@ pub enum Commands {
     Auth(AuthArgs),
     #[command(about = "Generate shell completion file for specified shell")]
     Completions(CompletionsArgs),
+    #[command(about = "Print information about current")]
+    PrintEnv(PrintEnvArgs),
 }
 
 pub fn run(command: Commands, config: &Config) -> Result<()> {
@@ -86,6 +90,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Model(args) => args.run(config),
         Commands::Register(args) => args.run(config),
         Commands::Events(args) => args.run(config),
+        Commands::PrintEnv(args) => args.run(config),
         Commands::Completions(args) => args.run(),
     }
 }

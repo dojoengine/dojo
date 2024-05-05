@@ -41,26 +41,16 @@ pub struct SignerOptions {
 
 impl SignerOptions {
     pub fn signer(&self, env_metadata: Option<&Environment>, no_wait: bool) -> Result<LocalWallet> {
-        if let Some(private_key) =
-            self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
-        {
+        if let Some(private_key) = self.private_key(env_metadata) {
             trace!(private_key, "Signing using private key.");
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-                FieldElement::from_str(private_key)?,
+                FieldElement::from_str(&private_key)?,
             )));
         }
 
-        if let Some(path) = &self
-            .keystore_path
-            .as_deref()
-            .or_else(|| env_metadata.and_then(|env| env.keystore_path()))
-        {
+        if let Some(path) = self.keystore_path(env_metadata) {
             let password = {
-                if let Some(password) = self
-                    .keystore_password
-                    .as_deref()
-                    .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
-                {
+                if let Some(password) = self.keystore_password(env_metadata) {
                     password.to_owned()
                 } else if no_wait {
                     return Err(anyhow!("Could not find password. Please specify the password."));
@@ -77,6 +67,30 @@ impl SignerOptions {
             "Could not find private key. Please specify the private key or path to the keystore \
              file."
         ))
+    }
+
+    pub fn private_key(&self, env_metadata: Option<&Environment>) -> Option<String> {
+        if let Some(s) = &self.private_key {
+            return Some(s.to_owned());
+        } else {
+            env_metadata.and_then(|env| env.private_key().map(|s| s.to_string()))
+        }
+    }
+
+    pub fn keystore_path(&self, env_metadata: Option<&Environment>) -> Option<String> {
+        if let Some(s) = &self.keystore_path {
+            return Some(s.to_owned());
+        } else {
+            env_metadata.and_then(|env| env.keystore_path().map(|s| s.to_string()))
+        }
+    }
+
+    pub fn keystore_password(&self, env_metadata: Option<&Environment>) -> Option<String> {
+        if let Some(s) = &self.keystore_password {
+            return Some(s.to_owned());
+        } else {
+            env_metadata.and_then(|env| env.keystore_password().map(|s| s.to_string()))
+        }
     }
 }
 
