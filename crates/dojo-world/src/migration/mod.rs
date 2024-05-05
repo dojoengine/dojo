@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
@@ -26,6 +26,13 @@ pub mod strategy;
 pub mod world;
 
 pub type DeclareOutput = DeclareTransactionResult;
+
+// TODO: this was taken from the current network limit
+// https://docs.starknet.io/documentation/tools/limits_and_triggers/.
+// This constant is also used into `katana-primitives`, which common crate
+// should expose this value to have it configurable.
+// Or should we just accept any size here?
+pub const MAX_BYTECODE_SIZE: usize = 81_290;
 
 #[derive(Clone, Debug)]
 pub struct DeployOutput {
@@ -113,6 +120,12 @@ pub enum TxnAction {
     },
     Estimate,
     Simulate,
+}
+
+impl TxnConfig {
+    pub fn init_wait() -> Self {
+        Self { wait: true, ..Default::default() }
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -376,7 +389,8 @@ pub fn read_class(artifact_path: &PathBuf) -> Result<SierraClass> {
 fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
-    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)?;
+    let casm_contract =
+        CasmContractClass::from_contract_class(casm_contract_class, true, MAX_BYTECODE_SIZE)?;
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)

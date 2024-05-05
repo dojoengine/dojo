@@ -12,6 +12,7 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::LocalWallet;
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -53,11 +54,13 @@ pub enum MigrateCommand {
 
 impl MigrateArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        trace!(command=?self.command, "Executing Migrate command.");
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
         let env_metadata = if config.manifest_path().exists() {
             dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
+            trace!("Manifest path does not exist.");
             None
         };
 
@@ -82,7 +85,7 @@ impl MigrateArgs {
                     &ws,
                     world_address,
                     rpc_url,
-                    &account,
+                    account,
                     &name,
                     true,
                     TxnConfig::default(),
@@ -90,9 +93,10 @@ impl MigrateArgs {
                 .await
             }),
             MigrateCommand::Apply { transaction } => config.tokio_handle().block_on(async {
+                trace!(name, "Applying migration.");
                 let txn_config: TxnConfig = transaction.into();
 
-                migration::migrate(&ws, world_address, rpc_url, &account, &name, false, txn_config)
+                migration::migrate(&ws, world_address, rpc_url, account, &name, false, txn_config)
                     .await
             }),
         }
@@ -111,14 +115,18 @@ pub async fn setup_env<'a>(
     SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     String,
 )> {
+    trace!("Setting up environment.");
     let ui = ws.config().ui();
 
     let world_address = world.address(env).ok();
+    trace!(?world_address);
 
     let (account, rpc_url) = {
         let provider = starknet.provider(env)?;
+        trace!("Provider initialized.");
 
         let spec_version = provider.spec_version().await?;
+        trace!(spec_version);
 
         if spec_version != RPC_SPEC_VERSION {
             return Err(anyhow!(
@@ -129,10 +137,12 @@ pub async fn setup_env<'a>(
         }
 
         let rpc_url = starknet.url(env)?;
+        trace!(?rpc_url);
 
         let chain_id = provider.chain_id().await?;
         let chain_id = parse_cairo_short_string(&chain_id)
             .with_context(|| "Cannot parse chain_id as string")?;
+        trace!(chain_id);
 
         let mut account = account.account(provider, env).await?;
         account.set_block_id(BlockId::Tag(BlockTag::Pending));

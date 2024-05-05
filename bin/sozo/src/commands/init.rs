@@ -6,6 +6,7 @@ use std::{fs, io};
 use anyhow::{ensure, Result};
 use clap::Args;
 use scarb::core::Config;
+use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct InitArgs {
@@ -30,6 +31,7 @@ impl InitArgs {
             }
             None => current_dir().unwrap(),
         };
+        trace!(?target_dir, "Executing Init command.");
 
         if target_dir.exists() {
             ensure!(
@@ -67,6 +69,8 @@ impl InitArgs {
              `sozo build`",
         );
 
+        trace!("Project initialization completed.");
+
         Ok(())
     }
 }
@@ -74,12 +78,15 @@ impl InitArgs {
 fn clone_repo(url: &str, path: &Path, config: &Config) -> Result<()> {
     config.ui().print(format!("Cloning project template from {}...", url));
     Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
+    trace!("Repository cloned successfully.");
     Ok(())
 }
 
 fn modify_git_history(url: &str) -> Result<()> {
+    trace!("Modifying Git history.");
     let git_output = Command::new("git").args(["rev-parse", "--short", "HEAD"]).output()?.stdout;
     let commit_hash = String::from_utf8(git_output)?;
+    trace!(commit_hash = commit_hash.trim());
 
     fs::remove_dir_all(".git")?;
 
@@ -89,5 +96,6 @@ fn modify_git_history(url: &str) -> Result<()> {
     let commit_msg = format!("chore: init from {} at {}", url, commit_hash.trim());
     Command::new("git").args(["commit", "-m", &commit_msg]).output()?;
 
+    trace!("Git history modified.");
     Ok(())
 }

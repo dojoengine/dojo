@@ -312,7 +312,7 @@ where
     let ui = ws.config().ui();
 
     ui.print(" ");
-    ui.print_step(6, "🌐", "Uploading metadata...");
+    ui.print_step(7, "🌐", "Uploading metadata...");
     ui.print(" ");
 
     let dojo_metadata = dojo_metadata_from_workspace(ws);
@@ -735,7 +735,7 @@ where
 pub async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,
-    profile_dir: &Utf8PathBuf,
+    manifest_dir: &Utf8PathBuf,
     profile_name: &str,
     rpc_url: &str,
     world_address: FieldElement,
@@ -745,8 +745,10 @@ pub async fn update_manifests_and_abis(
     let ui = ws.config().ui();
     ui.print_step(5, "✨", "Updating manifests...");
 
-    let deployed_path = profile_dir.join("manifest").with_extension("toml");
-    let deployed_path_json = profile_dir.join("manifest").with_extension("json");
+    let deployed_path =
+        manifest_dir.join(MANIFESTS_DIR).join(profile_name).join("manifest").with_extension("toml");
+    let deployed_path_json =
+        manifest_dir.join(MANIFESTS_DIR).join(profile_name).join("manifest").with_extension("json");
 
     let mut local_manifest: DeploymentManifest = local_manifest.into();
 
@@ -796,10 +798,10 @@ pub async fn update_manifests_and_abis(
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
-    update_manifest_abis(&mut local_manifest, profile_dir, profile_name).await;
+    update_manifest_abis(&mut local_manifest, manifest_dir, profile_name).await;
 
     local_manifest.write_to_path_toml(&deployed_path)?;
-    local_manifest.write_to_path_json(&deployed_path_json, profile_dir)?;
+    local_manifest.write_to_path_json(&deployed_path_json, manifest_dir)?;
     ui.print("\n✨ Done.");
 
     Ok(())
@@ -807,43 +809,54 @@ pub async fn update_manifests_and_abis(
 
 async fn update_manifest_abis(
     local_manifest: &mut DeploymentManifest,
-    profile_dir: &Utf8PathBuf,
+    manifest_dir: &Utf8PathBuf,
     profile_name: &str,
 ) {
-    fs::create_dir_all(profile_dir.join(ABIS_DIR).join(DEPLOYMENTS_DIR))
-        .await
-        .expect("Failed to create folder");
+    fs::create_dir_all(
+        manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(ABIS_DIR).join(DEPLOYMENTS_DIR),
+    )
+    .await
+    .expect("Failed to create folder");
 
     async fn inner_helper<T>(
-        profile_dir: &Utf8PathBuf,
+        manifest_dir: &Utf8PathBuf,
         profile_name: &str,
         manifest: &mut Manifest<T>,
     ) where
         T: ManifestMethods,
     {
+        // for example:
+        // from: manifests/dev/abis/base/contract/dojo_world_world.json
+        // to: manifests/dev/abis/deployments/contract/dojo_world_world.json
+        //
         // Unwraps in call to abi is safe because we always write abis for DojoContracts as relative
         // path.
         // In this relative path, we only what the root from
         // ABI directory.
-        let base_relative_path = manifest
-            .inner
-            .abi()
-            .unwrap()
-            .to_path()
-            .unwrap()
-            .strip_prefix(Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name))
+
+        // manifests/dev/abis/base/contract/dojo_world_world.json
+        let base_relative_path = manifest.inner.abi().unwrap().to_path().unwrap();
+
+        // contract/dojo_world_world.json
+        let stripped_path = base_relative_path
+            .strip_prefix(
+                Utf8PathBuf::new()
+                    .join(MANIFESTS_DIR)
+                    .join(profile_name)
+                    .join(ABIS_DIR)
+                    .join(BASE_DIR),
+            )
             .unwrap();
 
-        // The filename is safe to unwrap as it's always
-        // present in the base relative path.
-        let deployed_relative_path = Utf8PathBuf::new().join(ABIS_DIR).join(DEPLOYMENTS_DIR).join(
-            base_relative_path
-                .strip_prefix(Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR))
-                .unwrap(),
-        );
+        let deployed_relative_path = Utf8PathBuf::new()
+            .join(MANIFESTS_DIR)
+            .join(profile_name)
+            .join(ABIS_DIR)
+            .join(DEPLOYMENTS_DIR)
+            .join(stripped_path);
 
-        let full_base_path = profile_dir.join(base_relative_path);
-        let full_deployed_path = profile_dir.join(deployed_relative_path.clone());
+        let full_base_path = manifest_dir.join(base_relative_path);
+        let full_deployed_path = manifest_dir.join(deployed_relative_path.clone());
 
         fs::create_dir_all(full_deployed_path.parent().unwrap())
             .await
@@ -854,14 +867,14 @@ async fn update_manifest_abis(
         manifest.inner.set_abi(Some(AbiFormat::Path(deployed_relative_path)));
     }
 
-    inner_helper::<ManifestWorldContract>(profile_dir, profile_name, &mut local_manifest.world)
+    inner_helper::<ManifestWorldContract>(manifest_dir, profile_name, &mut local_manifest.world)
         .await;
 
     for contract in local_manifest.contracts.iter_mut() {
-        inner_helper::<DojoContract>(profile_dir, profile_name, contract).await;
+        inner_helper::<DojoContract>(manifest_dir, profile_name, contract).await;
     }
 
     for model in local_manifest.models.iter_mut() {
-        inner_helper::<DojoModel>(profile_dir, profile_name, model).await;
+        inner_helper::<DojoModel>(manifest_dir, profile_name, model).await;
     }
 }

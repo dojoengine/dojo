@@ -2,10 +2,9 @@ use std::io::Write;
 
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
+use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
+use katana_runner::KatanaRunner;
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
@@ -364,28 +363,35 @@ fn events_without_block_number_arent_parsed() {
     similar_asserts::assert_eq!(actual_contracts, expected_contracts);
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn fetch_remote_manifest() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+#[test]
+fn fetch_remote_manifest() {
+    let runner = KatanaRunner::new().expect("Fail to set runner");
 
-    let account = sequencer.account();
+    let account = runner.account(0);
     let provider = account.provider();
 
-    let manifest_path = Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap();
-    let artifacts_path =
-        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
-
-    let world_address = deploy_world(&sequencer, &manifest_path, &artifacts_path).await;
-
+    let source_project = "../../examples/spawn-and-move/Scarb.toml";
+    let dojo_core_path = "../dojo-core";
     let profile_name = "dev";
 
+    // Build a completely new project in it's own directory.
+    let (temp_project_dir, config, _) =
+        compiler::copy_build_project_temp(source_project, dojo_core_path, true);
+
+    let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
+
+    let world_address = config
+        .tokio_handle()
+        .block_on(async { deploy_world(&runner, &temp_project_dir, &artifacts_path).await });
+
     let local_manifest = BaseManifest::load_from_path(
-        &manifest_path.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+        &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
-    let remote_manifest =
-        DeploymentManifest::load_from_remote(provider, world_address).await.unwrap();
+
+    let remote_manifest = config.tokio_handle().block_on(async {
+        DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
+    });
 
     assert_eq!(local_manifest.models.len(), 4);
     assert_eq!(local_manifest.contracts.len(), 1);

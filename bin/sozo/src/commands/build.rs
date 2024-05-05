@@ -7,6 +7,7 @@ use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
+use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct BuildArgs {
@@ -36,6 +37,7 @@ impl BuildArgs {
             config,
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
         )?;
+        trace!(?compile_info, "Compiled workspace.");
 
         let mut builtin_plugins = vec![];
         if self.typescript {
@@ -54,6 +56,12 @@ impl BuildArgs {
             let target_dir = &compile_info.target_dir;
             let contracts_statistics = get_contract_statistics_for_dir(target_dir)
                 .context("Error getting contracts stats")?;
+            trace!(
+                ?contracts_statistics,
+                ?target_dir,
+                "Read contract statistics for target directory."
+            );
+
             let table = create_stats_table(contracts_statistics);
             table.printstd()
         }
@@ -69,6 +77,7 @@ impl BuildArgs {
             plugins: vec![],
             builtin_plugins,
         };
+        trace!(pluginManager=?bindgen, "Generating bindings.");
 
         tokio::runtime::Runtime::new()
             .unwrap()
@@ -95,7 +104,6 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
         let contract_name = contract_stats.contract_name;
         let number_felts = contract_stats.number_felts;
         let file_size = contract_stats.file_size;
-
         table.add_row(Row::new(vec![
             Cell::new_align(&contract_name, format::Alignment::LEFT),
             Cell::new_align(format!("{}", number_felts).as_str(), format::Alignment::RIGHT),

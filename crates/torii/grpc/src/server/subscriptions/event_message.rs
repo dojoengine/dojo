@@ -16,7 +16,7 @@ use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Entity;
+use torii_core::types::EventMessage;
 use tracing::{error, trace};
 
 use crate::proto;
@@ -60,7 +60,7 @@ pub struct Service {
     pool: Pool<Sqlite>,
     subs_manager: Arc<EventMessageManager>,
     model_cache: Arc<ModelCache>,
-    simple_broker: Pin<Box<dyn Stream<Item = Entity> + Send>>,
+    simple_broker: Pin<Box<dyn Stream<Item = EventMessage> + Send>>,
 }
 
 impl Service {
@@ -73,7 +73,7 @@ impl Service {
             pool,
             subs_manager,
             model_cache,
-            simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()),
+            simple_broker: Box::pin(SimpleBroker::<EventMessage>::subscribe()),
         }
     }
 
