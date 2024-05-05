@@ -71,7 +71,7 @@ impl SignerOptions {
 
     pub fn private_key(&self, env_metadata: Option<&Environment>) -> Option<String> {
         if let Some(s) = &self.private_key {
-            return Some(s.to_owned());
+            Some(s.to_owned())
         } else {
             env_metadata.and_then(|env| env.private_key().map(|s| s.to_string()))
         }
@@ -79,7 +79,7 @@ impl SignerOptions {
 
     pub fn keystore_path(&self, env_metadata: Option<&Environment>) -> Option<String> {
         if let Some(s) = &self.keystore_path {
-            return Some(s.to_owned());
+            Some(s.to_owned())
         } else {
             env_metadata.and_then(|env| env.keystore_path().map(|s| s.to_string()))
         }
@@ -87,7 +87,7 @@ impl SignerOptions {
 
     pub fn keystore_password(&self, env_metadata: Option<&Environment>) -> Option<String> {
         if let Some(s) = &self.keystore_password {
-            return Some(s.to_owned());
+            Some(s.to_owned())
         } else {
             env_metadata.and_then(|env| env.keystore_password().map(|s| s.to_string()))
         }

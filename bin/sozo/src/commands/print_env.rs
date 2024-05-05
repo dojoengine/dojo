@@ -43,8 +43,8 @@ impl PrintEnvArgs {
             ui.print(format!("Account address: {account_address:#064x}"));
         }
 
-        if let Some(_) = account.signer.private_key(env_metadata.as_ref()) {
-            ui.print(format!("Private key is set. It will take precedence over keystore"))
+        if account.signer.private_key(env_metadata.as_ref()).is_some() {
+            ui.print("Private key is set. It will take precedence over keystore".to_string())
         } else if let Some(keystore_path) = account.signer.keystore_path(env_metadata.as_ref()) {
             ui.print(format!("Keystore Path: {keystore_path}"));
         }
