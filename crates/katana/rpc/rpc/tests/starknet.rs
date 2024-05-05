@@ -5,12 +5,14 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use alloy::primitives::{Address, Uint, U256};
+use alloy::sol;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
-
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use dojo_world::utils::TransactionWaiter;
 use katana_core::sequencer::SequencerConfig;
+use katana_runner::{AnvilRunner, KatanaRunner, KatanaRunnerConfig};
 use serde_json::json;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::contract::ContractFactory;
@@ -23,10 +25,6 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::macros::felt;
 use starknet::providers::Provider;
 use tempfile::tempdir;
-
-use alloy::primitives::{Address, Uint, U256};
-use alloy::sol;
-use katana_runner::{AnvilRunner, KatanaRunner, KatanaRunnerConfig};
 
 mod common;
 
@@ -203,7 +201,7 @@ sol!(
     "tests/test_data/solidity/Contract1Compiled.json"
 );
 
-abigen!(CairoMessagingContract, "/Users/fabrobles/Fab/dojo_fork/crates/katana/rpc/rpc/tests/test_data/cairo_l1_msg_contract.json");
+abigen!(CairoMessagingContract, "crates/katana/rpc/rpc/tests/test_data/cairo_l1_msg_contract.json");
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_messaging_l1_l2() {
@@ -273,11 +271,13 @@ async fn test_messaging_l1_l2() {
     // successfully
     assert_eq!(receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
 
-    assert!(starknet_account
-        .provider()
-        .get_class(BlockId::Tag(BlockTag::Latest), class_hash)
-        .await
-        .is_ok());
+    assert!(
+        starknet_account
+            .provider()
+            .get_class(BlockId::Tag(BlockTag::Latest), class_hash)
+            .await
+            .is_ok()
+    );
 
     let contract_factory = ContractFactory::new(class_hash, &starknet_account);
 
@@ -354,7 +354,7 @@ async fn test_messaging_l1_l2() {
     let tx = cairo_messaging_contract
         .send_message_value(
             &EthAddress::from(
-                FieldElement::from_str(&contract_c1.address().to_string().as_str()).unwrap(),
+                FieldElement::from_str(contract_c1.address().to_string().as_str()).unwrap(),
             ),
             &FieldElement::from(2u8),
         )
@@ -376,7 +376,7 @@ async fn test_messaging_l1_l2() {
         .gas(12000000)
         .nonce(4);
 
-    //Wait for the message to reach L1
+    // Wait for the message to reach L1
     tokio::time::sleep(Duration::from_millis(8000)).await;
 
     let tx_receipt = builder.send().await.unwrap().get_receipt().await.unwrap();

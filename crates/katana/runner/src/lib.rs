@@ -9,8 +9,18 @@ use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
 
+use alloy::network::{Ethereum, EthereumSigner};
+use alloy::primitives::Address;
+use alloy::providers::fillers::{
+    ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, SignerFiller,
+};
+use alloy::providers::{Identity, ProviderBuilder, RootProvider};
+use alloy::signers::wallet::LocalWallet;
+use alloy::transports::http::Http;
 use anyhow::{Context, Result};
 use assert_fs::TempDir;
+use hyper::http::request;
+use hyper::{Client as HyperClient, Response, StatusCode};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
 use katana_primitives::FieldElement;
@@ -22,17 +32,6 @@ use tokio::sync::Mutex;
 use tokio::time;
 use url::Url;
 use utils::find_free_port;
-
-use alloy::network::{Ethereum, EthereumSigner};
-use alloy::primitives::Address;
-use alloy::providers::fillers::{
-    ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, SignerFiller,
-};
-use alloy::providers::{Identity, ProviderBuilder, RootProvider};
-use alloy::signers::wallet::LocalWallet;
-use alloy::transports::http::Http;
-use hyper::http::request;
-use hyper::{Client as HyperClient, Response, StatusCode};
 
 #[derive(Debug)]
 pub struct KatanaRunner {
@@ -115,7 +114,7 @@ impl KatanaRunner {
         }
 
         if let Some(messaging_file) = config.messaging {
-            command.args(["--messaging", &format!("{}", messaging_file)]);
+            command.args(["--messaging", messaging_file.as_str()]);
         }
 
         let mut child =
@@ -206,11 +205,7 @@ impl Drop for KatanaRunner {
 /// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
 /// environment variable. If not set, try to to use katana from the PATH.
 fn determine_default_program_path() -> String {
-    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") {
-        bin
-    } else {
-        "katana".to_string()
-    }
+    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
 }
 
 type Provider = FillProvider<
