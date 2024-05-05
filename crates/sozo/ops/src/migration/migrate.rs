@@ -708,6 +708,7 @@ where
     if let Some(world) = &strategy.world {
         ui.print_header("# World");
         ui.print_sub(format!("declare (class hash: {:#x})\n", world.diff.local_class_hash));
+        ui.print_sub(format!("declare (contract address: {:#x})\n", world.contract_address));
     }
 
     if !&strategy.models.is_empty() {
