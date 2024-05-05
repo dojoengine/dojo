@@ -1,6 +1,8 @@
+use anyhow::{bail, Result};
 use clap::Args;
-use dojo_world::migration::TxnConfig;
+use dojo_world::migration::{TxnAction, TxnConfig};
 use starknet::core::types::FieldElement;
+use tracing::trace;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Transaction options")]
@@ -37,8 +39,32 @@ pub struct TransactionOptions {
     pub receipt: bool,
 }
 
+impl TransactionOptions {
+    pub fn to_txn_action(&self, simulate: bool, estimate_only: bool) -> Result<TxnAction> {
+        match (estimate_only, simulate) {
+            (true, true) => {
+                bail!("Both `--estimate-only` and `--simulate` cannot be used at same time.")
+            }
+            (true, false) => Ok(TxnAction::Estimate),
+            (false, true) => Ok(TxnAction::Simulate),
+            (false, false) => Ok(TxnAction::Send {
+                wait: self.wait,
+                receipt: self.receipt,
+                max_fee_raw: self.max_fee_raw,
+                fee_estimate_multiplier: self.fee_estimate_multiplier,
+            }),
+        }
+    }
+}
+
 impl From<TransactionOptions> for TxnConfig {
     fn from(value: TransactionOptions) -> Self {
+        trace!(
+            fee_estimate_multiplier = value.fee_estimate_multiplier,
+            wait = value.wait,
+            receipt = value.receipt,
+            "Converting TransactionOptions to TxnConfig."
+        );
         Self {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait,

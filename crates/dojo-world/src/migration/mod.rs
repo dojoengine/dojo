@@ -101,6 +101,20 @@ pub struct TxnConfig {
     pub max_fee_raw: Option<FieldElement>,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum TxnAction {
+    Send {
+        wait: bool,
+        receipt: bool,
+        max_fee_raw: Option<FieldElement>,
+        /// The multiplier for how much the actual transaction max fee should be relative to the
+        /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
+        fee_estimate_multiplier: Option<f64>,
+    },
+    Estimate,
+    Simulate,
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Declarable {

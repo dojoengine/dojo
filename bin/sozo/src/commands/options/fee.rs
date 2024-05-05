@@ -1,3 +1,4 @@
+// TODO remove this file
 use anyhow::Result;
 use bigdecimal::{BigDecimal, Zero};
 use clap::Args;
@@ -9,17 +10,17 @@ use starknet_crypto::FieldElement;
 #[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Fee options")]
 pub struct FeeOptions {
-    #[clap(long, help = "Maximum transaction fee in Ether (18 decimals)")]
-    #[arg(global = true)]
-    max_fee: Option<BigDecimal>,
+    // #[clap(long, help = "Maximum transaction fee in Ether (18 decimals)")]
+    // #[arg(global = true)]
+    // max_fee: Option<BigDecimal>,
 
-    #[clap(long, help = "Maximum transaction fee in Wei")]
-    #[arg(global = true)]
-    max_fee_raw: Option<FieldElement>,
+    // #[clap(long, help = "Maximum transaction fee in Wei")]
+    // #[arg(global = true)]
+    // max_fee_raw: Option<FieldElement>,
 
-    #[clap(long, help = "Only estimate transaction fee without sending transaction")]
-    #[arg(global = true)]
-    estimate_only: bool,
+    // #[clap(long, help = "Only estimate transaction fee without sending transaction")]
+    // #[arg(global = true)]
+    // estimate_only: bool,
 }
 
 impl FeeOptions {

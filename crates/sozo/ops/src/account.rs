@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use colored::Colorize;
 use colored_json::{ColorMode, Output};
+use dojo_world::migration::TxnAction;
+use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -14,7 +16,7 @@ use starknet::core::types::{
     BlockId, BlockTag, FunctionCall, StarknetError, TransactionFinalityStatus,
 };
 use starknet::core::utils::get_contract_address;
-use starknet::macros::{felt, selector};
+use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::{LocalWallet, Signer, SigningKey};
@@ -189,17 +191,12 @@ pub async fn new(signer: LocalWallet, force: bool, file: PathBuf) -> Result<()> 
 pub async fn deploy(
     provider: JsonRpcClient<HttpTransport>,
     signer: LocalWallet,
-    fee_setting: FeeSetting,
-    simulate: bool,
+    txn_action: TxnAction,
     nonce: Option<FieldElement>,
     poll_interval: u64,
     file: PathBuf,
     no_confirmation: bool,
 ) -> Result<()> {
-    if simulate && fee_setting.is_estimate_only() {
-        anyhow::bail!("--simulate cannot be used with --estimate-only");
-    }
-
     if !file.exists() {
         anyhow::bail!("account config file not found");
     }
@@ -249,9 +246,58 @@ pub async fn deploy(
         panic!("Unexpected account deployment address mismatch");
     }
 
-    let max_fee = match fee_setting {
-        FeeSetting::Manual(fee) => MaxFeeType::Manual { max_fee: fee },
-        FeeSetting::EstimateOnly | FeeSetting::None => {
+    let account_deployment = match nonce {
+        Some(nonce) => account_deployment.nonce(nonce),
+        None => account_deployment,
+    };
+
+    match txn_action {
+        TxnAction::Send { wait, receipt, max_fee_raw, fee_estimate_multiplier } => {
+            let max_fee = if let Some(max_fee_raw) = max_fee_raw {
+                MaxFeeType::Manual { max_fee: max_fee_raw }
+            } else {
+                let estimated_fee = account_deployment
+                    .estimate_fee()
+                    .await
+                    .map_err(|err| match err {
+                        AccountFactoryError::Provider(ProviderError::StarknetError(err)) => {
+                            map_starknet_error(err)
+                        }
+                        err => anyhow::anyhow!("{}", err),
+                    })?
+                    .overall_fee;
+
+                let fee_estimate_multiplier = fee_estimate_multiplier.unwrap_or(1.1);
+
+                let estimated_fee_with_buffer = (((TryInto::<u64>::try_into(estimated_fee)? as f64)
+                    * fee_estimate_multiplier)
+                    as u64)
+                    .into();
+
+                MaxFeeType::Estimated {
+                    estimate: estimated_fee,
+                    estimate_with_buffer: estimated_fee_with_buffer,
+                }
+            };
+
+            let account_deployment = account_deployment.max_fee(max_fee.max_fee());
+            let txn_config = TxnConfig { fee_estimate_multiplier, wait, receipt, max_fee_raw };
+            do_account_deploy(
+                max_fee,
+                txn_config,
+                target_deployment_address,
+                no_confirmation,
+                account_deployment,
+                &provider,
+                poll_interval,
+                &mut account,
+            )
+            .await?;
+
+            write_account_to_file(file, account)?;
+            return Ok(());
+        }
+        TxnAction::Estimate => {
             let estimated_fee = account_deployment
                 .estimate_fee()
                 .await
@@ -263,49 +309,19 @@ pub async fn deploy(
                 })?
                 .overall_fee;
 
-            let estimated_fee_with_buffer = (estimated_fee * felt!("3")).floor_div(felt!("2"));
-
-            if fee_setting.is_estimate_only() {
-                println!("{} ETH", format!("{}", estimated_fee.to_big_decimal(18)).bright_yellow(),);
-                return Ok(());
-            }
-
-            MaxFeeType::Estimated {
-                estimate: estimated_fee,
-                estimate_with_buffer: estimated_fee_with_buffer,
-            }
+            println!("{} ETH", format!("{}", estimated_fee.to_big_decimal(18)).bright_yellow());
+            return Ok(());
         }
-    };
-
-    let account_deployment = match nonce {
-        Some(nonce) => account_deployment.nonce(nonce),
-        None => account_deployment,
-    };
-    let account_deployment = account_deployment.max_fee(max_fee.max_fee());
-
-    if simulate {
-        simulate_account_deploy(&account_deployment).await?;
-        Ok(())
-    } else {
-        do_account_deploy(
-            max_fee,
-            target_deployment_address,
-            no_confirmation,
-            account_deployment,
-            &provider,
-            poll_interval,
-            &mut account,
-        )
-        .await?;
-
-        write_account_to_file(file, account)?;
-
-        Ok(())
+        TxnAction::Simulate => {
+            simulate_account_deploy(&account_deployment).await?;
+            return Ok(());
+        }
     }
 }
 
 async fn do_account_deploy(
     max_fee: MaxFeeType,
+    txn_config: TxnConfig,
     target_deployment_address: FieldElement,
     no_confirmation: bool,
     account_deployment: starknet::accounts::AccountDeployment<
@@ -353,14 +369,19 @@ async fn do_account_deploy(
         format!("{:#064x}", account_deployment_tx).bright_yellow(),
         "sozo account fetch".bright_yellow(),
     );
-    TransactionWaiter::new(account_deployment_tx, &provider)
+    let receipt = TransactionWaiter::new(account_deployment_tx, &provider)
         .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
         .with_interval(poll_interval)
         .await?;
+
     eprintln!(
         "Transaction {} confirmed",
         format!("{:#064x}", account_deployment_tx).bright_yellow()
     );
+
+    if txn_config.receipt {
+        println!("Receipt:\n{}", serde_json::to_string_pretty(&receipt)?);
+    }
 
     account.deployment.to_deployed(target_deployment_address);
 
