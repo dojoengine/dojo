@@ -130,7 +130,7 @@ impl Sql {
             vec![model.name()],
             &mut model_idx,
             block_timestamp,
-            false
+            false,
         );
         self.query_queue.execute_all().await?;
 
@@ -414,7 +414,7 @@ impl Sql {
         path: Vec<String>,
         model_idx: &mut i64,
         block_timestamp: u64,
-        is_array: bool
+        is_array: bool,
     ) {
         if let Ty::Enum(_) = model {
             // Complex enum values not supported yet.
@@ -423,7 +423,7 @@ impl Sql {
 
         self.build_model_query(path.clone(), model, *model_idx, block_timestamp, is_array);
 
-        let mut build_member = |pathname: Option<&str>, member: &Ty| {
+        let mut build_member = |pathname: &str, member: &Ty| {
             if let Ty::Primitive(_) = member {
                 return;
             } else if let Ty::ByteArray(_) = member {
@@ -431,9 +431,7 @@ impl Sql {
             }
 
             let mut path_clone = path.clone();
-            if let Some(name) = pathname {
-                path_clone.push(name.to_string());
-            }
+            path_clone.push(pathname.to_string());
 
             self.build_register_queries_recursive(
                 member,
@@ -447,19 +445,15 @@ impl Sql {
 
         if let Ty::Struct(s) = model {
             for member in s.children.iter() {
-                build_member(Some(&member.name), &member.ty);
+                build_member(&member.name, &member.ty);
             }
         } else if let Ty::Tuple(t) = model {
             for (idx, member) in t.iter().enumerate() {
-                build_member(Some(&idx.to_string()), &member);
+                build_member(&idx.to_string(), &member);
             }
         } else if let Ty::Array(array) = model {
             let ty = &array[0];
-            match ty {
-                Ty::Primitive(_) => build_member(Some("data"), &ty),
-                Ty::ByteArray(_) => build_member(Some("data"), &ty),
-                _ => build_member(None, &ty),
-            }
+            build_member("data", &ty);
         }
     }
 
@@ -652,6 +646,12 @@ impl Sql {
             }
             Ty::Array(array) => {
                 for (idx, member) in array.iter().enumerate() {
+                    update_members(
+                        &[Member { name: "data".to_string(), ty: member.clone(), key: false }],
+                        &mut self.query_queue,
+                        Some(idx as i64),
+                    );
+
                     match member {
                         Ty::Struct(_) => {
                             let mut path_clone = path.clone();
@@ -692,17 +692,7 @@ impl Sql {
                                 Some(idx as i64),
                             );
                         }
-                        _ => {
-                            update_members(
-                                &[Member {
-                                    name: "data".to_string(),
-                                    ty: member.clone(),
-                                    key: false,
-                                }],
-                                &mut self.query_queue,
-                                Some(idx as i64),
-                            );
-                        }
+                        _ => {}
                     }
                 }
             }
@@ -872,34 +862,34 @@ impl Sql {
                     self.query_queue.enqueue(statement, arguments);
                 }
             }
-            // Ty::Array(array) => {
-            //     let mut options = None; // TEMP: doesnt support complex enums yet
-            //     let ty = &array[0];
-            //     build_member("data", &ty, &mut options);
+            Ty::Array(array) => {
+                let mut options = None; // TEMP: doesnt support complex enums yet
+                let ty = &array[0];
+                build_member("data", &ty, &mut options);
 
-            //     let statement =
-            //         "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
-            //                      name, type, type_enum, enum_options, key, executed_at) VALUES (?, ?, \
-            //                      ?, ?, ?, ?, ?, ?, ?, ?)";
-            //     let arguments = vec![
-            //         Argument::String(table_id.clone()),
-            //         // TEMP: this is temporary until the model hash is precomputed
-            //         Argument::String(format!(
-            //             "{:#x}",
-            //             get_selector_from_name(&path[0].clone()).unwrap()
-            //         )),
-            //         Argument::Int(model_idx),
-            //         Argument::Int(0),
-            //         Argument::String("data".to_string()),
-            //         Argument::String(ty.name()),
-            //         Argument::String(ty.as_ref().into()),
-            //         options.unwrap_or(Argument::Null),
-            //         Argument::Bool(false),
-            //         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-            //     ];
+                let statement =
+                    "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
+                                 name, type, type_enum, enum_options, key, executed_at) VALUES (?, ?, \
+                                 ?, ?, ?, ?, ?, ?, ?, ?)";
+                let arguments = vec![
+                    Argument::String(table_id.clone()),
+                    // TEMP: this is temporary until the model hash is precomputed
+                    Argument::String(format!(
+                        "{:#x}",
+                        get_selector_from_name(&path[0].clone()).unwrap()
+                    )),
+                    Argument::Int(model_idx),
+                    Argument::Int(0),
+                    Argument::String("data".to_string()),
+                    Argument::String(ty.name()),
+                    Argument::String(ty.as_ref().into()),
+                    options.unwrap_or(Argument::Null),
+                    Argument::Bool(false),
+                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                ];
 
-            //     self.query_queue.enqueue(statement, arguments);
-            // }
+                self.query_queue.enqueue(statement, arguments);
+            }
             _ => {}
         }
 
