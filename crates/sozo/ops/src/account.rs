@@ -6,7 +6,7 @@ use anyhow::Result;
 use colored::Colorize;
 use colored_json::{ColorMode, Output};
 use dojo_world::migration::{TxnAction, TxnConfig};
-use dojo_world::utils::TransactionWaiter;
+use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::accounts::{AccountFactory, AccountFactoryError, OpenZeppelinAccountFactory};
@@ -358,7 +358,10 @@ async fn do_account_deploy(
         eprint!("Press [ENTER] once you've funded the address.");
         std::io::stdin().read_line(&mut String::new())?;
     }
-    let account_deployment_tx = account_deployment.send().await?.transaction_hash;
+
+    let account_deployment_tx =
+        account_deployment.send_with_cfg(&txn_config).await?.transaction_hash;
+
     eprintln!(
         "Account deployment transaction: {}",
         format!("{:#064x}", account_deployment_tx).bright_yellow()
