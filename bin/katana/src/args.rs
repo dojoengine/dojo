@@ -131,7 +131,8 @@ pub struct ServerOptions {
     pub max_connections: u32,
 
     #[arg(long)]
-    #[arg(help = "Enables the CORS layer and sets the allowed origins.")]
+    #[arg(value_delimiter = ',')]
+    #[arg(help = "Enables the CORS layer and sets the allowed origins, separated by commas.")]
     pub allowed_origins: Option<Vec<String>>,
 }
 
