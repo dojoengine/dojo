@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714784215059,
+  "lastUpdate": 1714962300984,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7135,6 +7135,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16916968,
             "range": "± 49580",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e95670b2dfc0a8c995c1e4a0b433ed6392921631",
+          "message": "Update Saya to use rustls-tls rather than openssl (#1934)",
+          "timestamp": "2024-05-05T22:16:44-04:00",
+          "tree_id": "2d2d347fd07a5964a08d09b1066158889d0bb944",
+          "url": "https://github.com/dojoengine/dojo/commit/e95670b2dfc0a8c995c1e4a0b433ed6392921631"
+        },
+        "date": 1714962300195,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16805211,
+            "range": "± 74105",
             "unit": "ns/iter"
           }
         ]
