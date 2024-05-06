@@ -53,11 +53,11 @@ impl Scheduler {
         prover: ProverIdentifier,
     ) -> anyhow::Result<(Proof, ProgramInput)> {
         let mut scheduler = Scheduler::new(inputs.len(), world, prover);
-
+        trace!(target: "saya_core", "pushing inputs to scheduler");
         for input in inputs {
             scheduler.push_diff(input)?;
         }
-
+        info!(target: "saya_core", "inputs pushed to scheduler");
         scheduler.proved().await
     }
 }
@@ -189,6 +189,7 @@ async fn combine_proofs(
         program_input_from_program_output(program_output2, _state_updates2).unwrap();
     //combine two inputs to 1 input.json
     let inputs = vec![program_input1, program_input2];
+    trace!(target: "saya_core", "Merging proofs");
     Ok(prove_merge(input_to_json(inputs).await?, ProverIdentifier::Stone)
         .await
         .unwrap()
@@ -236,7 +237,7 @@ fn prove_recursively(
                 later_input.state_updates,
             )
             .await?;
-
+            info!(target: "saya_core", "Merged proofs");
             Ok((merged_proofs, input))
         }
     }
