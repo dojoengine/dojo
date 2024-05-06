@@ -8,7 +8,6 @@ version.workspace = true
 
 [dependencies]
 dojo-world = { workspace = true }
-alloy = { git = "https://github.com/alloy-rs/alloy", rev = "7128c53"}
 dojo-metrics.workspace = true
 katana-core.workspace = true
 katana-executor.workspace = true
@@ -47,3 +46,4 @@ jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-rpc-api = { workspace = true, features = [ "client" ] }
 katana-runner.workspace = true
 url.workspace = true
+alloy = { git = "https://github.com/alloy-rs/alloy", rev = "7128c53"}
