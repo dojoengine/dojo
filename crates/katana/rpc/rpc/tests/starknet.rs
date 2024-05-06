@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use alloy::primitives::{Address, Uint, U256};
+use alloy::primitives::{address, Uint, U256};
 use alloy::sol;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
@@ -207,21 +207,13 @@ abigen!(CairoMessagingContract, "crates/katana/rpc/rpc/tests/test_data/cairo_l1_
 async fn test_messaging_l1_l2() {
     // Prepare Anvil + Messaging Contracts
     let anvil_runner = AnvilRunner::new().await.unwrap();
+    let anvil_provider = anvil_runner.provider();
 
     let contract_strk = StarknetContract::deploy(anvil_runner.provider()).await.unwrap();
-    let strk_address = contract_strk.address();
+    assert_eq!(contract_strk.address(), &address!("5fbdb2315678afecb367f032d93f642f64180aa3"));
 
-    assert_eq!(
-        contract_strk.address(),
-        &Address::from_str("0x5fbdb2315678afecb367f032d93f642f64180aa3").unwrap()
-    );
-
-    let contract_c1 = Contract1::deploy(anvil_runner.provider(), *strk_address).await.unwrap();
-
-    assert_eq!(
-        contract_c1.address(),
-        &Address::from_str("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512").unwrap()
-    );
+    let contract_c1 = Contract1::deploy(anvil_provider, *contract_strk.address()).await.unwrap();
+    assert_eq!(contract_c1.address(), &address!("e7f1725e7734ce288f8367e1bb143e90bb3f0512"));
 
     // Prepare Katana + Messaging Contract
     let messagin_config = json!({
