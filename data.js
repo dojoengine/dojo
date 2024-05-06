@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715008159786,
+  "lastUpdate": 1715010529781,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7255,6 +7255,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16926052,
             "range": "± 52155",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrence@vanas.family",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "tarrence@vanas.family",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "distinct": true,
+          "id": "d6c3080c7c41552323c86387fcb51c68de076ec4",
+          "message": "Use ubuntu 22 for release builds",
+          "timestamp": "2024-05-06T11:40:32-04:00",
+          "tree_id": "73b1fcb6457111dc299abc66f0b2c5898f2e7521",
+          "url": "https://github.com/dojoengine/dojo/commit/d6c3080c7c41552323c86387fcb51c68de076ec4"
+        },
+        "date": 1715010529020,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16898156,
+            "range": "± 96220",
             "unit": "ns/iter"
           }
         ]
