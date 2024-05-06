@@ -42,11 +42,11 @@ jobs:
           # The target is used by Cargo
           # The arch is either 386, arm64 or amd64
           # The svm target platform to use for the binary https://github.com/roynalnaruto/svm-rs/blob/84cbe0ac705becabdc13168bae28a45ad2299749/svm-builds/build.rs#L4-L24
-          - os: ubuntu-20.04-4-cores
+          - os: ubuntu-latest-4-cores
             platform: linux
             target: x86_64-unknown-linux-gnu
             arch: amd64
-          - os: ubuntu-20.04-8-cores
+          - os: ubuntu-latest-8-cores
             platform: linux
             target: aarch64-unknown-linux-gnu
             arch: arm64
