@@ -1,7 +1,11 @@
 //! Saya core library.
 
 use std::sync::Arc;
+use std::time::Duration;
 
+use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
+use cairo_proof_parser::parse;
+use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
 use futures::future::{self, join};
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
@@ -10,13 +14,16 @@ use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use tracing::{error, trace};
+use starknet_crypto::poseidon_hash_many;
+use tokio::time::sleep;
+use tracing::{error, info, trace};
 use url::Url;
 
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
 use crate::prover::{extract_messages, ProgramInput, Scheduler};
+use crate::verifier::VerifierIdentifier;
 
 pub mod blockchain;
 pub mod data_availability;
@@ -96,6 +103,11 @@ impl Saya {
             join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
         let genesis_state_hash = genesis_block?.header.header.state_root;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
+
+        // The structure responsible for proving.
+        let mut prove_scheduler =
+            Scheduler::new(4, self.config.world_address, ProverIdentifier::Stone);
+
         loop {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
@@ -131,26 +143,21 @@ impl Saya {
                 .map(|(b, s)| (b, s, genesis_state_hash))
                 .collect::<Vec<_>>();
 
-            let mut processed = Vec::with_capacity(params.len());
             // Updating the local state sequentially, as there is only one instance of
             // `self.blockchain` This part does no actual  proving, so should not be a
             // problem
             for p in params.clone() {
-                let prover_input = self.process_block(block, p).await?;
-                if let Some(input) = prover_input {
-                    processed.push(input);
+                self.process_block(&mut prove_scheduler, block, p).await?;
+
+                if prove_scheduler.is_full() {
+                    // ProverIdentifier::Http(self.config.prover_url.clone()),
+                    self.process_proven(prove_scheduler).await?; // TODO: spawn it, but store a handle
+                    prove_scheduler =
+                        Scheduler::new(4, self.config.world_address, ProverIdentifier::Stone);
                 }
+
                 block += 1;
             }
-
-            // Prove each of the leaf nodes of the recursion tree and merge them into one
-            let proof = Scheduler::prove_recursively(
-                processed,
-                self.config.world_address,
-                ProverIdentifier::Stone,
-            )
-            .await?;
-            println!("Proof: {:?}", proof.0);
         }
     }
 
@@ -164,10 +171,7 @@ impl Saya {
     ///
     /// 3. Computes facts for this state transition. We may optimistically register the facts.
     ///
-    /// 4. Computes the proof from the trace with a prover.
-    ///
-    /// 5. Registers the facts + the send the proof to verifier. Not all provers require this step
-    ///    (a.k.a. SHARP).
+    /// 4. Starts computing the proof from the trace with a prover.
     ///
     /// # Arguments
     ///
@@ -176,9 +180,10 @@ impl Saya {
     ///   genesis block.
     async fn process_block(
         &mut self,
+        prove_scheduler: &mut Scheduler,
         block_number: BlockNumber,
         blocks: (SealedBlock, FieldElement, FieldElement),
-    ) -> SayaResult<Option<ProgramInput>> {
+    ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
         let (block, prev_state_root, _genesis_state_hash) = blocks;
@@ -197,14 +202,14 @@ impl Saya {
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
         if block_number == 0 {
-            return Ok(None);
+            return Ok(());
         }
 
         let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         if exec_infos.is_empty() {
             trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
-            return Ok(None);
+            return Ok(());
         }
 
         let transactions = block
@@ -233,42 +238,46 @@ impl Saya {
         };
         state_diff_prover_input.fill_da(self.config.world_address);
 
-        // let world_da = new_program_input.da_as_calldata(self.config.world_address);
-        // let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
-        // trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.");
+        prove_scheduler.push_diff(state_diff_prover_input).unwrap();
 
-        trace!(target: LOG_TARGET, "Proving block {block_number}.");
-        // let proof = prover::prove(
-        //     new_program_input.serialize(self.config.world_address)?,
-        //     ProverIdentifier::Http(self.config.prover_url.clone()),
-        // )
-        // .await?;
-        // info!(target: LOG_TARGET, block_number, "Block proven.");
+        info!(target: LOG_TARGET, block_number, "Block processed.");
 
-        // let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
+        Ok(())
+    }
 
-        // trace!(target: LOG_TARGET, block_number, "Verifying block.");
-        // let transaction_hash = verifier::verify(
-        //     VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
-        //     serialized_proof,
-        // )
-        // .await?;
-        // info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
+    /// Registers the facts + the send the proof to verifier. Not all provers require this step
+    ///    (a.k.a. SHARP).
+    async fn process_proven(&self, prove_scheduler: Scheduler) -> SayaResult<()> {
+        // Prove each of the leaf nodes of the recursion tree and merge them into one
+        let (proof, state_diff) = prove_scheduler.proved().await.unwrap();
 
-        // let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
-        // let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
-        // let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
-        // info!(target: LOG_TARGET, expected_fact, "Expected fact.");
+        let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
+        let world_da = state_diff.world_da.unwrap();
 
-        // sleep(Duration::from_millis(5000)).await;
+        let block_number = 999; // TODO: find a way to log it properly
 
-        // trace!(target: LOG_TARGET, block_number, "Applying diffs.");
-        // let transaction_hash =
-        //     dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
-        //         .await?;
-        // info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
+        trace!(target: LOG_TARGET, block_number, "Verifying block.");
+        let transaction_hash = verifier::verify(
+            VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
+            serialized_proof,
+        )
+        .await?;
+        info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
 
-        Ok(Some(state_diff_prover_input))
+        let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
+        let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
+        let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
+        info!(target: LOG_TARGET, expected_fact, "Expected fact.");
+
+        sleep(Duration::from_millis(5000)).await;
+
+        trace!(target: LOG_TARGET, block_number, "Applying diffs.");
+        let transaction_hash =
+            dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
+                .await?;
+        info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
+
+        Ok(())
     }
 }
 
