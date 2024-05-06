@@ -99,9 +99,7 @@ impl Saya {
         let poll_interval_secs = 1;
         let mut block = self.config.start_block.max(1); // Genesis block is not proven. We advance to block 1
 
-        let (genesis_block, block_before_the_first) =
-            join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
-        let genesis_state_hash = genesis_block?.header.header.state_root;
+        let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
         // The structure responsible for proving.
@@ -140,7 +138,7 @@ impl Saya {
             let params = fetched_blocks
                 .into_iter()
                 .zip(state_roots)
-                .map(|(b, s)| (b, s, genesis_state_hash))
+                .map(|(b, s)| (b, s))
                 .collect::<Vec<_>>();
 
             // Updating the local state sequentially, as there is only one instance of
@@ -182,11 +180,11 @@ impl Saya {
         &mut self,
         prove_scheduler: &mut Scheduler,
         block_number: BlockNumber,
-        blocks: (SealedBlock, FieldElement, FieldElement),
+        blocks: (SealedBlock, FieldElement),
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        let (block, prev_state_root, _genesis_state_hash) = blocks;
+        let (block, prev_state_root) = blocks;
 
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
