@@ -1,6 +1,6 @@
 //! Saya core library.
 
-use std::ops::{Range, RangeInclusive};
+use std::ops::RangeInclusive;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -9,6 +9,8 @@ use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
+use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use prover::ProverIdentifier;
@@ -131,11 +133,11 @@ impl Saya {
             // `self.blockchain` This part does no actual  proving, so should not be a
             // problem
             for p in params.clone() {
-                self.process_block(&mut prove_scheduler, block, p).await?;
+                self.process_block(&mut prove_scheduler, block, p)?;
 
                 if prove_scheduler.is_full() {
                     // ProverIdentifier::Http(self.config.prover_url.clone()),
-                    self.process_proven(prove_scheduler).await?; // TODO: spawn it, but store a handle
+                    self.process_proven(prove_scheduler, block).await?; // TODO: spawn it, but store a handle
                     prove_scheduler =
                         Scheduler::new(4, self.config.world_address, ProverIdentifier::Stone);
                 }
@@ -145,27 +147,47 @@ impl Saya {
         }
     }
 
-    /// Pulls state update.
     async fn prefetch_blocks(
         &mut self,
         block_numbers: RangeInclusive<BlockNumber>,
         previous_block_state_root: FieldElement,
-    ) -> SayaResult<(FieldElement, Vec<(SealedBlock, FieldElement)>)> {
+    ) -> SayaResult<(
+        FieldElement,
+        Vec<(SealedBlock, FieldElement, StateUpdatesWithDeclaredClasses, Vec<TxExecInfo>)>,
+    )> {
         // Fetch all blocks from the current block to the latest block
         let fetched_blocks = future::try_join_all(
-            (block_numbers).map(|block_number| self.provider.fetch_block(block_number)),
+            block_numbers.clone().map(|block_number| self.provider.fetch_block(block_number)),
         )
         .await?;
 
-        // shift the state roots to the right by one, as proof of each block is based on the
+        // Shift the state roots to the right by one, as proof of each block is based on the
         // previous state root
-        let mut state_roots =
-            fetched_blocks.iter().map(|b| b.header.header.state_root).collect::<Vec<_>>();
-        state_roots.insert(0, previous_block_state_root);
+        let mut state_roots = vec![previous_block_state_root];
+        state_roots.extend(fetched_blocks.iter().map(|block| block.header.header.state_root));
         let previous_block_state_root = state_roots.pop().unwrap();
 
-        let params =
-            fetched_blocks.into_iter().zip(state_roots).map(|(b, s)| (b, s)).collect::<Vec<_>>();
+        let mut state_updates_and_exec_info = vec![];
+
+        for block in block_numbers.clone() {
+            let (state_updates, da_state_update) = self.provider.fetch_state_updates(block).await?;
+            if let Some(da) = &self.da_client {
+                // Publish state difference if DA client is available
+                da.publish_state_diff_felts(&da_state_update).await?;
+            }
+            let exec_infos = self.provider.fetch_transactions_executions(block).await?;
+            state_updates_and_exec_info.push((state_updates, exec_infos));
+        }
+
+        // Prepare parameters
+        let params = fetched_blocks
+            .into_iter()
+            .zip(state_roots)
+            .zip(state_updates_and_exec_info)
+            .map(|((block, state_root), (state_updates, exec_infos))| {
+                (block, state_root, state_updates, exec_infos)
+            })
+            .collect::<Vec<_>>();
 
         Ok((previous_block_state_root, params))
     }
@@ -187,22 +209,15 @@ impl Saya {
     /// * `block_number` - The block number.
     /// * `blocks` - The block to process, along with the state roots of the previous block and the
     ///   genesis block.
-    async fn process_block(
+    fn process_block(
         &mut self,
         prove_scheduler: &mut Scheduler,
         block_number: BlockNumber,
-        blocks: (SealedBlock, FieldElement),
+        blocks: (SealedBlock, FieldElement, StateUpdatesWithDeclaredClasses, Vec<TxExecInfo>),
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        let (block, prev_state_root) = blocks;
-
-        let (state_updates, da_state_update) =
-            self.provider.fetch_state_updates(block_number).await?; // TODO: move to `prefetch_blocks()`
-
-        if let Some(da) = &self.da_client {
-            da.publish_state_diff_felts(&da_state_update).await?; // TODO: move to `prefetch_blocks()`
-        }
+        let (block, prev_state_root, state_updates, exec_infos) = blocks;
 
         let block =
             SealedBlockWithStatus { block: block.clone(), status: FinalityStatus::AcceptedOnL2 };
@@ -213,8 +228,6 @@ impl Saya {
         if block_number == 0 {
             return Ok(());
         }
-
-        let exec_infos = self.provider.fetch_transactions_executions(block_number).await?; // TODO: move to `prefetch_blocks()`
 
         if exec_infos.is_empty() {
             trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
@@ -256,14 +269,16 @@ impl Saya {
 
     /// Registers the facts + the send the proof to verifier. Not all provers require this step
     ///    (a.k.a. SHARP).
-    async fn process_proven(&self, prove_scheduler: Scheduler) -> SayaResult<()> {
+    async fn process_proven(
+        &self,
+        prove_scheduler: Scheduler,
+        block_number: BlockNumber,
+    ) -> SayaResult<()> {
         // Prove each of the leaf nodes of the recursion tree and merge them into one
         let (proof, state_diff) = prove_scheduler.proved().await.unwrap();
 
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
         let world_da = state_diff.world_da.unwrap();
-
-        let block_number = 999; // TODO: find a way to log it properly
 
         trace!(target: LOG_TARGET, block_number, "Verifying block.");
         let transaction_hash = verifier::verify(
