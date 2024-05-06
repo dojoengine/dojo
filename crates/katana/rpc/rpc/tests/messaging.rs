@@ -182,8 +182,8 @@ async fn test_messaging() {
                     &felt!("0x00c33cc113afc56bc878034908472770cb13eda6ad8ad91feb25fd4e5c9196a0")
                 );
 
-                // TODO: compute the l1 message hash and assert with the actual message hash in the l1 handler receipt
-                // hint: use `compute_l1_message_hash`
+                // TODO: compute the l1 message hash and assert with the actual message hash in the
+                // l1 handler receipt hint: use `compute_l1_message_hash`
 
                 assert_eq!(FieldElement::to_string(&calldata[1]), "123")
             }
