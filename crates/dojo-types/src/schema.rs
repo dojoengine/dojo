@@ -94,6 +94,22 @@ impl Ty {
         }
     }
 
+    /// If the `Ty` is an array, returns the associated [`Vec<Ty>`]. Returns `None` otherwise.
+    pub fn as_array(&self) -> Option<&Vec<Ty>> {
+        match self {
+            Ty::Array(tys) => Some(tys),
+            _ => None,
+        }
+    }
+
+    /// If the `Ty` is a byte array, returns the associated [`String`]. Returns `None` otherwise.
+    pub fn as_byte_array(&self) -> Option<&String> {
+        match self {
+            Ty::ByteArray(bytes) => Some(bytes),
+            _ => None,
+        }
+    }
+
     pub fn serialize(&self) -> Result<Vec<FieldElement>, PrimitiveError> {
         let mut felts = vec![];
 

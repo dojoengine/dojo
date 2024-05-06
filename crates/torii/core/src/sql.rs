@@ -130,6 +130,7 @@ impl Sql {
             vec![model.name()],
             &mut model_idx,
             block_timestamp,
+            false
         );
         self.query_queue.execute_all().await?;
 
@@ -185,6 +186,7 @@ impl Sql {
             &entity,
             block_timestamp,
             false,
+            None,
         );
         self.query_queue.execute_all().await?;
 
@@ -240,6 +242,7 @@ impl Sql {
             &entity,
             block_timestamp,
             true,
+            None,
         );
         self.query_queue.execute_all().await?;
 
@@ -411,15 +414,16 @@ impl Sql {
         path: Vec<String>,
         model_idx: &mut i64,
         block_timestamp: u64,
+        is_array: bool
     ) {
         if let Ty::Enum(_) = model {
             // Complex enum values not supported yet.
             return;
         }
 
-        self.build_model_query(path.clone(), model, *model_idx, block_timestamp);
+        self.build_model_query(path.clone(), model, *model_idx, block_timestamp, is_array);
 
-        let mut build_member = |pathname: &str, member: &Ty| {
+        let mut build_member = |pathname: Option<&str>, member: &Ty| {
             if let Ty::Primitive(_) = member {
                 return;
             } else if let Ty::ByteArray(_) = member {
@@ -427,28 +431,35 @@ impl Sql {
             }
 
             let mut path_clone = path.clone();
-            path_clone.push(pathname.to_string());
+            if let Some(name) = pathname {
+                path_clone.push(name.to_string());
+            }
 
             self.build_register_queries_recursive(
                 member,
                 path_clone,
                 &mut (*model_idx + 1),
                 block_timestamp,
+                // If the parent is an array, all children are also represented as table arrays
+                if let Ty::Array(_) = member { true } else { is_array },
             );
         };
 
         if let Ty::Struct(s) = model {
             for member in s.children.iter() {
-                build_member(&member.name, &member.ty);
+                build_member(Some(&member.name), &member.ty);
             }
         } else if let Ty::Tuple(t) = model {
             for (idx, member) in t.iter().enumerate() {
-                build_member(&idx.to_string(), &member);
+                build_member(Some(&idx.to_string()), &member);
             }
-        } 
-        else if let Ty::Array(array) = model {
+        } else if let Ty::Array(array) = model {
             let ty = &array[0];
-            build_member("data", &ty);
+            match ty {
+                Ty::Primitive(_) => build_member(Some("data"), &ty),
+                Ty::ByteArray(_) => build_member(Some("data"), &ty),
+                _ => build_member(None, &ty),
+            }
         }
     }
 
@@ -460,61 +471,69 @@ impl Sql {
         entity: &Ty,
         block_timestamp: u64,
         is_event_message: bool,
+        index: Option<i64>,
     ) {
-        let update_members = |members: &[Member], query_queue: &mut QueryQueue| {
-            let table_id = path.join("$");
-            let mut columns = vec![
-                "id".to_string(),
-                "event_id".to_string(),
-                "executed_at".to_string(),
-                if is_event_message {
-                    "event_message_id".to_string()
-                } else {
-                    "entity_id".to_string()
-                },
-            ];
-            let mut arguments = vec![
-                Argument::String(if is_event_message {
-                    "event:".to_string() + entity_id
-                } else {
-                    entity_id.to_string()
-                }),
-                Argument::String(event_id.to_string()),
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                Argument::String(entity_id.to_string()),
-            ];
+        let update_members =
+            |members: &[Member], query_queue: &mut QueryQueue, index: Option<i64>| {
+                let table_id = path.join("$");
+                let mut columns = vec![
+                    "id".to_string(),
+                    "event_id".to_string(),
+                    "executed_at".to_string(),
+                    if is_event_message {
+                        "event_message_id".to_string()
+                    } else {
+                        "entity_id".to_string()
+                    },
+                ];
 
-            for member in members.iter() {
-                match &member.ty {
-                    Ty::Primitive(ty) => {
-                        columns.push(format!("external_{}", &member.name));
-                        arguments.push(Argument::String(ty.to_sql_value().unwrap()));
-                    }
-                    Ty::Enum(e) => {
-                        columns.push(format!("external_{}", &member.name));
-                        arguments.push(Argument::String(e.to_sql_value().unwrap()));
-                    }
-                    Ty::ByteArray(b) => {
-                        columns.push(format!("external_{}", &member.name));
-                        arguments.push(Argument::String(b.clone()));
-                    }
-                    _ => {}
+                let mut arguments = vec![
+                    Argument::String(if is_event_message {
+                        "event:".to_string() + entity_id
+                    } else {
+                        entity_id.to_string()
+                    }),
+                    Argument::String(event_id.to_string()),
+                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    Argument::String(entity_id.to_string()),
+                ];
+
+                if let Some(idx) = index {
+                    columns.push("idx".to_string());
+                    arguments.push(Argument::Int(idx));
                 }
-            }
 
-            let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-            let statement = format!(
-                "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
-                columns.join(","),
-                placeholders.join(",")
-            );
+                for member in members.iter() {
+                    match &member.ty {
+                        Ty::Primitive(ty) => {
+                            columns.push(format!("external_{}", &member.name));
+                            arguments.push(Argument::String(ty.to_sql_value().unwrap()));
+                        }
+                        Ty::Enum(e) => {
+                            columns.push(format!("external_{}", &member.name));
+                            arguments.push(Argument::String(e.to_sql_value().unwrap()));
+                        }
+                        Ty::ByteArray(b) => {
+                            columns.push(format!("external_{}", &member.name));
+                            arguments.push(Argument::String(b.clone()));
+                        }
+                        _ => {}
+                    }
+                }
 
-            query_queue.enqueue(statement, arguments);
-        };
+                let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
+                let statement = format!(
+                    "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
+                    columns.join(","),
+                    placeholders.join(",")
+                );
+
+                query_queue.enqueue(statement, arguments);
+            };
 
         match entity {
             Ty::Struct(s) => {
-                update_members(&s.children, &mut self.query_queue);
+                update_members(&s.children, &mut self.query_queue, index);
 
                 for member in s.children.iter() {
                     if let Ty::Struct(_) = member.ty {
@@ -527,6 +546,7 @@ impl Sql {
                             &member.ty,
                             block_timestamp,
                             is_event_message,
+                            index,
                         );
                     } else if let Ty::Tuple(_) = member.ty {
                         let mut path_clone = path.clone();
@@ -538,6 +558,19 @@ impl Sql {
                             &member.ty,
                             block_timestamp,
                             is_event_message,
+                            index,
+                        );
+                    } else if let Ty::Array(_) = member.ty {
+                        let mut path_clone = path.clone();
+                        path_clone.push(member.name.to_string());
+                        self.build_set_entity_queries_recursive(
+                            path_clone,
+                            event_id,
+                            entity_id,
+                            &member.ty,
+                            block_timestamp,
+                            is_event_message,
+                            index,
                         );
                     }
                 }
@@ -553,6 +586,7 @@ impl Sql {
                         &child.ty,
                         block_timestamp,
                         is_event_message,
+                        index,
                     );
                 }
             }
@@ -560,75 +594,118 @@ impl Sql {
                 update_members(
                     t.iter()
                         .enumerate()
-                        .map(|(idx, m)| Member { name: idx.to_string(), ty: m.clone(), key: false })
-                        .collect::<Vec<_>>()
+                        .map(|(idx, member)| Member {
+                            name: idx.to_string(),
+                            ty: member.clone(),
+                            key: false,
+                        })
+                        .collect::<Vec<Member>>()
                         .as_slice(),
                     &mut self.query_queue,
+                    index,
                 );
 
                 for (idx, member) in t.iter().enumerate() {
-                    if let Ty::Struct(_) = &member {
-                        let mut path_clone = path.clone();
-                        path_clone.push(idx.to_string());
-                        self.build_set_entity_queries_recursive(
-                            path_clone,
-                            event_id,
-                            entity_id,
-                            &member,
-                            block_timestamp,
-                            is_event_message,
-                        );
-                    } else if let Ty::Tuple(_) = &member {
-                        let mut path_clone = path.clone();
-                        path_clone.push(idx.to_string());
-                        self.build_set_entity_queries_recursive(
-                            path_clone,
-                            event_id,
-                            entity_id,
-                            &member,
-                            block_timestamp,
-                            is_event_message,
-                        );
+                    match member {
+                        Ty::Struct(_) => {
+                            let mut path_clone = path.clone();
+                            path_clone.push(idx.to_string());
+                            self.build_set_entity_queries_recursive(
+                                path_clone,
+                                event_id,
+                                entity_id,
+                                &member,
+                                block_timestamp,
+                                is_event_message,
+                                index,
+                            );
+                        }
+                        Ty::Tuple(_) => {
+                            let mut path_clone = path.clone();
+                            path_clone.push(idx.to_string());
+                            self.build_set_entity_queries_recursive(
+                                path_clone,
+                                event_id,
+                                entity_id,
+                                &member,
+                                block_timestamp,
+                                is_event_message,
+                                index,
+                            );
+                        }
+                        Ty::Array(_) => {
+                            let mut path_clone = path.clone();
+                            path_clone.push(idx.to_string());
+                            self.build_set_entity_queries_recursive(
+                                path_clone,
+                                event_id,
+                                entity_id,
+                                &member,
+                                block_timestamp,
+                                is_event_message,
+                                index,
+                            );
+                        }
+                        _ => {}
                     }
                 }
             }
-            // wip
-            // Ty::Array(array) => {
-            //     update_members(
-            //         array.iter()
-            //             .enumerate()
-            //             .map(|(idx, m)| Member { name: idx.to_string(), ty: m.clone(), key: false })
-            //             .collect::<Vec<_>>()
-            //             .as_slice(),
-            //         &mut self.query_queue,
-            //     );
-
-            //     for member in array.iter() {
-            //         if let Ty::Struct(_) = &member {
-            //             let mut path_clone = path.clone();
-            //             path_clone.push("data".to_string());
-            //             self.build_set_entity_queries_recursive(
-            //                 path_clone,
-            //                 event_id,
-            //                 entity_id,
-            //                 &member,
-            //                 block_timestamp,
-            //                 is_event_message,
-            //             );
-            //         } else if let Ty::Tuple(_) = &member {
-            //             let mut path_clone = path.clone();
-            //             path_clone.push("data".to_string());
-            //             self.build_set_entity_queries_recursive(
-            //                 path_clone,
-            //                 event_id,
-            //                 entity_id,
-            //                 &member,
-            //                 block_timestamp,
-            //                 is_event_message,
-            //             );
-            //         }
-            //     }
-            // }
+            Ty::Array(array) => {
+                for (idx, member) in array.iter().enumerate() {
+                    match member {
+                        Ty::Struct(_) => {
+                            let mut path_clone = path.clone();
+                            path_clone.push("data".to_string());
+                            self.build_set_entity_queries_recursive(
+                                path_clone,
+                                event_id,
+                                entity_id,
+                                &member,
+                                block_timestamp,
+                                is_event_message,
+                                Some(idx as i64),
+                            );
+                        }
+                        Ty::Tuple(_) => {
+                            let mut path_clone = path.clone();
+                            path_clone.push("data".to_string());
+                            self.build_set_entity_queries_recursive(
+                                path_clone,
+                                event_id,
+                                entity_id,
+                                &member,
+                                block_timestamp,
+                                is_event_message,
+                                Some(idx as i64),
+                            );
+                        }
+                        Ty::Array(_) => {
+                            let mut path_clone = path.clone();
+                            path_clone.push("data".to_string());
+                            self.build_set_entity_queries_recursive(
+                                path_clone,
+                                event_id,
+                                entity_id,
+                                &member,
+                                block_timestamp,
+                                is_event_message,
+                                Some(idx as i64),
+                            );
+                        }
+                        _ => {
+                            update_members(
+                                &[Member {
+                                    name: "data".to_string(),
+                                    ty: member.clone(),
+                                    key: false,
+                                }],
+                                &mut self.query_queue,
+                                Some(idx as i64),
+                            );
+                        }
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -672,14 +749,19 @@ impl Sql {
         model: &Ty,
         model_idx: i64,
         block_timestamp: u64,
+        is_array: bool,
     ) {
         let table_id = path.join("$");
         let mut indices = Vec::new();
 
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL PRIMARY KEY, event_id TEXT \
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL, event_id TEXT \
              NOT NULL, entity_id TEXT, event_message_id TEXT, "
         );
+
+        if is_array {
+            create_table_query.push_str("idx INTEGER NOT NULL, ");
+        }
 
         let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
             if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
@@ -790,35 +872,34 @@ impl Sql {
                     self.query_queue.enqueue(statement, arguments);
                 }
             }
-            Ty::Array(array) => {
+            // Ty::Array(array) => {
+            //     let mut options = None; // TEMP: doesnt support complex enums yet
+            //     let ty = &array[0];
+            //     build_member("data", &ty, &mut options);
 
-                let mut options = None; // TEMP: doesnt support complex enums yet
-                let ty = &array[0];
-                build_member("data", &ty, &mut options);
+            //     let statement =
+            //         "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
+            //                      name, type, type_enum, enum_options, key, executed_at) VALUES (?, ?, \
+            //                      ?, ?, ?, ?, ?, ?, ?, ?)";
+            //     let arguments = vec![
+            //         Argument::String(table_id.clone()),
+            //         // TEMP: this is temporary until the model hash is precomputed
+            //         Argument::String(format!(
+            //             "{:#x}",
+            //             get_selector_from_name(&path[0].clone()).unwrap()
+            //         )),
+            //         Argument::Int(model_idx),
+            //         Argument::Int(0),
+            //         Argument::String("data".to_string()),
+            //         Argument::String(ty.name()),
+            //         Argument::String(ty.as_ref().into()),
+            //         options.unwrap_or(Argument::Null),
+            //         Argument::Bool(false),
+            //         Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+            //     ];
 
-                let statement =
-                    "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
-                                 name, type, type_enum, enum_options, key, executed_at) VALUES (?, ?, \
-                                 ?, ?, ?, ?, ?, ?, ?, ?)";
-                let arguments = vec![
-                    Argument::String(table_id.clone()),
-                    // TEMP: this is temporary until the model hash is precomputed
-                    Argument::String(format!(
-                        "{:#x}",
-                        get_selector_from_name(&path[0].clone()).unwrap()
-                    )),
-                    Argument::Int(model_idx),
-                    Argument::Int(0),
-                    Argument::String("data".to_string()),
-                    Argument::String(ty.name()),
-                    Argument::String(ty.as_ref().into()),
-                    options.unwrap_or(Argument::Null),
-                    Argument::Bool(false),
-                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                ];
-
-                self.query_queue.enqueue(statement, arguments);
-            }
+            //     self.query_queue.enqueue(statement, arguments);
+            // }
             _ => {}
         }
 
@@ -828,10 +909,24 @@ impl Sql {
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
-            create_table_query
-                .push_str(&format!("FOREIGN KEY (id) REFERENCES {parent_table_id} (id), "));
+
+            if is_array && path.len() > 2 {
+                create_table_query.push_str(&format!(
+                    "FOREIGN KEY (id, idx) REFERENCES {parent_table_id} (id, idx), "
+                ));
+            } else {
+                create_table_query.push_str(&format!(
+                    "FOREIGN KEY (id) REFERENCES {parent_table_id} (id), ",
+                    parent_table_id = parent_table_id
+                ));
+            }
         };
 
+        if is_array {
+            create_table_query.push_str("PRIMARY KEY (id, idx), ");
+        } else {
+            create_table_query.push_str("PRIMARY KEY (id), ");
+        }
         create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id), ");
         // create_table_query.push_str("FOREIGN KEY (event_id) REFERENCES events(id), ");
         create_table_query
