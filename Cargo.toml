@@ -149,7 +149,6 @@ parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"
 rayon = "1.8.0"
 regex = "1.10.3"
-reqwest = "0.12.4"
 rpassword = "7.2.0"
 salsa = "0.16.1"
 scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.6.4" }
