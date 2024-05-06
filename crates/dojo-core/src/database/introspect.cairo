@@ -1,15 +1,10 @@
-#[derive(Copy, Drop, Serde, Debug)]
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
 struct FieldLayout {
     selector: felt252,
     layout: Layout
 }
 
-// #[derive(Copy, Drop, Serde, Debug)]
-// struct ItemLayout {
-//     layout: Layout  // booo bad compiler ! bad !
-// }
-
-#[derive(Copy, Drop, Serde, Debug)]
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
 enum Layout {
     Fixed: Span<u8>,
     Struct: Span<FieldLayout>,
@@ -28,6 +23,11 @@ enum Layout {
     Array: Span<FieldLayout>,
 
     ByteArray,
+
+    // there is one layout per variant.
+    // the `selector` field identifies the variant (TODO: selector or raw value ?)
+    // the `layout` field defines the full variant layout (variant value + optional variant data)
+    Enum: Span<FieldLayout>,
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -214,5 +214,50 @@ impl Introspect_bytearray of Introspect<ByteArray> {
     }
     fn ty() -> Ty {
         Ty::DynamicSizeArray
+    }
+}
+
+impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
+    fn size() -> Option<usize> {
+        Option::None
+    }
+    fn layout() -> Layout {
+        Layout::Enum(
+            array![
+                FieldLayout {
+                    // Some
+                    selector: 0,
+                    layout: Layout::Tuple(
+                        array![
+                            FieldLayout {
+                                selector: '',
+                                layout: Layout::Fixed(array![8].span())
+                            },
+                            FieldLayout {
+                                selector: '',
+                                layout: Introspect::<T>::layout()
+                            }
+                        ].span()
+                    )
+                },
+                FieldLayout {
+                    // None
+                    selector: 1,
+                    layout: Layout::Tuple(
+                        array![
+                            FieldLayout {
+                                selector: '',
+                                layout: Layout::Fixed(array![8].span())
+                            }
+                        ].span()
+                    )
+                },
+            ].span()
+        )
+    }
+
+    fn ty() -> Ty {
+        // TODO: Not used anymore => to remove
+        Ty::Primitive('u8')
     }
 }

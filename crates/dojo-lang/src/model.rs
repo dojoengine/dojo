@@ -388,6 +388,7 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }

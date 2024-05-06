@@ -72,6 +72,13 @@ enum EnumTupleMix{
     Right: (Vec2, u64, EnumCustom),
 }
 
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithDifferentVariantData{
+    One,
+    Two: u32,
+    Three: (Vec2, u64),
+}
+
 #[derive(Copy, Drop, Introspect)]
 struct StructWithPrimitives {
     #[key]
@@ -232,6 +239,13 @@ enum EnumCustom {
 enum EnumTupleMix{
     Left: (Vec2, u64, EnumCustom),
     Right: (Vec2, u64, EnumCustom),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithDifferentVariantData{
+    One,
+    Two: u32,
+    Three: (Vec2, u64),
 }
 
 #[derive(Copy, Drop, Introspect)]
@@ -412,44 +426,61 @@ impl PlainEnumDrop of core::traits::Drop::<PlainEnum>;
 impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::Some(1)
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                }
-
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    
                 ].span()
             )
-            
+        },
+                ].span()
+            )
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    
+                ].span()
+            )
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'PlainEnum',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
@@ -476,52 +507,53 @@ impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
 impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumWithPrimitive<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::Some(2)
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
-dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u32>::layout()
-                        }
-
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<u32>::layout()
+        },
                 ].span()
             )
-            
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<u32>::layout()
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumWithPrimitive',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u32')
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u32')
-            )].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumWithStructSerde of core::serde::Serde::<EnumWithStruct> {
@@ -548,62 +580,53 @@ impl EnumWithStructDrop of core::traits::Drop::<EnumWithStruct>;
 impl EnumWithStructIntrospect<> of dojo::database::introspect::Introspect<EnumWithStruct<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
-Option::Some(1)
-                    ];
-
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
-
-                            dojo::database::introspect::FieldLayout {
-                                selector: '',
-                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
-                            }
-
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+        },
                 ].span()
             )
-            
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumWithStruct',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Vec2>::ty()
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Vec2>::ty()
-            )].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumWithSimpleArraySerde of core::serde::Serde::<EnumWithSimpleArray> {
@@ -630,62 +653,67 @@ impl EnumWithSimpleArrayDrop of core::traits::Drop::<EnumWithSimpleArray>;
 impl EnumWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect<EnumWithSimpleArray<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Array<u32>>::size(),
-Option::Some(1)
-                    ];
-
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
-
-                            dojo::database::introspect::FieldLayout {
-                                selector: '',
-                                layout: dojo::database::introspect::Introspect::<Array<u32>>::layout()
-                            }
-
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u32>::layout()
+                    }
                 ].span()
             )
-            
+        },
+                ].span()
+            )
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u32>::layout()
+                    }
+                ].span()
+            )
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumWithSimpleArray',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Array<u32>>::ty()
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Array<u32>>::ty()
-            )].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumWithByteArraySerde of core::serde::Serde::<EnumWithByteArray> {
@@ -717,47 +745,48 @@ impl EnumWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<Enu
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
-dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Layout::ByteArray
-                        }
-
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
+        },
                 ].span()
             )
-            
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumWithByteArray',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<ByteArray>::ty()
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<ByteArray>::ty()
-            )].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumWithSimpleTupleSerde of core::serde::Serde::<EnumWithSimpleTuple> {
@@ -784,62 +813,75 @@ impl EnumWithSimpleTupleDrop of core::traits::Drop::<EnumWithSimpleTuple>;
 impl EnumWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<EnumWithSimpleTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::Some(4)
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
 dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u8>::layout()
-                        },
-dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u256>::layout()
-                        }
-
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u256>::layout()
+                    }
                 ].span()
             )
-            
+        },
+                ].span()
+            )
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u256>::layout()
+                    }
+                ].span()
+            )
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumWithSimpleTuple',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u8')
-            ),
-dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u256')
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u8')
-            ),
-dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u256')
-            )].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumWithComplexTupleSerde of core::serde::Serde::<EnumWithComplexTuple> {
@@ -866,72 +908,75 @@ impl EnumWithComplexTupleDrop of core::traits::Drop::<EnumWithComplexTuple>;
 impl EnumWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<EnumWithComplexTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
-Option::Some(2)
-                    ];
-
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
 dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u8>::layout()
-                        },
-
-                            dojo::database::introspect::FieldLayout {
-                                selector: '',
-                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
-                            }
-
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    }
                 ].span()
             )
-            
+        },
+                ].span()
+            )
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u8>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    }
+                ].span()
+            )
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumWithComplexTuple',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u8')
-            ),
-dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Vec2>::ty()
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u8')
-            ),
-dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Vec2>::ty()
-            )].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumTupleOnePrimitiveSerde of core::serde::Serde::<EnumTupleOnePrimitive> {
@@ -958,52 +1003,67 @@ impl EnumTupleOnePrimitiveDrop of core::traits::Drop::<EnumTupleOnePrimitive>;
 impl EnumTupleOnePrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumTupleOnePrimitive<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::Some(2)
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
-dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u16>::layout()
-                        }
-
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u16>::layout()
+                    }
                 ].span()
             )
-            
+        },
+                ].span()
+            )
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u16>::layout()
+                    }
+                ].span()
+            )
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumTupleOnePrimitive',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u16')
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u16')
-            )].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumCustomSerde of core::serde::Serde::<EnumCustom> {
@@ -1030,62 +1090,53 @@ impl EnumCustomDrop of core::traits::Drop::<EnumCustom>;
 impl EnumCustomIntrospect<> of dojo::database::introspect::Introspect<EnumCustom<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
-Option::Some(1)
-                    ];
-
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
-
-                            dojo::database::introspect::FieldLayout {
-                                selector: '',
-                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
-                            }
-
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+        },
                 ].span()
             )
-            
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumCustom',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Vec2>::ty()
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Vec2>::ty()
-            )].span()))
-                )
-
-                ].span()
-            }
-        )
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumTupleMixSerde of core::serde::Serde::<EnumTupleMix> {
@@ -1112,84 +1163,173 @@ impl EnumTupleMixDrop of core::traits::Drop::<EnumTupleMix>;
 impl EnumTupleMixIntrospect<> of dojo::database::introspect::Introspect<EnumTupleMix<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
-dojo::database::introspect::Introspect::<EnumCustom>::size(),
-Option::Some(2)
-                    ];
-
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Tuple(
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 0,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
-                dojo::database::introspect::FieldLayout {
-                    selector: '',
-                    layout: dojo::database::introspect::Introspect::<u8>::layout()
-                },
-
-                            dojo::database::introspect::FieldLayout {
-                                selector: '',
-                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
-                            },
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    },
 dojo::database::introspect::FieldLayout {
-                            selector: '',
-                            layout: dojo::database::introspect::Introspect::<u64>::layout()
-                        },
-
-                            dojo::database::introspect::FieldLayout {
-                                selector: '',
-                                layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
-                            }
-
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u64>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
+                    }
                 ].span()
             )
-            
+        },
+                ].span()
+            )
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u64>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
+                    }
+                ].span()
+            )
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumTupleMix',
-                attrs: array![].span(),
-                children: array![
-                (
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Vec2>::ty()
-            ),
-dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u64')
-            ),
-dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<EnumCustom>::ty()
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<Vec2>::ty()
-            ),
-dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u64')
-            ),
-dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<EnumCustom>::ty()
-            )].span()))
-                )
-
-                ].span()
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
+    }
+}
+impl EnumWithDifferentVariantDataSerde of core::serde::Serde::<EnumWithDifferentVariantData> {
+    fn serialize(self: @EnumWithDifferentVariantData, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithDifferentVariantData::One(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithDifferentVariantData::Two(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithDifferentVariantData::Three(x) => { core::serde::Serde::serialize(@2, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithDifferentVariantData> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithDifferentVariantData::One(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithDifferentVariantData::Two(core::serde::Serde::deserialize(ref serialized)?),
+                2 => EnumWithDifferentVariantData::Three(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
             }
         )
+    }
+}
+impl EnumWithDifferentVariantDataCopy of core::traits::Copy::<EnumWithDifferentVariantData>;
+impl EnumWithDifferentVariantDataDrop of core::traits::Drop::<EnumWithDifferentVariantData>;
+
+impl EnumWithDifferentVariantDataIntrospect<> of dojo::database::introspect::Introspect<EnumWithDifferentVariantData<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                            selector: 0,
+                            layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                        },
+dojo::database::introspect::FieldLayout {
+            selector: 1,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Introspect::<u32>::layout()
+        },
+                ].span()
+            )
+        },
+dojo::database::introspect::FieldLayout {
+            selector: 2,
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    // variant value
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                    },
+                    dojo::database::introspect::FieldLayout {
+            selector: '',
+            layout: dojo::database::introspect::Layout::Tuple(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                    },
+dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<u64>::layout()
+                    }
+                ].span()
+            )
+        },
+                ].span()
+            )
+        }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithPrimitivesCopy of core::traits::Copy::<StructWithPrimitives>;
@@ -2114,7 +2254,3 @@ impl GenericStructIntrospect<T, impl TIntrospect: dojo::database::introspect::In
 }
 
 //! > expected_diagnostics
-error: Dynamic arrays are not supported.
- --> test_src/lib.cairo:29:9
-    Left: Array<u32>,
-        ^**********^

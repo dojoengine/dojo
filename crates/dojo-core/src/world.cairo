@@ -738,6 +738,24 @@ mod world {
             array_layout.span()
         }
 
+        fn _find_variant_layout(variant: felt252, variant_layouts: Span<FieldLayout>) -> Option<Layout> {
+            let mut i = 0;
+            let layout = loop {
+                if i >= variant_layouts.len() { break Option::None; }
+
+                let variant_layout = *variant_layouts.at(i);
+
+                // TODO: do we use the variant hash or directly the variant ?
+                if variant == variant_layout.selector {
+                    break Option::Some(variant_layout.layout);
+                }
+
+                i += 1;
+            };
+
+            layout
+        }
+
         /// Write values to the world storage.
         /// 
         /// # Arguments
@@ -768,6 +786,9 @@ mod world {
                 },
                 Layout::ByteArray => {
                     InternalFunctions::_write_byte_array_layout(model, key, values, ref offset);
+                },
+                Layout::Enum(layout) => {
+                    InternalFunctions::_write_enum_layout(model, key, values, ref offset, layout);
                 }
             }
         }
@@ -873,9 +894,9 @@ mod world {
                 if i >= layout.len() { break; }
 
                 let field_layout = *layout.at(i);
-                let key = InternalFunctions::_field_key(key, field_layout.selector);
+                let field_key = InternalFunctions::_field_key(key, field_layout.selector);
 
-                InternalFunctions::_write_layout(model, key, values, ref offset, field_layout.layout);
+                InternalFunctions::_write_layout(model, field_key, values, ref offset, field_layout.layout);
 
                 i += 1;
             }
@@ -897,6 +918,24 @@ mod world {
             layout: Span<FieldLayout>
         )  {
             InternalFunctions::_write_group_of_layouts(model, key, values, ref offset, layout);
+        }
+
+        fn _write_enum_layout(
+            model: felt252,
+            key: felt252, 
+            values: Span<felt252>,
+            ref offset: u32,
+            variant_layouts: Span<FieldLayout>
+        )  {
+            // first, get the variant value from `values``
+            let variant = *values.at(offset);
+            assert(variant.into() < 256_u256, 'invalid variant value');
+
+            // find the corresponding layout and then write the full variant
+            match InternalFunctions::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => InternalFunctions::_write_layout(model, key, values, ref offset, layout),
+                Option::None => panic!("Unable to find the variant layout")
+            };
         }
 
         /// Write values corresponding to a layout group to the world storage.
@@ -997,6 +1036,9 @@ mod world {
                 },
                 Layout::ByteArray => {
                     InternalFunctions::_delete_byte_array_layout(model, key);
+                },
+                Layout::Enum(layout) => {
+                    InternalFunctions::_delete_enum_layout(model, key, layout);
                 }
             }
         }
@@ -1049,6 +1091,25 @@ mod world {
             }
         }
 
+        fn _delete_enum_layout(
+            model: felt252,
+            key: felt252, 
+            variant_layouts: Span<FieldLayout>
+        ) {
+            // read the variant value first which is the first stored felt252
+            let res = database::get(model, key, array![251].span());
+            assert(res.len() == 1, 'internal database error');
+
+            let variant = *res.at(0);
+            assert(variant.into() < 256_u256, 'invalid variant value');
+
+            // find the corresponding layout and the delete the full variant
+            match InternalFunctions::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => InternalFunctions::_delete_layout(model, key, layout),
+                Option::None => panic!("Unable to find the variant layout")
+            };
+        }
+
         /// Read a model record.
         ///
         /// # Arguments
@@ -1073,6 +1134,8 @@ mod world {
                     InternalFunctions::_read_tuple_layout(model, key, ref read_data, layout),
                 Layout::ByteArray => 
                     InternalFunctions::_read_byte_array_layout(model, key, ref read_data),
+                Layout::Enum(layout) => 
+                    InternalFunctions::_read_enum_layout(model, key, ref read_data, layout),
             };
         }
 
@@ -1172,6 +1235,7 @@ mod world {
 
                 let field_layout = *layout.at(i);
                 let field_key = InternalFunctions::_field_key(key, field_layout.selector);
+
                 InternalFunctions::_read_layout(model, field_key, ref read_data, field_layout.layout);
 
                 i += 1;
@@ -1192,6 +1256,28 @@ mod world {
             layout: Span<FieldLayout>
         ) {
             InternalFunctions::_read_group_of_layouts(model, key, ref read_data, layout);
+        }
+
+        fn _read_enum_layout(
+            model: felt252,
+            key: felt252,
+            ref read_data: Array<felt252>,
+            variant_layouts: Span<FieldLayout>
+        ) {
+            // read the variant value first, which is the first element of the tuple
+            // (because an enum is stored as a tuple).
+            let variant_key = InternalFunctions::_field_key(key, 0);
+            let res = database::get(model, variant_key, array![8].span());
+            assert(res.len() == 1, 'internal database error');
+
+            let variant = *res.at(0);
+            assert(variant.into() < 256_u256, 'invalid variant value');
+
+            // find the corresponding layout and the read the full variant
+            match InternalFunctions::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => InternalFunctions::_read_layout(model, key, ref read_data, layout),
+                Option::None => panic!("Unable to find the variant layout")
+            };
         }
 
         /// Read data based on a group of layouts.

@@ -5,6 +5,7 @@ use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{
     Expr, GenericParam, ItemEnum, ItemStruct, OptionTypeClause, OptionWrappedGenericParamList,
+    TypeClause,
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
@@ -52,17 +53,23 @@ fn is_tuple(ty: &String) -> bool {
 
 fn get_array_item_type(ty: &String) -> String {
     if ty.starts_with("Array<") {
-        ty.strip_prefix("Array<").unwrap().strip_suffix('>').unwrap().to_string()
+        ty.trim().strip_prefix("Array<").unwrap().strip_suffix('>').unwrap().to_string()
     } else {
-        ty.strip_prefix("Span<").unwrap().strip_suffix('>').unwrap().to_string()
+        ty.trim().strip_prefix("Span<").unwrap().strip_suffix('>').unwrap().to_string()
     }
 }
 
 // split a tuple in array of items (nested tuples are not splitted).
 // example (u8, (u16, u32), u128) -> ["u8", "(u16, u32)", "u128"]
 fn get_tuple_item_types(ty: &String) -> Vec<String> {
-    let tuple_str =
-        ty.strip_prefix("(").unwrap().strip_suffix(")").unwrap().to_string().replace(" ", "");
+    let tuple_str = ty
+        .trim()
+        .strip_prefix("(")
+        .unwrap()
+        .strip_suffix(")")
+        .unwrap()
+        .to_string()
+        .replace(" ", "");
     let mut items = vec![];
     let mut current_item = "".to_string();
     let mut level = 0;
@@ -96,21 +103,6 @@ fn get_tuple_item_types(ty: &String) -> Vec<String> {
     items
 }
 
-fn build_array_layout_from_type(item_type: &String) -> String {
-    let item_type = get_array_item_type(item_type);
-    format!(
-        "dojo::database::introspect::Layout::Array(
-                array![
-                    dojo::database::introspect::FieldLayout {{
-                        selector: '',
-                        layout: {}
-                    }}
-                ].span()
-            )",
-        build_item_layout_from_type(&item_type)
-    )
-}
-
 fn compute_tuple_size(
     item_type: &String,
     precomputed_size: &mut usize,
@@ -136,6 +128,21 @@ fn compute_tuple_size(
     }
 
     return false;
+}
+
+fn build_array_layout_from_type(item_type: &String) -> String {
+    let item_type = get_array_item_type(item_type);
+    format!(
+        "dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {{
+                        selector: '',
+                        layout: {}
+                    }}
+                ].span()
+            )",
+        build_item_layout_from_type(&item_type)
+    )
 }
 
 fn build_tuple_layout_from_type(item_type: &String) -> String {
@@ -170,6 +177,115 @@ fn build_item_layout_from_type(item_type: &String) -> String {
     } else {
         format!("dojo::database::introspect::Introspect::<{}>::layout()", item_type)
     }
+}
+
+fn get_field_layout_from_type_clause(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    selector: String,
+    type_clause: &TypeClause,
+) -> String {
+    let field_layout = match type_clause.ty(db) {
+        Expr::Path(path) => {
+            let path_type = path.as_syntax_node().get_text(db);
+            build_item_layout_from_type(&path_type)
+        }
+        Expr::Tuple(expr) => {
+            let tuple_type = expr.as_syntax_node().get_text(db);
+            build_tuple_layout_from_type(&tuple_type)
+        }
+        _ => {
+            diagnostics.push(PluginDiagnostic {
+                stable_ptr: type_clause.stable_ptr().0,
+                message: "Unexpected expression for variant data type.".to_string(),
+                severity: Severity::Error,
+            });
+            "ERROR".to_string()
+        }
+    };
+
+    format!(
+        "dojo::database::introspect::FieldLayout {{
+            selector: {selector},
+            layout: {field_layout}
+        }}"
+    )
+}
+
+/// build the full layout for every variant in the Enum.
+/// Note that every variant may have a different associated data type.
+fn build_variant_layouts(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    enum_ast: ItemEnum,
+) -> String {
+    enum_ast
+        .variants(db)
+        .elements(db)
+        .iter()
+        .enumerate()
+        .map(|(i, v)| {
+            let selector = format!("{i}");
+
+            let variant_layout = match v.type_clause(db) {
+                OptionTypeClause::Empty(_) => "".to_string(),
+                OptionTypeClause::TypeClause(type_clause) => get_field_layout_from_type_clause(
+                    db,
+                    diagnostics,
+                    "''".to_string(),
+                    &type_clause,
+                ),
+            };
+
+            format!(
+                "dojo::database::introspect::FieldLayout {{
+                    selector: {selector},
+                    layout: dojo::database::introspect::Layout::Tuple(
+                        array![
+                            // variant value
+                            dojo::database::introspect::FieldLayout {{
+                                selector: '',
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            }},
+                            {variant_layout}
+                        ].span()
+                    )
+                }}"
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
+}
+
+fn build_generic_types_and_impls(
+    db: &dyn SyntaxGroup,
+    generic_params: OptionWrappedGenericParamList,
+) -> (Vec<String>, String) {
+    let generic_types =
+        if let OptionWrappedGenericParamList::WrappedGenericParamList(params) = generic_params {
+            params
+                .generic_params(db)
+                .elements(db)
+                .iter()
+                .filter_map(|el| {
+                    if let GenericParam::Type(typ) = el {
+                        Some(typ.name(db).text(db).to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        };
+
+    let generic_impls = generic_types
+        .iter()
+        .map(|g| format!("{g}, impl {g}Introspect: dojo::database::introspect::Introspect<{g}>"))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    (generic_types, generic_impls)
 }
 
 /// A handler for Dojo code derives Introspect for a struct
@@ -316,13 +432,63 @@ pub fn handle_enum_arm_type(ty_name: &String, is_primitive: bool) -> (String, St
     (serialized, ty_name.to_string())
 }
 
+pub fn handle_introspect_enum(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    enum_ast: ItemEnum,
+) -> RewriteNode {
+    let enum_name = enum_ast.name(db).text(db).into();
+
+    // TODO: compute size (is it really interesting ?)
+    let enum_size = "Option::None".to_string();
+
+    let (generic_types, generic_impls) =
+        build_generic_types_and_impls(db, enum_ast.generic_params(db));
+
+    let variant_layouts = build_variant_layouts(db, diagnostics, enum_ast);
+
+    RewriteNode::interpolate_patched(
+        "
+impl $name$Introspect<$generics$> of \
+         dojo::database::introspect::Introspect<$name$<$generics_types$>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        $size$
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            $variant_layouts$
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
+    }
+}
+        ",
+        &UnorderedHashMap::from([
+            ("name".to_string(), RewriteNode::Text(enum_name)),
+            ("generics".to_string(), RewriteNode::Text(generic_impls)),
+            ("generics_types".to_string(), RewriteNode::Text(generic_types.join(", "))),
+            ("size".to_string(), RewriteNode::Text(enum_size)),
+            ("variant_layouts".to_string(), RewriteNode::Text(variant_layouts)),
+        ]),
+    )
+}
+
 /// A handler for Dojo code derives Introspect for an enum
 /// Parameters:
 /// * db: The semantic database.
 /// * enum_ast: The AST of the enum.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_introspect_enum(
+pub fn handle_introspect_enum2(
     db: &dyn SyntaxGroup,
     diagnostics: &mut Vec<PluginDiagnostic>,
     enum_ast: ItemEnum,

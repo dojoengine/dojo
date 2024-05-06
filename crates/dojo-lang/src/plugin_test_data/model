@@ -361,6 +361,7 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -495,6 +496,7 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -629,6 +631,7 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -763,6 +766,7 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -897,6 +901,7 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -1031,6 +1036,7 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -1165,6 +1171,7 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -1299,6 +1306,7 @@ impl PositionModel of dojo::model::Model<Position> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -1433,6 +1441,7 @@ impl RolesModel of dojo::model::Model<Roles> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -1567,6 +1576,7 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -1701,6 +1711,7 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -1835,6 +1846,7 @@ impl PlayerModel of dojo::model::Model<Player> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -1969,6 +1981,7 @@ impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -2103,6 +2116,7 @@ impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -2237,6 +2251,7 @@ impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -2371,6 +2386,7 @@ impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -2505,6 +2521,7 @@ impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimi
             dojo::database::introspect::Layout::Struct(_) => Option::None,
             dojo::database::introspect::Layout::Array(_) => Option::None,
             dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
             dojo::database::introspect::Layout::ByteArray => Option::None,
         }
     }
@@ -2618,341 +2635,341 @@ struct U256KeyModel {
        ^**********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:90:1
+ --> test_src/lib.cairo[BadModelMultipleVersions]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:90:1
+ --> test_src/lib.cairo[BadModelBadVersionType]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:90:1
+ --> test_src/lib.cairo[BadModelNoVersionValue]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:90:1
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:90:1
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:90:1
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:90:1
+ --> test_src/lib.cairo[Modelv0]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:90:1
+ --> test_src/lib.cairo[Position]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:90:1
+ --> test_src/lib.cairo[Roles]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:90:1
+ --> test_src/lib.cairo[OnlyKeyModel]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:90:1
+ --> test_src/lib.cairo[U256KeyModel]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:90:1
+ --> test_src/lib.cairo[Player]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithSimpleArray]:90:1
+ --> test_src/lib.cairo[ModelWithSimpleArray]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithByteArray]:90:1
+ --> test_src/lib.cairo[ModelWithByteArray]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithComplexArray]:90:1
+ --> test_src/lib.cairo[ModelWithComplexArray]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTuple]:90:1
+ --> test_src/lib.cairo[ModelWithTuple]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:90:1
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:91:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:95:5
+ --> test_src/lib.cairo[BadModelMultipleVersions]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:98:5
+ --> test_src/lib.cairo[BadModelMultipleVersions]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:129:5
+ --> test_src/lib.cairo[BadModelMultipleVersions]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:95:5
+ --> test_src/lib.cairo[BadModelBadVersionType]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:98:5
+ --> test_src/lib.cairo[BadModelBadVersionType]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:129:5
+ --> test_src/lib.cairo[BadModelBadVersionType]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:95:5
+ --> test_src/lib.cairo[BadModelNoVersionValue]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:98:5
+ --> test_src/lib.cairo[BadModelNoVersionValue]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:129:5
+ --> test_src/lib.cairo[BadModelNoVersionValue]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:95:5
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:98:5
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:129:5
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:95:5
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:98:5
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:129:5
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:95:5
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:98:5
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:129:5
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:95:5
+ --> test_src/lib.cairo[Modelv0]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:98:5
+ --> test_src/lib.cairo[Modelv0]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:129:5
+ --> test_src/lib.cairo[Modelv0]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:95:5
+ --> test_src/lib.cairo[Position]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:98:5
+ --> test_src/lib.cairo[Position]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:129:5
+ --> test_src/lib.cairo[Position]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:95:5
+ --> test_src/lib.cairo[Roles]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:98:5
+ --> test_src/lib.cairo[Roles]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:129:5
+ --> test_src/lib.cairo[Roles]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:95:5
+ --> test_src/lib.cairo[OnlyKeyModel]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:98:5
+ --> test_src/lib.cairo[OnlyKeyModel]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:129:5
+ --> test_src/lib.cairo[OnlyKeyModel]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:95:5
+ --> test_src/lib.cairo[U256KeyModel]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:98:5
+ --> test_src/lib.cairo[U256KeyModel]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:129:5
+ --> test_src/lib.cairo[U256KeyModel]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:95:5
+ --> test_src/lib.cairo[Player]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:98:5
+ --> test_src/lib.cairo[Player]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:129:5
+ --> test_src/lib.cairo[Player]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithSimpleArray]:95:5
+ --> test_src/lib.cairo[ModelWithSimpleArray]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithSimpleArray]:98:5
+ --> test_src/lib.cairo[ModelWithSimpleArray]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithSimpleArray]:129:5
+ --> test_src/lib.cairo[ModelWithSimpleArray]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithByteArray]:95:5
+ --> test_src/lib.cairo[ModelWithByteArray]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithByteArray]:98:5
+ --> test_src/lib.cairo[ModelWithByteArray]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithByteArray]:129:5
+ --> test_src/lib.cairo[ModelWithByteArray]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithComplexArray]:95:5
+ --> test_src/lib.cairo[ModelWithComplexArray]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithComplexArray]:98:5
+ --> test_src/lib.cairo[ModelWithComplexArray]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithComplexArray]:129:5
+ --> test_src/lib.cairo[ModelWithComplexArray]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTuple]:95:5
+ --> test_src/lib.cairo[ModelWithTuple]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTuple]:98:5
+ --> test_src/lib.cairo[ModelWithTuple]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTuple]:129:5
+ --> test_src/lib.cairo[ModelWithTuple]:130:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:95:5
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:96:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:98:5
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:99:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:129:5
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:130:5
     #[abi(embed_v0)]
     ^**************^
