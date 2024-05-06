@@ -6,7 +6,7 @@ use std::time::Duration;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
-use futures::future::{self, join};
+use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
@@ -124,7 +124,7 @@ impl Saya {
 
             // Fetch all blocks from the current block to the latest block
             let fetched_blocks = future::try_join_all(
-                (block..latest_block).map(|block_number| self.provider.fetch_block(block_number)),
+                (block..=latest_block).map(|block_number| self.provider.fetch_block(block_number)),
             )
             .await?;
 
