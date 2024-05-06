@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715002004228,
+  "lastUpdate": 1715007987554,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7195,6 +7195,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17003670,
             "range": "± 875681",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrence@vanas.family",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "tarrence@vanas.family",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "distinct": true,
+          "id": "91532a2b0768ef9e4544b28fcd69b35c1975c746",
+          "message": "Don't build Saya for now",
+          "timestamp": "2024-05-06T10:58:13-04:00",
+          "tree_id": "9e062bb74c2434fd22470a1d5bca4eefe429d812",
+          "url": "https://github.com/dojoengine/dojo/commit/91532a2b0768ef9e4544b28fcd69b35c1975c746"
+        },
+        "date": 1715007986949,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16726257,
+            "range": "± 245250",
             "unit": "ns/iter"
           }
         ]
