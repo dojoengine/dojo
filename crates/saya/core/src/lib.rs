@@ -1,5 +1,6 @@
 //! Saya core library.
 
+use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -122,24 +123,9 @@ impl Saya {
                 continue;
             }
 
-            // Fetch all blocks from the current block to the latest block
-            let fetched_blocks = future::try_join_all(
-                (block..=latest_block).map(|block_number| self.provider.fetch_block(block_number)),
-            )
-            .await?;
-
-            // shift the state roots to the right by one, as proof of each block is based on the
-            // previous state root
-            let mut state_roots =
-                fetched_blocks.iter().map(|b| b.header.header.state_root).collect::<Vec<_>>();
-            state_roots.insert(0, previous_block_state_root);
-            previous_block_state_root = state_roots.pop().unwrap();
-
-            let params = fetched_blocks
-                .into_iter()
-                .zip(state_roots)
-                .map(|(b, s)| (b, s))
-                .collect::<Vec<_>>();
+            let (last_state_root, params) =
+                self.prefetch_blocks(block..=latest_block, previous_block_state_root).await?;
+            previous_block_state_root = last_state_root;
 
             // Updating the local state sequentially, as there is only one instance of
             // `self.blockchain` This part does no actual  proving, so should not be a
@@ -159,11 +145,36 @@ impl Saya {
         }
     }
 
+    /// Pulls state update.
+    async fn prefetch_blocks(
+        &mut self,
+        block_numbers: RangeInclusive<BlockNumber>,
+        previous_block_state_root: FieldElement,
+    ) -> SayaResult<(FieldElement, Vec<(SealedBlock, FieldElement)>)> {
+        // Fetch all blocks from the current block to the latest block
+        let fetched_blocks = future::try_join_all(
+            (block_numbers).map(|block_number| self.provider.fetch_block(block_number)),
+        )
+        .await?;
+
+        // shift the state roots to the right by one, as proof of each block is based on the
+        // previous state root
+        let mut state_roots =
+            fetched_blocks.iter().map(|b| b.header.header.state_root).collect::<Vec<_>>();
+        state_roots.insert(0, previous_block_state_root);
+        let previous_block_state_root = state_roots.pop().unwrap();
+
+        let params =
+            fetched_blocks.into_iter().zip(state_roots).map(|(b, s)| (b, s)).collect::<Vec<_>>();
+
+        Ok((previous_block_state_root, params))
+    }
+
     /// Processes the given block number.
     ///
     /// # Summary
     ///
-    /// 1. Pulls state update to update local state accordingly. We may publish DA at this point.
+    /// 1. Update local state accordingly to pulled state. We may publish DA at this point.
     ///
     /// 2. Pulls all transactions and data required to generate the trace.
     ///
@@ -187,10 +198,10 @@ impl Saya {
         let (block, prev_state_root) = blocks;
 
         let (state_updates, da_state_update) =
-            self.provider.fetch_state_updates(block_number).await?;
+            self.provider.fetch_state_updates(block_number).await?; // TODO: move to `prefetch_blocks()`
 
         if let Some(da) = &self.da_client {
-            da.publish_state_diff_felts(&da_state_update).await?;
+            da.publish_state_diff_felts(&da_state_update).await?; // TODO: move to `prefetch_blocks()`
         }
 
         let block =
@@ -203,7 +214,7 @@ impl Saya {
             return Ok(());
         }
 
-        let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
+        let exec_infos = self.provider.fetch_transactions_executions(block_number).await?; // TODO: move to `prefetch_blocks()`
 
         if exec_infos.is_empty() {
             trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
