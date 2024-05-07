@@ -65,7 +65,7 @@ impl AccountOptions {
         Ok(account)
     }
 
-    fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
+    pub fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         if let Some(address) = self.account_address {
             trace!(?address, "Account address found.");
             Ok(address)
