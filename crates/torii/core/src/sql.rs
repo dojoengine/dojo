@@ -449,7 +449,7 @@ impl Sql {
             }
         } else if let Ty::Tuple(t) = model {
             for (idx, member) in t.iter().enumerate() {
-                build_member(&idx.to_string(), &member);
+                build_member(format!("_{}", idx).as_str(), member);
             }
         } else if let Ty::Array(array) = model {
             let ty = &array[0];
@@ -589,7 +589,7 @@ impl Sql {
                     t.iter()
                         .enumerate()
                         .map(|(idx, member)| Member {
-                            name: idx.to_string(),
+                            name: format!("_{}", idx),
                             ty: member.clone(),
                             key: false,
                         })
@@ -603,7 +603,7 @@ impl Sql {
                     match member {
                         Ty::Struct(_) => {
                             let mut path_clone = path.clone();
-                            path_clone.push(idx.to_string());
+                            path_clone.push(format!("_{}", idx));
                             self.build_set_entity_queries_recursive(
                                 path_clone,
                                 event_id,
@@ -616,7 +616,7 @@ impl Sql {
                         }
                         Ty::Tuple(_) => {
                             let mut path_clone = path.clone();
-                            path_clone.push(idx.to_string());
+                            path_clone.push(format!("_{}", idx));
                             self.build_set_entity_queries_recursive(
                                 path_clone,
                                 event_id,
@@ -834,7 +834,7 @@ impl Sql {
                 for (idx, member) in tuple.iter().enumerate() {
                     let mut options = None; // TEMP: doesnt support complex enums yet
 
-                    build_member(&idx.to_string(), &member, &mut options);
+                    build_member(&format!("_{}", idx), &member, &mut options);
 
                     let statement =
                         "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
@@ -849,7 +849,7 @@ impl Sql {
                         )),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),
-                        Argument::String(idx.to_string()),
+                        Argument::String(format!("_{}", idx)),
                         Argument::String(member.name()),
                         Argument::String(member.as_ref().into()),
                         options.unwrap_or(Argument::Null),
