@@ -184,6 +184,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
 
             return FieldFuture::new(async move {
                 if let Some(value) = ctx.parent_value.as_value() {
+                    println!("parent_value: {:?}", value);
                     // Nested types resolution
                     if let TypeData::Nested((_, nested_mapping)) = type_data {
                         return match ctx.parent_value.try_to_value()? {
@@ -204,6 +205,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
 
                                 Ok(Some(Value::Object(result)))
                             }
+                            Value::List(list) => Ok(Some(Value::List(list.clone()))),
                             _ => Err("incorrect value, requires Value::Object".into()),
                         };
                     }
@@ -213,14 +215,19 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                         Value::Object(value_mapping) => {
                             Ok(Some(value_mapping.get(&field_name).unwrap().clone()))
                         }
+                        Value::List(list) => Ok(Some(Value::List(list.clone()))),
                         _ => Err("Incorrect value, requires Value::Object".into()),
                     };
                 }
 
                 // Catch model union resolutions, async-graphql sends union types as IndexMap<Name,
                 // ConstValue>
-                if let Some(value_mapping) = ctx.parent_value.downcast_ref::<ValueMapping>() {
-                    return Ok(Some(value_mapping.get(&field_name).unwrap().clone()));
+                if let Some(value) = ctx.parent_value.downcast_ref::<Value>() {
+                    if let Value::Object(indexmap) = value {
+                        return Ok(Some(indexmap.get(&field_name).unwrap().clone()));
+                    }
+
+                    return Ok(Some(value.clone()));
                 }
 
                 Err("Field resolver only accepts Value or IndexMap".into())

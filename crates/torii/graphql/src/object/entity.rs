@@ -5,6 +5,7 @@ use async_graphql::dynamic::{
 use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
 use sqlx::pool::PoolConnection;
+use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
@@ -14,6 +15,7 @@ use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
     DATETIME_FORMAT, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN,
+    INTERNAL_ENTITY_ID_KEY,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
@@ -63,8 +65,10 @@ impl ResolvableObject for EntityObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "entityUpdated",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let id = match ctx.args.get("id") {
                         Some(id) => Some(id.string()?.to_string()),
@@ -81,9 +85,9 @@ impl ResolvableObject for EntityObject {
                         }
                     }))
                 })
-            })
-            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
-        ])
+            },
+        )
+        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
     }
 }
 
@@ -143,6 +147,7 @@ fn model_union_field() -> Field {
                             &mut conn,
                             vec![name.clone()],
                             &entity_id,
+                            None,
                             &type_mapping,
                         )
                         .await?;
@@ -164,25 +169,52 @@ pub async fn model_data_recursive_query(
     conn: &mut PoolConnection<Sqlite>,
     path_array: Vec<String>,
     entity_id: &str,
+    idx: Option<i64>,
     type_mapping: &TypeMapping,
-) -> sqlx::Result<ValueMapping> {
+) -> sqlx::Result<Value> {
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
-    let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", table_name, entity_id);
-    let row = sqlx::query(&query).fetch_one(conn.as_mut()).await?;
-    let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
+    let mut query = format!("SELECT * FROM {} WHERE entity_id = '{}' ", table_name, entity_id);
+    if let Some(idx) = idx {
+        query.push_str(&format!("AND idx = {}", idx));
+    }
 
-    for (field_name, type_data) in type_mapping {
-        if let TypeData::Nested((_, nested_mapping)) = type_data {
-            let mut nested_path = path_array.clone();
-            nested_path.push(field_name.to_string());
+    let rows = sqlx::query(&query).fetch_all(conn.as_mut()).await?;
+    if rows.is_empty() {
+        return Ok(Value::Null);
+    }
 
-            let nested_values =
-                model_data_recursive_query(conn, nested_path, entity_id, nested_mapping).await?;
+    let value_mapping: Value;
+    let mut nested_value_mappings = Vec::new();
 
-            value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
+    for (idx, row) in rows.iter().enumerate() {
+        let mut nested_value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
+
+        for (field_name, type_data) in type_mapping {
+            if let TypeData::Nested((_, nested_mapping)) = type_data {
+                let mut nested_path = path_array.clone();
+                nested_path.push(field_name.to_string());
+
+                let nested_values = model_data_recursive_query(
+                    conn,
+                    nested_path,
+                    entity_id,
+                    if rows.len() > 1 { Some(idx as i64) } else { None },
+                    nested_mapping,
+                )
+                .await?;
+                nested_value_mapping.insert(Name::new(field_name), nested_values);
+            }
         }
+
+        nested_value_mappings.push(Value::Object(nested_value_mapping));
+    }
+
+    if nested_value_mappings.len() > 1 {
+        value_mapping = Value::List(nested_value_mappings);
+    } else {
+        value_mapping = nested_value_mappings.pop().unwrap();
     }
 
     Ok(value_mapping)
