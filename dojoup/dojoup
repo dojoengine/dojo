@@ -189,6 +189,29 @@ EOF
       fi
     done
 
+    # Extracting the scarb version from the output of 'sozo --version'
+    scarb_version=$(echo "$(sozo --version)" | grep -o 'scarb: [0-9.]*' | cut -d ' ' -f 2)
+
+    # Check if scarb is already installed
+    if [ "$(scarb --version 2>/dev/null)" != "scarb $scarb_version" ]; then
+      # Check if scarb is managed by asdf
+      if command -v asdf &> /dev/null; then
+        if asdf list | grep -q "scarb"; then
+          # Check if default version is set
+          if ! asdf current scarb &> /dev/null; then
+            asdf global scarb $scarb_version
+          fi
+        else
+          # Install scarb using asdf
+          asdf plugin add scarb
+          asdf install scarb $scarb_version
+        fi
+      else
+        # Install scarb using the install script
+        curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v $scarb_version
+      fi
+    fi
+
     say "done!"
     welcome_msg
 
