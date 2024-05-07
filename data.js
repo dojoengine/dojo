@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715068916223,
+  "lastUpdate": 1715088254280,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7345,6 +7345,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17066588,
             "range": "± 239484",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fdcf1d4de5b0100c0d305e035c516fe08f4e0fe1",
+          "message": "Simplify readme, add contextual warnings to dojoup (#1938)",
+          "timestamp": "2024-05-07T09:15:51-04:00",
+          "tree_id": "d847b4f2e08abb4fb815c2afe594afbc2e94bc70",
+          "url": "https://github.com/dojoengine/dojo/commit/fdcf1d4de5b0100c0d305e035c516fe08f4e0fe1"
+        },
+        "date": 1715088253534,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16945249,
+            "range": "± 519178",
             "unit": "ns/iter"
           }
         ]
