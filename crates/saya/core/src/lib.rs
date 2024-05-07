@@ -1,5 +1,7 @@
 //! Saya core library.
 
+use std::fs::File;
+use std::io::Write;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 use std::time::Duration;
@@ -105,9 +107,11 @@ impl Saya {
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
+        let capacity = 1; // TODO: make it configurable
+
         // The structure responsible for proving.
         let mut prove_scheduler =
-            Scheduler::new(4, self.config.world_address, ProverIdentifier::Stone);
+            Scheduler::new(capacity, self.config.world_address, ProverIdentifier::Stone);
 
         loop {
             let latest_block = match self.provider.block_number().await {
@@ -138,8 +142,11 @@ impl Saya {
                 if prove_scheduler.is_full() {
                     // ProverIdentifier::Http(self.config.prover_url.clone()),
                     self.process_proven(prove_scheduler, block).await?; // TODO: spawn it, but store a handle
-                    prove_scheduler =
-                        Scheduler::new(4, self.config.world_address, ProverIdentifier::Stone);
+                    prove_scheduler = Scheduler::new(
+                        capacity,
+                        self.config.world_address,
+                        ProverIdentifier::Stone,
+                    );
                 }
 
                 block += 1;
@@ -189,6 +196,8 @@ impl Saya {
             })
             .collect::<Vec<_>>();
 
+        trace!(target: LOG_TARGET, block_number = block_numbers.start(), to = block_numbers.end(), "Fetched blocks.");
+
         Ok((previous_block_state_root, params))
     }
 
@@ -206,6 +215,7 @@ impl Saya {
     ///
     /// # Arguments
     ///
+    /// * `prove_scheduler` - A pararell prove scheduler.
     /// * `block_number` - The block number.
     /// * `blocks` - The block to process, along with the state roots of the previous block and the
     ///   genesis block.
@@ -269,10 +279,15 @@ impl Saya {
 
     /// Registers the facts + the send the proof to verifier. Not all provers require this step
     ///    (a.k.a. SHARP).
+    ///
+    /// # Arguments
+    ///
+    /// * `prove_scheduler` - A full pararell prove scheduler.
+    /// * `last_block` - The last block number in the `prove_scheduler`.
     async fn process_proven(
         &self,
         prove_scheduler: Scheduler,
-        block_number: BlockNumber,
+        last_block: BlockNumber,
     ) -> SayaResult<()> {
         // Prove each of the leaf nodes of the recursion tree and merge them into one
         let (proof, state_diff) = prove_scheduler.proved().await.unwrap();
@@ -280,13 +295,13 @@ impl Saya {
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
         let world_da = state_diff.world_da.unwrap();
 
-        trace!(target: LOG_TARGET, block_number, "Verifying block.");
+        trace!(target: LOG_TARGET, last_block, "Verifying block.");
         let transaction_hash = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
         )
         .await?;
-        info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
+        info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
 
         let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
         let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
@@ -295,11 +310,11 @@ impl Saya {
 
         sleep(Duration::from_millis(5000)).await;
 
-        trace!(target: LOG_TARGET, block_number, "Applying diffs.");
+        trace!(target: LOG_TARGET, last_block, "Applying diffs.");
         let transaction_hash =
             dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
                 .await?;
-        info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
+        info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
 
         Ok(())
     }
