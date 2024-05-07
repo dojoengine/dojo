@@ -8,7 +8,6 @@ use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_crypto::FieldElement;
 
@@ -99,8 +98,7 @@ where
 {
     let mut calls = Vec::new();
 
-    let world_reader = WorldContractReader::new(world.address, world.account.provider())
-        .with_block(BlockId::Tag(BlockTag::Pending));
+    let world_reader = WorldContractReader::new(world.address, world.account.provider());
 
     for mc in models_contracts {
         let model_name = parse_cairo_short_string(&mc.model)?;
@@ -193,8 +191,7 @@ where
 {
     let mut calls = Vec::new();
 
-    let world_reader = WorldContractReader::new(world.address, world.account.provider())
-        .with_block(BlockId::Tag(BlockTag::Pending));
+    let world_reader = WorldContractReader::new(world.address, world.account.provider());
 
     for mc in models_contracts {
         let model_name = parse_cairo_short_string(&mc.model)?;

@@ -4,7 +4,7 @@ use dojo_world::contracts::WorldContractReader;
 use scarb::core::Config;
 use sozo_ops::register;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::FieldElement;
 use tracing::trace;
 
 use super::options::account::AccountOptions;
@@ -62,8 +62,7 @@ impl RegisterArgs {
             let world =
                 utils::world_from_env_metadata(world, account, starknet, &env_metadata).await?;
             let provider = world.account.provider();
-            let world_reader = WorldContractReader::new(world_address, &provider)
-                .with_block(BlockId::Tag(BlockTag::Pending));
+            let world_reader = WorldContractReader::new(world_address, &provider);
             register::model_register(
                 models,
                 &world,

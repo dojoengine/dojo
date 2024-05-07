@@ -54,7 +54,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.5", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.9", features = [ "abigen-rs" ] }
 common = { path = "crates/common" }
 
 # metrics
@@ -160,8 +160,8 @@ serde_with = "2.3.1"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
-starknet = "0.9.0"
-starknet-crypto = "0.6.1"
+starknet = "0.10.0"
+starknet-crypto = "0.6.2"
 starknet_api = "0.10.0"
 strum = "0.25"
 strum_macros = "0.25"
