@@ -419,162 +419,162 @@ error: Unsupported attribute.
     ^********^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[spawn]:10:21
+ --> test_src/lib.cairo[spawn]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:12:21
+ --> test_src/lib.cairo[spawn]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:19:21
+ --> test_src/lib.cairo[spawn]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:26:21
+ --> test_src/lib.cairo[spawn]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:36:13
+ --> test_src/lib.cairo[spawn]:37:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:42:13
+ --> test_src/lib.cairo[spawn]:43:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:45:17
+ --> test_src/lib.cairo[spawn]:46:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[proxy]:10:21
+ --> test_src/lib.cairo[proxy]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:12:21
+ --> test_src/lib.cairo[proxy]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:19:21
+ --> test_src/lib.cairo[proxy]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:26:21
+ --> test_src/lib.cairo[proxy]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:33:13
+ --> test_src/lib.cairo[proxy]:34:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:39:13
+ --> test_src/lib.cairo[proxy]:40:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:42:17
+ --> test_src/lib.cairo[proxy]:43:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[ctxnamed]:10:21
+ --> test_src/lib.cairo[ctxnamed]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:12:21
+ --> test_src/lib.cairo[ctxnamed]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:19:21
+ --> test_src/lib.cairo[ctxnamed]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:26:21
+ --> test_src/lib.cairo[ctxnamed]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:36:13
+ --> test_src/lib.cairo[ctxnamed]:37:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:42:13
+ --> test_src/lib.cairo[ctxnamed]:43:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:45:17
+ --> test_src/lib.cairo[ctxnamed]:46:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withevent]:10:21
+ --> test_src/lib.cairo[withevent]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:12:21
+ --> test_src/lib.cairo[withevent]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:19:21
+ --> test_src/lib.cairo[withevent]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:26:21
+ --> test_src/lib.cairo[withevent]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:30:13
+ --> test_src/lib.cairo[withevent]:31:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:42:13
+ --> test_src/lib.cairo[withevent]:43:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:45:17
+ --> test_src/lib.cairo[withevent]:46:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withcomponent]:10:21
+ --> test_src/lib.cairo[withcomponent]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:12:21
+ --> test_src/lib.cairo[withcomponent]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:19:21
+ --> test_src/lib.cairo[withcomponent]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:26:21
+ --> test_src/lib.cairo[withcomponent]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
@@ -589,52 +589,52 @@ error: Unknown inline item macro: 'component'.
     ^*********************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:32:13
+ --> test_src/lib.cairo[withcomponent]:33:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:35:17
+ --> test_src/lib.cairo[withcomponent]:36:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:37:25
+ --> test_src/lib.cairo[withcomponent]:38:25
                         #[substorage(v0)]
                         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:39:9
+ --> test_src/lib.cairo[withcomponent]:40:9
         #[substorage(v0)]
         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:43:13
+ --> test_src/lib.cairo[withcomponent]:44:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:47:25
+ --> test_src/lib.cairo[withcomponent]:48:25
                         #[flat]
                         ^*****^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:10:21
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:12:21
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:19:21
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:26:21
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
@@ -644,37 +644,37 @@ error: Unsupported attribute.
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:35:13
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:36:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:41:13
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:42:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ContractAllowedRefSelf]:44:17
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:45:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[MyFaultyContract]:10:21
+ --> test_src/lib.cairo[MyFaultyContract]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:12:21
+ --> test_src/lib.cairo[MyFaultyContract]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:19:21
+ --> test_src/lib.cairo[MyFaultyContract]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:26:21
+ --> test_src/lib.cairo[MyFaultyContract]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
@@ -684,37 +684,37 @@ error: Unsupported attribute.
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:60:13
+ --> test_src/lib.cairo[MyFaultyContract]:61:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:66:13
+ --> test_src/lib.cairo[MyFaultyContract]:67:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:69:17
+ --> test_src/lib.cairo[MyFaultyContract]:70:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[MyNominalContract]:10:21
+ --> test_src/lib.cairo[MyNominalContract]:11:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:12:21
+ --> test_src/lib.cairo[MyNominalContract]:13:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:19:21
+ --> test_src/lib.cairo[MyNominalContract]:20:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:26:21
+ --> test_src/lib.cairo[MyNominalContract]:27:21
                     #[abi(embed_v0)]
                     ^**************^
 
@@ -724,17 +724,17 @@ error: Unsupported attribute.
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:64:13
+ --> test_src/lib.cairo[MyNominalContract]:65:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:70:13
+ --> test_src/lib.cairo[MyNominalContract]:71:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:73:17
+ --> test_src/lib.cairo[MyNominalContract]:74:17
                 #[substorage(v0)]
                 ^***************^
 

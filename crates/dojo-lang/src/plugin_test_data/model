@@ -1,63 +1,91 @@
-//! > Test expansion of the derive(Model).
+//! > Test expansion of the dojo::model.
 
 //! > test_runner_name
 test_expand_plugin
 
 //! > cairo_code
-use core::serde::Serde;
-
-#[derive(Introspect, Copy, Drop, Serde)]
-struct Vec3 {
-    x: u32,
-    y: u32,
-    z: u8,
+#[dojo::model(version: 0)]
+#[dojo::model(version: 0)]
+struct BadModelMultipleAttr {
+    #[key]
+    id: felt252,
+    v: Vec3,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[dojo::model(version: 0, version: 0)]
+struct BadModelMultipleVersions {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: hello)]
+struct BadModelBadVersionType {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version)]
+struct BadModelNoVersionValue {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(my_arg: 1)]
+struct BadModelUnexpectedArgWithValue {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(my_arg)]
+struct BadModelUnexpectedArg {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: 2)]
+struct BadModelNotSupportedVersion {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: 0)]
+struct Modelv0 {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model]
 struct Position {
     #[key]
     id: felt252,
     v: Vec3,
 }
 
-trait PositionTrait {
-    fn is_zero(self: Position) -> bool;
-    fn is_equal(self: Position, b: Position) -> bool;
-}
-
-impl PositionImpl of PositionTrait {
-    fn is_zero(self: Position) -> bool {
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
-        }
-    }
-
-    fn is_equal(self: Position, b: Position) -> bool {
-        self.x == b.x && self.y == b.y
-    }
-}
-
-#[derive(Model, Serde)]
+#[dojo::model]
 struct Roles {
     role_ids: Array<u8>
 }
 
-#[derive(Model, Serde)]
+#[dojo::model]
 struct OnlyKeyModel {
     #[key]
     id: felt252
 }
 
-#[derive(Model, Serde)]
+#[dojo::model]
 struct U256KeyModel {
     #[key]
     id: u256
 }
 
-use starknet::ContractAddress;
-
-#[derive(Model, Copy, Drop, Serde)]
+#[dojo::model]
 struct Player {
     #[key]
     game: felt252,
@@ -67,1323 +95,2881 @@ struct Player {
     name: felt252, 
 }
 
-//! > generated_cairo_code
-use core::serde::Serde;
+#[dojo::model]
+type OtherPlayer = Player;
 
+#[dojo::model]
+struct ModelWithSimpleArray {
+    #[key]
+    player: ContractAddress,
 
-#[derive(Introspect, Copy, Drop, Serde)]
-struct Vec3 {
-    x: u32,
-    y: u32,
-    z: u8,
+    x: u16,
+    y: Array<u8>    
 }
 
-impl Vec3Introspect of dojo::database::introspect::Introspect<Vec3> {
-    #[inline(always)]
-    fn size() -> usize {
-        3
-    }
+#[dojo::model]
+struct ModelWithByteArray {
+    #[key]
+    player: ContractAddress,
 
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(32);
-        layout.append(32);
-        layout.append(8);
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(
-            dojo::database::introspect::Struct {
-                name: 'Vec3',
-                attrs: array![].span(),
-                children: array![
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'x',
-                            ty: dojo::database::introspect::Ty::Primitive('u32'),
-                            attrs: array![].span()
-                        }
-                    ),
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'y',
-                            ty: dojo::database::introspect::Ty::Primitive('u32'),
-                            attrs: array![].span()
-                        }
-                    ),
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'z',
-                            ty: dojo::database::introspect::Ty::Primitive('u8'),
-                            attrs: array![].span()
-                        }
-                    )
-                ]
-                    .span()
-            }
-        )
-    }
+    x: u16,
+    y: ByteArray
 }
 
+#[dojo::model]
+struct ModelWithComplexArray {
+    #[key]
+    player: ContractAddress,
 
+    x: u16,
+    y: Array<Vec3>
+}
 
-#[derive(Model, Copy, Drop, Serde)]
+#[dojo::model]
+struct ModelWithTuple {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: (u8, u16, u32)
+}
+
+#[dojo::model]
+struct ModelWithTupleNoPrimitives {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: (u8, Vec3, u32)
+}
+
+//! > expanded_cairo_code
+#[dojo::model(version: 0)]
+#[dojo::model(version: 0)]
+struct BadModelMultipleAttr {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: 0, version: 0)]
+struct BadModelMultipleVersions {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: hello)]
+struct BadModelBadVersionType {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version)]
+struct BadModelNoVersionValue {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(my_arg: 1)]
+struct BadModelUnexpectedArgWithValue {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(my_arg)]
+struct BadModelUnexpectedArg {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: 2)]
+struct BadModelNotSupportedVersion {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: 0)]
+struct Modelv0 {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model]
 struct Position {
     #[key]
     id: felt252,
     v: Vec3,
 }
 
-impl PositionModel of dojo::model::Model<Position> {
+#[dojo::model]
+struct Roles {
+    role_ids: Array<u8>
+}
+
+#[dojo::model]
+struct OnlyKeyModel {
+    #[key]
+    id: felt252
+}
+
+#[dojo::model]
+struct U256KeyModel {
+    #[key]
+    id: u256
+}
+
+#[dojo::model]
+struct Player {
+    #[key]
+    game: felt252,
+    #[key]
+    player: ContractAddress,
+
+    name: felt252, 
+}
+
+#[dojo::model]
+type OtherPlayer = Player;
+
+#[dojo::model]
+struct ModelWithSimpleArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: Array<u8>    
+}
+
+#[dojo::model]
+struct ModelWithByteArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: ByteArray
+}
+
+#[dojo::model]
+struct ModelWithComplexArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: Array<Vec3>
+}
+
+#[dojo::model]
+struct ModelWithTuple {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: (u8, u16, u32)
+}
+
+#[dojo::model]
+struct ModelWithTupleNoPrimitives {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: (u8, Vec3, u32)
+}
+
+impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersions> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelMultipleVersions {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelMultipleVersions"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<BadModelMultipleVersions>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelMultipleVersions>::is_none(@entity) {
+            panic!(
+                "Model `BadModelMultipleVersions`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelMultipleVersions>::unwrap(entity)
+    }
+
     #[inline(always)]
-    fn name(self: @Position) -> felt252 {
-        'Position'
+    fn name() -> ByteArray {
+        "BadModelMultipleVersions"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        0
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        "BadModelMultipleVersions"
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelMultipleVersions) -> felt252 {
+        dojo::model::Model::<BadModelMultipleVersions>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @BadModelMultipleVersions) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @BadModelMultipleVersions) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelMultipleVersions>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @BadModelMultipleVersions) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelMultipleVersions>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelMultipleVersions>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Ibad_model_multiple_versions<T> {
+    fn ensure_abi(self: @T, model: BadModelMultipleVersions);
+}
+
+#[starknet::contract]
+mod bad_model_multiple_versions {
+    use super::BadModelMultipleVersions;
+    use super::Ibad_model_multiple_versions;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<BadModelMultipleVersions>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<BadModelMultipleVersions>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<BadModelMultipleVersions>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<BadModelMultipleVersions>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelMultipleVersions>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelMultipleVersions>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<BadModelMultipleVersions>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl bad_model_multiple_versionsImpl of Ibad_model_multiple_versions<ContractState>{
+        fn ensure_abi(self: @ContractState, model: BadModelMultipleVersions) {
+        }
+    }
+}
+
+impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelBadVersionType {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelBadVersionType"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<BadModelBadVersionType>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelBadVersionType>::is_none(@entity) {
+            panic!(
+                "Model `BadModelBadVersionType`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelBadVersionType>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "BadModelBadVersionType"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("BadModelBadVersionType")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelBadVersionType) -> felt252 {
+        dojo::model::Model::<BadModelBadVersionType>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @BadModelBadVersionType) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @BadModelBadVersionType) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelBadVersionType>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @BadModelBadVersionType) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelBadVersionType>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelBadVersionType>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Ibad_model_bad_version_type<T> {
+    fn ensure_abi(self: @T, model: BadModelBadVersionType);
+}
+
+#[starknet::contract]
+mod bad_model_bad_version_type {
+    use super::BadModelBadVersionType;
+    use super::Ibad_model_bad_version_type;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<BadModelBadVersionType>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<BadModelBadVersionType>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<BadModelBadVersionType>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<BadModelBadVersionType>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelBadVersionType>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelBadVersionType>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<BadModelBadVersionType>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl bad_model_bad_version_typeImpl of Ibad_model_bad_version_type<ContractState>{
+        fn ensure_abi(self: @ContractState, model: BadModelBadVersionType) {
+        }
+    }
+}
+
+impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelNoVersionValue {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelNoVersionValue"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<BadModelNoVersionValue>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelNoVersionValue>::is_none(@entity) {
+            panic!(
+                "Model `BadModelNoVersionValue`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelNoVersionValue>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "BadModelNoVersionValue"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("BadModelNoVersionValue")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelNoVersionValue) -> felt252 {
+        dojo::model::Model::<BadModelNoVersionValue>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @BadModelNoVersionValue) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @BadModelNoVersionValue) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelNoVersionValue>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @BadModelNoVersionValue) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelNoVersionValue>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelNoVersionValue>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Ibad_model_no_version_value<T> {
+    fn ensure_abi(self: @T, model: BadModelNoVersionValue);
+}
+
+#[starknet::contract]
+mod bad_model_no_version_value {
+    use super::BadModelNoVersionValue;
+    use super::Ibad_model_no_version_value;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<BadModelNoVersionValue>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<BadModelNoVersionValue>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<BadModelNoVersionValue>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<BadModelNoVersionValue>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelNoVersionValue>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelNoVersionValue>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<BadModelNoVersionValue>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl bad_model_no_version_valueImpl of Ibad_model_no_version_value<ContractState>{
+        fn ensure_abi(self: @ContractState, model: BadModelNoVersionValue) {
+        }
+    }
+}
+
+impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpectedArgWithValue> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelUnexpectedArgWithValue {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelUnexpectedArgWithValue"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<BadModelUnexpectedArgWithValue>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelUnexpectedArgWithValue>::is_none(@entity) {
+            panic!(
+                "Model `BadModelUnexpectedArgWithValue`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelUnexpectedArgWithValue>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "BadModelUnexpectedArgWithValue"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("BadModelUnexpectedArgWithValue")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelUnexpectedArgWithValue) -> felt252 {
+        dojo::model::Model::<BadModelUnexpectedArgWithValue>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @BadModelUnexpectedArgWithValue) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @BadModelUnexpectedArgWithValue) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelUnexpectedArgWithValue>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @BadModelUnexpectedArgWithValue) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Ibad_model_unexpected_arg_with_value<T> {
+    fn ensure_abi(self: @T, model: BadModelUnexpectedArgWithValue);
+}
+
+#[starknet::contract]
+mod bad_model_unexpected_arg_with_value {
+    use super::BadModelUnexpectedArgWithValue;
+    use super::Ibad_model_unexpected_arg_with_value;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<BadModelUnexpectedArgWithValue>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<BadModelUnexpectedArgWithValue>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<BadModelUnexpectedArgWithValue>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<BadModelUnexpectedArgWithValue>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<BadModelUnexpectedArgWithValue>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl bad_model_unexpected_arg_with_valueImpl of Ibad_model_unexpected_arg_with_value<ContractState>{
+        fn ensure_abi(self: @ContractState, model: BadModelUnexpectedArgWithValue) {
+        }
+    }
+}
+
+impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelUnexpectedArg {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelUnexpectedArg"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<BadModelUnexpectedArg>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelUnexpectedArg>::is_none(@entity) {
+            panic!(
+                "Model `BadModelUnexpectedArg`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelUnexpectedArg>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "BadModelUnexpectedArg"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("BadModelUnexpectedArg")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelUnexpectedArg) -> felt252 {
+        dojo::model::Model::<BadModelUnexpectedArg>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @BadModelUnexpectedArg) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @BadModelUnexpectedArg) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelUnexpectedArg>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @BadModelUnexpectedArg) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelUnexpectedArg>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelUnexpectedArg>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Ibad_model_unexpected_arg<T> {
+    fn ensure_abi(self: @T, model: BadModelUnexpectedArg);
+}
+
+#[starknet::contract]
+mod bad_model_unexpected_arg {
+    use super::BadModelUnexpectedArg;
+    use super::Ibad_model_unexpected_arg;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<BadModelUnexpectedArg>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<BadModelUnexpectedArg>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<BadModelUnexpectedArg>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<BadModelUnexpectedArg>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelUnexpectedArg>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelUnexpectedArg>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<BadModelUnexpectedArg>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl bad_model_unexpected_argImpl of Ibad_model_unexpected_arg<ContractState>{
+        fn ensure_abi(self: @ContractState, model: BadModelUnexpectedArg) {
+        }
+    }
+}
+
+impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupportedVersion> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelNotSupportedVersion {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelNotSupportedVersion"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<BadModelNotSupportedVersion>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelNotSupportedVersion>::is_none(@entity) {
+            panic!(
+                "Model `BadModelNotSupportedVersion`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelNotSupportedVersion>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "BadModelNotSupportedVersion"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("BadModelNotSupportedVersion")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelNotSupportedVersion) -> felt252 {
+        dojo::model::Model::<BadModelNotSupportedVersion>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @BadModelNotSupportedVersion) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @BadModelNotSupportedVersion) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelNotSupportedVersion>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @BadModelNotSupportedVersion) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelNotSupportedVersion>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelNotSupportedVersion>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Ibad_model_not_supported_version<T> {
+    fn ensure_abi(self: @T, model: BadModelNotSupportedVersion);
+}
+
+#[starknet::contract]
+mod bad_model_not_supported_version {
+    use super::BadModelNotSupportedVersion;
+    use super::Ibad_model_not_supported_version;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<BadModelNotSupportedVersion>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<BadModelNotSupportedVersion>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<BadModelNotSupportedVersion>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<BadModelNotSupportedVersion>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelNotSupportedVersion>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelNotSupportedVersion>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<BadModelNotSupportedVersion>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl bad_model_not_supported_versionImpl of Ibad_model_not_supported_version<ContractState>{
+        fn ensure_abi(self: @ContractState, model: BadModelNotSupportedVersion) {
+        }
+    }
+}
+
+impl Modelv0Model of dojo::model::Model<Modelv0> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Modelv0 {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Modelv0"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<Modelv0>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<Modelv0>::is_none(@entity) {
+            panic!(
+                "Model `Modelv0`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<Modelv0>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "Modelv0"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        0
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        "Modelv0"
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Modelv0) -> felt252 {
+        dojo::model::Model::<Modelv0>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @Modelv0) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @Modelv0) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<Modelv0>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @Modelv0) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<Modelv0>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<Modelv0>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodelv_0<T> {
+    fn ensure_abi(self: @T, model: Modelv0);
+}
+
+#[starknet::contract]
+mod modelv_0 {
+    use super::Modelv0;
+    use super::Imodelv_0;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<Modelv0>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<Modelv0>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<Modelv0>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<Modelv0>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Modelv0>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<Modelv0>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<Modelv0>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl modelv_0Impl of Imodelv_0<ContractState>{
+        fn ensure_abi(self: @ContractState, model: Modelv0) {
+        }
+    }
+}
+
+impl PositionModel of dojo::model::Model<Position> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Position {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Position"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<Position>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<Position>::is_none(@entity) {
+            panic!(
+                "Model `Position`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<Position>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "Position"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("Position")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Position) -> felt252 {
+        dojo::model::Model::<Position>::selector()
     }
 
     #[inline(always)]
     fn keys(self: @Position) -> Span<felt252> {
-        let mut serialized = ArrayTrait::new();
-        array::ArrayTrait::append(ref serialized, *self.id);
-        array::ArrayTrait::span(@serialized)
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @Position) -> Span<felt252> {
-        let mut serialized = ArrayTrait::new();
+        let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
-        array::ArrayTrait::span(@serialized)
+        core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
-    fn layout(self: @Position) -> Span<u8> {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-        array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<Position>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @Position) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @Position) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<Position>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<Position>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
-
-
-impl PositionIntrospect of dojo::database::introspect::Introspect<Position> {
-    #[inline(always)]
-    fn size() -> usize {
-        dojo::database::introspect::Introspect::<Vec3>::size()
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        dojo::database::introspect::Introspect::<Vec3>::layout(ref layout);
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(
-            dojo::database::introspect::Struct {
-                name: 'Position',
-                attrs: array![].span(),
-                children: array![
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'id',
-                            ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                            attrs: array!['key'].span()
-                        }
-                    ),
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'v',
-                            ty: dojo::database::introspect::Introspect::<Vec3>::ty(),
-                            attrs: array![].span()
-                        }
-                    )
-                ]
-                    .span()
-            }
-        )
-    }
-}
-
 
 #[starknet::interface]
-trait IPosition<T> {
-    fn name(self: @T) -> felt252;
+trait Iposition<T> {
+    fn ensure_abi(self: @T, model: Position);
 }
 
 #[starknet::contract]
 mod position {
     use super::Position;
+    use super::Iposition;
 
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
-    fn name(self: @ContractState) -> felt252 {
-        'Position'
-    }
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<Position>::selector()
+        }
 
-    #[abi(embed_v0)]
-    fn unpacked_size(self: @ContractState) -> usize {
-        dojo::database::introspect::Introspect::<Position>::size()
-    }
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<Position>::name()
+        }
 
-    #[abi(embed_v0)]
-    fn packed_size(self: @ContractState) -> usize {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-        let mut layout_span = layout.span();
-        dojo::packing::calculate_packed_size(ref layout_span)
-    }
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<Position>::version()
+        }
 
-    #[abi(embed_v0)]
-    fn layout(self: @ContractState) -> Span<u8> {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-        array::ArrayTrait::span(@layout)
-    }
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<Position>::size()
+        }
 
-    #[abi(embed_v0)]
-    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Introspect::<Position>::ty()
-    }
-}
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Position>::packed_size()
+        }
 
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<Position>::layout()
+        }
 
-
-trait PositionTrait {
-    fn is_zero(self: Position) -> bool;
-    fn is_equal(self: Position, b: Position) -> bool;
-}
-
-
-impl PositionImpl of PositionTrait {
-    fn is_zero(self: Position) -> bool {
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<Position>::ty()
         }
     }
 
-    fn is_equal(self: Position, b: Position) -> bool {
-        self.x == b.x && self.y == b.y
+    #[abi(embed_v0)]
+    impl positionImpl of Iposition<ContractState>{
+        fn ensure_abi(self: @ContractState, model: Position) {
+        }
     }
 }
 
-
-#[derive(Model, Serde)]
-struct Roles {
-    role_ids: Array<u8>
-}
-
 impl RolesModel of dojo::model::Model<Roles> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Roles {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Roles"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<Roles>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<Roles>::is_none(@entity) {
+            panic!(
+                "Model `Roles`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<Roles>::unwrap(entity)
+    }
+
     #[inline(always)]
-    fn name(self: @Roles) -> felt252 {
-        'Roles'
+    fn name() -> ByteArray {
+        "Roles"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("Roles")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Roles) -> felt252 {
+        dojo::model::Model::<Roles>::selector()
     }
 
     #[inline(always)]
     fn keys(self: @Roles) -> Span<felt252> {
-        let mut serialized = ArrayTrait::new();
-
-        array::ArrayTrait::span(@serialized)
+        let mut serialized = core::array::ArrayTrait::new();
+        
+        core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @Roles) -> Span<felt252> {
-        let mut serialized = ArrayTrait::new();
+        let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.role_ids, ref serialized);
-        array::ArrayTrait::span(@serialized)
+        core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
-    fn layout(self: @Roles) -> Span<u8> {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-        array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<Roles>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @Roles) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @Roles) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<Roles>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<Roles>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
-
-
-impl RolesIntrospect of dojo::database::introspect::Introspect<Roles> {
-    #[inline(always)]
-    fn size() -> usize {
-        dojo::database::introspect::Introspect::<Array<u8>>::size()
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        dojo::database::introspect::Introspect::<Array<u8>>::layout(ref layout);
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(
-            dojo::database::introspect::Struct {
-                name: 'Roles',
-                attrs: array![].span(),
-                children: array![
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'role_ids',
-                            ty: dojo::database::introspect::Introspect::<Array<u8>>::ty(),
-                            attrs: array![].span()
-                        }
-                    )
-                ]
-                    .span()
-            }
-        )
-    }
-}
-
 
 #[starknet::interface]
-trait IRoles<T> {
-    fn name(self: @T) -> felt252;
+trait Iroles<T> {
+    fn ensure_abi(self: @T, model: Roles);
 }
 
 #[starknet::contract]
 mod roles {
     use super::Roles;
+    use super::Iroles;
 
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
-    fn name(self: @ContractState) -> felt252 {
-        'Roles'
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<Roles>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<Roles>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<Roles>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<Roles>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Roles>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<Roles>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<Roles>::ty()
+        }
     }
 
     #[abi(embed_v0)]
-    fn unpacked_size(self: @ContractState) -> usize {
-        dojo::database::introspect::Introspect::<Roles>::size()
-    }
-
-    #[abi(embed_v0)]
-    fn packed_size(self: @ContractState) -> usize {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-        let mut layout_span = layout.span();
-        dojo::packing::calculate_packed_size(ref layout_span)
-    }
-
-    #[abi(embed_v0)]
-    fn layout(self: @ContractState) -> Span<u8> {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-        array::ArrayTrait::span(@layout)
-    }
-
-    #[abi(embed_v0)]
-    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Introspect::<Roles>::ty()
+    impl rolesImpl of Iroles<ContractState>{
+        fn ensure_abi(self: @ContractState, model: Roles) {
+        }
     }
 }
 
+impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> OnlyKeyModel {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("OnlyKeyModel"), keys, layout);
 
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
 
-use starknet::ContractAddress;
+        let entity = core::serde::Serde::<OnlyKeyModel>::deserialize(ref serialized);
 
+        if core::option::OptionTrait::<OnlyKeyModel>::is_none(@entity) {
+            panic!(
+                "Model `OnlyKeyModel`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
 
-#[derive(Model, Copy, Drop, Serde)]
-struct Player {
-    #[key]
-    game: felt252,
-    #[key]
-    player: ContractAddress,
-
-    name: felt252, 
-}
-impl PlayerModel of dojo::model::Model<Player> {
-    #[inline(always)]
-    fn name(self: @Player) -> felt252 {
-        'Player'
+        core::option::OptionTrait::<OnlyKeyModel>::unwrap(entity)
     }
 
     #[inline(always)]
-    fn keys(self: @Player) -> Span<felt252> {
-        let mut serialized = ArrayTrait::new();
-        array::ArrayTrait::append(ref serialized, *self.game);
-        core::serde::Serde::serialize(self.player, ref serialized);
-        array::ArrayTrait::span(@serialized)
+    fn name() -> ByteArray {
+        "OnlyKeyModel"
     }
 
     #[inline(always)]
-    fn values(self: @Player) -> Span<felt252> {
-        let mut serialized = ArrayTrait::new();
-        array::ArrayTrait::append(ref serialized, *self.name);
-        array::ArrayTrait::span(@serialized)
-    }
-
-    #[inline(always)]
-    fn layout(self: @Player) -> Span<u8> {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-        array::ArrayTrait::span(@layout)
-    }
-
-    #[inline(always)]
-    fn packed_size(self: @Player) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
-    }
-}
-
-
-impl PlayerIntrospect of dojo::database::introspect::Introspect<Player> {
-    #[inline(always)]
-    fn size() -> usize {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(251);
+    fn selector() -> felt252 {
+        selector!("OnlyKeyModel")
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(
-            dojo::database::introspect::Struct {
-                name: 'Player',
-                attrs: array![].span(),
-                children: array![
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'game',
-                            ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                            attrs: array!['key'].span()
-                        }
-                    ),
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'player',
-                            ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                            attrs: array!['key'].span()
-                        }
-                    ),
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'name',
-                            ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                            attrs: array![].span()
-                        }
-                    )
-                ]
-                    .span()
-            }
-        )
+    fn instance_selector(self: @OnlyKeyModel) -> felt252 {
+        dojo::model::Model::<OnlyKeyModel>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @OnlyKeyModel) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @OnlyKeyModel) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<OnlyKeyModel>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @OnlyKeyModel) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<OnlyKeyModel>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<OnlyKeyModel>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
+#[starknet::interface]
+trait Ionly_key_model<T> {
+    fn ensure_abi(self: @T, model: OnlyKeyModel);
+}
+
+#[starknet::contract]
+mod only_key_model {
+    use super::OnlyKeyModel;
+    use super::Ionly_key_model;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<OnlyKeyModel>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<OnlyKeyModel>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<OnlyKeyModel>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<OnlyKeyModel>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<OnlyKeyModel>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<OnlyKeyModel>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<OnlyKeyModel>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl only_key_modelImpl of Ionly_key_model<ContractState>{
+        fn ensure_abi(self: @ContractState, model: OnlyKeyModel) {
+        }
+    }
+}
+
+impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> U256KeyModel {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("U256KeyModel"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<U256KeyModel>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<U256KeyModel>::is_none(@entity) {
+            panic!(
+                "Model `U256KeyModel`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<U256KeyModel>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "U256KeyModel"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("U256KeyModel")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @U256KeyModel) -> felt252 {
+        dojo::model::Model::<U256KeyModel>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @U256KeyModel) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.id, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @U256KeyModel) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<U256KeyModel>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @U256KeyModel) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<U256KeyModel>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<U256KeyModel>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
 
 #[starknet::interface]
-trait IPlayer<T> {
-    fn name(self: @T) -> felt252;
+trait Iu_256_key_model<T> {
+    fn ensure_abi(self: @T, model: U256KeyModel);
+}
+
+#[starknet::contract]
+mod u_256_key_model {
+    use super::U256KeyModel;
+    use super::Iu_256_key_model;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<U256KeyModel>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<U256KeyModel>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<U256KeyModel>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<U256KeyModel>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<U256KeyModel>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<U256KeyModel>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<U256KeyModel>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl u_256_key_modelImpl of Iu_256_key_model<ContractState>{
+        fn ensure_abi(self: @ContractState, model: U256KeyModel) {
+        }
+    }
+}
+
+impl PlayerModel of dojo::model::Model<Player> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Player {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Player"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<Player>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<Player>::is_none(@entity) {
+            panic!(
+                "Model `Player`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<Player>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "Player"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("Player")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Player) -> felt252 {
+        dojo::model::Model::<Player>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @Player) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.game);core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @Player) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.name);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<Player>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @Player) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<Player>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<Player>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Iplayer<T> {
+    fn ensure_abi(self: @T, model: Player);
 }
 
 #[starknet::contract]
 mod player {
     use super::Player;
+    use super::Iplayer;
 
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
-    fn name(self: @ContractState) -> felt252 {
-        'Player'
-    }
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<Player>::selector()
+        }
 
-    #[abi(embed_v0)]
-    fn unpacked_size(self: @ContractState) -> usize {
-        dojo::database::introspect::Introspect::<Player>::size()
-    }
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<Player>::name()
+        }
 
-    #[abi(embed_v0)]
-    fn packed_size(self: @ContractState) -> usize {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-        let mut layout_span = layout.span();
-        dojo::packing::calculate_packed_size(ref layout_span)
-    }
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<Player>::version()
+        }
 
-    #[abi(embed_v0)]
-    fn layout(self: @ContractState) -> Span<u8> {
-        let mut layout = ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-        array::ArrayTrait::span(@layout)
-    }
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<Player>::size()
+        }
 
-    #[abi(embed_v0)]
-    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Introspect::<Player>::ty()
-    }
-}
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Player>::packed_size()
+        }
 
-//! > expected_diagnostics
-error: Model must define at least one #[key] attribute
- --> test_src/lib.cairo:36:8
-struct Roles {
-       ^***^
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<Player>::layout()
+        }
 
-error: Model must define at least one member that is not a key
- --> test_src/lib.cairo:41:8
-struct OnlyKeyModel {
-       ^**********^
-
-error: Model must define at least one member that is not a key
- --> test_src/lib.cairo:47:8
-struct U256KeyModel {
-       ^**********^
-
-error: Key is only supported for core types that are 1 felt long once serialized. `u256` is a struct of 2 u128, hence not supported.
- --> test_src/lib.cairo:47:8
-struct U256KeyModel {
-       ^**********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:73:13
-            #[starknet::contract]
-            ^*******************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:69:13
-            #[starknet::contract]
-            ^*******************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:68:13
-            #[starknet::contract]
-            ^*******************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:68:13
-            #[starknet::contract]
-            ^*******************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:77:13
-            #[starknet::contract]
-            ^*******************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:78:17
-                #[storage]
-                ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:81:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:109:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:74:17
-                #[storage]
-                ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:77:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:105:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:73:17
-                #[storage]
-                ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:76:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:104:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:73:17
-                #[storage]
-                ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:76:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:104:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:82:17
-                #[storage]
-                ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:85:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:113:17
-                #[abi(embed_v0)]
-                ^**************^
-
-//! > expanded_cairo_code
-use core::serde::Serde;
-
-#[derive(Introspect, Copy, Drop, Serde)]
-struct Vec3 {
-    x: u32,
-    y: u32,
-    z: u8,
-}
-
-#[derive(Model, Copy, Drop, Serde)]
-struct Position {
-    #[key]
-    id: felt252,
-    v: Vec3,
-}
-
-trait PositionTrait {
-    fn is_zero(self: Position) -> bool;
-    fn is_equal(self: Position, b: Position) -> bool;
-}
-
-impl PositionImpl of PositionTrait {
-    fn is_zero(self: Position) -> bool {
-        match self.x - self.y {
-            0 => bool::True(()),
-            _ => bool::False(()),
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<Player>::ty()
         }
     }
 
-    fn is_equal(self: Position, b: Position) -> bool {
-        self.x == b.x && self.y == b.y
+    #[abi(embed_v0)]
+    impl playerImpl of Iplayer<ContractState>{
+        fn ensure_abi(self: @ContractState, model: Player) {
+        }
     }
 }
 
-#[derive(Model, Serde)]
-struct Roles {
-    role_ids: Array<u8>
-}
+impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithSimpleArray {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithSimpleArray"), keys, layout);
 
-#[derive(Model, Serde)]
-struct OnlyKeyModel {
-    #[key]
-    id: felt252
-}
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
 
-#[derive(Model, Serde)]
-struct U256KeyModel {
-    #[key]
-    id: u256
-}
+        let entity = core::serde::Serde::<ModelWithSimpleArray>::deserialize(ref serialized);
 
-use starknet::ContractAddress;
+        if core::option::OptionTrait::<ModelWithSimpleArray>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithSimpleArray`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
 
-#[derive(Model, Copy, Drop, Serde)]
-struct Player {
-    #[key]
-    game: felt252,
-    #[key]
-    player: ContractAddress,
-
-    name: felt252, 
-}
-impl Vec3Copy of core::traits::Copy::<Vec3>;
-impl Vec3Drop of core::traits::Drop::<Vec3>;
-impl Vec3Serde of core::serde::Serde::<Vec3> {
-    fn serialize(self: @Vec3, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.x, ref output);
-        core::serde::Serde::serialize(self.y, ref output);
-        core::serde::Serde::serialize(self.z, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Vec3> {
-        core::option::Option::Some(Vec3 {
-            x: core::serde::Serde::deserialize(ref serialized)?,
-            y: core::serde::Serde::deserialize(ref serialized)?,
-            z: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-impl Vec3Introspect<> of dojo::database::introspect::Introspect<Vec3<>> {
-    #[inline(always)]
-    fn size() -> usize {
-        3
+        core::option::OptionTrait::<ModelWithSimpleArray>::unwrap(entity)
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(32);
-layout.append(32);
-layout.append(8);
-
+    fn name() -> ByteArray {
+        "ModelWithSimpleArray"
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'Vec3',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'x',
-                ty: dojo::database::introspect::Ty::Primitive('u32'),
-                attrs: array![].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'y',
-                ty: dojo::database::introspect::Ty::Primitive('u32'),
-                attrs: array![].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'z',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            })].span()
-        })
-    }
-}
-impl PositionCopy of core::traits::Copy::<Position>;
-impl PositionDrop of core::traits::Drop::<Position>;
-impl PositionSerde of core::serde::Serde::<Position> {
-    fn serialize(self: @Position, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.id, ref output);
-        core::serde::Serde::serialize(self.v, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Position> {
-        core::option::Option::Some(Position {
-            id: core::serde::Serde::deserialize(ref serialized)?,
-            v: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-            impl PositionModel of dojo::model::Model<Position> {
-                #[inline(always)]
-                fn name(self: @Position) -> felt252 {
-                    'Position'
-                }
-
-                #[inline(always)]
-                fn keys(self: @Position) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::array::ArrayTrait::append(ref serialized, *self.id);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn values(self: @Position) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::serde::Serde::serialize(self.v, ref serialized);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn layout(self: @Position) -> Span<u8> {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-                    core::array::ArrayTrait::span(@layout)
-                }
-
-                #[inline(always)]
-                fn packed_size(self: @Position) -> usize {
-                    let mut layout = self.layout();
-                    dojo::packing::calculate_packed_size(ref layout)
-                }
-            }
-
-            
-impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> {
-    #[inline(always)]
-    fn size() -> usize {
-        dojo::database::introspect::Introspect::<Vec3>::size() + 0
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        dojo::database::introspect::Introspect::<Vec3>::layout(ref layout);
-
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'Position',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'id',
-                ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                attrs: array!['key'].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'v',
-                ty: dojo::database::introspect::Introspect::<Vec3>::ty(),
-                attrs: array![].span()
-            })].span()
-        })
-    }
-}
-        
-
-            #[starknet::interface]
-            trait Iposition<T> {
-                fn ensure_abi(self: @T, model: Position);
-            }
-
-            #[starknet::contract]
-            mod position {
-                use super::Position;
-                use super::Iposition;
-
-                #[storage]
-                struct Storage {}
-
-                #[abi(embed_v0)]
-                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'Position'
-                    }
-
-                    fn unpacked_size(self: @ContractState) -> usize {
-                        dojo::database::introspect::Introspect::<Position>::size()
-                    }
-
-                    fn packed_size(self: @ContractState) -> usize {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-                        let mut layout_span = layout.span();
-                        dojo::packing::calculate_packed_size(ref layout_span)
-                    }
-
-                    fn layout(self: @ContractState) -> Span<u8> {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-                        core::array::ArrayTrait::span(@layout)
-                    }
-
-                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                        dojo::database::introspect::Introspect::<Position>::ty()
-                    }
-                }
-
-                #[abi(embed_v0)]
-                impl positionImpl of Iposition<ContractState>{
-                    fn ensure_abi(self: @ContractState, model: Position) {
-                    }
-                }
-            }
-impl RolesSerde of core::serde::Serde::<Roles> {
-    fn serialize(self: @Roles, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.role_ids, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Roles> {
-        core::option::Option::Some(Roles {
-            role_ids: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-            impl RolesModel of dojo::model::Model<Roles> {
-                #[inline(always)]
-                fn name(self: @Roles) -> felt252 {
-                    'Roles'
-                }
-
-                #[inline(always)]
-                fn keys(self: @Roles) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn values(self: @Roles) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::serde::Serde::serialize(self.role_ids, ref serialized);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn layout(self: @Roles) -> Span<u8> {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-                    core::array::ArrayTrait::span(@layout)
-                }
-
-                #[inline(always)]
-                fn packed_size(self: @Roles) -> usize {
-                    let mut layout = self.layout();
-                    dojo::packing::calculate_packed_size(ref layout)
-                }
-            }
-
-            
-impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
-    #[inline(always)]
-    fn size() -> usize {
-        dojo::database::introspect::Introspect::<Array<u8>>::size() + 0
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        dojo::database::introspect::Introspect::<Array<u8>>::layout(ref layout);
-
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'Roles',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'role_ids',
-                ty: dojo::database::introspect::Introspect::<Array<u8>>::ty(),
-                attrs: array![].span()
-            })].span()
-        })
-    }
-}
-        
-
-            #[starknet::interface]
-            trait Iroles<T> {
-                fn ensure_abi(self: @T, model: Roles);
-            }
-
-            #[starknet::contract]
-            mod roles {
-                use super::Roles;
-                use super::Iroles;
-
-                #[storage]
-                struct Storage {}
-
-                #[abi(embed_v0)]
-                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'Roles'
-                    }
-
-                    fn unpacked_size(self: @ContractState) -> usize {
-                        dojo::database::introspect::Introspect::<Roles>::size()
-                    }
-
-                    fn packed_size(self: @ContractState) -> usize {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-                        let mut layout_span = layout.span();
-                        dojo::packing::calculate_packed_size(ref layout_span)
-                    }
-
-                    fn layout(self: @ContractState) -> Span<u8> {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-                        core::array::ArrayTrait::span(@layout)
-                    }
-
-                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                        dojo::database::introspect::Introspect::<Roles>::ty()
-                    }
-                }
-
-                #[abi(embed_v0)]
-                impl rolesImpl of Iroles<ContractState>{
-                    fn ensure_abi(self: @ContractState, model: Roles) {
-                    }
-                }
-            }
-impl OnlyKeyModelSerde of core::serde::Serde::<OnlyKeyModel> {
-    fn serialize(self: @OnlyKeyModel, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.id, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<OnlyKeyModel> {
-        core::option::Option::Some(OnlyKeyModel {
-            id: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-            impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
-                #[inline(always)]
-                fn name(self: @OnlyKeyModel) -> felt252 {
-                    'OnlyKeyModel'
-                }
-
-                #[inline(always)]
-                fn keys(self: @OnlyKeyModel) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::array::ArrayTrait::append(ref serialized, *self.id);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn values(self: @OnlyKeyModel) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn layout(self: @OnlyKeyModel) -> Span<u8> {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
-                    core::array::ArrayTrait::span(@layout)
-                }
-
-                #[inline(always)]
-                fn packed_size(self: @OnlyKeyModel) -> usize {
-                    let mut layout = self.layout();
-                    dojo::packing::calculate_packed_size(ref layout)
-                }
-            }
-
-            
-impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyModel<>> {
-    #[inline(always)]
-    fn size() -> usize {
-        0
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'OnlyKeyModel',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'id',
-                ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                attrs: array!['key'].span()
-            })].span()
-        })
-    }
-}
-        
-
-            #[starknet::interface]
-            trait Ionly_key_model<T> {
-                fn ensure_abi(self: @T, model: OnlyKeyModel);
-            }
-
-            #[starknet::contract]
-            mod only_key_model {
-                use super::OnlyKeyModel;
-                use super::Ionly_key_model;
-
-                #[storage]
-                struct Storage {}
-
-                #[abi(embed_v0)]
-                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'OnlyKeyModel'
-                    }
-
-                    fn unpacked_size(self: @ContractState) -> usize {
-                        dojo::database::introspect::Introspect::<OnlyKeyModel>::size()
-                    }
-
-                    fn packed_size(self: @ContractState) -> usize {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
-                        let mut layout_span = layout.span();
-                        dojo::packing::calculate_packed_size(ref layout_span)
-                    }
-
-                    fn layout(self: @ContractState) -> Span<u8> {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
-                        core::array::ArrayTrait::span(@layout)
-                    }
-
-                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                        dojo::database::introspect::Introspect::<OnlyKeyModel>::ty()
-                    }
-                }
-
-                #[abi(embed_v0)]
-                impl only_key_modelImpl of Ionly_key_model<ContractState>{
-                    fn ensure_abi(self: @ContractState, model: OnlyKeyModel) {
-                    }
-                }
-            }
-impl U256KeyModelSerde of core::serde::Serde::<U256KeyModel> {
-    fn serialize(self: @U256KeyModel, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.id, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<U256KeyModel> {
-        core::option::Option::Some(U256KeyModel {
-            id: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-            impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
-                #[inline(always)]
-                fn name(self: @U256KeyModel) -> felt252 {
-                    'U256KeyModel'
-                }
-
-                #[inline(always)]
-                fn keys(self: @U256KeyModel) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::serde::Serde::serialize(self.id, ref serialized);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn values(self: @U256KeyModel) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn layout(self: @U256KeyModel) -> Span<u8> {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
-                    core::array::ArrayTrait::span(@layout)
-                }
-
-                #[inline(always)]
-                fn packed_size(self: @U256KeyModel) -> usize {
-                    let mut layout = self.layout();
-                    dojo::packing::calculate_packed_size(ref layout)
-                }
-            }
-
-            
-impl U256KeyModelIntrospect<> of dojo::database::introspect::Introspect<U256KeyModel<>> {
-    #[inline(always)]
-    fn size() -> usize {
-        0
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'U256KeyModel',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'id',
-                ty: dojo::database::introspect::Ty::Primitive('u256'),
-                attrs: array!['key'].span()
-            })].span()
-        })
-    }
-}
-        
-
-            #[starknet::interface]
-            trait Iu_256_key_model<T> {
-                fn ensure_abi(self: @T, model: U256KeyModel);
-            }
-
-            #[starknet::contract]
-            mod u_256_key_model {
-                use super::U256KeyModel;
-                use super::Iu_256_key_model;
-
-                #[storage]
-                struct Storage {}
-
-                #[abi(embed_v0)]
-                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'U256KeyModel'
-                    }
-
-                    fn unpacked_size(self: @ContractState) -> usize {
-                        dojo::database::introspect::Introspect::<U256KeyModel>::size()
-                    }
-
-                    fn packed_size(self: @ContractState) -> usize {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
-                        let mut layout_span = layout.span();
-                        dojo::packing::calculate_packed_size(ref layout_span)
-                    }
-
-                    fn layout(self: @ContractState) -> Span<u8> {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
-                        core::array::ArrayTrait::span(@layout)
-                    }
-
-                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                        dojo::database::introspect::Introspect::<U256KeyModel>::ty()
-                    }
-                }
-
-                #[abi(embed_v0)]
-                impl u_256_key_modelImpl of Iu_256_key_model<ContractState>{
-                    fn ensure_abi(self: @ContractState, model: U256KeyModel) {
-                    }
-                }
-            }
-impl PlayerCopy of core::traits::Copy::<Player>;
-impl PlayerDrop of core::traits::Drop::<Player>;
-impl PlayerSerde of core::serde::Serde::<Player> {
-    fn serialize(self: @Player, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.game, ref output);
-        core::serde::Serde::serialize(self.player, ref output);
-        core::serde::Serde::serialize(self.name, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Player> {
-        core::option::Option::Some(Player {
-            game: core::serde::Serde::deserialize(ref serialized)?,
-            player: core::serde::Serde::deserialize(ref serialized)?,
-            name: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-            impl PlayerModel of dojo::model::Model<Player> {
-                #[inline(always)]
-                fn name(self: @Player) -> felt252 {
-                    'Player'
-                }
-
-                #[inline(always)]
-                fn keys(self: @Player) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::array::ArrayTrait::append(ref serialized, *self.game);core::serde::Serde::serialize(self.player, ref serialized);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn values(self: @Player) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::array::ArrayTrait::append(ref serialized, *self.name);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn layout(self: @Player) -> Span<u8> {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-                    core::array::ArrayTrait::span(@layout)
-                }
-
-                #[inline(always)]
-                fn packed_size(self: @Player) -> usize {
-                    let mut layout = self.layout();
-                    dojo::packing::calculate_packed_size(ref layout)
-                }
-            }
-
-            
-impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
-    #[inline(always)]
-    fn size() -> usize {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(251);
-
+    fn selector() -> felt252 {
+        selector!("ModelWithSimpleArray")
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'Player',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'game',
-                ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                attrs: array!['key'].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'name',
-                ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                attrs: array![].span()
-            })].span()
-        })
+    fn instance_selector(self: @ModelWithSimpleArray) -> felt252 {
+        dojo::model::Model::<ModelWithSimpleArray>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithSimpleArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithSimpleArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithSimpleArray>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithSimpleArray) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithSimpleArray>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithSimpleArray>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
-        
 
-            #[starknet::interface]
-            trait Iplayer<T> {
-                fn ensure_abi(self: @T, model: Player);
-            }
+#[starknet::interface]
+trait Imodel_with_simple_array<T> {
+    fn ensure_abi(self: @T, model: ModelWithSimpleArray);
+}
 
-            #[starknet::contract]
-            mod player {
-                use super::Player;
-                use super::Iplayer;
+#[starknet::contract]
+mod model_with_simple_array {
+    use super::ModelWithSimpleArray;
+    use super::Imodel_with_simple_array;
 
-                #[storage]
-                struct Storage {}
+    #[storage]
+    struct Storage {}
 
-                #[abi(embed_v0)]
-                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'Player'
-                    }
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithSimpleArray>::selector()
+        }
 
-                    fn unpacked_size(self: @ContractState) -> usize {
-                        dojo::database::introspect::Introspect::<Player>::size()
-                    }
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithSimpleArray>::name()
+        }
 
-                    fn packed_size(self: @ContractState) -> usize {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-                        let mut layout_span = layout.span();
-                        dojo::packing::calculate_packed_size(ref layout_span)
-                    }
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithSimpleArray>::version()
+        }
 
-                    fn layout(self: @ContractState) -> Span<u8> {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-                        core::array::ArrayTrait::span(@layout)
-                    }
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithSimpleArray>::size()
+        }
 
-                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                        dojo::database::introspect::Introspect::<Player>::ty()
-                    }
-                }
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithSimpleArray>::packed_size()
+        }
 
-                #[abi(embed_v0)]
-                impl playerImpl of Iplayer<ContractState>{
-                    fn ensure_abi(self: @ContractState, model: Player) {
-                    }
-                }
-            }
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithSimpleArray>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithSimpleArray>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_simple_arrayImpl of Imodel_with_simple_array<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithSimpleArray) {
+        }
+    }
+}
+
+impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithByteArray {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithByteArray"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithByteArray>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithByteArray>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithByteArray`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithByteArray>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithByteArray"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithByteArray")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithByteArray) -> felt252 {
+        dojo::model::Model::<ModelWithByteArray>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithByteArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithByteArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithByteArray>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithByteArray) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithByteArray>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithByteArray>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_byte_array<T> {
+    fn ensure_abi(self: @T, model: ModelWithByteArray);
+}
+
+#[starknet::contract]
+mod model_with_byte_array {
+    use super::ModelWithByteArray;
+    use super::Imodel_with_byte_array;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithByteArray>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithByteArray>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithByteArray>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithByteArray>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithByteArray>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithByteArray>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithByteArray>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_byte_arrayImpl of Imodel_with_byte_array<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithByteArray) {
+        }
+    }
+}
+
+impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithComplexArray {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithComplexArray"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithComplexArray>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithComplexArray>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithComplexArray`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithComplexArray>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithComplexArray"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithComplexArray")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithComplexArray) -> felt252 {
+        dojo::model::Model::<ModelWithComplexArray>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithComplexArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithComplexArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithComplexArray>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithComplexArray) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithComplexArray>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithComplexArray>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_complex_array<T> {
+    fn ensure_abi(self: @T, model: ModelWithComplexArray);
+}
+
+#[starknet::contract]
+mod model_with_complex_array {
+    use super::ModelWithComplexArray;
+    use super::Imodel_with_complex_array;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithComplexArray>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithComplexArray>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithComplexArray>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithComplexArray>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithComplexArray>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithComplexArray>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithComplexArray>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_complex_arrayImpl of Imodel_with_complex_array<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithComplexArray) {
+        }
+    }
+}
+
+impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithTuple {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithTuple"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithTuple>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithTuple>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithTuple`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithTuple>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithTuple"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithTuple")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithTuple) -> felt252 {
+        dojo::model::Model::<ModelWithTuple>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithTuple) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithTuple) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithTuple>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithTuple) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithTuple>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithTuple>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_tuple<T> {
+    fn ensure_abi(self: @T, model: ModelWithTuple);
+}
+
+#[starknet::contract]
+mod model_with_tuple {
+    use super::ModelWithTuple;
+    use super::Imodel_with_tuple;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithTuple>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithTuple>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithTuple>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithTuple>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithTuple>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithTuple>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithTuple>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_tupleImpl of Imodel_with_tuple<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithTuple) {
+        }
+    }
+}
+
+impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimitives> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithTupleNoPrimitives {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithTupleNoPrimitives"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithTupleNoPrimitives>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithTupleNoPrimitives>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithTupleNoPrimitives`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithTupleNoPrimitives>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithTupleNoPrimitives"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithTupleNoPrimitives")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithTupleNoPrimitives) -> felt252 {
+        dojo::model::Model::<ModelWithTupleNoPrimitives>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithTupleNoPrimitives) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithTupleNoPrimitives) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithTupleNoPrimitives>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithTupleNoPrimitives) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithTupleNoPrimitives>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_tuple_no_primitives<T> {
+    fn ensure_abi(self: @T, model: ModelWithTupleNoPrimitives);
+}
+
+#[starknet::contract]
+mod model_with_tuple_no_primitives {
+    use super::ModelWithTupleNoPrimitives;
+    use super::Imodel_with_tuple_no_primitives;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithTupleNoPrimitives>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithTupleNoPrimitives>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithTupleNoPrimitives>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithTupleNoPrimitives>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithTupleNoPrimitives>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_tuple_no_primitivesImpl of Imodel_with_tuple_no_primitives<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithTupleNoPrimitives) {
+        }
+    }
+}
+
+//! > expected_diagnostics
+error: A Dojo model must have zero or one dojo::model attribute.
+ --> test_src/lib.cairo:1:1
+#[dojo::model(version: 0)]
+^************************^
+
+error: Too many 'version' attributes for dojo::model
+ --> test_src/lib.cairo:9:1
+#[dojo::model(version: 0, version: 0)]
+^************************************^
+
+error: The argument 'version' of dojo::model must be an integer
+ --> test_src/lib.cairo:16:24
+#[dojo::model(version: hello)]
+                       ^***^
+
+error: Unexpected argument 'version' for dojo::model
+ --> test_src/lib.cairo:23:15
+#[dojo::model(version)]
+              ^*****^
+
+error: Unexpected argument 'my_arg' for dojo::model
+ --> test_src/lib.cairo:30:15
+#[dojo::model(my_arg: 1)]
+              ^*******^
+
+error: Unexpected argument 'my_arg' for dojo::model
+ --> test_src/lib.cairo:37:15
+#[dojo::model(my_arg)]
+              ^****^
+
+error: dojo::model version 2 not supported
+ --> test_src/lib.cairo:44:24
+#[dojo::model(version: 2)]
+                       ^
+
+error: Model must define at least one #[key] attribute
+ --> test_src/lib.cairo:66:8
+struct Roles {
+       ^***^
+
+error: Model must define at least one member that is not a key
+ --> test_src/lib.cairo:71:8
+struct OnlyKeyModel {
+       ^**********^
+
+error: Model must define at least one member that is not a key
+ --> test_src/lib.cairo:77:8
+struct U256KeyModel {
+       ^**********^
+
+error: Key is only supported for core types that are 1 felt long once serialized. `u256` is a struct of 2 u128, hence not supported.
+ --> test_src/lib.cairo:77:8
+struct U256KeyModel {
+       ^**********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelMultipleVersions]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelBadVersionType]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelNoVersionValue]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Modelv0]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Position]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Roles]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[U256KeyModel]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithSimpleArray]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithByteArray]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithComplexArray]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTuple]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:91:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelMultipleVersions]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelMultipleVersions]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelMultipleVersions]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelBadVersionType]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelBadVersionType]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelBadVersionType]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelNoVersionValue]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelNoVersionValue]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelNoVersionValue]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Modelv0]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Modelv0]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Modelv0]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Position]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Position]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Position]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Roles]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Roles]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Roles]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[U256KeyModel]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[U256KeyModel]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[U256KeyModel]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithSimpleArray]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithSimpleArray]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithSimpleArray]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithByteArray]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithByteArray]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithByteArray]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithComplexArray]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithComplexArray]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithComplexArray]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTuple]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTuple]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTuple]:130:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:96:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:99:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:130:5
+    #[abi(embed_v0)]
+    ^**************^

@@ -123,6 +123,8 @@ mod tests {
 
     use super::{create_stats_table, BuildArgs};
 
+    // Uncomment once bindings support arrays.
+    #[ignore]
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {
         let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();

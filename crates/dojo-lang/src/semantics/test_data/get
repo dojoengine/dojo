@@ -134,10 +134,14 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::felt252>::new,
+                            function: ?4::new,
                             args: [],
+<<<<<<< HEAD
                             coupon_arg: None,
                             ty: core::array::Array::<core::felt252>,
+=======
+                            ty: core::array::Array::<?5>,
+>>>>>>> storage-layout
                         },
                     ),
                 },
@@ -146,7 +150,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::Felt252Serde::serialize,
+                            function: ?5::serialize,
                             args: [
                                 Value(
                                     Snapshot(
@@ -175,7 +179,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::felt252>::span,
+                            function: ?6::span,
                             args: [
                                 Value(
                                     Snapshot(
@@ -188,8 +192,12 @@ Block(
                                     ),
                                 ),
                             ],
+<<<<<<< HEAD
                             coupon_arg: None,
                             ty: core::array::Span::<core::felt252>,
+=======
+                            ty: core::array::Span::<?7>,
+>>>>>>> storage-layout
                         },
                     ),
                 },
@@ -201,8 +209,9 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::integer::u8>::new,
+                            function: ?7::layout,
                             args: [],
+<<<<<<< HEAD
                             coupon_arg: None,
                             ty: core::array::Array::<core::integer::u8>,
                         },
@@ -221,6 +230,9 @@ Block(
                             ],
                             coupon_arg: None,
                             ty: (),
+=======
+                            ty: dojo::database::introspect::Layout,
+>>>>>>> storage-layout
                         },
                     ),
                 },
@@ -228,10 +240,11 @@ Block(
             Let(
                 StatementLet {
                     pattern: Variable(
-                        __Health_layout_clone__,
+                        __Health,
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
+<<<<<<< HEAD
                             function: core::array::ArrayTCloneImpl::<core::integer::u8, core::clone::TCopyClone::<core::integer::u8, core::integer::u8Copy>, core::integer::u8Drop>::clone,
                             args: [
                                 Value(
@@ -311,18 +324,13 @@ Block(
                     expr: FunctionCall(
                         ExprFunctionCall {
                             function: dojo::world::IWorldDispatcherImpl::entity,
+=======
+                            function: ?8::entity,
+>>>>>>> storage-layout
                             args: [
                                 Value(
                                     Var(
                                         LocalVarId(test::world),
-                                    ),
-                                ),
-                                Value(
-                                    Literal(
-                                        ExprLiteral {
-                                            value: 79600263394408,
-                                            ty: core::felt252,
-                                        },
                                     ),
                                 ),
                                 Value(
@@ -332,10 +340,11 @@ Block(
                                 ),
                                 Value(
                                     Var(
-                                        LocalVarId(test::__Health_layout_span__),
+                                        LocalVarId(test::__Health_layout__),
                                     ),
                                 ),
                             ],
+<<<<<<< HEAD
                             coupon_arg: None,
                             ty: core::array::Span::<core::felt252>,
                         },
@@ -750,6 +759,9 @@ Block(
                             ],
                             coupon_arg: None,
                             ty: test::Health,
+=======
+                            ty: ?8,
+>>>>>>> storage-layout
                         },
                     ),
                 },
@@ -765,3 +777,7 @@ Block(
 )
 
 //! > semantic_diagnostics
+error: Trait has no implementation in context: dojo::model::Model::<test::Health>
+ --> lib.cairo[get_inline_macro]:7:71
+                let __Health_layout__ = dojo::model::Model::<Health>::layout();
+                                                                      ^****^

@@ -6,7 +6,8 @@ use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{
-    cairo_short_string_to_felt, CairoShortStringToFeltError, ParseCairoShortStringError,
+    get_selector_from_name, CairoShortStringToFeltError, NonAsciiNameError,
+    ParseCairoShortStringError,
 };
 use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
@@ -35,6 +36,8 @@ pub enum ModelError {
     #[error(transparent)]
     CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
+    NonAsciiNameError(#[from] NonAsciiNameError),
+    #[error(transparent)]
     CairoTypeError(#[from] PrimitiveError),
     #[error(transparent)]
     Parse(#[from] ParseError),
@@ -44,6 +47,7 @@ pub enum ModelError {
     Cainome(#[from] CainomeError),
 }
 
+// TODO: to update to match with new model interface
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
@@ -77,7 +81,7 @@ where
         name: &str,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        let name = cairo_short_string_to_felt(name)?;
+        let name = get_selector_from_name(name)?;
 
         let (class_hash, contract_address) =
             world.model(&name).block_id(world.block_id).call().await?;
@@ -103,6 +107,7 @@ where
         &self,
         keys: &[FieldElement],
     ) -> Result<Vec<FieldElement>, ModelError> {
+        // TODO RBA: to update
         let packed_size: u8 =
             self.packed_size().await?.try_into().map_err(ParseError::ValueOutOfRange)?;
 

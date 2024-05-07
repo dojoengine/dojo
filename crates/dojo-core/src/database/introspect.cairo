@@ -1,3 +1,35 @@
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
+struct FieldLayout {
+    selector: felt252,
+    layout: Layout
+}
+
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
+enum Layout {
+    Fixed: Span<u8>,
+    Struct: Span<FieldLayout>,
+
+    // Use a direct reference to `Layout` through `Span<Layout>` leads to a recursion in 
+    // the Layout type definition. This recursion should be supported
+    // by the Cairo compiler but it does not work in Dojo.
+    // That's why we use an intermediate `ItemLayout` type for Tuple.
+    Tuple: Span<FieldLayout>,
+
+    // As for Tuple, a direct reference to Layout does not work.
+    // A direct reference to ItemLayout or through Box<Layout> (or Box<ItemLayout>)
+    // does not work either.
+    // So, even for Array, we use a `Span<ItemLayout>` which contains only one item,
+    // which is the layout definition of an array item.
+    Array: Span<FieldLayout>,
+
+    ByteArray,
+
+    // there is one layout per variant.
+    // the `selector` field identifies the variant (TODO: selector or raw value ?)
+    // the `layout` field defines the full variant layout (variant value + optional variant data)
+    Enum: Span<FieldLayout>,
+}
+
 #[derive(Copy, Drop, Serde)]
 enum Ty {
     Primitive: felt252,
@@ -5,7 +37,8 @@ enum Ty {
     Enum: Enum,
     Tuple: Span<Span<felt252>>,
     // Store the capacity of the array.
-    Array: u32,
+    FixedSizeArray: u32,
+    DynamicSizeArray,
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -44,7 +77,187 @@ fn serialize_member_type(m: @Ty) -> Span<felt252> {
 }
 
 trait Introspect<T> {
-    fn size() -> usize;
-    fn layout(ref layout: Array<u8>);
+    fn size() -> Option<usize>;
+    fn layout() -> Layout;
     fn ty() -> Ty;
+}
+
+
+impl Introspect_felt252 of Introspect<felt252> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('felt252')
+    }
+}
+
+
+impl Introspect_bool of Introspect<bool> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![1].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('bool')
+    }
+}
+
+impl Introspect_u8 of Introspect<u8> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![8].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('u8')
+    }
+}
+
+impl Introspect_u16 of Introspect<u16> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![16].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('u16')
+    }
+}
+
+impl Introspect_u32 of Introspect<u32> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![32].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('u32')
+    }
+}
+
+impl Introspect_u64 of Introspect<u64> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![64].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('u64')
+    }
+}
+
+impl Introspect_u128 of Introspect<u128> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![128].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('u128')
+    }
+}
+
+impl Introspect_u256 of Introspect<u256> {
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![128, 128].span())
+    }
+    fn ty() -> Ty {
+        Ty::FixedSizeArray(2)
+    }
+}
+
+impl Introspect_address of Introspect<starknet::ContractAddress> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('starknet::ContractAddress')
+    }
+}
+
+impl Introspect_classhash of Introspect<starknet::ClassHash> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('starknet::ClassHash')
+    }
+}
+
+
+impl Introspect_bytearray of Introspect<ByteArray> {
+    fn size() -> Option<usize> {
+        Option::None
+    }
+    fn layout() -> Layout {
+        Layout::ByteArray
+    }
+    fn ty() -> Ty {
+        Ty::DynamicSizeArray
+    }
+}
+
+impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
+    fn size() -> Option<usize> {
+        Option::None
+    }
+    fn layout() -> Layout {
+        Layout::Enum(
+            array![
+                FieldLayout {
+                    // Some
+                    selector: 0,
+                    layout: Layout::Tuple(
+                        array![
+                            FieldLayout {
+                                selector: '',
+                                layout: Layout::Fixed(array![8].span())
+                            },
+                            FieldLayout {
+                                selector: '',
+                                layout: Introspect::<T>::layout()
+                            }
+                        ].span()
+                    )
+                },
+                FieldLayout {
+                    // None
+                    selector: 1,
+                    layout: Layout::Tuple(
+                        array![
+                            FieldLayout {
+                                selector: '',
+                                layout: Layout::Fixed(array![8].span())
+                            }
+                        ].span()
+                    )
+                },
+            ].span()
+        )
+    }
+
+    fn ty() -> Ty {
+        // TODO: Not used anymore => to remove
+        Ty::Primitive('u8')
+    }
 }

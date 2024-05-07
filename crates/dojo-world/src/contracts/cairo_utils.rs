@@ -9,18 +9,9 @@ pub fn str_to_felt(string: &str) -> Result<FieldElement> {
     })
 }
 
-pub fn encode_uri(uri: &str) -> Result<Vec<FieldElement>> {
+pub fn encode_uri(uri: &str) -> Result<cainome::cairo_serde::ByteArray> {
     let parsed: Uri =
         uri.try_into().map_err(|e| anyhow!("Failed to encode URI `{}`: {}", uri, e))?;
 
-    Ok(parsed
-        .to_string()
-        .chars()
-        .collect::<Vec<_>>()
-        .chunks(31)
-        .map(|chunk| {
-            let s: String = chunk.iter().collect();
-            cairo_short_string_to_felt(&s)
-        })
-        .collect::<Result<Vec<_>, _>>()?)
+    Ok(cainome::cairo_serde::ByteArray::from_string(parsed.to_string().as_str()).unwrap())
 }
