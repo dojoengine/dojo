@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715010529781,
+  "lastUpdate": 1715040277844,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7285,6 +7285,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16898156,
             "range": "± 96220",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "broody@gmail.com",
+            "name": "Yun",
+            "username": "broody"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4a2c1491f31431267061f1147b09e41497b783eb",
+          "message": "Fix katana multiple origins arg (#1937)",
+          "timestamp": "2024-05-06T19:56:24-04:00",
+          "tree_id": "a3762bbd1f4b8db80ba9c62eceb1146a7d9be71f",
+          "url": "https://github.com/dojoengine/dojo/commit/4a2c1491f31431267061f1147b09e41497b783eb"
+        },
+        "date": 1715040277117,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16900436,
+            "range": "± 416100",
             "unit": "ns/iter"
           }
         ]
