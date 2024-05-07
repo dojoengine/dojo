@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715088271406,
+  "lastUpdate": 1715094039517,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7405,6 +7405,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17020489,
             "range": "± 312355",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f96982d3a2e4f905b383565780992021aefae337",
+          "message": "Handle scarb install in dojoup (#1940)",
+          "timestamp": "2024-05-07T10:52:24-04:00",
+          "tree_id": "db21f6af01087906d3a147ad7b1d48ab72731b33",
+          "url": "https://github.com/dojoengine/dojo/commit/f96982d3a2e4f905b383565780992021aefae337"
+        },
+        "date": 1715094038959,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16780789,
+            "range": "± 205349",
             "unit": "ns/iter"
           }
         ]
