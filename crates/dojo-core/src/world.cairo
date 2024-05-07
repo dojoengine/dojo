@@ -618,7 +618,7 @@ mod world {
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
         fn upgrade_state(
-            ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput
+            ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput, proven_by_merger: bool
         ) {
             let mut da_hasher = PedersenImpl::new(0);
             let mut i = 0;
@@ -637,7 +637,7 @@ mod world {
             program_output.serialize(ref program_output_array);
             let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
 
-            let program_hash = self.config.get_program_hash();
+            let program_hash = self.config.get_program_hash(proven_by_merger);
             let fact = poseidon::PoseidonImpl::new()
                 .update(program_hash)
                 .update(program_output_hash)

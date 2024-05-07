@@ -21,7 +21,8 @@ mod Config {
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct ProgramHashUpdate {
-        program_hash: felt252
+        program_hash: felt252,
+        of_merger_program: bool
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
@@ -32,6 +33,7 @@ mod Config {
     #[storage]
     struct Storage {
         program_hash: felt252,
+        merger_program_hash: felt252,
         facts_registry: ContractAddress,
         owner: ContractAddress
     }
@@ -50,14 +52,22 @@ mod Config {
     impl Config<
         TContractState, +HasComponent<TContractState>
     > of IConfig<ComponentState<TContractState>> {
-        fn set_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252) {
+        fn set_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252, for_merger_program: bool) {
             assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
-            self.program_hash.write(program_hash);
-            self.emit(ProgramHashUpdate { program_hash: program_hash });
+            if (for_merger_program) {
+                self.merger_program_hash.write(program_hash);
+            } else {
+                self.program_hash.write(program_hash);
+            }
+            self.emit(ProgramHashUpdate { program_hash: program_hash, of_merger_program: for_merger_program});
         }
 
-        fn get_program_hash(self: @ComponentState<TContractState>) -> felt252 {
-            self.program_hash.read()
+        fn get_program_hash(self: @ComponentState<TContractState>, of_merger_program: bool) -> felt252 {
+            if (of_merger_program) {
+                self.merger_program_hash.read()
+            } else {
+                self.program_hash.read()
+            }
         }
 
         fn set_facts_registry(ref self: ComponentState<TContractState>, address: ContractAddress) {
