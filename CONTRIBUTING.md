@@ -1,20 +1,26 @@
 # Contributing to Dojo
 
-First of all, thank you for considering contributing to Dojo. It's people like you that make Dojo such a great tool.
+Thank you for considering contributing to Dojo. It's people like you that make Dojo such a great project and community.
 
-Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
+Please follow the following guidelines in order to streamline your contribution. It helps communicate that you respect the time of the developers maintaining this open source project. In return, maintainers will reciprocate that respect when addressing your issue, assessing your changes, and helping you finalize your pull requests.
 
-## Getting Started
+### Check existing issues
 
-### Check the Issues
+Before you start contributing, please check the [Issue Tracker](https://github.com/dojoengine/dojo/issues) to see if there are any existing issues that match what you are intending to do. If the issue doesn't exist, please create it.
 
-Before you start contributing, please check the [Issue Tracker](https://github.com/dojoengine/dojo/issues) to see if there are any existing issues that match what you're intending to do. If the issue doesn't exist, please create it.
-
-If you're creating a new issue, please provide a descriptive title and detailed description. If possible, include a code sample or an executable test case demonstrating the expected behavior that is not occurring.
+If you are creating a new issue, please provide a descriptive title and detailed description. If possible, include a code sample or an executable test case demonstrating the expected behavior that is not occurring.
 
 ### Fork and Clone the Repository
 
 Once you've found an issue to work on, the next step is to fork the Dojo repo and clone it to your local machine. This is necessary because you probably won't have push access to the main repo.
+
+### Setting up your environment
+
+You will need the [Rust](https://rust-lang.org) compiler and Cargo, the Rust package manager.
+The easiest way to install both is with [`rustup.rs`](https://rustup.rs/).
+
+On Windows, you will also need a recent version of [Visual Studio](https://visualstudio.microsoft.com/downloads/),
+installed with the "Desktop Development With C++" Workloads option.
 
 ## Architecture
 
@@ -81,11 +87,17 @@ Additionally, when you push your changes, the built-in Continuous Integration (C
 
 The CI uses a `devcontainer` to have all the dependencies installed and to run the tests. You can find more information about the devcontainer in the [`.devcontainer.json`](.devcontainer/devcontainer.json) file and see the latest releases on [GitHub package](https://github.com/dojoengine/dojo/pkgs/container/dojo-dev).
 
+## Releasing
+
+Propose a new release by manually triggering the `release-dispatch` github action. The version value can be an semver or a level: `[patch, minor, major]`.
+
+Once run, the workflow will create a PR with the versioned repo which will trigger the release flow and the creation of a draft release on merge.
+
 ## Documentation
 
 We strive to provide comprehensive, up-to-date documentation for Dojo. If your changes require updates to the documentation, please include those in your pull request.
 
-The [dojo book repository](https://github.com/dojoengine/book) is where you should submit your changes to the documentation.
+The [Dojo Book repository](https://github.com/dojoengine/book) is where you should submit your changes to the documentation.
 
 ## Final Notes
 
