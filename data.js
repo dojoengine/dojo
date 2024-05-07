@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715040277844,
+  "lastUpdate": 1715068916223,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7315,6 +7315,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16900436,
             "range": "± 416100",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8367fa076a1df853f3b8a128684c8acc6453a92b",
+          "message": "feat(sozo): print-env subcommand (#1930)\n\n* feat(sozo): print-env subcommand\r\n\r\n* fix lint and clippy\r\n\r\n* use span instead of a specific trace event",
+          "timestamp": "2024-05-07T13:23:36+05:30",
+          "tree_id": "5c208f56efbfda92931269674c437c1ba1ccd31d",
+          "url": "https://github.com/dojoengine/dojo/commit/8367fa076a1df853f3b8a128684c8acc6453a92b"
+        },
+        "date": 1715068915401,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17066588,
+            "range": "± 239484",
             "unit": "ns/iter"
           }
         ]
