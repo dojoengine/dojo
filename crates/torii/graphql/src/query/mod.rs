@@ -5,6 +5,7 @@ use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
+use regex::Regex;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, SqliteConnection};
 use torii_core::sql::FELT_DELIMITER;
@@ -103,7 +104,12 @@ fn parse_nested_type(
         .collect();
 
     let model_name = member_id.split('$').next().unwrap();
-    let namespaced = format!("{}_{}", model_name, member_type);
+    // sanitizes the member type string
+    // for eg. Position<Position> -> Position_Position
+    // Position_(u8, Vec2) -> Position_u8_Vec2
+    let re = Regex::new(r"[, ()<>]").unwrap();
+    let member_type_name = re.replace_all(member_type, "");
+    let namespaced = format!("{}_{}", model_name, member_type_name);
     TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
 
