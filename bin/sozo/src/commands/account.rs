@@ -84,7 +84,7 @@ pub enum AccountCommand {
 
 impl AccountArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(command = ?self.command, "Executing command.");
+        trace!(args = ?self);
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         config.tokio_handle().block_on(async {

@@ -22,7 +22,7 @@ pub struct PrintEnvArgs {
 
 impl PrintEnvArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!("Executing PrintEnv command.");
+        trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         let ui = ws.config().ui();
 
