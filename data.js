@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715185048566,
+  "lastUpdate": 1715188667826,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7465,6 +7465,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17096562,
             "range": "± 259242",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5a7ecd8624a235c2b4e365d73612a952c0611716",
+          "message": "chore(katana): clean up txn hash test (#1941)",
+          "timestamp": "2024-05-09T01:09:35+08:00",
+          "tree_id": "7176109007f49afcc8ea033384534aaf78c93a8c",
+          "url": "https://github.com/dojoengine/dojo/commit/5a7ecd8624a235c2b4e365d73612a952c0611716"
+        },
+        "date": 1715188667043,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16576474,
+            "range": "± 256211",
             "unit": "ns/iter"
           }
         ]
