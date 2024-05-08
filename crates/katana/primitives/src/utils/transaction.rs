@@ -310,7 +310,8 @@ fn encode_da_mode(
 
 #[cfg(test)]
 mod tests {
-    use starknet::{core::chain_id, macros::felt};
+    use starknet::core::chain_id;
+    use starknet::macros::felt;
 
     use super::*;
 
