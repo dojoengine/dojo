@@ -59,40 +59,6 @@ When you submit the pull request, please provide a clear, detailed description o
 
 Your pull request will be reviewed by the maintainers of the Dojo project. They may ask for changes or clarification on certain points. Please address their comments and commit any required changes to the same branch on your repo.
 
-## Running Tests
-
-Before you submit your pull request, you should run the test suite locally to make sure your changes haven't broken anything.
-
-To run the test, you can execute the same command that will be exected on the CI by checking the [`.github/workflows/ci.yml`](.github/workflows/ci.yml) file.
-
-```bash
-# Run all the tests excluding Katana (due to SiR dependency, they may be run independently)
-cargo nextest run --all-features --workspace --exclude katana
-
-# To limit the resources, you can run the tests only on a package:
-cargo nextest run --all-features -p sozo-ops
-```
-
-If you have to modify `dojo-core` or `dojo-lang` crates you must:
-
-```bash
-# First spin up a **fresh** Katana instance on default port.
-cargo run --bin katana
-
-# Then execute the script that will rebuild them.
-bash scripts/rebuild_test_artifacts.sh
-```
-
-Additionally, when you push your changes, the built-in Continuous Integration (CI) will also run all the tests on the pushed code. You can see the result of these tests in the GitHub interface of your pull request. If the tests fail, you'll need to revise your code and push it again.
-
-The CI uses a `devcontainer` to have all the dependencies installed and to run the tests. You can find more information about the devcontainer in the [`.devcontainer.json`](.devcontainer/devcontainer.json) file and see the latest releases on [GitHub package](https://github.com/dojoengine/dojo/pkgs/container/dojo-dev).
-
-## Releasing
-
-Propose a new release by manually triggering the `release-dispatch` github action. The version value can be an semver or a level: `[patch, minor, major]`.
-
-Once run, the workflow will create a PR with the versioned repo which will trigger the release flow and the creation of a draft release on merge.
-
 ## Documentation
 
 We strive to provide comprehensive, up-to-date documentation for Dojo. If your changes require updates to the documentation, please include those in your pull request.

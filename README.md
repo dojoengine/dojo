@@ -18,7 +18,7 @@ You can find more detailed documentation in the Dojo Book [here](https://book.do
 
 ## Development
 
-We welcome contributions of all kinds from anyone. See our [Contribution Guide](/CONTRIBUTING.md) for more information on setting up your developer environment and how to get involved.
+We welcome contributions of all kinds from anyone. See our [Development](/DEVELOPMENT.md) and [Contributing](/CONTRIBUTING.md) guides for more information on setting up your developer environment and how to get involved.
 
 If you encounter issues or have questions, you can [submit an issue on GitHub](https://github.com/dojoengine/dojo/issues). You can also join our [Discord](https://discord.gg/dojoengine) for discussion and help.
 
