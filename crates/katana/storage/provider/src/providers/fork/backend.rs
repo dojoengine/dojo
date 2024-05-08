@@ -63,26 +63,26 @@ struct Request<P, T> {
 /// Each request consists of a payload and the sender half of a oneshot channel that will be used
 /// to send the result back to the backend handle.
 enum BackendRequest {
-    GetNonce(Request<ContractAddress, Nonce>),
-    GetClass(Request<ClassHash, RpcContractClass>),
-    GetClassHash(Request<ContractAddress, ClassHash>),
-    GetStorage(Request<(ContractAddress, StorageKey), StorageValue>),
+    Nonce(Request<ContractAddress, Nonce>),
+    Class(Request<ClassHash, RpcContractClass>),
+    ClassHash(Request<ContractAddress, ClassHash>),
+    Storage(Request<(ContractAddress, StorageKey), StorageValue>),
     // Test-only request kind for requesting the backend stats
     #[cfg(test)]
-    GetStats(OneshotSender<usize>),
+    Stats(OneshotSender<usize>),
 }
 
 impl BackendRequest {
     /// Create a new request for fetching the nonce of a contract.
     fn nonce(address: ContractAddress) -> (BackendRequest, OneshotReceiver<GetNonceResult>) {
         let (sender, receiver) = oneshot();
-        (BackendRequest::GetNonce(Request { payload: address, sender }), receiver)
+        (BackendRequest::Nonce(Request { payload: address, sender }), receiver)
     }
 
     /// Create a new request for fetching the class definitions of a contract.
     fn class(hash: ClassHash) -> (BackendRequest, OneshotReceiver<GetClassAtResult>) {
         let (sender, receiver) = oneshot();
-        (BackendRequest::GetClass(Request { payload: hash, sender }), receiver)
+        (BackendRequest::Class(Request { payload: hash, sender }), receiver)
     }
 
     /// Create a new request for fetching the class hash of a contract.
@@ -90,7 +90,7 @@ impl BackendRequest {
         address: ContractAddress,
     ) -> (BackendRequest, OneshotReceiver<GetClassHashAtResult>) {
         let (sender, receiver) = oneshot();
-        (BackendRequest::GetClassHash(Request { payload: address, sender }), receiver)
+        (BackendRequest::ClassHash(Request { payload: address, sender }), receiver)
     }
 
     /// Create a new request for fetching the storage value of a contract.
@@ -99,13 +99,13 @@ impl BackendRequest {
         key: StorageKey,
     ) -> (BackendRequest, OneshotReceiver<GetStorageResult>) {
         let (sender, receiver) = oneshot();
-        (BackendRequest::GetStorage(Request { payload: (address, key), sender }), receiver)
+        (BackendRequest::Storage(Request { payload: (address, key), sender }), receiver)
     }
 
     #[cfg(test)]
     fn stats() -> (BackendRequest, OneshotReceiver<usize>) {
         let (sender, receiver) = oneshot();
-        (BackendRequest::GetStats(sender), receiver)
+        (BackendRequest::Stats(sender), receiver)
     }
 }
 
@@ -136,6 +136,7 @@ where
     // choose which thread to running it on instead of spawning the thread ourselves.
     /// Create a new [Backend] with the given provider and block id, and returns a handle to it. The
     /// backend will start processing requests immediately upon creation.
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(provider: P, block_id: BlockHashOrNumber) -> Result<BackendHandle, BackendError> {
         let (handle, backend) = Self::new_inner(provider, block_id);
 
@@ -181,7 +182,7 @@ where
         let provider = self.provider.clone();
 
         match request {
-            BackendRequest::GetNonce(Request { payload, sender }) => {
+            BackendRequest::Nonce(Request { payload, sender }) => {
                 let fut = Box::pin(async move {
                     let res = provider
                         .get_nonce(block, FieldElement::from(payload))
@@ -194,7 +195,7 @@ where
                 self.pending_requests.push(fut);
             }
 
-            BackendRequest::GetStorage(Request { payload: (addr, key), sender }) => {
+            BackendRequest::Storage(Request { payload: (addr, key), sender }) => {
                 let fut = Box::pin(async move {
                     let res = provider
                         .get_storage_at(FieldElement::from(addr), key, block)
@@ -207,7 +208,7 @@ where
                 self.pending_requests.push(fut);
             }
 
-            BackendRequest::GetClassHash(Request { payload, sender }) => {
+            BackendRequest::ClassHash(Request { payload, sender }) => {
                 let fut = Box::pin(async move {
                     let res = provider
                         .get_class_hash_at(block, FieldElement::from(payload))
@@ -220,7 +221,7 @@ where
                 self.pending_requests.push(fut);
             }
 
-            BackendRequest::GetClass(Request { payload, sender }) => {
+            BackendRequest::Class(Request { payload, sender }) => {
                 let fut = Box::pin(async move {
                     let res = provider
                         .get_class(block, payload)
@@ -234,7 +235,7 @@ where
             }
 
             #[cfg(test)]
-            BackendRequest::GetStats(sender) => {
+            BackendRequest::Stats(sender) => {
                 let total_ongoing_request = self.pending_requests.len();
                 sender.send(total_ongoing_request).expect("failed to send backend stats");
             }
@@ -677,7 +678,7 @@ mod tests {
         });
         let h2 = handle.clone();
         thread::spawn(move || {
-            h2.get_class_at(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
+            h2.get_class_at(felt!("0x1")).expect(ERROR_SEND_REQUEST);
         });
         let h3 = handle.clone();
         thread::spawn(move || {
