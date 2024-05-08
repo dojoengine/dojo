@@ -108,6 +108,7 @@ mod world {
 
     #[abi(embed_v0)]
     impl ConfigImpl = Config::ConfigImpl<ContractState>;
+    impl ConfigInternalImpl = Config::InternalImpl<ContractState>;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -222,6 +223,8 @@ mod world {
                 RESOURCE_METADATA_SELECTOR,
                 (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
             );
+
+        self.config.initializer(creator);
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -637,7 +640,12 @@ mod world {
             program_output.serialize(ref program_output_array);
             let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
 
-            let program_hash = self.config.get_program_hash(proven_by_merger);
+            let program_hash = if proven_by_merger {
+                self.config.get_merger_program_hash()
+            } else {
+                self.config.get_differ_program_hash()
+            };
+
             let fact = poseidon::PoseidonImpl::new()
                 .update(program_hash)
                 .update(program_output_hash)
