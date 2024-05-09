@@ -285,7 +285,7 @@ struct ModelWithTupleNoPrimitives {
 
 impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersions> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelMultipleVersions {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelMultipleVersions"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, "BadModelMultipleVersions", keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -420,7 +420,7 @@ mod bad_model_multiple_versions {
 
 impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelBadVersionType {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelBadVersionType"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 537246025350462187868458942885902086202425585541495898150877285881426926523, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -452,7 +452,7 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("BadModelBadVersionType")
+        537246025350462187868458942885902086202425585541495898150877285881426926523
     }
 
     #[inline(always)]
@@ -555,7 +555,7 @@ mod bad_model_bad_version_type {
 
 impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelNoVersionValue {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelNoVersionValue"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 510884764440804248641145470106421715520498065640762121627610646122289418442, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -587,7 +587,7 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("BadModelNoVersionValue")
+        510884764440804248641145470106421715520498065640762121627610646122289418442
     }
 
     #[inline(always)]
@@ -690,7 +690,7 @@ mod bad_model_no_version_value {
 
 impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpectedArgWithValue> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelUnexpectedArgWithValue {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelUnexpectedArgWithValue"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 609798817400410974332175542242790740792842310475593325422194044359199941027, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -722,7 +722,7 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("BadModelUnexpectedArgWithValue")
+        609798817400410974332175542242790740792842310475593325422194044359199941027
     }
 
     #[inline(always)]
@@ -825,7 +825,7 @@ mod bad_model_unexpected_arg_with_value {
 
 impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelUnexpectedArg {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelUnexpectedArg"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 949097735839867165379372628344008784789919991740118948112868710933218930849, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -857,7 +857,7 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("BadModelUnexpectedArg")
+        949097735839867165379372628344008784789919991740118948112868710933218930849
     }
 
     #[inline(always)]
@@ -960,7 +960,7 @@ mod bad_model_unexpected_arg {
 
 impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupportedVersion> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelNotSupportedVersion {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelNotSupportedVersion"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 1024306429832444281478160321067399481685861686361100808176928576017034183663, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -992,7 +992,7 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("BadModelNotSupportedVersion")
+        1024306429832444281478160321067399481685861686361100808176928576017034183663
     }
 
     #[inline(always)]
@@ -1095,7 +1095,7 @@ mod bad_model_not_supported_version {
 
 impl Modelv0Model of dojo::model::Model<Modelv0> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Modelv0 {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Modelv0"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, "Modelv0", keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -1230,7 +1230,7 @@ mod modelv_0 {
 
 impl PositionModel of dojo::model::Model<Position> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Position {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Position"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 71955415935911354973604243446792437686714331401564029050333759332065302780, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -1262,7 +1262,7 @@ impl PositionModel of dojo::model::Model<Position> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("Position")
+        71955415935911354973604243446792437686714331401564029050333759332065302780
     }
 
     #[inline(always)]
@@ -1365,7 +1365,7 @@ mod position {
 
 impl RolesModel of dojo::model::Model<Roles> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Roles {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Roles"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 419336544500304321788712222515554985736095774968511843121228046452992595089, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -1397,7 +1397,7 @@ impl RolesModel of dojo::model::Model<Roles> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("Roles")
+        419336544500304321788712222515554985736095774968511843121228046452992595089
     }
 
     #[inline(always)]
@@ -1500,7 +1500,7 @@ mod roles {
 
 impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> OnlyKeyModel {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("OnlyKeyModel"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 95348903287879133251404472882179060573633188436503276991594023731017124802, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -1532,7 +1532,7 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("OnlyKeyModel")
+        95348903287879133251404472882179060573633188436503276991594023731017124802
     }
 
     #[inline(always)]
@@ -1635,7 +1635,7 @@ mod only_key_model {
 
 impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> U256KeyModel {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("U256KeyModel"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 1012572617804599336461526165833773117831255507291742736404237332578427043161, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -1667,7 +1667,7 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("U256KeyModel")
+        1012572617804599336461526165833773117831255507291742736404237332578427043161
     }
 
     #[inline(always)]
@@ -1770,7 +1770,7 @@ mod u_256_key_model {
 
 impl PlayerModel of dojo::model::Model<Player> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Player {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Player"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 711011379911436309259372467342761500657237775100998141763491044473508065524, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -1802,7 +1802,7 @@ impl PlayerModel of dojo::model::Model<Player> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("Player")
+        711011379911436309259372467342761500657237775100998141763491044473508065524
     }
 
     #[inline(always)]
@@ -1905,7 +1905,7 @@ mod player {
 
 impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithSimpleArray {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithSimpleArray"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 1666797686724122591687516812540504658474050953055875240069335038116740262482, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -1937,7 +1937,7 @@ impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("ModelWithSimpleArray")
+        1666797686724122591687516812540504658474050953055875240069335038116740262482
     }
 
     #[inline(always)]
@@ -2040,7 +2040,7 @@ mod model_with_simple_array {
 
 impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithByteArray {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithByteArray"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 141311514815198970479576122039175676312992855455532566618126930677198428029, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -2072,7 +2072,7 @@ impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("ModelWithByteArray")
+        141311514815198970479576122039175676312992855455532566618126930677198428029
     }
 
     #[inline(always)]
@@ -2175,7 +2175,7 @@ mod model_with_byte_array {
 
 impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithComplexArray {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithComplexArray"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 897000934674353152443993618748644314791405506479389733109858158050692281536, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -2207,7 +2207,7 @@ impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("ModelWithComplexArray")
+        897000934674353152443993618748644314791405506479389733109858158050692281536
     }
 
     #[inline(always)]
@@ -2310,7 +2310,7 @@ mod model_with_complex_array {
 
 impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithTuple {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithTuple"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 337716500732518130569836528184281758241439084973964029720107667501574962806, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -2342,7 +2342,7 @@ impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("ModelWithTuple")
+        337716500732518130569836528184281758241439084973964029720107667501574962806
     }
 
     #[inline(always)]
@@ -2445,7 +2445,7 @@ mod model_with_tuple {
 
 impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimitives> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithTupleNoPrimitives {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithTupleNoPrimitives"), keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, 1607855252168926989989190762728138559179794826576658643328244347189144524311, keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -2477,7 +2477,7 @@ impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimi
 
     #[inline(always)]
     fn selector() -> felt252 {
-        selector!("ModelWithTupleNoPrimitives")
+        1607855252168926989989190762728138559179794826576658643328244347189144524311
     }
 
     #[inline(always)]
