@@ -11,9 +11,7 @@ use futures::stream::Stream;
 use futures::{Future, FutureExt};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
-use katana_primitives::contract::{
-    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
-};
+use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
     legacy_rpc_to_compiled_class,
@@ -27,7 +25,7 @@ use tracing::{error, trace};
 
 use crate::error::ProviderError;
 use crate::providers::in_memory::cache::CacheStateDb;
-use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
+use crate::traits::contract::ContractClassProvider;
 use crate::traits::state::StateProvider;
 use crate::ProviderResult;
 
@@ -344,13 +342,6 @@ impl SharedStateProvider {
     }
 }
 
-impl ContractInfoProvider for SharedStateProvider {
-    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
-        let info = self.0.contract_state.read().get(&address).cloned();
-        Ok(info)
-    }
-}
-
 impl StateProvider for SharedStateProvider {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         // TEMP:
@@ -369,8 +360,13 @@ impl StateProvider for SharedStateProvider {
         //
         // Similar story with `class_hash_of_contract`
         //
-        if let nonce @ Some(_) =
-            self.contract(address)?.map(|i| i.nonce).filter(|n| n != &Nonce::ZERO)
+        if let nonce @ Some(_) = self
+            .0
+            .contract_state
+            .read()
+            .get(&address)
+            .map(|i| i.nonce)
+            .filter(|n| n != &Nonce::ZERO)
         {
             return Ok(nonce);
         }
@@ -432,8 +428,13 @@ impl StateProvider for SharedStateProvider {
         address: ContractAddress,
     ) -> ProviderResult<Option<ClassHash>> {
         // See comment at `nonce` for the explanation of this filter.
-        if let hash @ Some(_) =
-            self.contract(address)?.map(|i| i.class_hash).filter(|h| h != &ClassHash::ZERO)
+        if let hash @ Some(_) = self
+            .0
+            .contract_state
+            .read()
+            .get(&address)
+            .map(|i| i.class_hash)
+            .filter(|h| h != &ClassHash::ZERO)
         {
             return Ok(hash);
         }

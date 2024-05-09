@@ -1,13 +1,6 @@
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
-use katana_primitives::contract::{ContractAddress, GenericContractInfo};
 
 use crate::ProviderResult;
-
-#[auto_impl::auto_impl(&, Box, Arc)]
-pub trait ContractInfoProvider: Send + Sync {
-    /// Returns the contract information given its address.
-    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>>;
-}
 
 /// A provider trait for retrieving contract class related information.
 #[auto_impl::auto_impl(&, Box, Arc)]
