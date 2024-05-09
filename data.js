@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715188667826,
+  "lastUpdate": 1715286971800,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7495,6 +7495,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16576474,
             "range": "± 256211",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "810cd5769beccf7ff4a53c1b7bcaad639f60792a",
+          "message": "refactor(katana): remove `ContractInfoProvider`  (#1943)\n\n# Description\n\n<!--\nA description of what this PR is solving.\n-->\n\n## Related issue\n\n<!--\nPlease link related issues: Fixes #<issue_number>\nMore info: https://docs.github.com/en/free-pro-team@latest/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword\n-->\n\n## Tests\n\n<!--\nPlease refer to the CONTRIBUTING.md file to know more about the testing process. Ensure you've tested at least the package you're modifying if running all the tests consumes too much memory on your system.\n-->\n\n- [ ] Yes\n- [ ] No, because they aren't needed\n- [ ] No, because I need help\n\n## Added to documentation?\n\n<!--\nIf the changes are small, code comments are enough, otherwise, the documentation is needed. It\nmay be a README.md file added to your module/package, a DojoBook PR or both.\n-->\n\n- [ ] README.md\n- [ ] [Dojo Book](https://github.com/dojoengine/book)\n- [ ] No documentation needed\n\n## Checklist\n\n- [ ] I've formatted my code (`scripts/prettier.sh`, `scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)\n- [ ] I've linted my code (`scripts/clippy.sh`, `scripts/docs.sh`)\n- [ ] I've commented my code\n- [ ] I've requested a review after addressing the comments",
+          "timestamp": "2024-05-10T04:27:52+08:00",
+          "tree_id": "7148676725cae241e46cc655cda03ba47e9731e7",
+          "url": "https://github.com/dojoengine/dojo/commit/810cd5769beccf7ff4a53c1b7bcaad639f60792a"
+        },
+        "date": 1715286970616,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17121724,
+            "range": "± 176792",
             "unit": "ns/iter"
           }
         ]
