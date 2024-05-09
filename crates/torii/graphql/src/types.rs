@@ -54,7 +54,6 @@ pub enum ScalarType {
 #[derive(AsRefStr, Display, EnumIter, EnumString, Debug)]
 pub enum GraphqlType {
     ByteArray,
-    Tuple,
     Enum,
     Cursor,
     DateTime,
