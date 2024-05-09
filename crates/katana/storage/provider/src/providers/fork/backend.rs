@@ -584,8 +584,8 @@ impl ContractClassProvider for SharedStateProvider {
 /// A helper function to convert a contract/class not found error returned by the RPC provider into
 /// a `Option::None`.
 ///
-/// This is to follow the Katana's provider APIs where 'not found'/'non-existent' should be
-/// represented as `Option::None`.
+/// This is to follow the Katana's provider APIs convention where 'not found'/'non-existent' should
+/// be represented as `Option::None`.
 fn handle_not_found_err<T>(result: Result<T, BackendError>) -> Result<Option<T>, BackendError> {
     match result {
         Ok(value) => Ok(Some(value)),
