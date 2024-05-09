@@ -16,12 +16,14 @@ pub type TypeMapping = IndexMap<Name, TypeData>;
 pub enum TypeData {
     Simple(TypeRef),
     Nested((TypeRef, IndexMap<Name, TypeData>)),
+    Array(Box<TypeData>),
 }
 
 impl TypeData {
     pub fn type_ref(&self) -> TypeRef {
         match self {
             TypeData::Simple(ty) | TypeData::Nested((ty, _)) => ty.clone(),
+            TypeData::Array(inner) => TypeRef::List(Box::new(inner.type_ref())),
         }
     }
 
@@ -33,10 +35,15 @@ impl TypeData {
         matches!(self, TypeData::Nested(_))
     }
 
+    pub fn is_array(&self) -> bool {
+        matches!(self, TypeData::Array(_))
+    }
+
     pub fn type_mapping(&self) -> Option<&IndexMap<Name, TypeData>> {
         match self {
             TypeData::Simple(_) => None,
             TypeData::Nested((_, type_mapping)) => Some(type_mapping),
+            TypeData::Array(_) => None,
         }
     }
 }

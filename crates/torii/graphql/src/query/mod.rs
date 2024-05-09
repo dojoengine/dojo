@@ -74,6 +74,16 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
         "Primitive" => TypeData::Simple(TypeRef::named(&member.ty)),
         "Enum" => TypeData::Simple(TypeRef::named("Enum")),
         "ByteArray" => TypeData::Simple(TypeRef::named("ByteArray")),
+        "Array" => TypeData::Array(Box::new(member_to_type_data(
+            nested_members
+                .iter()
+                .find(|&nested_member| {
+                    nested_member.model_id == member.model_id
+                        && nested_member.id.ends_with(&member.name)
+                })
+                .expect("Array type should have nested type"),
+            nested_members,
+        ))),
         _ => parse_nested_type(
             &member.model_id,
             &member.id,
