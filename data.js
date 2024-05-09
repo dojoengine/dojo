@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715287076678,
+  "lastUpdate": 1715287181916,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7555,6 +7555,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16726136,
             "range": "± 708401",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6dca9446b3894422b559dd86a43cf53abbe723ae",
+          "message": "test(katana): ensure contract non-existent is validated properly on `StateProvider::nonce()` of forked provider (#1947)\n\n# Description\n\n<!--\nA description of what this PR is solving.\n-->\n\n## Related issue\n\n<!--\nPlease link related issues: Fixes #<issue_number>\nMore info: https://docs.github.com/en/free-pro-team@latest/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword\n-->\n\n## Tests\n\n<!--\nPlease refer to the CONTRIBUTING.md file to know more about the testing process. Ensure you've tested at least the package you're modifying if running all the tests consumes too much memory on your system.\n-->\n\n- [ ] Yes\n- [ ] No, because they aren't needed\n- [ ] No, because I need help\n\n## Added to documentation?\n\n<!--\nIf the changes are small, code comments are enough, otherwise, the documentation is needed. It\nmay be a README.md file added to your module/package, a DojoBook PR or both.\n-->\n\n- [ ] README.md\n- [ ] [Dojo Book](https://github.com/dojoengine/book)\n- [ ] No documentation needed\n\n## Checklist\n\n- [ ] I've formatted my code (`scripts/prettier.sh`, `scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)\n- [ ] I've linted my code (`scripts/clippy.sh`, `scripts/docs.sh`)\n- [ ] I've commented my code\n- [ ] I've requested a review after addressing the comments",
+          "timestamp": "2024-05-10T04:31:35+08:00",
+          "tree_id": "88a2640c23d385f7d3d9a58b1aab41d919a34bb9",
+          "url": "https://github.com/dojoengine/dojo/commit/6dca9446b3894422b559dd86a43cf53abbe723ae"
+        },
+        "date": 1715287181350,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16876791,
+            "range": "± 208170",
             "unit": "ns/iter"
           }
         ]
