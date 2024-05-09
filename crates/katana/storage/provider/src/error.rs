@@ -106,7 +106,7 @@ pub enum ProviderError {
     /// [ForkedProvider](crate::providers::fork::ForkedProvider).
     #[cfg(feature = "fork")]
     #[error(transparent)]
-    ForkedBackend(#[from] crate::providers::fork::backend::ForkedBackendError),
+    ForkedBackend(#[from] crate::providers::fork::backend::BackendError),
 
     /// Any error that is not covered by the other variants.
     #[error("soemthing went wrong: {0}")]
