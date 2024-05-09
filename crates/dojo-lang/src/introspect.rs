@@ -131,9 +131,11 @@ fn compute_tuple_size(
 }
 
 fn build_array_layout_from_type(item_type: &String) -> String {
-    let item_type = get_array_item_type(item_type);
-    format!(
-        "dojo::database::introspect::Layout::Array(
+    let array_item_type = get_array_item_type(item_type);
+
+    if is_tuple(&array_item_type) {
+        format!(
+            "dojo::database::introspect::Layout::Array(
                 array![
                     dojo::database::introspect::FieldLayout {{
                         selector: '',
@@ -141,8 +143,11 @@ fn build_array_layout_from_type(item_type: &String) -> String {
                     }}
                 ].span()
             )",
-        build_item_layout_from_type(&item_type)
-    )
+            build_item_layout_from_type(&array_item_type)
+        )
+    } else {
+        format!("dojo::database::introspect::Introspect::<{}>::layout()", item_type)
+    }
 }
 
 fn build_tuple_layout_from_type(item_type: &String) -> String {
