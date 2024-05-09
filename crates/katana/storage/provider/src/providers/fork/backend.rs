@@ -372,7 +372,7 @@ impl BackendHandle {
 /// cache to avoid fetching it again. This is shared across multiple instances of
 /// [`ForkedStateDb`](super::state::ForkedStateDb).
 #[derive(Clone)]
-pub struct SharedStateProvider(Arc<CacheStateDb<BackendHandle>>);
+pub struct SharedStateProvider(pub(crate) Arc<CacheStateDb<BackendHandle>>);
 
 impl SharedStateProvider {
     pub(crate) fn new_with_backend(backend: BackendHandle) -> Self {
@@ -599,14 +599,11 @@ fn handle_not_found_err<T>(result: Result<T, BackendError>) -> Result<Option<T>,
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod test_utils {
 
     use std::sync::mpsc::sync_channel;
-    use std::time::Duration;
 
     use katana_primitives::block::BlockNumber;
-    use katana_primitives::contract::GenericContractInfo;
-    use starknet::macros::felt;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
     use tokio::net::TcpListener;
@@ -614,23 +611,14 @@ mod tests {
 
     use super::*;
 
-    const LOCAL_RPC_URL: &str = "http://localhost:5050";
-
-    const STORAGE_KEY: StorageKey = felt!("0x1");
-    const ADDR_1: ContractAddress = ContractAddress(felt!("0xADD1"));
-    const ADDR_1_NONCE: Nonce = felt!("0x1");
-    const ADDR_1_STORAGE_VALUE: StorageKey = felt!("0x8080");
-    const ADDR_1_CLASS_HASH: StorageKey = felt!("0x1");
-
-    fn create_forked_backend(rpc_url: String, block_num: BlockNumber) -> BackendHandle {
-        let url = Url::parse(&rpc_url).expect("valid url");
+    pub fn create_forked_backend(rpc_url: &str, block_num: BlockNumber) -> BackendHandle {
+        let url = Url::parse(rpc_url).expect("valid url");
         let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url)));
-        let block_id = BlockHashOrNumber::Num(block_num);
-        Backend::new(provider, block_id).unwrap()
+        Backend::new(provider, block_num.into()).unwrap()
     }
 
     // Starts a TCP server that never close the connection.
-    fn start_tcp_server() {
+    pub fn start_tcp_server() {
         use tokio::runtime::Builder;
 
         let (tx, rx) = sync_channel::<()>(1);
@@ -650,22 +638,36 @@ mod tests {
 
         rx.recv().unwrap();
     }
+}
 
-    const ERROR_INIT_BACKEND: &str = "Failed to create backend";
+#[cfg(test)]
+mod tests {
+
+    use std::time::Duration;
+
+    use katana_primitives::contract::GenericContractInfo;
+    use starknet::macros::felt;
+
+    use super::test_utils::*;
+    use super::*;
+
+    const LOCAL_RPC_URL: &str = "http://localhost:5050";
+
+    const STORAGE_KEY: StorageKey = felt!("0x1");
+    const ADDR_1: ContractAddress = ContractAddress(felt!("0xADD1"));
+    const ADDR_1_NONCE: Nonce = felt!("0x1");
+    const ADDR_1_STORAGE_VALUE: StorageKey = felt!("0x8080");
+    const ADDR_1_CLASS_HASH: StorageKey = felt!("0x1");
+
     const ERROR_SEND_REQUEST: &str = "Failed to send request to backend";
     const ERROR_STATS: &str = "Failed to get stats";
 
     #[test]
     fn handle_incoming_requests() {
-        let url = Url::try_from("http://127.0.0.1:8080").unwrap();
-        let provider = JsonRpcClient::new(HttpTransport::new(url));
-        let block_id = BlockHashOrNumber::Num(1);
-
         // start a mock remote network
         start_tcp_server();
 
-        // start backend
-        let handle = Backend::new(Arc::new(provider), block_id).expect(ERROR_INIT_BACKEND);
+        let handle = create_forked_backend("http://127.0.0.1:8080", 1);
 
         // check no pending requests
         let stats = handle.stats().expect(ERROR_STATS);
@@ -704,7 +706,7 @@ mod tests {
     #[test]
     fn get_from_cache_if_exist() {
         // setup
-        let backend = create_forked_backend(LOCAL_RPC_URL.into(), 1);
+        let backend = create_forked_backend(LOCAL_RPC_URL, 1);
         let state_db = CacheStateDb::new(backend);
 
         state_db
@@ -734,7 +736,7 @@ mod tests {
 
     #[test]
     fn fetch_from_fork_will_err_if_backend_thread_not_running() {
-        let backend = create_forked_backend(LOCAL_RPC_URL.into(), 1);
+        let backend = create_forked_backend(LOCAL_RPC_URL, 1);
         let provider = SharedStateProvider(Arc::new(CacheStateDb::new(backend)));
         assert!(StateProvider::nonce(&provider, ADDR_1).is_err())
     }
@@ -751,7 +753,7 @@ mod tests {
     #[test]
     #[ignore]
     fn fetch_from_fork_if_not_in_cache() {
-        let backend = create_forked_backend(FORKED_URL.into(), 908622);
+        let backend = create_forked_backend(FORKED_URL, 908622);
         let provider = SharedStateProvider(Arc::new(CacheStateDb::new(backend)));
 
         // fetch from remote
