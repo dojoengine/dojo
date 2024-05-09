@@ -105,8 +105,8 @@ fn parse_nested_type(
 
     let model_name = member_id.split('$').next().unwrap();
     // sanitizes the member type string
-    // for eg. Position<Position> -> Position_Position
-    // Position_(u8, Vec2) -> Position_u8_Vec2
+    // for eg. Position_Array<Vec2> -> Position_ArrayVec2
+    // Position_(u8, Vec2) -> Position_u8Vec2
     let re = Regex::new(r"[, ()<>]").unwrap();
     let member_type_name = re.replace_all(member_type, "");
     let namespaced = format!("{}_{}", model_name, member_type_name);
