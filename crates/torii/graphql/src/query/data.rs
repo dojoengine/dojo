@@ -40,6 +40,21 @@ pub async fn fetch_single_row(
     sqlx::query(&query).fetch_one(conn).await
 }
 
+pub async fn fetch_single_row_by_idx(
+    conn: &mut SqliteConnection,
+    table_name: &str,
+    id_column: &str,
+    id: &str,
+    idx: i64,
+) -> sqlx::Result<SqliteRow> {
+    let query = format!(
+        "SELECT * FROM {} WHERE {} = '{}' AND idx = {}",
+        table_name, id_column, id, idx
+    );
+    sqlx::query(&query).fetch_one(conn).await
+}
+
+
 #[allow(clippy::too_many_arguments)]
 pub async fn fetch_multiple_rows(
     conn: &mut SqliteConnection,
