@@ -378,11 +378,6 @@ impl SharedStateProvider {
     pub(crate) fn new_with_backend(backend: BackendHandle) -> Self {
         Self(Arc::new(CacheStateDb::new(backend)))
     }
-
-    #[cfg(test)]
-    pub fn new_with_state(state: CacheStateDb<BackendHandle>) -> Self {
-        Self(Arc::new(state))
-    }
 }
 
 impl StateProvider for SharedStateProvider {
