@@ -39,9 +39,25 @@ impl StateProvider for ForkedStateDb {
         StateProvider::class_hash_of_contract(&self.db, address)
     }
 
+    // TODO: write unit tests for these cases
+    //
+    // When reading from local storage, we only consider entries that have non-zero nonce
+    // values OR non-zero class hashes.
+    //
+    // Nonce == 0 && ClassHash == 0
+    // - Contract does not exist locally (so try find from remote state)
+    // Nonce != 0 && ClassHash == 0
+    // - Contract exists and was deployed remotely but new nonce was set locally (so no need to read
+    //   from remote state anymore)
+    // Nonce == 0 && ClassHash != 0
+    // - Contract exists and was deployed locally (always read from local state)
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        if let nonce @ Some(_) =
-            self.contract_state.read().get(&address).map(|i| i.nonce).filter(|n| n != &Nonce::ZERO)
+        if let nonce @ Some(_) = self
+            .contract_state
+            .read()
+            .get(&address)
+            .filter(|c| c.nonce != Nonce::default() || c.class_hash != ClassHash::default())
+            .map(|c| c.nonce)
         {
             return Ok(nonce);
         }
@@ -198,4 +214,34 @@ impl ContractClassProvider for ForkedSnapshot {
             ContractClassProvider::class(&self.inner.db, hash)
         }
     }
+}
+
+// #[cfg(test)]
+// mod tests {
+//     use std::collections::HashMap;
+
+//     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+
+//     use crate::providers::{
+//         fork::backend::{Backend, SharedStateProvider},
+//         in_memory::cache::CacheStateDb,
+//     };
+
+//     use super::ForkedStateDb;
+
+//     #[test]
+//     fn test_get_nonce() {
+//         let backend = Backend::new().unwrap();
+
+//         let mut state = CacheStateDb::new(backend);
+//         state.insert_updates();
+
+//         let forked_state = SharedStateProvider::new_with_state(state);
+
+//         // setup initial state
+//         let states = StateUpdatesWithDeclaredClasses {
+//             state_updates: StateUpdates { nonce_updates: HashMap::from([()]) },
+//             ..Default::default()
+//         };
+//     }
 }
