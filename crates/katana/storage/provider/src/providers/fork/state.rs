@@ -39,8 +39,6 @@ impl StateProvider for ForkedStateDb {
         StateProvider::class_hash_of_contract(&self.db, address)
     }
 
-    // TODO: write unit tests for these cases
-    //
     // When reading from local storage, we only consider entries that have non-zero nonce
     // values OR non-zero class hashes.
     //
@@ -216,32 +214,114 @@ impl ContractClassProvider for ForkedSnapshot {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use std::collections::HashMap;
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
 
-//     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+    use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+    use starknet::macros::felt;
 
-//     use crate::providers::{
-//         fork::backend::{Backend, SharedStateProvider},
-//         in_memory::cache::CacheStateDb,
-//     };
+    use super::*;
+    use crate::providers::fork::backend::test_utils::create_forked_backend;
 
-//     use super::ForkedStateDb;
+    #[test]
+    fn test_get_nonce() {
+        let backend = create_forked_backend("http://localhost:8080", 1);
 
-//     #[test]
-//     fn test_get_nonce() {
-//         let backend = Backend::new().unwrap();
+        let address: ContractAddress = felt!("1").into();
+        let class_hash = felt!("11");
+        let remote_nonce = felt!("111");
+        let local_nonce = felt!("1111");
 
-//         let mut state = CacheStateDb::new(backend);
-//         state.insert_updates();
+        // Case: contract doesn't exist at all
+        {
+            let forked_state = SharedStateProvider::new_with_backend(backend.clone());
+            let state = ForkedStateDb::new(forked_state.clone());
 
-//         let forked_state = SharedStateProvider::new_with_state(state);
+            // asserts that its error for now
+            assert!(state.nonce(address).is_err());
+            assert!(forked_state.nonce(address).is_err());
+        }
 
-//         // setup initial state
-//         let states = StateUpdatesWithDeclaredClasses {
-//             state_updates: StateUpdates { nonce_updates: HashMap::from([()]) },
-//             ..Default::default()
-//         };
-//     }
+        // Case: contract exist remotely
+        {
+            let remote = SharedStateProvider::new_with_backend(backend.clone());
+            let local = ForkedStateDb::new(remote.clone());
+
+            let nonce_updates = HashMap::from([(address, remote_nonce)]);
+            let updates = StateUpdatesWithDeclaredClasses {
+                state_updates: StateUpdates { nonce_updates, ..Default::default() },
+                ..Default::default()
+            };
+            remote.0.insert_updates(updates);
+
+            assert_eq!(local.nonce(address).unwrap(), Some(remote_nonce));
+            assert_eq!(remote.nonce(address).unwrap(), Some(remote_nonce));
+        }
+
+        // Case: contract exist remotely but nonce was updated locally
+        {
+            let remote = SharedStateProvider::new_with_backend(backend.clone());
+            let local = ForkedStateDb::new(remote.clone());
+
+            let nonce_updates = HashMap::from([(address, remote_nonce)]);
+            let contract_updates = HashMap::from([(address, class_hash)]);
+            let updates = StateUpdatesWithDeclaredClasses {
+                state_updates: StateUpdates {
+                    nonce_updates,
+                    contract_updates,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            remote.0.insert_updates(updates);
+
+            let nonce_updates = HashMap::from([(address, local_nonce)]);
+            let updates = StateUpdatesWithDeclaredClasses {
+                state_updates: StateUpdates { nonce_updates, ..Default::default() },
+                ..Default::default()
+            };
+            local.insert_updates(updates);
+
+            assert_eq!(local.nonce(address).unwrap(), Some(local_nonce));
+            assert_eq!(remote.nonce(address).unwrap(), Some(remote_nonce));
+        }
+
+        // Case: contract was deployed locally only and has non-zero nonce
+        {
+            let remote = SharedStateProvider::new_with_backend(backend.clone());
+            let local = ForkedStateDb::new(remote.clone());
+
+            let contract_updates = HashMap::from([(address, class_hash)]);
+            let nonce_updates = HashMap::from([(address, local_nonce)]);
+            let updates = StateUpdatesWithDeclaredClasses {
+                state_updates: StateUpdates {
+                    nonce_updates,
+                    contract_updates,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            local.insert_updates(updates);
+
+            assert_eq!(local.nonce(address).unwrap(), Some(local_nonce));
+            assert!(remote.nonce(address).is_err());
+        }
+
+        // Case: contract was deployed locally only and has zero nonce
+        {
+            let remote = SharedStateProvider::new_with_backend(backend.clone());
+            let local = ForkedStateDb::new(remote.clone());
+
+            let contract_updates = HashMap::from([(address, class_hash)]);
+            let updates = StateUpdatesWithDeclaredClasses {
+                state_updates: StateUpdates { contract_updates, ..Default::default() },
+                ..Default::default()
+            };
+            local.insert_updates(updates);
+
+            assert_eq!(local.nonce(address).unwrap(), Some(Default::default()));
+            assert!(remote.nonce(address).is_err());
+        }
+    }
 }
