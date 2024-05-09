@@ -148,8 +148,8 @@ impl StateProvider for ForkedSnapshot {
             .inner
             .contract_state
             .get(&address)
-            .map(|info| info.nonce)
-            .filter(|n| n != &Nonce::ZERO)
+            .filter(|c| c.nonce != Nonce::default() || c.class_hash != ClassHash::default())
+            .map(|c| c.nonce)
         {
             return Ok(nonce);
         }
@@ -235,12 +235,16 @@ mod tests {
 
         // Case: contract doesn't exist at all
         {
-            let forked_state = SharedStateProvider::new_with_backend(backend.clone());
-            let state = ForkedStateDb::new(forked_state.clone());
+            let remote = SharedStateProvider::new_with_backend(backend.clone());
+            let local = ForkedStateDb::new(remote.clone());
 
             // asserts that its error for now
-            assert!(state.nonce(address).is_err());
-            assert!(forked_state.nonce(address).is_err());
+            assert!(local.nonce(address).is_err());
+            assert!(remote.nonce(address).is_err());
+
+            // make sure the snapshot maintains the same behavior
+            let snapshot = local.create_snapshot();
+            assert!(snapshot.nonce(address).is_err());
         }
 
         // Case: contract exist remotely
@@ -257,6 +261,10 @@ mod tests {
 
             assert_eq!(local.nonce(address).unwrap(), Some(remote_nonce));
             assert_eq!(remote.nonce(address).unwrap(), Some(remote_nonce));
+
+            // make sure the snapshot maintains the same behavior
+            let snapshot = local.create_snapshot();
+            assert_eq!(snapshot.nonce(address).unwrap(), Some(remote_nonce));
         }
 
         // Case: contract exist remotely but nonce was updated locally
@@ -285,6 +293,10 @@ mod tests {
 
             assert_eq!(local.nonce(address).unwrap(), Some(local_nonce));
             assert_eq!(remote.nonce(address).unwrap(), Some(remote_nonce));
+
+            // make sure the snapshot maintains the same behavior
+            let snapshot = local.create_snapshot();
+            assert_eq!(snapshot.nonce(address).unwrap(), Some(local_nonce));
         }
 
         // Case: contract was deployed locally only and has non-zero nonce
@@ -306,6 +318,10 @@ mod tests {
 
             assert_eq!(local.nonce(address).unwrap(), Some(local_nonce));
             assert!(remote.nonce(address).is_err());
+
+            // make sure the snapshot maintains the same behavior
+            let snapshot = local.create_snapshot();
+            assert_eq!(snapshot.nonce(address).unwrap(), Some(local_nonce));
         }
 
         // Case: contract was deployed locally only and has zero nonce
@@ -322,6 +338,10 @@ mod tests {
 
             assert_eq!(local.nonce(address).unwrap(), Some(Default::default()));
             assert!(remote.nonce(address).is_err());
+
+            // make sure the snapshot maintains the same behavior
+            let snapshot = local.create_snapshot();
+            assert_eq!(snapshot.nonce(address).unwrap(), Some(Default::default()));
         }
     }
 }
