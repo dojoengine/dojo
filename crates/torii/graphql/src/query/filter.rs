@@ -13,10 +13,13 @@ pub enum Comparator {
     Lte,
     Neq,
     Eq,
-    In,
+    // Order matters here.
+    // We want "NOT" comparators to be checked first
+    // so that "NOT IN" is matched before "IN"
     NotIn,
-    Like,
+    In,
     NotLike,
+    Like,
 }
 
 impl fmt::Display for Comparator {
