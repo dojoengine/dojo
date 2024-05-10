@@ -13,6 +13,9 @@ pub enum Comparator {
     Lte,
     Neq,
     Eq,
+    In,
+    NotIn,
+    Like,
 }
 
 impl fmt::Display for Comparator {
@@ -24,6 +27,9 @@ impl fmt::Display for Comparator {
             Comparator::Lte => write!(f, "<="),
             Comparator::Neq => write!(f, "!="),
             Comparator::Eq => write!(f, "="),
+            Comparator::In => write!(f, "IN"),
+            Comparator::NotIn => write!(f, "NOT IN"),
+            Comparator::Like => write!(f, "LIKE"),
         }
     }
 }
@@ -32,6 +38,7 @@ impl fmt::Display for Comparator {
 pub enum FilterValue {
     Int(i64),
     String(String),
+    List(Vec<FilterValue>),
 }
 
 #[derive(Debug)]
