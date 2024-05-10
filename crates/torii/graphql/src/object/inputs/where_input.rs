@@ -3,7 +3,7 @@ use std::str::FromStr;
 use async_graphql::dynamic::{
     Field, InputObject, InputValue, ResolverContext, TypeRef, ValueAccessor,
 };
-use async_graphql::{Error as GqlError, Name, Result, Value};
+use async_graphql::{Error as GqlError, Name, Result};
 use dojo_types::primitive::{Primitive, SqlType};
 use strum::IntoEnumIterator;
 
@@ -112,7 +112,7 @@ pub fn parse_where_argument(
 
                         Ok(Some(parse_filter(type_name, FilterValue::List(values))))
                     }
-                    _ => return Err(GqlError::new("Nested types are not supported")),
+                    _ => Err(GqlError::new("Nested types are not supported")),
                 })
             })
             .collect::<Result<Option<Vec<_>>>>()
