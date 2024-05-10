@@ -261,3 +261,45 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
         Ty::Primitive('u8')
     }
 }
+
+impl Introspect_array<T, +Introspect<T>> of Introspect<Array<T>> {
+    fn size() -> Option<usize> {
+        Option::None
+    }
+    fn layout() -> Layout {
+        Layout::Array(
+            array![
+                FieldLayout {
+                    selector: '',
+                    layout: Introspect::<T>::layout()
+                }
+            ].span()
+        )
+    }
+
+    fn ty() -> Ty {
+        // TODO: Not used anymore => to remove
+        Ty::Primitive('u8')
+    }
+}
+
+impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
+    fn size() -> Option<usize> {
+        Option::None
+    }
+    fn layout() -> Layout {
+        Layout::Array(
+            array![
+                FieldLayout {
+                    selector: '',
+                    layout: Introspect::<T>::layout()
+                }
+            ].span()
+        )
+    }
+
+    fn ty() -> Ty {
+        // TODO: Not used anymore => to remove
+        Ty::Primitive('u8')
+    }
+}

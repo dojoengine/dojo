@@ -94,7 +94,7 @@ fn create_struct_with_enum_second_variant() -> Span<felt252> {
     array![1].span()
 }
 
-#[derive(Introspect, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
 #[dojo::model]
 struct StructSimpleArrayModel {
     #[key]
@@ -103,6 +103,8 @@ struct StructSimpleArrayModel {
     b: Array<u64>,
     c: u128,
 }
+
+impl ArrayU64Copy of core::traits::Copy::<Array<u64>>;
 
 fn create_struct_simple_array_model() -> Span<felt252> {
     array![1, 4, 10, 20, 30, 40, 2].span()

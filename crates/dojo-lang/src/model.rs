@@ -10,6 +10,7 @@ use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
+use starknet::core::utils::get_selector_from_name;
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
 
@@ -233,7 +234,7 @@ pub fn handle_model_struct(
         0 => (RewriteNode::Text("0".to_string()), RewriteNode::Text(format!("\"{model_name}\""))),
         _ => (
             RewriteNode::Text(DEFAULT_MODEL_VERSION.to_string()),
-            RewriteNode::Text(format!("selector!(\"{model_name}\")")),
+            RewriteNode::Text(get_selector_from_name(model_name.as_str()).unwrap().to_string()),
         ),
     };
 
@@ -310,7 +311,7 @@ pub fn handle_model_struct(
 impl $type_name$Model of dojo::model::Model<$type_name$> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: \
              dojo::database::introspect::Layout) -> $type_name$ {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!(\"$type_name$\"), \
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, $model_selector$, \
              keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid

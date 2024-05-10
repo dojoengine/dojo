@@ -13,6 +13,7 @@ use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Member;
 use itertools::Itertools;
+use starknet::core::utils::get_selector_from_name;
 
 #[derive(PartialEq)]
 enum CompositeType {
@@ -131,9 +132,11 @@ fn compute_tuple_size(
 }
 
 fn build_array_layout_from_type(item_type: &String) -> String {
-    let item_type = get_array_item_type(item_type);
-    format!(
-        "dojo::database::introspect::Layout::Array(
+    let array_item_type = get_array_item_type(item_type);
+
+    if is_tuple(&array_item_type) {
+        format!(
+            "dojo::database::introspect::Layout::Array(
                 array![
                     dojo::database::introspect::FieldLayout {{
                         selector: '',
@@ -141,8 +144,11 @@ fn build_array_layout_from_type(item_type: &String) -> String {
                     }}
                 ].span()
             )",
-        build_item_layout_from_type(&item_type)
-    )
+            build_item_layout_from_type(&array_item_type)
+        )
+    } else {
+        format!("dojo::database::introspect::Introspect::<{}>::layout()", item_type)
+    }
 }
 
 fn build_tuple_layout_from_type(item_type: &String) -> String {
@@ -668,11 +674,12 @@ fn handle_introspect_internal(
 
                         layout.push(format!(
                             "dojo::database::introspect::FieldLayout {{
-                                selector: selector!(\"{}\"),
+                                selector: {},
                                 layout: \
                              dojo::database::introspect::Layout::Fixed(array![{}].span())
                             }}",
-                            m.name, values
+                            get_selector_from_name(m.name.as_str()).unwrap(),
+                            values
                         ))
                     }
                 };
@@ -693,10 +700,10 @@ fn handle_introspect_internal(
                 CompositeType::Struct => {
                     layout.push(format!(
                         "dojo::database::introspect::FieldLayout {{
-                            selector: selector!(\"{}\"),
+                            selector: {},
                             layout: dojo::database::introspect::Layout::ByteArray
                         }}",
-                        m.name
+                        get_selector_from_name(m.name.as_str()).unwrap()
                     ));
                 }
             }
@@ -723,10 +730,11 @@ fn handle_introspect_internal(
                 CompositeType::Struct => {
                     layout.push(format!(
                         "dojo::database::introspect::FieldLayout {{
-                            selector: selector!(\"{}\"),
+                            selector: {},
                             layout: {}
                         }}",
-                        m.name, array_layout
+                        get_selector_from_name(m.name.as_str()).unwrap(),
+                        array_layout
                     ));
                 }
             }
@@ -750,10 +758,11 @@ fn handle_introspect_internal(
                 CompositeType::Struct => {
                     layout.push(format!(
                         "dojo::database::introspect::FieldLayout {{
-                            selector: selector!(\"{}\"),
+                            selector: {},
                             layout: {}
                         }}",
-                        m.name, tuple_layout
+                        get_selector_from_name(m.name.as_str()).unwrap(),
+                        tuple_layout
                     ));
                 }
             }
@@ -778,10 +787,11 @@ fn handle_introspect_internal(
                     CompositeType::Struct => {
                         layout.push(format!(
                             "dojo::database::introspect::FieldLayout {{
-                                selector: selector!(\"{}\"),
+                                selector: {},
                                 layout: dojo::database::introspect::Introspect::<{}>::layout()
                             }}",
-                            m.name, m.ty
+                            get_selector_from_name(m.name.as_str()).unwrap(),
+                            m.ty
                         ));
                     }
                 }

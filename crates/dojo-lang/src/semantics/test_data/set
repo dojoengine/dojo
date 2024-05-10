@@ -205,12 +205,8 @@ Block(
                                                     ),
                                                 ),
                                             ],
-<<<<<<< HEAD
                                             coupon_arg: None,
-                                            ty: core::array::Span::<core::integer::u8>,
-=======
                                             ty: dojo::database::introspect::Layout,
->>>>>>> storage-layout
                                         },
                                     ),
                                 ),
