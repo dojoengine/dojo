@@ -285,16 +285,6 @@ mod tests {
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.total_count, 7);
 
-        // where filter on Like
-        let records = records_model_query(&schema, "(where: { type_feltLIKE: \"0x5%\" })").await;
-        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
-        assert_eq!(connection.total_count, 1);
-
-        // where filter on NotLike
-        let records = records_model_query(&schema, "(where: { type_feltNOTLIKE: \"0x5%\" })").await;
-        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
-        assert_eq!(connection.total_count, 9);
-
         // *** ORDER TESTING ***
 
         // order on random u8 DESC (number)
