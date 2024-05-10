@@ -3,13 +3,14 @@ use std::str::FromStr;
 use async_graphql::dynamic::{
     Field, InputObject, InputValue, ResolverContext, TypeRef, ValueAccessor,
 };
-use async_graphql::{Error as GqlError, Name, Result};
+use async_graphql::{Error as GqlError, Name, Result, Value};
 use dojo_types::primitive::{Primitive, SqlType};
 use strum::IntoEnumIterator;
 
 use super::InputObjectTrait;
 use crate::object::TypeMapping;
 use crate::query::filter::{parse_filter, Comparator, Filter, FilterValue};
+use crate::types::TypeData;
 
 pub struct WhereInputObject {
     pub type_name: String,
@@ -78,13 +79,33 @@ pub fn parse_where_argument(
             .iter()
             .filter_map(|(type_name, type_data)| {
                 input_object.get(type_name).map(|input| {
-                    let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
-                    let filter_value = match primitive.to_sql_type() {
-                        SqlType::Integer => parse_integer(input, type_name, primitive)?,
-                        SqlType::Text => parse_string(input, type_name)?,
-                    };
+                    match type_data {
+                        TypeData::Simple(_) => {
+                            let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
+                            let filter_value = match primitive.to_sql_type() {
+                                SqlType::Integer => parse_integer(input, type_name, primitive)?,
+                                SqlType::Text => parse_string(input, type_name)?,
+                            };
 
-                    Ok(Some(parse_filter(type_name, filter_value)))
+                            Ok(Some(parse_filter(type_name, filter_value)))
+                        }
+                        TypeData::List(_) => {
+                            let list = input.list()?;
+                            let values = list
+                                .iter()
+                                .map(|value| {
+                                    let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
+                                    match primitive.to_sql_type() {
+                                        SqlType::Integer => parse_integer(value, type_name, primitive),
+                                        SqlType::Text => parse_string(value, type_name),
+                                    }
+                                })
+                                .collect::<Result<Vec<_>>>()?;
+
+                            Ok(Some(parse_filter(type_name, FilterValue::List(values))))
+                        }
+                        _ => return Err(GqlError::new("Nested types are not supported")),
+                    }
                 })
             })
             .collect::<Result<Option<Vec<_>>>>()
