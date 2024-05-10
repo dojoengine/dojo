@@ -16,6 +16,7 @@ pub enum Comparator {
     In,
     NotIn,
     Like,
+    NotLike,
 }
 
 impl fmt::Display for Comparator {
@@ -30,6 +31,7 @@ impl fmt::Display for Comparator {
             Comparator::In => write!(f, "IN"),
             Comparator::NotIn => write!(f, "NOT IN"),
             Comparator::Like => write!(f, "LIKE"),
+            Comparator::NotLike => write!(f, "NOT LIKE"),
         }
     }
 }

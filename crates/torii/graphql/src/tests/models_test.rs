@@ -269,6 +269,38 @@ mod tests {
         assert_eq!(connection.total_count, 5);
         assert!(!first_record.node.type_bool, "should be false");
 
+        // where filter on In 
+        let records = records_model_query(
+            &schema,
+            "(where: { type_feltIn: [\"0x5\", \"0x6\", \"0x7\"] })",
+        ).await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        assert_eq!(connection.total_count, 3);
+
+        // where filter on NotIn
+        let records = records_model_query(
+            &schema,
+            "(where: { type_feltNotIn: [\"0x5\", \"0x6\", \"0x7\"] })",
+        ).await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        assert_eq!(connection.total_count, 7);
+
+        // where filter on Like
+        let records = records_model_query(
+            &schema,
+            "(where: { type_feltLike: \"0x5%\" })",
+        ).await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        assert_eq!(connection.total_count, 1);
+
+        // where filter on NotLike
+        let records = records_model_query(
+            &schema,
+            "(where: { type_feltNotLike: \"0x5%\" })",
+        ).await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        assert_eq!(connection.total_count, 9);
+
         // *** ORDER TESTING ***
 
         // order on random u8 DESC (number)
