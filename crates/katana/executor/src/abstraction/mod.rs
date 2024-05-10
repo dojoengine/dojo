@@ -5,7 +5,6 @@ pub use error::*;
 pub use executor::*;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
-use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::TxExecInfo;
@@ -105,13 +104,13 @@ pub struct EntryPointCall {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum ExecutionResult {
-    Success { receipt: Receipt, trace: TxExecInfo, fee: TxFeeInfo },
+    Success { receipt: Receipt, trace: TxExecInfo },
     Failed { error: ExecutionError },
 }
 
 impl ExecutionResult {
-    pub fn new_success(receipt: Receipt, trace: TxExecInfo, fee: TxFeeInfo) -> Self {
-        ExecutionResult::Success { receipt, trace, fee }
+    pub fn new_success(receipt: Receipt, trace: TxExecInfo) -> Self {
+        ExecutionResult::Success { receipt, trace }
     }
 
     pub fn new_failed(error: impl Into<ExecutionError>) -> Self {
@@ -136,13 +135,6 @@ impl ExecutionResult {
     pub fn trace(&self) -> Option<&TxExecInfo> {
         match self {
             ExecutionResult::Success { trace, .. } => Some(trace),
-            _ => None,
-        }
-    }
-
-    pub fn fee(&self) -> Option<&TxFeeInfo> {
-        match self {
-            ExecutionResult::Success { fee, .. } => Some(fee),
             _ => None,
         }
     }

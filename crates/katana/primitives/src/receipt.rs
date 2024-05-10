@@ -1,6 +1,7 @@
 use alloy_primitives::B256;
 
 use crate::contract::ContractAddress;
+use crate::fee::TxFeeInfo;
 use crate::FieldElement;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,11 +28,11 @@ pub struct MessageToL1 {
 }
 
 /// Receipt for a `Invoke` transaction.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxReceipt {
-    /// Actual fee paid for the transaction.
-    pub actual_fee: u128,
+    /// Information about the transaction fee.
+    pub fee: TxFeeInfo,
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// Messages sent to L1.
@@ -46,8 +47,8 @@ pub struct InvokeTxReceipt {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxReceipt {
-    /// Actual fee paid for the transaction.
-    pub actual_fee: u128,
+    /// Information about the transaction fee.
+    pub fee: TxFeeInfo,
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// Messages sent to L1.
@@ -62,8 +63,8 @@ pub struct DeclareTxReceipt {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTxReceipt {
-    /// Actual fee paid for the transaction.
-    pub actual_fee: u128,
+    /// Information about the transaction fee.
+    pub fee: TxFeeInfo,
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// The hash of the L1 message
@@ -80,8 +81,8 @@ pub struct L1HandlerTxReceipt {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployAccountTxReceipt {
-    /// Actual fee paid for the transaction.
-    pub actual_fee: u128,
+    /// Information about the transaction fee.
+    pub fee: TxFeeInfo,
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// Messages sent to L1.
@@ -149,6 +150,15 @@ impl Receipt {
             Receipt::Declare(rct) => &rct.execution_resources,
             Receipt::L1Handler(rct) => &rct.execution_resources,
             Receipt::DeployAccount(rct) => &rct.execution_resources,
+        }
+    }
+
+    pub fn fee(&self) -> &TxFeeInfo {
+        match self {
+            Receipt::Invoke(rct) => &rct.fee,
+            Receipt::Declare(rct) => &rct.fee,
+            Receipt::L1Handler(rct) => &rct.fee,
+            Receipt::DeployAccount(rct) => &rct.fee,
         }
     }
 }

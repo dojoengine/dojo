@@ -287,9 +287,11 @@ mod tests {
     use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
     use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash};
     use katana_primitives::contract::{ContractAddress, GenericContractInfo};
-    use katana_primitives::receipt::Receipt;
+    use katana_primitives::fee::TxFeeInfo;
+    use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxNumber};
+    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use crate::codecs::{Compress, Decode, Decompress, Encode};
@@ -356,7 +358,6 @@ mod tests {
             (Tx, Tx::Invoke(InvokeTx::V1(Default::default()))),
             (BlockNumber, 99),
             (TxExecInfo, TxExecInfo::default()),
-            (Receipt, Receipt::Invoke(Default::default())),
             (CompiledClassHash, felt!("211")),
             (CompiledClass, CompiledClass::Deprecated(Default::default())),
             (GenericContractInfo, GenericContractInfo::default()),
@@ -365,7 +366,14 @@ mod tests {
             (ContractNonceChange, ContractNonceChange::default()),
             (ContractClassChange, ContractClassChange::default()),
             (BlockList, BlockList::default()),
-            (ContractStorageEntry, ContractStorageEntry::default())
+            (ContractStorageEntry, ContractStorageEntry::default()),
+            (Receipt, Receipt::Invoke(InvokeTxReceipt {
+                        revert_error: None,
+                        events: Vec::new(),
+                        messages_sent: Vec::new(),
+                        execution_resources: Default::default(),
+                        fee: TxFeeInfo { gas_consumed: 0, gas_price: 0, overall_fee: 0, unit: PriceUnit::Wei },
+                    }))
         }
     }
 }
