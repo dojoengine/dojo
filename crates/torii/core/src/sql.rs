@@ -474,6 +474,7 @@ impl Sql {
                     "id".to_string(),
                     "event_id".to_string(),
                     "executed_at".to_string(),
+                    "updated_at".to_string(),
                     if is_event_message {
                         "event_message_id".to_string()
                     } else {
@@ -489,6 +490,7 @@ impl Sql {
                     }),
                     Argument::String(event_id.to_string()),
                     Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    Argument::String(chrono::Utc::now().to_rfc3339()),
                     Argument::String(entity_id.to_string()),
                 ];
 
@@ -895,6 +897,7 @@ impl Sql {
 
         create_table_query.push_str("executed_at DATETIME NOT NULL, ");
         create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+        create_table_query.push_str("updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
