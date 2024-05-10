@@ -694,17 +694,14 @@ where
     format!("deploy {}", contract.diff.name)
 }
 
-pub async fn print_strategy<P>(ui: &Ui, provider: &P, strategy: &MigrationStrategy, world_address: FieldElement, contract: &ContractMigration, base_class_hash: FieldElement)
+pub async fn print_strategy<P>(ui: &Ui, provider: &P, strategy: &MigrationStrategy)
 where
     P: Provider + Sync + Send + 'static,
 {
-
-    let contract_address =
-        get_contract_address(contract.salt, base_class_hash, &[], world_address);
-    
     ui.print("\n📋 Migration Strategy\n");
-    ui.print_sub(format!("World address: {:#x})\n", world_address));
-    ui.print_sub(format!("Contract address: {:#x})\n", contract_address));
+    if let Some(world) = &strategy.world {
+        ui.print_sub(format!("declare (contract address: {:#x})\n", world.contract_address));
+    }
 
     if let Some(base) = &strategy.base {
         ui.print_header("# Base Contract");
@@ -714,7 +711,6 @@ where
     if let Some(world) = &strategy.world {
         ui.print_header("# World");
         ui.print_sub(format!("declare (class hash: {:#x})\n", world.diff.local_class_hash));
-        ui.print_sub(format!("declare (contract address: {:#x})\n", world.contract_address));
     }
 
     if !&strategy.models.is_empty() {
@@ -739,6 +735,8 @@ where
         for c in &strategy.contracts {
             let op_name = get_contract_operation_name(provider, c, strategy.world_address).await;
             ui.print_sub(format!("{op_name} (class hash: {:#x})", c.diff.local_class_hash));
+            let contract_address = get_contract_address(c.salt, c.diff.base_class_hash, &[], c.contract_address);
+            ui.print_sub(format!("{op_name} (contract address: {:#x})", contract_address));
         }
         ui.print(" ");
     }
