@@ -269,11 +269,10 @@ mod tests {
         assert_eq!(connection.total_count, 5);
         assert!(!first_record.node.type_bool, "should be false");
 
-        // where filter on In 
-        let records = records_model_query(
-            &schema,
-            "(where: { type_feltIN: [\"0x5\", \"0x6\", \"0x7\"] })",
-        ).await;
+        // where filter on In
+        let records =
+            records_model_query(&schema, "(where: { type_feltIN: [\"0x5\", \"0x6\", \"0x7\"] })")
+                .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.total_count, 3);
 
@@ -281,23 +280,18 @@ mod tests {
         let records = records_model_query(
             &schema,
             "(where: { type_feltNOTIN: [\"0x5\", \"0x6\", \"0x7\"] })",
-        ).await;
+        )
+        .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.total_count, 7);
 
         // where filter on Like
-        let records = records_model_query(
-            &schema,
-            "(where: { type_feltLIKE: \"0x5%\" })",
-        ).await;
+        let records = records_model_query(&schema, "(where: { type_feltLIKE: \"0x5%\" })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.total_count, 1);
 
         // where filter on NotLike
-        let records = records_model_query(
-            &schema,
-            "(where: { type_feltNOTLIKE: \"0x5%\" })",
-        ).await;
+        let records = records_model_query(&schema, "(where: { type_feltNOTLIKE: \"0x5%\" })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.total_count, 9);
 
