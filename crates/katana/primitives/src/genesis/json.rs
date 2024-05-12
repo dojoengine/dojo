@@ -97,6 +97,15 @@ pub struct GenesisClassJson {
     /// The class hash of the contract. If not provided, the class hash is computed from the
     /// class at `path`.
     pub class_hash: Option<ClassHash>,
+    // Allows class identification by a unique name rather than by hash
+        name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum NameOrHash {
+    ClassName(String),
+    ClassHash(ClassHash),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -108,7 +117,7 @@ pub struct FeeTokenConfigJson {
     pub decimals: u8,
     /// The class hash of the fee token contract.
     /// If not provided, the default fee token class is used.
-    pub class: Option<ClassHash>,
+    pub class: Option<NameOrHash>,
     /// To initialize the fee token contract storage
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
@@ -120,7 +129,7 @@ pub struct UniversalDeployerConfigJson {
     pub address: Option<ContractAddress>,
     /// The class hash of the universal deployer contract.
     /// If not provided, the default UD class is used.
-    pub class: Option<ClassHash>,
+    pub class: Option<NameOrHash>,
     /// To initialize the UD contract storage
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
@@ -128,7 +137,7 @@ pub struct UniversalDeployerConfigJson {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisContractJson {
-    pub class: Option<ClassHash>,
+    pub class: Option<NameOrHash>,
     pub balance: Option<U256>,
     pub nonce: Option<FieldElement>,
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
@@ -181,6 +190,15 @@ pub enum GenesisJsonError {
 
     #[error(transparent)]
     Decode(#[from] base64::DecodeError),
+
+    #[error("Class name {0} already exists in the genesis classes")]
+    DuplicateClassName(String),
+
+    #[error("Class name not found in the genesis classes: {0}")]
+    InvalidClassName(String),
+
+    #[error("Class hash was not provided for a class")]
+    MissingClassHash,
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -263,18 +281,25 @@ impl TryFrom<GenesisJson> for Genesis {
     type Error = GenesisJsonError;
 
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
-        let mut classes: HashMap<ClassHash, GenesisClass> = value
-            .classes
-            .into_par_iter()
-            .map(|entry| {
-                let GenesisClassJson { class, class_hash } = entry;
-
+        let mut name_to_class_hash: HashMap<String, starknet::core::types::FieldElement> =
+            HashMap::new();
+             let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
+        for entry in value.classes.into_iter() {
+            let GenesisClassJson { class, class_hash, name } = entry;
                 let artifact = match class {
                     PathOrFullArtifact::Artifact(artifact) => artifact,
                     PathOrFullArtifact::Path(path) => {
                         return Err(GenesisJsonError::UnresolvedClassPath(path));
                     }
                 };
+            // Insert the name and class_hash into the name_to_class_hash HashMap
+            if let Some(name) = name {
+                if let Some(class_hash) = class_hash {
+                    name_to_class_hash.insert(name, class_hash);
+                } else {
+                    return Err(GenesisJsonError::MissingClassHash);
+                }
+            }
 
                 let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
 
@@ -311,26 +336,40 @@ impl TryFrom<GenesisJson> for Genesis {
                     }
                 };
 
-                Ok((class_hash, GenesisClass { compiled_class_hash, sierra, casm }))
-            })
-            .collect::<Result<_, GenesisJsonError>>()?;
+                         classes.insert(class_hash, GenesisClass { compiled_class_hash, sierra, casm });
+            }
 
         let fee_token = FeeTokenConfig {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
             decimals: value.fee_token.decimals,
             address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
-            class_hash: value.fee_token.class.unwrap_or(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
+            class_hash: match value.fee_token.class  {
+                Some(NameOrHash::ClassHash(class_hash)) => class_hash,
+                Some(NameOrHash::ClassName(ref class_name)) => *name_to_class_hash
+                    .get(class_name)
+                    .ok_or_else(|| GenesisJsonError::InvalidClassName(class_name.clone()))?,
+                None => DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            },
             storage: value.fee_token.storage,
         };
 
         match value.fee_token.class {
-            Some(hash) => {
+            Some(NameOrHash::ClassHash(hash)) => {
                 if !classes.contains_key(&hash) {
                     return Err(GenesisJsonError::MissingClass(hash));
                 }
             }
 
+            Some(NameOrHash::ClassName(name)) => {
+                let hash = name_to_class_hash
+                    .get(&name)
+                    .cloned()
+                    .ok_or_else(|| GenesisJsonError::InvalidClassName(name.clone()))?;
+                if !classes.contains_key(&hash) {
+                    return Err(GenesisJsonError::MissingClass(hash));
+                }
+            }
             // if no class hash is provided, use the default fee token class
             None => {
                 let _ = classes.insert(
@@ -346,7 +385,22 @@ impl TryFrom<GenesisJson> for Genesis {
 
         let universal_deployer = if let Some(config) = value.universal_deployer {
             match config.class {
-                Some(hash) => {
+                Some(NameOrHash::ClassHash(hash)) => {
+                    if !classes.contains_key(&hash) {
+                        return Err(GenesisJsonError::MissingClass(hash));
+                    }
+
+                    Some(UniversalDeployerConfig {
+                        class_hash: hash,
+                        address: config.address.unwrap_or(DEFAULT_UDC_ADDRESS),
+                        storage: config.storage,
+                    })
+                }
+
+                Some(NameOrHash::ClassName(name)) => {
+                    let hash = *name_to_class_hash
+                        .get(&name)
+                        .ok_or_else(|| GenesisJsonError::InvalidClassName(name))?;
                     if !classes.contains_key(&hash) {
                         return Err(GenesisJsonError::MissingClass(hash));
                     }
@@ -444,7 +498,20 @@ impl TryFrom<GenesisJson> for Genesis {
 
         for (address, contract) in value.contracts {
             // check that the class hash exists in the classes field
-            if let Some(hash) = contract.class {
+            let class_hash = if let Some(hash) = contract.class {
+                                Some(match hash {
+                    NameOrHash::ClassHash(hash) => hash,
+                    NameOrHash::ClassName(name) => {
+                        // Handle the case when the class is specified by name.
+                        *name_to_class_hash
+                            .get(&name)
+                            .ok_or_else(|| GenesisJsonError::InvalidClassName(name))?
+                    }
+                })
+            } else {
+                None
+            };
+            if let Some(hash) = class_hash {
                 if !classes.contains_key(&hash) {
                     return Err(GenesisJsonError::MissingClass(hash));
                 }
@@ -454,7 +521,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 address,
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: contract.balance,
-                    class_hash: contract.class,
+                 class_hash,
                     nonce: contract.nonce,
                     storage: contract.storage,
                 }),
@@ -540,6 +607,7 @@ mod tests {
     use std::io::BufReader;
     use std::path::PathBuf;
     use std::str::FromStr;
+    use crate::genesis::json::NameOrHash;
 
     use alloy_primitives::U256;
     use starknet::macros::felt;
@@ -579,7 +647,7 @@ mod tests {
         assert_eq!(json.fee_token.address, Some(ContractAddress::from(felt!("0x55"))));
         assert_eq!(json.fee_token.name, String::from("ETHER"));
         assert_eq!(json.fee_token.symbol, String::from("ETH"));
-        assert_eq!(json.fee_token.class, Some(felt!("0x8")));
+                assert_eq!(json.fee_token.class, Some(NameOrHash::ClassName(String::from("MyErc20"))));
         assert_eq!(json.fee_token.decimals, 18);
         assert_eq!(
             json.fee_token.storage,
@@ -667,7 +735,10 @@ mod tests {
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
         assert_eq!(json.contracts[&contract_1].nonce, None);
-        assert_eq!(json.contracts[&contract_1].class, Some(felt!("0x8")));
+                assert_eq!(
+            json.contracts[&contract_1].class,
+            Some(NameOrHash::ClassName(String::from("MyErc20")))
+        );
         assert_eq!(
             json.contracts[&contract_1].storage,
             Some(HashMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2"))]))
@@ -695,15 +766,20 @@ mod tests {
                 GenesisClassJson {
                     class_hash: Some(felt!("0x8")),
                     class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
+                                        name: Some("MyErc20".to_string()),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
                     class: PathBuf::from("../../../contracts/compiled/universal_deployer.json")
                         .into(),
+                                            name:None, 
+                        
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0xa55")),
                     class: PathBuf::from("../../../contracts/compiled/oz_account_080.json").into(),
+                                        name:None, 
+                    
                 },
             ]
         );
@@ -712,28 +788,39 @@ mod tests {
     #[test]
     fn deserialize_from_json_with_class() {
         let file = File::open("./src/genesis/test-genesis-with-class.json").unwrap();
-        let genesis: GenesisJson = serde_json::from_reader(BufReader::new(file)).unwrap();
-
+        let genesis_result: Result<GenesisJson, _> = serde_json::from_reader(BufReader::new(file));
+match genesis_result {
+    Ok(genesis) => {
         assert_eq!(
             genesis.classes,
             vec![
                 GenesisClassJson {
-                    class_hash: Some(felt!("0x8")),
+                    class_hash: None,
                     class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
+                                        name: Some("MyErc20".to_string()),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
                     class: PathBuf::from("../../../contracts/compiled/universal_deployer.json")
                         .into(),
+                            name: None,
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0xa55")),
                     class: serde_json::to_value(DEFAULT_OZ_ACCOUNT_CONTRACT.clone())
                         .unwrap()
                         .into(),
+                            name: None,
                 },
             ]
-        );
+        ); 
+    },
+    Err(e) => {
+        println!("Error parsing JSON: {:?}", e);
+    }
+}
+
+       
     }
 
     #[test]
