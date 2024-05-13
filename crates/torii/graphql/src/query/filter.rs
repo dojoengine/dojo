@@ -13,6 +13,13 @@ pub enum Comparator {
     Lte,
     Neq,
     Eq,
+    // Order matters here.
+    // We want "NOT" comparators to be checked first
+    // so that "NOT IN" is matched before "IN"
+    NotIn,
+    In,
+    NotLike,
+    Like,
 }
 
 impl fmt::Display for Comparator {
@@ -24,6 +31,10 @@ impl fmt::Display for Comparator {
             Comparator::Lte => write!(f, "<="),
             Comparator::Neq => write!(f, "!="),
             Comparator::Eq => write!(f, "="),
+            Comparator::In => write!(f, "IN"),
+            Comparator::NotIn => write!(f, "NOT IN"),
+            Comparator::Like => write!(f, "LIKE"),
+            Comparator::NotLike => write!(f, "NOT LIKE"),
         }
     }
 }
@@ -32,6 +43,7 @@ impl fmt::Display for Comparator {
 pub enum FilterValue {
     Int(i64),
     String(String),
+    List(Vec<FilterValue>),
 }
 
 #[derive(Debug)]
