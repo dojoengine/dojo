@@ -9,6 +9,7 @@ use cairo_lang_syntax::node::ast::{
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
+use cairo_lang_syntax::node::ids;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Member;
@@ -38,6 +39,11 @@ fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
         ("ContractAddress".into(), TypeIntrospection(1, vec![251])),
         ("ClassHash".into(), TypeIntrospection(1, vec![251])),
     ])
+}
+
+fn is_valid_option(ty: &String) -> bool {
+    // tuples are not allowed for Option
+    !ty.starts_with("Option<(")
 }
 
 fn is_byte_array(ty: &String) -> bool {
@@ -131,7 +137,11 @@ fn compute_tuple_size(
     return false;
 }
 
-fn build_array_layout_from_type(item_type: &String) -> String {
+fn build_array_layout_from_type(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: ids::SyntaxStablePtrId,
+    item_type: &String,
+) -> String {
     let array_item_type = get_array_item_type(item_type);
 
     if is_tuple(&array_item_type) {
@@ -144,14 +154,18 @@ fn build_array_layout_from_type(item_type: &String) -> String {
                     }}
                 ].span()
             )",
-            build_item_layout_from_type(&array_item_type)
+            build_item_layout_from_type(diagnostics, diagnostic_item, &array_item_type)
         )
     } else {
         format!("dojo::database::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
-fn build_tuple_layout_from_type(item_type: &String) -> String {
+fn build_tuple_layout_from_type(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: ids::SyntaxStablePtrId,
+    item_type: &String,
+) -> String {
     let tuple_items = get_tuple_item_types(item_type)
         .iter()
         .map(|x| {
@@ -160,7 +174,7 @@ fn build_tuple_layout_from_type(item_type: &String) -> String {
                         selector: '',
                         layout: {}
                     }}",
-                build_item_layout_from_type(&x)
+                build_item_layout_from_type(diagnostics, diagnostic_item, &x)
             )
         })
         .collect::<Vec<_>>()
@@ -175,12 +189,25 @@ fn build_tuple_layout_from_type(item_type: &String) -> String {
     )
 }
 
-fn build_item_layout_from_type(item_type: &String) -> String {
+fn build_item_layout_from_type(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: ids::SyntaxStablePtrId,
+    item_type: &String,
+) -> String {
     if is_array(item_type) {
-        build_array_layout_from_type(item_type)
+        build_array_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else if is_tuple(&item_type) {
-        build_tuple_layout_from_type(item_type)
+        build_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else {
+        // For Option<T>, T cannot be a tuple
+        if !is_valid_option(item_type) {
+            diagnostics.push(PluginDiagnostic {
+                stable_ptr: diagnostic_item,
+                message: "Option<T> cannot be used with tuples. Prefer using a struct.".into(),
+                severity: Severity::Error,
+            });
+        }
+
         format!("dojo::database::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
@@ -194,15 +221,19 @@ fn get_field_layout_from_type_clause(
     let field_layout = match type_clause.ty(db) {
         Expr::Path(path) => {
             let path_type = path.as_syntax_node().get_text(db);
-            build_item_layout_from_type(&path_type)
+            build_item_layout_from_type(diagnostics, type_clause.stable_ptr().untyped(), &path_type)
         }
         Expr::Tuple(expr) => {
             let tuple_type = expr.as_syntax_node().get_text(db);
-            build_tuple_layout_from_type(&tuple_type)
+            build_tuple_layout_from_type(
+                diagnostics,
+                type_clause.stable_ptr().untyped(),
+                &tuple_type,
+            )
         }
         _ => {
             diagnostics.push(PluginDiagnostic {
-                stable_ptr: type_clause.stable_ptr().0,
+                stable_ptr: type_clause.stable_ptr().untyped(),
                 message: "Unexpected expression for variant data type.".to_string(),
                 severity: Severity::Error,
             });
@@ -300,7 +331,11 @@ fn build_generic_types_and_impls(
 /// * struct_ast: The AST of the struct.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {
+pub fn handle_introspect_struct(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    struct_ast: ItemStruct,
+) -> RewriteNode {
     let name = struct_ast.name(db).text(db).into();
 
     let mut member_types: Vec<String> = vec![];
@@ -415,6 +450,8 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
         0,
         type_ty,
         members,
+        diagnostics,
+        struct_ast.name(db).stable_ptr().untyped(),
     )
 }
 
@@ -599,6 +636,8 @@ pub fn handle_introspect_enum2(
         size_precompute,
         type_ty,
         members,
+        diagnostics,
+        enum_ast.stable_ptr().untyped(),
     )
 }
 
@@ -610,6 +649,8 @@ fn handle_introspect_internal(
     mut size_precompute: usize,
     type_ty: String,
     members: Vec<Member>,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: ids::SyntaxStablePtrId,
 ) -> RewriteNode {
     let mut size = vec![];
     let mut dynamic_size = false;
@@ -720,7 +761,7 @@ fn handle_introspect_internal(
                     }}
                 ].span()
             )",
-                build_item_layout_from_type(&item_type.to_string())
+                build_item_layout_from_type(diagnostics, diagnostic_item, &item_type.to_string())
             );
 
             match composite_type {
@@ -739,7 +780,7 @@ fn handle_introspect_internal(
                 }
             }
         } else if is_tuple(&m.ty) {
-            let tuple_layout = build_item_layout_from_type(&m.ty);
+            let tuple_layout = build_item_layout_from_type(diagnostics, diagnostic_item, &m.ty);
 
             let mut tuple_precomputed_size = 0;
             let mut introspected_size = vec![];
@@ -766,6 +807,12 @@ fn handle_introspect_internal(
                     ));
                 }
             }
+        } else if !is_valid_option(&m.ty) {
+            diagnostics.push(PluginDiagnostic {
+                stable_ptr: diagnostic_item,
+                message: "Option<T> cannot be used with tuples. Prefer using a struct.".into(),
+                severity: Severity::Error,
+            });
         } else {
             // It's a custom type
             if m.key {
