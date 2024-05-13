@@ -18,19 +18,18 @@ impl UnityPlugin {
     // Maps cairo types to C#/Unity SDK defined types
     fn map_type(token: &Token) -> String {
         match token.type_name().as_str() {
-            "bool" => "RecsType.Boolean".to_string(),
-            "u8" => "RecsType.Number".to_string(),
-            "u16" => "RecsType.Number".to_string(),
-            "u32" => "RecsType.Number".to_string(),
-            "u64" => "RecsType.Number".to_string(),
-            "u128" => "RecsType.BigInt".to_string(),
-            "u256" => "RecsType.BigInt".to_string(),
-            "usize" => "RecsType.Number".to_string(),
-            "felt252" => "RecsType.BigInt".to_string(),
-            "bytes31" => "RecsType.String".to_string(),
-            "ClassHash" => "RecsType.BigInt".to_string(),
-            "ContractAddress" => "RecsType.BigInt".to_string(),
-            "ByteArray" => "RecsType.String".to_string(),
+            "u8" => "byte".to_string(),
+            "u16" => "ushort".to_string(),
+            "u32" => "uint".to_string(),
+            "u64" => "ulong".to_string(),
+            "u128" => "BigInteger".to_string(),
+            "u256" => "BigInteger".to_string(),
+            "usize" => "uint".to_string(),
+            "felt252" => "FieldElement".to_string(),
+            "bytes31" => "string".to_string(),
+            "ClassHash" => "FieldElement".to_string(),
+            "ContractAddress" => "FieldElement".to_string(),
+            "ByteArray" => "string".to_string(),
             "array" => {
                 if let Token::Array(array) = token {
                     format!("{}[]", UnityPlugin::map_type(&array.inner))

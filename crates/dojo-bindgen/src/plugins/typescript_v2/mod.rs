@@ -19,19 +19,18 @@ impl TypeScriptV2Plugin {
     // Maps cairo types to TypeScript defined types
     fn map_type(token: &Token) -> String {
         match token.type_name().as_str() {
-            "bool" => "RecsType.Boolean".to_string(),
-            "u8" => "RecsType.Number".to_string(),
-            "u16" => "RecsType.Number".to_string(),
-            "u32" => "RecsType.Number".to_string(),
-            "u64" => "RecsType.Number".to_string(),
-            "u128" => "RecsType.BigInt".to_string(),
-            "u256" => "RecsType.BigInt".to_string(),
-            "usize" => "RecsType.Number".to_string(),
-            "felt252" => "RecsType.BigInt".to_string(),
-            "bytes31" => "RecsType.String".to_string(),
-            "ClassHash" => "RecsType.BigInt".to_string(),
-            "ContractAddress" => "RecsType.BigInt".to_string(),
-            "ByteArray" => "RecsType.String".to_string(),
+            "bool" => "boolean".to_string(),
+            "u8" => "number".to_string(),
+            "u16" => "number".to_string(),
+            "u32" => "number".to_string(),
+            "u64" => "bigint".to_string(),
+            "u128" => "bigint".to_string(),
+            "u256" => "bigint".to_string(),
+            "usize" => "number".to_string(),
+            "felt252" => "string".to_string(),
+            "ClassHash" => "string".to_string(),
+            "ContractAddress" => "string".to_string(),
+            "ByteArray" => "string".to_string(),
             "array" => {
                 if let Token::Array(array) = token {
                     format!("{}[]", TypeScriptV2Plugin::map_type(&array.inner))
