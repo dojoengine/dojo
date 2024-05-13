@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715287181916,
+  "lastUpdate": 1715612375406,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7585,6 +7585,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16876791,
             "range": "± 208170",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d21163eb4c08cee93ce34233780236dfa71a4db9",
+          "message": "fix(katana): include full fee info in primitive receipts (#1948)\n\ninclude more verbose fee info in primitive receipt",
+          "timestamp": "2024-05-13T22:51:12+08:00",
+          "tree_id": "036e6b1b17c77a1f007d845fcfa2c66551846b15",
+          "url": "https://github.com/dojoengine/dojo/commit/d21163eb4c08cee93ce34233780236dfa71a4db9"
+        },
+        "date": 1715612374726,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16924306,
+            "range": "± 179129",
             "unit": "ns/iter"
           }
         ]
