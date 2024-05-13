@@ -29,8 +29,29 @@ impl UnityPlugin {
             "bytes31" => "string".to_string(),
             "ClassHash" => "FieldElement".to_string(),
             "ContractAddress" => "FieldElement".to_string(),
+            "ByteArray" => "string".to_string(),
 
-            _ => type_name.to_string(),
+            _ => {
+                if type_name.starts_with("Array") {
+                    format!(
+                        "{}[]",
+                        // Array<T> -> T
+                        UnityPlugin::map_type(&type_name[6..type_name.len() - 1])
+                    )
+                // check if tuple (T1, T2, ...)
+                } else if type_name.starts_with("(") && type_name.ends_with(")") {
+                    format!(
+                        "({})",
+                        type_name[1..type_name.len() - 1]
+                            .split(", ")
+                            .map(|t| UnityPlugin::map_type(t))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else {
+                    type_name.to_string()
+                }
+            }
         }
     }
 
