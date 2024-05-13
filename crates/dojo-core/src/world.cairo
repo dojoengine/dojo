@@ -8,6 +8,7 @@ trait IWorld<T> {
     fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
     fn model(self: @T, name: felt252) -> (ClassHash, ContractAddress);
+    fn contract(self: @T, name: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
@@ -46,8 +47,11 @@ trait IDojoResourceProvider<T> {
 mod Errors {
     const METADATA_DESER: felt252 = 'metadata deser error';
     const NOT_OWNER: felt252 = 'not owner';
+    const NOT_RESOURCE_OWNER: felt252 = 'not resource owner';
+    const RESOURCE_ALREADY_DECLARED: felt252 = 'resource already decalred';
     const NOT_OWNER_WRITER: felt252 = 'not owner or writer';
     const INVALID_MODEL_NAME: felt252 = 'invalid model name';
+    const INVALID_RESOURCE: felt252 = 'invalid resource';
     const OWNER_ONLY_UPGRADE: felt252 = 'only owner can upgrade';
     const OWNER_ONLY_UPDATE: felt252 = 'only owner can update';
 }
@@ -189,6 +193,7 @@ mod world {
         models_count: usize,
         models: LegacyMap::<felt252, (ClassHash, ContractAddress)>,
         deployed_contracts: LegacyMap::<felt252, ClassHash>,
+        contracts: LegacyMap::<felt252, (ClassHash, ContractAddress)>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
         #[substorage(v0)]
@@ -206,6 +211,8 @@ mod world {
                 RESOURCE_METADATA_MODEL,
                 (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
             );
+        
+        self.nonce.write(1); // make uuid start at 1 to avoid issues with key 0 beeing default storage value
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -398,7 +405,7 @@ mod world {
             );
         }
 
-        /// Gets the class hash of a registered model.
+        /// Gets the class hash & contract address of a registered model.
         ///
         /// # Arguments
         ///
@@ -434,6 +441,16 @@ mod world {
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
             self.deployed_contracts.write(contract_address.into(), class_hash.into());
+ 
+            // check dojo_resource not already registered
+            let dojo_resource = dojo::contract::get_dojo_resource(contract_address).unwrap_syscall();
+            let (_, dojo_resource_contract_address) = self.contracts.read(dojo_resource);
+            assert(dojo_resource_contract_address.is_zero(), Errors::RESOURCE_ALREADY_DECLARED);
+            assert(dojo_resource.is_non_zero(), Errors::INVALID_RESOURCE);
+
+            self.contracts.write(dojo_resource, (class_hash, contract_address));
+            self.owners.write((dojo_resource.into(), get_caller_address()), true);
+ 
 
             EventEmitter::emit(
                 ref self, ContractDeployed { salt, class_hash, address: contract_address }
@@ -456,9 +473,31 @@ mod world {
             ref self: ContractState, address: ContractAddress, class_hash: ClassHash
         ) -> ClassHash {
             assert(is_account_owner(@self, address.into()), Errors::NOT_OWNER);
+            let curr_dojo_resource = dojo::contract::get_dojo_resource(address).unwrap_syscall();
+            assert(is_account_owner(@self, curr_dojo_resource.into()), Errors::NOT_RESOURCE_OWNER);
+            
             IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
+            
+            let dojo_resource = dojo::contract::get_dojo_resource(address).unwrap_syscall();
+            assert(curr_dojo_resource == dojo_resource, Errors::INVALID_RESOURCE);
+
+            self.contracts.write(dojo_resource, (class_hash, address));
+          
             EventEmitter::emit(ref self, ContractUpgraded { class_hash, address });
             class_hash
+        }
+
+        /// Gets the class hash & contract address of a registered contract.
+        ///
+        /// # Arguments
+        ///
+        /// * `name` - The name of the contract.
+        ///
+        /// # Returns
+        ///
+        /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the contract.
+        fn contract(self: @ContractState, name: felt252) -> (ClassHash, ContractAddress) {
+            self.contracts.read(name)
         }
 
         /// Issues an autoincremented id to the caller.
