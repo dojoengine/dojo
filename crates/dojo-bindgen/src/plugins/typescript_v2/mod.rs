@@ -30,8 +30,27 @@ impl TypeScriptV2Plugin {
             "felt252" => "string".to_string(),
             "ClassHash" => "string".to_string(),
             "ContractAddress" => "string".to_string(),
+            "ByteArray" => "string".to_string(),
 
-            _ => type_name.to_string(),
+            _ => {
+                if type_name.starts_with("Array") {
+                    format!(
+                        "{}[]",
+                        TypeScriptV2Plugin::map_type(&type_name[6..type_name.len() - 1])
+                    )
+                } else if type_name.starts_with("(") && type_name.ends_with(")") {
+                    format!(
+                        "({})",
+                        type_name[1..type_name.len() - 1]
+                            .split(", ")
+                            .map(|t| TypeScriptV2Plugin::map_type(t))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else {
+                    type_name.to_string()
+                }
+            }
         }
     }
 

@@ -30,8 +30,27 @@ impl TypescriptPlugin {
             "bytes31" => "RecsType.String".to_string(),
             "ClassHash" => "RecsType.BigInt".to_string(),
             "ContractAddress" => "RecsType.BigInt".to_string(),
+            "ByteArray" => "RecsType.String".to_string(),
 
-            _ => type_name.to_string(),
+            _ => {
+                if type_name.starts_with("Array") {
+                    format!(
+                        "{}[]",
+                        TypescriptPlugin::map_type(&type_name[6..type_name.len() - 1])
+                    )
+                } else if type_name.starts_with("(") && type_name.ends_with(")") {
+                    format!(
+                        "({})",
+                        type_name[1..type_name.len() - 1]
+                            .split(", ")
+                            .map(|t| TypescriptPlugin::map_type(t))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else {
+                    type_name.to_string()
+                }
+            }
         }
     }
 
