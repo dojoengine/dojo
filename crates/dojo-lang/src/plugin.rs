@@ -9,9 +9,8 @@ use cairo_lang_defs::plugin::{
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::plugin::PluginSuite;
 use cairo_lang_starknet::plugin::aux_data::StarkNetEventAuxData;
-use cairo_lang_syntax::attribute::structured::{
-    AttributeArg, AttributeArgVariant, AttributeStructurize,
-};
+use cairo_lang_syntax::attribute::structured::{AttributeArgVariant, AttributeStructurize};
+use cairo_lang_syntax::node::ast::Attribute;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
@@ -40,6 +39,9 @@ pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
 pub const DOJO_MODEL_ATTR: &str = "dojo::model";
 pub const DOJO_EVENT_ATTR: &str = "dojo::event";
+
+pub const DOJO_INTROSPECT_ATTR: &str = "Introspect";
+pub const DOJO_PACKED_ATTR: &str = "IntrospectPacked";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
@@ -255,6 +257,61 @@ pub fn dojo_plugin_suite() -> PluginSuite {
     suite
 }
 
+fn get_derive_attr_names(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    attrs: Vec<Attribute>,
+) -> Vec<String> {
+    attrs
+        .iter()
+        .filter_map(|attr| {
+            let args = attr.clone().structurize(db).args;
+            if args.is_empty() {
+                diagnostics.push(PluginDiagnostic {
+                    stable_ptr: attr.stable_ptr().untyped(),
+                    message: "Expected args.".into(),
+                    severity: Severity::Error,
+                });
+                None
+            } else {
+                Some(args.into_iter().filter_map(|a| {
+                    if let AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. } =
+                        a.variant
+                    {
+                        if let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] {
+                            Some(segment.ident(db).text(db).to_string())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }))
+            }
+        })
+        .flatten()
+        .collect::<Vec<_>>()
+}
+
+fn check_for_attr_conflicts(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: SyntaxStablePtrId,
+    attr_names: &Vec<String>,
+) {
+    if attr_names.contains(&DOJO_INTROSPECT_ATTR.to_string())
+        && attr_names.contains(&DOJO_PACKED_ATTR.to_string())
+    {
+        diagnostics.push(PluginDiagnostic {
+            stable_ptr: diagnostic_item,
+            message: format!(
+                "{} and {} attributes cannot be used at a same time.",
+                DOJO_INTROSPECT_ATTR, DOJO_PACKED_ATTR
+            ),
+            severity: Severity::Error,
+        });
+    }
+}
+
 impl MacroPlugin for BuiltinDojoPlugin {
     // New metadata field: <https://github.com/starkware-libs/cairo/blob/60340c801125b25baaaddce64dd89c6c1524b59d/crates/cairo-lang-defs/src/plugin.rs#L81>
     // Not used for now, but it contains a key-value BTreeSet. TBD what we can do with this.
@@ -272,56 +329,30 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 let mut rewrite_nodes = vec![];
                 let mut diagnostics = vec![];
 
+                let attr_names = get_derive_attr_names(
+                    db,
+                    &mut diagnostics,
+                    enum_ast.attributes(db).query_attr(db, "derive"),
+                );
+
+                check_for_attr_conflicts(
+                    &mut diagnostics,
+                    enum_ast.name(db).stable_ptr().untyped(),
+                    &attr_names,
+                );
+
                 // Iterate over all the derive attributes of the struct
-                for attr in enum_ast.attributes(db).query_attr(db, "derive") {
-                    let attr = attr.structurize(db);
-
-                    // Check if the derive attribute has arguments
-                    if attr.args.is_empty() {
-                        diagnostics.push(PluginDiagnostic {
-                            stable_ptr: attr.args_stable_ptr.untyped(),
-                            message: "Expected args.".into(),
-                            severity: Severity::Error,
-                        });
-                        continue;
-                    }
-
-                    // Iterate over all the arguments of the derive attribute
-                    for arg in attr.args {
-                        // Check if the argument is a path then set it to arg
-                        let AttributeArg {
-                            variant:
-                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
-                            ..
-                        } = arg
-                        else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: arg.arg_stable_ptr.untyped(),
-                                message: "Expected path.".into(),
-                                severity: Severity::Error,
-                            });
-                            continue;
-                        };
-
-                        // Check if the path has a single segment
-                        let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
-                            continue;
-                        };
-
-                        // Get the text of the segment and check if it is "Model"
-                        let derived = segment.ident(db).text(db);
-
-                        match derived.as_str() {
-                            "Introspect" => {
-                                rewrite_nodes.push(handle_introspect_enum(
-                                    db,
-                                    &mut diagnostics,
-                                    enum_ast.clone(),
-                                ));
-                            }
-                            "Print" => rewrite_nodes.push(handle_print_enum(db, enum_ast.clone())),
-                            _ => continue,
+                for attr in attr_names {
+                    match attr.as_str() {
+                        DOJO_INTROSPECT_ATTR => {
+                            rewrite_nodes.push(handle_introspect_enum(
+                                db,
+                                &mut diagnostics,
+                                enum_ast.clone(),
+                            ));
                         }
+                        "Print" => rewrite_nodes.push(handle_print_enum(db, enum_ast.clone())),
+                        _ => continue,
                     }
                 }
 
@@ -351,58 +382,32 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 let mut rewrite_nodes = vec![];
                 let mut diagnostics = vec![];
 
+                let attr_names = get_derive_attr_names(
+                    db,
+                    &mut diagnostics,
+                    struct_ast.attributes(db).query_attr(db, "derive"),
+                );
+
+                check_for_attr_conflicts(
+                    &mut diagnostics,
+                    struct_ast.name(db).stable_ptr().untyped(),
+                    &attr_names,
+                );
+
                 // Iterate over all the derive attributes of the struct
-                for attr in struct_ast.attributes(db).query_attr(db, "derive") {
-                    let attr = attr.structurize(db);
-
-                    // Check if the derive attribute has arguments
-                    if attr.args.is_empty() {
-                        diagnostics.push(PluginDiagnostic {
-                            stable_ptr: attr.args_stable_ptr.untyped(),
-                            message: "Expected args.".into(),
-                            severity: Severity::Error,
-                        });
-                        continue;
-                    }
-
-                    // Iterate over all the arguments of the derive attribute
-                    for arg in attr.args {
-                        // Check if the argument is a path then set it to arg
-                        let AttributeArg {
-                            variant:
-                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
-                            ..
-                        } = arg
-                        else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: arg.arg_stable_ptr.untyped(),
-                                message: "Expected path.".into(),
-                                severity: Severity::Error,
-                            });
-                            continue;
-                        };
-
-                        // Check if the path has a single segment
-                        let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
-                            continue;
-                        };
-
-                        // Get the text of the segment and check if it is "Model"
-                        let derived = segment.ident(db).text(db);
-
-                        match derived.as_str() {
-                            "Print" => {
-                                rewrite_nodes.push(handle_print_struct(db, struct_ast.clone()));
-                            }
-                            "Introspect" => {
-                                rewrite_nodes.push(handle_introspect_struct(
-                                    db,
-                                    &mut diagnostics,
-                                    struct_ast.clone(),
-                                ));
-                            }
-                            _ => continue,
+                for attr in attr_names {
+                    match attr.as_str() {
+                        "Print" => {
+                            rewrite_nodes.push(handle_print_struct(db, struct_ast.clone()));
                         }
+                        DOJO_INTROSPECT_ATTR => {
+                            rewrite_nodes.push(handle_introspect_struct(
+                                db,
+                                &mut diagnostics,
+                                struct_ast.clone(),
+                            ));
+                        }
+                        _ => continue,
                     }
                 }
 

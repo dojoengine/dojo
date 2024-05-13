@@ -182,6 +182,20 @@ enum EnumWithBadOption {
     first: Option<(u8, u16)>,
 }
 
+#[derive(Introspect, IntrospectPacked)]
+enum EnumIncompatibleAttrs {}
+
+#[derive(Introspect, IntrospectPacked)]
+struct StructIncompatibleAttrs {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+struct StructIncompatibleAttrs2 {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+enum EnumIncompatibleAttrs2 {}
+
 //! > expanded_cairo_code
 use core::serde::Serde;
 
@@ -360,6 +374,20 @@ struct StructWithBadOption {
 enum EnumWithBadOption {
     first: Option<(u8, u16)>,
 }
+
+#[derive(Introspect, IntrospectPacked)]
+enum EnumIncompatibleAttrs {}
+
+#[derive(Introspect, IntrospectPacked)]
+struct StructIncompatibleAttrs {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+struct StructIncompatibleAttrs2 {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+enum EnumIncompatibleAttrs2 {}
 impl Vec2Copy of core::traits::Copy::<Vec2>;
 impl Vec2Drop of core::traits::Drop::<Vec2>;
 impl Vec2Serde of core::serde::Serde::<Vec2> {
@@ -1984,6 +2012,94 @@ impl EnumWithBadOptionIntrospect<> of dojo::database::introspect::Introspect<Enu
     }
 }
 
+impl EnumIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspect<EnumIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
+    }
+}
+
+impl StructIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspect<StructIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
+    }
+}
+
+impl StructIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introspect<StructIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
+    }
+}
+
+impl EnumIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introspect<EnumIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
+    }
+}
+
 //! > expected_diagnostics
 error: Option<T> cannot be used with tuples. Prefer using a struct.
  --> test_src/lib.cairo:171:6
@@ -1994,3 +2110,23 @@ error: Option<T> cannot be used with tuples. Prefer using a struct.
  --> test_src/lib.cairo:176:10
     first: Option<(u8, u16)>,
          ^*****************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> test_src/lib.cairo:180:6
+enum EnumIncompatibleAttrs {}
+     ^*******************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> test_src/lib.cairo:183:8
+struct StructIncompatibleAttrs {}
+       ^*********************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> test_src/lib.cairo:187:8
+struct StructIncompatibleAttrs2 {}
+       ^**********************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> test_src/lib.cairo:191:6
+enum EnumIncompatibleAttrs2 {}
+     ^********************^
