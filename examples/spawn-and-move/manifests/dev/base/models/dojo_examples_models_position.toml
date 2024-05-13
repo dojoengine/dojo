@@ -1,6 +1,6 @@
 kind = "DojoModel"
-class_hash = "0x6365ac617e1845977dbfdadf1bb4432222b08898885ff5764f6d4a48ce6204d"
-original_class_hash = "0x6365ac617e1845977dbfdadf1bb4432222b08898885ff5764f6d4a48ce6204d"
+class_hash = "0x22a3d15debc686ca0bd2effc0d3980a0263fa774ce42a279f4058b4fcdcfe57"
+original_class_hash = "0x22a3d15debc686ca0bd2effc0d3980a0263fa774ce42a279f4058b4fcdcfe57"
 abi = "manifests/dev/abis/base/models/dojo_examples_models_position.json"
 name = "dojo_examples::models::position"
 

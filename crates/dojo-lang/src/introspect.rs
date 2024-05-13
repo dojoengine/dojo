@@ -25,6 +25,7 @@ enum CompositeType {
 #[derive(Clone, Default)]
 struct TypeIntrospection(usize, Vec<usize>);
 
+// Provides type introspection information for primitive types
 fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
     HashMap::from([
         ("felt252".into(), TypeIntrospection(1, vec![251])),
@@ -41,9 +42,10 @@ fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
     ])
 }
 
-fn is_valid_option(ty: &String) -> bool {
-    // tuples are not allowed for Option
-    !ty.starts_with("Option<(")
+/// Check if the provided type is an unsupported Option<T>,
+/// because tuples are not supported with Option.
+fn is_unsupported_option_type(ty: &String) -> bool {
+    ty.starts_with("Option<(")
 }
 
 fn is_byte_array(ty: &String) -> bool {
@@ -66,8 +68,8 @@ fn get_array_item_type(ty: &String) -> String {
     }
 }
 
-// split a tuple in array of items (nested tuples are not splitted).
-// example (u8, (u16, u32), u128) -> ["u8", "(u16, u32)", "u128"]
+/// split a tuple in array of items (nested tuples are not splitted).
+/// example (u8, (u16, u32), u128) -> ["u8", "(u16, u32)", "u128"]
 fn get_tuple_item_types(ty: &String) -> Vec<String> {
     let tuple_str = ty
         .trim()
@@ -110,33 +112,8 @@ fn get_tuple_item_types(ty: &String) -> Vec<String> {
     items
 }
 
-fn compute_tuple_size(
-    item_type: &String,
-    precomputed_size: &mut usize,
-    introspected_size: &mut Vec<String>,
-) -> bool {
-    let primitive_sizes = primitive_type_introspection();
-    let items = get_tuple_item_types(item_type);
-
-    for item in items {
-        if is_array(&item) || is_byte_array(&item) {
-            return true;
-        } else if is_tuple(&item) {
-            let is_dynamic = compute_tuple_size(&item, precomputed_size, introspected_size);
-            if is_dynamic {
-                return true;
-            }
-        } else if let Some(primitive_ty) = primitive_sizes.get(&item) {
-            *precomputed_size += primitive_ty.0;
-        } else {
-            introspected_size
-                .push(format!("dojo::database::introspect::Introspect::<{}>::size()", item));
-        }
-    }
-
-    return false;
-}
-
+/// Build the array layout describing the provided array type.
+/// item_type could be something like Array<u128> for example.
 fn build_array_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
@@ -156,11 +133,25 @@ fn build_array_layout_from_type(
             )",
             build_item_layout_from_type(diagnostics, diagnostic_item, &array_item_type)
         )
+    } else if is_array(&array_item_type) {
+        format!(
+            "dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {{
+                        selector: '',
+                        layout: {}
+                    }}
+                ].span()
+            )",
+            build_array_layout_from_type(diagnostics, diagnostic_item, &array_item_type)
+        )
     } else {
         format!("dojo::database::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
+/// Build the tuple layout describing the provided tuple type.
+/// item_type could be something like (u8, u32, u128) for example.
 fn build_tuple_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
@@ -189,6 +180,8 @@ fn build_tuple_layout_from_type(
     )
 }
 
+/// Build the layout describing the provided type.
+/// item_type could be any type (array, tuple, struct, ...)
 fn build_item_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
@@ -200,7 +193,7 @@ fn build_item_layout_from_type(
         build_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else {
         // For Option<T>, T cannot be a tuple
-        if !is_valid_option(item_type) {
+        if is_unsupported_option_type(item_type) {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: diagnostic_item,
                 message: "Option<T> cannot be used with tuples. Prefer using a struct.".into(),
@@ -212,6 +205,7 @@ fn build_item_layout_from_type(
     }
 }
 
+/// Build a field layout describing the provided type clause.
 fn get_field_layout_from_type_clause(
     db: &dyn SyntaxGroup,
     diagnostics: &mut Vec<PluginDiagnostic>,
@@ -294,6 +288,37 @@ fn build_variant_layouts(
         .join(",\n")
 }
 
+/// build the full layout for every field in the Struct.
+fn build_field_layouts(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    struct_ast: ItemStruct,
+) -> String {
+    struct_ast
+        .members(db)
+        .elements(db)
+        .iter()
+        .filter_map(|m| {
+            if m.has_attr(db, "key") {
+                return None;
+            }
+
+            let field_name = m.name(db).text(db);
+            let field_selector = get_selector_from_name(field_name.as_str()).unwrap().to_string();
+
+            Some(get_field_layout_from_type_clause(
+                db,
+                diagnostics,
+                field_selector,
+                &m.type_clause(db),
+            ))
+        })
+        .collect::<Vec<_>>()
+        .join(",\n")
+}
+
+// Extract generic type information and build the
+// type and impl information to add to the generated introspect
 fn build_generic_types_and_impls(
     db: &dyn SyntaxGroup,
     generic_params: OptionWrappedGenericParamList,
@@ -325,13 +350,116 @@ fn build_generic_types_and_impls(
     (generic_types, generic_impls)
 }
 
+/// Handle the introspection of a Struct
+pub fn handle_introspect_struct(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    struct_ast: ItemStruct,
+) -> RewriteNode {
+    let struct_name = struct_ast.name(db).text(db).into();
+
+    // TODO: compute size (is it really interesting ?)
+    let struct_size = "Option::None".to_string();
+
+    let (generic_types, generic_impls) =
+        build_generic_types_and_impls(db, struct_ast.generic_params(db));
+
+    let field_layouts = build_field_layouts(db, diagnostics, struct_ast);
+
+    generate_introspect(
+        &struct_name,
+        &struct_size,
+        &generic_types,
+        generic_impls,
+        &"Struct".to_string(),
+        &field_layouts,
+    )
+}
+
+/// Handle the introspection of a Enum
+pub fn handle_introspect_enum(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    enum_ast: ItemEnum,
+) -> RewriteNode {
+    let enum_name = enum_ast.name(db).text(db).into();
+
+    // TODO: compute size (is it really interesting ?)
+    let enum_size = "Option::None".to_string();
+
+    let (generic_types, generic_impls) =
+        build_generic_types_and_impls(db, enum_ast.generic_params(db));
+
+    let variant_layouts = build_variant_layouts(db, diagnostics, enum_ast);
+
+    generate_introspect(
+        &enum_name,
+        &enum_size,
+        &generic_types,
+        generic_impls,
+        &"Enum".to_string(),
+        &variant_layouts,
+    )
+}
+
+/// generate the type introspection
+fn generate_introspect(
+    name: &String,
+    size: &String,
+    generic_types: &Vec<String>,
+    generic_impls: String,
+    layout_type: &String,
+    layouts: &String,
+) -> RewriteNode {
+    RewriteNode::interpolate_patched(
+        "
+impl $name$Introspect<$generics$> of dojo::database::introspect::Introspect<$name$<$generics_types$>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        $size$
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::$layout_type$(
+            array![
+            $layouts$
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
+    }
+}
+        ",
+        &UnorderedHashMap::from([
+            ("name".to_string(), RewriteNode::Text(name.to_string())),
+            ("generics".to_string(), RewriteNode::Text(generic_impls)),
+            ("generics_types".to_string(), RewriteNode::Text(generic_types.join(", "))),
+            ("size".to_string(), RewriteNode::Text(size.to_string())),
+            ("layout_type".to_string(), RewriteNode::Text(layout_type.to_string())),
+            ("layouts".to_string(), RewriteNode::Text(layouts.to_string())),
+        ]),
+    )
+}
+
+/// =============================================================
+///
+/// TODO: to remove if we do not use Ty and size anymore
+///
+///
+/// =============================================================
+
 /// A handler for Dojo code derives Introspect for a struct
 /// Parameters:
 /// * db: The semantic database.
 /// * struct_ast: The AST of the struct.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_introspect_struct(
+pub fn handle_introspect_struct_old(
     db: &dyn SyntaxGroup,
     diagnostics: &mut Vec<PluginDiagnostic>,
     struct_ast: ItemStruct,
@@ -455,83 +583,13 @@ pub fn handle_introspect_struct(
     )
 }
 
-/// Generates enum arm type introspect
-pub fn handle_enum_arm_type(ty_name: &String, is_primitive: bool) -> (String, String) {
-    let serialized = if is_primitive {
-        format!(
-            "dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('{}')
-            )",
-            ty_name
-        )
-    } else {
-        format!(
-            "dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<{}>::ty()
-            )",
-            ty_name
-        )
-    };
-    (serialized, ty_name.to_string())
-}
-
-pub fn handle_introspect_enum(
-    db: &dyn SyntaxGroup,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-    enum_ast: ItemEnum,
-) -> RewriteNode {
-    let enum_name = enum_ast.name(db).text(db).into();
-
-    // TODO: compute size (is it really interesting ?)
-    let enum_size = "Option::None".to_string();
-
-    let (generic_types, generic_impls) =
-        build_generic_types_and_impls(db, enum_ast.generic_params(db));
-
-    let variant_layouts = build_variant_layouts(db, diagnostics, enum_ast);
-
-    RewriteNode::interpolate_patched(
-        "
-impl $name$Introspect<$generics$> of \
-         dojo::database::introspect::Introspect<$name$<$generics_types$>> {
-    #[inline(always)]
-    fn size() -> Option<usize> {
-        $size$
-    }
-
-    #[inline(always)]
-    fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Enum(
-            array![
-            $variant_layouts$
-            ].span()
-        )
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        // TODO: Not used anymore => to remove
-        dojo::database::introspect::Ty::Primitive('u8')
-    }
-}
-        ",
-        &UnorderedHashMap::from([
-            ("name".to_string(), RewriteNode::Text(enum_name)),
-            ("generics".to_string(), RewriteNode::Text(generic_impls)),
-            ("generics_types".to_string(), RewriteNode::Text(generic_types.join(", "))),
-            ("size".to_string(), RewriteNode::Text(enum_size)),
-            ("variant_layouts".to_string(), RewriteNode::Text(variant_layouts)),
-        ]),
-    )
-}
-
 /// A handler for Dojo code derives Introspect for an enum
 /// Parameters:
 /// * db: The semantic database.
 /// * enum_ast: The AST of the enum.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_introspect_enum2(
+pub fn handle_introspect_enum_old(
     db: &dyn SyntaxGroup,
     diagnostics: &mut Vec<PluginDiagnostic>,
     enum_ast: ItemEnum,
@@ -807,7 +865,7 @@ fn handle_introspect_internal(
                     ));
                 }
             }
-        } else if !is_valid_option(&m.ty) {
+        } else if is_unsupported_option_type(&m.ty) {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: diagnostic_item,
                 message: "Option<T> cannot be used with tuples. Prefer using a struct.".into(),
@@ -923,6 +981,53 @@ impl $name$Introspect<$generics$> of \
             ("ty".to_string(), RewriteNode::Text(type_ty)),
         ]),
     )
+}
+
+/// Generates enum arm type introspect
+pub fn handle_enum_arm_type(ty_name: &String, is_primitive: bool) -> (String, String) {
+    let serialized = if is_primitive {
+        format!(
+            "dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('{}')
+            )",
+            ty_name
+        )
+    } else {
+        format!(
+            "dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<{}>::ty()
+            )",
+            ty_name
+        )
+    };
+    (serialized, ty_name.to_string())
+}
+
+fn compute_tuple_size(
+    item_type: &String,
+    precomputed_size: &mut usize,
+    introspected_size: &mut Vec<String>,
+) -> bool {
+    let primitive_sizes = primitive_type_introspection();
+    let items = get_tuple_item_types(item_type);
+
+    for item in items {
+        if is_array(&item) || is_byte_array(&item) {
+            return true;
+        } else if is_tuple(&item) {
+            let is_dynamic = compute_tuple_size(&item, precomputed_size, introspected_size);
+            if is_dynamic {
+                return true;
+            }
+        } else if let Some(primitive_ty) = primitive_sizes.get(&item) {
+            *precomputed_size += primitive_ty.0;
+        } else {
+            introspected_size
+                .push(format!("dojo::database::introspect::Introspect::<{}>::size()", item));
+        }
+    }
+
+    return false;
 }
 
 #[test]

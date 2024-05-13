@@ -378,48 +378,30 @@ impl Vec2Serde of core::serde::Serde::<Vec2> {
 impl Vec2Introspect<> of dojo::database::introspect::Introspect<Vec2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::Some(2)
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
-                                layout: dojo::database::introspect::Layout::Fixed(array![32].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+            layout: dojo::database::introspect::Introspect::<u32>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                                selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
-                                layout: dojo::database::introspect::Layout::Fixed(array![32].span())
-                            }
-
-                ].span()
-            )
-            
+            selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
+            layout: dojo::database::introspect::Introspect::<u32
+>::layout()
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'Vec2',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'x',
-                ty: dojo::database::introspect::Ty::Primitive('u32'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'y',
-                ty: dojo::database::introspect::Ty::Primitive('u32'),
-                attrs: array![].span()
-            })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl PlainEnumSerde of core::serde::Serde::<PlainEnum> {
@@ -1353,54 +1335,29 @@ impl StructWithPrimitivesDrop of core::traits::Drop::<StructWithPrimitives>;
 impl StructWithPrimitivesIntrospect<> of dojo::database::introspect::Introspect<StructWithPrimitives<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::Some(2)
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                                selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                                layout: dojo::database::introspect::Layout::Fixed(array![16].span())
-                            }
-
-                ].span()
-            )
-            
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Introspect::<u16>::layout()
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithPrimitives',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'after',
-                ty: dojo::database::introspect::Ty::Primitive('u16'),
-                attrs: array![].span()
-            })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithStructCopy of core::traits::Copy::<StructWithStruct>;
@@ -1409,63 +1366,29 @@ impl StructWithStructDrop of core::traits::Drop::<StructWithStruct>;
 impl StructWithStructIntrospect<> of dojo::database::introspect::Introspect<StructWithStruct<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
-Option::Some(1)
-                    ];
-
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                                selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
-                            }
-
-                ].span()
-            )
-            
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithStruct',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Introspect::<Vec2>::ty(),
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithSimpleArrayCopy of core::traits::Copy::<StructWithSimpleArray>;
@@ -1480,55 +1403,23 @@ impl StructWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::Array(
-                array![
-                    dojo::database::introspect::FieldLayout {
-                        selector: '',
-                        layout: dojo::database::introspect::Introspect::<u32>::layout()
-                    }
-                ].span()
-            )
-                        }
-
-                ].span()
-            )
-            
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Introspect::<Array<u32>>::layout()
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithSimpleArray',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithByteArrayCopy of core::traits::Copy::<StructWithByteArray>;
@@ -1543,42 +1434,23 @@ impl StructWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<S
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::ByteArray
-                        }
-
-                ].span()
-            )
-            
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithByteArray',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithComplexArrayCopy of core::traits::Copy::<StructWithComplexArray>;
@@ -1593,55 +1465,23 @@ impl StructWithComplexArrayIntrospect<> of dojo::database::introspect::Introspec
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::Array(
-                array![
-                    dojo::database::introspect::FieldLayout {
-                        selector: '',
-                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
-                    }
-                ].span()
-            )
-                        }
-
-                ].span()
-            )
-            
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Introspect::<Array<Vec2>>::layout()
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithComplexArray',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithSimpleTupleCopy of core::traits::Copy::<StructWithSimpleTuple>;
@@ -1650,20 +1490,20 @@ impl StructWithSimpleTupleDrop of core::traits::Drop::<StructWithSimpleTuple>;
 impl StructWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<StructWithSimpleTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::Some(4)
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::Tuple(
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
                     dojo::database::introspect::FieldLayout {
                         selector: '',
@@ -1675,49 +1515,15 @@ dojo::database::introspect::FieldLayout {
                     }
                 ].span()
             )
-                        }
-
-                ].span()
-            )
-            
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithSimpleTuple',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Ty::Tuple(
-                            array![
-                                dojo::database::introspect::serialize_member_type(
-                                    @dojo::database::introspect::Ty::Primitive('u8')
-                                ),
-dojo::database::introspect::serialize_member_type(
-                                    @dojo::database::introspect::Ty::Primitive('u256')
-                                )
-                            ].span()
-                        ),
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithComplexTupleCopy of core::traits::Copy::<StructWithComplexTuple>;
@@ -1726,30 +1532,20 @@ impl StructWithComplexTupleDrop of core::traits::Drop::<StructWithComplexTuple>;
 impl StructWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<StructWithComplexTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
-dojo::database::introspect::Introspect::<EnumCustom>::size(),
-Option::Some(2)
-                    ];
-
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::Tuple(
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
                     dojo::database::introspect::FieldLayout {
                         selector: '',
@@ -1765,46 +1561,15 @@ dojo::database::introspect::FieldLayout {
                     }
                 ].span()
             )
-                        }
-
-                ].span()
-            )
-            
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithComplexTuple',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Ty::Tuple(
-                            array![
-                                dojo::database::introspect::serialize_member_type(
-                                    @dojo::database::introspect::Ty::Primitive('u8')
-                                )
-                            ].span()
-                        ),
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithNestedArraysCopy of core::traits::Copy::<StructWithNestedArrays>;
@@ -1819,55 +1584,37 @@ impl StructWithNestedArraysIntrospect<> of dojo::database::introspect::Introspec
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::Array(
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Layout::Array(
                 array![
                     dojo::database::introspect::FieldLayout {
                         selector: '',
-                        layout: dojo::database::introspect::Introspect::<Array<Array<Vec2>>>::layout()
+                        layout: dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::FieldLayout {
+                        selector: '',
+                        layout: dojo::database::introspect::Introspect::<Array<Vec2>>::layout()
                     }
                 ].span()
             )
-                        }
-
+                    }
                 ].span()
             )
-            
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithNestedArrays',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithNestedTuplesCopy of core::traits::Copy::<StructWithNestedTuples>;
@@ -1876,30 +1623,20 @@ impl StructWithNestedTuplesDrop of core::traits::Drop::<StructWithNestedTuples>;
 impl StructWithNestedTuplesIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedTuples<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
-dojo::database::introspect::Introspect::<EnumCustom>::size(),
-Option::Some(3)
-                    ];
-
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::Tuple(
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
                     dojo::database::introspect::FieldLayout {
                         selector: '',
@@ -1933,44 +1670,15 @@ dojo::database::introspect::FieldLayout {
                     }
                 ].span()
             )
-                        }
-
-                ].span()
-            )
-            
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithNestedTuples',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Ty::Tuple(
-                            array![
-                                
-                            ].span()
-                        ),
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithNestedTuplesAndByteArrayCopy of core::traits::Copy::<StructWithNestedTuplesAndByteArray>;
@@ -1985,14 +1693,14 @@ impl StructWithNestedTuplesAndByteArrayIntrospect<> of dojo::database::introspec
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::Tuple(
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
                     dojo::database::introspect::FieldLayout {
                         selector: '',
@@ -2026,44 +1734,15 @@ dojo::database::introspect::FieldLayout {
                     }
                 ].span()
             )
-                        }
-
-                ].span()
-            )
-            
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithNestedTuplesAndByteArray',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Ty::Tuple(
-                            array![
-                                
-                            ].span()
-                        ),
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithNestedEverythingCopy of core::traits::Copy::<StructWithNestedEverything>;
@@ -2078,14 +1757,14 @@ impl StructWithNestedEverythingIntrospect<> of dojo::database::introspect::Intro
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
-                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
-                            },
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+            layout: dojo::database::introspect::Introspect::<u8>::layout()
+        },
 dojo::database::introspect::FieldLayout {
-                            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
-                            layout: dojo::database::introspect::Layout::Tuple(
+            selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+            layout: dojo::database::introspect::Layout::Tuple(
                 array![
                     dojo::database::introspect::FieldLayout {
                         selector: '',
@@ -2163,44 +1842,15 @@ dojo::database::introspect::FieldLayout {
                     }
                 ].span()
             )
-                        }
-
-                ].span()
-            )
-            
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithNestedEverything',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'player',
-                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
-                attrs: array!['key'].span()
-            }),
-dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {
-                name: 'before',
-                ty: dojo::database::introspect::Ty::Primitive('u8'),
-                attrs: array![].span()
-            }),
-dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'after',
-                        ty: dojo::database::introspect::Ty::Tuple(
-                            array![
-                                
-                            ].span()
-                        ),
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl GenericStructCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<GenericStruct<T>>;
@@ -2219,38 +1869,25 @@ impl GenericStructSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> o
 impl GenericStructIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<GenericStruct<T>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        dojo::database::introspect::Introspect::<T>::size()
+        Option::None
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                dojo::database::introspect::FieldLayout {
-                                selector: 1246920879054256875300693562709339669009726288543267794550465531256469553289,
-                                layout: dojo::database::introspect::Introspect::<T>::layout()
-                            }
-
-                ].span()
-            )
-            
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 1246920879054256875300693562709339669009726288543267794550465531256469553289,
+            layout: dojo::database::introspect::Introspect::<T>::layout()
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'GenericStruct',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 't',
-                        ty: dojo::database::introspect::Introspect::<T>::ty(),
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl StructWithBadOptionCopy of core::traits::Copy::<StructWithBadOption>;
@@ -2275,29 +1912,20 @@ impl StructWithBadOptionIntrospect<> of dojo::database::introspect::Introspect<S
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
-                array![
-                
-
-                ].span()
-            )
-            
+            array![
+            dojo::database::introspect::FieldLayout {
+            selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+            layout: dojo::database::introspect::Introspect::<Option<(u8, u16)>
+>::layout()
+        }
+            ].span()
+        )
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'StructWithBadOption',
-            attrs: array![].span(),
-            children: array![
-                dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                        name: 'x',
-                        ty: dojo::database::introspect::Introspect::<Option<(u8, u16)>>::ty(),
-                        attrs: array![].span()
-                    })
-
-            ].span()
-        })
+        // TODO: Not used anymore => to remove
+        dojo::database::introspect::Ty::Primitive('u8')
     }
 }
 impl EnumWithBadOptionCopy of core::traits::Copy::<EnumWithBadOption>;
@@ -2358,9 +1986,9 @@ impl EnumWithBadOptionIntrospect<> of dojo::database::introspect::Introspect<Enu
 
 //! > expected_diagnostics
 error: Option<T> cannot be used with tuples. Prefer using a struct.
- --> test_src/lib.cairo:170:8
-struct StructWithBadOption {
-       ^*****************^
+ --> test_src/lib.cairo:171:6
+    x: Option<(u8, u16)>
+     ^*****************^
 
 error: Option<T> cannot be used with tuples. Prefer using a struct.
  --> test_src/lib.cairo:176:10

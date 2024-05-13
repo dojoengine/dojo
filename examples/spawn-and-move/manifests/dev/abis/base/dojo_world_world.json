@@ -6,11 +6,19 @@
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<core::felt252>",
+    "name": "core::byte_array::ByteArray",
     "members": [
       {
-        "name": "snapshot",
-        "type": "@core::array::Array::<core::felt252>"
+        "name": "data",
+        "type": "core::array::Array::<core::bytes_31::bytes31>"
+      },
+      {
+        "name": "pending_word",
+        "type": "core::felt252"
+      },
+      {
+        "name": "pending_word_len",
+        "type": "core::integer::u32"
       }
     ]
   },
@@ -24,7 +32,17 @@
       },
       {
         "name": "metadata_uri",
-        "type": "core::array::Span::<core::felt252>"
+        "type": "core::byte_array::ByteArray"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::felt252>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::felt252>"
       }
     ]
   },
@@ -80,6 +98,14 @@
       },
       {
         "name": "Array",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      },
+      {
+        "name": "ByteArray",
+        "type": "()"
+      },
+      {
+        "name": "Enum",
         "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
       }
     ]
@@ -523,26 +549,8 @@
       },
       {
         "name": "uri",
-        "type": "core::array::Span::<core::felt252>",
+        "type": "core::byte_array::ByteArray",
         "kind": "data"
-      }
-    ]
-  },
-  {
-    "type": "struct",
-    "name": "core::byte_array::ByteArray",
-    "members": [
-      {
-        "name": "data",
-        "type": "core::array::Array::<core::bytes_31::bytes31>"
-      },
-      {
-        "name": "pending_word",
-        "type": "core::felt252"
-      },
-      {
-        "name": "pending_word_len",
-        "type": "core::integer::u32"
       }
     ]
   },
