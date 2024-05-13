@@ -169,6 +169,8 @@ fn data_objects_recursion(
 pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<String>) -> Object {
     let mut object = Object::new(type_name);
 
+    // println!("type_mapping: {:?}", type_mapping);
+
     for (field_name, type_data) in type_mapping.clone() {
         let path_array = path_array.clone();
 
@@ -184,7 +186,6 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
 
             return FieldFuture::new(async move {
                 if let Some(value) = ctx.parent_value.as_value() {
-                    println!("parent_value: {:?}", value);
                     // Nested types resolution
                     if let TypeData::Nested((_, nested_mapping)) = type_data {
                         return match ctx.parent_value.try_to_value()? {
@@ -192,6 +193,11 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                                 let entity_id =
                                     extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
+
+                                // if we already fetched our model data, return it
+                                if let Some(data) = indexmap.get(&field_name) {
+                                    return Ok(Some(data.clone()));
+                                }
 
                                 // TODO: remove subqueries and use JOIN in parent query
                                 let data = fetch_single_row(
@@ -205,8 +211,14 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
 
                                 Ok(Some(Value::Object(result)))
                             }
-                            Value::List(list) => Ok(Some(Value::List(list.clone()))),
                             _ => Err("incorrect value, requires Value::Object".into()),
+                        };
+                    } else if let TypeData::Array(_) = type_data {
+                        println!("Array type: {:?}", value);
+                        // Array types resolution
+                        return match value {
+                            Value::List(values) => Ok(Some(Value::List(values.clone()))),
+                            _ => Err("Incorrect value, requires Value::List".into()),
                         };
                     }
 
@@ -215,19 +227,15 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                         Value::Object(value_mapping) => {
                             Ok(Some(value_mapping.get(&field_name).unwrap().clone()))
                         }
-                        Value::List(list) => Ok(Some(Value::List(list.clone()))),
+                        Value::List(values) => Ok(Some(Value::List(values.clone()))),
                         _ => Err("Incorrect value, requires Value::Object".into()),
                     };
                 }
 
                 // Catch model union resolutions, async-graphql sends union types as IndexMap<Name,
                 // ConstValue>
-                if let Some(value) = ctx.parent_value.downcast_ref::<Value>() {
-                    if let Value::Object(indexmap) = value {
-                        return Ok(Some(indexmap.get(&field_name).unwrap().clone()));
-                    }
-
-                    return Ok(Some(value.clone()));
+                if let Some(value_mapping) = ctx.parent_value.downcast_ref::<ValueMapping>() {
+                    return Ok(Some(value_mapping.get(&field_name).unwrap().clone()));
                 }
 
                 Err("Field resolver only accepts Value or IndexMap".into())
