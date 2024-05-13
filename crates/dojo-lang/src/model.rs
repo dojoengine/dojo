@@ -311,8 +311,8 @@ pub fn handle_model_struct(
 impl $type_name$Model of dojo::model::Model<$type_name$> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: \
              dojo::database::introspect::Layout) -> $type_name$ {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, $model_selector$, \
-             keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, $model_selector$, keys, \
+             layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.

@@ -71,11 +71,7 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 
@@ -93,11 +89,7 @@ impl GeneratedFileAuxData for ComputedValuesAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 
@@ -296,7 +288,7 @@ fn get_derive_attr_names(
 fn check_for_attr_conflicts(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: SyntaxStablePtrId,
-    attr_names: &Vec<String>,
+    attr_names: &[String],
 ) {
     if attr_names.contains(&DOJO_INTROSPECT_ATTR.to_string())
         && attr_names.contains(&DOJO_PACKED_ATTR.to_string())

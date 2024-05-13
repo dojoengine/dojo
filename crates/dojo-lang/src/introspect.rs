@@ -9,8 +9,7 @@ use cairo_lang_syntax::node::ast::{
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::ids;
-use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ids, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Member;
 use itertools::Itertools;
@@ -44,7 +43,7 @@ fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
 
 /// Check if the provided type is an unsupported Option<T>,
 /// because tuples are not supported with Option.
-fn is_unsupported_option_type(ty: &String) -> bool {
+fn is_unsupported_option_type(ty: &str) -> bool {
     ty.starts_with("Option<(")
 }
 
@@ -52,15 +51,15 @@ fn is_byte_array(ty: &String) -> bool {
     ty.eq("ByteArray")
 }
 
-fn is_array(ty: &String) -> bool {
+fn is_array(ty: &str) -> bool {
     ty.starts_with("Array<") || ty.starts_with("Span<")
 }
 
-fn is_tuple(ty: &String) -> bool {
-    ty.starts_with("(")
+fn is_tuple(ty: &str) -> bool {
+    ty.starts_with('(')
 }
 
-fn get_array_item_type(ty: &String) -> String {
+fn get_array_item_type(ty: &str) -> String {
     if ty.starts_with("Array<") {
         ty.trim().strip_prefix("Array<").unwrap().strip_suffix('>').unwrap().to_string()
     } else {
@@ -70,15 +69,15 @@ fn get_array_item_type(ty: &String) -> String {
 
 /// split a tuple in array of items (nested tuples are not splitted).
 /// example (u8, (u16, u32), u128) -> ["u8", "(u16, u32)", "u128"]
-fn get_tuple_item_types(ty: &String) -> Vec<String> {
+fn get_tuple_item_types(ty: &str) -> Vec<String> {
     let tuple_str = ty
         .trim()
-        .strip_prefix("(")
+        .strip_prefix('(')
         .unwrap()
-        .strip_suffix(")")
+        .strip_suffix(')')
         .unwrap()
         .to_string()
-        .replace(" ", "");
+        .replace(' ', "");
     let mut items = vec![];
     let mut current_item = "".to_string();
     let mut level = 0;
@@ -89,7 +88,7 @@ fn get_tuple_item_types(ty: &String) -> Vec<String> {
                 current_item.push(c);
             }
 
-            if level == 0 && current_item.len() > 0 {
+            if level == 0 && !current_item.is_empty() {
                 items.push(current_item);
                 current_item = "".to_string();
             }
@@ -105,7 +104,7 @@ fn get_tuple_item_types(ty: &String) -> Vec<String> {
         }
     }
 
-    if current_item.len() > 0 {
+    if !current_item.is_empty() {
         items.push(current_item);
     }
 
@@ -117,7 +116,7 @@ fn get_tuple_item_types(ty: &String) -> Vec<String> {
 fn build_array_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
-    item_type: &String,
+    item_type: &str,
 ) -> String {
     let array_item_type = get_array_item_type(item_type);
 
@@ -155,7 +154,7 @@ fn build_array_layout_from_type(
 fn build_tuple_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
-    item_type: &String,
+    item_type: &str,
 ) -> String {
     let tuple_items = get_tuple_item_types(item_type)
         .iter()
@@ -165,7 +164,7 @@ fn build_tuple_layout_from_type(
                         selector: '',
                         layout: {}
                     }}",
-                build_item_layout_from_type(diagnostics, diagnostic_item, &x)
+                build_item_layout_from_type(diagnostics, diagnostic_item, x)
             )
         })
         .collect::<Vec<_>>()
@@ -185,11 +184,11 @@ fn build_tuple_layout_from_type(
 fn build_item_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
-    item_type: &String,
+    item_type: &str,
 ) -> String {
     if is_array(item_type) {
         build_array_layout_from_type(diagnostics, diagnostic_item, item_type)
-    } else if is_tuple(&item_type) {
+    } else if is_tuple(item_type) {
         build_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else {
         // For Option<T>, T cannot be a tuple
@@ -406,14 +405,15 @@ pub fn handle_introspect_enum(
 fn generate_introspect(
     name: &String,
     size: &String,
-    generic_types: &Vec<String>,
+    generic_types: &[String],
     generic_impls: String,
     layout_type: &String,
     layouts: &String,
 ) -> RewriteNode {
     RewriteNode::interpolate_patched(
         "
-impl $name$Introspect<$generics$> of dojo::database::introspect::Introspect<$name$<$generics_types$>> {
+impl $name$Introspect<$generics$> of \
+         dojo::database::introspect::Introspect<$name$<$generics_types$>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         $size$
@@ -715,11 +715,13 @@ fn handle_introspect_internal(
     let primitive_sizes = primitive_type_introspection();
     let mut layout = match composite_type {
         CompositeType::Enum => {
-            vec!["dojo::database::introspect::FieldLayout {
+            vec![
+                "dojo::database::introspect::FieldLayout {
                     selector: '',
                     layout: dojo::database::introspect::Introspect::<u8>::layout()
                 }"
-            .to_string()]
+                .to_string(),
+            ]
         }
         CompositeType::Struct => vec![],
     };
@@ -819,7 +821,7 @@ fn handle_introspect_internal(
                     }}
                 ].span()
             )",
-                build_item_layout_from_type(diagnostics, diagnostic_item, &item_type.to_string())
+                build_item_layout_from_type(diagnostics, diagnostic_item, item_type)
             );
 
             match composite_type {
@@ -1004,7 +1006,7 @@ pub fn handle_enum_arm_type(ty_name: &String, is_primitive: bool) -> (String, St
 }
 
 fn compute_tuple_size(
-    item_type: &String,
+    item_type: &str,
     precomputed_size: &mut usize,
     introspected_size: &mut Vec<String>,
 ) -> bool {
@@ -1026,8 +1028,7 @@ fn compute_tuple_size(
                 .push(format!("dojo::database::introspect::Introspect::<{}>::size()", item));
         }
     }
-
-    return false;
+    false
 }
 
 #[test]
