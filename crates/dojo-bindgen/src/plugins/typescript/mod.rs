@@ -16,8 +16,8 @@ impl TypescriptPlugin {
     }
 
     // Maps cairo types to C#/Unity SDK defined types
-    fn map_type(type_name: &str) -> String {
-        match type_name {
+    fn map_type(token: &Token) -> String {
+        match token.type_name().as_str() {
             "bool" => "RecsType.Boolean".to_string(),
             "u8" => "RecsType.Number".to_string(),
             "u16" => "RecsType.Number".to_string(),
@@ -31,26 +31,28 @@ impl TypescriptPlugin {
             "ClassHash" => "RecsType.BigInt".to_string(),
             "ContractAddress" => "RecsType.BigInt".to_string(),
             "ByteArray" => "RecsType.String".to_string(),
-
-            _ => {
-                if type_name.starts_with("Array") {
-                    format!(
-                        "{}[]",
-                        TypescriptPlugin::map_type(&type_name[6..type_name.len() - 1])
-                    )
-                } else if type_name.starts_with("(") && type_name.ends_with(")") {
-                    format!(
-                        "({})",
-                        type_name[1..type_name.len() - 1]
-                            .split(", ")
-                            .map(|t| TypescriptPlugin::map_type(t))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
+            "array" => {
+                if let Token::Array(array) = token {
+                    format!("{}[]", TypescriptPlugin::map_type(&array.inner))
                 } else {
-                    type_name.to_string()
+                    panic!("Invalid array token: {:?}", token);
                 }
             }
+            "tuple" => {
+                if let Token::Tuple(tuple) = token {
+                    let inners = tuple
+                        .inners
+                        .iter()
+                        .map(|inner| TypescriptPlugin::map_type(inner))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    format!("({})", inners)
+                } else {
+                    panic!("Invalid tuple token: {:?}", token);
+                }
+            }
+
+            _ => token.type_name().to_string(),
         }
     }
 
@@ -69,7 +71,7 @@ impl TypescriptPlugin {
         let mut fields = String::new();
 
         for field in &token.inners {
-            let mapped = TypescriptPlugin::map_type(field.token.type_name().as_str());
+            let mapped = TypescriptPlugin::map_type(&field.token);
             if mapped == field.token.type_name() {
                 let token = handled_tokens
                     .iter()
@@ -142,7 +144,7 @@ export enum {} {{
             .inners
             .iter()
             .map(|field| {
-                let mapped = TypescriptPlugin::map_type(field.token.type_name().as_str());
+                let mapped = TypescriptPlugin::map_type(&field.token);
                 if mapped == field.token.type_name() {
                     custom_types.push(format!("\"{}\"", field.token.type_name()));
 
@@ -277,7 +279,7 @@ export function defineContractComponents(world: World) {
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
         fn map_type(token: &Token) -> String {
             match token {
-                Token::CoreBasic(t) => TypescriptPlugin::map_type(&t.type_name())
+                Token::CoreBasic(_) => TypescriptPlugin::map_type(token)
                 .replace("RecsType.", "")
                 // types should be lowercased
                 .to_lowercase(),

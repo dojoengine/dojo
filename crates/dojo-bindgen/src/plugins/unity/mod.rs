@@ -16,42 +16,43 @@ impl UnityPlugin {
     }
 
     // Maps cairo types to C#/Unity SDK defined types
-    fn map_type(type_name: &str) -> String {
-        match type_name {
-            "u8" => "byte".to_string(),
-            "u16" => "ushort".to_string(),
-            "u32" => "uint".to_string(),
-            "u64" => "ulong".to_string(),
-            "u128" => "BigInteger".to_string(),
-            "u256" => "BigInteger".to_string(),
-            "usize" => "uint".to_string(),
-            "felt252" => "FieldElement".to_string(),
-            "bytes31" => "string".to_string(),
-            "ClassHash" => "FieldElement".to_string(),
-            "ContractAddress" => "FieldElement".to_string(),
-            "ByteArray" => "string".to_string(),
-
-            _ => {
-                if type_name.starts_with("Array") {
-                    format!(
-                        "{}[]",
-                        // Array<T> -> T
-                        UnityPlugin::map_type(&type_name[6..type_name.len() - 1])
-                    )
-                // check if tuple (T1, T2, ...)
-                } else if type_name.starts_with("(") && type_name.ends_with(")") {
-                    format!(
-                        "({})",
-                        type_name[1..type_name.len() - 1]
-                            .split(", ")
-                            .map(|t| UnityPlugin::map_type(t))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
+    fn map_type(token: &Token) -> String {
+        match token.type_name().as_str() {
+            "bool" => "RecsType.Boolean".to_string(),
+            "u8" => "RecsType.Number".to_string(),
+            "u16" => "RecsType.Number".to_string(),
+            "u32" => "RecsType.Number".to_string(),
+            "u64" => "RecsType.Number".to_string(),
+            "u128" => "RecsType.BigInt".to_string(),
+            "u256" => "RecsType.BigInt".to_string(),
+            "usize" => "RecsType.Number".to_string(),
+            "felt252" => "RecsType.BigInt".to_string(),
+            "bytes31" => "RecsType.String".to_string(),
+            "ClassHash" => "RecsType.BigInt".to_string(),
+            "ContractAddress" => "RecsType.BigInt".to_string(),
+            "ByteArray" => "RecsType.String".to_string(),
+            "array" => {
+                if let Token::Array(array) = token {
+                    format!("{}[]", UnityPlugin::map_type(&array.inner))
                 } else {
-                    type_name.to_string()
+                    panic!("Invalid array token: {:?}", token);
                 }
             }
+            "tuple" => {
+                if let Token::Tuple(tuple) = token {
+                    let inners = tuple
+                        .inners
+                        .iter()
+                        .map(|inner| UnityPlugin::map_type(inner))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    format!("({})", inners)
+                } else {
+                    panic!("Invalid tuple token: {:?}", token);
+                }
+            }
+
+            _ => token.type_name().to_string(),
         }
     }
 
@@ -72,7 +73,7 @@ impl UnityPlugin {
             .map(|field| {
                 format!(
                     "public {} {};",
-                    UnityPlugin::map_type(field.token.clone().type_name().as_str()),
+                    UnityPlugin::map_type(&field.token),
                     field.name
                 )
             })
@@ -128,7 +129,7 @@ public enum {} {{
                 format!(
                     "[ModelField(\"{}\")]\n    public {} {};",
                     field.name,
-                    UnityPlugin::map_type(field.token.type_name().as_str()),
+                    UnityPlugin::map_type(&field.token),
                     field.name,
                 )
             })
@@ -206,7 +207,7 @@ public class {} : ModelInstance {{
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
         fn map_type(token: &Token) -> String {
             match token {
-                Token::CoreBasic(t) => UnityPlugin::map_type(&t.type_name()),
+                Token::CoreBasic(_) => UnityPlugin::map_type(&token),
                 Token::Composite(t) => t.type_name().to_string(),
                 Token::Array(t) => format!("{}[]", map_type(&t.inner)),
                 _ => panic!("Unsupported token type: {:?}", token),
@@ -247,7 +248,7 @@ public class {} : ModelInstance {{
                             }
                         }
                     }
-                    None => match UnityPlugin::map_type(type_name).as_str() {
+                    None => match UnityPlugin::map_type(token).as_str() {
                         "FieldElement" => format!("{}.Inner()", type_name),
                         _ => format!("new FieldElement({}).Inner()", type_name),
                     },

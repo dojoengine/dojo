@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use cainome::parser::tokens::{Composite, CompositeType, Function};
+use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
 use convert_case::Casing;
 
 use crate::error::BindgenResult;
@@ -17,40 +17,43 @@ impl TypeScriptV2Plugin {
     }
 
     // Maps cairo types to TypeScript defined types
-    fn map_type(type_name: &str) -> String {
-        match type_name {
-            "bool" => "boolean".to_string(),
-            "u8" => "number".to_string(),
-            "u16" => "number".to_string(),
-            "u32" => "number".to_string(),
-            "u64" => "bigint".to_string(),
-            "u128" => "bigint".to_string(),
-            "u256" => "bigint".to_string(),
-            "usize" => "number".to_string(),
-            "felt252" => "string".to_string(),
-            "ClassHash" => "string".to_string(),
-            "ContractAddress" => "string".to_string(),
-            "ByteArray" => "string".to_string(),
-
-            _ => {
-                if type_name.starts_with("Array") {
-                    format!(
-                        "{}[]",
-                        TypeScriptV2Plugin::map_type(&type_name[6..type_name.len() - 1])
-                    )
-                } else if type_name.starts_with("(") && type_name.ends_with(")") {
-                    format!(
-                        "({})",
-                        type_name[1..type_name.len() - 1]
-                            .split(", ")
-                            .map(|t| TypeScriptV2Plugin::map_type(t))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
+    fn map_type(token: &Token) -> String {
+        match token.type_name().as_str() {
+            "bool" => "RecsType.Boolean".to_string(),
+            "u8" => "RecsType.Number".to_string(),
+            "u16" => "RecsType.Number".to_string(),
+            "u32" => "RecsType.Number".to_string(),
+            "u64" => "RecsType.Number".to_string(),
+            "u128" => "RecsType.BigInt".to_string(),
+            "u256" => "RecsType.BigInt".to_string(),
+            "usize" => "RecsType.Number".to_string(),
+            "felt252" => "RecsType.BigInt".to_string(),
+            "bytes31" => "RecsType.String".to_string(),
+            "ClassHash" => "RecsType.BigInt".to_string(),
+            "ContractAddress" => "RecsType.BigInt".to_string(),
+            "ByteArray" => "RecsType.String".to_string(),
+            "array" => {
+                if let Token::Array(array) = token {
+                    format!("{}[]", TypeScriptV2Plugin::map_type(&array.inner))
                 } else {
-                    type_name.to_string()
+                    panic!("Invalid array token: {:?}", token);
                 }
             }
+            "tuple" => {
+                if let Token::Tuple(tuple) = token {
+                    let inners = tuple
+                        .inners
+                        .iter()
+                        .map(|inner| TypeScriptV2Plugin::map_type(inner))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    format!("({})", inners)
+                } else {
+                    panic!("Invalid tuple token: {:?}", token);
+                }
+            }
+
+            _ => token.type_name().to_string(),
         }
     }
 
@@ -440,7 +443,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         let mut native_fields: Vec<String> = Vec::new();
 
         for field in &token.inners {
-            let mapped = TypeScriptV2Plugin::map_type(field.token.type_name().as_str());
+            let mapped = TypeScriptV2Plugin::map_type(&field.token);
             if mapped == field.token.type_name() {
                 let token = handled_tokens
                     .iter()
@@ -504,10 +507,10 @@ export enum {} {{
                 format!(
                     "{}: {}",
                     arg.0,
-                    if TypeScriptV2Plugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
+                    if TypeScriptV2Plugin::map_type(&arg.1) == arg.1.type_name() {
                         arg.1.type_name()
                     } else {
-                        TypeScriptV2Plugin::map_type(&arg.1.type_name())
+                        TypeScriptV2Plugin::map_type(&arg.1)
                     }
                 )
             })
