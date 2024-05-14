@@ -23,6 +23,9 @@ pub mod error;
 pub mod providers;
 pub mod traits;
 
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
+
 use crate::traits::block::{BlockHashProvider, BlockNumberProvider, BlockProvider, HeaderProvider};
 use crate::traits::state::{StateFactoryProvider, StateProvider};
 use crate::traits::state_update::StateUpdateProvider;

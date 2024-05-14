@@ -25,6 +25,7 @@ tokio = { workspace = true, optional = true }
 default = [ "fork", "in-memory" ]
 fork = [ "dep:futures", "dep:starknet", "dep:tokio", "in-memory" ]
 in-memory = [  ]
+test-utils = [  ]
 
 [dev-dependencies]
 katana-core.workspace = true
