@@ -37,7 +37,7 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
-reqwest = { version = "0.12.4", features = [ "blocking", "rustls-tls" ], default-features = false }
+reqwest.workspace = true
 
 # TODO: use features for each possible DA.
 celestia-rpc = "0.1.1"

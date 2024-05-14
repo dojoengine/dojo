@@ -1318,7 +1318,7 @@ dependencies = [
  "katana-runner",
  "lazy_static",
  "proptest",
- "reqwest 0.11.24",
+ "reqwest 0.12.4",
  "scarb",
  "serde",
  "serde_json",
@@ -2842,7 +2842,7 @@ name = "common"
 version = "0.7.0-alpha.1"
 dependencies = [
  "anyhow",
- "reqwest 0.11.24",
+ "reqwest 0.12.4",
  "thiserror",
 ]
 
@@ -6812,7 +6812,7 @@ dependencies = [
  "metrics",
  "parking_lot 0.12.1",
  "rand",
- "reqwest 0.11.24",
+ "reqwest 0.12.4",
  "serde",
  "serde_json",
  "serde_with",
@@ -10371,9 +10371,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-pki-types"
-version = "1.5.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "beb461507cee2c2ff151784c52762cf4d9ff6a61f3e80968600ed24fa837fa54"
+checksum = "976295e77ce332211c0d24d92c0e83e50f5c5f046d11082cea19f3df13a3562d"
 
 [[package]]
 name = "rustls-webpki"
@@ -10871,9 +10871,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.197"
+version = "1.0.201"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fb1c873e1b9b056a4dc4c0c198b24c3ffa059243875552b2bd0933b1aee4ce2"
+checksum = "780f1cebed1629e4753a1a38a3c72d30b97ec044f0aef68cb26650a3c5cf363c"
 dependencies = [
  "serde_derive",
 ]
@@ -10909,9 +10909,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.197"
+version = "1.0.201"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7eb0b34b42edc17f6b7cac84a52a1c5f0e1bb2227e997ca9011ea3dd34e8610b"
+checksum = "c5e405930b9796f1c00bee880d03fc7e0bb4b9a11afc776885ffe84320da2865"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -12709,7 +12709,7 @@ dependencies = [
  "lazy_static",
  "log",
  "once_cell",
- "reqwest 0.11.24",
+ "reqwest 0.12.4",
  "scarb",
  "scarb-ui",
  "serde",
