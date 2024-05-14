@@ -154,6 +154,8 @@ fn model_union_field() -> Field {
                         )
                         .await?;
 
+                        println!("data: {:#?}", data);
+
                         results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
 
@@ -198,29 +200,41 @@ pub async fn model_data_recursive_query(
                 let mut nested_path = path_array.clone();
                 nested_path.push(field_name.to_string());
 
-                let nested_values =
-                    model_data_recursive_query(conn, nested_path, entity_id, None, nested_mapping)
-                        .await?;
+                let nested_values = model_data_recursive_query(
+                    conn,
+                    nested_path,
+                    entity_id,
+                    if rows.len() > 1 { Some(idx as i64) } else { None },
+                    nested_mapping,
+                )
+                .await?;
                 nested_value_mapping.insert(Name::new(field_name), nested_values);
             } else if let TypeData::List(inner) = type_data {
                 let mut nested_path = path_array.clone();
                 nested_path.push(field_name.to_string());
 
-                let nested_values = if let Value::Object(obj) = model_data_recursive_query(
+                let data = match model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
-                    Some(idx as i64),
+                    None,
                     &IndexMap::from([(Name::new("data"), *inner.clone())]),
                 )
                 .await?
                 {
-                    obj.get("data").expect("array table should have data field").clone()
-                } else {
-                    panic!("array should be an object")
+                    // map our list which uses a data field as a place holder
+                    // for all elements to get the elemnt directly
+                    Value::List(data) => data
+                        .iter()
+                        .map(|v| match v {
+                            Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
+                            _ => unreachable!(),
+                        })
+                        .collect(),
+                    _ => unreachable!(),
                 };
 
-                nested_value_mapping.insert(Name::new(field_name), nested_values);
+                nested_value_mapping.insert(Name::new(field_name), data);
             }
         }
 
