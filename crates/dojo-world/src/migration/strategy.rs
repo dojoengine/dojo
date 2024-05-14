@@ -13,6 +13,10 @@ use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
 
+#[cfg(test)]
+#[path = "strategy_test.rs"]
+mod tests;
+
 #[derive(Debug, Clone)]
 pub struct MigrationStrategy {
     pub world_address: Option<FieldElement>,
@@ -63,7 +67,7 @@ impl MigrationStrategy {
     pub fn resolve_variable(&mut self, world_address: FieldElement) -> Result<()> {
         let contracts_clone = self.contracts.clone();
         for contract in self.contracts.iter_mut() {
-            for field in contract.constructor_calldata.iter_mut() {
+            for field in contract.diff.constructor_calldata.iter_mut() {
                 if let Some(dependency) = field.strip_prefix("$contract_address") {
                     let dependency_contract =
                         contracts_clone.iter().find(|c| &c.diff.name == &dependency).unwrap();
@@ -200,7 +204,6 @@ fn evaluate_contracts_to_migrate(
                     diff: c.clone(),
                     artifact_path: path.clone(),
                     salt: generate_salt(&c.name),
-                    constructor_calldata: c.constructor_calldata.clone(),
                     ..Default::default()
                 });
             }

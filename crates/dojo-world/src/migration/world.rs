@@ -4,13 +4,11 @@ use std::str::FromStr;
 
 use anyhow::{bail, Result};
 use convert_case::{Case, Casing};
-use starknet::core::utils::get_contract_address;
 use starknet_crypto::FieldElement;
 use topological_sort::TopologicalSort;
 
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
-use super::strategy::generate_salt;
 use super::StateDiff;
 use crate::manifest::{
     BaseManifest, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
@@ -56,7 +54,7 @@ impl WorldDiff {
             })
             .collect::<Vec<_>>();
 
-        let mut contracts = local
+        let contracts = local
             .contracts
             .iter()
             .map(|contract| {
@@ -125,7 +123,7 @@ impl WorldDiff {
             ts.insert(curr_name);
 
             for field in &contract.constructor_calldata {
-                if let Some(dependency) = field.strip_prefix("$contract_address") {
+                if let Some(dependency) = field.strip_prefix("$contract_address:") {
                     ts.add_dependency(dependency, curr_name);
                 } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
                     ts.add_dependency(dependency, curr_name);

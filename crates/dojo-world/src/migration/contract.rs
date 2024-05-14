@@ -51,7 +51,6 @@ pub struct ContractMigration {
     pub diff: ContractDiff,
     pub artifact_path: PathBuf,
     pub contract_address: FieldElement,
-    pub constructor_calldata: Vec<String>,
 }
 
 impl ContractMigration {
