@@ -22,6 +22,7 @@ smol_str.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
+topological-sort.workspace = true
 tracing.workspace = true
 
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.5", features = [ "abigen-rs" ] }
@@ -39,8 +40,8 @@ assert_matches.workspace = true
 dojo-lang.workspace = true
 dojo-test-utils = { path = "../dojo-test-utils" }
 similar-asserts.workspace = true
-tokio.workspace = true
 tempfile = "3.3.0"
+tokio.workspace = true
 
 [features]
 contracts = [ "dep:dojo-types", "dep:http" ]

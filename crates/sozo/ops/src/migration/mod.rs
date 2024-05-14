@@ -79,7 +79,9 @@ where
 
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
-    let diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
+    let mut diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
+    diff.update_order()?;
+
     let total_diffs = diff.count_diffs();
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
 
@@ -90,6 +92,7 @@ where
 
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
+    strategy.resolve_variable(world_address)?;
 
     if dry_run {
         print_strategy(&ui, account.provider(), &strategy).await;

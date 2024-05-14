@@ -13,7 +13,7 @@ use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MigrationStrategy {
     pub world_address: Option<FieldElement>,
     pub world: Option<ContractMigration>,
@@ -58,6 +58,31 @@ impl MigrationStrategy {
         });
 
         MigrationItemsInfo { new, update }
+    }
+
+    pub fn resolve_variable(&mut self, world_address: FieldElement) -> Result<()> {
+        let contracts_clone = self.contracts.clone();
+        for contract in self.contracts.iter_mut() {
+            for field in contract.constructor_calldata.iter_mut() {
+                if let Some(dependency) = field.strip_prefix("$contract_address") {
+                    let dependency_contract =
+                        contracts_clone.iter().find(|c| &c.diff.name == &dependency).unwrap();
+                    let contract_address = get_contract_address(
+                        generate_salt(&dependency_contract.diff.name),
+                        dependency_contract.diff.base_class_hash,
+                        &[],
+                        world_address,
+                    );
+                    *field = contract_address.to_string();
+                } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
+                    let dependency_contract =
+                        contracts_clone.iter().find(|c| &c.diff.name == &dependency).unwrap();
+                    *field = dependency_contract.diff.local_class_hash.to_string();
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -175,6 +200,7 @@ fn evaluate_contracts_to_migrate(
                     diff: c.clone(),
                     artifact_path: path.clone(),
                     salt: generate_salt(&c.name),
+                    constructor_calldata: c.constructor_calldata.clone(),
                     ..Default::default()
                 });
             }
