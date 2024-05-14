@@ -7,7 +7,7 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-assert_fs = "1.0.9"
+assert_fs.workspace = true
 chrono.workspace = true
 home = "0.5.5"
 katana-core.workspace = true

@@ -7,7 +7,7 @@ version.workspace = true
 
 [dependencies]
 crypto-bigint.workspace = true
-hex = "0.4.3"
+hex.workspace = true
 itertools.workspace = true
 serde.workspace = true
 starknet.workspace = true

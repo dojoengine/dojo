@@ -35,5 +35,5 @@ rstest.workspace = true
 rstest_reuse.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
-tempfile = "3.8.1"
+tempfile.workspace = true
 url.workspace = true

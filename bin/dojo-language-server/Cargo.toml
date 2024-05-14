@@ -18,7 +18,7 @@ cairo-lang-utils.workspace = true
 clap.workspace = true
 dojo-lang.workspace = true
 log.workspace = true
-salsa = "0.16.1"
+salsa.workspace = true
 smol_str.workspace = true
 tokio = { version = "1.18.2", features = [ "full", "sync" ] }
 tower-lsp = "0.20.0"
