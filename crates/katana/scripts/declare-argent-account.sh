@@ -1,10 +1,10 @@
 #! /bin/bash
 
 STD_ARGENT_ACCOUNT_0_3_0_CLASS_HASH="0x01a736d6ed154502257f02b1ccdf4d9d1089f80811cd6acad48e6b6a9d1f2003"
-STD_ARGENT_ACCOUNT_0_3_0_COMPILED_FILE="../primitives/contracts/compiled/argent_ArgentAccount_0.3.0.json"
+STD_ARGENT_ACCOUNT_0_3_0_COMPILED_FILE="../contracts/compiled/argent_ArgentAccount_0.3.0.json"
 
 STD_ARGENT_ACCOUNT_0_3_1_CLASS_HASH="0x29927c8af6bccf3f6fda035981e765a7bdbf18a2dc0d630494f8758aa908e2b"
-STD_ARGENT_ACCOUNT_0_3_1_COMPILED_FILE="../primitives/contracts/compiled/argent_ArgentAccount_0.3.1.json"
+STD_ARGENT_ACCOUNT_0_3_1_COMPILED_FILE="../contracts/compiled/argent_ArgentAccount_0.3.1.json"
 
 TEMP_ACCOUNT_FILE="temp-account.json"
 TEMP_KEYSTORE_FILE="temp-keystore.json"
@@ -20,6 +20,11 @@ ACCOUNT_ADDRESS="$1"
 PRIVATE_KEY="$2"
 RPC_URL="$3"
 ARGENT_CLASS_HASH="$4"
+
+echo "Declaring Argent account with the following parameters:"
+echo "Account address: $ACCOUNT_ADDRESS"
+echo "Private key: $PRIVATE_KEY"
+echo "RPC URL: $RPC_URL"
 
 if [[ -z "$ACCOUNT_ADDRESS" ]] || [[ -z "$PRIVATE_KEY" ]] || [[ -z "$RPC_URL" ]]; then
 	# Make sure that the account address and private key are provided
@@ -57,9 +62,14 @@ else
 	exit 1
 fi
 
+echo "Declaring the following classes: ${CLASS_TO_DECLARE[@]}"
 
+echo "Fetching account"
+echo "starkli account fetch $ACCOUNT_ADDRESS --rpc $RPC_URL --output $TEMP_ACCOUNT_FILE"
 starkli account fetch $ACCOUNT_ADDRESS --rpc $RPC_URL --output $TEMP_ACCOUNT_FILE &> /dev/null
 
 for file in "${CLASS_TO_DECLARE[@]}"; do
+	echo "Declaring $file"
+	echo "starkli declare --account $TEMP_ACCOUNT_FILE $file --private-key $PRIVATE_KEY --rpc $RPC_URL"
 	starkli declare --account $TEMP_ACCOUNT_FILE $file --private-key $PRIVATE_KEY --rpc $RPC_URL
 done
