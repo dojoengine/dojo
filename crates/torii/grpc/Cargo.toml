@@ -24,10 +24,10 @@ strum_macros.workspace = true
 
 # server
 hex.workspace = true
-hyper = "0.14.27"
-rand = "0.8.5"
+hyper.workspace = true
+rand.workspace = true
 serde_json.workspace = true
-tower = "0.4.13"
+tower.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

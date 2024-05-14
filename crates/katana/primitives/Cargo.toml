@@ -12,10 +12,10 @@ base64.workspace = true
 cairo-vm.workspace = true
 derive_more.workspace = true
 lazy_static = "1.4.0"
-rand = { version = "0.8.5", features = [ "small_rng" ] }
+rand = { workspace = true, features = [ "small_rng" ] }
 rayon.workspace = true
 serde.workspace = true
-serde_json = { workspace = true, features = [ "arbitrary_precision" ] }
+serde_json.workspace = true
 serde_with.workspace = true
 starknet-crypto = "0.6.1"
 starknet.workspace = true
@@ -25,8 +25,8 @@ thiserror.workspace = true
 
 alloy-primitives.workspace = true
 cairo-lang-sierra.workspace = true
-cairo-lang-starknet.workspace = true
 cairo-lang-starknet-classes.workspace = true
+cairo-lang-starknet.workspace = true
 flate2.workspace = true
 starknet_api.workspace = true
 

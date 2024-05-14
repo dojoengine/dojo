@@ -7805,9 +7805,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.20"
+version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
+checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
 dependencies = [
  "value-bag",
 ]
@@ -10935,7 +10935,6 @@ version = "1.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e17db7126d17feb94eb3fad46bf1a96b034e8aacbc2e775fe81505f8b0b2813"
 dependencies = [
- "indexmap 2.2.5",
  "itoa",
  "ryu",
  "serde",
@@ -12638,7 +12637,7 @@ dependencies = [
  "http-body 0.4.6",
  "hyper 0.14.28",
  "hyper-reverse-proxy",
- "indexmap 1.9.3",
+ "indexmap 2.2.5",
  "lazy_static",
  "scarb",
  "serde",
@@ -12866,7 +12865,7 @@ dependencies = [
  "http-body 0.4.6",
  "hyper 0.14.28",
  "hyper-reverse-proxy",
- "indexmap 1.9.3",
+ "indexmap 2.2.5",
  "lazy_static",
  "scarb",
  "serde",

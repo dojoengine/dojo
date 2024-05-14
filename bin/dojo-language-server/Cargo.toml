@@ -17,7 +17,7 @@ cairo-lang-test-plugin.workspace = true
 cairo-lang-utils.workspace = true
 clap.workspace = true
 dojo-lang.workspace = true
-log = "0.4.14"
+log.workspace = true
 salsa = "0.16.1"
 smol_str.workspace = true
 tokio = { version = "1.18.2", features = [ "full", "sync" ] }
