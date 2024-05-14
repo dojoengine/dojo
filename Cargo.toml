@@ -54,7 +54,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.9", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "29f44929", features = [ "abigen-rs" ] }
 common = { path = "crates/common" }
 
 # metrics
