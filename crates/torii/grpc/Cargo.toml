@@ -8,7 +8,7 @@ version.workspace = true
 [dependencies]
 bytes = "1.0"
 dojo-types = { path = "../../dojo-types" }
-futures-util = "0.3.28"
+futures-util.workspace = true
 futures.workspace = true
 parking_lot.workspace = true
 rayon.workspace = true
@@ -17,10 +17,10 @@ starknet.workspace = true
 thiserror.workspace = true
 torii-core = { path = "../core", optional = true }
 
+crypto-bigint.workspace = true
 serde.workspace = true
 strum.workspace = true
 strum_macros.workspace = true
-crypto-bigint.workspace = true
 
 # server
 hex.workspace = true
@@ -31,10 +31,10 @@ tower = "0.4.13"
 tracing.workspace = true
 
 [dev-dependencies]
-scarb.workspace = true
 dojo-test-utils.workspace = true
-sozo-ops.workspace = true
 dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
+scarb.workspace = true
+sozo-ops.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true
