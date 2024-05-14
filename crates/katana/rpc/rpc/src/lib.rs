@@ -65,7 +65,7 @@ pub async fn spawn<EF: ExecutorFactory>(
     let cors = CorsLayer::new()
             // Allow `POST` when accessing the resource
             .allow_methods([Method::POST, Method::GET])
-            .allow_headers([hyper::header::CONTENT_TYPE]);
+            .allow_headers(vec![hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
 
     let cors =
         config.allowed_origins.clone().map(|allowed_origins| match allowed_origins.as_slice() {
