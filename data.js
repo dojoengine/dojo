@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715632551927,
+  "lastUpdate": 1715684839305,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7645,6 +7645,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16789611,
             "range": "± 249486",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a095ccf01d4faf83642887fa572a71966d7bfcfc",
+          "message": "dev(sozo): use `TransationOption` instead of `FeeOption` (#1927)\n\n* use TransactionOption instead of FeeOption\r\n\r\n* clean up\r\n\r\n* print more info about error\r\n\r\n* implement TransactionExt for AccountDeployment",
+          "timestamp": "2024-05-14T16:29:06+05:30",
+          "tree_id": "c85f75f119868119b15f667159d881c8ee25dac0",
+          "url": "https://github.com/dojoengine/dojo/commit/a095ccf01d4faf83642887fa572a71966d7bfcfc"
+        },
+        "date": 1715684838675,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17265490,
+            "range": "± 259414",
             "unit": "ns/iter"
           }
         ]
