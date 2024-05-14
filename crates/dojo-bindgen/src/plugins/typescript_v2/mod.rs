@@ -43,7 +43,7 @@ impl TypeScriptV2Plugin {
                     let inners = tuple
                         .inners
                         .iter()
-                        .map(|inner| TypeScriptV2Plugin::map_type(inner))
+                        .map(TypeScriptV2Plugin::map_type)
                         .collect::<Vec<String>>()
                         .join(", ");
                     format!("[{}]", inners)
