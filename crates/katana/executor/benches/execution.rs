@@ -38,10 +38,10 @@ fn blockifier(group: &mut BenchmarkGroup<'_, WallTime>) {
                 let flags = SimulationFlag::new().skip_validate().skip_fee_transfer();
 
                 // setup blockifier cached state
-                let state = StateProviderDb::from(state);
-                let cache = GlobalContractCache::new(100);
+                let contract_cache = GlobalContractCache::new(100);
+                let state = CachedState::new(StateProviderDb::from(state), contract_cache);
 
-                (CachedState::new(state, cache), block_context, flags, tx)
+                (state, block_context, flags, tx)
             },
             |(mut state, block_context, flags, tx)| {
                 transact(&mut state, &block_context, &flags, tx)
