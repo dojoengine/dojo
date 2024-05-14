@@ -6,6 +6,7 @@ use crate::{providers::in_memory::InMemoryProvider, traits::block::BlockWriter};
 use katana_db::mdbx::{test_utils, DbEnvKind};
 use katana_primitives::block::{BlockHash, FinalityStatus};
 use katana_primitives::class::CompiledClass;
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{
     DevGenesisAccount, GenesisAccountAlloc, GenesisAllocation,
 };

@@ -21,11 +21,13 @@ futures = { workspace = true, optional = true }
 starknet = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
+serde_json = { workspace = true, optional = true }
+
 [features]
 default = [ "fork", "in-memory" ]
 fork = [ "dep:futures", "dep:starknet", "dep:tokio", "in-memory" ]
 in-memory = [  ]
-test-utils = [  ]
+test-utils = [ "dep:serde_json" ]
 
 [dev-dependencies]
 katana-core.workspace = true
