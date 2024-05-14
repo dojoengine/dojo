@@ -13,7 +13,7 @@ on:
       - ".github/workflows/devcontainer.yml"
       - "!.devcontainer/devcontainer.json"
   release:
-    types: [created]
+    types: [published, prereleased]
 
 jobs:
   build-and-push:
@@ -76,7 +76,7 @@ jobs:
   propose-update-pr:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'create' && startsWith(github.ref, 'refs/tags/'))
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'release' && startsWith(github.ref, 'refs/tags/'))
     permissions:
       pull-requests: write
       contents: write
