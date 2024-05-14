@@ -7,9 +7,8 @@ STD_ARGENT_ACCOUNT_0_3_1_CLASS_HASH="0x29927c8af6bccf3f6fda035981e765a7bdbf18a2d
 STD_ARGENT_ACCOUNT_0_3_1_COMPILED_FILE="../contracts/compiled/argent_ArgentAccount_0.3.1.json"
 
 TEMP_ACCOUNT_FILE="temp-account.json"
-TEMP_KEYSTORE_FILE="temp-keystore.json"
 
-trap "rm -f $TEMP_ACCOUNT_FILE $TEMP_KEYSTORE_FILE" EXIT
+trap "rm -f $TEMP_ACCOUNT_FILE" EXIT
 
 # This is helper script is for declaring the standard Argent account to Katana as it doesn't come as a default.
 # Argent account contract source code: https://github.com/argentlabs/argent-contracts-starknet/blob/53d01c0d6dce4fd30db955c3d698f658cdda1796/contracts/account/src/argent_account.cairo
@@ -20,11 +19,6 @@ ACCOUNT_ADDRESS="$1"
 PRIVATE_KEY="$2"
 RPC_URL="$3"
 ARGENT_CLASS_HASH="$4"
-
-echo "Declaring Argent account with the following parameters:"
-echo "Account address: $ACCOUNT_ADDRESS"
-echo "Private key: $PRIVATE_KEY"
-echo "RPC URL: $RPC_URL"
 
 if [[ -z "$ACCOUNT_ADDRESS" ]] || [[ -z "$PRIVATE_KEY" ]] || [[ -z "$RPC_URL" ]]; then
 	# Make sure that the account address and private key are provided
@@ -62,14 +56,8 @@ else
 	exit 1
 fi
 
-echo "Declaring the following classes: ${CLASS_TO_DECLARE[@]}"
-
-echo "Fetching account"
-echo "starkli account fetch $ACCOUNT_ADDRESS --rpc $RPC_URL --output $TEMP_ACCOUNT_FILE"
 starkli account fetch $ACCOUNT_ADDRESS --rpc $RPC_URL --output $TEMP_ACCOUNT_FILE &> /dev/null
 
 for file in "${CLASS_TO_DECLARE[@]}"; do
-	echo "Declaring $file"
-	echo "starkli declare --account $TEMP_ACCOUNT_FILE $file --private-key $PRIVATE_KEY --rpc $RPC_URL"
 	starkli declare --account $TEMP_ACCOUNT_FILE $file --private-key $PRIVATE_KEY --rpc $RPC_URL
 done
