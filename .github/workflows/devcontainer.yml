@@ -13,7 +13,7 @@ on:
       - ".github/workflows/devcontainer.yml"
       - "!.devcontainer/devcontainer.json"
   release:
-    types: [published, prereleased]
+    types: [published]
 
 jobs:
   build-and-push:
@@ -69,7 +69,8 @@ jobs:
           tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
           build-args: |
             VARIANT=bookworm
-            DOJO_VERSION=${{ github.event_name == 'release' && github.event.release.tag_name || 'stable' }}
+            BUILD_TYPE=${{ github.event_name }}
+            DOJO_VERSION=${{ github.event.release.tag_name }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 
