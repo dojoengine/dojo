@@ -1,8 +1,5 @@
 use std::sync::Arc;
 
-use crate::providers::db::DbProvider;
-use crate::{providers::in_memory::InMemoryProvider, traits::block::BlockWriter};
-
 use katana_db::mdbx::{test_utils, DbEnvKind};
 use katana_primitives::block::{BlockHash, FinalityStatus};
 use katana_primitives::class::CompiledClass;
@@ -13,6 +10,10 @@ use katana_primitives::genesis::allocation::{
 use katana_primitives::genesis::{Genesis, GenesisClass};
 use katana_primitives::utils::class::parse_compiled_class_v1;
 use starknet::macros::felt;
+
+use crate::providers::db::DbProvider;
+use crate::providers::in_memory::InMemoryProvider;
+use crate::traits::block::BlockWriter;
 
 /// Creates an in-memory provider with initial states loaded for testing.
 pub fn test_in_memory_provider() -> InMemoryProvider {
