@@ -31,7 +31,7 @@ smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.28.0", features = [ "full" ] }
-toml = "0.7.1"
+toml.workspace = true
 tracing.workspace = true
 url = "2.2.2"
 
