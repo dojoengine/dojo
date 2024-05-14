@@ -87,8 +87,8 @@ pub(super) fn transact<S: StateReader>(
             }
         }?;
 
-        // There are a few case where the `actual_fee` field of the transaction info is not set where
-        // the fee is skipped and thus not charged for the transaction (e.g. when the
+        // There are a few case where the `actual_fee` field of the transaction info is not set
+        // where the fee is skipped and thus not charged for the transaction (e.g. when the
         // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
         // these cases, we still want to calculate the fee.
         let overall_fee = if info.actual_fee == Fee(0) {
