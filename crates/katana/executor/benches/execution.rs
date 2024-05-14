@@ -11,7 +11,7 @@ use crate::utils::{envs, tx};
 
 mod utils;
 
-fn transact(c: &mut Criterion) {
+fn executor_transact(c: &mut Criterion) {
     let mut group = c.benchmark_group("Invoke.ERC20.transfer");
     group.measurement_time(Duration::from_millis(200));
     group.warm_up_time(Duration::from_millis(200));
@@ -54,7 +54,7 @@ fn blockifier(group: &mut BenchmarkGroup<'_, WallTime>) {
 criterion_group! {
     name = benches;
     config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
-    targets = transact
+    targets = executor_transact
 }
 
 criterion_main!(benches);
