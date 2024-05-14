@@ -42,7 +42,7 @@ impl UnityPlugin {
                     let inners = tuple
                         .inners
                         .iter()
-                        .map(|inner| UnityPlugin::map_type(inner))
+                        .map(UnityPlugin::map_type)
                         .collect::<Vec<String>>()
                         .join(", ");
                     format!("Tuple<{}>", inners)
