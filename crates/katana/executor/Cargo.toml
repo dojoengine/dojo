@@ -34,7 +34,7 @@ cairo-vm = { workspace = true, optional = true }
 [dev-dependencies]
 anyhow.workspace = true
 cairo-vm.workspace = true
-katana-provider.workspace = true
+katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
@@ -54,3 +54,4 @@ default = [ "blockifier" ]
 [[bench]]
 harness = false
 name = "execution"
+required-features = [ "blockifier" ]

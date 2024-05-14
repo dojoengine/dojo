@@ -62,7 +62,7 @@ use crate::abstraction::{EntryPointCall, SimulationFlag};
 use crate::utils::build_receipt;
 use crate::{ExecutionError, ExecutionResult};
 
-pub(super) fn transact<S: StateReader>(
+pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
     simulation_flags: &SimulationFlag,
@@ -357,7 +357,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 }
 
 /// Create a block context from the chain environment values.
-pub(crate) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
+pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
     let fee_token_addresses = FeeTokenAddresses {
         eth_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.eth),
         strk_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.strk),
