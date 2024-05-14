@@ -23,25 +23,25 @@ fn blockifier(group: &mut BenchmarkGroup<'_, WallTime>) {
     use katana_executor::implementation::blockifier::utils::block_context_from_envs;
     use katana_executor::implementation::blockifier::utils::transact;
 
+    let provider = test_utils::test_in_memory_provider();
+    let flags = SimulationFlag::new().skip_validate().skip_fee_transfer();
+
+    let tx = tx();
+    let (block_env, cfg_env) = envs();
+
     group.bench_function("Blockifier", |b| {
         b.iter_batched(
             || {
                 // setup state
-                let provider = test_utils::test_in_memory_provider();
                 let state = provider.latest().unwrap();
-
-                let tx = tx();
-                let (block_env, cfg_env) = envs();
-
                 // block context
                 let block_context = block_context_from_envs(&block_env, &cfg_env);
-                let flags = SimulationFlag::new().skip_validate().skip_fee_transfer();
 
                 // setup blockifier cached state
                 let contract_cache = GlobalContractCache::new(100);
                 let state = CachedState::new(StateProviderDb::from(state), contract_cache);
 
-                (state, block_context, flags, tx)
+                (state, block_context, flags.clone(), tx.clone())
             },
             |(mut state, block_context, flags, tx)| {
                 transact(&mut state, &block_context, &flags, tx)
