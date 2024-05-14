@@ -5,6 +5,7 @@ use cairo_vm::vm::runners::builtin_runner::{
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
     SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
 };
+use katana_primitives::block::GasPrices;
 use katana_primitives::env::{BlockEnv, CfgEnv, FeeTokenAddressses};
 use katana_primitives::transaction::{ExecutableTxWithHash, InvokeTx, InvokeTxV1};
 use katana_primitives::{genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS, FieldElement};
@@ -28,7 +29,7 @@ pub fn tx() -> ExecutableTxWithHash {
 }
 
 pub fn envs() -> (BlockEnv, CfgEnv) {
-    let block = BlockEnv::default();
+    let block = BlockEnv { l1_gas_prices: GasPrices { eth: 1, strk: 1 }, ..Default::default() };
     let cfg = CfgEnv {
         max_recursion_depth: 100,
         validate_max_n_steps: 4_000_000,
