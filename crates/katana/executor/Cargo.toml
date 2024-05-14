@@ -42,8 +42,15 @@ serde_json.workspace = true
 similar-asserts.workspace = true
 tokio.workspace = true
 
+criterion.workspace = true
+pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
+
 [features]
 blockifier = [ "dep:blockifier", "dep:cairo-vm" ]
 default = [ "blockifier" ]
 # native = [ "sir", "sir/cairo-native" ]
 # sir = [ "dep:sir", "dep:starknet-types-core" ]
+
+[[bench]]
+harness = false
+name = "execution"

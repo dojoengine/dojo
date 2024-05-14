@@ -209,6 +209,8 @@ wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "
 alloy-primitives = { version = "0.7.2", default-features = false }
 alloy-sol-types = { version = "0.7.2", default-features = false }
 
+criterion = "0.5.1"
+
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
