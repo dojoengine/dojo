@@ -213,13 +213,6 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                             }
                             _ => Err("incorrect value, requires Value::Object".into()),
                         };
-                    } else if let TypeData::Array(_) = type_data {
-                        println!("Array type: {:?}", value);
-                        // Array types resolution
-                        return match value {
-                            Value::List(values) => Ok(Some(Value::List(values.clone()))),
-                            _ => Err("Incorrect value, requires Value::List".into()),
-                        };
                     }
 
                     // Simple types resolution

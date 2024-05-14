@@ -200,7 +200,7 @@ pub async fn model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
-                    if rows.len() > 1 { Some(idx as i64) } else { None },
+                    None,
                     nested_mapping,
                 )
                 .await?;

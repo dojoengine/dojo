@@ -35,15 +35,15 @@ impl TypeData {
         matches!(self, TypeData::Nested(_))
     }
 
-    pub fn is_array(&self) -> bool {
-        matches!(self, TypeData::Array(_))
+    pub fn is_list(&self) -> bool {
+        matches!(self, TypeData::List(_))
     }
 
     pub fn type_mapping(&self) -> Option<&IndexMap<Name, TypeData>> {
         match self {
             TypeData::Simple(_) => None,
             TypeData::Nested((_, type_mapping)) => Some(type_mapping),
-            TypeData::List(inner) => inner.type_mapping(),
+            TypeData::List(_) => None,
         }
     }
 }
