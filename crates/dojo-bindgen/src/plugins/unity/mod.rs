@@ -45,7 +45,7 @@ impl UnityPlugin {
                         .map(|inner| UnityPlugin::map_type(inner))
                         .collect::<Vec<String>>()
                         .join(", ");
-                    format!("({})", inners)
+                    format!("Tuple<{}>", inners)
                 } else {
                     panic!("Invalid tuple token: {:?}", token);
                 }
@@ -69,13 +69,7 @@ impl UnityPlugin {
         let fields = token
             .inners
             .iter()
-            .map(|field| {
-                format!(
-                    "public {} {};",
-                    UnityPlugin::map_type(&field.token),
-                    field.name
-                )
-            })
+            .map(|field| format!("public {} {};", UnityPlugin::map_type(&field.token), field.name))
             .collect::<Vec<String>>()
             .join("\n    ");
 
@@ -204,19 +198,10 @@ public class {} : ModelInstance {{
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
-        fn map_type(token: &Token) -> String {
-            match token {
-                Token::CoreBasic(_) => UnityPlugin::map_type(&token),
-                Token::Composite(t) => t.type_name().to_string(),
-                Token::Array(t) => format!("{}[]", map_type(&t.inner)),
-                _ => panic!("Unsupported token type: {:?}", token),
-            }
-        }
-
         let args = system
             .inputs
             .iter()
-            .map(|arg| format!("{} {}", map_type(&arg.1), &arg.0))
+            .map(|arg| format!("{} {}", UnityPlugin::map_type(&arg.1), &arg.0))
             .collect::<Vec<String>>()
             .join(", ");
 

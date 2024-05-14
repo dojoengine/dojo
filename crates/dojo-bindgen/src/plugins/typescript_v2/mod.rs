@@ -46,7 +46,7 @@ impl TypeScriptV2Plugin {
                         .map(|inner| TypeScriptV2Plugin::map_type(inner))
                         .collect::<Vec<String>>()
                         .join(", ");
-                    format!("({})", inners)
+                    format!("[{}]", inners)
                 } else {
                     panic!("Invalid tuple token: {:?}", token);
                 }
