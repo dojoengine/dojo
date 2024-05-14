@@ -131,7 +131,8 @@ pub struct ServerOptions {
     pub max_connections: u32,
 
     #[arg(long)]
-    #[arg(help = "Enables the CORS layer and sets the allowed origins.")]
+    #[arg(value_delimiter = ',')]
+    #[arg(help = "Enables the CORS layer and sets the allowed origins, separated by commas.")]
     pub allowed_origins: Option<Vec<String>>,
 }
 
@@ -202,7 +203,7 @@ pub struct EnvironmentOptions {
 
 impl KatanaArgs {
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forked_backend=trace,server=debug,\
+        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forking::backend=trace,server=debug,\
                                           katana_core=trace,blockifier=off,jsonrpsee_server=off,\
                                           hyper=off,messaging=debug,node=error";
 

@@ -20,7 +20,7 @@ use parking_lot::RwLock;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use self::backend::{ForkedBackend, ForkedBackendError, SharedStateProvider};
+use self::backend::{Backend, BackendError, SharedStateProvider};
 use self::state::ForkedStateDb;
 use super::in_memory::cache::{CacheDb, CacheStateDb};
 use super::in_memory::state::HistoricalStates;
@@ -49,8 +49,8 @@ impl ForkedProvider {
     pub fn new(
         provider: Arc<JsonRpcClient<HttpTransport>>,
         block_id: BlockHashOrNumber,
-    ) -> Result<Self, ForkedBackendError> {
-        let backend = ForkedBackend::new_with_backend_thread(provider, block_id)?;
+    ) -> Result<Self, BackendError> {
+        let backend = Backend::new(provider, block_id)?;
         let shared_provider = SharedStateProvider::new_with_backend(backend);
 
         let storage = RwLock::new(CacheDb::new(()));

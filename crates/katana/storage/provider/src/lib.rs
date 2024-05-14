@@ -6,7 +6,7 @@ use katana_primitives::block::{
     SealedBlockWithStatus,
 };
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
-use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey, StorageValue};
+use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -24,7 +24,6 @@ pub mod providers;
 pub mod traits;
 
 use crate::traits::block::{BlockHashProvider, BlockNumberProvider, BlockProvider, HeaderProvider};
-use crate::traits::contract::ContractInfoProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{ReceiptProvider, TransactionProvider, TransactionsProviderExt};
@@ -295,15 +294,6 @@ where
 {
     fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
         self.provider.state_update(block_id)
-    }
-}
-
-impl<Db> ContractInfoProvider for BlockchainProvider<Db>
-where
-    Db: ContractInfoProvider,
-{
-    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
-        self.provider.contract(address)
     }
 }
 

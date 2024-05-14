@@ -138,6 +138,7 @@ mod tests {
     use katana_primitives::block::{
         Block, FinalityStatus, GasPrices, Header, SealedBlockWithStatus,
     };
+    use katana_primitives::fee::TxFeeInfo;
     use katana_primitives::genesis::constant::{
         DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
         DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
@@ -156,6 +157,7 @@ mod tests {
     };
     use katana_provider::traits::state::StateFactoryProvider;
     use katana_provider::traits::transaction::{TransactionProvider, TransactionTraceProvider};
+    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use super::Blockchain;
@@ -254,7 +256,18 @@ mod tests {
                 .insert_block_with_states_and_receipts(
                     dummy_block.clone(),
                     StateUpdatesWithDeclaredClasses::default(),
-                    vec![Receipt::Invoke(InvokeTxReceipt::default())],
+                    vec![Receipt::Invoke(InvokeTxReceipt {
+                        revert_error: None,
+                        events: Vec::new(),
+                        messages_sent: Vec::new(),
+                        execution_resources: Default::default(),
+                        fee: TxFeeInfo {
+                            gas_price: 0,
+                            overall_fee: 0,
+                            gas_consumed: 0,
+                            unit: PriceUnit::Wei,
+                        },
+                    })],
                     vec![TxExecInfo::default()],
                 )
                 .unwrap();

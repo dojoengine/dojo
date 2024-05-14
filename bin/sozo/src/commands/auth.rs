@@ -58,7 +58,7 @@ pub enum AuthCommand {
 
 impl AuthArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(command=?self.command, "Executing Auth command.", );
+        trace!(args = ?self);
 
         let env_metadata = utils::load_metadata_from_config(config)?;
         trace!(metadata=?env_metadata, "Loaded environment.");
