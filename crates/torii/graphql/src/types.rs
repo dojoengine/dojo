@@ -16,14 +16,14 @@ pub type TypeMapping = IndexMap<Name, TypeData>;
 pub enum TypeData {
     Simple(TypeRef),
     Nested((TypeRef, IndexMap<Name, TypeData>)),
-    List((Box<TypeData>, IndexMap<Name, TypeData>)),
+    List(Box<TypeData>),
 }
 
 impl TypeData {
     pub fn type_ref(&self) -> TypeRef {
         match self {
             TypeData::Simple(ty) | TypeData::Nested((ty, _)) => ty.clone(),
-            TypeData::List((inner, _)) => TypeRef::List(Box::new(inner.type_ref())),
+            TypeData::List(inner) => TypeRef::List(Box::new(inner.type_ref())),
         }
     }
 

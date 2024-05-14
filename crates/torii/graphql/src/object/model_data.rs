@@ -227,8 +227,12 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
 
                 // Catch model union resolutions, async-graphql sends union types as IndexMap<Name,
                 // ConstValue>
-                if let Some(value_mapping) = ctx.parent_value.downcast_ref::<ValueMapping>() {
-                    return Ok(Some(value_mapping.get(&field_name).unwrap().clone()));
+                if let Some(value_mapping) = ctx.parent_value.as_value() {
+                    if let Value::Object(value_mapping) = value_mapping {
+                        return Ok(Some(value_mapping.get(&field_name).unwrap().clone()));
+                    }
+                    
+                    return Ok(Some(value_mapping.clone()));
                 }
 
                 Err("Field resolver only accepts Value or IndexMap".into())

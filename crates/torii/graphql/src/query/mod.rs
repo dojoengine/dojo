@@ -65,7 +65,7 @@ fn build_type_mapping(
         })
         .collect::<sqlx::Result<TypeMapping>>()?;
 
-    println!("Type Mapping: {:#?}", type_mapping);
+    // println!("Type Mapping: {:#?}", type_mapping);
 
     Ok(type_mapping)
 }
@@ -76,7 +76,7 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
         "Primitive" => TypeData::Simple(TypeRef::named(&member.ty)),
         "Enum" => TypeData::Simple(TypeRef::named("Enum")),
         "ByteArray" => TypeData::Simple(TypeRef::named("ByteArray")),
-        "Array" => TypeData::List((
+        "Array" => TypeData::List(
             Box::new(member_to_type_data(
                 nested_members
                     .iter()
@@ -87,20 +87,7 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                     .expect("Array type should have nested type"),
                 nested_members,
             )),
-            nested_members
-                .iter()
-                .filter_map(|&nested_member| {
-                    if nested_member.model_id == member.model_id
-                        && nested_member.id.ends_with(&member.name)
-                    {
-                        let type_data = member_to_type_data(member, nested_members);
-                        Some((Name::new(&member.name), type_data))
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
-        )),
+        ),
         _ => parse_nested_type(
             &member.model_id,
             &member.id,

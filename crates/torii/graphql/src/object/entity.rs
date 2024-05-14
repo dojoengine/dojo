@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
@@ -196,14 +198,28 @@ pub async fn model_data_recursive_query(
                 let mut nested_path = path_array.clone();
                 nested_path.push(field_name.to_string());
 
-                let nested_values = model_data_recursive_query(
+                let nested_values =
+                    model_data_recursive_query(conn, nested_path, entity_id, None, nested_mapping)
+                        .await?;
+                nested_value_mapping.insert(Name::new(field_name), nested_values);
+            } else if let TypeData::List(inner) = type_data {
+                let mut nested_path = path_array.clone();
+                nested_path.push(field_name.to_string());
+
+                let nested_values = if let Value::Object(obj) = model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
-                    None,
-                    nested_mapping,
+                    Some(idx as i64),
+                    &IndexMap::from([(Name::new("data"), *inner.clone())]),
                 )
-                .await?;
+                .await?
+                {
+                    obj.get("data").expect("array table should have data field").clone()
+                } else {
+                    panic!("array should be an object")
+                };
+
                 nested_value_mapping.insert(Name::new(field_name), nested_values);
             }
         }
