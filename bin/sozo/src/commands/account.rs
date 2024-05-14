@@ -8,9 +8,9 @@ use starknet::signers::LocalWallet;
 use starknet_crypto::FieldElement;
 use tracing::trace;
 
-use super::options::fee::FeeOptions;
 use super::options::signer::SignerOptions;
 use super::options::starknet::StarknetOptions;
+use super::options::transaction::TransactionOptions;
 use crate::utils;
 
 #[derive(Debug, Args)]
@@ -43,10 +43,14 @@ pub enum AccountCommand {
         signer: SignerOptions,
 
         #[clap(flatten)]
-        fee: FeeOptions,
+        transaction: TransactionOptions,
 
         #[clap(long, help = "Simulate the transaction only")]
         simulate: bool,
+
+        #[clap(long, help = "Only estimate transaction fee without sending transaction")]
+        #[arg(global = true)]
+        estimate_only: bool,
 
         #[clap(long, help = "Provide transaction nonce manually")]
         nonce: Option<FieldElement>,
@@ -97,20 +101,21 @@ impl AccountArgs {
                 AccountCommand::Deploy {
                     starknet,
                     signer,
-                    fee,
+                    transaction,
                     simulate,
+                    estimate_only,
                     nonce,
                     poll_interval,
                     file,
                     no_confirmation,
                 } => {
                     let provider = starknet.provider(env_metadata.as_ref())?;
-                    let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
-                    let fee_setting = fee.into_setting()?;
+                    let signer = signer.signer(env_metadata.as_ref(), false)?;
+                    let txn_action = transaction.to_txn_action(simulate, estimate_only)?;
                     trace!(
                         ?starknet,
                         ?signer,
-                        ?fee_setting,
+                        ?txn_action,
                         simulate,
                         ?nonce,
                         poll_interval,
@@ -121,8 +126,7 @@ impl AccountArgs {
                     account::deploy(
                         provider,
                         signer,
-                        fee_setting,
-                        simulate,
+                        txn_action,
                         nonce,
                         poll_interval,
                         file,
