@@ -1305,7 +1305,7 @@ dependencies = [
 
 [[package]]
 name = "benches"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -2837,7 +2837,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "reqwest 0.11.24",
@@ -3571,7 +3571,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "async-trait",
  "cainome",
@@ -3587,15 +3587,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-core"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 
 [[package]]
 name = "dojo-lang"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3646,7 +3646,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3668,7 +3668,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-metrics"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "hyper 0.14.28",
@@ -3686,7 +3686,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3720,7 +3720,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -3735,7 +3735,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3773,7 +3773,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "cairo-lang-starknet",
  "cairo-lang-starknet-classes",
@@ -6732,7 +6732,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6759,7 +6759,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -6767,7 +6767,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6777,7 +6777,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -6825,7 +6825,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "cairo-lang-starknet",
@@ -6847,7 +6847,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6872,7 +6872,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6899,7 +6899,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -6924,7 +6924,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -6961,7 +6961,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -6972,7 +6972,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6993,7 +6993,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -7005,7 +7005,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -7025,7 +7025,7 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "futures",
  "rayon",
@@ -10219,7 +10219,7 @@ checksum = "e666a5496a0b2186dbcd0ff6106e29e093c15591bde62c20d3842007c6978a09"
 
 [[package]]
 name = "runner-macro"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "quote",
  "syn 2.0.55",
@@ -10487,7 +10487,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -10506,7 +10506,7 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -10546,7 +10546,7 @@ dependencies = [
 
 [[package]]
 name = "saya-provider"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -11310,7 +11310,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -11366,7 +11366,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -11420,7 +11420,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "starknet 0.9.0",
@@ -12740,7 +12740,7 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12785,7 +12785,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "async-trait",
  "camino",
@@ -12813,7 +12813,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12850,7 +12850,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -12891,7 +12891,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "bytes",
  "crypto-bigint",
@@ -12934,7 +12934,7 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12969,7 +12969,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13274,7 +13274,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 
 [[package]]
 name = "ucd-trie"

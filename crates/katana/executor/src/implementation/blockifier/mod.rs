@@ -19,7 +19,7 @@ use starknet_api::block::{BlockNumber, BlockTimestamp};
 use tracing::info;
 
 use self::state::CachedState;
-use crate::utils::receipt_from_exec_info;
+use crate::utils::build_receipt;
 use crate::{
     BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
     ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
@@ -188,19 +188,19 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                 Ok((info, fee)) => {
                     // get the trace and receipt from the execution info
                     let trace = utils::to_exec_info(info);
-                    let receipt = receipt_from_exec_info(&tx, &trace);
+                    let receipt = build_receipt(&tx, fee, &trace);
 
                     crate::utils::log_resources(&trace.actual_resources);
                     crate::utils::log_events(receipt.events());
 
-                    self.stats.l1_gas_used += fee.gas_consumed;
+                    self.stats.l1_gas_used += receipt.fee().gas_consumed;
                     self.stats.cairo_steps_used += receipt.resources_used().steps as u128;
 
                     if let Some(reason) = receipt.revert_reason() {
                         info!(target: LOG_TARGET, reason = %reason, "Transaction reverted.");
                     }
 
-                    ExecutionResult::new_success(receipt, trace, fee)
+                    ExecutionResult::new_success(receipt, trace)
                 }
                 Err(e) => {
                     info!(target: LOG_TARGET, error = %e, "Executing transaction.");
@@ -262,8 +262,8 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
             let result = match res {
                 Ok((info, fee)) => {
                     let trace = utils::to_exec_info(info);
-                    let receipt = receipt_from_exec_info(&tx, &trace);
-                    ExecutionResult::new_success(receipt, trace, fee)
+                    let receipt = build_receipt(&tx, fee, &trace);
+                    ExecutionResult::new_success(receipt, trace)
                 }
                 Err(e) => ExecutionResult::new_failed(e),
             };
