@@ -50,6 +50,7 @@ pub fn create_genesis_for_testing() -> Genesis {
     let class_hash = felt!("0x111");
     let address = ContractAddress::from(felt!("0x1"));
 
+    // TODO: we should have a genesis builder that can do all of this for us.
     let class = {
         let json = include_str!("../test-data/simple_account.sierra.json");
         let json = serde_json::from_str(json).unwrap();
@@ -67,8 +68,8 @@ pub fn create_genesis_for_testing() -> Genesis {
     let account = GenesisAllocation::Account(GenesisAccountAlloc::DevAccount(account));
 
     let mut genesis = Genesis::default();
-    genesis.classes.insert(class_hash, class); // insert the test class
-    genesis.extend_allocations([(address, account)]); // insert the test account
-
+    // insert test account class and contract
+    genesis.classes.insert(class_hash, class);
+    genesis.extend_allocations([(address, account)]);
     genesis
 }
