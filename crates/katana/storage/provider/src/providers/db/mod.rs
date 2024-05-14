@@ -756,10 +756,12 @@ mod tests {
         Block, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
     };
     use katana_primitives::contract::ContractAddress;
-    use katana_primitives::receipt::Receipt;
+    use katana_primitives::fee::TxFeeInfo;
+    use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
+    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use super::DbProvider;
@@ -843,7 +845,18 @@ mod tests {
             &provider,
             block.clone(),
             state_updates,
-            vec![Receipt::Invoke(Default::default())],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
             vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
@@ -921,7 +934,18 @@ mod tests {
             &provider,
             block.clone(),
             state_updates1,
-            vec![Receipt::Invoke(Default::default())],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
             vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
@@ -931,7 +955,18 @@ mod tests {
             &provider,
             block,
             state_updates2,
-            vec![Receipt::Invoke(Default::default())],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
             vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");

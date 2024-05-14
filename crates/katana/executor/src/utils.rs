@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use convert_case::{Case, Casing};
+use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{
     DeclareTxReceipt, DeployAccountTxReceipt, Event, InvokeTxReceipt, L1HandlerTxReceipt,
     MessageToL1, Receipt, TxExecutionResources,
@@ -47,8 +48,7 @@ pub fn log_events(events: &[Event]) {
     }
 }
 
-pub fn receipt_from_exec_info(tx: &Tx, info: &TxExecInfo) -> Receipt {
-    let actual_fee = info.actual_fee;
+pub fn build_receipt(tx: &Tx, fee: TxFeeInfo, info: &TxExecInfo) -> Receipt {
     let events = events_from_exec_info(info);
     let revert_error = info.revert_error.clone();
     let messages_sent = l2_to_l1_messages_from_exec_info(info);
@@ -57,7 +57,7 @@ pub fn receipt_from_exec_info(tx: &Tx, info: &TxExecInfo) -> Receipt {
     match tx {
         Tx::Invoke(_) => Receipt::Invoke(InvokeTxReceipt {
             events,
-            actual_fee,
+            fee,
             revert_error,
             messages_sent,
             execution_resources: actual_resources,
@@ -65,7 +65,7 @@ pub fn receipt_from_exec_info(tx: &Tx, info: &TxExecInfo) -> Receipt {
 
         Tx::Declare(_) => Receipt::Declare(DeclareTxReceipt {
             events,
-            actual_fee,
+            fee,
             revert_error,
             messages_sent,
             execution_resources: actual_resources,
@@ -73,7 +73,7 @@ pub fn receipt_from_exec_info(tx: &Tx, info: &TxExecInfo) -> Receipt {
 
         Tx::L1Handler(tx) => Receipt::L1Handler(L1HandlerTxReceipt {
             events,
-            actual_fee,
+            fee,
             revert_error,
             messages_sent,
             message_hash: tx.message_hash,
@@ -82,7 +82,7 @@ pub fn receipt_from_exec_info(tx: &Tx, info: &TxExecInfo) -> Receipt {
 
         Tx::DeployAccount(tx) => Receipt::DeployAccount(DeployAccountTxReceipt {
             events,
-            actual_fee,
+            fee,
             revert_error,
             messages_sent,
             execution_resources: actual_resources,

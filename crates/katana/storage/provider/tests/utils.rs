@@ -1,8 +1,10 @@
 use katana_primitives::block::{Block, BlockHash, FinalityStatus, Header, SealedBlockWithStatus};
+use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
 use katana_primitives::FieldElement;
+use starknet::core::types::PriceUnit;
 
 pub fn generate_dummy_txs_and_receipts(
     count: usize,
@@ -18,7 +20,13 @@ pub fn generate_dummy_txs_and_receipts(
             transaction: Tx::Invoke(InvokeTx::V1(Default::default())),
         });
 
-        receipts.push(Receipt::Invoke(InvokeTxReceipt::default()));
+        receipts.push(Receipt::Invoke(InvokeTxReceipt {
+            revert_error: None,
+            events: Vec::new(),
+            messages_sent: Vec::new(),
+            execution_resources: Default::default(),
+            fee: TxFeeInfo { gas_consumed: 0, gas_price: 0, overall_fee: 0, unit: PriceUnit::Wei },
+        }));
         executions.push(TxExecInfo::default());
     }
 
