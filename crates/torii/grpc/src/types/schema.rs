@@ -66,7 +66,19 @@ impl TryFrom<Ty> for proto::types::Ty {
             }
             Ty::Enum(r#enum) => Some(proto::types::ty::TyType::Enum(r#enum.into())),
             Ty::Struct(r#struct) => Some(proto::types::ty::TyType::Struct(r#struct.try_into()?)),
-            Ty::Tuple(_) => unimplemented!("unimplemented typle type"),
+            Ty::Tuple(tuple) => Some(proto::types::ty::TyType::Tuple(proto::types::Array {
+                children: tuple
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<Vec<_>, _>>()?,
+            })),
+            Ty::Array(array) => Some(proto::types::ty::TyType::Array(proto::types::Array {
+                children: array
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<Vec<_>, _>>()?,
+            })),
+            Ty::ByteArray(string) => Some(proto::types::ty::TyType::Bytearray(string)),
         };
 
         Ok(proto::types::Ty { ty_type })
@@ -269,6 +281,13 @@ impl TryFrom<proto::types::Ty> for Ty {
             }
             proto::types::ty::TyType::Struct(r#struct) => Ok(Ty::Struct(r#struct.try_into()?)),
             proto::types::ty::TyType::Enum(r#enum) => Ok(Ty::Enum(r#enum.into())),
+            proto::types::ty::TyType::Tuple(array) => Ok(Ty::Tuple(
+                array.children.into_iter().map(TryInto::try_into).collect::<Result<Vec<_>, _>>()?,
+            )),
+            proto::types::ty::TyType::Array(array) => Ok(Ty::Array(
+                array.children.into_iter().map(TryInto::try_into).collect::<Result<Vec<_>, _>>()?,
+            )),
+            proto::types::ty::TyType::Bytearray(string) => Ok(Ty::ByteArray(string)),
         }
     }
 }

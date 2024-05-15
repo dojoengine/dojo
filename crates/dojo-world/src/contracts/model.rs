@@ -1,6 +1,6 @@
 pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
-use cainome::cairo_serde::{ContractAddress, Error as CainomeError};
+use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeError};
 use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
 use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
@@ -14,6 +14,8 @@ use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::poseidon_hash_many;
 
 use crate::contracts::WorldContractReader;
+
+use super::abi::world::Layout;
 
 #[cfg(test)]
 #[path = "model_test.rs"]
@@ -51,13 +53,16 @@ pub enum ModelError {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
+    // TODO: kept for compatibility but should be removed
+    // because it returns the model name hash and not the model name itself.
     fn name(&self) -> String;
+    fn selector(&self) -> FieldElement;
     fn class_hash(&self) -> FieldElement;
     fn contract_address(&self) -> FieldElement;
     async fn schema(&self) -> Result<Ty, E>;
-    async fn packed_size(&self) -> Result<FieldElement, E>;
-    async fn unpacked_size(&self) -> Result<FieldElement, E>;
-    async fn layout(&self) -> Result<Vec<FieldElement>, E>;
+    async fn packed_size(&self) -> Result<u32, E>;
+    async fn unpacked_size(&self) -> Result<u32, E>;
+    async fn layout(&self) -> Result<abigen::model::Layout, E>;
 }
 
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
@@ -107,39 +112,22 @@ where
         &self,
         keys: &[FieldElement],
     ) -> Result<Vec<FieldElement>, ModelError> {
-        // TODO RBA: to update
-        let packed_size: u8 =
-            self.packed_size().await?.try_into().map_err(ParseError::ValueOutOfRange)?;
+        // As the dojo::database::introspect::Layout type has been pasted
+        // in both `model` and `world` ABI by abigen, the compiler sees both types
+        // as different even if they are strictly identical.
+        // Here is a trick reading the model layout as raw FieldElement
+        // and deserialize it to a world::Layout.
+        let raw_layout = self.model_reader.layout().raw_call().await?;
+        let layout = Layout::cairo_deserialize(raw_layout.as_slice(), 0)?;
 
-        let key = poseidon_hash_many(keys);
-        let key = poseidon_hash_many(&[short_string!("dojo_storage"), self.name, key]);
-
-        let mut packed = Vec::with_capacity(packed_size as usize);
-        for slot in 0..packed_size {
-            let value = self
-                .world_reader
-                .provider()
-                .get_storage_at(
-                    self.world_reader.address,
-                    key + slot.into(),
-                    self.world_reader.block_id,
-                )
-                .await?;
-
-            packed.push(value);
-        }
-
-        Ok(packed)
+        Ok(self.world_reader.entity(&self.selector(), &keys.to_vec(), &layout).call().await?)
     }
 
     pub async fn entity(&self, keys: &[FieldElement]) -> Result<Ty, ModelError> {
         let mut schema = self.schema().await?;
+        let values = self.entity_storage(keys).await?;
 
-        let layout = self.layout().await?;
-        let raw_values = self.entity_storage(keys).await?;
-
-        let unpacked = unpack(raw_values, layout)?;
-        let mut keys_and_unpacked = [keys, &unpacked].concat();
+        let mut keys_and_unpacked = [keys, &values].concat();
 
         schema.deserialize(&mut keys_and_unpacked)?;
 
@@ -157,6 +145,10 @@ where
         self.name.to_string()
     }
 
+    fn selector(&self) -> FieldElement {
+        self.name
+    }
+
     fn class_hash(&self) -> FieldElement {
         self.class_hash
     }
@@ -170,20 +162,17 @@ where
         Ok(parse_ty(&res)?)
     }
 
-    async fn packed_size(&self) -> Result<FieldElement, ModelError> {
-        Ok(self.model_reader.packed_size().raw_call().await?[0])
+    // For non fixed layouts, packed and unpacked sizes are None.
+    // Therefore we return 0 in this case.
+    async fn packed_size(&self) -> Result<u32, ModelError> {
+        Ok(self.model_reader.packed_size().call().await?.unwrap_or(0))
     }
 
-    async fn unpacked_size(&self) -> Result<FieldElement, ModelError> {
-        Ok(self.model_reader.unpacked_size().raw_call().await?[0])
+    async fn unpacked_size(&self) -> Result<u32, ModelError> {
+        Ok(self.model_reader.unpacked_size().call().await?.unwrap_or(0))
     }
 
-    async fn layout(&self) -> Result<Vec<FieldElement>, ModelError> {
-        // Layout entrypoint expanded by the #[model] attribute returns a
-        // `Span`. So cainome generated code will deserialize the result
-        // of `executor.call()` which is a Vec<FieldElement>.
-        // So inside the vec, we skip the first element, which is the length
-        // of the span returned by `layout` entrypoint of the model code.
-        Ok(self.model_reader.layout().raw_call().await?[1..].into())
+    async fn layout(&self) -> Result<abigen::model::Layout, ModelError> {
+        Ok(self.model_reader.layout().call().await?)
     }
 }

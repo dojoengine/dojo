@@ -49,6 +49,10 @@ pub enum PrimitiveError {
     TypeMismatch,
     #[error(transparent)]
     ValueOutOfRange(#[from] ValueOutOfRangeError),
+    #[error(transparent)]
+    CairoSerde(#[from] cainome::cairo_serde::Error),
+    #[error(transparent)]
+    FromUtf8Error(#[from] std::string::FromUtf8Error),
 }
 
 #[derive(AsRefStr, Debug, Display, EnumString, PartialEq)]

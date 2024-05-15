@@ -16,3 +16,5 @@ strum_macros.workspace = true
 thiserror.workspace = true
 
 serde_json.workspace = true
+
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.5-serde.1" }

@@ -169,6 +169,8 @@ fn data_objects_recursion(
 pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<String>) -> Object {
     let mut object = Object::new(type_name);
 
+    // println!("type_mapping: {:?}", type_mapping);
+
     for (field_name, type_data) in type_mapping.clone() {
         let path_array = path_array.clone();
 
@@ -183,7 +185,13 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
             let table_name = path_array.join("$").replace(&namespace, "");
 
             return FieldFuture::new(async move {
+                println!("field_name: {:?}", field_name);
+                println!("type_data: {:?}", type_data);
+                println!("path_array: {:?}", path_array);
+                println!("table_name: {:?}", table_name);
+
                 if let Some(value) = ctx.parent_value.as_value() {
+                    println!("parent_value: {:?}", value);
                     // Nested types resolution
                     if let TypeData::Nested((_, nested_mapping)) = type_data {
                         return match ctx.parent_value.try_to_value()? {
@@ -191,6 +199,11 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                                 let entity_id =
                                     extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
+
+                                // if we already fetched our model data, return it
+                                if let Some(data) = indexmap.get(&field_name) {
+                                    return Ok(Some(data.clone()));
+                                }
 
                                 // TODO: remove subqueries and use JOIN in parent query
                                 let data = fetch_single_row(

@@ -988,7 +988,7 @@ checksum = "c7f329c7eb9b646a72f70c9c4b516c70867d356ec46cb00dcac8ad343fd006b0"
 dependencies = [
  "Inflector",
  "async-graphql-parser",
- "darling 0.20.8",
+ "darling 0.20.9",
  "proc-macro-crate 1.1.3",
  "proc-macro2",
  "quote",
@@ -1746,10 +1746,34 @@ source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5#54df2a4114c0c61
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde",
- "cainome-parser",
- "cainome-rs",
- "cainome-rs-macro",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "camino",
+ "clap",
+ "clap_complete",
+ "convert_case 0.6.0",
+ "serde",
+ "serde_json",
+ "starknet 0.9.0",
+ "thiserror",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "cainome"
+version = "0.2.3"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1#c905666cbd009bcd1812d02df70b124dedb5040f"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
+ "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
  "camino",
  "clap",
  "clap_complete",
@@ -1773,9 +1797,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "cainome-cairo-serde"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1#c905666cbd009bcd1812d02df70b124dedb5040f"
+dependencies = [
+ "serde",
+ "starknet 0.9.0",
+ "thiserror",
+]
+
+[[package]]
 name = "cainome-parser"
 version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5#54df2a4114c0c61359c2f1a70bc7e5fb57d9eaf2"
+dependencies = [
+ "convert_case 0.6.0",
+ "quote",
+ "serde_json",
+ "starknet 0.9.0",
+ "syn 2.0.63",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-parser"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1#c905666cbd009bcd1812d02df70b124dedb5040f"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
@@ -1791,8 +1838,24 @@ version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5#54df2a4114c0c61359c2f1a70bc7e5fb57d9eaf2"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde",
- "cainome-parser",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "starknet 0.9.0",
+ "syn 2.0.63",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-rs"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1#c905666cbd009bcd1812d02df70b124dedb5040f"
+dependencies = [
+ "anyhow",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -1807,9 +1870,26 @@ version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5#54df2a4114c0c61359c2f1a70bc7e5fb57d9eaf2"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde",
- "cainome-parser",
- "cainome-rs",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "starknet 0.9.0",
+ "syn 2.0.63",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-rs-macro"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1#c905666cbd009bcd1812d02df70b124dedb5040f"
+dependencies = [
+ "anyhow",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -2254,7 +2334,7 @@ dependencies = [
  "serde",
  "smol_str",
  "thiserror",
- "toml 0.8.12",
+ "toml 0.8.13",
 ]
 
 [[package]]
@@ -2267,7 +2347,7 @@ dependencies = [
  "serde",
  "smol_str",
  "thiserror",
- "toml 0.8.12",
+ "toml 0.8.13",
 ]
 
 [[package]]
@@ -2380,7 +2460,7 @@ dependencies = [
  "once_cell",
  "salsa",
  "smol_str",
- "toml 0.8.12",
+ "toml 0.8.13",
 ]
 
 [[package]]
@@ -3377,9 +3457,9 @@ checksum = "32b13ea120a812beba79e34316b3942a857c86ec1593cb34f27bb28272ce2cca"
 
 [[package]]
 name = "const-hex"
-version = "1.11.3"
+version = "1.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ba00838774b4ab0233e355d26710fbfc8327a05c017f6dc4873f876d1f79f78"
+checksum = "70ff96486ccc291d36a958107caf2c0af8c78c0af7d31ae2f35ce055130de1a6"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -3713,12 +3793,12 @@ dependencies = [
 
 [[package]]
 name = "darling"
-version = "0.20.8"
+version = "0.20.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54e36fcd13ed84ffdfda6f5be89b31287cbb80c439841fe69e04841435464391"
+checksum = "83b2eb4d90d12bdda5ed17de686c2acb4c57914f8f921b8da7e112b5a36f3fe1"
 dependencies = [
- "darling_core 0.20.8",
- "darling_macro 0.20.8",
+ "darling_core 0.20.9",
+ "darling_macro 0.20.9",
 ]
 
 [[package]]
@@ -3737,15 +3817,15 @@ dependencies = [
 
 [[package]]
 name = "darling_core"
-version = "0.20.8"
+version = "0.20.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c2cf1c23a687a1feeb728783b993c4e1ad83d99f351801977dd809b48d0a70f"
+checksum = "622687fe0bac72a04e5599029151f5796111b90f1baaa9b544d807a5e31cd120"
 dependencies = [
  "fnv",
  "ident_case",
  "proc-macro2",
  "quote",
- "strsim 0.10.0",
+ "strsim 0.11.1",
  "syn 2.0.63",
 ]
 
@@ -3762,11 +3842,11 @@ dependencies = [
 
 [[package]]
 name = "darling_macro"
-version = "0.20.8"
+version = "0.20.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a668eda54683121533a393014d8692171709ff57a7d61f187b6e782719f8933f"
+checksum = "733cabb43482b1a1b53eee8583c2b9e8684d592215ea83efd305dd31bc2f0178"
 dependencies = [
- "darling_core 0.20.8",
+ "darling_core 0.20.9",
  "quote",
  "syn 2.0.63",
 ]
@@ -3902,7 +3982,7 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d48cda787f839151732d396ac69e3473923d54312c070ee21e9effcaa8ca0b1d"
 dependencies = [
- "darling 0.20.8",
+ "darling 0.20.9",
  "proc-macro2",
  "quote",
  "syn 2.0.63",
@@ -4066,7 +4146,7 @@ name = "dojo-bindgen"
 version = "0.7.0-alpha.2"
 dependencies = [
  "async-trait",
- "cainome",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
  "camino",
  "chrono",
  "convert_case 0.6.0",
@@ -4131,7 +4211,7 @@ dependencies = [
  "starknet 0.9.0",
  "test-log",
  "thiserror",
- "toml 0.8.12",
+ "toml 0.8.13",
  "tracing",
  "url",
 ]
@@ -4214,6 +4294,7 @@ dependencies = [
 name = "dojo-types"
 version = "0.7.0-alpha.2"
 dependencies = [
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
  "crypto-bigint",
  "hex",
  "itertools 0.12.1",
@@ -4233,7 +4314,7 @@ dependencies = [
  "assert_fs",
  "assert_matches",
  "async-trait",
- "cainome",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
  "cairo-lang-filesystem 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-project 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-starknet 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
@@ -4258,7 +4339,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "toml 0.8.12",
+ "toml 0.8.13",
  "tracing",
  "url",
 ]
@@ -11210,8 +11291,8 @@ dependencies = [
  "tar",
  "thiserror",
  "tokio",
- "toml 0.8.12",
- "toml_edit 0.22.12",
+ "toml 0.8.13",
+ "toml_edit 0.22.13",
  "tracing",
  "tracing-subscriber",
  "typed-builder",
@@ -11538,9 +11619,9 @@ dependencies = [
 
 [[package]]
 name = "serde_spanned"
-version = "0.6.5"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb3622f419d1296904700073ea6cc23ad690adbd66f13ea683df73298736f0c1"
+checksum = "79e674e01f999af37c49f70a6ede167a8a60b2503e56c5599532a65baa5969a0"
 dependencies = [
  "serde",
 ]
@@ -11579,7 +11660,7 @@ version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
 dependencies = [
- "darling 0.20.8",
+ "darling 0.20.9",
  "proc-macro2",
  "quote",
  "syn 2.0.63",
@@ -11824,9 +11905,9 @@ dependencies = [
 
 [[package]]
 name = "snapbox-macros"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1c4b838b05d15ab22754068cb73500b2f3b07bf09d310e15b27f88160f1de40"
+checksum = "b1f4c14672714436c09254801c934b203196a51182a5107fb76591c7cc56424d"
 dependencies = [
  "anstream",
 ]
@@ -11892,7 +11973,7 @@ dependencies = [
  "assert_fs",
  "async-trait",
  "bigdecimal 0.4.3",
- "cainome",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
  "cairo-lang-compiler 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-defs 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-filesystem 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
@@ -11947,7 +12028,7 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
- "cainome",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5)",
  "cairo-lang-compiler 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-defs 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-filesystem 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
@@ -13144,21 +13225,21 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.8.12"
+version = "0.8.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9dd1545e8208b4a5af1aa9bbd0b4cf7e9ea08fabc5d0a5c67fcaafa17433aa3"
+checksum = "a4e43f8cc456c9704c851ae29c67e17ef65d2c30017c17a9765b89c382dc8bba"
 dependencies = [
  "serde",
  "serde_spanned",
  "toml_datetime",
- "toml_edit 0.22.12",
+ "toml_edit 0.22.13",
 ]
 
 [[package]]
 name = "toml_datetime"
-version = "0.6.5"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3550f4e9685620ac18a50ed434eb3aec30db8ba93b0287467bca5826ea25baf1"
+checksum = "4badfd56924ae69bcc9039335b2e017639ce3f9b001c393c1b2d1ef846ce2cbf"
 dependencies = [
  "serde",
 ]
@@ -13189,9 +13270,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.22.12"
+version = "0.22.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3328d4f68a705b2a4498da1d580585d39a6510f98318a2cec3018a7ec61ddef"
+checksum = "c127785850e8c20836d49732ae6abfa47616e60bf9d9f57c43c250361a9db96c"
 dependencies = [
  "indexmap 2.2.6",
  "serde",
@@ -13413,6 +13494,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.21.7",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.5-serde.1)",
  "camino",
  "chrono",
  "crypto-bigint",
@@ -13477,7 +13559,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
- "toml 0.8.12",
+ "toml 0.8.13",
  "torii-core",
  "tracing",
  "url",

@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::model::ModelReader;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
@@ -21,9 +22,9 @@ pub struct ModelSQLReader {
     /// The contract address of the model
     contract_address: FieldElement,
     pool: Pool<Sqlite>,
-    packed_size: FieldElement,
-    unpacked_size: FieldElement,
-    layout: Vec<FieldElement>,
+    packed_size: u32,
+    unpacked_size: u32,
+    layout: Layout,
 }
 
 impl ModelSQLReader {
@@ -47,11 +48,8 @@ impl ModelSQLReader {
             FieldElement::from_hex_be(&class_hash).map_err(error::ParseError::FromStr)?;
         let contract_address =
             FieldElement::from_hex_be(&contract_address).map_err(error::ParseError::FromStr)?;
-        let packed_size = FieldElement::from(packed_size);
-        let unpacked_size = FieldElement::from(unpacked_size);
 
-        let layout = hex::decode(layout).unwrap();
-        let layout = layout.iter().map(|e| FieldElement::from(*e)).collect();
+        let layout = serde_json::from_str(&layout).map_err(error::ParseError::FromJsonStr)?;
 
         Ok(Self { name, class_hash, contract_address, pool, packed_size, unpacked_size, layout })
     }
@@ -62,6 +60,11 @@ impl ModelSQLReader {
 impl ModelReader<Error> for ModelSQLReader {
     fn name(&self) -> String {
         self.name.to_string()
+    }
+
+    fn selector(&self) -> FieldElement {
+        // this should never fail
+        get_selector_from_name(&self.name).unwrap()
     }
 
     fn class_hash(&self) -> FieldElement {
@@ -88,15 +91,15 @@ impl ModelReader<Error> for ModelSQLReader {
         Ok(parse_sql_model_members(&self.name, &model_members))
     }
 
-    async fn packed_size(&self) -> Result<FieldElement, Error> {
+    async fn packed_size(&self) -> Result<u32, Error> {
         Ok(self.packed_size)
     }
 
-    async fn unpacked_size(&self) -> Result<FieldElement, Error> {
+    async fn unpacked_size(&self) -> Result<u32, Error> {
         Ok(self.unpacked_size)
     }
 
-    async fn layout(&self) -> Result<Vec<FieldElement>, Error> {
+    async fn layout(&self) -> Result<Layout, Error> {
         Ok(self.layout.clone())
     }
 }
@@ -157,6 +160,59 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                             .map(|s| EnumOption { name: s.to_owned(), ty: Ty::Tuple(vec![]) })
                             .collect::<Vec<_>>(),
                     }),
+                },
+
+                "Tuple" => Member {
+                    key: child.key,
+                    name: child.name.to_owned(),
+                    ty: Ty::Tuple(
+                        model_members_all
+                            .iter()
+                            .filter(|member| member.id == format!("{}${}", child.id, child.name))
+                            .map(|member| {
+                                if member.type_enum == "Primitive" {
+                                    Ty::Primitive(member.r#type.parse().unwrap())
+                                } else {
+                                    parse_sql_model_members_impl(
+                                        &format!("{}${}${}", child.id, child.name, member.name),
+                                        &member.r#type,
+                                        model_members_all,
+                                    )
+                                }
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
+                },
+                "Array" => {
+                    Member {
+                        key: child.key,
+                        name: child.name.to_owned(),
+                        // get T from Array<T>
+                        ty: Ty::Array(
+                            model_members_all
+                                .iter()
+                                .filter(|member| {
+                                    member.id == format!("{}${}", child.id, child.name)
+                                })
+                                .map(|member| {
+                                    if member.type_enum == "Primitive" {
+                                        Ty::Primitive(member.r#type.parse().unwrap())
+                                    } else {
+                                        parse_sql_model_members_impl(
+                                            &format!("{}${}${}", child.id, child.name, member.name),
+                                            &member.r#type,
+                                            model_members_all,
+                                        )
+                                    }
+                                })
+                                .collect::<Vec<_>>(),
+                        ),
+                    }
+                }
+                "ByteArray" => Member {
+                    key: child.key,
+                    name: child.name.to_owned(),
+                    ty: Ty::ByteArray("".to_string()),
                 },
 
                 ty => {
