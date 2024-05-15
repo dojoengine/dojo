@@ -48,7 +48,7 @@ where
         event: &Event,
     ) -> Result<(), Error> {
         let selector = event.data[MODEL_INDEX];
-        
+
         let model = db.model(&format!("{:#x}", selector)).await?;
 
         info!(

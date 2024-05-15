@@ -10,7 +10,7 @@ use cairo_lang_syntax::attribute::structured::{
 };
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode, TypedStablePtr};
+use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 
@@ -130,7 +130,7 @@ impl DojoContract {
                         }],
                         events: vec![],
                     })),
-                    code_mappings: code_mappings,
+                    code_mappings,
                 }),
                 diagnostics: system.diagnostics,
                 remove_original_item: true,

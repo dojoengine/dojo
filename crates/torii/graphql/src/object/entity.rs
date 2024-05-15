@@ -67,10 +67,8 @@ impl ResolvableObject for EntityObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![SubscriptionField::new(
-            "entityUpdated",
-            TypeRef::named_nn(self.type_name()),
-            |ctx| {
+        Some(vec![
+            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let id = match ctx.args.get("id") {
                         Some(id) => Some(id.string()?.to_string()),
@@ -87,9 +85,9 @@ impl ResolvableObject for EntityObject {
                         }
                     }))
                 })
-            },
-        )
-        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
+            })
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
     }
 }
 
@@ -145,14 +143,15 @@ fn model_union_field() -> Field {
                         let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
                         // but the table name for the model data is the unhashed model name
-                        let data: ValueMapping =  match model_data_recursive_query(
+                        let data: ValueMapping = match model_data_recursive_query(
                             &mut conn,
                             vec![name.clone()],
                             &entity_id,
                             None,
                             &type_mapping,
                         )
-                        .await? {
+                        .await?
+                        {
                             Value::Object(map) => map,
                             _ => unreachable!(),
                         };

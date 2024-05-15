@@ -747,8 +747,8 @@ impl Sql {
         let mut indices = Vec::new();
 
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL, event_id TEXT \
-             NOT NULL, entity_id TEXT, event_message_id TEXT, "
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL, event_id TEXT NOT NULL, \
+             entity_id TEXT, event_message_id TEXT, "
         );
 
         if is_array {
@@ -807,10 +807,9 @@ impl Sql {
 
                     // NOTE: this might cause some errors to fail silently
                     // due to the ignore clause. check migrations for type_enum check
-                    let statement =
-                        "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
-                                     member_idx, name, type, type_enum, enum_options, key, \
-                                     executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
+                                     model_idx, member_idx, name, type, type_enum, enum_options, \
+                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
                     let arguments = vec![
                         Argument::String(table_id.clone()),
@@ -838,10 +837,9 @@ impl Sql {
 
                     build_member(&format!("_{}", idx), &member, &mut options);
 
-                    let statement =
-                        "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
-                                     member_idx, name, type, type_enum, enum_options, key, \
-                                     executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
+                                     model_idx, member_idx, name, type, type_enum, enum_options, \
+                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
@@ -869,10 +867,9 @@ impl Sql {
                 let ty = &array[0];
                 build_member("data", &ty, &mut options);
 
-                let statement =
-                    "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
-                                 name, type, type_enum, enum_options, key, executed_at) VALUES (?, ?, \
-                                 ?, ?, ?, ?, ?, ?, ?, ?)";
+                let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
+                                 member_idx, name, type, type_enum, enum_options, key, \
+                                 executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 let arguments = vec![
                     Argument::String(table_id.clone()),
                     // TEMP: this is temporary until the model hash is precomputed

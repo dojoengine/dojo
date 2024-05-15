@@ -47,13 +47,10 @@ pub async fn fetch_single_row_by_idx(
     id: &str,
     idx: i64,
 ) -> sqlx::Result<SqliteRow> {
-    let query = format!(
-        "SELECT * FROM {} WHERE {} = '{}' AND idx = {}",
-        table_name, id_column, id, idx
-    );
+    let query =
+        format!("SELECT * FROM {} WHERE {} = '{}' AND idx = {}", table_name, id_column, id, idx);
     sqlx::query(&query).fetch_one(conn).await
 }
-
 
 #[allow(clippy::too_many_arguments)]
 pub async fn fetch_multiple_rows(

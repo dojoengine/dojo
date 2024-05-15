@@ -88,10 +88,8 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
     let resolve = scarb::ops::resolve_workspace(&ws)?;
 
-    let features_opts = FeaturesOpts {
-        features: FeaturesSelector::AllFeatures,
-        no_default_features: false,
-    };
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
     let compilation_units = scarb::ops::generate_compilation_units(&resolve, &features_opts, &ws)?
         .into_iter()

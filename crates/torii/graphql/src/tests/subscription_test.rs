@@ -269,9 +269,17 @@ mod tests {
                     ty: Ty::Primitive(Primitive::U32(None)),
                 }],
             });
-            db.register_model(model, Layout::Fixed(vec![]), class_hash, contract_address, 0, 0, block_timestamp)
-                .await
-                .unwrap();
+            db.register_model(
+                model,
+                Layout::Fixed(vec![]),
+                class_hash,
+                contract_address,
+                0,
+                0,
+                block_timestamp,
+            )
+            .await
+            .unwrap();
 
             // 3. fn publish() is called from state.set_entity()
 
@@ -322,9 +330,17 @@ mod tests {
                     ty: Ty::Primitive(Primitive::U8(None)),
                 }],
             });
-            db.register_model(model, Layout::Fixed(vec![]), class_hash, contract_address, 0, 0, block_timestamp)
-                .await
-                .unwrap();
+            db.register_model(
+                model,
+                Layout::Fixed(vec![]),
+                class_hash,
+                contract_address,
+                0,
+                0,
+                block_timestamp,
+            )
+            .await
+            .unwrap();
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();

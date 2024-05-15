@@ -4,11 +4,11 @@ use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
-use cairo_lang_diagnostics::Severity;
 use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{ExprPath, ExprStructCtorCall, FunctionWithBody, ItemModule};
 use cairo_lang_syntax::node::kind::SyntaxKind;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode, TypedStablePtr};
+use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 
 use super::unsupported_arg_diagnostic;
 use super::utils::{parent_of_kind, SystemRWOpRecord, SYSTEM_WRITES};
@@ -178,7 +178,7 @@ impl InlineMacroExprPlugin for SetMacro {
             code: Some(PluginGeneratedFile {
                 name: "set_inline_macro".into(),
                 content: code,
-                code_mappings: code_mappings,
+                code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],

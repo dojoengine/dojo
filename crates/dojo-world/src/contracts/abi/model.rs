@@ -109,6 +109,10 @@ abigen!(
       {
         "name": "ByteArray",
         "type": "()"
+      },
+      {
+        "name": "Enum",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
       }
     ]
   },

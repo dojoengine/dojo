@@ -260,14 +260,9 @@ impl std::fmt::Display for Ty {
                     Some(enum_str)
                 }
                 Ty::Tuple(tuple) => {
-                    Some(format!(
-                        "tuple({})",
-                        tuple.iter().map(|ty| ty.name()).join(", ")
-                    ))
+                    Some(format!("tuple({})", tuple.iter().map(|ty| ty.name()).join(", ")))
                 }
-                Ty::Array(items_ty) => {
-                    Some(format!("Array<{}>", items_ty[0].name()))
-                }
+                Ty::Array(items_ty) => Some(format!("Array<{}>", items_ty[0].name())),
                 Ty::ByteArray(_) => Some("ByteArray".to_string()),
             })
             .collect::<Vec<_>>()

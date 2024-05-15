@@ -616,11 +616,13 @@ fn handle_introspect_internal(
     let primitive_sizes = primitive_type_introspection();
     let mut layout = match composite_type {
         CompositeType::Enum => {
-            vec!["dojo::database::introspect::FieldLayout {
+            vec![
+                "dojo::database::introspect::FieldLayout {
                     selector: '',
                     layout: dojo::database::introspect::Introspect::<u8>::layout()
                 }"
-            .to_string()]
+                .to_string(),
+            ]
         }
         CompositeType::Struct => vec![],
     };

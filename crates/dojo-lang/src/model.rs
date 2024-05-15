@@ -6,7 +6,7 @@ use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{ArgClause, Expr, ItemStruct, OptionArgListParenthesized};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, TypedStablePtr};
+use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
@@ -311,8 +311,8 @@ pub fn handle_model_struct(
 impl $type_name$Model of dojo::model::Model<$type_name$> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: \
              dojo::database::introspect::Layout) -> $type_name$ {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, $model_selector$, \
-             keys, layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, $model_selector$, keys, \
+             layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.

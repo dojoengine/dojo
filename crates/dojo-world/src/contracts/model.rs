@@ -13,9 +13,8 @@ use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::poseidon_hash_many;
 
-use crate::contracts::WorldContractReader;
-
 use super::abi::world::Layout;
+use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
 #[path = "model_test.rs"]

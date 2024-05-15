@@ -71,10 +71,8 @@ impl TestArgs {
         // TODO: Compute all compilation units and remove duplicates, could be unnecessary in future
         // version of Scarb.
 
-        let features_opts = FeaturesOpts {
-            features: FeaturesSelector::AllFeatures,
-            no_default_features: false,
-        };
+        let features_opts =
+            FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
         let mut compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws)?;
         compilation_units.sort_by_key(|unit| unit.main_package_id());

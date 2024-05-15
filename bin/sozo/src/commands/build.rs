@@ -33,10 +33,8 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let features_opts = FeaturesOpts {
-            features: FeaturesSelector::AllFeatures,
-            no_default_features: false,
-        };
+        let features_opts =
+            FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
         let compile_info = compile_workspace(
             config,

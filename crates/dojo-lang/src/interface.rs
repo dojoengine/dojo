@@ -2,7 +2,7 @@ use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{PluginDiagnostic, PluginGeneratedFile, PluginResult};
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode, TypedStablePtr};
+use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
 pub struct DojoInterface {
@@ -70,7 +70,7 @@ impl DojoInterface {
                 name: name.clone(),
                 content: code,
                 aux_data: None,
-                code_mappings: code_mappings,
+                code_mappings,
             }),
             diagnostics: system.diagnostics,
             remove_original_item: true,

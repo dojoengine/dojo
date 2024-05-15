@@ -15,7 +15,7 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode, TypedStablePtr};
+use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use dojo_types::system::Dependency;
 use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
@@ -69,11 +69,7 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 
@@ -91,11 +87,7 @@ impl GeneratedFileAuxData for ComputedValuesAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self == other
-        } else {
-            false
-        }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
     }
 }
 
@@ -290,8 +282,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     for arg in attr.args {
                         // Check if the argument is a path then set it to arg
                         let AttributeArg {
-                            variant:
-                                AttributeArgVariant::Unnamed(ast::Expr::Path(path)),
+                            variant: AttributeArgVariant::Unnamed(ast::Expr::Path(path)),
                             ..
                         } = arg
                         else {
@@ -342,7 +333,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                         name,
                         content: code,
                         aux_data: Some(DynGeneratedFileAuxData::new(aux_data)),
-                        code_mappings: code_mappings,
+                        code_mappings,
                     }),
                     diagnostics,
                     remove_original_item: false,
@@ -371,8 +362,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     for arg in attr.args {
                         // Check if the argument is a path then set it to arg
                         let AttributeArg {
-                            variant:
-                                AttributeArgVariant::Unnamed(ast::Expr::Path(path)),
+                            variant: AttributeArgVariant::Unnamed(ast::Expr::Path(path)),
                             ..
                         } = arg
                         else {
@@ -462,7 +452,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                         name,
                         content: code,
                         aux_data: Some(DynGeneratedFileAuxData::new(aux_data)),
-                        code_mappings: code_mappings,
+                        code_mappings,
                     }),
                     diagnostics,
                     remove_original_item: false,

@@ -2,11 +2,11 @@ use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
-use cairo_lang_diagnostics::Severity;
 use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{Expr, ItemModule};
 use cairo_lang_syntax::node::kind::SyntaxKind;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode, TypedStablePtr};
+use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 use itertools::Itertools;
 
 use super::utils::{parent_of_kind, SYSTEM_READS};
@@ -127,7 +127,7 @@ impl InlineMacroExprPlugin for GetMacro {
             code: Some(PluginGeneratedFile {
                 name: "get_inline_macro".into(),
                 content: code,
-                code_mappings: code_mappings,
+                code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],
