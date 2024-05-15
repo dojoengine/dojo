@@ -680,7 +680,7 @@ mod world {
     }
 
     #[generate_trait]
-    impl InternalFunctions of InternalFunctionsTrait {
+    impl Self of SelfTrait {
 
         /// Write a new model record.
         ///
@@ -701,10 +701,10 @@ mod world {
 
             match layout {
                 Layout::Fixed(layout) => {
-                    InternalFunctions::_write_fixed_layout(model, model_key, values, ref offset, layout);
+                    Self::_write_fixed_layout(model, model_key, values, ref offset, layout);
                 },
                 Layout::Struct(layout) => {
-                    InternalFunctions::_write_struct_layout(model, model_key, values, ref offset, layout);
+                    Self::_write_struct_layout(model, model_key, values, ref offset, layout);
                 },
                 _ => {
                     panic!("Unexpected layout type for a model.");
@@ -729,10 +729,10 @@ mod world {
 
             match layout {
                 Layout::Fixed(layout) => {
-                    InternalFunctions::_delete_fixed_layout(model, model_key, layout);
+                    Self::_delete_fixed_layout(model, model_key, layout);
                 },
                 Layout::Struct(layout) => {
-                    InternalFunctions::_delete_struct_layout(model, model_key, layout);
+                    Self::_delete_struct_layout(model, model_key, layout);
                 },
                 _ => {
                     panic!("Unexpected layout type for a model.");
@@ -757,10 +757,10 @@ mod world {
 
             match layout {
                 Layout::Fixed(layout) => {
-                    InternalFunctions::_read_fixed_layout(model, model_key, ref read_data, layout);
+                    Self::_read_fixed_layout(model, model_key, ref read_data, layout);
                 },
                 Layout::Struct(layout) => {
-                    InternalFunctions::_read_struct_layout(model, model_key, ref read_data, layout);
+                    Self::_read_struct_layout(model, model_key, ref read_data, layout);
                 },
                 _ => {
                     panic!("Unexpected layout type for a model.");
@@ -842,22 +842,22 @@ mod world {
         ) {
             match layout {
                 Layout::Fixed(layout) => {
-                    InternalFunctions::_write_fixed_layout(model, key, values, ref offset, layout);
+                    Self::_write_fixed_layout(model, key, values, ref offset, layout);
                 },
                 Layout::Struct(layout) => {
-                    InternalFunctions::_write_struct_layout(model, key, values, ref offset, layout);
+                    Self::_write_struct_layout(model, key, values, ref offset, layout);
                 },
                 Layout::Array(layout) => {
-                    InternalFunctions::_write_array_layout(model, key, values, ref offset, layout);
+                    Self::_write_array_layout(model, key, values, ref offset, layout);
                 },
                 Layout::Tuple(layout) => {
-                    InternalFunctions::_write_tuple_layout(model, key, values, ref offset, layout);
+                    Self::_write_tuple_layout(model, key, values, ref offset, layout);
                 },
                 Layout::ByteArray => {
-                    InternalFunctions::_write_byte_array_layout(model, key, values, ref offset);
+                    Self::_write_byte_array_layout(model, key, values, ref offset);
                 },
                 Layout::Enum(layout) => {
-                    InternalFunctions::_write_enum_layout(model, key, values, ref offset, layout);
+                    Self::_write_enum_layout(model, key, values, ref offset, layout);
                 }
             }
         }
@@ -909,9 +909,9 @@ mod world {
 
             // and then, write array items
             let item_layout = *item_layout.at(0);
-            let array_layout = InternalFunctions::_generate_full_array_layout(item_layout, array_len);
+            let array_layout = Self::_generate_full_array_layout(item_layout, array_len);
 
-            InternalFunctions::_write_group_of_layouts(model, key, values, ref offset, array_layout);
+            Self::_write_group_of_layouts(model, key, values, ref offset, array_layout);
         }
 
         ///
@@ -963,9 +963,9 @@ mod world {
                 if i >= layout.len() { break; }
 
                 let field_layout = *layout.at(i);
-                let field_key = InternalFunctions::_field_key(key, field_layout.selector);
+                let field_key = Self::_field_key(key, field_layout.selector);
 
-                InternalFunctions::_write_layout(model, field_key, values, ref offset, field_layout.layout);
+                Self::_write_layout(model, field_key, values, ref offset, field_layout.layout);
 
                 i += 1;
             }
@@ -986,7 +986,7 @@ mod world {
             ref offset: u32,
             layout: Span<FieldLayout>
         )  {
-            InternalFunctions::_write_group_of_layouts(model, key, values, ref offset, layout);
+            Self::_write_group_of_layouts(model, key, values, ref offset, layout);
         }
 
         fn _write_enum_layout(
@@ -1001,8 +1001,8 @@ mod world {
             assert(variant.into() < 256_u256, 'invalid variant value');
 
             // find the corresponding layout and then write the full variant
-            match InternalFunctions::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => InternalFunctions::_write_layout(model, key, values, ref offset, layout),
+            match Self::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => Self::_write_layout(model, key, values, ref offset, layout),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }
@@ -1027,9 +1027,9 @@ mod world {
                 if i >= layout.len() { break; }
 
                 let field_layout = *layout.at(i);
-                let key = InternalFunctions::_field_key(key, i.into());
+                let key = Self::_field_key(key, i.into());
 
-                InternalFunctions::_write_layout(model, key, values, ref offset, field_layout.layout);
+                Self::_write_layout(model, key, values, ref offset, field_layout.layout);
 
                 i += 1;
             }
@@ -1092,22 +1092,22 @@ mod world {
         ) {
             match layout {
                 Layout::Fixed(layout) => {
-                    InternalFunctions::_delete_fixed_layout(model, key, layout);
+                    Self::_delete_fixed_layout(model, key, layout);
                 },
                 Layout::Struct(layout) => {
-                    InternalFunctions::_delete_struct_layout(model, key, layout);
+                    Self::_delete_struct_layout(model, key, layout);
                 },
                 Layout::Array(_) => {
-                    InternalFunctions::_delete_array_layout(model, key);
+                    Self::_delete_array_layout(model, key);
                 },
                 Layout::Tuple(layout) => {
-                    InternalFunctions::_delete_tuple_layout(model, key, layout);
+                    Self::_delete_tuple_layout(model, key, layout);
                 },
                 Layout::ByteArray => {
-                    InternalFunctions::_delete_byte_array_layout(model, key);
+                    Self::_delete_byte_array_layout(model, key);
                 },
                 Layout::Enum(layout) => {
-                    InternalFunctions::_delete_enum_layout(model, key, layout);
+                    Self::_delete_enum_layout(model, key, layout);
                 }
             }
         }
@@ -1128,9 +1128,9 @@ mod world {
                 if i >= layout.len() { break; }
 
                 let field_layout = *layout.at(i);
-                let key = InternalFunctions::_field_key(key, field_layout.selector);
+                let key = Self::_field_key(key, field_layout.selector);
 
-                InternalFunctions::_delete_layout(model, key, field_layout.layout);
+                Self::_delete_layout(model, key, field_layout.layout);
 
                 i += 1;
             }
@@ -1152,9 +1152,9 @@ mod world {
                 if i >= layout.len() { break; }
 
                 let field_layout = *layout.at(i);
-                let key = InternalFunctions::_field_key(key, i.into());
+                let key = Self::_field_key(key, i.into());
                 
-                InternalFunctions::_delete_layout(model, key, field_layout.layout);
+                Self::_delete_layout(model, key, field_layout.layout);
 
                 i += 1;
             }
@@ -1173,8 +1173,8 @@ mod world {
             assert(variant.into() < 256_u256, 'invalid variant value');
 
             // find the corresponding layout and the delete the full variant
-            match InternalFunctions::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => InternalFunctions::_delete_layout(model, key, layout),
+            match Self::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => Self::_delete_layout(model, key, layout),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }
@@ -1194,17 +1194,17 @@ mod world {
         ) {
             match layout {
                 Layout::Fixed(layout) =>
-                    InternalFunctions::_read_fixed_layout(model, key, ref read_data, layout),
+                    Self::_read_fixed_layout(model, key, ref read_data, layout),
                 Layout::Struct(layout) =>
-                    InternalFunctions::_read_struct_layout(model, key, ref read_data, layout),
+                    Self::_read_struct_layout(model, key, ref read_data, layout),
                 Layout::Array(layout) =>
-                    InternalFunctions::_read_array_layout(model, key, ref read_data, layout),
+                    Self::_read_array_layout(model, key, ref read_data, layout),
                 Layout::Tuple(layout) =>
-                    InternalFunctions::_read_tuple_layout(model, key, ref read_data, layout),
+                    Self::_read_tuple_layout(model, key, ref read_data, layout),
                 Layout::ByteArray => 
-                    InternalFunctions::_read_byte_array_layout(model, key, ref read_data),
+                    Self::_read_byte_array_layout(model, key, ref read_data),
                 Layout::Enum(layout) => 
-                    InternalFunctions::_read_enum_layout(model, key, ref read_data, layout),
+                    Self::_read_enum_layout(model, key, ref read_data, layout),
             };
         }
 
@@ -1222,7 +1222,7 @@ mod world {
             layout: Span<u8>
         ) {
             let data = database::get(model, key, layout);
-            InternalFunctions::_append_array(ref read_data, data);
+            Self::_append_array(ref read_data, data);
         }
 
         /// Read an array layout model record.
@@ -1250,8 +1250,8 @@ mod world {
             let item_layout = *layout.at(0);
             let array_len: u32 = array_len.try_into().unwrap();
 
-            let array_layout = InternalFunctions::_generate_full_array_layout(item_layout, array_len);
-            InternalFunctions::_read_group_of_layouts(model, key, ref read_data, array_layout);
+            let array_layout = Self::_generate_full_array_layout(item_layout, array_len);
+            Self::_read_group_of_layouts(model, key, ref read_data, array_layout);
         }
 
         ///
@@ -1282,7 +1282,7 @@ mod world {
 
             let data = database::get_array(model, key, array_size);
 
-            InternalFunctions::_append_array(ref read_data, data);
+            Self::_append_array(ref read_data, data);
         }
 
         /// Read a struct layout model record.
@@ -1303,9 +1303,9 @@ mod world {
                 if i >= layout.len() { break; }
 
                 let field_layout = *layout.at(i);
-                let field_key = InternalFunctions::_field_key(key, field_layout.selector);
+                let field_key = Self::_field_key(key, field_layout.selector);
 
-                InternalFunctions::_read_layout(model, field_key, ref read_data, field_layout.layout);
+                Self::_read_layout(model, field_key, ref read_data, field_layout.layout);
 
                 i += 1;
             }
@@ -1324,7 +1324,7 @@ mod world {
             ref read_data: Array<felt252>,
             layout: Span<FieldLayout>
         ) {
-            InternalFunctions::_read_group_of_layouts(model, key, ref read_data, layout);
+            Self::_read_group_of_layouts(model, key, ref read_data, layout);
         }
 
         fn _read_enum_layout(
@@ -1335,7 +1335,7 @@ mod world {
         ) {
             // read the variant value first, which is the first element of the tuple
             // (because an enum is stored as a tuple).
-            let variant_key = InternalFunctions::_field_key(key, 0);
+            let variant_key = Self::_field_key(key, 0);
             let res = database::get(model, variant_key, array![8].span());
             assert(res.len() == 1, 'internal database error');
 
@@ -1343,8 +1343,8 @@ mod world {
             assert(variant.into() < 256_u256, 'invalid variant value');
 
             // find the corresponding layout and the read the full variant
-            match InternalFunctions::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => InternalFunctions::_read_layout(model, key, ref read_data, layout),
+            match Self::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => Self::_read_layout(model, key, ref read_data, layout),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }
@@ -1367,8 +1367,8 @@ mod world {
                 if i >= layout.len() { break; }
 
                 let field_layout = *layout.at(i);
-                let field_key = InternalFunctions::_field_key(key, i.into());
-                InternalFunctions::_read_layout(model, field_key, ref read_data, field_layout.layout);
+                let field_key = Self::_field_key(key, i.into());
+                Self::_read_layout(model, field_key, ref read_data, field_layout.layout);
 
                 i += 1;
             }

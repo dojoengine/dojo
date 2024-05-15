@@ -65,7 +65,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     #[inline(always)]
     fn instance_selector(self: @ResourceMetadata) -> felt252 {
-        ResourceMetadataModel::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -89,7 +89,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     #[inline(always)]
     fn instance_layout(self: @ResourceMetadata) -> dojo::database::introspect::Layout {
-        ResourceMetadataModel::layout()
+        Self::layout()
     }
 
     #[inline(always)]

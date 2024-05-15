@@ -15,7 +15,7 @@ use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::Config;
-use scarb::ops::{self, CompileOpts, FeaturesOpts, FeaturesSelector};
+use scarb::ops::{self, FeaturesOpts, FeaturesSelector};
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";

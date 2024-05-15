@@ -18,7 +18,7 @@ use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::{Config, Workspace};
-use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
+use scarb::ops::{FeaturesOpts, FeaturesSelector};
 use sozo_ops::migration;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
