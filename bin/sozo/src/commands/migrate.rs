@@ -123,12 +123,12 @@ pub async fn setup_env<'a>(
 
     let (account, rpc_url) = {
         let provider = starknet.provider(env)?;
-        trace!("Provider initialized.");
+        trace!(?provider, "Provider initialized.");
 
         let spec_version = provider.spec_version().await?;
         trace!(spec_version);
 
-        if spec_version != RPC_SPEC_VERSION {
+        if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
             return Err(anyhow!(
                 "Unsupported Starknet RPC version: {}, expected {}.",
                 spec_version,
@@ -166,4 +166,66 @@ pub async fn setup_env<'a>(
     .with_context(|| "Problem initializing account for migration.")?;
 
     Ok((world_address, account, rpc_url.to_string()))
+}
+
+/// Checks if the provided version string is compatible with the expected version string using
+/// semantic versioning rules. Includes specific backward compatibility rules, e.g., version 0.6 is
+/// compatible with 0.7.
+///
+/// # Arguments
+///
+/// * `provided_version` - The version string provided by the user.
+/// * `expected_version` - The expected version string.
+///
+/// # Returns
+///
+/// * `Result<bool>` - Returns `true` if the provided version is compatible with the expected
+///   version, `false` otherwise.
+fn is_compatible_version(provided_version: &str, expected_version: &str) -> Result<bool> {
+    use semver::Version;
+    let provided_ver = Version::parse(provided_version)
+        .map_err(|e| anyhow!("Failed to parse provided version '{}': {}", provided_version, e))?;
+    let expected_ver = Version::parse(expected_version)
+        .map_err(|e| anyhow!("Failed to parse expected version '{}': {}", expected_version, e))?;
+
+    // Check major version for compatibility.
+    if provided_ver.major != expected_ver.major {
+        return Ok(false);
+    }
+
+    // Specific backward compatibility rule: 0.6 is compatible with 0.7.
+    if (provided_ver.major == 0 && provided_ver.minor == 6)
+        && (expected_ver.major == 0 && expected_ver.minor == 7)
+    {
+        return Ok(true);
+    }
+
+    // Check minor version for general compatibility.
+    Ok(provided_ver.minor >= expected_ver.minor)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_compatible_version_major_mismatch() {
+        assert!(!is_compatible_version("1.0.0", "2.0.0").unwrap());
+    }
+
+    #[test]
+    fn test_is_compatible_version_minor_compatible() {
+        assert!(is_compatible_version("1.2.0", "1.1.0").unwrap());
+    }
+
+    #[test]
+    fn test_is_compatible_version_specific_backward_compatibility() {
+        assert!(is_compatible_version("0.6.0", "0.7.1").unwrap());
+    }
+
+    #[test]
+    fn test_is_compatible_version_invalid_version_string() {
+        assert!(is_compatible_version("1.0", "1.0.0").is_err());
+        assert!(is_compatible_version("1.0.0", "1.0").is_err());
+    }
 }
