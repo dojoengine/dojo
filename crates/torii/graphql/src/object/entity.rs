@@ -145,16 +145,17 @@ fn model_union_field() -> Field {
                         let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
                         // but the table name for the model data is the unhashed model name
-                        let data = model_data_recursive_query(
+                        let data: ValueMapping =  match model_data_recursive_query(
                             &mut conn,
                             vec![name.clone()],
                             &entity_id,
                             None,
                             &type_mapping,
                         )
-                        .await?;
-
-                        println!("data: {:#?}", data);
+                        .await? {
+                            Value::Object(map) => map,
+                            _ => unreachable!(),
+                        };
 
                         results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
