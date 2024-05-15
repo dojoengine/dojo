@@ -185,7 +185,13 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
             let table_name = path_array.join("$").replace(&namespace, "");
 
             return FieldFuture::new(async move {
+                println!("field_name: {:?}", field_name);
+                println!("type_data: {:?}", type_data);
+                println!("path_array: {:?}", path_array);
+                println!("table_name: {:?}", table_name);
+
                 if let Some(value) = ctx.parent_value.as_value() {
+                    println!("parent_value: {:?}", value);
                     // Nested types resolution
                     if let TypeData::Nested((_, nested_mapping)) = type_data {
                         return match ctx.parent_value.try_to_value()? {
@@ -220,19 +226,14 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                         Value::Object(value_mapping) => {
                             Ok(Some(value_mapping.get(&field_name).unwrap().clone()))
                         }
-                        Value::List(values) => Ok(Some(Value::List(values.clone()))),
                         _ => Err("Incorrect value, requires Value::Object".into()),
                     };
                 }
 
                 // Catch model union resolutions, async-graphql sends union types as IndexMap<Name,
                 // ConstValue>
-                if let Some(value_mapping) = ctx.parent_value.as_value() {
-                    if let Value::Object(value_mapping) = value_mapping {
-                        return Ok(Some(value_mapping.get(&field_name).unwrap().clone()));
-                    }
-                    
-                    return Ok(Some(value_mapping.clone()));
+                if let Some(value_mapping) = ctx.parent_value.downcast_ref::<ValueMapping>() {
+                    return Ok(Some(value_mapping.get(&field_name).unwrap().clone()));
                 }
 
                 Err("Field resolver only accepts Value or IndexMap".into())
