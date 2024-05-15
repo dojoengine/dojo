@@ -6,7 +6,8 @@ use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkGroup, Crit
 use katana_executor::{SimulationFlag, StateProviderDb};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::ExecutableTxWithHash;
-use katana_provider::{test_utils, traits::state::StateFactoryProvider};
+use katana_provider::test_utils;
+use katana_provider::traits::state::StateFactoryProvider;
 use pprof::criterion::{Output, PProfProfiler};
 
 use crate::utils::{envs, tx};
@@ -35,8 +36,7 @@ fn blockifier<SF>(
 ) where
     SF: StateFactoryProvider,
 {
-    use katana_executor::implementation::blockifier::utils::block_context_from_envs;
-    use katana_executor::implementation::blockifier::utils::transact;
+    use katana_executor::implementation::blockifier::utils::{block_context_from_envs, transact};
 
     // convert to blockifier block context
     let block_context = block_context_from_envs(&block_envs.0, &block_envs.1);
@@ -54,9 +54,7 @@ fn blockifier<SF>(
 
                 (state, &block_context, &execution_flags, tx.clone())
             },
-            |(mut state, block_context, flags, tx)| {
-                transact(&mut state, &block_context, &flags, tx)
-            },
+            |(mut state, block_context, flags, tx)| transact(&mut state, block_context, flags, tx),
             BatchSize::SmallInput,
         )
     });

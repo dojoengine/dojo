@@ -7,8 +7,9 @@ use cairo_vm::vm::runners::builtin_runner::{
 };
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{BlockEnv, CfgEnv, FeeTokenAddressses};
+use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_primitives::transaction::{ExecutableTxWithHash, InvokeTx, InvokeTxV1};
-use katana_primitives::{genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS, FieldElement};
+use katana_primitives::FieldElement;
 use starknet::macros::{felt, selector};
 
 pub fn tx() -> ExecutableTxWithHash {
