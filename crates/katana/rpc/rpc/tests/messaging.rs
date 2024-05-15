@@ -7,21 +7,24 @@ use alloy::sol;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
 use dojo_world::utils::TransactionWaiter;
+use katana_primitives::utils::transaction::{compute_l1_handler_tx_hash, compute_l1_message_hash};
 use katana_runner::{AnvilRunner, KatanaRunner, KatanaRunnerConfig};
 use serde_json::json;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, FieldElement, Transaction, TransactionFinalityStatus,
+    BlockId, BlockTag, ContractClass, FieldElement, Hash256, MaybePendingTransactionReceipt,
+    Transaction, TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
-use starknet::macros::felt;
+use starknet::macros::selector;
 use starknet::providers::Provider;
 use tempfile::tempdir;
 
 mod common;
 
 sol!(
+    #[derive(Debug)]
     #[allow(missing_docs)]
     #[sol(rpc)]
     StarknetContract,
@@ -131,15 +134,14 @@ async fn test_messaging() {
         // The L2 contract address to send the message to
         let recipient = l2_test_contract;
         // The L2 contract function to call
-        // TODO: compute the function hash from the function signature instead of hardcoding it
-        let function = "0x005421de947699472df434466845d68528f221a52fce7ad2934c5dae2e1f1cdc";
+        let function = selector!("msg_handler_value");
         // The L2 contract function arguments
-        let calldata = vec![123];
+        let calldata = [123];
 
         let call = l1_test_contract
             .sendMessage(
                 U256::from_str(&recipient.to_string()).unwrap(),
-                U256::from_str(function).unwrap(),
+                U256::from_str(&function.to_string()).unwrap(),
                 calldata.iter().map(|x| U256::from(*x)).collect::<Vec<_>>(),
             )
             .gas(12000000)
@@ -154,8 +156,6 @@ async fn test_messaging() {
             .expect("error getting transaction receipt");
 
         assert!(receipt.status(), "failed to send L1 -> L2 message");
-
-        // TODO: query the core messaging contract to check that the message hash do exist
 
         // Wait for the tx to be mined on L2 (Katana)
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -172,20 +172,58 @@ async fn test_messaging() {
             Transaction::L1Handler(ref l1_handler_transaction) => {
                 let calldata = &l1_handler_transaction.calldata;
 
-                // TODO: compute the tx hash using the message params, we're not really asserting
-                // the hash to be correct as we just hardcoded it.
-                //
-                // hint: use `compute_l1_handler_tx_hash` and assert with the actual hash instead of
-                // the hardcoded value
-                assert_eq!(
-                    tx.transaction_hash(),
-                    &felt!("0x00c33cc113afc56bc878034908472770cb13eda6ad8ad91feb25fd4e5c9196a0")
+                // Assert thr value sent
+                assert_eq!(FieldElement::to_string(&calldata[1]), "123");
+
+                // Assert Transaction hash
+                let computed_tx_hash = compute_l1_handler_tx_hash(
+                    FieldElement::ZERO,
+                    recipient,
+                    function,
+                    calldata,
+                    katana_account.provider().chain_id().await.unwrap(),
+                    katana_account
+                        .provider()
+                        .get_nonce(BlockId::Tag(BlockTag::Latest), recipient)
+                        .await
+                        .unwrap(),
                 );
+                assert_eq!(tx.transaction_hash(), &computed_tx_hash);
 
-                // TODO: compute the l1 message hash and assert with the actual message hash in the
-                // l1 handler receipt hint: use `compute_l1_message_hash`
+                let maybe_receipt = katana_account
+                    .provider()
+                    .get_transaction_receipt(tx.transaction_hash())
+                    .await
+                    .unwrap();
+                match maybe_receipt {
+                    MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
+                        TransactionReceipt::L1Handler(l1handler_tx_receipt) => {
+                            // Assert Message hash
+                            let computed_mesage_hash = compute_l1_message_hash(
+                                FieldElement::from_str(&l1_test_contract.address().to_string())
+                                    .unwrap(),
+                                recipient,
+                                calldata,
+                            );
+                            assert_eq!(
+                                l1handler_tx_receipt.message_hash,
+                                Hash256::from_str(&computed_mesage_hash.to_string()).unwrap()
+                            );
 
-                assert_eq!(FieldElement::to_string(&calldata[1]), "123")
+                            // query the core messaging contract to check that the message hash do
+                            // exist
+                            let call = core_contract.l1ToL2Messages(computed_mesage_hash);
+                            let test = call.call().await.unwrap();
+                            println!("TEST CALL {:?}", test);
+                        }
+                        _ => {
+                            panic!("Error, No L1Handler TransactionReceipt")
+                        }
+                    },
+                    _ => {
+                        panic!("Error, No Receipt TransactionReceipt")
+                    }
+                }
             }
             _ => {
                 panic!("Error, No L1handler transaction")
@@ -222,7 +260,7 @@ async fn test_messaging() {
             .consumeMessage(from_address, payload)
             .value(Uint::from(1))
             .gas(12000000)
-            .nonce(5);
+            .nonce(4);
 
         // Wait for the tx to be mined on L1 (Anvil)
         tokio::time::sleep(Duration::from_secs(8)).await;
