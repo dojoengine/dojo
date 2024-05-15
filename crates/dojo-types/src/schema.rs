@@ -41,6 +41,8 @@ pub enum Ty {
     Struct(Struct),
     Enum(Enum),
     Tuple(Vec<Ty>),
+    Array(Vec<Ty>),
+    ByteArray(String),
 }
 
 impl Ty {
@@ -258,12 +260,15 @@ impl std::fmt::Display for Ty {
                     Some(enum_str)
                 }
                 Ty::Tuple(tuple) => {
-                    if tuple.is_empty() {
-                        None
-                    } else {
-                        Some(ty.name())
-                    }
+                    Some(format!(
+                        "tuple({})",
+                        tuple.iter().map(|ty| ty.name()).join(", ")
+                    ))
                 }
+                Ty::Array(items_ty) => {
+                    Some(format!("Array<{}>", items_ty[0].name()))
+                }
+                Ty::ByteArray(_) => Some("ByteArray".to_string()),
             })
             .collect::<Vec<_>>()
             .join("\n\n");
