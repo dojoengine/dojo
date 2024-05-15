@@ -321,26 +321,38 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
             if primitive_sizes.get(&ty).is_some() {
                 // It's a primitive type
                 member_types.push(format!(
-                    "dojo::database::introspect::serialize_member(
-                     @dojo::database::introspect::Member {{
+                    "dojo::database::introspect::Member {{
                 name: '{member_name}',
                 ty: dojo::database::introspect::Ty::Primitive('{ty}'),
                 attrs: array![{}].span()
-            }})",
+            }}",
                     attrs.join(","),
                 ));
             } else if is_byte_array(&ty) {
-                // TODO for Ty
+                member_types.push(format!(
+                    "dojo::database::introspect::Member {{
+                        name: '{member_name}',
+                        ty: dojo::database::introspect::Ty::ByteArray,
+                        attrs: array![{}].span()
+                    }}",
+                    attrs.join(","),
+                ));
             } else if is_array(&ty) {
                 let item_type = get_array_item_type(&ty);
 
+                // Here, we would want to support array of structs, enums etc...
+                // So we need to know the introspect Ty of the item type in order
+                // to push it into the Ty of the array...
+                // We could easily detect if it's a primitive type or a byte array,
+                // but how to know if it's a struct or an enum... x(
                 member_types.push(format!(
-                    "dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {{
+                    "dojo::database::introspect::Member {{
                         name: '{member_name}',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        ty: dojo::database::introspect::Ty::Array(
+                            array![dojo::database::introspect::Ty::Primitive('{item_type}')].span()
+                        ),
                         attrs: array![{}].span()
-                    }})",
+                    }}",
                     attrs.join(","),
                 ));
 
@@ -352,11 +364,7 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
                     .filter_map(|e| {
                         let e_ty = e.as_syntax_node().get_text(db).trim().to_string();
                         if primitive_sizes.get(&e_ty).is_some() {
-                            Some(format!(
-                                "dojo::database::introspect::serialize_member_type(
-                                    @dojo::database::introspect::Ty::Primitive('{e_ty}')
-                                )"
-                            ))
+                            Some(format!("dojo::database::introspect::Ty::Primitive('{e_ty}')"))
                         } else {
                             // No need to handle other types as the Ty will be removed soon
                             None
@@ -366,8 +374,7 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
 
                 // Tuple
                 member_types.push(format!(
-                    "dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {{
+                    "dojo::database::introspect::Member {{
                         name: '{member_name}',
                         ty: dojo::database::introspect::Ty::Tuple(
                             array![
@@ -375,19 +382,18 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
                             ].span()
                         ),
                         attrs: array![{}].span()
-                    }})",
+                    }}",
                     tuple_items.join(",\n"),
                     attrs.join(","),
                 ));
             } else {
                 // It's a custom struct/enum
                 member_types.push(format!(
-                    "dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {{
+                    "dojo::database::introspect::Member {{
                         name: '{member_name}',
                         ty: dojo::database::introspect::Introspect::<{ty}>::ty(),
                         attrs: array![{}].span()
-                    }})",
+                    }}",
                     attrs.join(","),
                 ));
             }
@@ -421,19 +427,9 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
 /// Generates enum arm type introspect
 pub fn handle_enum_arm_type(ty_name: &String, is_primitive: bool) -> (String, String) {
     let serialized = if is_primitive {
-        format!(
-            "dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('{}')
-            )",
-            ty_name
-        )
+        format!("dojo::database::introspect::Ty::Primitive('{}')", ty_name)
     } else {
-        format!(
-            "dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Introspect::<{}>::ty()
-            )",
-            ty_name
-        )
+        format!("dojo::database::introspect::Introspect::<{}>::ty()", ty_name)
     };
     (serialized, ty_name.to_string())
 }
@@ -563,8 +559,7 @@ pub fn handle_introspect_enum2(
         arms_ty.push(format!(
             "(
                     '{member_name}',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![{}].span()))
+                    dojo::database::introspect::Ty::Tuple(array![{}].span())
                 )",
             if !variant_type_arr.is_empty() {
                 let ty_cairo: Vec<_> =

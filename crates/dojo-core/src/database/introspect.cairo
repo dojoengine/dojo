@@ -35,24 +35,26 @@ enum Ty {
     Primitive: felt252,
     Struct: Struct,
     Enum: Enum,
-    Tuple: Span<Span<felt252>>,
-    // Store the capacity of the array.
-    FixedSizeArray: u32,
-    DynamicSizeArray,
+    Tuple: Span<Ty>,
+    // We can't have `Ty` here as it will cause infinite recursion.
+    // And `Box` is not serializable. So using a Span, even if it's to have
+    // one element, does the trick.
+    Array: Span<Ty>,
+    ByteArray,
 }
 
 #[derive(Copy, Drop, Serde)]
 struct Struct {
     name: felt252,
     attrs: Span<felt252>,
-    children: Span<Span<felt252>>
+    children: Span<Member>
 }
 
 #[derive(Copy, Drop, Serde)]
 struct Enum {
     name: felt252,
     attrs: Span<felt252>,
-    children: Span<(felt252, Span<felt252>)>
+    children: Span<(felt252, Ty)>
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -60,20 +62,6 @@ struct Member {
     name: felt252,
     attrs: Span<felt252>,
     ty: Ty
-}
-
-// Remove once https://github.com/starkware-libs/cairo/issues/4075 is resolved
-fn serialize_member(m: @Member) -> Span<felt252> {
-    let mut serialized = ArrayTrait::new();
-    m.serialize(ref serialized);
-    serialized.span()
-}
-
-// Remove once https://github.com/starkware-libs/cairo/issues/4075 is resolved
-fn serialize_member_type(m: @Ty) -> Span<felt252> {
-    let mut serialized = ArrayTrait::new();
-    m.serialize(ref serialized);
-    serialized.span()
 }
 
 trait Introspect<T> {
@@ -176,7 +164,7 @@ impl Introspect_u256 of Introspect<u256> {
         Layout::Fixed(array![128, 128].span())
     }
     fn ty() -> Ty {
-        Ty::FixedSizeArray(2)
+        Ty::Tuple(array![Ty::Primitive('u128'), Ty::Primitive('u128')].span())
     }
 }
 
@@ -213,7 +201,7 @@ impl Introspect_bytearray of Introspect<ByteArray> {
         Layout::ByteArray
     }
     fn ty() -> Ty {
-        Ty::DynamicSizeArray
+        Ty::ByteArray
     }
 }
 

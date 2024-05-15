@@ -194,6 +194,16 @@ abigen!(
     ]
   },
   {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::Ty>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::Ty>"
+      }
+    ]
+  },
+  {
     "type": "enum",
     "name": "dojo::database::introspect::Ty",
     "variants": [
@@ -211,14 +221,14 @@ abigen!(
       },
       {
         "name": "Tuple",
-        "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+        "type": "core::array::Span::<dojo::database::introspect::Ty>"
       },
       {
-        "name": "FixedSizeArray",
-        "type": "core::integer::u32"
+        "name": "Array",
+        "type": "core::array::Span::<dojo::database::introspect::Ty>"
       },
       {
-        "name": "DynamicSizeArray",
+        "name": "ByteArray",
         "type": "()"
       }
     ]

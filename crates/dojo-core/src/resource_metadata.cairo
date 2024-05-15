@@ -27,7 +27,6 @@ struct ResourceMetadata {
 }
 
 impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
-
     fn entity(
         world: dojo::world::IWorldDispatcher,
         keys: Span<felt252>,
@@ -113,7 +112,8 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
                     selector: selector!("metadata_uri"),
                     layout: dojo::database::introspect::Layout::ByteArray
                 }
-            ].span()
+            ]
+                .span()
         )
     }
 
@@ -124,20 +124,16 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
                 name: 'ResourceMetadata',
                 attrs: array![].span(),
                 children: array![
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
-                            name: 'resource_id',
-                            ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                            attrs: array!['key'].span()
-                        }
-                    ),
-                    dojo::database::introspect::serialize_member(
-                        @dojo::database::introspect::Member {
+                    dojo::database::introspect::Member {
+                        name: 'resource_id',
+                        ty: dojo::database::introspect::Ty::Primitive('felt252'),
+                        attrs: array!['key'].span()
+                    },
+                    dojo::database::introspect::Member {
                         name: 'metadata_uri',
-                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        ty: dojo::database::introspect::Ty::ByteArray,
                         attrs: array![].span()
-                        }
-                    )
+                    }
                 ].span()
             }
         )
