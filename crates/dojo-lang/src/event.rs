@@ -8,7 +8,7 @@ use cairo_lang_starknet::plugin::events::EventData;
 use cairo_lang_starknet_classes::abi::EventFieldKind;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode, TypedStablePtr};
 use indoc::formatdoc;
 
 use crate::plugin::DojoAuxData;

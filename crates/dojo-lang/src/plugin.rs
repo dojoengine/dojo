@@ -15,7 +15,7 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode, TypedStablePtr};
 use dojo_types::system::Dependency;
 use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
@@ -291,12 +291,12 @@ impl MacroPlugin for BuiltinDojoPlugin {
                         // Check if the argument is a path then set it to arg
                         let AttributeArg {
                             variant:
-                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
+                                AttributeArgVariant::Unnamed(ast::Expr::Path(path)),
                             ..
                         } = arg
                         else {
                             diagnostics.push(PluginDiagnostic {
-                                stable_ptr: arg.arg_stable_ptr.untyped(),
+                                stable_ptr: attr.args_stable_ptr.untyped(),
                                 message: "Expected path.".into(),
                                 severity: Severity::Error,
                             });
@@ -330,17 +330,19 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 }
 
                 let name = enum_ast.name(db).text(db);
-                let mut builder = PatchBuilder::new(db);
+                let mut builder = PatchBuilder::new(db, &enum_ast);
                 for node in rewrite_nodes {
                     builder.add_modified(node);
                 }
 
+                let (code, code_mappings) = builder.build();
+
                 PluginResult {
                     code: Some(PluginGeneratedFile {
                         name,
-                        content: builder.code,
+                        content: code,
                         aux_data: Some(DynGeneratedFileAuxData::new(aux_data)),
-                        code_mappings: builder.code_mappings,
+                        code_mappings: code_mappings,
                     }),
                     diagnostics,
                     remove_original_item: false,
@@ -370,12 +372,12 @@ impl MacroPlugin for BuiltinDojoPlugin {
                         // Check if the argument is a path then set it to arg
                         let AttributeArg {
                             variant:
-                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
+                                AttributeArgVariant::Unnamed(ast::Expr::Path(path)),
                             ..
                         } = arg
                         else {
                             diagnostics.push(PluginDiagnostic {
-                                stable_ptr: arg.arg_stable_ptr.untyped(),
+                                stable_ptr: attr.args_stable_ptr.untyped(),
                                 message: "Expected path.".into(),
                                 severity: Severity::Error,
                             });
@@ -448,17 +450,19 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 }
 
                 let name = struct_ast.name(db).text(db);
-                let mut builder = PatchBuilder::new(db);
+                let mut builder = PatchBuilder::new(db, &struct_ast);
                 for node in rewrite_nodes {
                     builder.add_modified(node);
                 }
 
+                let (code, code_mappings) = builder.build();
+
                 PluginResult {
                     code: Some(PluginGeneratedFile {
                         name,
-                        content: builder.code,
+                        content: code,
                         aux_data: Some(DynGeneratedFileAuxData::new(aux_data)),
-                        code_mappings: builder.code_mappings,
+                        code_mappings: code_mappings,
                     }),
                     diagnostics,
                     remove_original_item: false,

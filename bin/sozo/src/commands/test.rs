@@ -15,7 +15,7 @@ use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::Config;
-use scarb::ops;
+use scarb::ops::{self, CompileOpts, FeaturesOpts, FeaturesSelector};
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
@@ -52,6 +52,12 @@ pub struct TestArgs {
     /// Should we run the profiler and with what mode.
     #[arg(long, default_value = "none")]
     profiler_mode: ProfilerMode,
+    /// Should we run the tests with gas enabled.
+    #[arg(long, default_value_t = true)]
+    gas_enabled: bool,
+    /// Should we print the resource usage.
+    #[arg(long, default_value_t = false)]
+    print_resource_usage: bool,
 }
 
 impl TestArgs {
@@ -64,7 +70,13 @@ impl TestArgs {
         let resolve = ops::resolve_workspace(&ws)?;
         // TODO: Compute all compilation units and remove duplicates, could be unnecessary in future
         // version of Scarb.
-        let mut compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
+
+        let features_opts = FeaturesOpts {
+            features: FeaturesSelector::AllFeatures,
+            no_default_features: false,
+        };
+
+        let mut compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws)?;
         compilation_units.sort_by_key(|unit| unit.main_package_id());
         compilation_units.dedup_by_key(|unit| unit.main_package_id());
 
@@ -99,6 +111,8 @@ impl TestArgs {
                 ignored: self.ignored,
                 include_ignored: self.include_ignored,
                 run_profiler: self.profiler_mode.clone().into(),
+                gas_enabled: self.gas_enabled,
+                print_resource_usage: self.print_resource_usage,
             };
 
             let compiler =

@@ -5,10 +5,10 @@ use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
+use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::ast::{ExprPath, ExprStructCtorCall, FunctionWithBody, ItemModule};
 use cairo_lang_syntax::node::kind::SyntaxKind;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, TypedSyntaxNode, TypedStablePtr};
 
 use super::unsupported_arg_diagnostic;
 use super::utils::{parent_of_kind, SystemRWOpRecord, SYSTEM_WRITES};
@@ -43,7 +43,7 @@ impl InlineMacroExprPlugin for SetMacro {
         let ast::WrappedArgList::ParenthesizedArgList(arg_list) = syntax.arguments(db) else {
             return unsupported_bracket_diagnostic(db, syntax);
         };
-        let mut builder = PatchBuilder::new(db);
+        let mut builder = PatchBuilder::new(db, syntax);
         builder.add_str("{");
 
         let args = arg_list.arguments(db).elements(db);
@@ -172,11 +172,13 @@ impl InlineMacroExprPlugin for SetMacro {
         }
         builder.add_str("}");
 
+        let (code, code_mappings) = builder.build();
+
         InlinePluginResult {
             code: Some(PluginGeneratedFile {
                 name: "set_inline_macro".into(),
-                content: builder.code,
-                code_mappings: builder.code_mappings,
+                content: code,
+                code_mappings: code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],

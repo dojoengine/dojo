@@ -5,7 +5,7 @@ use dojo_lang::scarb_internal::compile_workspace;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
-use scarb::ops::CompileOpts;
+use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
@@ -33,9 +33,18 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let features_opts = FeaturesOpts {
+            features: FeaturesSelector::AllFeatures,
+            no_default_features: false,
+        };
+
         let compile_info = compile_workspace(
             config,
-            CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+            CompileOpts {
+                include_targets: vec![],
+                exclude_targets: vec![TargetKind::TEST],
+                features: features_opts,
+            },
         )?;
         trace!(?compile_info, "Compiled workspace.");
 
