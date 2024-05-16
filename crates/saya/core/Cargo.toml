@@ -25,8 +25,8 @@ futures.workspace = true
 itertools.workspace = true
 lazy_static.workspace = true
 parking_lot.workspace = true
-rand = { version = "0.8.5", features = [ "small_rng" ] }
-reqwest = { version = "0.12.4", features = [ "rustls-tls" ], default-features = false }
+rand = { workspace = true, features = [ "small_rng" ] }
+reqwest = { workspace = true, features = [ "rustls-tls" ] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
