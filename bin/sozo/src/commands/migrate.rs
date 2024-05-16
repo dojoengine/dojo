@@ -218,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn test_is_incompatible_version_minor_compatible() {
+    fn test_is_compatible_version_minor_mismatch() {
         assert!(!is_compatible_version("0.2.0", "0.7.0").unwrap());
     }
 
