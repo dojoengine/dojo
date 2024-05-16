@@ -402,7 +402,7 @@ dependencies = [
  "proc-macro-error",
  "proc-macro2",
  "quote",
- "syn 2.0.55",
+ "syn 2.0.61",
 ]
 
 [[package]]
