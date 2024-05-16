@@ -12,7 +12,7 @@ use crate::class::{
 // We may want to make this configurable.
 // We also need this value into `dojo-world`.. which is not ideal as we don't want
 // primitives to depend on `dojo-world` or vice-versa.
-pub const MAX_BYTECODE_SIZE: usize = 81_290;
+// pub const MAX_BYTECODE_SIZE: usize = 81_290;
 
 pub fn parse_compiled_class(artifact: Value) -> Result<CompiledClass> {
     if let Ok(class) = parse_compiled_class_v1(artifact.clone()) {
@@ -29,7 +29,7 @@ pub fn parse_compiled_class_v1(class: Value) -> Result<SierraCompiledClass> {
     let entry_points_by_type = class.entry_points_by_type.clone();
     let sierra = SierraProgram { program, entry_points_by_type };
 
-    let casm = CasmContractClass::from_contract_class(class, true, MAX_BYTECODE_SIZE)?;
+    let casm = CasmContractClass::from_contract_class(class, true, usize::MAX)?;
 
     Ok(SierraCompiledClass { casm, sierra })
 }
