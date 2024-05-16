@@ -87,6 +87,16 @@ abigen!(
     ]
   },
   {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::Layout>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::Layout>"
+      }
+    ]
+  },
+  {
     "type": "enum",
     "name": "dojo::database::introspect::Layout",
     "variants": [
@@ -100,11 +110,11 @@ abigen!(
       },
       {
         "name": "Tuple",
-        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+        "type": "core::array::Span::<dojo::database::introspect::Layout>"
       },
       {
         "name": "Array",
-        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+        "type": "core::array::Span::<dojo::database::introspect::Layout>"
       },
       {
         "name": "ByteArray",
