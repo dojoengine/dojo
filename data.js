@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715889826054,
+  "lastUpdate": 1715889977451,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8005,6 +8005,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16866294,
             "range": "± 198015",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6e972b539edac7ae5d48e2e141a9cfcbf351c79b",
+          "message": "refactor(katana): encapsulate all the tx execution logic into a single function (#1968)\n\n# Description\r\n\r\nput all the logic that is required for every tx execution (ie building the receipt, exec info, etc) into a single unit of execution (ie `transact`). \r\n\r\nthis allow us to simplify testing/benchmarking tx execution, bcs all the necessary steps are now included in a single function that we can easily test, without having to create the entire `BlockExecutor` trait.\r\n\r\n## Related issue\r\n\r\n<!--\r\nPlease link related issues: Fixes #<issue_number>\r\nMore info: https://docs.github.com/en/free-pro-team@latest/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword\r\n-->\r\n\r\n## Tests\r\n\r\n<!--\r\nPlease refer to the CONTRIBUTING.md file to know more about the testing process. Ensure you've tested at least the package you're modifying if running all the tests consumes too much memory on your system.\r\n-->\r\n\r\n- [ ] Yes\r\n- [x] No, because they aren't needed\r\n- [ ] No, because I need help\r\n\r\n## Added to documentation?\r\n\r\n<!--\r\nIf the changes are small, code comments are enough, otherwise, the documentation is needed. It\r\nmay be a README.md file added to your module/package, a DojoBook PR or both.\r\n-->\r\n\r\n- [ ] README.md\r\n- [ ] [Dojo Book](https://github.com/dojoengine/book)\r\n- [x] No documentation needed\r\n\r\n## Checklist\r\n\r\n- [x] I've formatted my code (`scripts/prettier.sh`, `scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)\r\n- [x] I've linted my code (`scripts/clippy.sh`, `scripts/docs.sh`)\r\n- [ ] I've commented my code\r\n- [ ] I've requested a review after addressing the comments",
+          "timestamp": "2024-05-17T03:57:59+08:00",
+          "tree_id": "c9e17ed976f3379d98ebe39e3acab651745ac428",
+          "url": "https://github.com/dojoengine/dojo/commit/6e972b539edac7ae5d48e2e141a9cfcbf351c79b"
+        },
+        "date": 1715889976845,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17330590,
+            "range": "± 225481",
             "unit": "ns/iter"
           }
         ]
