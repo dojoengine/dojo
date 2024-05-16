@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715848892204,
+  "lastUpdate": 1715866891258,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7885,6 +7885,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17023883,
             "range": "± 242355",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "628542f3084778c1216768d3eb05172adc43e79b",
+          "message": "chore: ensure Cargo.lock is committed (#1976)",
+          "timestamp": "2024-05-16T15:33:14+02:00",
+          "tree_id": "e903a89e7ce3df6053c30e4c6e1b399a0d1491f3",
+          "url": "https://github.com/dojoengine/dojo/commit/628542f3084778c1216768d3eb05172adc43e79b"
+        },
+        "date": 1715866890432,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16974865,
+            "range": "± 333342",
             "unit": "ns/iter"
           }
         ]
