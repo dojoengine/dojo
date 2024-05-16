@@ -8,7 +8,6 @@ use blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::BlockContext;
 use blockifier::state::cached_state::{self, GlobalContractCache, MutRefState};
 use blockifier::state::state_api::StateReader;
-use blockifier::transaction::objects::TransactionExecutionInfo;
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
@@ -19,7 +18,6 @@ use starknet_api::block::{BlockNumber, BlockTimestamp};
 use tracing::info;
 
 use self::state::CachedState;
-use crate::utils::build_receipt;
 use crate::{
     BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
     ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
@@ -136,10 +134,7 @@ impl<'a> StarknetVMProcessor<'a> {
         mut op: F,
     ) -> Vec<T>
     where
-        F: FnMut(
-            &mut dyn StateReader,
-            (TxWithHash, Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError>),
-        ) -> T,
+        F: FnMut(&mut dyn StateReader, (TxWithHash, ExecutionResult)) -> T,
     {
         let block_context = &self.block_context;
         let state = &mut self.state.0.write().inner;
@@ -151,7 +146,7 @@ impl<'a> StarknetVMProcessor<'a> {
         let mut results = Vec::with_capacity(transactions.len());
         for exec_tx in transactions {
             let tx = TxWithHash::from(&exec_tx);
-            let res = utils::transact(exec_tx, &mut state, block_context, flags);
+            let res = utils::transact(&mut state, block_context, flags, exec_tx);
             results.push(op(&mut state, (tx, res)));
         }
 
@@ -184,36 +179,29 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
             };
 
             let tx = TxWithHash::from(&exec_tx);
-            let res = match utils::transact(exec_tx, &mut state.inner, block_context, flags) {
-                Ok((info, fee)) => {
-                    // get the trace and receipt from the execution info
-                    let trace = utils::to_exec_info(info);
-                    let receipt = build_receipt(&tx, fee, &trace);
+            let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
 
-                    crate::utils::log_resources(&trace.actual_resources);
-                    crate::utils::log_events(receipt.events());
-
+            match &res {
+                ExecutionResult::Success { receipt, trace } => {
                     self.stats.l1_gas_used += receipt.fee().gas_consumed;
                     self.stats.cairo_steps_used += receipt.resources_used().steps as u128;
 
                     if let Some(reason) = receipt.revert_reason() {
-                        info!(target: LOG_TARGET, reason = %reason, "Transaction reverted.");
+                        info!(target: LOG_TARGET, %reason, "Transaction reverted.");
                     }
 
-                    ExecutionResult::new_success(receipt, trace)
+                    if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
+                        state.declared_classes.insert(class_hash, (compiled, sierra));
+                    }
+
+                    crate::utils::log_resources(&trace.actual_resources);
+                    crate::utils::log_events(receipt.events());
                 }
-                Err(e) => {
-                    info!(target: LOG_TARGET, error = %e, "Executing transaction.");
-                    ExecutionResult::new_failed(e)
+
+                ExecutionResult::Failed { error } => {
+                    info!(target: LOG_TARGET, %error, "Executing transaction.");
                 }
             };
-
-            // if the tx succeed, inserts the class artifacts into the contract class cache
-            if res.is_success() {
-                if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
-                    state.declared_classes.insert(class_hash, (compiled, sierra));
-                }
-            }
 
             self.transactions.push((tx, res));
         }
@@ -258,17 +246,9 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         transactions: Vec<ExecutableTxWithHash>,
         flags: SimulationFlag,
     ) -> Vec<ResultAndStates> {
-        self.simulate_with(transactions, &flags, |_, (tx, res)| {
-            let result = match res {
-                Ok((info, fee)) => {
-                    let trace = utils::to_exec_info(info);
-                    let receipt = build_receipt(&tx, fee, &trace);
-                    ExecutionResult::new_success(receipt, trace)
-                }
-                Err(e) => ExecutionResult::new_failed(e),
-            };
-
-            ResultAndStates { result, states: Default::default() }
+        self.simulate_with(transactions, &flags, |_, (_, result)| ResultAndStates {
+            result,
+            states: Default::default(),
         })
     }
 
@@ -278,18 +258,19 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         flags: SimulationFlag,
     ) -> Vec<Result<TxFeeInfo, ExecutionError>> {
         self.simulate_with(transactions, &flags, |_, (_, res)| match res {
-            Ok((info, fee)) => {
+            ExecutionResult::Success { receipt, .. } => {
                 // if the transaction was reverted, return as error
-                if let Some(reason) = info.revert_error {
-                    info!(target: LOG_TARGET, reason = %reason, "Estimating fee.");
-                    Err(ExecutionError::TransactionReverted { revert_error: reason })
+                if let Some(reason) = receipt.revert_reason() {
+                    info!(target: LOG_TARGET, %reason, "Estimating fee.");
+                    Err(ExecutionError::TransactionReverted { revert_error: reason.to_string() })
                 } else {
-                    Ok(fee)
+                    Ok(receipt.fee().clone())
                 }
             }
-            Err(e) => {
-                info!(target: LOG_TARGET, error = %e, "Estimating fee.");
-                Err(e)
+
+            ExecutionResult::Failed { error } => {
+                info!(target: LOG_TARGET, %error, "Estimating fee.");
+                Err(error)
             }
         })
     }
