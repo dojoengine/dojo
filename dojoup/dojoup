@@ -42,7 +42,9 @@ main() {
   done
 
   if [ -n "$DOJOUP_BRANCH" ] || [ -n "$DOJOUP_PR" ] || [ -n "$DOJOUP_COMMIT" ] || [ -n "$DOJOUP_LOCAL_REPO" ] || [ -n "$DOJOUP_REPO" ]; then
-    err "Rust is required for building from source. Please install Rust from https://www.rust-lang.org/tools/install."
+    if ! command -v rustc &> /dev/null; then
+      err "Rust is required for building from source. Please install Rust from https://www.rust-lang.org/tools/install."
+    fi
   fi
 
   if [ -n "$DOJOUP_PR" ]; then
