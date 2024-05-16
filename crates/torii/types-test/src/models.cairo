@@ -88,7 +88,7 @@ impl DepthIntoFelt252 of Into<Depth, felt252> {
 
 // takes a long time to deploy, uncomment for now
 // #[derive(Introspect, Copy, Drop, Serde)]
-#[dojo::model]
+// #[dojo::model]
 // struct FatModel {
 //     #[key]
 //     record_id: u32,

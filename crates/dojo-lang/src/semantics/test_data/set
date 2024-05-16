@@ -95,7 +95,7 @@ Block(
                                     Literal(
                                         ExprLiteral {
                                             value: 2827,
-                                            ty: ?5,
+                                            ty: core::integer::u32,
                                         },
                                     ),
                                 ),
@@ -104,7 +104,7 @@ Block(
                                     Literal(
                                         ExprLiteral {
                                             value: 79,
-                                            ty: ?6,
+                                            ty: core::integer::u16,
                                         },
                                     ),
                                 ),
@@ -119,7 +119,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?6::set_entity,
+                            function: dojo::world::IWorldDispatcherImpl::set_entity,
                             args: [
                                 Value(
                                     Var(
@@ -224,12 +224,12 @@ Block(
 )
 
 //! > semantic_diagnostics
-warning: Unused variable. Consider ignoring by prefixing with `_`.
+warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
  --> lib.cairo:9:22
 fn test_func() { let key: felt252 = 0xb0b;
                      ^*^
 
-error: Trait has no implementation in context: dojo::model::Model::<test::Health>
- --> lib.cairo[set_inline_macro]:4:41
-                    dojo::model::Model::instance_selector(@__set_model_instance__),
-                                        ^***************^
+error: Trait has no implementation in context: dojo::model::Model::<test::Health>.
+ --> lib.cairo:11:1
+set!(world, (Health{id: 0xb0b, health: 79}))
+^******************************************^

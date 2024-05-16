@@ -91,8 +91,7 @@ struct Player {
     game: felt252,
     #[key]
     player: ContractAddress,
-
-    name: felt252, 
+    name: felt252,
 }
 
 #[dojo::model]
@@ -102,16 +101,14 @@ type OtherPlayer = Player;
 struct ModelWithSimpleArray {
     #[key]
     player: ContractAddress,
-
     x: u16,
-    y: Array<u8>    
+    y: Array<u8>
 }
 
 #[dojo::model]
 struct ModelWithByteArray {
     #[key]
     player: ContractAddress,
-
     x: u16,
     y: ByteArray
 }
@@ -120,7 +117,6 @@ struct ModelWithByteArray {
 struct ModelWithComplexArray {
     #[key]
     player: ContractAddress,
-
     x: u16,
     y: Array<Vec3>
 }
@@ -129,7 +125,6 @@ struct ModelWithComplexArray {
 struct ModelWithTuple {
     #[key]
     player: ContractAddress,
-
     x: u16,
     y: (u8, u16, u32)
 }
@@ -138,7 +133,6 @@ struct ModelWithTuple {
 struct ModelWithTupleNoPrimitives {
     #[key]
     player: ContractAddress,
-
     x: u16,
     y: (u8, Vec3, u32)
 }
@@ -231,8 +225,7 @@ struct Player {
     game: felt252,
     #[key]
     player: ContractAddress,
-
-    name: felt252, 
+    name: felt252,
 }
 
 #[dojo::model]
@@ -242,16 +235,14 @@ type OtherPlayer = Player;
 struct ModelWithSimpleArray {
     #[key]
     player: ContractAddress,
-
     x: u16,
-    y: Array<u8>    
+    y: Array<u8>
 }
 
 #[dojo::model]
 struct ModelWithByteArray {
     #[key]
     player: ContractAddress,
-
     x: u16,
     y: ByteArray
 }
@@ -260,7 +251,6 @@ struct ModelWithByteArray {
 struct ModelWithComplexArray {
     #[key]
     player: ContractAddress,
-
     x: u16,
     y: Array<Vec3>
 }
@@ -269,7 +259,6 @@ struct ModelWithComplexArray {
 struct ModelWithTuple {
     #[key]
     player: ContractAddress,
-
     x: u16,
     y: (u8, u16, u32)
 }
@@ -278,7 +267,6 @@ struct ModelWithTuple {
 struct ModelWithTupleNoPrimitives {
     #[key]
     player: ContractAddress,
-
     x: u16,
     y: (u8, Vec3, u32)
 }
@@ -2635,341 +2623,341 @@ struct U256KeyModel {
        ^**********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:9:1
+#[dojo::model(version: 0, version: 0)]
+^************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:16:1
+#[dojo::model(version: hello)]
+^****************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:23:1
+#[dojo::model(version)]
+^*********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:30:1
+#[dojo::model(my_arg: 1)]
+^***********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:37:1
+#[dojo::model(my_arg)]
+^********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:44:1
+#[dojo::model(version: 2)]
+^************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:51:1
+#[dojo::model(version: 0)]
+^************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:58:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:65:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:70:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:76:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:82:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithSimpleArray]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:94:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithByteArray]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:102:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithComplexArray]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:110:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTuple]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:118:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:91:1
-#[starknet::contract]
-^*******************^
+ --> test_src/lib.cairo:126:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:9:1
+#[dojo::model(version: 0, version: 0)]
+^************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:9:1
+#[dojo::model(version: 0, version: 0)]
+^************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:9:1
+#[dojo::model(version: 0, version: 0)]
+^************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:16:1
+#[dojo::model(version: hello)]
+^****************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:16:1
+#[dojo::model(version: hello)]
+^****************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:16:1
+#[dojo::model(version: hello)]
+^****************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:23:1
+#[dojo::model(version)]
+^*********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:23:1
+#[dojo::model(version)]
+^*********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:23:1
+#[dojo::model(version)]
+^*********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:30:1
+#[dojo::model(my_arg: 1)]
+^***********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:30:1
+#[dojo::model(my_arg: 1)]
+^***********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:30:1
+#[dojo::model(my_arg: 1)]
+^***********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:37:1
+#[dojo::model(my_arg)]
+^********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:37:1
+#[dojo::model(my_arg)]
+^********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:37:1
+#[dojo::model(my_arg)]
+^********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:44:1
+#[dojo::model(version: 2)]
+^************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:44:1
+#[dojo::model(version: 2)]
+^************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:44:1
+#[dojo::model(version: 2)]
+^************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:51:1
+#[dojo::model(version: 0)]
+^************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:51:1
+#[dojo::model(version: 0)]
+^************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:51:1
+#[dojo::model(version: 0)]
+^************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:58:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:58:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:58:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:65:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:65:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:65:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:70:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:70:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:70:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:76:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:76:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:76:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:82:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:82:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:82:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithSimpleArray]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:94:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithSimpleArray]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:94:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithSimpleArray]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:94:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithByteArray]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:102:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithByteArray]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:102:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithByteArray]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:102:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithComplexArray]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:110:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithComplexArray]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:110:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithComplexArray]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:110:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTuple]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:118:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTuple]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:118:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTuple]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:118:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:96:5
-    #[storage]
-    ^********^
+ --> test_src/lib.cairo:126:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:99:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:126:1
+#[dojo::model]
+^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:130:5
-    #[abi(embed_v0)]
-    ^**************^
+ --> test_src/lib.cairo:126:1
+#[dojo::model]
+^************^

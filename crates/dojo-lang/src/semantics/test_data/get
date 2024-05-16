@@ -34,12 +34,12 @@ error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models
 get!()
 ^****^
 
-warning: Unused variable. Consider ignoring by prefixing with `_`.
+warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
  --> lib.cairo:10:22
 fn test_func() { let key: felt252 = 0xb0b;
                      ^*^
 
-warning: Unused variable. Consider ignoring by prefixing with `_`.
+warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
  --> lib.cairo:11:5
 let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
     ^***^
@@ -82,12 +82,12 @@ error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models
 get!(world)
 ^*********^
 
-warning: Unused variable. Consider ignoring by prefixing with `_`.
+warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
  --> lib.cairo:10:22
 fn test_func() { let key: felt252 = 0xb0b;
                      ^*^
 
-warning: Unused variable. Consider ignoring by prefixing with `_`.
+warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
  --> lib.cairo:11:5
 let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
     ^***^
@@ -134,10 +134,10 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?4::new,
+                            function: core::array::ArrayImpl::<core::felt252>::new,
                             args: [],
                             coupon_arg: None,
-                            ty: core::array::Array::<?5>,
+                            ty: core::array::Array::<core::felt252>,
                         },
                     ),
                 },
@@ -146,7 +146,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?5::serialize,
+                            function: core::Felt252Serde::serialize,
                             args: [
                                 Value(
                                     Snapshot(
@@ -175,7 +175,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?6::span,
+                            function: core::array::ArrayImpl::<core::felt252>::span,
                             args: [
                                 Value(
                                     Snapshot(
@@ -189,7 +189,7 @@ Block(
                                 ),
                             ],
                             coupon_arg: None,
-                            ty: core::array::Span::<?7>,
+                            ty: core::array::Span::<core::felt252>,
                         },
                     ),
                 },
@@ -235,7 +235,7 @@ Block(
                                 ),
                             ],
                             coupon_arg: None,
-                            ty: ?8,
+                            ty: test::Health,
                         },
                     ),
                 },
@@ -251,7 +251,7 @@ Block(
 )
 
 //! > semantic_diagnostics
-error: Trait has no implementation in context: dojo::model::Model::<test::Health>
- --> lib.cairo[get_inline_macro]:7:71
-                let __Health_layout__ = dojo::model::Model::<Health>::layout();
-                                                                      ^****^
+error: Trait has no implementation in context: dojo::model::Model::<test::Health>.
+ --> lib.cairo:12:1
+get!(world, key, (Health))
+^************************^

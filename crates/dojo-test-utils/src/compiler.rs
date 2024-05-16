@@ -11,7 +11,7 @@ use dojo_lang::scarb_internal::{compile_workspace, CompileInfo};
 use scarb::compiler::{CompilationUnit, CompilerRepository};
 use scarb::core::{Config, TargetKind};
 use scarb::ops;
-use scarb::ops::CompileOpts;
+use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use scarb_ui::Verbosity;
 use toml::{Table, Value};
 
@@ -65,11 +65,16 @@ pub fn copy_build_project_temp(
 
     let config = build_test_config(&temp_project_path).unwrap();
 
+    let features_opts = FeaturesOpts {
+        features: FeaturesSelector::AllFeatures,
+        no_default_features: false,
+    };
+
     let compile_info = if do_build {
         Some(
             compile_workspace(
                 &config,
-                CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+                CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST], features: features_opts },
             )
             .unwrap(),
         )
@@ -180,7 +185,13 @@ pub fn corelib() -> PathBuf {
     let config = build_test_config("./src/manifest_test_data/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     let resolve = ops::resolve_workspace(&ws).unwrap();
-    let compilation_units = ops::generate_compilation_units(&resolve, &ws).unwrap();
+
+    let features_opts = FeaturesOpts {
+        features: FeaturesSelector::AllFeatures,
+        no_default_features: false,
+    };
+
+    let compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws).unwrap();
 
     if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
         unit.core_package_component().expect("should have component").target.source_root().into()
