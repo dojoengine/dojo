@@ -157,7 +157,29 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                             .as_ref()
                             .expect("qed; enum_options should exist")
                             .split(',')
-                            .map(|s| EnumOption { name: s.to_owned(), ty: Ty::Tuple(vec![]) })
+                            .map(|s| {
+                                EnumOption {
+                                    name: s.to_owned(),
+                                    ty: model_members_all
+                                        .iter()
+                                        .find(|member| {
+                                            member.id == format!("{}${}", child.id, child.name)
+                                                && member.name == s
+                                        })
+                                        .map(|member| match member.type_enum.as_ref() {
+                                            "Primitive" => {
+                                                Ty::Primitive(member.r#type.parse().unwrap())
+                                            }
+                                            "ByteArray" => Ty::ByteArray("".to_string()),
+                                            _ => parse_sql_model_members_impl(
+                                                &format!("{}${}${}", child.id, child.name, member.name),
+                                                &member.r#type,
+                                                model_members_all,
+                                            ),
+                                        })
+                                        .unwrap_or(Ty::Tuple(vec![])),
+                                }
+                            })
                             .collect::<Vec<_>>(),
                     }),
                 },
@@ -169,16 +191,14 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                         model_members_all
                             .iter()
                             .filter(|member| member.id == format!("{}${}", child.id, child.name))
-                            .map(|member| {
-                                if member.type_enum == "Primitive" {
-                                    Ty::Primitive(member.r#type.parse().unwrap())
-                                } else {
-                                    parse_sql_model_members_impl(
-                                        &format!("{}${}${}", child.id, child.name, member.name),
-                                        &member.r#type,
-                                        model_members_all,
-                                    )
-                                }
+                            .map(|member| match member.type_enum.as_ref() {
+                                "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
+                                "ByteArray" => Ty::ByteArray("".to_string()),
+                                _ => parse_sql_model_members_impl(
+                                    &format!("{}${}${}", child.id, child.name, member.name),
+                                    &member.r#type,
+                                    model_members_all,
+                                ),
                             })
                             .collect::<Vec<_>>(),
                     ),
@@ -194,16 +214,14 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                                 .filter(|member| {
                                     member.id == format!("{}${}", child.id, child.name)
                                 })
-                                .map(|member| {
-                                    if member.type_enum == "Primitive" {
-                                        Ty::Primitive(member.r#type.parse().unwrap())
-                                    } else {
-                                        parse_sql_model_members_impl(
-                                            &format!("{}${}${}", child.id, child.name, member.name),
-                                            &member.r#type,
-                                            model_members_all,
-                                        )
-                                    }
+                                .map(|member| match member.type_enum.as_ref() {
+                                    "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
+                                    "ByteArray" => Ty::ByteArray("".to_string()),
+                                    _ => parse_sql_model_members_impl(
+                                        &format!("{}${}${}", child.id, child.name, member.name),
+                                        &member.r#type,
+                                        model_members_all,
+                                    ),
                                 })
                                 .collect::<Vec<_>>(),
                         ),

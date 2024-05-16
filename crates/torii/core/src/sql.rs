@@ -416,11 +416,6 @@ impl Sql {
         block_timestamp: u64,
         is_array: bool,
     ) {
-        if let Ty::Enum(_) = model {
-            // Complex enum values not supported yet.
-            return;
-        }
-
         self.build_model_query(path.clone(), model, *model_idx, block_timestamp, is_array);
 
         let mut build_member = |pathname: &str, member: &Ty| {
@@ -454,6 +449,17 @@ impl Sql {
         } else if let Ty::Array(array) = model {
             let ty = &array[0];
             build_member("data", &ty);
+        } else if let Ty::Enum(e) = model {
+            for child in e.options.iter() {
+                // Skip enum options that have no type / member
+                if let Ty::Tuple(t) = &child.ty {
+                    if t.is_empty() {
+                        continue;
+                    }
+                }
+
+                build_member(&child.name, &child.ty);
+            }
         }
     }
 
@@ -532,58 +538,50 @@ impl Sql {
                 update_members(&s.children, &mut self.query_queue, index);
 
                 for member in s.children.iter() {
-                    if let Ty::Struct(_) = member.ty {
+                    let mut path_clone = path.clone();
+                    path_clone.push(member.name.clone());
+                    self.build_set_entity_queries_recursive(
+                        path_clone,
+                        event_id,
+                        entity_id,
+                        &member.ty,
+                        block_timestamp,
+                        is_event_message,
+                        index,
+                    );
+                }
+            }
+            Ty::Enum(e) => {
+                let option = e.options[e.option.unwrap() as usize].clone();
+                
+                update_members(
+                    &[
+                        Member {
+                            name: option.name.clone(),
+                            ty: option.ty.clone(),
+                            key: false,
+                        },
+                    ],
+                    &mut self.query_queue,
+                    index,
+                );
+
+                match &option.ty {
+                    // Skip enum options that have no type / member
+                    Ty::Tuple(t) if t.is_empty() => {}
+                    _ => {
                         let mut path_clone = path.clone();
-                        path_clone.push(member.name.to_string());
+                        path_clone.push(option.name.clone());
                         self.build_set_entity_queries_recursive(
                             path_clone,
                             event_id,
                             entity_id,
-                            &member.ty,
-                            block_timestamp,
-                            is_event_message,
-                            index,
-                        );
-                    } else if let Ty::Tuple(_) = member.ty {
-                        let mut path_clone = path.clone();
-                        path_clone.push(member.name.to_string());
-                        self.build_set_entity_queries_recursive(
-                            path_clone,
-                            event_id,
-                            entity_id,
-                            &member.ty,
-                            block_timestamp,
-                            is_event_message,
-                            index,
-                        );
-                    } else if let Ty::Array(_) = member.ty {
-                        let mut path_clone = path.clone();
-                        path_clone.push(member.name.to_string());
-                        self.build_set_entity_queries_recursive(
-                            path_clone,
-                            event_id,
-                            entity_id,
-                            &member.ty,
+                            &option.ty,
                             block_timestamp,
                             is_event_message,
                             index,
                         );
                     }
-                }
-            }
-            Ty::Enum(e) => {
-                for child in e.options.iter() {
-                    let mut path_clone = path.clone();
-                    path_clone.push(child.name.clone());
-                    self.build_set_entity_queries_recursive(
-                        path_clone,
-                        event_id,
-                        entity_id,
-                        &child.ty,
-                        block_timestamp,
-                        is_event_message,
-                        index,
-                    );
                 }
             }
             Ty::Tuple(t) => {
@@ -602,48 +600,17 @@ impl Sql {
                 );
 
                 for (idx, member) in t.iter().enumerate() {
-                    match member {
-                        Ty::Struct(_) => {
-                            let mut path_clone = path.clone();
-                            path_clone.push(format!("_{}", idx));
-                            self.build_set_entity_queries_recursive(
-                                path_clone,
-                                event_id,
-                                entity_id,
-                                &member,
-                                block_timestamp,
-                                is_event_message,
-                                index,
-                            );
-                        }
-                        Ty::Tuple(_) => {
-                            let mut path_clone = path.clone();
-                            path_clone.push(format!("_{}", idx));
-                            self.build_set_entity_queries_recursive(
-                                path_clone,
-                                event_id,
-                                entity_id,
-                                &member,
-                                block_timestamp,
-                                is_event_message,
-                                index,
-                            );
-                        }
-                        Ty::Array(_) => {
-                            let mut path_clone = path.clone();
-                            path_clone.push(idx.to_string());
-                            self.build_set_entity_queries_recursive(
-                                path_clone,
-                                event_id,
-                                entity_id,
-                                &member,
-                                block_timestamp,
-                                is_event_message,
-                                index,
-                            );
-                        }
-                        _ => {}
-                    }
+                    let mut path_clone = path.clone();
+                    path_clone.push(format!("{}", idx));
+                    self.build_set_entity_queries_recursive(
+                        path_clone,
+                        event_id,
+                        entity_id,
+                        &member,
+                        block_timestamp,
+                        is_event_message,
+                        index,
+                    );
                 }
             }
             Ty::Array(array) => {
@@ -654,48 +621,17 @@ impl Sql {
                         Some(idx as i64),
                     );
 
-                    match member {
-                        Ty::Struct(_) => {
-                            let mut path_clone = path.clone();
-                            path_clone.push("data".to_string());
-                            self.build_set_entity_queries_recursive(
-                                path_clone,
-                                event_id,
-                                entity_id,
-                                &member,
-                                block_timestamp,
-                                is_event_message,
-                                Some(idx as i64),
-                            );
-                        }
-                        Ty::Tuple(_) => {
-                            let mut path_clone = path.clone();
-                            path_clone.push("data".to_string());
-                            self.build_set_entity_queries_recursive(
-                                path_clone,
-                                event_id,
-                                entity_id,
-                                &member,
-                                block_timestamp,
-                                is_event_message,
-                                Some(idx as i64),
-                            );
-                        }
-                        Ty::Array(_) => {
-                            let mut path_clone = path.clone();
-                            path_clone.push("data".to_string());
-                            self.build_set_entity_queries_recursive(
-                                path_clone,
-                                event_id,
-                                entity_id,
-                                &member,
-                                block_timestamp,
-                                is_event_message,
-                                Some(idx as i64),
-                            );
-                        }
-                        _ => {}
-                    }
+                    let mut path_clone = path.clone();
+                    path_clone.push("data".to_string());
+                    self.build_set_entity_queries_recursive(
+                        path_clone,
+                        event_id,
+                        entity_id,
+                        &member,
+                        block_timestamp,
+                        is_event_message,
+                        Some(idx as i64),
+                    );
                 }
             }
             _ => {}
@@ -888,6 +824,42 @@ impl Sql {
                 ];
 
                 self.query_queue.enqueue(statement, arguments);
+            }
+            Ty::Enum(e) => {
+                for (idx, child) in e.options.iter().enumerate() {
+                    // Skip enum options that have no type / member
+                    if let Ty::Tuple(tuple) = &child.ty {
+                        if tuple.is_empty() {
+                            continue;
+                        }
+                    }
+
+                    let mut options = None; // TEMP: doesnt support complex enums yet
+                    build_member(&child.name, &child.ty, &mut options);
+
+                    let statement =
+                        "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
+                                     member_idx, name, type, type_enum, enum_options, key, \
+                                     executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    let arguments = vec![
+                        Argument::String(table_id.clone()),
+                        // TEMP: this is temporary until the model hash is precomputed
+                        Argument::String(format!(
+                            "{:#x}",
+                            get_selector_from_name(&path[0].clone()).unwrap()
+                        )),
+                        Argument::Int(model_idx),
+                        Argument::Int(idx as i64),
+                        Argument::String(child.name.clone()),
+                        Argument::String(child.ty.name()),
+                        Argument::String(child.ty.as_ref().into()),
+                        options.unwrap_or(Argument::Null),
+                        Argument::Bool(false),
+                        Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    ];
+
+                    self.query_queue.enqueue(statement, arguments);
+                }
             }
             _ => {}
         }
