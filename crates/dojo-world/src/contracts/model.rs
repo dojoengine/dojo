@@ -1,7 +1,7 @@
 pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeError};
-use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
+use dojo_types::packing::{parse_ty, PackingError, ParseError};
 use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
 use starknet::core::types::FieldElement;
@@ -9,9 +9,7 @@ use starknet::core::utils::{
     get_selector_from_name, CairoShortStringToFeltError, NonAsciiNameError,
     ParseCairoShortStringError,
 };
-use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
-use starknet_crypto::poseidon_hash_many;
 
 use super::abi::world::Layout;
 use crate::contracts::WorldContractReader;

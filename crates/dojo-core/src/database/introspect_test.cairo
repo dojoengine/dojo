@@ -63,27 +63,12 @@ fn field(selector: felt252, layout: Layout) -> FieldLayout {
     FieldLayout { selector, layout }
 }
 
-fn item(layout: Layout) -> FieldLayout {
-    FieldLayout { selector: '', layout }
-}
-
 fn fixed(values: Array<u8>) -> Layout {
     Layout::Fixed(values.span())
 }
 
 fn tuple(values: Array<Layout>) -> Layout {
-    let mut items = array![];
-    let mut i: u32 = 0;
-    loop {
-        if i >= values.len() { break; }
-        let v = *values.at(i);
-
-        items.append(item(v));
-
-        i += 1;
-    };
-
-    Layout::Tuple(items.span())
+    Layout::Tuple(values.span())
 }
 
 fn _enum(values: Array<Option<Layout>>) -> Layout {
@@ -126,7 +111,7 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
 
 fn arr(item_layout: Layout) -> Layout {
     Layout::Array(
-        array![item(item_layout)].span()
+        array![item_layout].span()
     )
 }
 

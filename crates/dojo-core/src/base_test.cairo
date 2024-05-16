@@ -145,7 +145,7 @@ mod invalid_model {
     impl InvalidModelSelector of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x7dd4efcdb43134973afac995519471062092df24e91107a2f8faef75daa2cd0
+            0x1fb3f43d260cce5ff6fd7f0a190bbfe1962d72cbf42e2a2ea72c16389c63091
         }
 
         fn name(self: @ContractState) -> ByteArray {

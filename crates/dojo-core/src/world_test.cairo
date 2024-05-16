@@ -1176,10 +1176,7 @@ fn test_set_entity_with_unexpected_array_model_layout() {
 
     let layout = Layout::Array(
         array![
-            FieldLayout {
-                selector:'',
-                layout: dojo::database::introspect::Introspect::<felt252>::layout()
-            },
+            dojo::database::introspect::Introspect::<felt252>::layout()
         ].span()
     );
 
@@ -1196,10 +1193,7 @@ fn test_set_entity_with_unexpected_tuple_model_layout() {
 
     let layout = Layout::Tuple(
         array![
-            FieldLayout {
-                selector:'',
-                layout: dojo::database::introspect::Introspect::<felt252>::layout()
-            },
+            dojo::database::introspect::Introspect::<felt252>::layout()
         ].span()
     );
 
@@ -1216,10 +1210,7 @@ fn test_delete_entity_with_unexpected_array_model_layout() {
 
     let layout = Layout::Array(
         array![
-            FieldLayout {
-                selector:'',
-                layout: dojo::database::introspect::Introspect::<felt252>::layout()
-            },
+            dojo::database::introspect::Introspect::<felt252>::layout()
         ].span()
     );
 
@@ -1236,10 +1227,7 @@ fn test_delete_entity_with_unexpected_tuple_model_layout() {
 
     let layout = Layout::Tuple(
         array![
-            FieldLayout {
-                selector:'',
-                layout: dojo::database::introspect::Introspect::<felt252>::layout()
-            },
+            dojo::database::introspect::Introspect::<felt252>::layout()
         ].span()
     );
 
@@ -1256,10 +1244,7 @@ fn test_get_entity_with_unexpected_array_model_layout() {
 
     let layout = Layout::Array(
         array![
-            FieldLayout {
-                selector:'',
-                layout: dojo::database::introspect::Introspect::<felt252>::layout()
-            },
+            dojo::database::introspect::Introspect::<felt252>::layout()
         ].span()
     );
 
@@ -1276,10 +1261,7 @@ fn test_get_entity_with_unexpected_tuple_model_layout() {
 
     let layout = Layout::Tuple(
         array![
-            FieldLayout {
-                selector:'',
-                layout: dojo::database::introspect::Introspect::<felt252>::layout()
-            },
+            dojo::database::introspect::Introspect::<felt252>::layout()
         ].span()
     );
 
@@ -1302,10 +1284,7 @@ fn test_set_entity_with_bad_values_length_error_for_array_layout() {
                 selector: selector!("a"),
                 layout: Layout::Array(
                     array![
-                        FieldLayout {
-                            selector:'',
-                            layout: dojo::database::introspect::Introspect::<felt252>::layout()
-                        }
+                        dojo::database::introspect::Introspect::<felt252>::layout()
                     ].span()
                 )
             },

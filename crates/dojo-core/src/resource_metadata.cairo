@@ -112,8 +112,7 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
                     selector: selector!("metadata_uri"),
                     layout: dojo::database::introspect::Layout::ByteArray
                 }
-            ]
-                .span()
+            ].span()
         )
     }
 

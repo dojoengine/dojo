@@ -789,32 +789,12 @@ mod world {
             };
         }
 
-        /// Build the full array layout by repeating the item layout 'len' times.
-        /// 
-        /// Note that this function should be removed once the type recursion compilation
-        /// issue of Layout/FieldLayout will be fixed.
-        fn _generate_full_array_layout(item_layout: FieldLayout, len: u32) -> Span<FieldLayout> {
-            let mut array_layout = array![];
-
-            let mut i = 0;
-            loop {
-                if i >= len { break; }
-                array_layout.append(item_layout);
-
-                 i += 1;
-            };
-
-            array_layout.span()
-        }
-
         fn _find_variant_layout(variant: felt252, variant_layouts: Span<FieldLayout>) -> Option<Layout> {
             let mut i = 0;
             let layout = loop {
                 if i >= variant_layouts.len() { break Option::None; }
 
                 let variant_layout = *variant_layouts.at(i);
-
-                // TODO: do we use the variant hash or directly the variant ?
                 if variant == variant_layout.selector {
                     break Option::Some(variant_layout.layout);
                 }
@@ -894,7 +874,7 @@ mod world {
             key: felt252,
             values: Span<felt252>,
             ref offset: u32,
-            item_layout: Span<FieldLayout>
+            item_layout: Span<Layout>
         ) {
             assert((values.len() - offset) > 0, 'Invalid values length');
 
@@ -909,9 +889,16 @@ mod world {
 
             // and then, write array items
             let item_layout = *item_layout.at(0);
-            let array_layout = Self::_generate_full_array_layout(item_layout, array_len);
 
-            Self::_write_group_of_layouts(model, key, values, ref offset, array_layout);
+            let mut i = 0;
+            loop {
+                if i >= array_len { break; }
+                let key = Self::_field_key(key, i.into());
+
+                Self::_write_layout(model, key, values, ref offset, item_layout);
+
+                i += 1;
+            };
         }
 
         ///
@@ -984,9 +971,19 @@ mod world {
             key: felt252, 
             values: Span<felt252>,
             ref offset: u32,
-            layout: Span<FieldLayout>
+            layout: Span<Layout>
         )  {
-            Self::_write_group_of_layouts(model, key, values, ref offset, layout);
+            let mut i = 0;
+            loop {
+                if i >= layout.len() { break; }
+
+                let field_layout = *layout.at(i);
+                let key = Self::_field_key(key, i.into());
+
+                Self::_write_layout(model, key, values, ref offset, field_layout);
+
+                i += 1;
+            };
         }
 
         fn _write_enum_layout(
@@ -1005,34 +1002,6 @@ mod world {
                 Option::Some(layout) => Self::_write_layout(model, key, values, ref offset, layout),
                 Option::None => panic!("Unable to find the variant layout")
             };
-        }
-
-        /// Write values corresponding to a layout group to the world storage.
-        /// 
-        /// # Arguments
-        /// * `model` - the model selector.
-        /// * `key` - the model record key.
-        /// * `values` - the model record values.
-        /// * `offset` - the start of model record values in the `values` parameter.
-        /// * `layout` - list of layouts.
-        fn _write_group_of_layouts(
-            model: felt252,
-            key: felt252, 
-            values: Span<felt252>,
-            ref offset: u32,
-            layout: Span<FieldLayout>
-        )  {
-            let mut i = 0;
-            loop {
-                if i >= layout.len() { break; }
-
-                let field_layout = *layout.at(i);
-                let key = Self::_field_key(key, i.into());
-
-                Self::_write_layout(model, key, values, ref offset, field_layout.layout);
-
-                i += 1;
-            }
         }
 
         /// Delete a fixed layout model record from the world storage.
@@ -1145,7 +1114,7 @@ mod world {
         fn _delete_tuple_layout(
             model: felt252,
             key: felt252, 
-            layout: Span<FieldLayout>
+            layout: Span<Layout>
         ) {
             let mut i = 0;
             loop {
@@ -1154,7 +1123,7 @@ mod world {
                 let field_layout = *layout.at(i);
                 let key = Self::_field_key(key, i.into());
                 
-                Self::_delete_layout(model, key, field_layout.layout);
+                Self::_delete_layout(model, key, field_layout);
 
                 i += 1;
             }
@@ -1236,7 +1205,7 @@ mod world {
             model: felt252,
             key: felt252,
             ref read_data: Array<felt252>,
-            layout: Span<FieldLayout>
+            layout: Span<Layout>
         ) {            
             // read number of array items
             let res = database::get(model, key, array![251].span());
@@ -1250,8 +1219,15 @@ mod world {
             let item_layout = *layout.at(0);
             let array_len: u32 = array_len.try_into().unwrap();
 
-            let array_layout = Self::_generate_full_array_layout(item_layout, array_len);
-            Self::_read_group_of_layouts(model, key, ref read_data, array_layout);
+            let mut i = 0;
+            loop {
+                if i >= array_len { break; }
+
+                let field_key = Self::_field_key(key, i.into());
+                Self::_read_layout(model, field_key, ref read_data, item_layout);
+
+                i += 1;
+            };
         }
 
         ///
@@ -1322,9 +1298,18 @@ mod world {
             model: felt252,
             key: felt252,
             ref read_data: Array<felt252>,
-            layout: Span<FieldLayout>
+            layout: Span<Layout>
         ) {
-            Self::_read_group_of_layouts(model, key, ref read_data, layout);
+            let mut i = 0;
+            loop {
+                if i >= layout.len() { break; }
+
+                let field_layout = *layout.at(i);
+                let field_key = Self::_field_key(key, i.into());
+                Self::_read_layout(model, field_key, ref read_data, field_layout);
+
+                i += 1;
+            };
         }
 
         fn _read_enum_layout(
@@ -1347,31 +1332,6 @@ mod world {
                 Option::Some(layout) => Self::_read_layout(model, key, ref read_data, layout),
                 Option::None => panic!("Unable to find the variant layout")
             };
-        }
-
-        /// Read data based on a group of layouts.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `key` - model record key.
-        ///   * `read_data` - the read data.
-        ///   * `layout` - the list of layouts.
-        fn _read_group_of_layouts(
-            model: felt252,
-            key: felt252,
-            ref read_data: Array<felt252>,
-            layout: Span<FieldLayout>
-        ) {
-            let mut i = 0;
-            loop {
-                if i >= layout.len() { break; }
-
-                let field_layout = *layout.at(i);
-                let field_key = Self::_field_key(key, i.into());
-                Self::_read_layout(model, field_key, ref read_data, field_layout.layout);
-
-                i += 1;
-            }
-        }            
+        } 
     }
 }

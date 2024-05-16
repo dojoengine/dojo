@@ -14,26 +14,17 @@ use starknet::core::utils::get_selector_from_name;
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
 
-#[derive(PartialEq)]
-enum ModelLayout {
-    Serial,
-    Hash,
-}
-
 const DEFAULT_MODEL_VERSION: u8 = 1;
-const DEFAULT_MODEL_LAYOUT: ModelLayout = ModelLayout::Hash;
 
 const MODEL_VERSION_NAME: &str = "version";
-const MODEL_LAYOUT_NAME: &str = "layout";
 
 struct ModelParameters {
     version: u8,
-    layout: ModelLayout,
 }
 
 impl Default for ModelParameters {
     fn default() -> ModelParameters {
-        ModelParameters { version: DEFAULT_MODEL_VERSION, layout: DEFAULT_MODEL_LAYOUT }
+        ModelParameters { version: DEFAULT_MODEL_VERSION }
     }
 }
 
@@ -82,55 +73,6 @@ fn get_model_version(
     }
 }
 
-/// process the model layout value which should match with the ModelLayout enum.
-fn process_model_layout_value(
-    value: &str,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> ModelLayout {
-    match value {
-        "serial" => ModelLayout::Serial,
-        "hash" => ModelLayout::Hash,
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!("'{}' is not a supported layout for dojo::model", value),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            DEFAULT_MODEL_LAYOUT
-        }
-    }
-}
-
-/// Get the model layout from the `Expr` parameter.
-fn get_model_layout(
-    db: &dyn SyntaxGroup,
-    arg_value: Expr,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> ModelLayout {
-    match arg_value {
-        Expr::ShortString(ref value) => {
-            let value = value.string_value(db).unwrap();
-            process_model_layout_value(&value, arg_value, diagnostics)
-        }
-        Expr::String(ref value) => {
-            let value = value.string_value(db).unwrap();
-            process_model_layout_value(&value, arg_value, diagnostics)
-        }
-        _ => {
-            diagnostics.push(PluginDiagnostic {
-                message: format!(
-                    "The argument '{}' of dojo::model must be a short string or a string",
-                    MODEL_LAYOUT_NAME
-                ),
-                stable_ptr: arg_value.stable_ptr().untyped(),
-                severity: Severity::Error,
-            });
-            DEFAULT_MODEL_LAYOUT
-        }
-    }
-}
-
 /// Get parameters of the dojo::model attribute.
 ///
 /// Note: dojo::model attribute has already been checked so there is one and only one attribute.
@@ -171,9 +113,6 @@ fn get_model_parameters(
                     match arg_name.as_str() {
                         MODEL_VERSION_NAME => {
                             parameters.version = get_model_version(db, arg_value, diagnostics);
-                        }
-                        MODEL_LAYOUT_NAME => {
-                            parameters.layout = get_model_layout(db, arg_value, diagnostics);
                         }
                         _ => {
                             diagnostics.push(PluginDiagnostic {
