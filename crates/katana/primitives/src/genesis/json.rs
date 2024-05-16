@@ -14,7 +14,6 @@ use alloy_primitives::U256;
 use base64::prelude::*;
 use cairo_lang_starknet_classes::casm_contract_class::StarknetSierraCompilationError;
 use cairo_vm::types::errors::program_errors::ProgramError;
-use rayon::prelude::*;
 use serde::de::value::MapAccessDeserializer;
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
