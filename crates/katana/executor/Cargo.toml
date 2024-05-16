@@ -22,7 +22,7 @@ tracing.workspace = true
 alloy-primitives.workspace = true
 
 # blockifier deps
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "935292bb", features = [ "testing" ], optional = true }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "7d866a24", features = [ "testing" ], optional = true }
 cairo-vm = { workspace = true, optional = true }
 
 # Disable SIR for now until they support Cairo 2.6.3

@@ -17,8 +17,8 @@ anyhow.workspace = true
 async-trait.workspace = true
 dojo-metrics.workspace = true
 metrics.workspace = true
-cairo-lang-casm = "2.3.1"
-cairo-lang-starknet = "2.3.1"
+cairo-lang-casm = "=2.6.3"
+cairo-lang-starknet = "=2.6.3"
 cairo-vm.workspace = true
 convert_case.workspace = true
 k256 = { version = "0.13", default-features = false, features = ["ecdsa", "std"] }
