@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715866891258,
+  "lastUpdate": 1715870701766,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7915,6 +7915,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16974865,
             "range": "± 333342",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "543322b5da733b505446250e36a53c851db18830",
+          "message": "fix: add more logic on semver check of Starknet API (#1966)\n\n* fix: add more logic on semver check of Starknet API\r\n\r\n* fix: use matches functionality from semver crate\r\n\r\n* fix: fix typo",
+          "timestamp": "2024-05-16T16:36:38+02:00",
+          "tree_id": "2deed2ae6cb3812924ee4ddcd827d9d8f8899dbc",
+          "url": "https://github.com/dojoengine/dojo/commit/543322b5da733b505446250e36a53c851db18830"
+        },
+        "date": 1715870700544,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16663465,
+            "range": "± 1013116",
             "unit": "ns/iter"
           }
         ]
