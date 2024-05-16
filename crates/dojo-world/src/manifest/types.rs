@@ -153,7 +153,7 @@ pub struct OverlayDojoContract {
     pub original_class_hash: Option<FieldElement>,
     pub reads: Option<Vec<String>>,
     pub writes: Option<Vec<String>>,
-    pub constructor_calldata: Vec<FieldElement>,
+    pub constructor_calldata: Option<Vec<String>>,
 }
 
 #[serde_as]

@@ -500,6 +500,7 @@ where
                 contract.diff.base_class_hash,
                 migrator,
                 txn_config,
+                &contract.diff.constructor_calldata,
             )
             .await
         {

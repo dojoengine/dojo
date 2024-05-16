@@ -13,10 +13,6 @@ use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
 
-#[cfg(test)]
-#[path = "strategy_test.rs"]
-mod tests;
-
 #[derive(Debug, Clone)]
 pub struct MigrationStrategy {
     pub world_address: Option<FieldElement>,

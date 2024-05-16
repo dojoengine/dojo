@@ -9,7 +9,7 @@ trait IWorld<T> {
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
     fn model(self: @T, name: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
-    fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
+    fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
@@ -417,12 +417,13 @@ mod world {
         ///
         /// * `salt` - The salt use for contract deployment.
         /// * `class_hash` - The class hash of the contract.
+        /// * `init_calldata` - Calldata used to initialize the contract
         ///
         /// # Returns
         ///
         /// * `ContractAddress` - The address of the newly deployed contract.
         fn deploy_contract(
-            ref self: ContractState, salt: felt252, class_hash: ClassHash
+            ref self: ContractState, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>,
         ) -> ContractAddress {
             let (contract_address, _) = deploy_syscall(
                 self.contract_base.read(), salt, array![].span(), false
@@ -430,6 +431,8 @@ mod world {
                 .unwrap_syscall();
             let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address };
             upgradeable_dispatcher.upgrade(class_hash);
+
+            // TODO: call the init method of the contract
 
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
