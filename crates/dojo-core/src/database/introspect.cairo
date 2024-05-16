@@ -9,14 +9,11 @@ enum Layout {
     Fixed: Span<u8>,
     Struct: Span<FieldLayout>,
     Tuple: Span<Layout>,
-
     // We can't have `Layout` here as it will cause infinite recursion.
     // And `Box` is not serializable. So using a Span, even if it's to have
     // one element, does the trick.
     Array: Span<Layout>,
-
     ByteArray,
-
     // there is one layout per variant.
     // the `selector` field identifies the variant
     // the `layout` field defines the full variant layout (variant value + optional variant data)
@@ -210,22 +207,16 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
                     // Some
                     selector: 0,
                     layout: Layout::Tuple(
-                        array![
-                            Layout::Fixed(array![8].span()),
-                            Introspect::<T>::layout()
-                        ].span()
+                        array![Layout::Fixed(array![8].span()), Introspect::<T>::layout()].span()
                     )
                 },
                 FieldLayout {
                     // None
                     selector: 1,
-                    layout: Layout::Tuple(
-                        array![
-                            Layout::Fixed(array![8].span())
-                        ].span()
-                    )
+                    layout: Layout::Tuple(array![Layout::Fixed(array![8].span())].span())
                 },
-            ].span()
+            ]
+                .span()
         )
     }
 
@@ -235,9 +226,9 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
                 name: 'Option<T>',
                 attrs: array![].span(),
                 children: array![
-                    ('Some', Introspect::<T>::ty()),
-                    ('None', Ty::Tuple(array![].span()))
-                ].span()
+                    ('Some', Introspect::<T>::ty()), ('None', Ty::Tuple(array![].span()))
+                ]
+                    .span()
             }
         )
     }
@@ -248,11 +239,7 @@ impl Introspect_array<T, +Introspect<T>> of Introspect<Array<T>> {
         Option::None
     }
     fn layout() -> Layout {
-        Layout::Array(
-            array![
-                Introspect::<T>::layout()
-            ].span()
-        )
+        Layout::Array(array![Introspect::<T>::layout()].span())
     }
 
     fn ty() -> Ty {
@@ -265,11 +252,7 @@ impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
         Option::None
     }
     fn layout() -> Layout {
-        Layout::Array(
-            array![
-                Introspect::<T>::layout()
-            ].span()
-        )
+        Layout::Array(array![Introspect::<T>::layout()].span())
     }
 
     fn ty() -> Ty {

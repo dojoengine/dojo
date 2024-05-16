@@ -2,7 +2,9 @@ use dojo::world::IWorldDispatcher;
 use starknet::SyscallResult;
 
 trait Model<T> {
-    fn entity(world: IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> T;
+    fn entity(
+        world: IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout
+    ) -> T;
     fn name() -> ByteArray;
     fn version() -> u8;
     fn selector() -> felt252;

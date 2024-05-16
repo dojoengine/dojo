@@ -104,7 +104,7 @@ struct StructSimpleArrayModel {
     c: u128,
 }
 
-impl ArrayU64Copy of core::traits::Copy::<Array<u64>>;
+impl ArrayU64Copy of core::traits::Copy<Array<u64>>;
 
 fn create_struct_simple_array_model() -> Span<felt252> {
     array![1, 4, 10, 20, 30, 40, 2].span()
@@ -142,17 +142,27 @@ struct StructComplexArrayModel {
 
 fn create_struct_complex_array_model() -> Span<felt252> {
     array![
-        1,                          // a
-        2,                          // b (array length)
-        1, 2, 3, 4,                 // item 1
-        5, 6, 7, 8,                 // item 2
-        1,                          // c (AnotherEnum variant)
-        1,                          // u8
-        0,                          // OneEnum variant
-        0,                          // u8
-        123,                        // felt252
-        1, 'first', 'pending', 7    // ByteArray
-        ].span()
+        1, // a
+        2, // b (array length)
+        1,
+        2,
+        3,
+        4, // item 1
+        5,
+        6,
+        7,
+        8, // item 2
+        1, // c (AnotherEnum variant)
+        1, // u8
+        0, // OneEnum variant
+        0, // u8
+        123, // felt252
+        1,
+        'first',
+        'pending',
+        7 // ByteArray
+    ]
+        .span()
 }
 
 #[derive(Introspect, Drop, Serde)]
@@ -160,7 +170,6 @@ fn create_struct_complex_array_model() -> Span<felt252> {
 struct StructNestedModel {
     #[key]
     caller: ContractAddress,
-
     x: (u8, u16, (u32, ByteArray, u8), Array<(u8, u16)>),
     y: Array<Array<(u8, (u16, u256))>>
 }
@@ -168,20 +177,43 @@ struct StructNestedModel {
 fn create_struct_nested_model() -> Span<felt252> {
     array![
         // -- x
-        1,                                  // u8
-        2,                                  // u16
-        3, 1, 'first', 'pending', 7, 9,     // (u32, ByteArray, u8)
-        3, 1, 2, 3, 4, 5, 6,                // Array<(u8, u16)> with 3 items
-
+        1, // u8
+        2, // u16
+        3,
+        1,
+        'first',
+        'pending',
+        7,
+        9, // (u32, ByteArray, u8)
+        3,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6, // Array<(u8, u16)> with 3 items
         // -- y
-        2,                                  // Array<Array<(u8, (u16, u256))>> with 2 items
-        3,                                  // first array item - Array<(u8, (u16, u256))> of 3 items
-        1, 2, 0, 3,                         // first array item - (u8, (u16, u256))
-        4, 5, 0, 6,                         // second array item - (u8, (u16, u256))
-        8, 7, 9, 10,                        // third array item - (u8, (u16, u256))
-        1,                                  // second array item - Array<(u8, (u16, u256))> of 1 item
-        5, 4, 6, 7                          // first array item - (u8, (u16, u256))
-    ].span()
+        2, // Array<Array<(u8, (u16, u256))>> with 2 items
+        3, // first array item - Array<(u8, (u16, u256))> of 3 items
+        1,
+        2,
+        0,
+        3, // first array item - (u8, (u16, u256))
+        4,
+        5,
+        0,
+        6, // second array item - (u8, (u16, u256))
+        8,
+        7,
+        9,
+        10, // third array item - (u8, (u16, u256))
+        1, // second array item - Array<(u8, (u16, u256))> of 1 item
+        5,
+        4,
+        6,
+        7 // first array item - (u8, (u16, u256))
+    ]
+        .span()
 }
 
 #[derive(Introspect, Copy, Drop, Serde)]
@@ -447,8 +479,7 @@ fn test_set_metadata_world() {
     let world = deploy_world();
 
     let metadata = ResourceMetadata {
-        resource_id: 0,
-        metadata_uri: format!("ipfs:world_with_a_long_uri_that")
+        resource_id: 0, metadata_uri: format!("ipfs:world_with_a_long_uri_that")
     };
 
     world.set_metadata(metadata.clone());
@@ -474,8 +505,7 @@ fn test_set_metadata_model_writer() {
     bar_contract.set_foo(1337, 1337);
 
     let metadata = ResourceMetadata {
-        resource_id: selector!("Foo"),
-        metadata_uri: format!("ipfs:bob")
+        resource_id: selector!("Foo"), metadata_uri: format!("ipfs:bob")
     };
 
     // A system that has write access on a model should be able to update the metadata.
@@ -491,8 +521,7 @@ fn test_set_metadata_same_model_rules() {
     let world = deploy_world();
 
     let metadata = ResourceMetadata { // World metadata.
-        resource_id: 0, 
-        metadata_uri: format!("ipfs:bob"),
+        resource_id: 0, metadata_uri: format!("ipfs:bob"),
     };
 
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -847,7 +876,7 @@ fn test_set_entity_with_struct_tuple_layout() {
     let layout = dojo::model::Model::<StructWithTuple>::layout();
 
     world.set_entity(selector, keys, values, layout);
- 
+
     let read_values = world.entity(selector, keys, layout);
     assert_array(read_values, values);
 }
@@ -864,14 +893,14 @@ fn test_set_entity_with_struct_enum_layout() {
 
     // test with the first variant
     world.set_entity(selector, keys, values, layout);
- 
+
     let read_values = world.entity(selector, keys, layout);
     assert_array(read_values, values);
 
     // then override with the second variant
     let values = create_struct_with_enum_second_variant();
     world.set_entity(selector, keys, values, layout);
- 
+
     let read_values = world.entity(selector, keys, layout);
     assert_array(read_values, values);
 }
@@ -943,7 +972,9 @@ fn test_set_entity_with_nested_elements() {
 fn assert_empty_array(values: Span<felt252>) {
     let mut i = 0;
     loop {
-        if i >= values.len() { break; }
+        if i >= values.len() {
+            break;
+        }
         assert!(*values.at(i) == 0);
         i += 1;
     };
@@ -961,14 +992,14 @@ fn test_set_entity_with_struct_generics_enum_layout() {
 
     // test with the first variant
     world.set_entity(selector, keys, values, layout);
- 
+
     let read_values = world.entity(selector, keys, layout);
     assert_array(read_values, values);
 
     // then override with the second variant
     let values = create_struct_generic_second_variant();
     world.set_entity(selector, keys, values, layout);
- 
+
     let read_values = world.entity(selector, keys, layout);
     assert_array(read_values, values);
 }
@@ -1011,7 +1042,6 @@ fn test_delete_entity_with_simple_struct_layout() {
 
     assert!(read_values.len() == values.len());
     assert_empty_array(read_values);
-
 }
 
 #[test]
@@ -1035,7 +1065,6 @@ fn test_delete_entity_with_struct_simple_array_layout() {
 
     assert!(read_values.len() == expected_values.len());
     assert_empty_array(read_values);
-
 }
 
 #[test]
@@ -1056,7 +1085,7 @@ fn test_delete_entity_with_complex_array_struct_layout() {
     let read_values = world.entity(selector, keys, layout);
 
     // array length set to 0, so the expected value span is shorter than the initial values
-    let expected_values =  array![0, 0, 0, 0, 0, 0, 0, 0, 0, 0].span();
+    let expected_values = array![0, 0, 0, 0, 0, 0, 0, 0, 0, 0].span();
 
     assert!(read_values.len() == expected_values.len());
     assert_empty_array(read_values);
@@ -1073,7 +1102,7 @@ fn test_delete_entity_with_struct_tuple_layout() {
     let layout = dojo::model::Model::<StructWithTuple>::layout();
 
     world.set_entity(selector, keys, values, layout);
- 
+
     world.delete_entity(selector, keys, layout);
 
     let expected_values = array![0, 0].span();
@@ -1095,8 +1124,8 @@ fn test_delete_entity_with_struct_enum_layout() {
 
     // test with the first variant
     world.set_entity(selector, keys, values, layout);
- 
-   world.delete_entity(selector, keys, layout);
+
+    world.delete_entity(selector, keys, layout);
 
     let expected_values = array![0, 0, 0].span();
     let read_values = world.entity(selector, keys, layout);
@@ -1117,7 +1146,7 @@ fn test_delete_entity_with_struct_layout_and_byte_array() {
 
     world.set_entity(selector, keys, values, layout);
 
-   world.delete_entity(selector, keys, layout);
+    world.delete_entity(selector, keys, layout);
 
     let expected_values = array![0, 0, 0, 0].span();
     let read_values = world.entity(selector, keys, layout);
@@ -1138,7 +1167,7 @@ fn test_delete_entity_with_nested_elements() {
 
     world.set_entity(selector, keys, values, layout);
 
-   world.delete_entity(selector, keys, layout);
+    world.delete_entity(selector, keys, layout);
 
     let expected_values = array![0, 0, 0, 0, 0, 0, 0, 0, 0].span();
     let read_values = world.entity(selector, keys, layout);
@@ -1158,8 +1187,8 @@ fn test_delete_entity_with_struct_generics_enum_layout() {
     let layout = dojo::model::Model::<StructWithGeneric>::layout();
 
     world.set_entity(selector, keys, values, layout);
- 
-   world.delete_entity(selector, keys, layout);
+
+    world.delete_entity(selector, keys, layout);
 
     let expected_values = array![0, 0].span();
     let read_values = world.entity(selector, keys, layout);
@@ -1175,14 +1204,13 @@ fn test_set_entity_with_unexpected_array_model_layout() {
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let layout = Layout::Array(
-        array![
-            dojo::database::introspect::Introspect::<felt252>::layout()
-        ].span()
+        array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.set_entity(
-        selector!("struct_simple_array_model"), array![].span(), array![].span(), layout
-    );
+    world
+        .set_entity(
+            selector!("struct_simple_array_model"), array![].span(), array![].span(), layout
+        );
 }
 
 #[test]
@@ -1192,14 +1220,13 @@ fn test_set_entity_with_unexpected_tuple_model_layout() {
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let layout = Layout::Tuple(
-        array![
-            dojo::database::introspect::Introspect::<felt252>::layout()
-        ].span()
+        array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.set_entity(
-        selector!("struct_simple_array_model"), array![].span(), array![].span(), layout
-    );
+    world
+        .set_entity(
+            selector!("struct_simple_array_model"), array![].span(), array![].span(), layout
+        );
 }
 
 #[test]
@@ -1209,14 +1236,10 @@ fn test_delete_entity_with_unexpected_array_model_layout() {
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let layout = Layout::Array(
-        array![
-            dojo::database::introspect::Introspect::<felt252>::layout()
-        ].span()
+        array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.delete_entity(
-        selector!("struct_simple_array_model"), array![].span(), layout
-    );
+    world.delete_entity(selector!("struct_simple_array_model"), array![].span(), layout);
 }
 
 #[test]
@@ -1226,14 +1249,10 @@ fn test_delete_entity_with_unexpected_tuple_model_layout() {
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let layout = Layout::Tuple(
-        array![
-            dojo::database::introspect::Introspect::<felt252>::layout()
-        ].span()
+        array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.delete_entity(
-        selector!("struct_simple_array_model"), array![].span(), layout
-    );
+    world.delete_entity(selector!("struct_simple_array_model"), array![].span(), layout);
 }
 
 #[test]
@@ -1243,14 +1262,10 @@ fn test_get_entity_with_unexpected_array_model_layout() {
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let layout = Layout::Array(
-        array![
-            dojo::database::introspect::Introspect::<felt252>::layout()
-        ].span()
+        array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.entity(
-        selector!("struct_simple_array_model"), array![].span(), layout
-    );
+    world.entity(selector!("struct_simple_array_model"), array![].span(), layout);
 }
 
 #[test]
@@ -1260,14 +1275,10 @@ fn test_get_entity_with_unexpected_tuple_model_layout() {
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
     let layout = Layout::Tuple(
-        array![
-            dojo::database::introspect::Introspect::<felt252>::layout()
-        ].span()
+        array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.entity(
-        selector!("struct_simple_array_model"), array![].span(), layout
-    );
+    world.entity(selector!("struct_simple_array_model"), array![].span(), layout);
 }
 
 
@@ -1283,12 +1294,11 @@ fn test_set_entity_with_bad_values_length_error_for_array_layout() {
             FieldLayout {
                 selector: selector!("a"),
                 layout: Layout::Array(
-                    array![
-                        dojo::database::introspect::Introspect::<felt252>::layout()
-                    ].span()
+                    array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
                 )
             },
-        ].span()
+        ]
+            .span()
     );
 
     world.set_entity(selector, keys, array![].span(), layout);
@@ -1302,7 +1312,10 @@ fn test_set_entity_with_too_big_array_length() {
 
     let selector = selector!("struct_simple_array_model");
     let keys = get_key_test();
-    let values: Span<felt252> = array![1, MAX_ARRAY_LENGTH.try_into().unwrap() + 1, 10, 20, 30, 40, 2].span();
+    let values: Span<felt252> = array![
+        1, MAX_ARRAY_LENGTH.try_into().unwrap() + 1, 10, 20, 30, 40, 2
+    ]
+        .span();
     let layout = dojo::model::Model::<StructSimpleArrayModel>::layout();
 
     world.set_entity(selector, keys, values, layout);
@@ -1316,9 +1329,10 @@ fn test_set_entity_with_struct_layout_and_bad_byte_array_length() {
 
     let selector = selector!("struct_byte_array_model");
     let keys = get_key_test();
-    let values : Span<felt252> = array![
+    let values: Span<felt252> = array![
         1, MAX_ARRAY_LENGTH.try_into().unwrap(), 'first', 'second', 'third', 'pending', 7
-    ].span();
+    ]
+        .span();
     let layout = dojo::model::Model::<StructByteArrayModel>::layout();
 
     world.set_entity(selector, keys, values, layout);
@@ -1332,11 +1346,8 @@ fn test_set_entity_with_struct_layout_and_bad_value_length_for_byte_array() {
 
     let selector = selector!("struct_byte_array_model");
     let keys = get_key_test();
-    let values: Span<felt252> = array![
-        1, 3, 'first', 'second', 'third', 'pending'
-    ].span();
+    let values: Span<felt252> = array![1, 3, 'first', 'second', 'third', 'pending'].span();
     let layout = dojo::model::Model::<StructByteArrayModel>::layout();
-
 
     world.set_entity(selector, keys, values, layout);
 }
