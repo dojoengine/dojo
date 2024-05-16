@@ -1,13 +1,15 @@
+use std::str::FromStr as _;
+
 pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeError};
 use dojo_types::packing::{parse_ty, PackingError, ParseError};
-use dojo_types::primitive::PrimitiveError;
-use dojo_types::schema::Ty;
+use dojo_types::primitive::{Primitive, PrimitiveError};
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{
-    get_selector_from_name, CairoShortStringToFeltError, NonAsciiNameError,
-    ParseCairoShortStringError,
+    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
+    CairoShortStringToFeltError, NonAsciiNameError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
 
@@ -155,8 +157,8 @@ where
     }
 
     async fn schema(&self) -> Result<Ty, ModelError> {
-        let res = self.model_reader.schema().raw_call().await?;
-        Ok(parse_ty(&res)?)
+        let res = self.model_reader.schema().call().await?;
+        parse_schema(&res).map_err(ModelError::Parse)
     }
 
     // For non fixed layouts, packed and unpacked sizes are None.
@@ -171,5 +173,70 @@ where
 
     async fn layout(&self) -> Result<abigen::model::Layout, ModelError> {
         Ok(self.model_reader.layout().call().await?)
+    }
+}
+
+fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
+    match ty {
+        abigen::model::Ty::Primitive(primitive) => {
+            let ty = parse_cairo_short_string(primitive)?;
+            let ty = ty.split("::").last().unwrap();
+            let primitive = match Primitive::from_str(&ty) {
+                Ok(primitive) => primitive,
+                Err(_) => return Err(ParseError::InvalidSchema),
+            };
+
+            Ok(Ty::Primitive(primitive))
+        }
+        abigen::model::Ty::Struct(schema) => {
+            let name = parse_cairo_short_string(&schema.name)?;
+
+            let children = schema
+                .children
+                .iter()
+                .map(|child| {
+                    Ok(Member {
+                        name: parse_cairo_short_string(&child.name)?,
+                        ty: parse_schema(&child.ty)?,
+                        key: child.attrs.contains(&cairo_short_string_to_felt("key").unwrap()),
+                    })
+                })
+                .collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::Struct(Struct { name, children }))
+        }
+        abigen::model::Ty::Enum(enum_) => {
+            let name = parse_cairo_short_string(&enum_.name)?;
+
+            let options = enum_
+                .children
+                .iter()
+                .map(|(name, ty)| {
+                    let name = parse_cairo_short_string(name)?;
+                    let ty = parse_schema(&ty)?;
+
+                    Ok(EnumOption { name, ty })
+                })
+                .collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::Enum(Enum { name, option: None, options }))
+        }
+        abigen::model::Ty::Tuple(values) => {
+            let values = values
+                .iter()
+                .map(|value| parse_schema(value))
+                .collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::Tuple(values))
+        }
+        abigen::model::Ty::Array(values) => {
+            let values = values
+                .iter()
+                .map(|value| parse_schema(value))
+                .collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::Array(values))
+        }
+        abigen::model::Ty::ByteArray => Ok(Ty::ByteArray("".to_string())),
     }
 }
