@@ -19,19 +19,19 @@ fn executor_transact(c: &mut Criterion) {
     group.warm_up_time(Duration::from_millis(200));
 
     let provider = test_utils::test_in_memory_provider();
-    let flags = SimulationFlag::new().skip_validate().skip_fee_transfer();
+    let flags = SimulationFlag::new();
 
     let tx = tx();
-    let (block_env, cfg_env) = envs();
+    let envs = envs();
 
-    blockifier(&mut group, &provider, flags, (block_env, cfg_env), tx);
+    blockifier(&mut group, &provider, &flags, &envs, tx);
 }
 
 fn blockifier<SF>(
     group: &mut BenchmarkGroup<'_, WallTime>,
     provider: SF,
-    execution_flags: SimulationFlag,
-    block_envs: (BlockEnv, CfgEnv),
+    execution_flags: &SimulationFlag,
+    block_envs: &(BlockEnv, CfgEnv),
     tx: ExecutableTxWithHash,
 ) where
     SF: StateFactoryProvider,
@@ -46,13 +46,13 @@ fn blockifier<SF>(
         b.iter_batched(
             || {
                 // setup state
-                let state = provider.latest().unwrap();
+                let state = provider.latest().expect("failed to get latest state");
 
                 // setup blockifier cached state
                 let contract_cache = GlobalContractCache::new(100);
                 let state = CachedState::new(StateProviderDb::from(state), contract_cache);
 
-                (state, &block_context, &execution_flags, tx.clone())
+                (state, &block_context, execution_flags, tx.clone())
             },
             |(mut state, block_context, flags, tx)| transact(&mut state, block_context, flags, tx),
             BatchSize::SmallInput,

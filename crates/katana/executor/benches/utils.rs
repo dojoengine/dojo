@@ -23,6 +23,7 @@ pub fn tx() -> ExecutableTxWithHash {
             FieldElement::ONE,
             FieldElement::ZERO,
         ],
+        max_fee: 10_000,
         ..Default::default()
     });
 
@@ -30,7 +31,11 @@ pub fn tx() -> ExecutableTxWithHash {
 }
 
 pub fn envs() -> (BlockEnv, CfgEnv) {
-    let block = BlockEnv { l1_gas_prices: GasPrices { eth: 1, strk: 1 }, ..Default::default() };
+    let block = BlockEnv {
+        l1_gas_prices: GasPrices { eth: 1, strk: 1 },
+        sequencer_address: felt!("0x1337").into(),
+        ..Default::default()
+    };
     let cfg = CfgEnv {
         max_recursion_depth: 100,
         validate_max_n_steps: 4_000_000,
