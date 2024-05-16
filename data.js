@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715718961870,
+  "lastUpdate": 1715848892204,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7855,6 +7855,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17120427,
             "range": "± 51815",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "31a7684149b37cc08ca34971e742ecc8b1408fe8",
+          "message": "fix(sozo/katana): remove max_bytecode_size limitation (#1963)\n\n* fix: remove max_bytecode_size limitation\r\n\r\n* fix: stale error message\r\n\r\n* remove limitation from katana too",
+          "timestamp": "2024-05-16T14:03:12+05:30",
+          "tree_id": "88b75b6162847d3a7637f057a96f91b7bf2a79ae",
+          "url": "https://github.com/dojoengine/dojo/commit/31a7684149b37cc08ca34971e742ecc8b1408fe8"
+        },
+        "date": 1715848890467,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17023883,
+            "range": "± 242355",
             "unit": "ns/iter"
           }
         ]
