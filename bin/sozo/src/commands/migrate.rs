@@ -182,16 +182,12 @@ pub async fn setup_env<'a>(
 /// * `Result<bool>` - Returns `true` if the provided version is compatible with the expected
 ///   version, `false` otherwise.
 fn is_compatible_version(provided_version: &str, expected_version: &str) -> Result<bool> {
-    use semver::Version;
+    use semver::{Version, VersionReq};
+
     let provided_ver = Version::parse(provided_version)
         .map_err(|e| anyhow!("Failed to parse provided version '{}': {}", provided_version, e))?;
     let expected_ver = Version::parse(expected_version)
         .map_err(|e| anyhow!("Failed to parse expected version '{}': {}", expected_version, e))?;
-
-    // Check major version for compatibility.
-    if provided_ver.major != expected_ver.major {
-        return Ok(false);
-    }
 
     // Specific backward compatibility rule: 0.6 is compatible with 0.7.
     if (provided_ver.major == 0 && provided_ver.minor == 6)
@@ -200,8 +196,11 @@ fn is_compatible_version(provided_version: &str, expected_version: &str) -> Resu
         return Ok(true);
     }
 
-    // Check minor version for general compatibility.
-    Ok(provided_ver.minor >= expected_ver.minor)
+    let expected_ver_req = VersionReq::parse(expected_version).map_err(|e| {
+        anyhow!("Failed to parse expected version requirement '{}': {}", expected_version, e)
+    })?;
+
+    Ok(expected_ver_req.matches(&provided_ver))
 }
 
 #[cfg(test)]
@@ -216,6 +215,11 @@ mod tests {
     #[test]
     fn test_is_compatible_version_minor_compatible() {
         assert!(is_compatible_version("1.2.0", "1.1.0").unwrap());
+    }
+
+    #[test]
+    fn test_is_incompatible_version_minor_compatible() {
+        assert!(!is_compatible_version("0.2.0", "0.7.0").unwrap());
     }
 
     #[test]
