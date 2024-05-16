@@ -1,6 +1,6 @@
 mod error;
 mod state;
-mod utils;
+pub mod utils;
 
 use std::num::NonZeroU128;
 

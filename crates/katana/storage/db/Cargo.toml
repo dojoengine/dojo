@@ -35,7 +35,7 @@ rev = "b34b0d3"
 
 [dev-dependencies]
 cairo-lang-starknet.workspace = true
-criterion = "0.5.1"
+criterion.workspace = true
 starknet.workspace = true
 tempfile.workspace = true
 
