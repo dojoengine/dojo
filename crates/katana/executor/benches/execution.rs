@@ -27,22 +27,20 @@ fn executor_transact(c: &mut Criterion) {
     blockifier(&mut group, &provider, &flags, &envs, tx);
 }
 
-fn blockifier<SF>(
+fn blockifier(
     group: &mut BenchmarkGroup<'_, WallTime>,
-    provider: SF,
+    provider: impl StateFactoryProvider,
     execution_flags: &SimulationFlag,
     block_envs: &(BlockEnv, CfgEnv),
     tx: ExecutableTxWithHash,
-) where
-    SF: StateFactoryProvider,
-{
+) {
     use katana_executor::implementation::blockifier::utils::{block_context_from_envs, transact};
 
     // convert to blockifier block context
     let block_context = block_context_from_envs(&block_envs.0, &block_envs.1);
 
     group.bench_function("Blockifier", |b| {
-        // we need to set up the cached state for each iteration
+        // we need to set up the cached state for each iteration as it's not cloneable
         b.iter_batched(
             || {
                 // setup state
