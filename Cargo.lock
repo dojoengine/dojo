@@ -6919,6 +6919,7 @@ dependencies = [
 name = "katana-provider"
 version = "0.7.0-alpha.2"
 dependencies = [
+ "alloy-primitives",
  "anyhow",
  "auto_impl",
  "futures",
