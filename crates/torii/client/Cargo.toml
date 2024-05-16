@@ -10,8 +10,9 @@ async-trait.workspace = true
 crypto-bigint.workspace = true
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
-futures-util = "0.3.28"
+futures-util.workspace = true
 futures.workspace = true
+libp2p-gossipsub = "0.46.1"
 parking_lot.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -22,7 +23,6 @@ tokio = { version = "1.32.0", features = [ "sync" ], default-features = false }
 torii-grpc = { path = "../grpc", features = [ "client" ] }
 torii-relay = { path = "../libp2p" }
 url.workspace = true
-libp2p-gossipsub = "0.46.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 prost.workspace = true

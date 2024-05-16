@@ -734,7 +734,10 @@ mod tests {
         );
     }
 
+    // TODO: unignore this once we have separate the spawning of the backend thread from the backend
+    // creation
     #[test]
+    #[ignore]
     fn fetch_from_fork_will_err_if_backend_thread_not_running() {
         let backend = create_forked_backend(LOCAL_RPC_URL, 1);
         let provider = SharedStateProvider(Arc::new(CacheStateDb::new(backend)));

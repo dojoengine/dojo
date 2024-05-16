@@ -11,8 +11,8 @@ anyhow.workspace = true
 async-trait.workspace = true
 cairo-lang-filesystem.workspace = true
 cairo-lang-project.workspace = true
-cairo-lang-starknet.workspace = true
 cairo-lang-starknet-classes.workspace = true
+cairo-lang-starknet.workspace = true
 camino.workspace = true
 convert_case.workspace = true
 futures.workspace = true
@@ -27,21 +27,21 @@ tracing.workspace = true
 
 cainome.workspace = true
 dojo-types = { path = "../dojo-types", optional = true }
-http = { version = "0.2.9", optional = true }
+http = { workspace = true, optional = true }
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
 scarb = { workspace = true, optional = true }
 tokio = { version = "1.32.0", features = [ "time" ], default-features = false, optional = true }
 toml.workspace = true
-url = { version = "2.2.2", optional = true }
+url = { workspace = true, optional = true }
 
 [dev-dependencies]
-assert_fs = "1.0.9"
+assert_fs.workspace = true
 assert_matches.workspace = true
 dojo-lang.workspace = true
 dojo-test-utils = { path = "../dojo-test-utils" }
 katana-runner.workspace = true
 similar-asserts.workspace = true
-tempfile = "3.3.0"
+tempfile.workspace = true
 tokio.workspace = true
 
 [features]

@@ -59,50 +59,71 @@ use starknet_api::transaction::{
 use super::state::{CachedState, StateDb};
 use super::CACHE_SIZE;
 use crate::abstraction::{EntryPointCall, SimulationFlag};
-use crate::ExecutionError;
+use crate::utils::build_receipt;
+use crate::{ExecutionError, ExecutionResult};
 
-pub(super) fn transact<S: StateReader>(
-    tx: ExecutableTxWithHash,
+pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
     simulation_flags: &SimulationFlag,
-) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
-    let validate = !simulation_flags.skip_validate;
-    let charge_fee = !simulation_flags.skip_fee_transfer;
+    tx: ExecutableTxWithHash,
+) -> ExecutionResult {
+    fn transact_inner<S: StateReader>(
+        state: &mut cached_state::CachedState<S>,
+        block_context: &BlockContext,
+        simulation_flags: &SimulationFlag,
+        tx: Transaction,
+    ) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
+        let validate = !simulation_flags.skip_validate;
+        let charge_fee = !simulation_flags.skip_fee_transfer;
 
-    let transaction = to_executor_tx(tx);
-    let fee_type = get_fee_type_from_tx(&transaction);
+        let fee_type = get_fee_type_from_tx(&tx);
+        let info = match tx {
+            Transaction::AccountTransaction(tx) => {
+                tx.execute(state, block_context, charge_fee, validate)
+            }
+            Transaction::L1HandlerTransaction(tx) => {
+                tx.execute(state, block_context, charge_fee, validate)
+            }
+        }?;
 
-    let info = match transaction {
-        Transaction::AccountTransaction(tx) => {
-            tx.execute(state, block_context, charge_fee, validate)
+        // There are a few case where the `actual_fee` field of the transaction info is not set
+        // where the fee is skipped and thus not charged for the transaction (e.g. when the
+        // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
+        // these cases, we still want to calculate the fee.
+        let overall_fee = if info.actual_fee == Fee(0) {
+            calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?.0
+        } else {
+            info.actual_fee.0
+        };
+
+        let consts = block_context.versioned_constants();
+        let gas_consumed = calculate_tx_gas_vector(&info.actual_resources, consts)?.l1_gas;
+
+        let (unit, gas_price) = match fee_type {
+            FeeType::Eth => {
+                (PriceUnit::Wei, block_context.block_info().gas_prices.eth_l1_gas_price)
+            }
+            FeeType::Strk => {
+                (PriceUnit::Fri, block_context.block_info().gas_prices.strk_l1_gas_price)
+            }
+        };
+
+        let fee = TxFeeInfo { gas_consumed, gas_price: gas_price.into(), unit, overall_fee };
+
+        Ok((info, fee))
+    }
+
+    match transact_inner(state, block_context, simulation_flags, to_executor_tx(tx.clone())) {
+        Ok((info, fee)) => {
+            // get the trace and receipt from the execution info
+            let trace = to_exec_info(info);
+            let receipt = build_receipt(tx.tx_ref(), fee, &trace);
+            ExecutionResult::new_success(receipt, trace)
         }
-        Transaction::L1HandlerTransaction(tx) => {
-            tx.execute(state, block_context, charge_fee, validate)
-        }
-    }?;
 
-    // There are a few case where the `actual_fee` field of the transaction info is not set where
-    // the fee is skipped and thus not charged for the transaction (e.g. when the
-    // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
-    // these cases, we still want to calculate the fee.
-    let overall_fee = if info.actual_fee == Fee(0) {
-        calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?.0
-    } else {
-        info.actual_fee.0
-    };
-
-    let gas_consumed =
-        calculate_tx_gas_vector(&info.actual_resources, block_context.versioned_constants())?
-            .l1_gas;
-
-    let (unit, gas_price) = match fee_type {
-        FeeType::Eth => (PriceUnit::Wei, block_context.block_info().gas_prices.eth_l1_gas_price),
-        FeeType::Strk => (PriceUnit::Fri, block_context.block_info().gas_prices.strk_l1_gas_price),
-    };
-
-    let fee = TxFeeInfo { gas_consumed, gas_price: gas_price.into(), unit, overall_fee };
-    Ok((info, fee))
+        Err(e) => ExecutionResult::new_failed(e),
+    }
 }
 
 /// Perform a function call on a contract and retrieve the return values.
@@ -336,7 +357,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 }
 
 /// Create a block context from the chain environment values.
-pub(crate) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
+pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
     let fee_token_addresses = FeeTokenAddresses {
         eth_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.eth),
         strk_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.strk),

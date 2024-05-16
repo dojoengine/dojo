@@ -34,7 +34,7 @@ cairo-vm = { workspace = true, optional = true }
 [dev-dependencies]
 anyhow.workspace = true
 cairo-vm.workspace = true
-katana-provider.workspace = true
+katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
@@ -42,8 +42,16 @@ serde_json.workspace = true
 similar-asserts.workspace = true
 tokio.workspace = true
 
+criterion.workspace = true
+pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
+
 [features]
 blockifier = [ "dep:blockifier", "dep:cairo-vm" ]
 default = [ "blockifier" ]
 # native = [ "sir", "sir/cairo-native" ]
 # sir = [ "dep:sir", "dep:starknet-types-core" ]
+
+[[bench]]
+harness = false
+name = "execution"
+required-features = [ "blockifier" ]

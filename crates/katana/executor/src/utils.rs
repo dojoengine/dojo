@@ -7,7 +7,7 @@ use katana_primitives::receipt::{
     MessageToL1, Receipt, TxExecutionResources,
 };
 use katana_primitives::trace::{CallInfo, TxExecInfo};
-use katana_primitives::transaction::Tx;
+use katana_primitives::transaction::TxRef;
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "executor";
@@ -48,14 +48,14 @@ pub fn log_events(events: &[Event]) {
     }
 }
 
-pub fn build_receipt(tx: &Tx, fee: TxFeeInfo, info: &TxExecInfo) -> Receipt {
+pub(crate) fn build_receipt(tx: TxRef<'_>, fee: TxFeeInfo, info: &TxExecInfo) -> Receipt {
     let events = events_from_exec_info(info);
     let revert_error = info.revert_error.clone();
     let messages_sent = l2_to_l1_messages_from_exec_info(info);
     let actual_resources = parse_actual_resources(&info.actual_resources);
 
     match tx {
-        Tx::Invoke(_) => Receipt::Invoke(InvokeTxReceipt {
+        TxRef::Invoke(_) => Receipt::Invoke(InvokeTxReceipt {
             events,
             fee,
             revert_error,
@@ -63,7 +63,7 @@ pub fn build_receipt(tx: &Tx, fee: TxFeeInfo, info: &TxExecInfo) -> Receipt {
             execution_resources: actual_resources,
         }),
 
-        Tx::Declare(_) => Receipt::Declare(DeclareTxReceipt {
+        TxRef::Declare(_) => Receipt::Declare(DeclareTxReceipt {
             events,
             fee,
             revert_error,
@@ -71,7 +71,7 @@ pub fn build_receipt(tx: &Tx, fee: TxFeeInfo, info: &TxExecInfo) -> Receipt {
             execution_resources: actual_resources,
         }),
 
-        Tx::L1Handler(tx) => Receipt::L1Handler(L1HandlerTxReceipt {
+        TxRef::L1Handler(tx) => Receipt::L1Handler(L1HandlerTxReceipt {
             events,
             fee,
             revert_error,
@@ -80,7 +80,7 @@ pub fn build_receipt(tx: &Tx, fee: TxFeeInfo, info: &TxExecInfo) -> Receipt {
             execution_resources: actual_resources,
         }),
 
-        Tx::DeployAccount(tx) => Receipt::DeployAccount(DeployAccountTxReceipt {
+        TxRef::DeployAccount(tx) => Receipt::DeployAccount(DeployAccountTxReceipt {
             events,
             fee,
             revert_error,

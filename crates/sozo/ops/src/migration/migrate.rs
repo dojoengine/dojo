@@ -642,8 +642,8 @@ pub fn handle_artifact_error(ui: &Ui, artifact_path: &Path, error: anyhow::Error
     ui.verbose(format!("{path}: {error:?}"));
 
     anyhow!(
-        "Discrepancy detected in {name}.\nUse `sozo clean` to clean your project or `sozo clean \
-         --artifacts` to clean artifacts only.\nThen, rebuild your project with `sozo build`."
+        "Discrepancy detected in {name}.\nUse `sozo clean` to clean your project.\n
+        Then, rebuild your project with `sozo build`."
     )
 }
 
