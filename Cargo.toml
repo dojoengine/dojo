@@ -247,5 +247,7 @@ cairo-lang-test-runner = { git = "https://github.com/starkware-libs/cairo", rev 
 cairo-lang-test-utils = { git = "https://github.com/starkware-libs/cairo", rev = "290f51f554c978180ca9d91177423305959cbed5" }
 cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo", rev = "290f51f554c978180ca9d91177423305959cbed5" }
 
+# Runner
 cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev = "290f51f554c978180ca9d91177423305959cbed5" }
 cairo-lang-runner = { git = "https://github.com/starkware-libs/cairo", rev = "290f51f554c978180ca9d91177423305959cbed5" }
+
