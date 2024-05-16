@@ -33,5 +33,5 @@ pub trait ContractClassWriter: Send + Sync {
 
     /// Retrieves the Sierra class definition of a contract class given its class hash.
     fn set_sierra_class(&self, hash: ClassHash, sierra: FlattenedSierraClass)
-    -> ProviderResult<()>;
+        -> ProviderResult<()>;
 }

@@ -55,7 +55,11 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 
     // ensure that all transactions succeeded, if not panic with the error message and tx index
     let has_failed = transactions.iter().enumerate().find_map(|(i, (_, res))| {
-        if let ExecutionResult::Failed { error } = res { Some((i, error)) } else { None }
+        if let ExecutionResult::Failed { error } = res {
+            Some((i, error))
+        } else {
+            None
+        }
     });
 
     if let Some((pos, error)) = has_failed {

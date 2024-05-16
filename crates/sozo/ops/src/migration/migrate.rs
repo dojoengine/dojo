@@ -699,9 +699,6 @@ where
     P: Provider + Sync + Send + 'static,
 {
     ui.print("\n📋 Migration Strategy\n");
-    if let Some(world) = &strategy.world {
-        ui.print_sub(format!("declare (contract address: {:#x})\n", world.contract_address));
-    }
 
     if let Some(base) = &strategy.base {
         ui.print_header("# Base Contract");
@@ -711,6 +708,7 @@ where
     if let Some(world) = &strategy.world {
         ui.print_header("# World");
         ui.print_sub(format!("declare (class hash: {:#x})\n", world.diff.local_class_hash));
+        ui.print_sub(format!("declare (contract address: {:#x})\n", world.contract_address));
     }
 
     if !&strategy.models.is_empty() {
@@ -729,7 +727,8 @@ where
         for c in &strategy.contracts {
             let op_name = get_contract_operation_name(provider, c, strategy.world_address).await;
             ui.print_sub(format!("{op_name} (class hash: {:#x})", c.diff.local_class_hash));
-            let contract_address = get_contract_address(c.salt, c.diff.base_class_hash, &[], c.contract_address);
+            let contract_address =
+                get_contract_address(c.salt, c.diff.base_class_hash, &[], c.contract_address);
             ui.print_sub(format!("{op_name} (contract address: {:#x})", contract_address));
         }
         ui.print(" ");
