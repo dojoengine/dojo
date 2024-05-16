@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715871209834,
+  "lastUpdate": 1715889826054,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7975,6 +7975,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16789404,
             "range": "± 216914",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c6df7b4e580ef561ec87552a87ca6304cdadd84",
+          "message": "test(katana): provider test utils  (#1967)\n\n# Description\r\n\r\nTest utilities for when we need to instantiate the providers with predefined initial states that are useful for testing/benchmarking purposes.\r\n\r\n## Related issue\r\n\r\n<!--\r\nPlease link related issues: Fixes #<issue_number>\r\nMore info: https://docs.github.com/en/free-pro-team@latest/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword\r\n-->\r\n\r\n## Tests\r\n\r\n<!--\r\nPlease refer to the CONTRIBUTING.md file to know more about the testing process. Ensure you've tested at least the package you're modifying if running all the tests consumes too much memory on your system.\r\n-->\r\n\r\n- [ ] Yes\r\n- [x] No, because they aren't needed\r\n- [ ] No, because I need help\r\n\r\n## Added to documentation?\r\n\r\n<!--\r\nIf the changes are small, code comments are enough, otherwise, the documentation is needed. It\r\nmay be a README.md file added to your module/package, a DojoBook PR or both.\r\n-->\r\n\r\n- [ ] README.md\r\n- [ ] [Dojo Book](https://github.com/dojoengine/book)\r\n- [x] No documentation needed\r\n\r\n## Checklist\r\n\r\n- [x] I've formatted my code (`scripts/prettier.sh`, `scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)\r\n- [x] I've linted my code (`scripts/clippy.sh`, `scripts/docs.sh`)\r\n- [x] I've commented my code\r\n- [ ] I've requested a review after addressing the comments",
+          "timestamp": "2024-05-17T03:55:24+08:00",
+          "tree_id": "55523ffeaf2f82080c93a5a55f672be990105d38",
+          "url": "https://github.com/dojoengine/dojo/commit/8c6df7b4e580ef561ec87552a87ca6304cdadd84"
+        },
+        "date": 1715889825313,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16866294,
+            "range": "± 198015",
             "unit": "ns/iter"
           }
         ]
