@@ -106,7 +106,9 @@ fn assert_array(value: Span<felt252>, expected: Span<felt252>) {
 
     let mut i = 0;
     loop {
-        if i >= value.len() { break; }
+        if i >= value.len() {
+            break;
+        }
 
         assert!(
             *value.at(i) == *expected.at(i),

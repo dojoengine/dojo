@@ -8,24 +8,14 @@ struct FieldLayout {
 enum Layout {
     Fixed: Span<u8>,
     Struct: Span<FieldLayout>,
-
-    // Use a direct reference to `Layout` through `Span<Layout>` leads to a recursion in 
-    // the Layout type definition. This recursion should be supported
-    // by the Cairo compiler but it does not work in Dojo.
-    // That's why we use an intermediate `ItemLayout` type for Tuple.
-    Tuple: Span<FieldLayout>,
-
-    // As for Tuple, a direct reference to Layout does not work.
-    // A direct reference to ItemLayout or through Box<Layout> (or Box<ItemLayout>)
-    // does not work either.
-    // So, even for Array, we use a `Span<ItemLayout>` which contains only one item,
-    // which is the layout definition of an array item.
-    Array: Span<FieldLayout>,
-
+    Tuple: Span<Layout>,
+    // We can't have `Layout` here as it will cause infinite recursion.
+    // And `Box` is not serializable. So using a Span, even if it's to have
+    // one element, does the trick.
+    Array: Span<Layout>,
     ByteArray,
-
     // there is one layout per variant.
-    // the `selector` field identifies the variant (TODO: selector or raw value ?)
+    // the `selector` field identifies the variant
     // the `layout` field defines the full variant layout (variant value + optional variant data)
     Enum: Span<FieldLayout>,
 }
@@ -209,6 +199,7 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
     fn size() -> Option<usize> {
         Option::None
     }
+
     fn layout() -> Layout {
         Layout::Enum(
             array![
@@ -216,37 +207,30 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
                     // Some
                     selector: 0,
                     layout: Layout::Tuple(
-                        array![
-                            FieldLayout {
-                                selector: '',
-                                layout: Layout::Fixed(array![8].span())
-                            },
-                            FieldLayout {
-                                selector: '',
-                                layout: Introspect::<T>::layout()
-                            }
-                        ].span()
+                        array![Layout::Fixed(array![8].span()), Introspect::<T>::layout()].span()
                     )
                 },
                 FieldLayout {
                     // None
                     selector: 1,
-                    layout: Layout::Tuple(
-                        array![
-                            FieldLayout {
-                                selector: '',
-                                layout: Layout::Fixed(array![8].span())
-                            }
-                        ].span()
-                    )
+                    layout: Layout::Tuple(array![Layout::Fixed(array![8].span())].span())
                 },
-            ].span()
+            ]
+                .span()
         )
     }
 
     fn ty() -> Ty {
-        // TODO: Not used anymore => to remove
-        Ty::Primitive('u8')
+        Ty::Enum(
+            Enum {
+                name: 'Option<T>',
+                attrs: array![].span(),
+                children: array![
+                    ('Some', Introspect::<T>::ty()), ('None', Ty::Tuple(array![].span()))
+                ]
+                    .span()
+            }
+        )
     }
 }
 
@@ -255,19 +239,11 @@ impl Introspect_array<T, +Introspect<T>> of Introspect<Array<T>> {
         Option::None
     }
     fn layout() -> Layout {
-        Layout::Array(
-            array![
-                FieldLayout {
-                    selector: '',
-                    layout: Introspect::<T>::layout()
-                }
-            ].span()
-        )
+        Layout::Array(array![Introspect::<T>::layout()].span())
     }
 
     fn ty() -> Ty {
-        // TODO: Not used anymore => to remove
-        Ty::Primitive('u8')
+        Ty::Array(array![Introspect::<T>::ty()].span())
     }
 }
 
@@ -276,18 +252,10 @@ impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
         Option::None
     }
     fn layout() -> Layout {
-        Layout::Array(
-            array![
-                FieldLayout {
-                    selector: '',
-                    layout: Introspect::<T>::layout()
-                }
-            ].span()
-        )
+        Layout::Array(array![Introspect::<T>::layout()].span())
     }
 
     fn ty() -> Ty {
-        // TODO: Not used anymore => to remove
-        Ty::Primitive('u8')
+        Ty::Array(array![Introspect::<T>::ty()].span())
     }
 }

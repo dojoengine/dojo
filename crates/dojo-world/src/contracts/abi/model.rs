@@ -87,6 +87,16 @@ abigen!(
     ]
   },
   {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::Layout>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::Layout>"
+      }
+    ]
+  },
+  {
     "type": "enum",
     "name": "dojo::database::introspect::Layout",
     "variants": [
@@ -100,11 +110,11 @@ abigen!(
       },
       {
         "name": "Tuple",
-        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+        "type": "core::array::Span::<dojo::database::introspect::Layout>"
       },
       {
         "name": "Array",
-        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+        "type": "core::array::Span::<dojo::database::introspect::Layout>"
       },
       {
         "name": "ByteArray",
@@ -139,11 +149,29 @@ abigen!(
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+    "name": "dojo::database::introspect::Member",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::felt252"
+      },
+      {
+        "name": "attrs",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "ty",
+        "type": "dojo::database::introspect::Ty"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::Member>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+        "type": "@core::array::Array::<dojo::database::introspect::Member>"
       }
     ]
   },
@@ -161,17 +189,17 @@ abigen!(
       },
       {
         "name": "children",
-        "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+        "type": "core::array::Span::<dojo::database::introspect::Member>"
       }
     ]
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+    "name": "core::array::Span::<(core::felt252, dojo::database::introspect::Ty)>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+        "type": "@core::array::Array::<(core::felt252, dojo::database::introspect::Ty)>"
       }
     ]
   },
@@ -189,7 +217,7 @@ abigen!(
       },
       {
         "name": "children",
-        "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+        "type": "core::array::Span::<(core::felt252, dojo::database::introspect::Ty)>"
       }
     ]
   },

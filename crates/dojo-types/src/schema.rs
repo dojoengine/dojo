@@ -149,7 +149,7 @@ impl Ty {
                     }
                 }
                 Ty::ByteArray(bytes) => {
-                    let bytearray = ByteArray::from_string(&bytes)?;
+                    let bytearray = ByteArray::from_string(bytes)?;
 
                     felts.extend(ByteArray::cairo_serialize(&bytearray))
                 }

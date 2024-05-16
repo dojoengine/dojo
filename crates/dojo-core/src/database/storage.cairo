@@ -72,7 +72,13 @@ fn set(address_domain: u32, keys: Span<felt252>, value: felt252) {
         .unwrap_syscall();
 }
 
-fn set_many(address_domain: u32, keys: Span<felt252>, mut unpacked: Span<felt252>, offset: u32, mut layout: Span<u8>) -> SyscallResult<()> {
+fn set_many(
+    address_domain: u32,
+    keys: Span<felt252>,
+    mut unpacked: Span<felt252>,
+    offset: u32,
+    mut layout: Span<u8>
+) -> SyscallResult<()> {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     let base_address = starknet::storage_address_from_base(base);
 
@@ -124,7 +130,9 @@ fn set_packed_array(
     let mut i = 0;
 
     loop {
-        if i >= array_size { break Result::Ok(()); }
+        if i >= array_size {
+            break Result::Ok(());
+        }
 
         let curr_value = *data.at(offset + i);
 
@@ -171,11 +179,12 @@ fn get_packed_array(
     loop {
         let value =
             match starknet::syscalls::storage_read_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(chunk_base, index_in_chunk)
+                address_domain,
+                starknet::storage_address_from_base_and_offset(chunk_base, index_in_chunk)
             ) {
-                Result::Ok(value) => value,
-                Result::Err(err) => { break SyscallResult::<Span<felt252>>::Err(err); },
-            };
+            Result::Ok(value) => value,
+            Result::Err(err) => { break SyscallResult::<Span<felt252>>::Err(err); },
+        };
 
         packed.append(value);
 

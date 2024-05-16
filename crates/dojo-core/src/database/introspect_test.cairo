@@ -63,27 +63,12 @@ fn field(selector: felt252, layout: Layout) -> FieldLayout {
     FieldLayout { selector, layout }
 }
 
-fn item(layout: Layout) -> FieldLayout {
-    FieldLayout { selector: '', layout }
-}
-
 fn fixed(values: Array<u8>) -> Layout {
     Layout::Fixed(values.span())
 }
 
 fn tuple(values: Array<Layout>) -> Layout {
-    let mut items = array![];
-    let mut i: u32 = 0;
-    loop {
-        if i >= values.len() { break; }
-        let v = *values.at(i);
-
-        items.append(item(v));
-
-        i += 1;
-    };
-
-    Layout::Tuple(items.span())
+    Layout::Tuple(values.span())
 }
 
 fn _enum(values: Array<Option<Layout>>) -> Layout {
@@ -91,31 +76,16 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
     let mut i = 0;
 
     loop {
-        if i >= values.len() { break; }
+        if i >= values.len() {
+            break;
+        }
 
         let v = *values.at(i);
         match v {
             Option::Some(v) => {
-                items.append(
-                    field(
-                        i.into(),
-                        tuple(
-                            array![
-                                fixed(array![8]),
-                                v
-                            ]
-                        )
-                    )
-                );
+                items.append(field(i.into(), tuple(array![fixed(array![8]), v])));
             },
-            Option::None => {
-                items.append(
-                    field(
-                        i.into(),
-                        fixed(array![8])
-                    )
-                )
-            }
+            Option::None => { items.append(field(i.into(), fixed(array![8]))) }
         }
 
         i += 1;
@@ -125,9 +95,7 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
 }
 
 fn arr(item_layout: Layout) -> Layout {
-    Layout::Array(
-        array![item(item_layout)].span()
-    )
+    Layout::Array(array![item_layout].span())
 }
 
 #[test]
@@ -202,8 +170,9 @@ fn test_layout_of_enum_without_variant_data() {
             field(1, tuple(array![fixed(array![8])])),
             // Three
             field(2, tuple(array![fixed(array![8])])),
-        ].span()
-        );
+        ]
+            .span()
+    );
 
     assert!(layout == expected);
 }
@@ -214,44 +183,17 @@ fn test_layout_of_enum_with_variant_data() {
     let expected = Layout::Enum(
         array![
             // One
-            field(
-                0,
-                tuple(
-                    array![
-                        fixed(array![8]),
-                        fixed(array![32]),
-                    ]
-                )
-            ),
-
+            field(0, tuple(array![fixed(array![8]), fixed(array![32]),])),
             // Two
             field(
                 1,
-                tuple(
-                    array![
-                        fixed(array![8]),
-                        tuple(
-                            array![
-                                fixed(array![8]),
-                                fixed(array![16]),
-                            ]
-                        )
-                    ]
-                )
+                tuple(array![fixed(array![8]), tuple(array![fixed(array![8]), fixed(array![16]),])])
             ),
-
             // Three
-            field(
-                2,
-                tuple(
-                    array![
-                        fixed(array![8]),
-                        arr(fixed(array![128])),
-                    ]
-                )
-            ),
-        ].span()
-        );
+            field(2, tuple(array![fixed(array![8]), arr(fixed(array![128])),])),
+        ]
+            .span()
+    );
 
     assert!(layout == expected);
 }
@@ -259,17 +201,8 @@ fn test_layout_of_enum_with_variant_data() {
 fn test_layout_of_struct_with_option() {
     let layout = Introspect::<StructWithOption>::layout();
     let expected = Layout::Struct(
-        array![
-            field(
-                selector!("x"),
-                _enum(
-                    array![
-                        Option::Some(fixed(array![16])),
-                        Option::None
-                    ]
-                )
-            )
-        ].span()
+        array![field(selector!("x"), _enum(array![Option::Some(fixed(array![16])), Option::None]))]
+            .span()
     );
 
     assert!(layout == expected);

@@ -172,6 +172,85 @@ struct GenericStruct<T> {
     t: T,
 }
 
+#[derive(Copy, Drop, Serde, Introspect)]
+struct StructWithBadOption {
+    x: Option<(u8, u16)>
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+enum EnumWithBadOption {
+    first: Option<(u8, u16)>,
+}
+
+#[derive(Introspect, IntrospectPacked)]
+enum EnumIncompatibleAttrs {}
+
+#[derive(Introspect, IntrospectPacked)]
+struct StructIncompatibleAttrs {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+struct StructIncompatibleAttrs2 {}
+
+#[derive(Introspect)]
+#[derive(IntrospectPacked)]
+enum EnumIncompatibleAttrs2 {}
+
+#[derive(IntrospectPacked)]
+struct StructPacked1 {
+    x: u8
+}
+
+#[derive(IntrospectPacked)]
+struct StructPacked2 {
+    x: u8,
+    y: u256
+}
+
+#[derive(IntrospectPacked)]
+struct StructPacked3 {
+    x: u256,
+    y: (u8, u32)
+}
+
+#[derive(IntrospectPacked)]
+struct StructNotPackable1 {
+    x: u8,
+    y: Array<u32>
+}
+
+#[derive(IntrospectPacked)]
+struct StructNotPackable2 {
+    x: u8,
+    y: StructPacked1
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked1 {
+    a,
+    b,
+    c
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked2 {
+    a: u8,
+    b: u8,
+    c: u8
+}
+
+#[derive(IntrospectPacked)]
+enum EnumPacked3 {
+    a: (u128, u128),
+    b: u256,
+}
+
+#[derive(IntrospectPacked)]
+enum EnumNotPackable1 {
+    a: u8,
+    b: u256,
+}
+
 //! > expanded_cairo_code
 use core::serde::Serde;
 
@@ -340,6 +419,9 @@ struct StructWithNestedEverything {
 struct GenericStruct<T> {
     t: T,
 }
+
+
+
 impl Vec2Copy of core::traits::Copy::<Vec2>;
 impl Vec2Drop of core::traits::Drop::<Vec2>;
 impl Vec2Serde of core::serde::Serde::<Vec2> {

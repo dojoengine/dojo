@@ -27,7 +27,9 @@ fn _fill_with_zeroes(ref values: Array<felt252>, size: u32) {
     let mut i = 0;
 
     loop {
-        if i >= size { break; }
+        if i >= size {
+            break;
+        }
         values.append(0);
         i += 1;
     }

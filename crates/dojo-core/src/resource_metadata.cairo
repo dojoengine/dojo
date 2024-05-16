@@ -134,7 +134,8 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
                         ty: dojo::database::introspect::Ty::ByteArray,
                         attrs: array![].span()
                     }
-                ].span()
+                ]
+                    .span()
             }
         )
     }
