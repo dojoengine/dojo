@@ -193,6 +193,7 @@ mod world {
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
         #[substorage(v0)]
         config: Config::Storage,
+        initialized_contract: LegacyMap::<felt252, bool>,
     }
 
     #[constructor]
@@ -432,8 +433,12 @@ mod world {
             let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address };
             upgradeable_dispatcher.upgrade(class_hash);
 
-            // TODO: call the init method of the contract
-
+            if self.initialized_contract.read(contract_address.into()) {
+                panic!("Already initialized");
+            } else {
+                starknet::call_contract_syscall(contract_address, selector!("dojo_init"), init_calldata).expect('initialization failed');
+                self.initialized_contract.write(contract_address.into(), true);
+            }
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
             self.deployed_contracts.write(contract_address.into(), class_hash.into());

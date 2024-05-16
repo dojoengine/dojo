@@ -18,7 +18,6 @@ use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use starknet::signers::Signer;
 use thiserror::Error;
-use tracing::field::Field;
 
 use crate::utils::{TransactionExt, TransactionWaiter, TransactionWaitingError};
 
