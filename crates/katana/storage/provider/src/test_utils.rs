@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use alloy_primitives::U256;
 use katana_db::mdbx::{test_utils, DbEnvKind};
 use katana_primitives::block::{BlockHash, FinalityStatus};
 use katana_primitives::class::CompiledClass;
@@ -64,7 +65,7 @@ pub fn create_genesis_for_testing() -> Genesis {
     };
 
     // setup test account
-    let (_, account) = DevGenesisAccount::new(felt!("0x1"), class_hash);
+    let (_, account) = DevGenesisAccount::new_with_balance(felt!("0x1"), class_hash, U256::MAX);
     let account = GenesisAllocation::Account(GenesisAccountAlloc::DevAccount(account));
 
     let mut genesis = Genesis::default();
