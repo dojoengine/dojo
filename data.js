@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715870701766,
+  "lastUpdate": 1715871209834,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -7945,6 +7945,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16663465,
             "range": "± 1013116",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "49f0a4eaaef5c2f6708f179bd5be6659f64c2f9f",
+          "message": "chore(katana): ignore forked backend thread spawn test (#1977)\n\nignore useless test for now",
+          "timestamp": "2024-05-16T22:45:09+08:00",
+          "tree_id": "f0924740d87dc92902a1c9e301a6e3393f89d8ea",
+          "url": "https://github.com/dojoengine/dojo/commit/49f0a4eaaef5c2f6708f179bd5be6659f64c2f9f"
+        },
+        "date": 1715871209196,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16789404,
+            "range": "± 216914",
             "unit": "ns/iter"
           }
         ]
