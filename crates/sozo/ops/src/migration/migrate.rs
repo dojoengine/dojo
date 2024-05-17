@@ -714,10 +714,16 @@ where
     if !&strategy.models.is_empty() {
         ui.print_header(format!("# Models ({})", &strategy.models.len()));
         for m in &strategy.models {
-            ui.print_sub(format!(
-                "register {} (class hash: {:#x})",
-                m.diff.name, m.diff.local_class_hash
-            ));
+            ui.print_sub(format!("{}", m.diff.name));
+            ui.print_sub(format!("(class hash: {:#x})", m.diff.local_class_hash));
+            let salt = generate_salt(&m.diff.name);
+            let contract_address = get_contract_address(
+                salt,
+                m.diff.local_class_hash,
+                &[],
+                strategy.world_address.unwrap(),
+            );
+            ui.print_sub(format!("(contract address: {:#x})", contract_address));
         }
         ui.print(" ");
     }
@@ -727,9 +733,6 @@ where
         for c in &strategy.contracts {
             let op_name = get_contract_operation_name(provider, c, strategy.world_address).await;
             ui.print_sub(format!("{op_name} (class hash: {:#x})", c.diff.local_class_hash));
-            let contract_address =
-                get_contract_address(c.salt, c.diff.base_class_hash, &[], c.contract_address);
-            ui.print_sub(format!("{op_name} (contract address: {:#x})", contract_address));
         }
         ui.print(" ");
     }
