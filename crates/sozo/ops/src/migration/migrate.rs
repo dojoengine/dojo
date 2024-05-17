@@ -791,9 +791,15 @@ pub async fn update_manifests_and_abis(
     }
 
     local_manifest.contracts.iter_mut().for_each(|contract| {
-        let salt = generate_salt(&contract.name);
-        contract.inner.address =
-            Some(get_contract_address(salt, contract.inner.base_class_hash, &[], world_address));
+        if contract.inner.base_class_hash != FieldElement::ZERO {
+            let salt = generate_salt(&contract.name);
+            contract.inner.address = Some(get_contract_address(
+                salt,
+                contract.inner.base_class_hash,
+                &[],
+                world_address,
+            ));
+        }
     });
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
