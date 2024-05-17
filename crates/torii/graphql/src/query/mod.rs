@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
@@ -91,12 +92,25 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                     if member.model_id == nested_member.model_id
                         && nested_member.id.ends_with(&member.name)
                     {
-                        Some(member_to_type_data(nested_member, nested_members))
+                        let type_data = member_to_type_data(nested_member, nested_members);
+
+                        Some((
+                            TypeRef::named(&format!("{}_{}", nested_member.name, type_data.type_ref().type_name())),
+                            if let TypeData::Nested((_, mapping)) = type_data {
+                                mapping
+                            } else {
+                                IndexMap::from([(Name::new("value"), type_data)])
+                            }
+                        ))
                     } else {
                         None
                     }
-                })
-                .collect(),
+                }).chain(
+                    vec![(
+                        TypeRef::named("EnumOption"),
+                        IndexMap::from([(Name::new("value"), TypeData::Simple(TypeRef::named("Enum")))])
+                    )].into_iter()
+                ).collect()
         )),
         _ => parse_nested_type(
             &member.model_id,

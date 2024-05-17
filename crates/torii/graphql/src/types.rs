@@ -17,7 +17,8 @@ pub enum TypeData {
     Simple(TypeRef),
     Nested((TypeRef, IndexMap<Name, TypeData>)),
     List(Box<TypeData>),
-    Union((TypeRef, Vec<TypeData>)),
+    // Union can only represent a list of objects; which refer to TypeData::Nested 
+    Union((TypeRef, Vec<(TypeRef, IndexMap<Name, TypeData>)>)),
 }
 
 impl TypeData {
@@ -65,6 +66,7 @@ pub enum ScalarType {
 #[derive(AsRefStr, Display, EnumIter, EnumString, Debug)]
 pub enum GraphqlType {
     ByteArray,
+    Enum,
     Cursor,
     DateTime,
 }

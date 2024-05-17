@@ -26,14 +26,14 @@ use crate::types::TypeData;
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // build world gql objects
-    let (objects, union) = build_objects(pool).await?;
+    let (objects, unions) = build_objects(pool).await?;
 
     let mut schema_builder = Schema::build(QUERY_TYPE_NAME, None, Some(SUBSCRIPTION_TYPE_NAME));
     let mut query_root = Object::new(QUERY_TYPE_NAME);
     let mut subscription_root = Subscription::new(SUBSCRIPTION_TYPE_NAME);
 
     // register model data unions
-    for union in union {
+    for union in unions {
         schema_builder = schema_builder.register(union);
     }
 
@@ -144,8 +144,8 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
             for (field_name, type_data) in &type_mapping {
                 if let TypeData::Union((_, types)) = type_data {
                     let mut enum_union = Union::new(format!("{}Union", field_name.to_case(Case::Pascal)));
-                    for ty in types {
-                        enum_union = enum_union.possible_type(&ty.type_ref().to_string());
+                    for (type_ref, _) in types {
+                        enum_union = enum_union.possible_type(&type_ref.to_string());
                     }
 
                     unions.push(enum_union);

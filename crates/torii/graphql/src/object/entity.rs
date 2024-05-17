@@ -6,6 +6,7 @@ use async_graphql::dynamic::{
 };
 use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
+use chrono::format;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Sqlite};
@@ -217,6 +218,7 @@ pub async fn model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
+                    // this might need to be changed to support 2d+ arrays
                     None,
                     &IndexMap::from([(Name::new("data"), *inner.clone())]),
                 )
@@ -235,6 +237,40 @@ pub async fn model_data_recursive_query(
                 };
 
                 nested_value_mapping.insert(Name::new(field_name), data);
+            } else if let TypeData::Union((_, types)) = type_data {
+                let mut enum_union = Vec::new();
+                for (type_ref, mapping) in types {
+                    let mut nested_path = path_array.clone();
+                    nested_path.push(field_name.to_string());
+                    nested_path.push(type_ref.to_string().split("_").next().unwrap().to_string());
+                    
+                    let data = if mapping.get(&Name::new("value")).is_some() {
+                        let query = format!(
+                            "SELECT external_{} FROM {} WHERE entity_id = '{}'",
+                            field_name,
+                            table_name,
+                            entity_id,
+                        );
+
+                        let (value,): (String,) = sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
+                        Value::from(value)
+                    } else {
+                        model_data_recursive_query(
+                            conn,
+                            nested_path,
+                            entity_id,
+                            if rows.len() > 1 { Some(idx as i64) } else { None },
+                            mapping,
+                        )
+                        .await?
+                    };
+
+                    enum_union.push(data);
+                }
+
+                println!("Enum Union: {:#?}", enum_union);
+
+                nested_value_mapping.insert(Name::new(field_name), Value::List(enum_union));
             }
         }
 

@@ -1,5 +1,6 @@
-use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
-use async_graphql::Value;
+use async_graphql::dynamic::indexmap::IndexMap;
+use async_graphql::dynamic::{Enum, Field, FieldFuture, FieldValue, InputObject, Object, TypeRef};
+use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -155,6 +156,16 @@ fn data_objects_recursion(
                     data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
 
                 Some(nested_objects)
+            } else if let TypeData::Union((_, union_types)) = type_data {
+                let mut union_objects = Vec::new();
+                for (type_ref, mapping) in union_types {
+                    let mut union_path = path_array.clone();
+                    union_path.push(field_name.to_string());
+                    let union_object = object(&type_ref.to_string(), mapping, union_path);
+                    union_objects.push(union_object);
+                }
+
+                Some(union_objects)
             } else {
                 None
             }
