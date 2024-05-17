@@ -17,6 +17,7 @@ pub enum TypeData {
     Simple(TypeRef),
     Nested((TypeRef, IndexMap<Name, TypeData>)),
     List(Box<TypeData>),
+    Union((TypeRef, Vec<TypeData>)),
 }
 
 impl TypeData {
@@ -24,6 +25,7 @@ impl TypeData {
         match self {
             TypeData::Simple(ty) | TypeData::Nested((ty, _)) => ty.clone(),
             TypeData::List(inner) => TypeRef::List(Box::new(inner.type_ref())),
+            TypeData::Union((ty, _)) => ty.clone(),
         }
     }
 
@@ -39,11 +41,16 @@ impl TypeData {
         matches!(self, TypeData::List(_))
     }
 
+    pub fn is_union(&self) -> bool {
+        matches!(self, TypeData::Union(_))
+    }
+
     pub fn type_mapping(&self) -> Option<&IndexMap<Name, TypeData>> {
         match self {
             TypeData::Simple(_) => None,
             TypeData::Nested((_, type_mapping)) => Some(type_mapping),
             TypeData::List(_) => None,
+            TypeData::Union(_) => None,
         }
     }
 }
@@ -58,7 +65,6 @@ pub enum ScalarType {
 #[derive(AsRefStr, Display, EnumIter, EnumString, Debug)]
 pub enum GraphqlType {
     ByteArray,
-    Enum,
     Cursor,
     DateTime,
 }

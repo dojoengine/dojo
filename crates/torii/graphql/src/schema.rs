@@ -18,6 +18,7 @@ use crate::object::model::ModelObject;
 use crate::object::transaction::TransactionObject;
 use crate::object::ObjectVariant;
 use crate::query::type_mapping_query;
+use crate::types::TypeData;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
 // the models until runtime. There are however, predefined objects such as entities and
@@ -32,7 +33,9 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut subscription_root = Subscription::new(SUBSCRIPTION_TYPE_NAME);
 
     // register model data unions
-    schema_builder = schema_builder.register(union);
+    for union in union {
+        schema_builder = schema_builder.register(union);
+    }
 
     // register default scalars
     for scalar_type in ScalarType::all().iter() {
@@ -98,7 +101,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         .map_err(|e| e.into())
 }
 
-async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Union)> {
+async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Union>)> {
     let mut conn = pool.acquire().await?;
     let models: Vec<Model> = sqlx::query_as("SELECT * FROM models").fetch_all(&mut *conn).await?;
 
@@ -116,25 +119,46 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Union)>
     ];
 
     // model union object
-    let mut union = Union::new("ModelUnion");
+    let mut unions: Vec<Union> = Vec::new();
+    let mut model_union = Union::new("ModelUnion");
 
     // model data objects
     for model in models {
         let type_mapping = type_mapping_query(&mut conn, &model.id).await?;
+        println!("Type Mapping: {:#?}", type_mapping);
 
         if !type_mapping.is_empty() {
+            // add models objects & unions
             let field_name = model.name.to_case(Case::Camel);
             let type_name = model.name;
 
-            union = union.possible_type(&type_name);
+            model_union = model_union.possible_type(&type_name);
 
             objects.push(ObjectVariant::Resolvable(Box::new(ModelDataObject::new(
                 field_name,
                 type_name,
-                type_mapping,
+                type_mapping.clone(),
             ))));
+            
+            // add enum unions
+            for (field_name, type_data) in &type_mapping {
+                if let TypeData::Union((_, types)) = type_data {
+                    let mut enum_union = Union::new(format!("{}Union", field_name.to_case(Case::Pascal)));
+                    for ty in types {
+                        enum_union = enum_union.possible_type(&ty.type_ref().to_string());
+                    }
+
+                    unions.push(enum_union);
+                }
+            }
+
+            
         }
     }
 
-    Ok((objects, union))
+    unions.push(model_union);
+
+    println!("union: {:#?}", unions);
+
+    Ok((objects, unions))
 }

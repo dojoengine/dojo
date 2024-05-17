@@ -65,8 +65,6 @@ fn build_type_mapping(
         })
         .collect::<sqlx::Result<TypeMapping>>()?;
 
-    // println!("Type Mapping: {:#?}", type_mapping);
-
     Ok(type_mapping)
 }
 
@@ -74,7 +72,6 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
     // TODO: convert sql -> Ty directly
     match member.type_enum.as_str() {
         "Primitive" => TypeData::Simple(TypeRef::named(&member.ty)),
-        "Enum" => TypeData::Simple(TypeRef::named("Enum")),
         "ByteArray" => TypeData::Simple(TypeRef::named("ByteArray")),
         "Array" => TypeData::List(Box::new(member_to_type_data(
             nested_members
@@ -86,6 +83,21 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                 .expect("Array type should have nested type"),
             nested_members,
         ))),
+        "Enum" => TypeData::Union((
+            TypeRef::named(format!("{}Union", member.name.to_case(Case::Pascal))),
+            nested_members
+                .iter()
+                .filter_map(|&nested_member| {
+                    if member.model_id == nested_member.model_id
+                        && nested_member.id.ends_with(&member.name)
+                    {
+                        Some(member_to_type_data(nested_member, nested_members))
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+        )),
         _ => parse_nested_type(
             &member.model_id,
             &member.id,
