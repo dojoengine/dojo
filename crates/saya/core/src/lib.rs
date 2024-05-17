@@ -1,11 +1,10 @@
 //! Saya core library.
 
-use std::fs::File;
-use std::io::Write;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
@@ -16,6 +15,7 @@ use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use prover::ProverIdentifier;
+pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,7 @@ pub struct SayaConfig {
     pub katana_rpc: Url,
     #[serde(deserialize_with = "url_deserializer")]
     pub prover_url: Url,
+    pub prover_key: ProverAccessKey,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
     pub world_address: FieldElement,
@@ -107,11 +108,15 @@ impl Saya {
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
-        let capacity = 1; // TODO: make it configurable
+        let capacity = 2; // TODO: make it configurable
+        let prover_identifier = ProverIdentifier::Http((
+            self.config.prover_url.clone(),
+            self.config.prover_key.clone(),
+        ));
 
         // The structure responsible for proving.
         let mut prove_scheduler =
-            Scheduler::new(capacity, self.config.world_address, ProverIdentifier::Stone);
+            Scheduler::new(capacity, self.config.world_address, prover_identifier.clone());
 
         loop {
             let latest_block = match self.provider.block_number().await {
@@ -145,7 +150,7 @@ impl Saya {
                     prove_scheduler = Scheduler::new(
                         capacity,
                         self.config.world_address,
-                        ProverIdentifier::Stone,
+                        prover_identifier.clone(),
                     );
                 }
 
@@ -290,10 +295,20 @@ impl Saya {
         last_block: BlockNumber,
     ) -> SayaResult<()> {
         // Prove each of the leaf nodes of the recursion tree and merge them into one
-        let (proof, state_diff) = prove_scheduler.proved().await.unwrap();
+        let (proof, state_diff) = prove_scheduler.proved().await.context("Failed to prove.")?;
+
+        std::io::Write::write_all(
+            &mut std::fs::File::create("proof.json").unwrap(),
+            proof.as_bytes(),
+        )
+        .unwrap();
 
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
         let world_da = state_diff.world_da.unwrap();
+        println!(
+            "Final World DA: {}",
+            world_da.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(", ")
+        );
 
         trace!(target: LOG_TARGET, last_block, "Verifying block.");
         let transaction_hash = verifier::verify(
@@ -304,17 +319,22 @@ impl Saya {
         info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
 
         let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
+        println!("Program hash: {}", program_hash);
         let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
         info!(target: LOG_TARGET, expected_fact, "Expected fact.");
 
         sleep(Duration::from_millis(5000)).await;
 
-        trace!(target: LOG_TARGET, last_block, "Applying diffs.");
-        let transaction_hash =
-            dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
-                .await?;
-        info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
+        // trace!(target: LOG_TARGET, last_block, "Applying diffs.");
+        // let transaction_hash = dojo_os::starknet_apply_diffs(
+        //     self.config.world_address,
+        //     world_da,
+        //     program_output,
+        //     true,
+        // )
+        // .await?;
+        // info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
 
         Ok(())
     }

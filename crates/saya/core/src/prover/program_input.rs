@@ -129,6 +129,11 @@ impl ProgramInput {
             .flatten()
             .collect::<Vec<_>>();
 
+        println!(
+            "Filled DA: {}",
+            updates.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(", ")
+        );
+
         self.world_da = Some(updates);
     }
 
@@ -175,6 +180,11 @@ impl ProgramInput {
                 world_da.extend(later)
             }
         }
+
+        println!(
+            "Combined DA: {}",
+            world_da.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(", ")
+        );
 
         // The block number is the one from the last block.
         Ok(ProgramInput {

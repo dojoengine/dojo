@@ -15,20 +15,19 @@ mod vec252;
 
 pub use program_input::*;
 pub use scheduler::*;
-use serde::{Deserialize, Serialize};
 pub use stone_image::*;
 use url::Url;
 
 use self::client::http_prove;
 
 /// The prover used to generate the proof.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ProverIdentifier {
     #[default]
     Stone,
     Sharp,
     Platinum,
-    Http(Url),
+    Http((Url, prover_sdk::ProverAccessKey)),
 }
 
 pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
@@ -36,7 +35,7 @@ pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<St
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Stone => prove_stone(input).await,
         ProverIdentifier::Platinum => todo!(),
-        ProverIdentifier::Http(prover_url) => http_prove(prover_url, input).await,
+        ProverIdentifier::Http((url, access_key)) => http_prove(url, access_key, input).await,
     }
 }
 

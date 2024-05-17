@@ -46,3 +46,5 @@ celestia-types = "0.1.1"
 cairo-felt = "0.9.1"
 num-bigint = "0.4.4"
 num-traits = "0.2.18"
+
+prover-sdk = { git = "https://github.com/neotheprogramist/http-prover", branch = "version-match" }

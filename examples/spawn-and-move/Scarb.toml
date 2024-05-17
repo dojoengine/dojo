@@ -7,7 +7,7 @@ version = "0.6.0"
 edition = "2023_10"
 
 [cairo]
-sierra-replace-ids = trues
+sierra-replace-ids = true
 
 [dependencies]
 dojo = { path = "../../crates/dojo-core" }
@@ -20,7 +20,7 @@ description = "example world"
 name = "example"
 
 [tool.dojo.env]
-rpc_url = "http://localhost:5050/"
+# rpc_url = "http://localhost:5050/"
 
 # Default account for katana with seed = 0s
 account_address = "0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
-use saya_core::SayaConfig;
+use saya_core::{ProverAccessKey, SayaConfig};
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
@@ -33,6 +33,12 @@ pub struct SayaArgs {
     #[arg(value_name = "PROVER URL")]
     #[arg(help = "The Prover URL for remote proving.")]
     pub prover_url: Url,
+
+    /// Specify the Prover Key.
+    #[arg(long)]
+    #[arg(value_name = "PROVER KEY")]
+    #[arg(help = "An authorized prover key for remote proving.")]
+    pub prover_key: String,
 
     /// Enable JSON logging.
     #[arg(long)]
@@ -117,9 +123,13 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 None => None,
             };
 
+            let prover_key = ProverAccessKey::from_hex_string(&args.prover_key)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
                 prover_url: args.prover_url,
+                prover_key,
                 start_block: args.start_block,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
@@ -146,6 +156,7 @@ mod tests {
             config_file: Some(config_file_path.clone()),
             rpc_url: Url::parse("http://localhost:5050").unwrap(),
             prover_url: Url::parse("http://localhost:5050").unwrap(),
+            prover_key: "d0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027".into(),
             json_log: false,
             start_block: 0,
             data_availability: DataAvailabilityOptions {
@@ -166,6 +177,10 @@ mod tests {
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
         assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
+        assert_eq!(
+            config.prover_key.signing_key_as_hex_string(),
+            "d0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
+        );
         assert_eq!(config.start_block, 0);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");

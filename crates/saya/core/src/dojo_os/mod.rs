@@ -52,12 +52,13 @@ pub async fn starknet_apply_diffs(
     world: FieldElement,
     new_state: Vec<FieldElement>,
     program_output: Vec<FieldElement>,
+    proven_by_merger: bool,
 ) -> anyhow::Result<String> {
     let calldata = chain![
         vec![FieldElement::from_dec_str(&(new_state.len() / 2).to_string()).unwrap()].into_iter(),
         new_state.clone().into_iter(),
         program_output.into_iter(),
-        vec![FieldElement::from(0u64)].into_iter(),
+        vec![FieldElement::from(if proven_by_merger { 1u64 } else { 0 })].into_iter(),
     ]
     .collect::<Vec<FieldElement>>();
 

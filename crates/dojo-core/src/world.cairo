@@ -665,7 +665,7 @@ mod world {
                     0, starknet::storage_address_from_base(base), *new_state.at(i).value
                 )
                     .unwrap_syscall();
-                i += 2;
+                i += 1;
             };
             EventEmitter::emit(ref self, StateUpdated { da_hash: da_hash });
         }

@@ -76,7 +76,7 @@ fn program_input_from_program_output(
     let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
     match num {
         0..=3 => {
-            message_to_starknet_segment = Default::default();
+            message_to_starknet_segment = Default::default(); // TODO: report error here
         }
         4..=u64::MAX => {
             message_to_starknet_segment =
