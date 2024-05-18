@@ -348,16 +348,25 @@ impl DeclareTx {
     }
 }
 
+/// The transaction type for L1 handler invocation.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTx {
+    /// The L1 to L2 message nonce.
     pub nonce: Nonce,
+    /// The chain id.
     pub chain_id: ChainId,
+    /// Amount of fee paid on L1.
     pub paid_fee_on_l1: u128,
+    /// Transaction version.
     pub version: FieldElement,
+    /// L1 to L2 message hash.
     pub message_hash: B256,
+    /// The input to the L1 handler function.
     pub calldata: Vec<FieldElement>,
+    /// Contract address of the L1 handler.
     pub contract_address: ContractAddress,
+    /// The L1 handler function selector.
     pub entry_point_selector: FieldElement,
 }
 
