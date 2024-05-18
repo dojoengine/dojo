@@ -53,7 +53,7 @@ pub fn compute_enum_layout_size(
 
                 build_size_function_body(&mut sizes, cumulated_sizes, is_dynamic_size)
             }
-            None => return "Option::None".to_string(),
+            None => "Option::None".to_string(),
         }
     } else {
         "Option::None".to_string()
@@ -152,10 +152,9 @@ pub fn compute_item_size_from_type(item_type: &String) -> Vec<String> {
     }
 }
 
-pub fn compute_tuple_size_from_type(tuple_type: &String) -> Vec<String> {
+pub fn compute_tuple_size_from_type(tuple_type: &str) -> Vec<String> {
     get_tuple_item_types(tuple_type)
         .iter()
-        .map(|x| compute_item_size_from_type(x))
-        .flatten()
+        .flat_map(compute_item_size_from_type)
         .collect::<Vec<_>>()
 }

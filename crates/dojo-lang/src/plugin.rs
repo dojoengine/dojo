@@ -43,6 +43,8 @@ pub const DOJO_EVENT_ATTR: &str = "dojo::event";
 pub const DOJO_INTROSPECT_ATTR: &str = "Introspect";
 pub const DOJO_PACKED_ATTR: &str = "IntrospectPacked";
 
+pub const DOJO_MODEL_MANDATORY_DERIVE_ATTRS: [&str; 3] = ["Drop", "Copy", "Serde"];
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
     pub name: String,
@@ -283,7 +285,7 @@ fn get_derive_attr_names(
         .collect::<Vec<_>>()
 }
 
-fn check_for_attr_conflicts(
+fn check_for_derive_attr_conflicts(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: SyntaxStablePtrId,
     attr_names: &[String],
@@ -300,6 +302,20 @@ fn check_for_attr_conflicts(
             severity: Severity::Error,
         });
     }
+}
+
+fn get_additional_derive_attrs_for_model(derive_attr_names: &[String]) -> Vec<String> {
+    let mut additional_attrs = vec![];
+
+    // if not already present, add Introspect to derive attributes because it
+    // is mandatory for a model
+    if !derive_attr_names.contains(&DOJO_INTROSPECT_ATTR.to_string())
+        && !derive_attr_names.contains(&DOJO_PACKED_ATTR.to_string())
+    {
+        additional_attrs.push(DOJO_INTROSPECT_ATTR.to_string());
+    }
+
+    additional_attrs
 }
 
 impl MacroPlugin for BuiltinDojoPlugin {
@@ -319,20 +335,20 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 let mut rewrite_nodes = vec![];
                 let mut diagnostics = vec![];
 
-                let attr_names = get_derive_attr_names(
+                let derive_attr_names = get_derive_attr_names(
                     db,
                     &mut diagnostics,
                     enum_ast.attributes(db).query_attr(db, "derive"),
                 );
 
-                check_for_attr_conflicts(
+                check_for_derive_attr_conflicts(
                     &mut diagnostics,
                     enum_ast.name(db).stable_ptr().0,
-                    &attr_names,
+                    &derive_attr_names,
                 );
 
                 // Iterate over all the derive attributes of the struct
-                for attr in attr_names {
+                for attr in derive_attr_names {
                     match attr.as_str() {
                         DOJO_INTROSPECT_ATTR => {
                             rewrite_nodes.push(handle_introspect_enum(
@@ -383,20 +399,28 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 let mut rewrite_nodes = vec![];
                 let mut diagnostics = vec![];
 
-                let attr_names = get_derive_attr_names(
+                let mut addtional_derive_attr_names = vec![];
+                let derive_attr_names = get_derive_attr_names(
                     db,
                     &mut diagnostics,
                     struct_ast.attributes(db).query_attr(db, "derive"),
                 );
 
-                check_for_attr_conflicts(
+                let model_attrs = struct_ast.attributes(db).query_attr(db, DOJO_MODEL_ATTR);
+
+                check_for_derive_attr_conflicts(
                     &mut diagnostics,
                     struct_ast.name(db).stable_ptr().0,
-                    &attr_names,
+                    &derive_attr_names,
                 );
 
+                if !model_attrs.is_empty() {
+                    addtional_derive_attr_names =
+                        get_additional_derive_attrs_for_model(&derive_attr_names);
+                }
+
                 // Iterate over all the derive attributes of the struct
-                for attr in attr_names {
+                for attr in derive_attr_names.iter().chain(addtional_derive_attr_names.iter()) {
                     match attr.as_str() {
                         "Print" => {
                             rewrite_nodes.push(handle_print_struct(db, struct_ast.clone()));
@@ -421,9 +445,9 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     }
                 }
 
-                let attributes = struct_ast.attributes(db).query_attr(db, DOJO_EVENT_ATTR);
+                let event_attrs = struct_ast.attributes(db).query_attr(db, DOJO_EVENT_ATTR);
 
-                match attributes.len().cmp(&1) {
+                match event_attrs.len().cmp(&1) {
                     Ordering::Equal => {
                         let (event_rewrite_nodes, event_diagnostics) =
                             handle_event_struct(db, &mut aux_data, struct_ast.clone());
@@ -441,9 +465,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     _ => {}
                 }
 
-                let attributes = struct_ast.attributes(db).query_attr(db, DOJO_MODEL_ATTR);
-
-                match attributes.len().cmp(&1) {
+                match model_attrs.len().cmp(&1) {
                     Ordering::Equal => {
                         let (model_rewrite_nodes, model_diagnostics) =
                             handle_model_struct(db, &mut aux_data, struct_ast.clone());
