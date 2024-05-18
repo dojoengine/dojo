@@ -12,8 +12,11 @@ use async_trait::async_trait;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
-use katana_primitives::utils::transaction::compute_l1_message_hash;
+use katana_primitives::utils::transaction::{
+    compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
+};
 use katana_primitives::FieldElement;
+use starknet::core::types::EthAddress;
 use tracing::{debug, trace, warn};
 
 use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
@@ -190,6 +193,7 @@ impl Messenger for EthereumMessaging {
     }
 }
 
+// TODO: refactor this as a method of the message log struct
 fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1HandlerTx> {
     let parsed_log = LogMessageToL2::LogMessageToL2Event::decode_log(
         &alloy_primitives::Log::<LogData>::new(
@@ -202,23 +206,33 @@ fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1Hand
     )
     .unwrap();
 
-    let from_address = felt_from_address(parsed_log.from_address);
+    let from_address =
+        EthAddress::try_from(parsed_log.from_address.as_slice()).expect("valid address");
     let contract_address = felt_from_u256(parsed_log.to_address);
     let entry_point_selector = felt_from_u256(parsed_log.selector);
-    let nonce = felt_from_u256(parsed_log.nonce);
+    let nonce: u64 = parsed_log.nonce.try_into().expect("nonce does not fit into u64.");
     let paid_fee_on_l1: u128 = parsed_log.fee.try_into().expect("Fee does not fit into u128.");
+    let payload = parsed_log.payload.clone().into_iter().map(felt_from_u256).collect::<Vec<_>>();
 
-    let mut calldata = vec![from_address];
-    calldata.extend(parsed_log.payload.clone().into_iter().map(felt_from_u256));
+    let message_hash = compute_l1_to_l2_message_hash(
+        from_address.clone(),
+        contract_address,
+        entry_point_selector,
+        &payload,
+        nonce,
+    );
 
-    let message_hash = compute_l1_message_hash(from_address, contract_address, &calldata);
+    // In an l1_handler transaction, the first element of the calldata is always the Ethereum
+    // address of the sender (msg.sender). https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/messaging-mechanism/#l1-l2-messages
+    let mut calldata = vec![FieldElement::from(from_address)];
+    calldata.extend(payload.clone());
 
     Ok(L1HandlerTx {
-        nonce,
         calldata,
         chain_id,
         message_hash,
         paid_fee_on_l1,
+        nonce: nonce.into(),
         entry_point_selector,
         version: FieldElement::ZERO,
         contract_address: contract_address.into(),
@@ -230,19 +244,17 @@ fn parse_messages(messages: &[MessageToL1]) -> Vec<U256> {
     messages
         .iter()
         .map(|msg| {
-            U256::from_be_bytes(
-                compute_l1_message_hash(msg.from_address.into(), msg.to_address, &msg.payload)
-                    .into(),
-            )
+            let hash = compute_l2_to_l1_message_hash(
+                msg.from_address.into(),
+                msg.to_address,
+                &msg.payload,
+            );
+            U256::from_be_bytes(hash.into())
         })
         .collect()
 }
 
 fn felt_from_u256(v: U256) -> FieldElement {
-    FieldElement::from_str(format!("{:#064x}", v).as_str()).unwrap()
-}
-
-fn felt_from_address(v: Address) -> FieldElement {
     FieldElement::from_str(format!("{:#064x}", v).as_str()).unwrap()
 }
 
@@ -260,7 +272,7 @@ mod tests {
         let from_address = "0x000000000000000000000000be3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be";
         let to_address = "0x039dc79e64f4bb3289240f88e0bae7d21735bef0d1a51b2bf3c4730cb16983e1";
         let selector = "0x02f15cff7b0eed8b9beb162696cf4e3e0e35fa7032af69cd1b7d2ac67a13f40f";
-        let nonce = 783082_u128;
+        let nonce = 783082_u64;
         let fee = 30000_u128;
 
         // Payload two values: [1, 2].
@@ -298,9 +310,11 @@ mod tests {
         // SN_GOERLI.
         let chain_id = ChainId::Named(NamedChainId::Goerli);
         let to_address = FieldElement::from_hex_be(to_address).unwrap();
-        let from_address = FieldElement::from_hex_be(from_address).unwrap();
+        let from_address = EthAddress::from_str(from_address).unwrap();
+        let selector = FieldElement::from_hex_be(selector).unwrap();
 
-        let message_hash = compute_l1_message_hash(from_address, to_address, &calldata);
+        let message_hash =
+            compute_l1_to_l2_message_hash(from_address, to_address, selector, &calldata, nonce);
 
         let expected = L1HandlerTx {
             calldata,
@@ -310,7 +324,7 @@ mod tests {
             version: FieldElement::ZERO,
             nonce: FieldElement::from(nonce),
             contract_address: to_address.into(),
-            entry_point_selector: FieldElement::from_hex_be(selector).unwrap(),
+            entry_point_selector: selector,
         };
         let tx_hash = expected.calculate_hash();
 

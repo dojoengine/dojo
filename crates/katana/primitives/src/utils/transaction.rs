@@ -1,6 +1,6 @@
 use alloy_primitives::B256;
 use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::{DataAvailabilityMode, MsgToL1, ResourceBounds};
+use starknet::core::types::{DataAvailabilityMode, EthAddress, MsgToL1, MsgToL2, ResourceBounds};
 use starknet_crypto::poseidon_hash_many;
 
 use crate::FieldElement;
@@ -261,16 +261,29 @@ pub fn compute_l1_handler_tx_hash(
     ])
 }
 
-/// Computes the hash of a L1 message.
+/// Computes the hash of a L2 to L1 message.
 ///
 /// The hash that is used to consume the message in L1.
-pub fn compute_l1_message_hash(
+pub fn compute_l2_to_l1_message_hash(
     from_address: FieldElement,
     to_address: FieldElement,
     payload: &[FieldElement],
 ) -> B256 {
     let msg = MsgToL1 { from_address, to_address, payload: payload.to_vec() };
+    B256::from_slice(msg.hash().as_bytes())
+}
 
+// TODO: standardize the usage of eth types. prefer to use alloy (for its convenience) instead of
+// starknet-rs's types.
+/// Computes the hash of a L1 to L2 message.
+pub fn compute_l1_to_l2_message_hash(
+    from_address: EthAddress,
+    to_address: FieldElement,
+    selector: FieldElement,
+    payload: &[FieldElement],
+    nonce: u64,
+) -> B256 {
+    let msg = MsgToL2 { from_address, to_address, selector, payload: payload.to_vec(), nonce };
     B256::from_slice(msg.hash().as_bytes())
 }
 
