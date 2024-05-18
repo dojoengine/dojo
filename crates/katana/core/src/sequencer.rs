@@ -286,13 +286,10 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
 
         let tx @ Some(_) = tx else {
             return Ok(self.pending_executor().as_ref().and_then(|exec| {
-                exec.read().transactions().iter().find_map(|tx| {
-                    if tx.0.hash == *hash {
-                        Some(tx.0.clone())
-                    } else {
-                        None
-                    }
-                })
+                exec.read()
+                    .transactions()
+                    .iter()
+                    .find_map(|tx| if tx.0.hash == *hash { Some(tx.0.clone()) } else { None })
             }));
         };
 

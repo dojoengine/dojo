@@ -1071,10 +1071,12 @@ mod tests {
     fn genesis_from_json_with_unresolved_paths() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
         let json: GenesisJson = serde_json::from_reader(file).unwrap();
-        assert!(Genesis::try_from(json)
-            .unwrap_err()
-            .to_string()
-            .contains("Unresolved class artifact path"));
+        assert!(
+            Genesis::try_from(json)
+                .unwrap_err()
+                .to_string()
+                .contains("Unresolved class artifact path")
+        );
     }
 
     #[test]
