@@ -43,6 +43,8 @@ pub const DOJO_EVENT_ATTR: &str = "dojo::event";
 pub const DOJO_INTROSPECT_ATTR: &str = "Introspect";
 pub const DOJO_PACKED_ATTR: &str = "IntrospectPacked";
 
+pub const DOJO_MODEL_MANDATORY_DERIVE_ATTRS: [&str; 3] = ["Drop", "Copy", "Serde"];
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
     pub name: String,
