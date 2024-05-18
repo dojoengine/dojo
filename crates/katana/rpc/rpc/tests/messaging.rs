@@ -2,12 +2,14 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use alloy::primitives::{Uint, U256};
+use alloy::primitives::{Uint, B256, U256};
 use alloy::sol;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
 use dojo_world::utils::TransactionWaiter;
-use katana_primitives::utils::transaction::{compute_l1_handler_tx_hash, compute_l1_message_hash};
+use katana_primitives::utils::transaction::{
+    compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash,
+};
 use katana_runner::{AnvilRunner, KatanaRunner, KatanaRunnerConfig};
 use serde_json::json;
 use starknet::accounts::{Account, ConnectedAccount};
@@ -47,9 +49,10 @@ async fn test_messaging() {
     let l1_provider = anvil_runner.provider();
 
     // Deploy the core messaging contract on L1
-    let core_contract = StarknetContract::deploy(anvil_runner.provider()).await.unwrap();
+    let core_contract = StarknetContract::deploy(l1_provider).await.unwrap();
     // Deploy test contract on L1 used to send/receive messages to/from L2
-    let l1_test_contract = Contract1::deploy(l1_provider, *core_contract.address()).await.unwrap();
+    let l1_test_contract =
+        Contract1::deploy(l1_provider, dbg!(*core_contract.address())).await.unwrap();
 
     // Prepare Katana + Messaging Contract
     let messaging_config = json!({
@@ -72,6 +75,7 @@ async fn test_messaging() {
         disable_fee: false,
         block_time: None,
         port: None,
+        // program_name: Some("/Users/kariy/.dojo/bin/katana".to_string()),
         program_name: None,
         run_name: None,
         messaging: Some(path.to_str().unwrap().to_string()),
@@ -131,17 +135,22 @@ async fn test_messaging() {
 
     // Send message from L1 to L2
     {
+        // The L1 sender address
+        let sender = l1_test_contract.address();
         // The L2 contract address to send the message to
         let recipient = l2_test_contract;
         // The L2 contract function to call
-        let function = selector!("msg_handler_value");
+        let selector = selector!("msg_handler_value");
         // The L2 contract function arguments
-        let calldata = [123];
+        let calldata = [123u8];
+        // Get the current L1 -> L2 message nonce
+        let nonce = core_contract.l1ToL2MessageNonce().call().await.expect("get nonce")._0;
 
+        // Send message to L2
         let call = l1_test_contract
             .sendMessage(
                 U256::from_str(&recipient.to_string()).unwrap(),
-                U256::from_str(&function.to_string()).unwrap(),
+                U256::from_str(&selector.to_string()).unwrap(),
                 calldata.iter().map(|x| U256::from(*x)).collect::<Vec<_>>(),
             )
             .gas(12000000)
@@ -160,73 +169,69 @@ async fn test_messaging() {
         // Wait for the tx to be mined on L2 (Katana)
         tokio::time::sleep(Duration::from_secs(1)).await;
 
-        // Check that the transaction was indeed received by Katana
-        let block_id = BlockId::Tag(BlockTag::Latest);
+        // In an l1_handler transaction, the first element of the calldata is always the Ethereum address of the sender (msg.sender).
+        let mut l1_tx_calldata = vec![FieldElement::from_byte_slice_be(sender.as_slice()).unwrap()];
+        l1_tx_calldata.extend(calldata.iter().map(|x| FieldElement::from(*x)));
+
+        // Compute transaction hash
+        let tx_hash = compute_l1_handler_tx_hash(
+            FieldElement::ZERO,
+            recipient,
+            selector,
+            &l1_tx_calldata,
+            katana_account.provider().chain_id().await.unwrap(),
+            nonce.to::<u64>().into(),
+        );
+
+        // fetch the transaction
         let tx = katana_account
             .provider()
-            .get_transaction_by_block_id_and_index(block_id, 0)
+            .get_transaction_by_hash(tx_hash)
             .await
-            .unwrap();
+            .expect("failed to get l1 handler tx");
 
-        match tx {
-            Transaction::L1Handler(ref l1_handler_transaction) => {
-                let calldata = &l1_handler_transaction.calldata;
+        let Transaction::L1Handler(ref tx) = tx else {
+            panic!("invalid transaction type");
+        };
 
-                // Assert thr value sent
-                assert_eq!(FieldElement::to_string(&calldata[1]), "123");
+        // Assert the transaction fields
+        assert_eq!(tx.contract_address, recipient);
+        assert_eq!(tx.entry_point_selector, selector);
+        assert_eq!(tx.calldata, l1_tx_calldata);
 
-                // Assert Transaction hash
-                let computed_tx_hash = compute_l1_handler_tx_hash(
-                    FieldElement::ZERO,
+        // fetch the receipt
+        let receipt = katana_account
+            .provider()
+            .get_transaction_receipt(tx.transaction_hash)
+            .await
+            .expect("failed to get receipt");
+
+        match receipt {
+            MaybePendingTransactionReceipt::Receipt(receipt) => {
+                let TransactionReceipt::L1Handler(receipt) = receipt else {
+                    panic!("invalid receipt type");
+                };
+
+                let msg_hash = compute_l1_to_l2_message_hash(
+                    sender.as_slice().try_into().unwrap(),
                     recipient,
-                    function,
-                    calldata,
-                    katana_account.provider().chain_id().await.unwrap(),
-                    katana_account
-                        .provider()
-                        .get_nonce(BlockId::Tag(BlockTag::Latest), recipient)
-                        .await
-                        .unwrap(),
+                    selector,
+                    &calldata.iter().map(|x| FieldElement::from(*x)).collect::<Vec<_>>(),
+                    nonce.to::<u64>().into(),
                 );
-                assert_eq!(tx.transaction_hash(), &computed_tx_hash);
 
-                let maybe_receipt = katana_account
-                    .provider()
-                    .get_transaction_receipt(tx.transaction_hash())
+                let msg_fee = core_contract
+                    .l1ToL2Messages(msg_hash)
+                    .call()
                     .await
-                    .unwrap();
-                match maybe_receipt {
-                    MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
-                        TransactionReceipt::L1Handler(l1handler_tx_receipt) => {
-                            // Assert Message hash
-                            let computed_mesage_hash = compute_l1_message_hash(
-                                FieldElement::from_str(&l1_test_contract.address().to_string())
-                                    .unwrap(),
-                                recipient,
-                                calldata,
-                            );
-                            assert_eq!(
-                                l1handler_tx_receipt.message_hash,
-                                Hash256::from_str(&computed_mesage_hash.to_string()).unwrap()
-                            );
+                    .expect("failed to get msg fee");
 
-                            // query the core messaging contract to check that the message hash do
-                            // exist
-                            let call = core_contract.l1ToL2Messages(computed_mesage_hash);
-                            let test = call.call().await.unwrap();
-                            println!("TEST CALL {:?}", test);
-                        }
-                        _ => {
-                            panic!("Error, No L1Handler TransactionReceipt")
-                        }
-                    },
-                    _ => {
-                        panic!("Error, No Receipt TransactionReceipt")
-                    }
-                }
+                assert_ne!(msg_fee._0, U256::ZERO, "msg fee must be non-zero if exist");
+                assert_eq!(receipt.message_hash, Hash256::from_bytes(msg_hash.0));
             }
+
             _ => {
-                panic!("Error, No L1handler transaction")
+                panic!("Error, No Receipt TransactionReceipt")
             }
         }
     }
