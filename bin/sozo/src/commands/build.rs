@@ -15,10 +15,9 @@ pub struct BuildArgs {
     #[arg(help = "Generate Typescript bindings.")]
     pub typescript: bool,
 
-    #[arg(long)]
-    #[arg(help = "Generate Typescript bindings.")]
-    pub typescript_v2: bool,
-
+    // #[arg(long)]
+    // #[arg(help = "Generate Typescript bindings.")]
+    // pub typescript_v2: bool,
     #[arg(long)]
     #[arg(help = "Generate Unity bindings.")]
     pub unity: bool,
@@ -44,9 +43,9 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::Typescript);
         }
 
-        if self.typescript_v2 {
-            builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
-        }
+        // if self.typescript_v2 {
+        //     builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
+        // }
 
         if self.unity {
             builtin_plugins.push(BuiltinPlugins::Unity);
@@ -131,7 +130,6 @@ mod tests {
             bindings_output: "generated".to_string(),
             typescript: true,
             unity: true,
-            typescript_v2: false,
             stats: true,
         };
         let result = build_args.run(&config);

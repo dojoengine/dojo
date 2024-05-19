@@ -15,7 +15,7 @@ pub mod unity;
 pub enum BuiltinPlugins {
     Typescript,
     Unity,
-    TypeScriptV2,
+    // TypeScriptV2,
 }
 
 impl fmt::Display for BuiltinPlugins {
@@ -23,7 +23,7 @@ impl fmt::Display for BuiltinPlugins {
         match self {
             BuiltinPlugins::Typescript => write!(f, "typescript"),
             BuiltinPlugins::Unity => write!(f, "unity"),
-            BuiltinPlugins::TypeScriptV2 => write!(f, "typescript_v2"),
+            // BuiltinPlugins::TypeScriptV2 => write!(f, "typescript_v2"),
         }
     }
 }

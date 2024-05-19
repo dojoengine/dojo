@@ -12,9 +12,9 @@ use crate::{DojoContract, DojoData, DojoModel};
 pub struct TypeScriptV2Plugin {}
 
 impl TypeScriptV2Plugin {
-    pub fn new() -> Self {
-        Self {}
-    }
+    // pub fn new() -> Self {
+    //    Self {}
+    // }
 
     // Maps cairo types to TypeScript defined types
     fn map_type(type_name: &str) -> String {
