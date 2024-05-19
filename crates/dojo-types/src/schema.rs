@@ -176,7 +176,6 @@ impl Ty {
                 e.option =
                     Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
 
-
                 match &e.options[e.option.unwrap() as usize].ty {
                     // Skip deserializing the enum option if it has no type - unit type
                     Ty::Tuple(tuple) if tuple.is_empty() => {}
