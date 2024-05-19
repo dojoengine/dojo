@@ -418,12 +418,12 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
 
     #[inline(always)]
     fn instance_layout(self: @BadModelMultipleVersions) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<BadModelMultipleVersions>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<BadModelMultipleVersions>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -595,12 +595,12 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
 
     #[inline(always)]
     fn instance_layout(self: @BadModelBadVersionType) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<BadModelBadVersionType>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<BadModelBadVersionType>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -772,12 +772,12 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
 
     #[inline(always)]
     fn instance_layout(self: @BadModelNoVersionValue) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<BadModelNoVersionValue>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<BadModelNoVersionValue>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -949,12 +949,12 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
 
     #[inline(always)]
     fn instance_layout(self: @BadModelUnexpectedArgWithValue) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -1126,12 +1126,12 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
 
     #[inline(always)]
     fn instance_layout(self: @BadModelUnexpectedArg) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<BadModelUnexpectedArg>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<BadModelUnexpectedArg>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -1303,12 +1303,12 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
 
     #[inline(always)]
     fn instance_layout(self: @BadModelNotSupportedVersion) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<BadModelNotSupportedVersion>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<BadModelNotSupportedVersion>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -1480,12 +1480,12 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
 
     #[inline(always)]
     fn instance_layout(self: @Modelv0) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<Modelv0>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<Modelv0>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -1657,12 +1657,12 @@ impl PositionModel of dojo::model::Model<Position> {
 
     #[inline(always)]
     fn instance_layout(self: @Position) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<Position>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<Position>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -1834,12 +1834,12 @@ impl RolesModel of dojo::model::Model<Roles> {
 
     #[inline(always)]
     fn instance_layout(self: @Roles) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<Roles>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<Roles>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -2003,12 +2003,12 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
 
     #[inline(always)]
     fn instance_layout(self: @OnlyKeyModel) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<OnlyKeyModel>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<OnlyKeyModel>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -2172,12 +2172,12 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
 
     #[inline(always)]
     fn instance_layout(self: @U256KeyModel) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<U256KeyModel>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<U256KeyModel>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -2354,12 +2354,12 @@ impl PlayerModel of dojo::model::Model<Player> {
 
     #[inline(always)]
     fn instance_layout(self: @Player) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<Player>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<Player>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -2545,12 +2545,12 @@ impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
 
     #[inline(always)]
     fn instance_layout(self: @ModelWithSimpleArray) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<ModelWithSimpleArray>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<ModelWithSimpleArray>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -2732,12 +2732,12 @@ impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
 
     #[inline(always)]
     fn instance_layout(self: @ModelWithByteArray) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<ModelWithByteArray>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<ModelWithByteArray>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -2923,12 +2923,12 @@ impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
 
     #[inline(always)]
     fn instance_layout(self: @ModelWithComplexArray) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<ModelWithComplexArray>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<ModelWithComplexArray>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -3121,12 +3121,12 @@ impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
 
     #[inline(always)]
     fn instance_layout(self: @ModelWithTuple) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<ModelWithTuple>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<ModelWithTuple>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
@@ -3328,12 +3328,12 @@ impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimi
 
     #[inline(always)]
     fn instance_layout(self: @ModelWithTupleNoPrimitives) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<ModelWithTupleNoPrimitives>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
