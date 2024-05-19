@@ -725,7 +725,7 @@ pub async fn print_strategy<P>(
     if !&strategy.models.is_empty() {
         ui.print_header(format!("# Models ({})", &strategy.models.len()));
         for m in &strategy.models {
-            ui.print(format!("{}", m.diff.name));
+            ui.print(m.diff.name.to_string());
             ui.print_sub(format!("Class hash: {:#x}", m.diff.local_class_hash));
         }
     }
@@ -737,7 +737,7 @@ pub async fn print_strategy<P>(
         for c in &strategy.contracts {
             let op_name = get_contract_operation_name(provider, c, strategy.world_address).await;
 
-            ui.print(format!("{op_name}"));
+            ui.print(op_name);
             ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));
             let salt = generate_salt(&c.diff.name);
             let contract_address = get_contract_address(
