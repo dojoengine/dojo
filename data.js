@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716149323514,
+  "lastUpdate": 1716151296736,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8095,6 +8095,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17007814,
             "range": "± 324901",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "112043913+stevencartavia@users.noreply.github.com",
+            "name": "Steven",
+            "username": "stevencartavia"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "60e7ded73a37f381d5f16c12173fe2e5e52c191a",
+          "message": "display contract addresses in sozo migrate plan (#1926)\n\n* draft\r\n\r\n* world_addres and contract_address print\r\n\r\n* fix\r\n\r\n* s\r\n\r\n* fix\r\n\r\n* world_addres and contract_address print\r\n\r\n* fix\r\n\r\n* fix\r\n\r\n* formatting\r\n\r\n* fix implementation and clean up\r\n\r\n* revert cargo.lock changes\r\n\r\n* clippy lints\r\n\r\n* fix CI\r\n\r\n* restore unnecessary changes\r\n\r\n---------\r\n\r\nCo-authored-by: Steven <steven@Stevens-Mac.local>\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-05-19T22:33:11+02:00",
+          "tree_id": "fbe29ba6d8d62f8333c88b86c9350b0734a2d3fc",
+          "url": "https://github.com/dojoengine/dojo/commit/60e7ded73a37f381d5f16c12173fe2e5e52c191a"
+        },
+        "date": 1716151295485,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16750969,
+            "range": "± 200615",
             "unit": "ns/iter"
           }
         ]
