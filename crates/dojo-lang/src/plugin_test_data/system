@@ -83,7 +83,7 @@ trait IEmptyTrait;
 
 #[dojo::interface]
 trait IFaultyTrait {
-    const ONE: u8;
+   const ONE: u8;
 
     fn do_ref_self(ref self: TContractState);
 
@@ -325,6 +325,7 @@ error: Unsupported attribute.
 error: Anything other than functions is not supported in a dojo::interface
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:80:5
 =======
  --> test_src/lib.cairo:87:5
@@ -332,10 +333,14 @@ error: Anything other than functions is not supported in a dojo::interface
 =======
  --> test_src/lib.cairo:88:5
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:91:5
+>>>>>>> a0bbad02 (update dojo-lang tests)
     const ONE: u8;
     ^************^
 
 error: Functions of dojo::interface cannot have `ref self` parameter.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:82:5
@@ -345,10 +350,14 @@ error: Functions of dojo::interface cannot have `ref self` parameter.
 =======
  --> test_src/lib.cairo:90:5
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:93:5
+>>>>>>> a0bbad02 (update dojo-lang tests)
     fn do_ref_self(ref self: TContractState);
     ^***************************************^
 
 error: Functions of dojo::contract cannot have 'ref self' parameter.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:130:9
@@ -358,10 +367,14 @@ error: Functions of dojo::contract cannot have 'ref self' parameter.
 =======
  --> test_src/lib.cairo:138:9
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:141:9
+>>>>>>> a0bbad02 (update dojo-lang tests)
         fn do_with_ref_self(ref self: ContractState) -> felt252 {
         ^*******************************************************^
 
 error: Only one parameter of type IWorldDispatcher is allowed.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:134:9
@@ -371,10 +384,14 @@ error: Only one parameter of type IWorldDispatcher is allowed.
 =======
  --> test_src/lib.cairo:142:9
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:145:9
+>>>>>>> a0bbad02 (update dojo-lang tests)
         fn do_with_several_world_dispatchers(
         ^***********************************^
 
 error: The IWorldDispatcher parameter must be named 'world'.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:140:42
@@ -384,10 +401,14 @@ error: The IWorldDispatcher parameter must be named 'world'.
 =======
  --> test_src/lib.cairo:148:42
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:151:42
+>>>>>>> a0bbad02 (update dojo-lang tests)
         fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
                                          ^*****************************^
 
 error: The IWorldDispatcher parameter must be named 'world'.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:145:35
@@ -397,10 +418,14 @@ error: The IWorldDispatcher parameter must be named 'world'.
 =======
  --> test_src/lib.cairo:153:35
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:156:35
+>>>>>>> a0bbad02 (update dojo-lang tests)
             self: @ContractState, another_world: IWorldDispatcher
                                   ^*****************************^
 
 error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:150:47
@@ -410,10 +435,14 @@ error: The IWorldDispatcher parameter must be the first parameter of the functio
 =======
  --> test_src/lib.cairo:158:47
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:161:47
+>>>>>>> a0bbad02 (update dojo-lang tests)
         fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
                                               ^*********************^
 
 error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:155:46
@@ -423,6 +452,9 @@ error: The IWorldDispatcher parameter must be the first parameter of the functio
 =======
  --> test_src/lib.cairo:163:46
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:166:46
+>>>>>>> a0bbad02 (update dojo-lang tests)
             self: @ContractState, vec: Vec2, world: IWorldDispatcher
                                              ^*********************^
 
@@ -454,6 +486,7 @@ error: Unsupported attribute.
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:84:5
 =======
  --> test_src/lib.cairo:91:5
@@ -461,10 +494,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:92:5
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:95:5
+>>>>>>> a0bbad02 (update dojo-lang tests)
     #[my_attr]
     ^********^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:93:1
@@ -474,10 +511,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:101:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:104:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:126:1
@@ -487,10 +528,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:134:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:137:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:162:1
@@ -500,6 +545,9 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:170:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:173:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
@@ -716,18 +764,6 @@ error: Unsupported attribute.
 error: Unknown inline item macro: 'component'.
 <<<<<<< HEAD
 <<<<<<< HEAD
- --> test_src/lib.cairo:93:1
-=======
- --> test_src/lib.cairo:100:1
->>>>>>> b1b16586 (fix fmt+clippy)
-=======
- --> test_src/lib.cairo:101:1
->>>>>>> b7940e47 (fix warning about trait path in Impl)
-#[dojo::contract(allow_ref_self)]
-^*******************************^
-
-error: Unsupported attribute.
-<<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:93:1
 =======
@@ -736,10 +772,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:101:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:104:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:93:1
@@ -749,10 +789,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:101:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:104:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:93:1
@@ -762,10 +806,31 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:101:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:104:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+ --> test_src/lib.cairo:93:1
+=======
+ --> test_src/lib.cairo:100:1
+>>>>>>> b1b16586 (fix fmt+clippy)
+=======
+ --> test_src/lib.cairo:101:1
+>>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:104:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
+#[dojo::contract(allow_ref_self)]
+^*******************************^
+
+error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:95:5
@@ -775,12 +840,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:103:5
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:106:5
+>>>>>>> a0bbad02 (update dojo-lang tests)
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:93:1
 =======
  --> test_src/lib.cairo:100:1
@@ -788,12 +857,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:101:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:104:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:93:1
 =======
  --> test_src/lib.cairo:100:1
@@ -801,12 +874,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:101:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:104:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:93:1
 =======
  --> test_src/lib.cairo:100:1
@@ -814,24 +891,15 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:101:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:104:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unknown inline item macro: 'component'.
 <<<<<<< HEAD
 <<<<<<< HEAD
- --> test_src/lib.cairo:126:1
-=======
- --> test_src/lib.cairo:133:1
->>>>>>> b1b16586 (fix fmt+clippy)
-=======
- --> test_src/lib.cairo:134:1
->>>>>>> b7940e47 (fix warning about trait path in Impl)
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
-<<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:126:1
 =======
@@ -840,10 +908,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:134:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:137:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:126:1
@@ -853,10 +925,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:134:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:137:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:126:1
@@ -866,10 +942,31 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:134:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:137:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+ --> test_src/lib.cairo:126:1
+=======
+ --> test_src/lib.cairo:133:1
+>>>>>>> b1b16586 (fix fmt+clippy)
+=======
+ --> test_src/lib.cairo:134:1
+>>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:137:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:128:5
@@ -879,12 +976,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:136:5
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:139:5
+>>>>>>> a0bbad02 (update dojo-lang tests)
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:126:1
 =======
  --> test_src/lib.cairo:133:1
@@ -892,12 +993,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:134:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:137:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:126:1
 =======
  --> test_src/lib.cairo:133:1
@@ -905,12 +1010,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:134:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:137:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:126:1
 =======
  --> test_src/lib.cairo:133:1
@@ -918,24 +1027,15 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:134:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:137:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
 <<<<<<< HEAD
 <<<<<<< HEAD
- --> test_src/lib.cairo:162:1
-=======
- --> test_src/lib.cairo:169:1
->>>>>>> b1b16586 (fix fmt+clippy)
-=======
- --> test_src/lib.cairo:170:1
->>>>>>> b7940e47 (fix warning about trait path in Impl)
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
-<<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:162:1
 =======
@@ -944,10 +1044,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:170:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:173:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:162:1
@@ -957,10 +1061,14 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:170:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:173:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:162:1
@@ -970,10 +1078,31 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:170:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:173:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+ --> test_src/lib.cairo:162:1
+=======
+ --> test_src/lib.cairo:169:1
+>>>>>>> b1b16586 (fix fmt+clippy)
+=======
+ --> test_src/lib.cairo:170:1
+>>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:173:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
  --> test_src/lib.cairo:169:5
@@ -983,12 +1112,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:177:5
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:180:5
+>>>>>>> a0bbad02 (update dojo-lang tests)
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:162:1
 =======
  --> test_src/lib.cairo:169:1
@@ -996,12 +1129,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:170:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:173:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:162:1
 =======
  --> test_src/lib.cairo:169:1
@@ -1009,12 +1146,16 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:170:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:173:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
  --> test_src/lib.cairo:162:1
 =======
  --> test_src/lib.cairo:169:1
@@ -1022,6 +1163,9 @@ error: Unsupported attribute.
 =======
  --> test_src/lib.cairo:170:1
 >>>>>>> b7940e47 (fix warning about trait path in Impl)
+=======
+ --> test_src/lib.cairo:173:1
+>>>>>>> a0bbad02 (update dojo-lang tests)
 #[dojo::contract]
 ^***************^
 
