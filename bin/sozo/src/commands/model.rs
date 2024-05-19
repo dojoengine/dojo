@@ -41,6 +41,18 @@ pub enum ModelCommand {
         starknet: StarknetOptions,
     },
 
+    #[command(about = "Retrieve the layout used to store model records in the world storage.")]
+    Layout {
+        #[arg(help = "The name of the model")]
+        name: String,
+
+        #[command(flatten)]
+        world: WorldOptions,
+
+        #[command(flatten)]
+        starknet: StarknetOptions,
+    },
+
     #[command(about = "Retrieve the schema for a model")]
     Schema {
         #[arg(help = "The name of the model")]
@@ -91,6 +103,11 @@ impl ModelArgs {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
                     model::model_contract_address(name, world_address, provider).await
+                }
+                ModelCommand::Layout { name, starknet, world } => {
+                    let world_address = world.address(env_metadata.as_ref()).unwrap();
+                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
+                    model::model_layout(name, world_address, provider).await
                 }
                 ModelCommand::Schema { name, to_json, starknet, world } => {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
