@@ -740,12 +740,8 @@ pub async fn print_strategy<P>(
             ui.print(op_name);
             ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));
             let salt = generate_salt(&c.diff.name);
-            let contract_address = get_contract_address(
-                salt,
-                c.diff.base_class_hash,
-                &[],
-                strategy.world_address.unwrap(),
-            );
+            let contract_address =
+                get_contract_address(salt, c.diff.base_class_hash, &[], world_address);
             ui.print_sub(format!("Contract address: {:#x}", contract_address));
         }
     }

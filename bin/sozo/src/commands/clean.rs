@@ -92,7 +92,7 @@ mod tests {
                 runner.endpoint(),
                 runner.account(0),
                 "dojo_examples",
-                true,
+                false,
                 TxnConfig::default(),
             )
             .await
