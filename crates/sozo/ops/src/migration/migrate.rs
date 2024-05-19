@@ -681,61 +681,76 @@ where
                 .await
             {
                 Ok(current_class_hash) if current_class_hash != contract.diff.local_class_hash => {
-                    return format!("upgrade {}", contract.diff.name);
+                    return format!("{}: Upgrade", contract.diff.name);
                 }
                 Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                    return format!("deploy {}", contract.diff.name);
+                    return format!("{}: Deploy", contract.diff.name);
                 }
-                Ok(_) => return "already deployed".to_string(),
-                Err(_) => return format!("deploy {}", contract.diff.name),
+                Ok(_) => return "Already Deployed".to_string(),
+                Err(_) => return format!("{}: Deploy", contract.diff.name),
             }
         }
     }
     format!("deploy {}", contract.diff.name)
 }
 
-pub async fn print_strategy<P>(ui: &Ui, provider: &P, strategy: &MigrationStrategy)
-where
+pub async fn print_strategy<P>(
+    ui: &Ui,
+    provider: &P,
+    strategy: &MigrationStrategy,
+    world_address: FieldElement,
+) where
     P: Provider + Sync + Send + 'static,
 {
     ui.print("\n📋 Migration Strategy\n");
 
+    ui.print_header(format!("World address: {:#x}", world_address));
+
+    ui.print(" ");
+
     if let Some(base) = &strategy.base {
         ui.print_header("# Base Contract");
-        ui.print_sub(format!("declare (class hash: {:#x})\n", base.diff.local_class_hash));
+        ui.print_sub(format!("Class hash: {:#x}", base.diff.local_class_hash));
     }
+
+    ui.print(" ");
 
     if let Some(world) = &strategy.world {
         ui.print_header("# World");
-        ui.print_sub(format!("declare (class hash: {:#x})\n", world.diff.local_class_hash));
-        ui.print_sub(format!("declare (contract address: {:#x})\n", world.contract_address));
+        ui.print_sub(format!("Class hash: {:#x}", world.diff.local_class_hash));
     }
+
+    ui.print(" ");
 
     if !&strategy.models.is_empty() {
         ui.print_header(format!("# Models ({})", &strategy.models.len()));
         for m in &strategy.models {
-            ui.print_sub(format!("{}", m.diff.name));
-            ui.print_sub(format!("(class hash: {:#x})", m.diff.local_class_hash));
-            let salt = generate_salt(&m.diff.name);
-            let contract_address = get_contract_address(
-                salt,
-                m.diff.local_class_hash,
-                &[],
-                strategy.world_address.unwrap(),
-            );
-            ui.print_sub(format!("(contract address: {:#x})", contract_address));
+            ui.print(format!("{}", m.diff.name));
+            ui.print_sub(format!("Class hash: {:#x}", m.diff.local_class_hash));
         }
-        ui.print(" ");
     }
+
+    ui.print(" ");
 
     if !&strategy.contracts.is_empty() {
         ui.print_header(format!("# Contracts ({})", &strategy.contracts.len()));
         for c in &strategy.contracts {
             let op_name = get_contract_operation_name(provider, c, strategy.world_address).await;
-            ui.print_sub(format!("{op_name} (class hash: {:#x})", c.diff.local_class_hash));
+
+            ui.print(format!("{op_name}"));
+            ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));
+            let salt = generate_salt(&c.diff.name);
+            let contract_address = get_contract_address(
+                salt,
+                c.diff.base_class_hash,
+                &[],
+                strategy.world_address.unwrap(),
+            );
+            ui.print_sub(format!("Contract address: {:#x}", contract_address));
         }
-        ui.print(" ");
     }
+
+    ui.print(" ");
 }
 
 #[allow(clippy::too_many_arguments)]
