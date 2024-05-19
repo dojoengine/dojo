@@ -88,6 +88,7 @@ trait IFaultyTrait {
     /// See:
     ///
     ///
+    ///
     /// 
     /// https://github.com/starkware-libs/cairo/blob/600553d34a1af93ff7fb038ac677efdd3fd07010/crates/cairo-lang-parser/src/parser.rs#L835
     const ONE: u8;
@@ -330,42 +331,42 @@ error: Unsupported attribute.
 ^********************^
 
 error: Anything other than functions is not supported in a dojo::interface
- --> test_src/lib.cairo:87:5
+ --> test_src/lib.cairo:88:5
     const ONE: u8;
     ^************^
 
 error: Functions of dojo::interface cannot have `ref self` parameter.
- --> test_src/lib.cairo:89:5
+ --> test_src/lib.cairo:90:5
     fn do_ref_self(ref self: TContractState);
     ^***************************************^
 
 error: Functions of dojo::contract cannot have 'ref self' parameter.
- --> test_src/lib.cairo:137:9
+ --> test_src/lib.cairo:138:9
         fn do_with_ref_self(ref self: ContractState) -> felt252 {
         ^*******************************************************^
 
 error: Only one parameter of type IWorldDispatcher is allowed.
- --> test_src/lib.cairo:141:9
+ --> test_src/lib.cairo:142:9
         fn do_with_several_world_dispatchers(
         ^***********************************^
 
 error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:147:42
+ --> test_src/lib.cairo:148:42
         fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
                                          ^*****************************^
 
 error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:152:35
+ --> test_src/lib.cairo:153:35
             self: @ContractState, another_world: IWorldDispatcher
                                   ^*****************************^
 
 error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:157:47
+ --> test_src/lib.cairo:158:47
         fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
                                               ^*********************^
 
 error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:162:46
+ --> test_src/lib.cairo:163:46
             self: @ContractState, vec: Vec2, world: IWorldDispatcher
                                              ^*********************^
 
@@ -395,22 +396,22 @@ error: Unsupported attribute.
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:91:5
+ --> test_src/lib.cairo:92:5
     #[my_attr]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:100:1
+ --> test_src/lib.cairo:101:1
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:133:1
+ --> test_src/lib.cairo:134:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:169:1
+ --> test_src/lib.cairo:170:1
 #[dojo::contract]
 ^***************^
 
@@ -625,122 +626,122 @@ error: Unsupported attribute.
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:100:1
+ --> test_src/lib.cairo:101:1
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:100:1
+ --> test_src/lib.cairo:101:1
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:100:1
+ --> test_src/lib.cairo:101:1
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:100:1
+ --> test_src/lib.cairo:101:1
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:102:5
+ --> test_src/lib.cairo:103:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:100:1
+ --> test_src/lib.cairo:101:1
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:100:1
+ --> test_src/lib.cairo:101:1
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:100:1
+ --> test_src/lib.cairo:101:1
 #[dojo::contract(allow_ref_self)]
 ^*******************************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:133:1
+ --> test_src/lib.cairo:134:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:133:1
+ --> test_src/lib.cairo:134:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:133:1
+ --> test_src/lib.cairo:134:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:133:1
+ --> test_src/lib.cairo:134:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:5
+ --> test_src/lib.cairo:136:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:133:1
+ --> test_src/lib.cairo:134:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:133:1
+ --> test_src/lib.cairo:134:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:133:1
+ --> test_src/lib.cairo:134:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:169:1
+ --> test_src/lib.cairo:170:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:169:1
+ --> test_src/lib.cairo:170:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:169:1
+ --> test_src/lib.cairo:170:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:169:1
+ --> test_src/lib.cairo:170:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:176:5
+ --> test_src/lib.cairo:177:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:169:1
+ --> test_src/lib.cairo:170:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:169:1
+ --> test_src/lib.cairo:170:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:169:1
+ --> test_src/lib.cairo:170:1
 #[dojo::contract]
 ^***************^
 

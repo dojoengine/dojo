@@ -394,7 +394,7 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
 
     #[inline(always)]
     fn instance_selector(self: @BadModelMultipleVersions) -> felt252 {
-        dojo::model::Model::<BadModelMultipleVersions>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -571,7 +571,7 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
 
     #[inline(always)]
     fn instance_selector(self: @BadModelBadVersionType) -> felt252 {
-        dojo::model::Model::<BadModelBadVersionType>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -748,7 +748,7 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
 
     #[inline(always)]
     fn instance_selector(self: @BadModelNoVersionValue) -> felt252 {
-        dojo::model::Model::<BadModelNoVersionValue>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -925,7 +925,7 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
 
     #[inline(always)]
     fn instance_selector(self: @BadModelUnexpectedArgWithValue) -> felt252 {
-        dojo::model::Model::<BadModelUnexpectedArgWithValue>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -1102,7 +1102,7 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
 
     #[inline(always)]
     fn instance_selector(self: @BadModelUnexpectedArg) -> felt252 {
-        dojo::model::Model::<BadModelUnexpectedArg>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -1279,7 +1279,7 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
 
     #[inline(always)]
     fn instance_selector(self: @BadModelNotSupportedVersion) -> felt252 {
-        dojo::model::Model::<BadModelNotSupportedVersion>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -1456,7 +1456,7 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
 
     #[inline(always)]
     fn instance_selector(self: @Modelv0) -> felt252 {
-        dojo::model::Model::<Modelv0>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -1633,7 +1633,7 @@ impl PositionModel of dojo::model::Model<Position> {
 
     #[inline(always)]
     fn instance_selector(self: @Position) -> felt252 {
-        dojo::model::Model::<Position>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -1810,7 +1810,7 @@ impl RolesModel of dojo::model::Model<Roles> {
 
     #[inline(always)]
     fn instance_selector(self: @Roles) -> felt252 {
-        dojo::model::Model::<Roles>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -1979,7 +1979,7 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
 
     #[inline(always)]
     fn instance_selector(self: @OnlyKeyModel) -> felt252 {
-        dojo::model::Model::<OnlyKeyModel>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -2148,7 +2148,7 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
 
     #[inline(always)]
     fn instance_selector(self: @U256KeyModel) -> felt252 {
-        dojo::model::Model::<U256KeyModel>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -2330,7 +2330,7 @@ impl PlayerModel of dojo::model::Model<Player> {
 
     #[inline(always)]
     fn instance_selector(self: @Player) -> felt252 {
-        dojo::model::Model::<Player>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -2521,7 +2521,7 @@ impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
 
     #[inline(always)]
     fn instance_selector(self: @ModelWithSimpleArray) -> felt252 {
-        dojo::model::Model::<ModelWithSimpleArray>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -2708,7 +2708,7 @@ impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
 
     #[inline(always)]
     fn instance_selector(self: @ModelWithByteArray) -> felt252 {
-        dojo::model::Model::<ModelWithByteArray>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -2899,7 +2899,7 @@ impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
 
     #[inline(always)]
     fn instance_selector(self: @ModelWithComplexArray) -> felt252 {
-        dojo::model::Model::<ModelWithComplexArray>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -3097,7 +3097,7 @@ impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
 
     #[inline(always)]
     fn instance_selector(self: @ModelWithTuple) -> felt252 {
-        dojo::model::Model::<ModelWithTuple>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -3304,7 +3304,7 @@ impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimi
 
     #[inline(always)]
     fn instance_selector(self: @ModelWithTupleNoPrimitives) -> felt252 {
-        dojo::model::Model::<ModelWithTupleNoPrimitives>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
