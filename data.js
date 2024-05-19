@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715890160981,
+  "lastUpdate": 1716149323514,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8065,6 +8065,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16876835,
             "range": "± 215919",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7943970c7093cef751bce249bdd8fc512fdd217d",
+          "message": "fix(sozo): handle edge case when base_class_hash is FieldElement::ZERO (#1978)",
+          "timestamp": "2024-05-19T22:00:26+02:00",
+          "tree_id": "8ea0248b09f9f5a4738631bd774383fb3741c9c9",
+          "url": "https://github.com/dojoengine/dojo/commit/7943970c7093cef751bce249bdd8fc512fdd217d"
+        },
+        "date": 1716149322333,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17007814,
+            "range": "± 324901",
             "unit": "ns/iter"
           }
         ]
