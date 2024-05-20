@@ -97,7 +97,7 @@ where
     let world_address = strategy.world_address().expect("world address must exist");
 
     if dry_run {
-        print_strategy(&ui, account.provider(), &strategy).await;
+        print_strategy(&ui, account.provider(), &strategy, world_address).await;
 
         update_manifests_and_abis(
             ws,

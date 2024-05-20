@@ -4,6 +4,7 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use scarb::core::Config;
 use sozo_ops::keystore;
+use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct KeystoreArgs {
@@ -67,6 +68,7 @@ pub enum KeystoreCommand {
 
 impl KeystoreArgs {
     pub fn run(self, _config: &Config) -> Result<()> {
+        trace!(args = ?self);
         match self.command {
             KeystoreCommand::New { password, force, file } => keystore::new(password, force, file),
             KeystoreCommand::FromKey { force, private_key, password, file } => {

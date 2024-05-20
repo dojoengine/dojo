@@ -13,20 +13,21 @@ anyhow.workspace = true
 async-trait.workspace = true
 base64.workspace = true
 chrono.workspace = true
-crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
+crypto-bigint.workspace = true
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world", features = [ "contracts", "manifest" ] }
 futures-channel = "0.3.0"
-futures-util = "0.3.0"
+futures-util.workspace = true
 hex.workspace = true
 lazy_static.workspace = true
-log = "0.4.17"
+log.workspace = true
 once_cell.workspace = true
-reqwest = { version = "0.11.22", features = [ "blocking", "rustls-tls" ], default-features = false }
+reqwest.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 slab = "0.4.2"
+sozo-ops.workspace = true
 sqlx.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
@@ -35,7 +36,6 @@ tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tracing.workspace = true
-sozo-ops.workspace = true
 
 [dev-dependencies]
 camino.workspace = true

@@ -19,6 +19,7 @@ pub struct InitArgs {
 
 impl InitArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        trace!(args = ?self);
         let target_dir = match self.path {
             Some(path) => {
                 if path.is_absolute() {
@@ -31,7 +32,7 @@ impl InitArgs {
             }
             None => current_dir().unwrap(),
         };
-        trace!(?target_dir, "Executing Init command.");
+        trace!(?target_dir);
 
         if target_dir.exists() {
             ensure!(

@@ -27,13 +27,6 @@ pub mod world;
 
 pub type DeclareOutput = DeclareTransactionResult;
 
-// TODO: this was taken from the current network limit
-// https://docs.starknet.io/documentation/tools/limits_and_triggers/.
-// This constant is also used into `katana-primitives`, which common crate
-// should expose this value to have it configurable.
-// Or should we just accept any size here?
-pub const MAX_BYTECODE_SIZE: usize = 81_290;
-
 #[derive(Clone, Debug)]
 pub struct DeployOutput {
     pub transaction_hash: FieldElement,
@@ -106,6 +99,20 @@ pub struct TxnConfig {
     pub wait: bool,
     pub receipt: bool,
     pub max_fee_raw: Option<FieldElement>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum TxnAction {
+    Send {
+        wait: bool,
+        receipt: bool,
+        max_fee_raw: Option<FieldElement>,
+        /// The multiplier for how much the actual transaction max fee should be relative to the
+        /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
+        fee_estimate_multiplier: Option<f64>,
+    },
+    Estimate,
+    Simulate,
 }
 
 impl TxnConfig {
@@ -376,7 +383,7 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
     let casm_contract =
-        CasmContractClass::from_contract_class(casm_contract_class, true, MAX_BYTECODE_SIZE)?;
+        CasmContractClass::from_contract_class(casm_contract_class, true, usize::MAX)?;
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)

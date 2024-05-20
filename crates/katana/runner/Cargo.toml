@@ -6,20 +6,20 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-assert_fs = "1.0.9"
-runner-macro = { path = "./runner-macro" }
+anyhow.workspace = true
+assert_fs.workspace = true
+chrono.workspace = true
+home = "0.5.5"
 katana-core.workspace = true
 katana-primitives.workspace = true
-sozo = { path = "../../../bin/sozo" }
-anyhow.workspace = true
-home = "0.5.5"
 lazy_static.workspace = true
+runner-macro = { path = "./runner-macro" }
+serde.workspace = true
+serde_json.workspace = true
+sozo = { path = "../../../bin/sozo" }
 starknet.workspace = true
 tokio.workspace = true
 url.workspace = true
-chrono.workspace = true
-serde.workspace = true
-serde_json = "1.0.111"
 alloy = { git = "https://github.com/alloy-rs/alloy", rev = "7128c53", features = [
     "network",
     "providers",

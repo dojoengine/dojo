@@ -10,6 +10,7 @@ use strum::IntoEnumIterator;
 use super::InputObjectTrait;
 use crate::object::TypeMapping;
 use crate::query::filter::{parse_filter, Comparator, Filter, FilterValue};
+use crate::types::TypeData;
 
 pub struct WhereInputObject {
     pub type_name: String,
@@ -36,7 +37,16 @@ impl WhereInputObject {
                     vec![(Name::new(type_name), type_data.clone())],
                     |mut acc, comparator| {
                         let name = format!("{}{}", type_name, comparator.as_ref());
-                        acc.push((Name::new(name), type_data.clone()));
+
+                        match comparator {
+                            Comparator::In | Comparator::NotIn => acc.push((
+                                Name::new(name),
+                                TypeData::List(Box::new(type_data.clone())),
+                            )),
+                            _ => {
+                                acc.push((Name::new(name), type_data.clone()));
+                            }
+                        }
 
                         acc
                     },
@@ -77,14 +87,32 @@ pub fn parse_where_argument(
         where_mapping
             .iter()
             .filter_map(|(type_name, type_data)| {
-                input_object.get(type_name).map(|input| {
-                    let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
-                    let filter_value = match primitive.to_sql_type() {
-                        SqlType::Integer => parse_integer(input, type_name, primitive)?,
-                        SqlType::Text => parse_string(input, type_name)?,
-                    };
+                input_object.get(type_name).map(|input| match type_data {
+                    TypeData::Simple(_) => {
+                        let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
+                        let filter_value = match primitive.to_sql_type() {
+                            SqlType::Integer => parse_integer(input, type_name, primitive)?,
+                            SqlType::Text => parse_string(input, type_name)?,
+                        };
 
-                    Ok(Some(parse_filter(type_name, filter_value)))
+                        Ok(Some(parse_filter(type_name, filter_value)))
+                    }
+                    TypeData::List(inner) => {
+                        let list = input.list()?;
+                        let values = list
+                            .iter()
+                            .map(|value| {
+                                let primitive = Primitive::from_str(&inner.type_ref().to_string())?;
+                                match primitive.to_sql_type() {
+                                    SqlType::Integer => parse_integer(value, type_name, primitive),
+                                    SqlType::Text => parse_string(value, type_name),
+                                }
+                            })
+                            .collect::<Result<Vec<_>>>()?;
+
+                        Ok(Some(parse_filter(type_name, FilterValue::List(values))))
+                    }
+                    _ => Err(GqlError::new("Nested types are not supported")),
                 })
             })
             .collect::<Result<Option<Vec<_>>>>()
@@ -114,10 +142,7 @@ fn parse_string(input: ValueAccessor<'_>, type_name: &str) -> Result<FilterValue
             true => Ok(FilterValue::String(format!("0x{:0>64}", i.strip_prefix("0x").unwrap()))), /* safe to unwrap since we know it starts with 0x */
             false => match i.parse::<u128>() {
                 Ok(val) => Ok(FilterValue::String(format!("0x{:0>64x}", val))),
-                Err(_) => Err(GqlError::new(format!(
-                    "Failed to parse integer value on field {}",
-                    type_name
-                ))),
+                Err(_) => Ok(FilterValue::String(i.to_string())),
             },
         },
         Err(_) => Err(GqlError::new(format!("Expected string on field {}", type_name))),

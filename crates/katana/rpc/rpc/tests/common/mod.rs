@@ -5,7 +5,6 @@ use anyhow::{anyhow, Result};
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use katana_primitives::conversion::rpc::CompiledClass;
-use katana_primitives::utils::class::MAX_BYTECODE_SIZE;
 use starknet::accounts::Call;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::{FieldElement, FlattenedSierraClass};
@@ -31,7 +30,7 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
     let casm_contract =
-        CasmContractClass::from_contract_class(casm_contract_class, true, MAX_BYTECODE_SIZE)
+        CasmContractClass::from_contract_class(casm_contract_class, true, usize::MAX)
             .map_err(|e| anyhow!("CasmContractClass from ContractClass error: {e}"))?;
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;

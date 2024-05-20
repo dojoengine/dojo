@@ -45,7 +45,7 @@ pub enum RegisterCommand {
 
 impl RegisterArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(command=?self.command, "Executing Register command.");
+        trace!(args = ?self);
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         let (starknet, world, account, transaction, models) = match self.command {
@@ -62,8 +62,9 @@ impl RegisterArgs {
             let world =
                 utils::world_from_env_metadata(world, account, starknet, &env_metadata).await?;
             let provider = world.account.provider();
-            let world_reader = WorldContractReader::new(world_address, &provider)
-                .with_block(BlockId::Tag(BlockTag::Pending));
+            let mut world_reader = WorldContractReader::new(world_address, &provider);
+            world_reader.set_block(BlockId::Tag(BlockTag::Pending));
+
             register::model_register(
                 models,
                 &world,

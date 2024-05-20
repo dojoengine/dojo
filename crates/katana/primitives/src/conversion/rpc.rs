@@ -27,7 +27,6 @@ use crate::class::{
     ClassHash, CompiledClassHash, DeprecatedCompiledClass, FlattenedSierraClass,
     SierraCompiledClass, SierraProgram,
 };
-use crate::utils::class::MAX_BYTECODE_SIZE;
 use crate::FieldElement;
 
 /// Converts the legacy inner compiled class type [DeprecatedCompiledClass] into its RPC equivalent
@@ -149,7 +148,7 @@ pub fn flattened_sierra_to_compiled_class(
     let entry_points_by_type = class.entry_points_by_type.clone();
     let sierra = SierraProgram { program, entry_points_by_type };
 
-    let casm = CasmContractClass::from_contract_class(class, true, MAX_BYTECODE_SIZE)?;
+    let casm = CasmContractClass::from_contract_class(class, true, usize::MAX)?;
     let compiled_hash = FieldElement::from_bytes_be(&casm.compiled_class_hash().to_be_bytes())?;
 
     let class = crate::class::CompiledClass::Class(SierraCompiledClass { casm, sierra });
@@ -161,7 +160,7 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
     contract_class: &FlattenedSierraClass,
 ) -> Result<FieldElement> {
     let contract_class = rpc_to_cairo_contract_class(contract_class)?;
-    let casm = CasmContractClass::from_contract_class(contract_class, true, MAX_BYTECODE_SIZE)?;
+    let casm = CasmContractClass::from_contract_class(contract_class, true, usize::MAX)?;
     let compiled_class: CompiledClass = serde_json::from_str(&serde_json::to_string(&casm)?)?;
     Ok(compiled_class.class_hash()?)
 }
