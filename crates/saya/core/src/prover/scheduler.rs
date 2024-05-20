@@ -66,6 +66,7 @@ fn program_input_from_program_output(
     output: Vec<FieldElement>,
     state_updates: StateUpdates,
 ) -> anyhow::Result<ProgramInput> {
+    println!("{:?}", serde_json::to_string(&output).unwrap());
     let prev_state_root = output[0].clone();
     let block_number = serde_json::from_str(&output[2].clone().to_string()).unwrap();
     let block_hash = output[3].clone();
