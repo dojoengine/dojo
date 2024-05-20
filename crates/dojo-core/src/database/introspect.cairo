@@ -226,7 +226,7 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
                 name: 'Option<T>',
                 attrs: array![].span(),
                 children: array![
-                    ('Some', Introspect::<T>::ty()), ('None', Ty::Tuple(array![].span()))
+                    ('Some(T)', Introspect::<T>::ty()), ('None', Ty::Tuple(array![].span()))
                 ]
                     .span()
             }
