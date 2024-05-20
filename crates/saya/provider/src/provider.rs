@@ -1,6 +1,6 @@
 use katana_primitives::block::{BlockNumber, SealedBlock};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::trace::TxExecInfo;
+use katana_rpc_types::trace::TxExecutionInfo;
 use starknet::core::types::FieldElement;
 
 use crate::ProviderResult;
@@ -40,5 +40,5 @@ pub trait Provider {
     async fn fetch_transactions_executions(
         &self,
         block_number: BlockNumber,
-    ) -> ProviderResult<Vec<TxExecInfo>>;
+    ) -> ProviderResult<Vec<TxExecutionInfo>>;
 }

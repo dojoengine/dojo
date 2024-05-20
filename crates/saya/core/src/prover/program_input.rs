@@ -1,8 +1,8 @@
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
-use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
-use katana_primitives::transaction::L1HandlerTx;
-use katana_primitives::utils::transaction::compute_l1_message_hash;
+use katana_primitives::trace::{CallInfo, EntryPointType};
+use katana_primitives::transaction::{L1HandlerTx, TxHash};
+use katana_rpc_types::trace::TxExecutionInfo;
 use starknet::core::types::FieldElement;
 
 use super::state_diff::state_updates_to_json_like;
@@ -42,50 +42,39 @@ fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToStarknet> {
 }
 
 pub fn extract_messages(
-    exec_infos: &[TxExecInfo],
-    mut transactions: Vec<&L1HandlerTx>,
+    exec_infos: &[TxExecutionInfo],
+    transactions: &[(TxHash, &L1HandlerTx)],
 ) -> (Vec<MessageToStarknet>, Vec<MessageToAppchain>) {
+    // extract messages to starknet (ie l2 -> l1)
     let message_to_starknet_segment = exec_infos
         .iter()
-        .flat_map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter()).chain(t.fee_transfer_call_info.iter())) // Take into account both validate and execute calls.
+        .flat_map(|t| t.trace.execute_call_info.iter().chain(t.trace.validate_call_info.iter()).chain(t.trace.fee_transfer_call_info.iter())) // Take into account both validate and execute calls.
         .flat_map(get_messages_recursively)
         .collect();
 
-    let message_to_appchain_segment = exec_infos
-        .iter()
-        .flat_map(|t| t.execute_call_info.iter())
-        .filter(|c| c.entry_point_type == EntryPointType::L1Handler)
-        .map(|c| {
-            let message_hash =
-                compute_l1_message_hash(*c.caller_address, *c.contract_address, &c.calldata[..]);
+    // extract messages to appchain (ie l1 -> l2)
+    let message_to_appchain_segment = {
+        // get the call infos only
+        let calls = exec_infos.iter().filter_map(|t| {
+            let calls = t.trace.execute_call_info.as_ref()?;
+            let tx = transactions.iter().find(|tx| tx.0 == t.hash).expect("qed; tx must exist");
+            Some((tx.1, calls))
+        });
 
-            // Matching execution to a transaction to extract nonce.
-            let matching = transactions
-                .iter()
-                .enumerate()
-                .find(|(_, &t)| {
-                    t.message_hash == message_hash
-                        && c.contract_address == t.contract_address
-                        && c.calldata == t.calldata
-                })
-                .unwrap_or_else(|| {
-                    panic!("No matching transaction found for message hash: {}", message_hash)
-                })
-                .0;
+        // filter only the l1 handler tx
+        let l1_handlers = calls.filter(|(_, c)| c.entry_point_type == EntryPointType::L1Handler);
 
-            // Removing, to have different nonces, even for the same message content.
-            let removed = transactions.remove(matching);
-
-            (c, removed)
-        })
-        .map(|(c, t)| MessageToAppchain {
-            from_address: c.caller_address,
-            to_address: c.contract_address,
-            nonce: t.nonce,
-            selector: c.entry_point_selector,
-            payload: c.calldata.clone(),
-        })
-        .collect();
+        // build messages
+        l1_handlers
+            .map(|(t, c)| MessageToAppchain {
+                nonce: t.nonce,
+                payload: c.calldata.clone(),
+                from_address: c.caller_address,
+                to_address: c.contract_address,
+                selector: c.entry_point_selector,
+            })
+            .collect()
+    };
 
     (message_to_starknet_segment, message_to_appchain_segment)
 }
