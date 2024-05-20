@@ -96,15 +96,43 @@ pub struct GenesisClassJson {
     /// The class hash of the contract. If not provided, the class hash is computed from the
     /// class at `path`.
     pub class_hash: Option<ClassHash>,
-    // Allows class identification by a unique name rather than by hash
-        name: Option<String>,
+    // Allows class identification by a unique name rather than by hash when specifying the class.
+    pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// Class identifier.
+///
+/// When deploying a contract through the genesis file, the class implementation of the contract
+/// can be specified either by the class hash or by the class name.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum NameOrHash {
     ClassName(String),
     ClassHash(ClassHash),
+}
+
+impl<'de> Deserialize<'de> for NameOrHash {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct _Visitor;
+
+        impl<'de> Visitor<'de> for _Visitor {
+            type Value = NameOrHash;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a name or a class hash prefixed with 0x")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                if v.starts_with("0x") {
+                    Ok(NameOrHash::ClassHash(ClassHash::from_str(v).map_err(E::custom)?))
+                } else {
+                    Ok(NameOrHash::ClassName(v.to_string()))
+                }
+            }
+        }
+
+        deserializer.deserialize_any(_Visitor)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
