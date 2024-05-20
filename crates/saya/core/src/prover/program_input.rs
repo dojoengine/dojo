@@ -54,7 +54,7 @@ pub fn extract_messages(
 
     // extract messages to appchain (ie l1 -> l2)
     let message_to_appchain_segment = {
-        // get the call infos only
+        // get the call infos from the trace and the corresponding tx hash
         let calls = exec_infos.iter().filter_map(|t| {
             let calls = t.trace.execute_call_info.as_ref()?;
             let tx = transactions.iter().find(|tx| tx.0 == t.hash).expect("qed; tx must exist");

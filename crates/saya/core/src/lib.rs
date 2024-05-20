@@ -182,6 +182,7 @@ impl Saya {
             .body
             .iter()
             .filter_map(|t| match &t.transaction {
+                // attach the tx hash for filtering when extracting messages later
                 Tx::L1Handler(tx) => Some((t.hash, tx)),
                 _ => None,
             })
