@@ -148,6 +148,7 @@ fn get_message_to_appchain_segment(
         let decimal = output[index + 4].clone().to_big_decimal(0);
         let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
         let payload = output[index + 5..index + 5 + num as usize].to_vec();
+
         message_to_appchain_segment.push(MessageToAppchain {
             from_address,
             to_address,
@@ -188,8 +189,11 @@ async fn combine_proofs(
         program_input_from_program_output(program_output1, _state_updates1).unwrap();
     let program_input2 =
         program_input_from_program_output(program_output2, _state_updates2).unwrap();
-    //combine two inputs to 1 input.json
-    let inputs = vec![program_input1, program_input2];
+
+    let mut inputs = vec![FieldElement::from_dec_str("2")?];
+    inputs.extend_from_slice(&program_input1.serialize_to_prover_args());
+    inputs.extend_from_slice(&program_input2.serialize_to_prover_args());
+
     trace!(target: "saya_core", "Merging proofs");
 
     let input = "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into();
@@ -213,7 +217,16 @@ fn prove_recursively(
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
 
-            let prepared_input = "[1 101 102 103 104 1 1111 22222 1 333 1 4444 555 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 1 4444 555 0]".into();
+            let mut serialized_input = input.serialize_to_prover_args();
+            serialized_input.insert(0, FieldElement::from_dec_str("1")?); // Always only one input here.
+
+            let stringified = serialized_input
+                .into_iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(" ");
+
+            let prepared_input = format!("[{}]", stringified);
 
             let proof = prove(prepared_input, prover).await?;
             info!(target: "saya_core", block_number, "Block proven");

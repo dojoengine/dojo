@@ -211,6 +211,69 @@ impl ProgramInput {
 
         updates
     }
+
+    pub fn serialize_to_prover_args(&self) -> Vec<FieldElement> {
+        let mut out = vec![
+            self.prev_state_root,
+            FieldElement::from(self.block_number),
+            self.block_hash,
+            self.config_hash,
+        ];
+
+        out.push(FieldElement::from(self.state_updates.nonce_updates.len()));
+        for (k, v) in &self.state_updates.nonce_updates {
+            out.push(**k);
+            out.push(*v);
+        }
+
+        out.push(FieldElement::from(self.state_updates.storage_updates.len()));
+        for (c, h) in &self.state_updates.storage_updates {
+            out.push(**c);
+            out.push(FieldElement::from(h.len()));
+            for (k, v) in h {
+                out.push(*k);
+                out.push(*v);
+            }
+        }
+
+        out.push(FieldElement::from(self.state_updates.contract_updates.len()));
+        for (k, v) in &self.state_updates.contract_updates {
+            out.push(**k);
+            out.push(*v);
+        }
+
+        out.push(FieldElement::from(self.state_updates.declared_classes.len()));
+        for (k, v) in &self.state_updates.declared_classes {
+            out.push(*k);
+            out.push(*v);
+        }
+
+        let starknet_messages = self
+            .message_to_starknet_segment
+            .iter()
+            .map(|m| m.serialize().unwrap())
+            .flatten()
+            .collect::<Vec<_>>();
+        out.push(FieldElement::from(starknet_messages.len()));
+        out.extend(starknet_messages);
+
+        let appchain_messages = self
+            .message_to_appchain_segment
+            .iter()
+            .map(|m| m.serialize().unwrap())
+            .flatten()
+            .collect::<Vec<_>>();
+
+        out.push(FieldElement::from(appchain_messages.len()));
+        out.extend(appchain_messages);
+
+        out.push(FieldElement::from(self.world_da.as_ref().unwrap().len() / 2));
+        out.extend(self.world_da.as_ref().unwrap().iter().cloned());
+
+        out.push(FieldElement::from(0u64)); // Proofs
+
+        out
+    }
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L16
@@ -576,6 +639,50 @@ fn test_serialize_input() -> anyhow::Result<()> {
     let serialized = serde_json::to_string::<ProgramInput>(&input.clone())?;
     let deserialized = serde_json::from_str::<ProgramInput>(&serialized)?;
     assert_eq!(input, deserialized);
+
+    Ok(())
+}
+
+#[test]
+fn test_serialize_to_prover_args() -> anyhow::Result<()> {
+    let input = r#"{
+        "prev_state_root":"101", 
+        "block_number":102,
+        "block_hash":"103",
+        "config_hash":"104",
+        "nonce_updates":{
+            "1111": "22222"
+        },
+        "storage_updates":{
+            "333": {
+                "4444": "555"
+            }
+        },
+        "contract_updates":{
+            "66666": "7777"
+        },
+        "declared_classes":{
+            "88888": "99999"
+        },
+        "message_to_starknet_segment":["123","456","123","128"], 
+        "message_to_appchain_segment":["108","109","110","111","1","112"]
+    }"#;
+    let mut input = serde_json::from_str::<ProgramInput>(input)?;
+    input.fill_da(FieldElement::from_str("333")?);
+
+    println!("{:?}", input);
+
+    let serialized = input.serialize_to_prover_args();
+
+    let expected = vec![
+        101, 102, 103, 104, 1, 1111, 22222, 1, 333, 1, 4444, 555, 1, 66666, 7777, 1, 88888, 99999,
+        4, 123, 456, 1, 128, 6, 108, 109, 110, 111, 1, 112, 1, 4444, 555, 0u64,
+    ]
+    .into_iter()
+    .map(FieldElement::from)
+    .collect::<Vec<_>>();
+
+    assert_eq!(serialized, expected);
 
     Ok(())
 }

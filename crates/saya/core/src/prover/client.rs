@@ -48,11 +48,5 @@ pub async fn http_prove(
     let result =
         prover.prove_cairo1(input).await.context("Failed to prove using the http prover")?;
 
-    std::fs::write(
-        &PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("programs/res.json"),
-        &result,
-    )
-    .expect("Unable to write file");
-
     Ok(result)
 }
