@@ -171,6 +171,7 @@ async fn input_to_json(result: Vec<ProgramInput>) -> anyhow::Result<String> {
     .unwrap();
     Ok(format!("{{\"1\":{},\"2\":{}}}", input1, input2))
 }
+
 async fn combine_proofs(
     first: Proof,
     second: Proof,
@@ -190,10 +191,9 @@ async fn combine_proofs(
     //combine two inputs to 1 input.json
     let inputs = vec![program_input1, program_input2];
     trace!(target: "saya_core", "Merging proofs");
-    Ok(prove_merge(input_to_json(inputs).await?, ProverIdentifier::Stone)
-        .await
-        .unwrap()
-        .to_string())
+
+    let input = "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into();
+    Ok(prove_merge(input, ProverIdentifier::Stone).await.unwrap().to_string())
 }
 
 /// Simulates the proving process with a placeholder function.
@@ -212,7 +212,10 @@ fn prove_recursively(
             input.fill_da(world);
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
-            let proof = prove(serde_json::to_string(&input).unwrap(), prover).await?;
+
+            let prepared_input = "[1 101 102 103 104 1 1111 22222 1 333 1 4444 555 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 1 4444 555 0]".into();
+
+            let proof = prove(prepared_input, prover).await?;
             info!(target: "saya_core", block_number, "Block proven");
             Ok((proof, input))
         } else {
