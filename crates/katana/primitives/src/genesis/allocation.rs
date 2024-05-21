@@ -3,12 +3,14 @@ use std::fmt::Debug;
 
 use alloy_primitives::U256;
 use derive_more::{Deref, DerefMut};
-use rand::rngs::SmallRng;
-use rand::{RngCore, SeedableRng};
+use hmac::{Hmac, Mac, NewMac};
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
 use starknet::core::utils::get_contract_address;
 use starknet::signers::SigningKey;
+
+type HmacSha256 = Hmac<Sha256>;
 
 use super::constant::DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH;
 use crate::class::ClassHash;
@@ -260,17 +262,23 @@ impl DevAllocationsGenerator {
     #[must_use]
     pub fn generate(&self) -> HashMap<ContractAddress, DevGenesisAccount> {
         let mut seed = self.seed;
+        let mut mac = HmacSha256::new_from_slice(&seed).expect("HMAC can take key of any size");
+
         (0..self.total)
             .map(|_| {
-                let mut rng = SmallRng::from_seed(seed);
-                let mut private_key_bytes = [0u8; 32];
+                mac.update(b"account");
+                let result = mac.finalize_reset();
+                let account_bytes = result.into_bytes();
 
-                rng.fill_bytes(&mut private_key_bytes);
-                private_key_bytes[0] %= 0x8;
-                seed = private_key_bytes;
+                // Assuming you have a way to convert `account_bytes` to a `ContractAddress` and `DevGenesisAccount`
+                let private_key = FieldElement::from_bytes_be(&account_bytes).unwrap();
+                let contract_address = ContractAddress::from(private_key); // Simplified, adjust according to your actual method
 
-                let private_key = FieldElement::from_bytes_be(&private_key_bytes).unwrap();
-                DevGenesisAccount::new_with_balance(private_key, self.class_hash, self.balance)
+                seed.copy_from_slice(&account_bytes); // Update seed with the output for the next iteration
+                (
+                    contract_address,
+                    DevGenesisAccount::new_with_balance(private_key, self.class_hash, self.balance),
+                )
             })
             .collect()
     }
