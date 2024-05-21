@@ -553,15 +553,9 @@ impl Sql {
             }
             Ty::Enum(e) => {
                 let option = e.options[e.option.unwrap() as usize].clone();
-                
+
                 update_members(
-                    &[
-                        Member {
-                            name: option.name.clone(),
-                            ty: option.ty.clone(),
-                            key: false,
-                        },
-                    ],
+                    &[Member { name: option.name.clone(), ty: option.ty.clone(), key: false }],
                     &mut self.query_queue,
                     index,
                 );
@@ -837,10 +831,9 @@ impl Sql {
                     let mut options = None; // TEMP: doesnt support complex enums yet
                     build_member(&child.name, &child.ty, &mut options);
 
-                    let statement =
-                        "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
-                                     member_idx, name, type, type_enum, enum_options, key, \
-                                     executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
+                                     model_idx, member_idx, name, type, type_enum, enum_options, \
+                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed

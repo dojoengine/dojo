@@ -84,69 +84,72 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                 .expect("Array type should have nested type"),
             nested_members,
         ))),
-        "Enum" => TypeData::Union((
-            TypeRef::named(format!("{}Union", member.name.to_case(Case::Pascal))),
-            nested_members
-                .iter()
-                .filter_map(|&nested_member| {
-                    if member.model_id == nested_member.model_id
-                        && nested_member.id.ends_with(&member.name)
-                    {
-                        let type_data = member_to_type_data(nested_member, nested_members);
+        // "Enum" => TypeData::Enum((
+        //     TypeRef::named(format!("{}Union", member.name.to_case(Case::Pascal))),
+        //     nested_members
+        //         .iter()
+        //         .filter_map(|&nested_member| {
+        //             if member.model_id == nested_member.model_id
+        //                 && nested_member.id.ends_with(&member.name)
+        //             {
+        //                 let type_data = member_to_type_data(nested_member, nested_members);
+        //                 let namespace =
+        //                     format!("{}_{}", nested_member.name,
+        // type_data.type_ref().type_name());
 
-                        Some((
-                            TypeRef::named(&format!("{}_{}", nested_member.name, type_data.type_ref().type_name())),
-                            if let TypeData::Nested((_, mapping)) = type_data {
-                                mapping
-                            } else {
-                                IndexMap::from([(Name::new("value"), type_data)])
-                            }
-                        ))
-                    } else {
-                        None
-                    }
-                }).chain(
-                    vec![(
-                        TypeRef::named("EnumOption"),
-                        IndexMap::from([(Name::new("value"), TypeData::Simple(TypeRef::named("Enum")))])
-                    )].into_iter()
-                ).collect()
-        )),
-        _ => parse_nested_type(
-            &member.model_id,
-            &member.id,
-            &member.name,
-            &member.ty,
-            nested_members,
-        ),
+        //                 Some((
+        //                     Name::new(&nested_member.name),
+        //                     if let TypeData::Nested((_, mapping)) = type_data {
+        //                         TypeData::Nested((TypeRef::named(namespace), mapping))
+        //                     } else {
+        //                         TypeData::Nested((
+        //                             TypeRef::named(namespace),
+        //                             IndexMap::from([(Name::new("value"), type_data)]),
+        //                         ))
+        //                     },
+        //                 ))
+        //             } else {
+        //                 None
+        //             }
+        //         })
+        //         .chain(
+        //             vec![(
+        //                 Name::new("option"),
+        //                 TypeData::Simple(TypeRef::named("Enum"))
+        //             )]
+        //             .into_iter(),
+        //         )
+        //         .collect(),
+        // )),
+        _ => parse_nested_type(member, nested_members),
     }
 }
 
-fn parse_nested_type(
-    model_id: &str,
-    member_id: &str,
-    member_name: &str,
-    member_type: &str,
-    nested_members: &[&ModelMember],
-) -> TypeData {
+fn parse_nested_type(member: &ModelMember, nested_members: &[&ModelMember]) -> TypeData {
     let nested_mapping: TypeMapping = nested_members
         .iter()
-        .filter_map(|&member| {
-            if model_id == member.model_id && member.id.ends_with(member_name) {
-                let type_data = member_to_type_data(member, nested_members);
-                Some((Name::new(&member.name), type_data))
+        .filter_map(|&nested_member| {
+            if member.model_id == nested_member.model_id && nested_member.id.ends_with(&member.name) {
+                let type_data = member_to_type_data(nested_member, nested_members);
+                Some((Name::new(&nested_member.name), type_data))
             } else {
                 None
             }
         })
+        // add Enum option for Enum types
+        .chain(if member.type_enum == "Enum" {
+            vec![(Name::new("option"), TypeData::Simple(TypeRef::named("Enum")))]
+        } else {
+            vec![]
+        })
         .collect();
 
-    let model_name = member_id.split('$').next().unwrap();
+    let model_name = member.id.split('$').next().unwrap();
     // sanitizes the member type string
     // for eg. Position_Array<Vec2> -> Position_ArrayVec2
     // Position_(u8, Vec2) -> Position_u8Vec2
     let re = Regex::new(r"[, ()<>]").unwrap();
-    let member_type_name = re.replace_all(member_type, "");
+    let member_type_name = re.replace_all(&member.ty, "");
     let namespaced = format!("{}_{}", model_name, member_type_name);
     TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
@@ -171,7 +174,10 @@ pub fn value_mapping_from_row(
 ) -> sqlx::Result<ValueMapping> {
     let mut value_mapping = types
         .iter()
-        .filter(|(_, type_data)| type_data.is_simple())
+        .filter(|(_, type_data)| {
+            // ignore Enum fields because the column is not stored in this row. we inejct it later
+            type_data.is_simple() && !(type_data.type_ref().to_string() == "Enum")
+        })
         .map(|(field_name, type_data)| {
             let mut value =
                 fetch_value(row, field_name, &type_data.type_ref().to_string(), is_external)?;

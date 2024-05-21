@@ -17,8 +17,8 @@ pub enum TypeData {
     Simple(TypeRef),
     Nested((TypeRef, IndexMap<Name, TypeData>)),
     List(Box<TypeData>),
-    // Union can only represent a list of objects; which refer to TypeData::Nested 
-    Union((TypeRef, Vec<(TypeRef, IndexMap<Name, TypeData>)>)),
+    // Union can only  represent an object of objects
+    // Enum((TypeRef, IndexMap<Name, TypeData>)),
 }
 
 impl TypeData {
@@ -26,7 +26,7 @@ impl TypeData {
         match self {
             TypeData::Simple(ty) | TypeData::Nested((ty, _)) => ty.clone(),
             TypeData::List(inner) => TypeRef::List(Box::new(inner.type_ref())),
-            TypeData::Union((ty, _)) => ty.clone(),
+            // TypeData::Enum((ty, _)) => ty.clone(),
         }
     }
 
@@ -42,16 +42,16 @@ impl TypeData {
         matches!(self, TypeData::List(_))
     }
 
-    pub fn is_union(&self) -> bool {
-        matches!(self, TypeData::Union(_))
-    }
+    // pub fn is_enum(&self) -> bool {
+    //     matches!(self, TypeData::Enum(_))
+    // }
 
     pub fn type_mapping(&self) -> Option<&IndexMap<Name, TypeData>> {
         match self {
             TypeData::Simple(_) => None,
             TypeData::Nested((_, type_mapping)) => Some(type_mapping),
             TypeData::List(_) => None,
-            TypeData::Union(_) => None,
+            // TypeData::Enum((_, type_mapping)) => Some(type_mapping),
         }
     }
 }

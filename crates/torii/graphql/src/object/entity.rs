@@ -1,14 +1,10 @@
-use std::ops::Deref;
-
 use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
-use chrono::format;
 use sqlx::pool::PoolConnection;
-use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
@@ -18,7 +14,6 @@ use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
     DATETIME_FORMAT, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN,
-    INTERNAL_ENTITY_ID_KEY,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
@@ -201,7 +196,7 @@ pub async fn model_data_recursive_query(
                 let mut nested_path = path_array.clone();
                 nested_path.push(field_name.to_string());
 
-                let nested_values = model_data_recursive_query(
+                let mut nested_values = model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
@@ -209,6 +204,23 @@ pub async fn model_data_recursive_query(
                     nested_mapping,
                 )
                 .await?;
+
+                match nested_mapping.get(&Name::new("option")) {
+                    Some(TypeData::Simple(TypeRef::Named(name))) if name == "Enum" => {
+                        let query = format!(
+                            "SELECT external_{} FROM {} WHERE entity_id = '{}'",
+                            field_name, table_name, entity_id,
+                        );
+
+                        let (value,): (String,) =
+                            sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
+                        if let Value::Object(map) = &mut nested_values {
+                            map.insert(Name::new("option"), Value::from(value));
+                        }
+                    }
+                    _ => {}
+                };
+
                 nested_value_mapping.insert(Name::new(field_name), nested_values);
             } else if let TypeData::List(inner) = type_data {
                 let mut nested_path = path_array.clone();
@@ -237,41 +249,47 @@ pub async fn model_data_recursive_query(
                 };
 
                 nested_value_mapping.insert(Name::new(field_name), data);
-            } else if let TypeData::Union((_, types)) = type_data {
-                let mut enum_union = Vec::new();
-                for (type_ref, mapping) in types {
-                    let mut nested_path = path_array.clone();
-                    nested_path.push(field_name.to_string());
-                    nested_path.push(type_ref.to_string().split("_").next().unwrap().to_string());
-                    
-                    let data = if mapping.get(&Name::new("value")).is_some() {
-                        let query = format!(
-                            "SELECT external_{} FROM {} WHERE entity_id = '{}'",
-                            field_name,
-                            table_name,
-                            entity_id,
-                        );
-
-                        let (value,): (String,) = sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
-                        Value::from(value)
-                    } else {
-                        model_data_recursive_query(
-                            conn,
-                            nested_path,
-                            entity_id,
-                            if rows.len() > 1 { Some(idx as i64) } else { None },
-                            mapping,
-                        )
-                        .await?
-                    };
-
-                    enum_union.push(data);
-                }
-
-                println!("Enum Union: {:#?}", enum_union);
-
-                nested_value_mapping.insert(Name::new(field_name), Value::List(enum_union));
             }
+            //  else if let TypeData::Enum((_, types)) = type_data {
+            //     let mut enum_union = IndexMap::new();
+            //     for (type_ref, mapping) in types {
+            //         let mut nested_path = path_array.clone();
+            //         nested_path.push(field_name.to_string());
+            //         nested_path.push(type_ref.to_string().split("_").next().unwrap().
+            // to_string());
+
+            //         let mapping: &IndexMap<_, _> = match &mapping {
+            //             TypeData::Nested((_, mapping)) => mapping,
+            //             _ => unreachable!(),
+            //         };
+
+            //         let data = if mapping.get(&Name::new("value")).is_some() {
+            //             let query = format!(
+            //                 "SELECT external_{} FROM {} WHERE entity_id = '{}'",
+            //                 field_name,
+            //                 table_name,
+            //                 entity_id,
+            //             );
+
+            //             let (value,): (String,) =
+            // sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
+            // Value::Object(IndexMap::from([(Name::new("value"), Value::from(value))]))
+            //         } else {
+            //             model_data_recursive_query(
+            //                 conn,
+            //                 nested_path,
+            //                 entity_id,
+            //                 if rows.len() > 1 { Some(idx as i64) } else { None },
+            //                 mapping,
+            //             )
+            //             .await?
+            //         };
+
+            //         enum_union.insert(Name::new(&type_ref.to_string()), data);
+            //     }
+
+            //     nested_value_mapping.insert(Name::new(field_name), Value::Object(enum_union));
+            // }
         }
 
         nested_value_mappings.push(Value::Object(nested_value_mapping));
