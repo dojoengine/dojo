@@ -51,7 +51,7 @@ impl Ty {
             Ty::Primitive(c) => c.to_string(),
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.replace(
-                "T",
+                'T',
                 &e.options.iter().map(|o| o.ty.name().replace("()", "")).unique().join(""),
             ),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),

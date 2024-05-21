@@ -3,7 +3,7 @@ use std::str::FromStr as _;
 pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeError};
-use dojo_types::packing::{parse_ty, PackingError, ParseError};
+use dojo_types::packing::{PackingError, ParseError};
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::core::types::FieldElement;
@@ -181,7 +181,7 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
         abigen::model::Ty::Primitive(primitive) => {
             let ty = parse_cairo_short_string(primitive)?;
             let ty = ty.split("::").last().unwrap();
-            let primitive = match Primitive::from_str(&ty) {
+            let primitive = match Primitive::from_str(ty) {
                 Ok(primitive) => primitive,
                 Err(_) => return Err(ParseError::InvalidSchema),
             };
@@ -213,7 +213,7 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
                 .iter()
                 .map(|(name, ty)| {
                     let name = parse_cairo_short_string(name)?;
-                    let ty = parse_schema(&ty)?;
+                    let ty = parse_schema(ty)?;
 
                     Ok(EnumOption { name, ty })
                 })
@@ -224,7 +224,7 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
         abigen::model::Ty::Tuple(values) => {
             let values = values
                 .iter()
-                .map(|value| parse_schema(value))
+                .map(parse_schema)
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
             Ok(Ty::Tuple(values))
@@ -232,7 +232,7 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
         abigen::model::Ty::Array(values) => {
             let values = values
                 .iter()
-                .map(|value| parse_schema(value))
+                .map(parse_schema)
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
             Ok(Ty::Array(values))
