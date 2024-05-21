@@ -5,6 +5,7 @@ use std::time::Duration;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_core::sequencer::SequencerConfig;
+use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_rpc_api::dev::DevApiClient;
 use katana_rpc_api::saya::SayaApiClient;
 use katana_rpc_api::starknet::StarknetApiClient;
@@ -199,6 +200,143 @@ async fn executions_chunks_logic_ok() {
     assert!(response.transactions_executions.is_empty());
     assert_eq!(response.cursor.block_number, 3);
     assert_eq!(response.cursor.transaction_index, 0);
+
+    sequencer.stop().expect("failed to stop sequencer");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn fetch_traces_from_block() {
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
+
+    let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+
+    let account = sequencer.account();
+
+    let path: PathBuf = PathBuf::from("tests/test_data/cairo1_contract.json");
+    let (contract, compiled_class_hash) =
+        common::prepare_contract_declaration_params(&path).unwrap();
+    let contract = Arc::new(contract);
+
+    let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
+
+    let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
+    let mut nonce = FieldElement::ONE;
+
+    // Store the tx hashes to check the retrieved traces later.
+    let mut tx_hashes = vec![declare_res.transaction_hash];
+
+    // Prepare 29 transactions to test chunks (30 at total with the previous declare).
+    for i in 0..29 {
+        let call =
+            common::build_deploy_cairo1_contract_call(declare_res.class_hash, (i + 2_u32).into());
+
+        // we set the nonce manually so that we can send the tx rapidly without waiting for the
+        // previous tx to be mined first.
+        let res = account
+            .execute(vec![call])
+            .nonce(nonce)
+            .max_fee(max_fee)
+            .send()
+            .await
+            .expect("failed to send tx");
+
+        nonce += FieldElement::ONE;
+        tx_hashes.push(res.transaction_hash);
+    }
+
+    // Wait for the for all the txs to be mined first.
+    tokio::time::sleep(Duration::from_secs(5)).await;
+
+    // Generate a new block.
+    let _: () = client.generate_block().await.unwrap();
+
+    // Get the traces from the latest block.
+    let traces = client
+        .transaction_executions_by_block(BlockIdOrTag::Tag(BlockTag::Latest))
+        .await
+        .expect("failed to get traces from latest block");
+
+    assert_eq!(
+        tx_hashes.len(),
+        traces.len(),
+        "traces count in the latest block must equal to the total txs"
+    );
+
+    for (expected, actual) in tx_hashes.iter().zip(traces) {
+        // Assert that the traces are from the txs in the requested block.
+        assert_eq!(expected, &actual.hash);
+    }
+
+    sequencer.stop().expect("failed to stop sequencer");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn fetch_traces_from_pending_block() {
+    let sequencer = TestSequencer::start(
+        SequencerConfig { no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
+
+    let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+
+    let account = sequencer.account();
+
+    let path: PathBuf = PathBuf::from("tests/test_data/cairo1_contract.json");
+    let (contract, compiled_class_hash) =
+        common::prepare_contract_declaration_params(&path).unwrap();
+    let contract = Arc::new(contract);
+
+    let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
+
+    let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
+    let mut nonce = FieldElement::ONE;
+
+    // Store the tx hashes to check the retrieved traces later.
+    let mut tx_hashes = vec![declare_res.transaction_hash];
+
+    // Prepare 29 transactions to test chunks (30 at total with the previous declare).
+    for i in 0..29 {
+        let call =
+            common::build_deploy_cairo1_contract_call(declare_res.class_hash, (i + 2_u32).into());
+
+        // we set the nonce manually so that we can send the tx rapidly without waiting for the
+        // previous tx to be mined first.
+        let res = account
+            .execute(vec![call])
+            .nonce(nonce)
+            .max_fee(max_fee)
+            .send()
+            .await
+            .expect("failed to send tx");
+
+        nonce += FieldElement::ONE;
+        tx_hashes.push(res.transaction_hash);
+    }
+
+    // Wait for the for all the txs to be mined first.
+    tokio::time::sleep(Duration::from_secs(5)).await;
+
+    // Get the traces from the latest block.
+    let traces = client
+        .transaction_executions_by_block(BlockIdOrTag::Tag(BlockTag::Pending))
+        .await
+        .expect("failed to get traces from latest block");
+
+    assert_eq!(
+        tx_hashes.len(),
+        traces.len(),
+        "traces count in the latest block must equal to the total txs"
+    );
+
+    for (expected, actual) in tx_hashes.iter().zip(traces) {
+        // Assert that the traces are from the txs in the requested block.
+        assert_eq!(expected, &actual.hash);
+    }
 
     sequencer.stop().expect("failed to stop sequencer");
 }
