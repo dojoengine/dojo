@@ -149,25 +149,15 @@ fn data_objects_recursion(
     let mut objects: Vec<Object> = type_mapping
         .iter()
         .filter_map(|(field_name, type_data)| {
-            if let TypeData::Nested((nested_type, nested_mapping)) = type_data {
-                let mut nested_path = path_array.clone();
-                nested_path.push(field_name.to_string());
-                let nested_objects =
-                    data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
+            match &type_data {
+                TypeData::Nested((nested_type, nested_mapping)) | TypeData::Union((nested_type, nested_mapping)) => {
+                    let mut nested_path = path_array.clone();
+                    nested_path.push(field_name.to_string());
+                    let nested_objects = data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
 
-                Some(nested_objects)
-            } else if let TypeData::Union((_, union_types)) = type_data {
-                let mut union_objects = Vec::new();
-                for (type_ref, mapping) in union_types {
-                    let mut union_path = path_array.clone();
-                    union_path.push(field_name.to_string());
-                    let union_object = object(&type_ref.to_string(), mapping, union_path);
-                    union_objects.push(union_object);
+                    return Some(nested_objects);
                 }
-
-                Some(union_objects)
-            } else {
-                None
+                _ => None,
             }
         })
         .flatten()
@@ -180,7 +170,7 @@ fn data_objects_recursion(
 pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<String>) -> Object {
     let mut object = Object::new(type_name);
 
-    // println!("type_mapping: {:?}", type_mapping);
+    println!("type_mapping: {:?}", type_mapping);
 
     for (field_name, type_data) in type_mapping.clone() {
         let path_array = path_array.clone();
@@ -195,16 +185,14 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
             path_array.push(field_name.to_string());
             let table_name = path_array.join("$").replace(&namespace, "");
 
+            
             return FieldFuture::new(async move {
-                println!("field_name: {:?}", field_name);
-                println!("type_data: {:?}", type_data);
-                println!("path_array: {:?}", path_array);
-                println!("table_name: {:?}", table_name);
+                println!("table_name: {}", table_name);
+                println!("field_name: {}", field_name);
 
                 if let Some(value) = ctx.parent_value.as_value() {
-                    println!("parent_value: {:?}", value);
                     // Nested types resolution
-                    if let TypeData::Nested((_, nested_mapping)) = type_data {
+                    if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
                         return match ctx.parent_value.try_to_value()? {
                             Value::Object(indexmap) => {
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;

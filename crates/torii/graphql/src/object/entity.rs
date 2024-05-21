@@ -243,6 +243,11 @@ pub async fn model_data_recursive_query(
                     let mut nested_path = path_array.clone();
                     nested_path.push(field_name.to_string());
                     nested_path.push(type_ref.to_string().split("_").next().unwrap().to_string());
+
+                    let mapping: &IndexMap<_, _> = match &mapping {
+                        TypeData::Nested((_, mapping)) => mapping,
+                        _ => unreachable!(),
+                    };
                     
                     let data = if mapping.get(&Name::new("value")).is_some() {
                         let query = format!(
@@ -253,7 +258,7 @@ pub async fn model_data_recursive_query(
                         );
 
                         let (value,): (String,) = sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
-                        Value::from(value)
+                        Value::Object(IndexMap::from([(Name::new("value"), Value::from(value))]))
                     } else {
                         model_data_recursive_query(
                             conn,

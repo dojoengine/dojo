@@ -84,7 +84,7 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                 .expect("Array type should have nested type"),
             nested_members,
         ))),
-        "Enum" => TypeData::Union((
+        "Enum" => TypeData::Nested((
             TypeRef::named(format!("{}Union", member.name.to_case(Case::Pascal))),
             nested_members
                 .iter()
@@ -93,24 +93,38 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                         && nested_member.id.ends_with(&member.name)
                     {
                         let type_data = member_to_type_data(nested_member, nested_members);
+                        let namespace =
+                            format!("{}_{}", nested_member.name, type_data.type_ref().type_name());
 
                         Some((
-                            TypeRef::named(&format!("{}_{}", nested_member.name, type_data.type_ref().type_name())),
+                            Name::new(&namespace),
                             if let TypeData::Nested((_, mapping)) = type_data {
-                                mapping
+                                TypeData::Nested((TypeRef::named(namespace), mapping))
                             } else {
-                                IndexMap::from([(Name::new("value"), type_data)])
-                            }
+                                TypeData::Nested((
+                                    TypeRef::named(namespace),
+                                    IndexMap::from([(Name::new("value"), type_data)]),
+                                ))
+                            },
                         ))
                     } else {
                         None
                     }
-                }).chain(
+                })
+                .chain(
                     vec![(
-                        TypeRef::named("EnumOption"),
-                        IndexMap::from([(Name::new("value"), TypeData::Simple(TypeRef::named("Enum")))])
-                    )].into_iter()
-                ).collect()
+                        Name::new("EnumOption"),
+                        TypeData::Nested((
+                            TypeRef::named("EnumOption"),
+                            IndexMap::from([(
+                                Name::new("value"),
+                                TypeData::Simple(TypeRef::named("Enum")),
+                            )]),
+                        )),
+                    )]
+                    .into_iter(),
+                )
+                .collect(),
         )),
         _ => parse_nested_type(
             &member.model_id,
