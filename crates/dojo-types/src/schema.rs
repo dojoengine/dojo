@@ -50,7 +50,10 @@ impl Ty {
         match self {
             Ty::Primitive(c) => c.to_string(),
             Ty::Struct(s) => s.name.clone(),
-            Ty::Enum(e) => e.name.clone(),
+            Ty::Enum(e) => e.name.replace(
+                "T",
+                &e.options.iter().map(|o| o.ty.name().replace("()", "")).unique().join(""),
+            ),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
             Ty::Array(ty) => format!("Array<{}>", ty[0].name()),
             Ty::ByteArray(_) => "ByteArray".to_string(),
@@ -175,7 +178,6 @@ impl Ty {
             Ty::Enum(e) => {
                 e.option =
                     Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-
 
                 match &e.options[e.option.unwrap() as usize].ty {
                     // Skip deserializing the enum option if it has no type - unit type

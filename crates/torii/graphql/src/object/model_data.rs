@@ -148,17 +148,16 @@ fn data_objects_recursion(
 ) -> Vec<Object> {
     let mut objects: Vec<Object> = type_mapping
         .iter()
-        .filter_map(|(field_name, type_data)| {
-            match &type_data {
-                TypeData::Nested((nested_type, nested_mapping)) | TypeData::Union((nested_type, nested_mapping)) => {
-                    let mut nested_path = path_array.clone();
-                    nested_path.push(field_name.to_string());
-                    let nested_objects = data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
+        .filter_map(|(field_name, type_data)| match &type_data {
+            TypeData::Nested((nested_type, nested_mapping)) => {
+                let mut nested_path = path_array.clone();
+                nested_path.push(field_name.to_string());
+                let nested_objects =
+                    data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
 
-                    return Some(nested_objects);
-                }
-                _ => None,
+                return Some(nested_objects);
             }
+            _ => None,
         })
         .flatten()
         .collect();
@@ -185,7 +184,6 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
             path_array.push(field_name.to_string());
             let table_name = path_array.join("$").replace(&namespace, "");
 
-            
             return FieldFuture::new(async move {
                 println!("table_name: {}", table_name);
                 println!("field_name: {}", field_name);

@@ -141,24 +141,22 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
             ))));
             
             // add enum unions
-            for (_, type_data) in &type_mapping {
-                if let TypeData::Union((type_ref, types)) = type_data {
-                    let mut enum_union = Union::new(&type_ref.to_string());
-                    for (type_ref, _) in types {
-                        enum_union = enum_union.possible_type(&type_ref.to_string());
-                    }
+            // for (_, type_data) in &type_mapping {
+            //     if let TypeData::Enum((type_ref, types)) = type_data {
+            //         let mut enum_union = Union::new(&type_ref.to_string());
+            //         for (type_ref, _) in types {
+            //             enum_union = enum_union.possible_type(&type_ref.to_string());
+            //         }
 
-                    unions.push(enum_union);
-                }
-            }
+            //         unions.push(enum_union);
+            //     }
+            // }
 
             
         }
     }
 
     unions.push(model_union);
-
-    println!("union: {:#?}", unions);
 
     Ok((objects, unions))
 }

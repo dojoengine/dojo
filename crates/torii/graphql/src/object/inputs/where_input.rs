@@ -24,7 +24,7 @@ impl WhereInputObject {
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
         let where_mapping = object_types
             .iter()
-            .filter(|(_, type_data)| !type_data.is_nested() && !type_data.is_list() && !type_data.is_union())
+            .filter(|(_, type_data)| !type_data.is_nested() && !type_data.is_list())
             .flat_map(|(type_name, type_data)| {
                 // TODO: filter on nested and enum objects
                 if type_data.type_ref() == TypeRef::named("Enum")
