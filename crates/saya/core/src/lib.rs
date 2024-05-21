@@ -48,6 +48,7 @@ pub struct SayaConfig {
     pub prover_url: Url,
     pub prover_key: ProverAccessKey,
     pub start_block: u64,
+    pub batch_size: usize,
     pub data_availability: Option<DataAvailabilityConfig>,
     pub world_address: FieldElement,
     pub fact_registry_address: FieldElement,
@@ -108,15 +109,17 @@ impl Saya {
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
-        let capacity = 2; // TODO: make it configurable
         let prover_identifier = ProverIdentifier::Http((
             self.config.prover_url.clone(),
             self.config.prover_key.clone(),
         ));
 
         // The structure responsible for proving.
-        let mut prove_scheduler =
-            Scheduler::new(capacity, self.config.world_address, prover_identifier.clone());
+        let mut prove_scheduler = Scheduler::new(
+            self.config.batch_size,
+            self.config.world_address,
+            prover_identifier.clone(),
+        );
 
         loop {
             let latest_block = match self.provider.block_number().await {
@@ -148,7 +151,7 @@ impl Saya {
                     // ProverIdentifier::Http(self.config.prover_url.clone()),
                     self.process_proven(prove_scheduler, block).await?; // TODO: spawn it, but store a handle
                     prove_scheduler = Scheduler::new(
-                        capacity,
+                        self.config.batch_size,
                         self.config.world_address,
                         prover_identifier.clone(),
                     );

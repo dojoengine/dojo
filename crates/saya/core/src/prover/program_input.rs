@@ -176,11 +176,6 @@ impl ProgramInput {
             }
         }
 
-        println!(
-            "Combined DA: {}",
-            world_da.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(", ")
-        );
-
         // The block number is the one from the last block.
         Ok(ProgramInput {
             prev_state_root: self.prev_state_root,

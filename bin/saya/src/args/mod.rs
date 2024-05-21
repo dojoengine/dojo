@@ -56,6 +56,10 @@ pub struct SayaArgs {
     #[arg(short, long, default_value = "0")]
     pub start_block: u64,
 
+    #[arg(short, long, default_value = "1")]
+    #[arg(help = "The number of blocks to be merged into a single proof.")]
+    pub batch_size: usize,
+
     #[command(flatten)]
     #[command(next_help_heading = "Data availability options")]
     pub data_availability: DataAvailabilityOptions,
@@ -131,6 +135,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 prover_url: args.prover_url,
                 prover_key,
                 start_block: args.start_block,
+                batch_size: args.batch_size,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
@@ -159,6 +164,7 @@ mod tests {
             prover_key: "d0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027".into(),
             json_log: false,
             start_block: 0,
+            batch_size: 4,
             data_availability: DataAvailabilityOptions {
                 da_chain: None,
                 celestia: CelestiaOptions {
@@ -177,6 +183,7 @@ mod tests {
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
         assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
+        assert_eq!(config.batch_size, 4);
         assert_eq!(
             config.prover_key.signing_key_as_hex_string(),
             "d0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"

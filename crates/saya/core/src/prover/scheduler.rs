@@ -1,3 +1,5 @@
+use crate::LOG_TARGET;
+
 use super::{prove, MessageToAppchain, MessageToStarknet, ProgramInput, ProverIdentifier};
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::BoxFuture;
@@ -51,11 +53,11 @@ impl Scheduler {
         prover: ProverIdentifier,
     ) -> anyhow::Result<(Proof, ProgramInput)> {
         let mut scheduler = Scheduler::new(inputs.len(), world, prover);
-        trace!(target: "saya_core", "pushing inputs to scheduler");
+        trace!(target: LOG_TARGET, "pushing inputs to scheduler");
         for input in inputs {
             scheduler.push_diff(input)?;
         }
-        info!(target: "saya_core", "inputs pushed to scheduler");
+        info!(target: LOG_TARGET, "inputs pushed to scheduler");
         scheduler.proved().await
     }
 }
@@ -168,7 +170,7 @@ async fn combine_proofs(
 
     let _merger_input = ProgramInput::prepare_differ_args(vec![earlier_input, later_input]);
 
-    trace!(target: "saya_core", "Merging proofs");
+    trace!(target: LOG_TARGET, "Merging proofs");
 
     let prover =
         if prover == ProverIdentifier::Stone { ProverIdentifier::StoneMerge } else { prover };
@@ -177,7 +179,7 @@ async fn combine_proofs(
     let merger_input = "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into();
     let merged_proof = prove(merger_input, prover).await?;
 
-    trace!(target: "saya_core", "Proofs merged");
+    trace!(target: LOG_TARGET, "Proofs merged");
     Ok(merged_proof)
 }
 
@@ -196,16 +198,16 @@ fn prove_recursively(
             let mut input = inputs.pop().unwrap().await.unwrap();
             input.fill_da(world);
             let block_number = input.block_number;
-            trace!(target: "saya_core", "Proving block {block_number}");
+            trace!(target: LOG_TARGET, "Proving block {block_number}");
 
             let prover_input = ProgramInput::prepare_differ_args(vec![input.clone()]);
 
             let proof = prove(prover_input, prover).await?;
-            info!(target: "saya_core", block_number, "Block proven");
+            info!(target: LOG_TARGET, block_number, "Block proven");
             Ok((proof, input))
         } else {
-            let mid = inputs.len() / 2;
-            let last = inputs.split_off(mid);
+            let proof_count = inputs.len();
+            let last = inputs.split_off(proof_count / 2);
 
             let provers = (prover.clone(), prover.clone());
             let (earlier_result, later_result) = tokio::try_join!(
@@ -225,7 +227,9 @@ fn prove_recursively(
                 later_input.state_updates,
             )
             .await?;
-            info!(target: "saya_core", "Merged proofs");
+
+            let first_proven = earlier_input.block_number;
+            info!(target: LOG_TARGET, first_proven, proof_count, "Merged proofs");
             Ok((merged_proofs, input))
         }
     }
