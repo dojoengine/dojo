@@ -1,14 +1,10 @@
-use std::ops::Deref;
-
 use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
-use chrono::format;
 use sqlx::pool::PoolConnection;
-use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
@@ -18,7 +14,6 @@ use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
     DATETIME_FORMAT, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN,
-    INTERNAL_ENTITY_ID_KEY,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
@@ -68,8 +63,10 @@ impl ResolvableObject for EntityObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "entityUpdated",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let id = match ctx.args.get("id") {
                         Some(id) => Some(id.string()?.to_string()),
@@ -86,9 +83,9 @@ impl ResolvableObject for EntityObject {
                         }
                     }))
                 })
-            })
-            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
-        ])
+            },
+        )
+        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
     }
 }
 
@@ -157,8 +154,6 @@ fn model_union_field() -> Field {
                             _ => unreachable!(),
                         };
 
-                        println!("Data: {:#?}", data);
-
                         results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
 
@@ -211,8 +206,6 @@ pub async fn model_data_recursive_query(
                     nested_mapping,
                 )
                 .await?;
-
-                println!("Nested Values: {:#?}", nested_values);
 
                 match nested_mapping.get(&Name::new("option")) {
                     Some(TypeData::Simple(TypeRef::Named(name))) if name == "Enum" => {
@@ -281,7 +274,7 @@ pub async fn model_data_recursive_query(
             //             );
 
             //             let (value,): (String,) =
-            // sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;             
+            // sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
             // Value::Object(IndexMap::from([(Name::new("value"), Value::from(value))]))
             //         } else {
             //             model_data_recursive_query(

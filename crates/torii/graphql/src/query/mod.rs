@@ -175,6 +175,7 @@ pub fn value_mapping_from_row(
     let mut value_mapping = types
         .iter()
         .filter(|(_, type_data)| {
+            // ignore Enum fields because the column is not stored in this row. we inejct it later
             type_data.is_simple() && !(type_data.type_ref().to_string() == "Enum")
         })
         .map(|(field_name, type_data)| {

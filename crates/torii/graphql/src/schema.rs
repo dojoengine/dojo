@@ -18,7 +18,6 @@ use crate::object::model::ModelObject;
 use crate::object::transaction::TransactionObject;
 use crate::object::ObjectVariant;
 use crate::query::type_mapping_query;
-use crate::types::TypeData;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
 // the models until runtime. There are however, predefined objects such as entities and
@@ -125,7 +124,6 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
     // model data objects
     for model in models {
         let type_mapping = type_mapping_query(&mut conn, &model.id).await?;
-        println!("Type Mapping: {:#?}", type_mapping);
 
         if !type_mapping.is_empty() {
             // add models objects & unions
@@ -141,6 +139,8 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
             ))));
 
             // add enum unions
+            // Should we consider using unions for enums? Not sure about
+            // the practicality and benefit
             // for (_, type_data) in &type_mapping {
             //     if let TypeData::Enum((type_ref, types)) = type_data {
             //         let mut enum_union = Union::new(&type_ref.to_string());

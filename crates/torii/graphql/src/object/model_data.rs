@@ -1,6 +1,5 @@
-use async_graphql::dynamic::indexmap::IndexMap;
-use async_graphql::dynamic::{Enum, Field, FieldFuture, FieldValue, InputObject, Object, TypeRef};
-use async_graphql::{Name, Value};
+use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
+use async_graphql::Value;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -169,8 +168,6 @@ fn data_objects_recursion(
 pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<String>) -> Object {
     let mut object = Object::new(type_name);
 
-    println!("type_mapping: {:?}", type_mapping);
-
     for (field_name, type_data) in type_mapping.clone() {
         let path_array = path_array.clone();
 
@@ -185,12 +182,9 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
             let table_name = path_array.join("$").replace(&namespace, "");
 
             return FieldFuture::new(async move {
-                println!("table_name: {}", table_name);
-                println!("field_name: {}", field_name);
-
                 if let Some(value) = ctx.parent_value.as_value() {
                     // Nested types resolution
-                    if let TypeData::Nested((type_ref, nested_mapping)) = type_data {
+                    if let TypeData::Nested((_, nested_mapping)) = type_data {
                         return match ctx.parent_value.try_to_value()? {
                             Value::Object(indexmap) => {
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
