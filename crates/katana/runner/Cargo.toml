@@ -16,7 +16,6 @@ lazy_static.workspace = true
 runner-macro = { path = "./runner-macro" }
 serde.workspace = true
 serde_json.workspace = true
-sozo = { path = "../../../bin/sozo" }
 starknet.workspace = true
 tokio.workspace = true
 url.workspace = true

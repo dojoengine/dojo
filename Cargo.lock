@@ -7086,7 +7086,6 @@ dependencies = [
  "runner-macro",
  "serde",
  "serde_json",
- "sozo",
  "starknet",
  "tokio",
  "url",
