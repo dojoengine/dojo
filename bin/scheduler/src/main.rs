@@ -62,7 +62,6 @@ async fn main() {
             program_input_from_json(json_data)
         })
         .collect();
-    let result =
-        Scheduler::prove_recursively(inputs, args.world, ProverIdentifier::Stone).await.unwrap().0;
+    let result = Scheduler::merge(inputs, args.world, ProverIdentifier::Stone).await.unwrap().0;
     prove_to_json(vec![result]).await;
 }
