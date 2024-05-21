@@ -23,7 +23,7 @@ pub async fn starknet_verify(
         }])
         .send_with_cfg(&txn_config)
         .await
-        .unwrap();
+        .expect("Failed to send `verify_and_register_fact` transaction.");
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);

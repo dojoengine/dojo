@@ -52,15 +52,13 @@ pub async fn starknet_apply_diffs(
     world: FieldElement,
     new_state: Vec<FieldElement>,
     program_output: Vec<FieldElement>,
-    proven_by_merger: bool,
 ) -> anyhow::Result<String> {
     let calldata = chain![
         vec![FieldElement::from_dec_str(&(new_state.len() / 2).to_string()).unwrap()].into_iter(),
         new_state.clone().into_iter(),
         program_output.into_iter(),
-        vec![FieldElement::from(if proven_by_merger { 1u64 } else { 0 })].into_iter(),
     ]
-    .collect::<Vec<FieldElement>>();
+    .collect();
 
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let tx = STARKNET_ACCOUNT
@@ -71,7 +69,7 @@ pub async fn starknet_apply_diffs(
         }])
         .send_with_cfg(&txn_config)
         .await
-        .unwrap();
+        .expect("Failed to send `upgrade state` transaction.");
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);

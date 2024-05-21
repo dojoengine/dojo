@@ -88,7 +88,6 @@ async fn combine_proofs(
     let merger_input = "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into();
     let merged_proof = prove(merger_input, prover).await?;
 
-    trace!(target: LOG_TARGET, "Proofs merged");
     Ok(merged_proof)
 }
 
