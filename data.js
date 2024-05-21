@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716153162694,
+  "lastUpdate": 1716311803734,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8155,6 +8155,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17555458,
             "range": "± 321845",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "22b0c90b9606ae74c0514567dc7fa115cb32f78e",
+          "message": "Remove `sozo` as a dependency of `katana-runner` crate (#1988)\n\nremove unused sozo dep in `katana-runner` crate",
+          "timestamp": "2024-05-22T01:08:22+08:00",
+          "tree_id": "fb3272a0310e4dfb19e06d84c3b93604de4cf402",
+          "url": "https://github.com/dojoengine/dojo/commit/22b0c90b9606ae74c0514567dc7fa115cb32f78e"
+        },
+        "date": 1716311802891,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16679877,
+            "range": "± 199526",
             "unit": "ns/iter"
           }
         ]
