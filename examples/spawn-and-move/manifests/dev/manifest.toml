@@ -10,8 +10,8 @@ seed = "saya-world-v1"
 transaction_hash = "0x7106054ad5c4ccfcd5e512d286ce7cadc5ddc21b8cf058e4daab09743bace76"
 
 [world.metadata]
-profile_name = "desv"
-rpc_url = "http://localhost:5060/"
+profile_name = "dev"
+rpc_url = "https://starknet-sepolia.g.alchemy.com/v2/PovJ0plog8O9RxyaPMYAZiKHqZ5LLII_"
 
 [base]
 class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"

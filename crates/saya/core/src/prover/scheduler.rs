@@ -1,6 +1,4 @@
-use super::{
-    prove, prove_merge, MessageToAppchain, MessageToStarknet, ProgramInput, ProverIdentifier,
-};
+use super::{prove, MessageToAppchain, MessageToStarknet, ProgramInput, ProverIdentifier};
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::BoxFuture;
 use futures::FutureExt;
@@ -66,50 +64,41 @@ fn program_input_from_program_output(
     output: Vec<FieldElement>,
     state_updates: StateUpdates,
 ) -> anyhow::Result<ProgramInput> {
-    println!("{:?}", serde_json::to_string(&output).unwrap());
-    let prev_state_root = output[0].clone();
-    let block_number = serde_json::from_str(&output[2].clone().to_string()).unwrap();
-    let block_hash = output[3].clone();
-    let config_hash = output[4].clone();
-    let message_to_starknet_segment: Vec<MessageToStarknet>;
-    let message_to_appchain_segment: Vec<MessageToAppchain>;
-    let mut decimal = output[6].clone().to_big_decimal(0); // Convert with no decimal places
-    let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
-    match num {
-        0..=3 => {
-            message_to_starknet_segment = Default::default(); // TODO: report error here
-        }
-        4..=u64::MAX => {
-            message_to_starknet_segment =
-                get_message_to_starknet_segment(&output[7..7 + num as usize].to_vec())?
-        }
-    }
-    let index = 7 + num as usize;
-    decimal = output[index].clone().to_big_decimal(0);
-    let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
-    match num {
-        0..=4 => {
-            message_to_appchain_segment = Default::default();
-        }
-        5..=u64::MAX => {
-            message_to_appchain_segment = get_message_to_appchain_segment(
-                &output[index + 1..index + 1 + num as usize].to_vec(),
-            )?
-        }
-    }
+    // println!("{:?}", serde_json::to_string(&output).unwrap());
+    // let prev_state_root = output[0].clone();
+    // let block_number = serde_json::from_str(&output[2].clone().to_string()).unwrap();
+    // let block_hash = output[3].clone();
+    // let config_hash = output[4].clone();
+    // let message_to_starknet_segment: Vec<MessageToStarknet>;
+    // let message_to_appchain_segment: Vec<MessageToAppchain>;
+    // let mut decimal = output[6].clone().to_big_decimal(0); // Convert with no decimal places
+    // let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
+    // match num {
+    //     0..=3 => {
+    //         message_to_starknet_segment = Default::default(); // TODO: report error here
+    //     }
+    //     4..=u64::MAX => {
+    //         message_to_starknet_segment =
+    //             get_message_to_starknet_segment(&output[7..7 + num as usize].to_vec())?
+    //     }
+    // }
+    // let index = 7 + num as usize;
+    // decimal = output[index].clone().to_big_decimal(0);
+    // let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
+    // match num {
+    //     0..=4 => {
+    //         message_to_appchain_segment = Default::default();
+    //     }
+    //     5..=u64::MAX => {
+    //         message_to_appchain_segment = get_message_to_appchain_segment(
+    //             &output[index + 1..index + 1 + num as usize].to_vec(),
+    //         )?
+    //     }
+    // }
 
-    let mut input = ProgramInput {
-        prev_state_root,
-        block_number,
-        block_hash,
-        config_hash,
-        message_to_starknet_segment,
-        message_to_appchain_segment,
-        state_updates,
-        world_da: None,
-    };
+    let mut input = ProgramInput { ..Default::default() };
 
-    input.fill_da(FieldElement::default());
+    input.fill_da(FieldElement::default()); // TODO: pass contract address to function
     Ok(input)
 }
 
@@ -162,43 +151,34 @@ fn get_message_to_appchain_segment(
     Ok(message_to_appchain_segment)
 }
 
-async fn input_to_json(result: Vec<ProgramInput>) -> anyhow::Result<String> {
-    let input1 = serde_json::to_string(
-        &result.get(0).ok_or_else(|| anyhow::anyhow!("Index out of bounds")).unwrap(),
-    )
-    .unwrap();
-    let input2 = serde_json::to_string(
-        &result.get(1).ok_or_else(|| anyhow::anyhow!("Index out of bounds")).unwrap(),
-    )
-    .unwrap();
-    Ok(format!("{{\"1\":{},\"2\":{}}}", input1, input2))
-}
-
 async fn combine_proofs(
     first: Proof,
     second: Proof,
-    _input: &ProgramInput,
-    _state_updates1: StateUpdates,
-    _state_updates2: StateUpdates,
+    prover: ProverIdentifier,
+    state_updates1: StateUpdates,
+    state_updates2: StateUpdates,
 ) -> anyhow::Result<Proof> {
     let ExtractOutputResult { program_output: program_output1, program_output_hash: _ } =
         extract_output(&first)?;
     let ExtractOutputResult { program_output: program_output2, program_output_hash: _ } =
         extract_output(&second)?;
 
-    let program_input1 =
-        program_input_from_program_output(program_output1, _state_updates1).unwrap();
-    let program_input2 =
-        program_input_from_program_output(program_output2, _state_updates2).unwrap();
+    let earlier_input = program_input_from_program_output(program_output1, state_updates1).unwrap();
+    let later_input = program_input_from_program_output(program_output2, state_updates2).unwrap();
 
-    let mut inputs = vec![FieldElement::from_dec_str("2")?];
-    inputs.extend_from_slice(&program_input1.serialize_to_prover_args());
-    inputs.extend_from_slice(&program_input2.serialize_to_prover_args());
+    let _merger_input = ProgramInput::prepare_differ_args(vec![earlier_input, later_input]);
 
     trace!(target: "saya_core", "Merging proofs");
 
-    let input = "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into();
-    Ok(prove_merge(input, ProverIdentifier::Stone).await.unwrap().to_string())
+    let prover =
+        if prover == ProverIdentifier::Stone { ProverIdentifier::StoneMerge } else { prover };
+
+    // TODO: remove when proof extraction is working.
+    let merger_input = "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into();
+    let merged_proof = prove(merger_input, prover).await?;
+
+    trace!(target: "saya_core", "Proofs merged");
+    Ok(merged_proof)
 }
 
 /// Simulates the proving process with a placeholder function.
@@ -218,28 +198,19 @@ fn prove_recursively(
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
 
-            let mut serialized_input = input.serialize_to_prover_args();
-            serialized_input.insert(0, FieldElement::from_dec_str("1")?); // Always only one input here.
+            let prover_input = ProgramInput::prepare_differ_args(vec![input.clone()]);
 
-            let stringified = serialized_input
-                .into_iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>()
-                .join(" ");
-
-            let prepared_input = format!("[{}]", stringified);
-
-            let proof = prove(prepared_input, prover).await?;
+            let proof = prove(prover_input, prover).await?;
             info!(target: "saya_core", block_number, "Block proven");
             Ok((proof, input))
         } else {
             let mid = inputs.len() / 2;
             let last = inputs.split_off(mid);
 
-            let other_prover = prover.clone();
+            let provers = (prover.clone(), prover.clone());
             let (earlier_result, later_result) = tokio::try_join!(
-                tokio::spawn(async move { prove_recursively(inputs, world, prover).await }),
-                tokio::spawn(async move { prove_recursively(last, world, other_prover).await }),
+                tokio::spawn(async move { prove_recursively(inputs, world, provers.0).await }),
+                tokio::spawn(async move { prove_recursively(last, world, provers.1).await }),
             )?;
 
             let ((earlier_result, earlier_input), (later_result, later_input)) =
@@ -249,7 +220,7 @@ fn prove_recursively(
             let merged_proofs = combine_proofs(
                 earlier_result,
                 later_result,
-                &input,
+                prover,
                 earlier_input.state_updates,
                 later_input.state_updates,
             )
@@ -267,53 +238,6 @@ mod tests {
     use itertools::Itertools;
     use katana_primitives::state::StateUpdates;
     use std::str::FromStr;
-
-    #[tokio::test]
-    async fn test_input_to_json() {
-        pub const EXPECTED: &str = r#"{
-            "1": {
-                "prev_state_root": "0",
-                "block_number": 0,
-                "block_hash": "0",
-                "config_hash": "0",
-                "message_to_starknet_segment": [],
-                "message_to_appchain_segment": [],
-                "nonce_updates": {},
-                "storage_updates": {},
-                "contract_updates": {},
-                "declared_classes": {},
-                "world_da": []
-            },
-            "2": {
-                "prev_state_root": "1",
-                "block_number": 1,
-                "block_hash": "1",
-                "config_hash": "1",
-                "message_to_starknet_segment": [],
-                "message_to_appchain_segment": [],
-                "nonce_updates": {},
-                "storage_updates": {},
-                "contract_updates": {},
-                "declared_classes": {},
-                "world_da": []
-            }
-        }"#;
-        let inputs = (0..2)
-            .map(|i| ProgramInput {
-                prev_state_root: FieldElement::from(i),
-                block_number: i,
-                block_hash: FieldElement::from(i),
-                config_hash: FieldElement::from(i),
-                message_to_appchain_segment: Default::default(),
-                message_to_starknet_segment: Default::default(),
-                state_updates: Default::default(),
-                world_da: Some(Vec::new()),
-            })
-            .collect::<Vec<_>>();
-        let expected = EXPECTED.chars().filter(|c| !c.is_whitespace()).collect::<String>();
-        let result = input_to_json(inputs).await.unwrap();
-        assert_eq!(result, expected);
-    }
 
     #[tokio::test]
     async fn test_program_input_from_program_output() -> anyhow::Result<()> {

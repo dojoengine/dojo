@@ -129,11 +129,6 @@ impl ProgramInput {
             .flatten()
             .collect::<Vec<_>>();
 
-        println!(
-            "Filled DA: {}",
-            updates.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(", ")
-        );
-
         self.world_da = Some(updates);
     }
 
@@ -212,7 +207,7 @@ impl ProgramInput {
         updates
     }
 
-    pub fn serialize_to_prover_args(&self) -> Vec<FieldElement> {
+    fn serialize_to_prover_args(&self) -> Vec<FieldElement> {
         let mut out = vec![
             self.prev_state_root,
             FieldElement::from(self.block_number),
@@ -273,6 +268,18 @@ impl ProgramInput {
         out.push(FieldElement::from(0u64)); // Proofs
 
         out
+    }
+
+    pub fn prepare_differ_args(inputs: Vec<ProgramInput>) -> String {
+        let serialized = inputs
+            .iter()
+            .map(|input| input.serialize_to_prover_args())
+            .flatten()
+            .collect::<Vec<_>>();
+
+        let joined = serialized.iter().map(|f| f.to_big_decimal(0).to_string()).collect::<Vec<_>>();
+
+        format!("[{} {}]", inputs.len(), joined.join(" "))
     }
 }
 

@@ -560,10 +560,6 @@
               {
                 "name": "program_output",
                 "type": "dojo::interfaces::ProgramOutput"
-              },
-              {
-                "name": "proven_by_merger",
-                "type": "core::bool"
               }
             ],
             "outputs": [],
@@ -582,7 +578,7 @@
         "items": [
           {
             "type": "function",
-            "name": "set_differ_program_hash",
+            "name": "set_program_hash",
             "inputs": [
               {
                 "name": "program_hash",
@@ -594,30 +590,7 @@
           },
           {
             "type": "function",
-            "name": "set_merger_program_hash",
-            "inputs": [
-              {
-                "name": "program_hash",
-                "type": "core::felt252"
-              }
-            ],
-            "outputs": [],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
-            "name": "get_differ_program_hash",
-            "inputs": [],
-            "outputs": [
-              {
-                "type": "core::felt252"
-              }
-            ],
-            "state_mutability": "view"
-          },
-          {
-            "type": "function",
-            "name": "get_merger_program_hash",
+            "name": "get_program_hash",
             "inputs": [],
             "outputs": [
               {
@@ -863,19 +836,7 @@
       },
       {
         "type": "event",
-        "name": "dojo::config::component::Config::DifferProgramHashUpdate",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "program_hash",
-            "type": "core::felt252",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
-        "name": "dojo::config::component::Config::MergerProgramHashUpdate",
+        "name": "dojo::config::component::Config::ProgramHashUpdate",
         "kind": "struct",
         "members": [
           {
@@ -903,13 +864,8 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "DifferProgramHashUpdate",
-            "type": "dojo::config::component::Config::DifferProgramHashUpdate",
-            "kind": "nested"
-          },
-          {
-            "name": "MergerProgramHashUpdate",
-            "type": "dojo::config::component::Config::MergerProgramHashUpdate",
+            "name": "ProgramHashUpdate",
+            "type": "dojo::config::component::Config::ProgramHashUpdate",
             "kind": "nested"
           },
           {
@@ -1002,10 +958,10 @@
     "address": "0x2e31cfde9f9990c7fe44b25043e3c6958a849c0a66ab535686d2b710e97f309",
     "transaction_hash": "0x7106054ad5c4ccfcd5e512d286ce7cadc5ddc21b8cf058e4daab09743bace76",
     "block_number": 3,
-    "seed": "saya-world-v1",
+    "seed": "mateo-saya-v009",
     "metadata": {
       "profile_name": "dev",
-      "rpc_url": "http://localhost:5060/"
+      "rpc_url": "https://starknet-sepolia.g.alchemy.com/v2/PovJ0plog8O9RxyaPMYAZiKHqZ5LLII_"
     },
     "name": "dojo::world::world"
   },

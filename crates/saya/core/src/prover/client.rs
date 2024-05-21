@@ -3,14 +3,10 @@ use std::path::PathBuf;
 use anyhow::Context;
 use prover_sdk::{errors::ProverSdkErrors, Cairo1CompiledProgram, Cairo1ProverInput, ProverSDK};
 use serde_json::Value;
-use tokio::{
-    fs::File,
-    io::AsyncReadExt,
-    sync::{Mutex, OnceCell},
-};
+use tokio::{fs::File, io::AsyncReadExt, sync::OnceCell};
 use url::Url;
 
-static ONCE: OnceCell<Mutex<Result<ProverSDK, ProverSdkErrors>>> = OnceCell::const_new();
+static ONCE: OnceCell<Result<ProverSDK, ProverSdkErrors>> = OnceCell::const_new();
 
 async fn load_program() -> anyhow::Result<Value> {
     let mut program_file = File::open(
@@ -28,11 +24,7 @@ pub async fn http_prove(
     access_key: prover_sdk::ProverAccessKey,
     input: String,
 ) -> anyhow::Result<String> {
-    let prover = ONCE
-        .get_or_init(|| async { Mutex::new(ProverSDK::new(access_key, prover_url).await) })
-        .await
-        .lock()
-        .await;
+    let prover = ONCE.get_or_init(|| async { ProverSDK::new(access_key, prover_url).await }).await;
 
     let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 

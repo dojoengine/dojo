@@ -25,6 +25,7 @@ use self::client::http_prove;
 pub enum ProverIdentifier {
     #[default]
     Stone,
+    StoneMerge,
     Sharp,
     Platinum,
     Http((Url, prover_sdk::ProverAccessKey)),
@@ -34,17 +35,9 @@ pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<St
     match prover {
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Stone => prove_stone(input).await,
+        ProverIdentifier::StoneMerge => prove_merge_stone(input).await,
         ProverIdentifier::Platinum => todo!(),
         ProverIdentifier::Http((url, access_key)) => http_prove(url, access_key, input).await,
-    }
-}
-
-pub async fn prove_merge(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
-    match prover {
-        ProverIdentifier::Sharp => todo!(),
-        ProverIdentifier::Stone => prove_merge_stone(input).await,
-        ProverIdentifier::Platinum => todo!(),
-        ProverIdentifier::Http(_prover_url) => todo!(),
     }
 }
 
