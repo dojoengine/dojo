@@ -1,7 +1,7 @@
 # `scheduler`
 
 ```sh
-cargo run --bin scheduler -- --world 42 your_input.json your_input2.json ... your_input2^n
+cargo run --bin scheduler -- --world <world> --key <your secret key for sdk> your_input.json your_input2.json ... your_input2^n
 ```
 ## number of inputs have to be power of 2
 # input format example
