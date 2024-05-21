@@ -94,7 +94,8 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
         //             {
         //                 let type_data = member_to_type_data(nested_member, nested_members);
         //                 let namespace =
-        //                     format!("{}_{}", nested_member.name, type_data.type_ref().type_name());
+        //                     format!("{}_{}", nested_member.name,
+        // type_data.type_ref().type_name());
 
         //                 Some((
         //                     Name::new(&nested_member.name),
@@ -173,7 +174,9 @@ pub fn value_mapping_from_row(
 ) -> sqlx::Result<ValueMapping> {
     let mut value_mapping = types
         .iter()
-        .filter(|(_, type_data)| type_data.is_simple() && !(type_data.type_ref().to_string() == "Enum"))
+        .filter(|(_, type_data)| {
+            type_data.is_simple() && !(type_data.type_ref().to_string() == "Enum")
+        })
         .map(|(field_name, type_data)| {
             let mut value =
                 fetch_value(row, field_name, &type_data.type_ref().to_string(), is_external)?;

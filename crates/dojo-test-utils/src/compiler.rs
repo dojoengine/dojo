@@ -65,16 +65,18 @@ pub fn copy_build_project_temp(
 
     let config = build_test_config(&temp_project_path).unwrap();
 
-    let features_opts = FeaturesOpts {
-        features: FeaturesSelector::AllFeatures,
-        no_default_features: false,
-    };
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
     let compile_info = if do_build {
         Some(
             compile_workspace(
                 &config,
-                CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST], features: features_opts },
+                CompileOpts {
+                    include_targets: vec![],
+                    exclude_targets: vec![TargetKind::TEST],
+                    features: features_opts,
+                },
             )
             .unwrap(),
         )
@@ -186,10 +188,8 @@ pub fn corelib() -> PathBuf {
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     let resolve = ops::resolve_workspace(&ws).unwrap();
 
-    let features_opts = FeaturesOpts {
-        features: FeaturesSelector::AllFeatures,
-        no_default_features: false,
-    };
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
     let compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws).unwrap();
 

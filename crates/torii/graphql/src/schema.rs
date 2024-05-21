@@ -139,7 +139,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
                 type_name,
                 type_mapping.clone(),
             ))));
-            
+
             // add enum unions
             // for (_, type_data) in &type_mapping {
             //     if let TypeData::Enum((type_ref, types)) = type_data {
@@ -151,8 +151,6 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
             //         unions.push(enum_union);
             //     }
             // }
-
-            
         }
     }
 

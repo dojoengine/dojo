@@ -1,5 +1,5 @@
-use dojo_lang::plugin::dojo_plugin_suite;
 use cairo_lang_language_server::Tricks;
+use dojo_lang::plugin::dojo_plugin_suite;
 
 fn main() {
     let mut tricks = Tricks::default();

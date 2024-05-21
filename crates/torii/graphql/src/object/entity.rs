@@ -209,7 +209,8 @@ pub async fn model_data_recursive_query(
                     entity_id,
                     if rows.len() > 1 { Some(idx as i64) } else { None },
                     nested_mapping,
-                ).await?;
+                )
+                .await?;
 
                 println!("Nested Values: {:#?}", nested_values);
 
@@ -217,19 +218,18 @@ pub async fn model_data_recursive_query(
                     Some(TypeData::Simple(TypeRef::Named(name))) if name == "Enum" => {
                         let query = format!(
                             "SELECT external_{} FROM {} WHERE entity_id = '{}'",
-                            field_name,
-                            table_name,
-                            entity_id,
+                            field_name, table_name, entity_id,
                         );
 
-                        let (value,): (String,) = sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
+                        let (value,): (String,) =
+                            sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
                         if let Value::Object(map) = &mut nested_values {
                             map.insert(Name::new("option"), Value::from(value));
                         }
                     }
                     _ => {}
                 };
-                
+
                 nested_value_mapping.insert(Name::new(field_name), nested_values);
             } else if let TypeData::List(inner) = type_data {
                 let mut nested_path = path_array.clone();
@@ -264,13 +264,14 @@ pub async fn model_data_recursive_query(
             //     for (type_ref, mapping) in types {
             //         let mut nested_path = path_array.clone();
             //         nested_path.push(field_name.to_string());
-            //         nested_path.push(type_ref.to_string().split("_").next().unwrap().to_string());
+            //         nested_path.push(type_ref.to_string().split("_").next().unwrap().
+            // to_string());
 
             //         let mapping: &IndexMap<_, _> = match &mapping {
             //             TypeData::Nested((_, mapping)) => mapping,
             //             _ => unreachable!(),
             //         };
-                    
+
             //         let data = if mapping.get(&Name::new("value")).is_some() {
             //             let query = format!(
             //                 "SELECT external_{} FROM {} WHERE entity_id = '{}'",
@@ -279,8 +280,9 @@ pub async fn model_data_recursive_query(
             //                 entity_id,
             //             );
 
-            //             let (value,): (String,) = sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
-            //             Value::Object(IndexMap::from([(Name::new("value"), Value::from(value))]))
+            //             let (value,): (String,) =
+            // sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;             
+            // Value::Object(IndexMap::from([(Name::new("value"), Value::from(value))]))
             //         } else {
             //             model_data_recursive_query(
             //                 conn,

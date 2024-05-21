@@ -9,7 +9,7 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 // correpsonding types. Both are used at runtime to dynamically build/resolve graphql
 // queries/schema. `Value` from async-graphql supports nesting, but TypeRef does not. TypeData is
 // used to support nesting.
-pub type    ValueMapping = IndexMap<Name, Value>;
+pub type ValueMapping = IndexMap<Name, Value>;
 pub type TypeMapping = IndexMap<Name, TypeData>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -8,14 +8,16 @@ use crate::scarb_internal;
 fn test_compiler_cairo_features() {
     let config = build_test_config("./src/manifest_test_data/compiler_cairo/Scarb.toml").unwrap();
 
-    let features_opts = FeaturesOpts {
-        features: FeaturesSelector::AllFeatures,
-        no_default_features: false,
-    };
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
     let compile_info = scarb_internal::compile_workspace(
         &config,
-        CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST], features: features_opts },
+        CompileOpts {
+            include_targets: vec![],
+            exclude_targets: vec![TargetKind::TEST],
+            features: features_opts,
+        },
     )
     .unwrap();
 
