@@ -32,7 +32,7 @@ enum AnotherEnum {
     SecondArm: (u8, OneEnum, ByteArray)
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct Foo {
     #[key]
@@ -45,7 +45,7 @@ fn create_foo() -> Span<felt252> {
     array![1, 2].span()
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct Fizz {
     #[key]
@@ -53,7 +53,7 @@ struct Fizz {
     a: felt252
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct StructSimpleModel {
     #[key]
@@ -66,7 +66,7 @@ fn create_struct_simple_model() -> Span<felt252> {
     array![1, 2].span()
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct StructWithTuple {
     #[key]
@@ -78,7 +78,7 @@ fn create_struct_with_tuple() -> Span<felt252> {
     array![12, 58].span()
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct StructWithEnum {
     #[key]
@@ -94,7 +94,7 @@ fn create_struct_with_enum_second_variant() -> Span<felt252> {
     array![1].span()
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct StructSimpleArrayModel {
     #[key]
@@ -110,7 +110,7 @@ fn create_struct_simple_array_model() -> Span<felt252> {
     array![1, 4, 10, 20, 30, 40, 2].span()
 }
 
-#[derive(Introspect, Drop, Serde)]
+#[derive(Drop, Serde)]
 #[dojo::model]
 struct StructByteArrayModel {
     #[key]
@@ -130,7 +130,7 @@ struct ModelData {
     z: felt252
 }
 
-#[derive(Introspect, Drop, Serde)]
+#[derive(Drop, Serde)]
 #[dojo::model]
 struct StructComplexArrayModel {
     #[key]
@@ -165,7 +165,7 @@ fn create_struct_complex_array_model() -> Span<felt252> {
         .span()
 }
 
-#[derive(Introspect, Drop, Serde)]
+#[derive(Drop, Serde)]
 #[dojo::model]
 struct StructNestedModel {
     #[key]
@@ -222,7 +222,7 @@ enum EnumGeneric<T, U> {
     Two: U
 }
 
-#[derive(Introspect, Drop, Serde)]
+#[derive(Drop, Serde)]
 #[dojo::model]
 struct StructWithGeneric {
     #[key]

@@ -240,7 +240,7 @@ pub fn get_packed_field_layout_from_type_clause(
             get_packed_item_layout_from_type(
                 diagnostics,
                 type_clause.stable_ptr().0,
-                &path_type.trim(),
+                path_type.trim(),
             )
         }
         Expr::Tuple(expr) => {

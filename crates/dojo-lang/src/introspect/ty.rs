@@ -12,7 +12,7 @@ pub fn build_struct_ty(db: &dyn SyntaxGroup, name: &String, struct_ast: &ItemStr
         .members(db)
         .elements(db)
         .iter()
-        .map(|m| build_member_ty(db, &m))
+        .map(|m| build_member_ty(db, m))
         .collect::<Vec<_>>();
 
     format!(
@@ -116,10 +116,10 @@ pub fn build_item_ty_from_type(item_type: &String) -> String {
     }
 }
 
-pub fn build_tuple_ty_from_type(item_type: &String) -> String {
+pub fn build_tuple_ty_from_type(item_type: &str) -> String {
     let tuple_items = get_tuple_item_types(item_type)
         .iter()
-        .map(|x| build_item_ty_from_type(x))
+        .map(build_item_ty_from_type)
         .collect::<Vec<_>>()
         .join(",\n");
     format!(

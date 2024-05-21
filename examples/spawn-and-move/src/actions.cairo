@@ -21,8 +21,9 @@ mod actions {
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
 
-    #[derive(Model, Copy, Drop, Serde)]
+    #[derive(Copy, Drop, Serde)]
     #[dojo::event]
+    #[dojo::model]
     struct Moved {
         #[key]
         player: ContractAddress,

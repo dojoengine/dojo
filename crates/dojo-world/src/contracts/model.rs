@@ -222,18 +222,12 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
             Ok(Ty::Enum(Enum { name, option: None, options }))
         }
         abigen::model::Ty::Tuple(values) => {
-            let values = values
-                .iter()
-                .map(parse_schema)
-                .collect::<Result<Vec<_>, ParseError>>()?;
+            let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;
 
             Ok(Ty::Tuple(values))
         }
         abigen::model::Ty::Array(values) => {
-            let values = values
-                .iter()
-                .map(parse_schema)
-                .collect::<Result<Vec<_>, ParseError>>()?;
+            let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;
 
             Ok(Ty::Array(values))
         }

@@ -30,7 +30,7 @@ enum Emote {
     Love,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct EmoteMessage {
     #[key]
@@ -38,7 +38,7 @@ struct EmoteMessage {
     emote: Emote,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct Moves {
     #[key]
@@ -53,7 +53,7 @@ struct Vec2 {
     y: u32
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 #[dojo::model]
 struct Position {
     #[key]

@@ -289,7 +289,7 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
 
     #[inline(always)]
     fn instance_selector(self: @$type_name$) -> felt252 {
-        dojo::model::Model::<$type_name$>::selector()
+        Self::selector()
     }
 
     #[inline(always)]
@@ -313,12 +313,12 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
 
     #[inline(always)]
     fn instance_layout(self: @$type_name$) -> dojo::database::introspect::Layout {
-        dojo::model::Model::<$type_name$>::layout()
+        Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = dojo::model::Model::<$type_name$>::layout();
+        let layout = Self::layout();
 
         match layout {
             dojo::database::introspect::Layout::Fixed(layout) => {
