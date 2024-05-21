@@ -3764,6 +3764,18 @@ dependencies = [
 
 [[package]]
 name = "common"
+version = "0.1.0"
+source = "git+https://github.com/neotheprogramist/http-prover?rev=705f1a0e1903377627d5b50c5b332bcd18849250#705f1a0e1903377627d5b50c5b332bcd18849250"
+dependencies = [
+ "ed25519-dalek",
+ "hex",
+ "serde",
+ "serde_json",
+ "serde_with 3.8.1",
+]
+
+[[package]]
+name = "common"
 version = "0.7.0-alpha.5"
 dependencies = [
  "anyhow",
@@ -3883,6 +3895,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
 dependencies = [
  "unicode-segmentation",
+]
+
+[[package]]
+name = "cookie"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7efb37c3e1ccb1ff97164ad95ac1606e8ccd35b3fa0a7d99a304c7f4a428cc24"
+dependencies = [
+ "percent-encoding",
+ "time",
+ "version_check",
+]
+
+[[package]]
+name = "cookie_store"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "387461abbc748185c3a6e1673d826918b450b87ff22639429c694619a83b6cf6"
+dependencies = [
+ "cookie",
+ "idna 0.3.0",
+ "log",
+ "publicsuffix",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "time",
+ "url",
 ]
 
 [[package]]
@@ -4600,7 +4640,7 @@ dependencies = [
  "semver 1.0.23",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "smol_str",
  "starknet",
  "test-log",
@@ -4661,7 +4701,7 @@ dependencies = [
  "scarb-ui",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "smol_str",
  "starknet",
  "thiserror",
@@ -4712,7 +4752,7 @@ dependencies = [
  "scarb",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "similar-asserts",
  "smol_str",
  "starknet",
@@ -4784,6 +4824,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
  "pkcs8",
+ "serde",
  "signature",
 ]
 
@@ -6458,6 +6499,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "h2"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa82e28a107a8cc405f0839610bdc9b15f1e25ec7d696aa5cf173edbcb1486ab"
+dependencies = [
+ "atomic-waker",
+ "bytes",
+ "fnv",
+ "futures-core",
+ "futures-sink",
+ "http 1.1.0",
+ "indexmap 2.2.6",
+ "slab",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6781,7 +6841,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2",
+ "h2 0.3.26",
  "http 0.2.12",
  "http-body 0.4.6",
  "httparse",
@@ -6804,6 +6864,7 @@ dependencies = [
  "bytes",
  "futures-channel",
  "futures-util",
+ "h2 0.4.5",
  "http 1.1.0",
  "http-body 1.0.0",
  "httparse",
@@ -6913,6 +6974,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper-tls"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0"
+dependencies = [
+ "bytes",
+ "http-body-util",
+ "hyper 1.3.1",
+ "hyper-util",
+ "native-tls",
+ "tokio",
+ "tokio-native-tls",
+ "tower-service",
+]
+
+[[package]]
 name = "hyper-util"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6966,6 +7043,16 @@ name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
+name = "idna"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e14ddfc70884202db2244c223200c204c2bda1bc6e0998d11b5e024d657209e6"
+dependencies = [
+ "unicode-bidi",
+ "unicode-normalization",
+]
 
 [[package]]
 name = "idna"
@@ -7778,7 +7865,7 @@ dependencies = [
  "cfg-if",
  "clap",
  "clap_complete",
- "common",
+ "common 0.7.0-alpha.5",
  "console",
  "dojo-metrics",
  "katana-core",
@@ -7864,7 +7951,7 @@ dependencies = [
  "reqwest 0.12.4",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "starknet",
  "starknet_api",
  "tempfile",
@@ -7938,7 +8025,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "similar-asserts",
  "starknet",
  "starknet-crypto 0.6.2",
@@ -8001,7 +8088,7 @@ dependencies = [
  "metrics",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "starknet",
  "starknet_api",
  "thiserror",
@@ -8039,7 +8126,7 @@ dependencies = [
  "rstest 0.18.2",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "starknet",
  "thiserror",
 ]
@@ -10653,6 +10740,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "prover-sdk"
+version = "0.1.0"
+source = "git+https://github.com/neotheprogramist/http-prover?rev=705f1a0e1903377627d5b50c5b332bcd18849250#705f1a0e1903377627d5b50c5b332bcd18849250"
+dependencies = [
+ "bytes",
+ "common 0.1.0",
+ "ed25519-dalek",
+ "hex",
+ "http 1.1.0",
+ "hyper-util",
+ "rand",
+ "reqwest 0.12.4",
+ "reqwest_cookie_store",
+ "serde",
+ "serde_json",
+ "serde_with 3.8.1",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "psl-types"
+version = "2.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33cb294fe86a74cbcf50d4445b37da762029549ebeea341421c7c70370f86cac"
+
+[[package]]
+name = "publicsuffix"
+version = "2.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96a8c1bda5ae1af7f99a2962e49df150414a43d62404644d98dd5c3a93d07457"
+dependencies = [
+ "idna 0.3.0",
+ "psl-types",
+]
+
+[[package]]
 name = "quanta"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10992,12 +11118,12 @@ dependencies = [
  "encoding_rs",
  "futures-core",
  "futures-util",
- "h2",
+ "h2 0.3.26",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.28",
  "hyper-rustls 0.24.2",
- "hyper-tls",
+ "hyper-tls 0.5.0",
  "ipnet",
  "js-sys",
  "log",
@@ -11036,19 +11162,25 @@ checksum = "566cafdd92868e0939d3fb961bd0dc25fcfaaed179291093b3d43e6b3150ea10"
 dependencies = [
  "base64 0.22.1",
  "bytes",
+ "cookie",
+ "cookie_store",
+ "encoding_rs",
  "futures-channel",
  "futures-core",
  "futures-util",
+ "h2 0.4.5",
  "http 1.1.0",
  "http-body 1.0.0",
  "http-body-util",
  "hyper 1.3.1",
  "hyper-rustls 0.26.0",
+ "hyper-tls 0.6.0",
  "hyper-util",
  "ipnet",
  "js-sys",
  "log",
  "mime",
+ "native-tls",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
@@ -11059,7 +11191,9 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sync_wrapper",
+ "system-configuration",
  "tokio",
+ "tokio-native-tls",
  "tokio-rustls 0.25.0",
  "tower-service",
  "url",
@@ -11068,6 +11202,18 @@ dependencies = [
  "web-sys",
  "webpki-roots 0.26.1",
  "winreg 0.52.0",
+]
+
+[[package]]
+name = "reqwest_cookie_store"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93ea5c6f30c19d766efe8d823c88f9abd1c56516648a0d4264ab2dc04cc19472"
+dependencies = [
+ "bytes",
+ "cookie_store",
+ "reqwest 0.12.4",
+ "url",
 ]
 
 [[package]]
@@ -11698,12 +11844,13 @@ dependencies = [
  "num-bigint",
  "num-traits 0.2.19",
  "parking_lot 0.12.2",
+ "prover-sdk",
  "rand",
  "reqwest 0.12.4",
  "saya-provider",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "starknet",
  "starknet-crypto 0.6.2",
  "starknet-types-core 0.0.9",
@@ -11735,7 +11882,7 @@ dependencies = [
  "lazy_static",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "starknet",
  "starknet_api",
  "thiserror",
@@ -12176,7 +12323,25 @@ dependencies = [
  "indexmap 1.9.3",
  "serde",
  "serde_json",
- "serde_with_macros",
+ "serde_with_macros 2.3.3",
+ "time",
+]
+
+[[package]]
+name = "serde_with"
+version = "3.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ad483d2ab0149d5a5ebcd9972a3852711e0153d863bf5a5d0391d28883c4a20"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "hex",
+ "indexmap 1.9.3",
+ "indexmap 2.2.6",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "serde_with_macros 3.8.1",
  "time",
 ]
 
@@ -12185,6 +12350,18 @@ name = "serde_with_macros"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
+dependencies = [
+ "darling 0.20.9",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.64",
+]
+
+[[package]]
+name = "serde_with_macros"
+version = "3.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65569b702f41443e8bc8bbb1c5779bd0450bbe723b56198980e80ec45780bce2"
 dependencies = [
  "darling 0.20.9",
  "proc-macro2",
@@ -12593,7 +12770,7 @@ dependencies = [
  "semver 1.0.23",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "smol_str",
  "snapbox",
  "starknet",
@@ -12910,7 +13087,7 @@ checksum = "cb3b73d437b4d62241612d13fce612602de6684c149cccf696e76a20757e2156"
 dependencies = [
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "starknet-accounts",
  "starknet-core",
  "starknet-providers",
@@ -12929,7 +13106,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_json_pythonic",
- "serde_with",
+ "serde_with 2.3.3",
  "sha3",
  "starknet-crypto 0.6.2",
  "starknet-ff",
@@ -13043,7 +13220,7 @@ dependencies = [
  "reqwest 0.11.27",
  "serde",
  "serde_json",
- "serde_with",
+ "serde_with 2.3.3",
  "starknet-core",
  "thiserror",
  "url",
@@ -13771,7 +13948,7 @@ dependencies = [
  "axum",
  "base64 0.21.7",
  "bytes",
- "h2",
+ "h2 0.3.26",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.28",
@@ -13886,7 +14063,7 @@ dependencies = [
  "camino",
  "chrono",
  "clap",
- "common",
+ "common 0.7.0-alpha.5",
  "ctrlc",
  "dojo-metrics",
  "dojo-types",

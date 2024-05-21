@@ -15,18 +15,12 @@ mod Config {
     #[event]
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub enum Event {
-        DifferProgramHashUpdate: DifferProgramHashUpdate,
-        MergerProgramHashUpdate: MergerProgramHashUpdate,
+        ProgramHashUpdate: ProgramHashUpdate,
         FactsRegistryUpdate: FactsRegistryUpdate
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
-    pub struct DifferProgramHashUpdate {
-        program_hash: felt252,
-    }
-
-    #[derive(Drop, starknet::Event, Debug, PartialEq)]
-    pub struct MergerProgramHashUpdate {
+    pub struct ProgramHashUpdate {
         program_hash: felt252,
     }
 
@@ -38,7 +32,6 @@ mod Config {
     #[storage]
     struct Storage {
         program_hash: felt252,
-        merger_program_hash: felt252,
         facts_registry: ContractAddress,
         owner: ContractAddress
     }
@@ -56,24 +49,14 @@ mod Config {
     impl Config<
         TContractState, +HasComponent<TContractState>
     > of IConfig<ComponentState<TContractState>> {
-        fn set_differ_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252) {
+        fn set_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252) {
             assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
             self.program_hash.write(program_hash);
-            self.emit(DifferProgramHashUpdate { program_hash });
+            self.emit(ProgramHashUpdate { program_hash });
         }
 
-        fn set_merger_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252) {
-            assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
-            self.merger_program_hash.write(program_hash);
-            self.emit(MergerProgramHashUpdate { program_hash });
-        }
-
-        fn get_differ_program_hash(self: @ComponentState<TContractState>) -> felt252 {
+        fn get_program_hash(self: @ComponentState<TContractState>) -> felt252 {
             self.program_hash.read()
-        }
-
-        fn get_merger_program_hash(self: @ComponentState<TContractState>) -> felt252 {
-            self.merger_program_hash.read()
         }
 
         fn set_facts_registry(ref self: ComponentState<TContractState>, address: ContractAddress) {

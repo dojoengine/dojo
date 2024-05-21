@@ -9,8 +9,7 @@ trait IConfig<T> {
     ///
     /// * `program_hash` - The program hash.
     /// * `config_hash` - The program's config hash.
-    fn set_differ_program_hash(ref self: T, program_hash: felt252);
-    fn set_merger_program_hash(ref self: T, program_hash: felt252);
+    fn set_program_hash(ref self: T, program_hash: felt252);
 
     /// Gets the information of the program that generates the
     /// state transition trace (namely DojoOS).
@@ -18,8 +17,7 @@ trait IConfig<T> {
     /// # Returns
     ///
     /// The program hash and it's configuration hash.
-    fn get_differ_program_hash(self: @T) -> felt252;
-    fn get_merger_program_hash(self: @T) -> felt252;
+    fn get_program_hash(self: @T) -> felt252;
 
     /// Sets the facts registry contract address, which is already
     /// initialized with the verifier information.
