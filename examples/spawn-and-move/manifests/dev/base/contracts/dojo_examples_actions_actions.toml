@@ -6,4 +6,5 @@ abi = "manifests/dev/abis/base/contracts/dojo_examples_actions_actions.json"
 reads = []
 writes = []
 computed = []
+constructor_calldata = []
 name = "dojo_examples::actions::actions"

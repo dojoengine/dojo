@@ -29,6 +29,11 @@ mod actions {
         direction: Direction,
     }
 
+    #[dojo::init]
+    fn dojo_init(other_contract: ContractAddress) {
+        // assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+    }
+
     #[abi(embed_v0)]
     impl ActionsComputedImpl of IActionsComputed<ContractState> {
         #[computed]

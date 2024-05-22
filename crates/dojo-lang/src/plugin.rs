@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use anyhow::Result;
-use cairo_lang_defs::patcher::PatchBuilder;
+use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, MacroPluginMetadata,
     PluginDiagnostic, PluginGeneratedFile, PluginResult,
@@ -16,6 +16,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
@@ -40,6 +41,7 @@ use crate::print::{handle_print_enum, handle_print_struct};
 pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
 pub const DOJO_EVENT_ATTR: &str = "dojo::event";
+pub const DOJO_INIT_ATTR: &str = "dojo::init";
 const DOJO_PLUGIN_EXPAND_VAR_ENV: &str = "DOJO_PLUGIN_EXPAND";
 
 #[derive(Clone, Debug, PartialEq)]
@@ -132,7 +134,85 @@ impl BuiltinDojoPlugin {
         }
     }
 
+    fn handle_init_fn(&self, db: &dyn SyntaxGroup, fn_ast: ast::FunctionWithBody) -> PluginResult {
+        let fn_decl = fn_ast.declaration(db);
+
+        let fn_name = fn_decl.name(db).text(db);
+        let params = fn_decl.signature(db).parameters(db);
+        let param_els = params.elements(db);
+
+        println!("name {}", fn_name);
+
+        if fn_name != "dojo_init" {
+            return self.result_with_diagnostic(
+                fn_decl.name(db).stable_ptr().untyped(),
+                "Dojo init function must be named dojo_init.".into(),
+            );
+        }
+
+        let node = RewriteNode::text("lambda!");
+
+        // let node = RewriteNode::interpolate_patched(
+        // "
+        // use dojo::systems::IDojoInit;
+        // #[abi(embed_v0)]
+        // fn  $name$ {
+        // use dojo::world;
+        // use dojo::world::IWorldDispatcher;
+        // use dojo::world::IWorldDispatcherTrait;
+        // use dojo::world::IWorldProvider;
+        // use dojo::world::IDojoResourceProvider;
+        //
+        // component!(path: dojo::components::upgradeable::upgradeable, storage: \
+        // upgradeable, event: UpgradeableEvent);
+        //
+        // #[abi(embed_v0)]
+        // impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+        // fn dojo_resource(self: @ContractState) -> felt252 {
+        // '$name$'
+        // }
+        // }
+        //
+        // #[abi(embed_v0)]
+        // impl WorldProviderImpl of IWorldProvider<ContractState> {
+        // fn world(self: @ContractState) -> IWorldDispatcher {
+        // self.world_dispatcher.read()
+        // }
+        // }
+        //
+        // #[abi(embed_v0)]
+        // impl UpgradableImpl = \
+        // dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+        //
+        // $body$
+        // }
+        // ",
+        // &UnorderedHashMap::from([
+        // ("name".to_string(), RewriteNode::Text(name.to_string())),
+        // ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+        // ]),
+        // );
+
+        let mut builder = PatchBuilder::new(db);
+        builder.add_modified(node);
+
+        PluginResult {
+            code: Some(PluginGeneratedFile {
+                name: fn_name.clone(),
+                content: builder.code,
+                aux_data: None,
+                code_mappings: builder.code_mappings,
+            }),
+            diagnostics: vec![],
+            remove_original_item: false,
+        }
+    }
+
     fn handle_fn(&self, db: &dyn SyntaxGroup, fn_ast: ast::FunctionWithBody) -> PluginResult {
+        if fn_ast.has_attr(db, DOJO_INIT_ATTR) {
+            return self.handle_init_fn(db, fn_ast);
+        }
+
         let attrs = fn_ast.attributes(db).query_attr(db, "computed");
         if attrs.is_empty() {
             return PluginResult::default();
@@ -469,6 +549,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
             "dojo::event".to_string(),
             "key".to_string(),
             "computed".to_string(),
+            "dojo::init".to_string(),
             // Not adding capacity for now, this will automatically
             // makes Scarb emitting a diagnostic saying this attribute is not supported.
             // "capacity".to_string(),
