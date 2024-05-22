@@ -6957,6 +6957,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "similar-asserts",
  "starknet",
  "starknet-crypto 0.6.2",
  "starknet_api",

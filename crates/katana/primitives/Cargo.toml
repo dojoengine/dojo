@@ -30,6 +30,9 @@ cairo-lang-starknet.workspace = true
 flate2.workspace = true
 starknet_api.workspace = true
 
+[dev-dependencies]
+similar-asserts.workspace = true
+
 [features]
 default = [ "serde" ]
 rpc = [  ]
