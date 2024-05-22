@@ -611,7 +611,7 @@ impl Sql {
 
                 for (idx, member) in t.iter().enumerate() {
                     let mut path_clone = path.clone();
-                    path_clone.push(format!("{}", idx));
+                    path_clone.push(format!("_{}", idx));
                     self.build_set_entity_queries_recursive(
                         path_clone,
                         event_id,
