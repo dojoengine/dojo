@@ -102,7 +102,9 @@ mod tests {
                     random_u128
                     type_deeply_nested {{
                         __typename
-                        depth
+                        depth {{
+                            option
+                        }}
                         type_number
                         type_string
                         type_nested_more {{
