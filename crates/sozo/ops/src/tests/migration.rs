@@ -236,11 +236,7 @@ async fn migrate_with_auto_authorize() {
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let txn_config = TxnConfig {
-        // make sure to test the assumption after transaction has been confirmed
-        wait: true,
-        ..Default::default()
-    };
+    let txn_config = TxnConfig::init_wait();
 
     let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
 
@@ -261,9 +257,10 @@ async fn migrate_with_auto_authorize() {
         let contract = manifest.contracts.iter().find(|a| a.name == c.diff.name).unwrap();
 
         for model in &contract.inner.writes {
-            let model = cairo_short_string_to_felt(model).unwrap();
+            let model_selector = get_selector_from_name(model).unwrap();
             let contract_address = ContractAddress(contract_address);
-            let is_writer = world_reader.is_writer(&model, &contract_address).call().await.unwrap();
+            let is_writer =
+                world_reader.is_writer(&model_selector, &contract_address).call().await.unwrap();
             assert!(is_writer);
         }
     }

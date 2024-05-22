@@ -112,7 +112,7 @@ async fn test_load_from_remote() {
 
     assert_eq!(id, format!("{:#x}", get_selector_from_name("Position").unwrap()));
     assert_eq!(name, "Position");
-    assert_eq!(packed_size, 1);
+    assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 2);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
