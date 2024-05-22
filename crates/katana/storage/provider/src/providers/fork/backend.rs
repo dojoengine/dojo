@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::pin::Pin;
 use std::sync::mpsc::{
     channel as oneshot, Receiver as OneshotReceiver, RecvError, Sender as OneshotSender,
@@ -119,8 +119,10 @@ type BackendRequestFuture = BoxFuture<'static, ()>;
 pub struct Backend<P> {
     /// The Starknet RPC provider that will be used to fetch data from.
     provider: Arc<P>,
+    // Set that keep track of current requests, for dedup purposes.
+    request_dedup_set: HashSet<String>,
     /// Requests that are currently being poll.
-    pending_requests: Vec<BackendRequestFuture>,
+    pending_requests: Vec<(String, BackendRequestFuture)>,
     /// Requests that are queued to be polled.
     queued_requests: VecDeque<BackendRequest>,
     /// A channel for receiving requests from the [BackendHandle]s.
@@ -169,6 +171,7 @@ where
             block,
             incoming: rx,
             provider: Arc::new(provider),
+            request_dedup_set: HashSet::new(),
             pending_requests: Vec::new(),
             queued_requests: VecDeque::new(),
         };
@@ -182,63 +185,88 @@ where
         let block = self.block;
         let provider = self.provider.clone();
 
+        // Check if there are similar requests in the queue before sending the request
         match request {
             BackendRequest::Nonce(Request { payload, sender }) => {
-                let fut = Box::pin(async move {
-                    let res = provider
-                        .get_nonce(block, Felt::from(payload))
-                        .await
-                        .map_err(BackendError::StarknetProvider);
+                let req_key = format!("nonce_{}", payload);
 
-                    sender.send(res).expect("failed to send nonce result")
-                });
+                if !self.request_dedup_set.contains(&req_key) {
+                    let fut = Box::pin(async move {
+                        let res = provider
+                            .get_nonce(block, Felt::from(payload))
+                            .await
+                            .map_err(BackendError::StarknetProvider);
 
-                self.pending_requests.push(fut);
+                        sender.send(res).expect("failed to send nonce result")
+                    });
+
+                    self.pending_requests.push((req_key.clone(), fut));
+                    self.request_dedup_set.insert(req_key);
+                }
             }
 
             BackendRequest::Storage(Request { payload: (addr, key), sender }) => {
-                let fut = Box::pin(async move {
-                    let res = provider
-                        .get_storage_at(Felt::from(addr), key, block)
-                        .await
-                        .map_err(BackendError::StarknetProvider);
+                let req_key = format!("storage_{}_{}", addr, key);
 
-                    sender.send(res).expect("failed to send storage result")
-                });
+                if !self.request_dedup_set.contains(&req_key) {
+                    let fut = Box::pin(async move {
+                        let res = provider
+                            .get_storage_at(Felt::from(addr), key, block)
+                            .await
+                            .map_err(BackendError::StarknetProvider);
 
-                self.pending_requests.push(fut);
+                        sender.send(res).expect("failed to send storage result")
+                    });
+
+                    self.pending_requests.push((req_key.clone(), fut));
+                    self.request_dedup_set.insert(req_key);
+                }
             }
 
             BackendRequest::ClassHash(Request { payload, sender }) => {
-                let fut = Box::pin(async move {
-                    let res = provider
-                        .get_class_hash_at(block, Felt::from(payload))
-                        .await
-                        .map_err(BackendError::StarknetProvider);
+                let req_key = format!("classhash_{}", payload);
 
-                    sender.send(res).expect("failed to send class hash result")
-                });
+                if !self.request_dedup_set.contains(&req_key) {
+                    let fut = Box::pin(async move {
+                        let res = provider
+                            .get_class_hash_at(block, Felt::from(payload))
+                            .await
+                            .map_err(BackendError::StarknetProvider);
 
-                self.pending_requests.push(fut);
+                        sender.send(res).expect("failed to send class hash result")
+                    });
+
+                    self.pending_requests.push((req_key.clone(), fut));
+                    self.request_dedup_set.insert(req_key);
+                }
             }
 
             BackendRequest::Class(Request { payload, sender }) => {
-                let fut = Box::pin(async move {
-                    let res = provider
-                        .get_class(block, payload)
-                        .await
-                        .map_err(BackendError::StarknetProvider);
+                let req_key = format!("class_{}", payload);
 
-                    sender.send(res).expect("failed to send class result")
-                });
+                if !self.request_dedup_set.contains(&req_key) {
+                    let fut = Box::pin(async move {
+                        let res = provider
+                            .get_class(block, payload)
+                            .await
+                            .map_err(BackendError::StarknetProvider);
 
-                self.pending_requests.push(fut);
+                        sender.send(res).expect("failed to send class result")
+                    });
+
+                    self.pending_requests.push((req_key.clone(), fut));
+                    self.request_dedup_set.insert(req_key);
+                }
             }
 
             #[cfg(test)]
             BackendRequest::Stats(sender) => {
+                // let req_key = "stats";
+                // if !self.request_dedup_set.contains(req_key) {
                 let total_ongoing_request = self.pending_requests.len();
                 sender.send(total_ongoing_request).expect("failed to send backend stats");
+                // self.request_dedup_set.insert(req_key.to_string());
+                // }
             }
         }
     }
@@ -275,11 +303,13 @@ where
 
             // poll all pending requests
             for n in (0..pin.pending_requests.len()).rev() {
-                let mut fut = pin.pending_requests.swap_remove(n);
+                let (fut_key, mut fut) = pin.pending_requests.swap_remove(n);
                 // poll the future and if the future is still pending, push it back to the
                 // pending requests so that it will be polled again
                 if fut.poll_unpin(cx).is_pending() {
-                    pin.pending_requests.push(fut);
+                    pin.pending_requests.push((fut_key.clone(), fut));
+                } else {
+                    pin.request_dedup_set.remove(&fut_key);
                 }
             }
 
@@ -734,6 +764,12 @@ mod tests {
             StateProvider::class_hash_of_contract(&provider, ADDR_1).unwrap(),
             Some(ADDR_1_CLASS_HASH)
         );
+    }
+
+    #[test]
+    fn requests_should_be_deduped() {
+        let backend = create_forked_backend(LOCAL_RPC_URL, 1);
+        let provider = SharedStateProvider(Arc::new(CacheStateDb::new(backend)));
     }
 
     // TODO: unignore this once we have separate the spawning of the backend thread from the backend
