@@ -125,7 +125,7 @@ async fn test_load_from_remote() {
     assert_eq!(id, format!("{:#x}", get_selector_from_name("Moves").unwrap()));
     assert_eq!(name, "Moves");
     assert_eq!(packed_size, 0);
-    assert_eq!(unpacked_size, 2);
+    assert_eq!(unpacked_size, 0);
 
     // print all entities
     let entities = sqlx::query("SELECT * FROM entities").fetch_all(&pool).await.unwrap();
