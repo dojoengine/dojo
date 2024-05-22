@@ -417,13 +417,8 @@ impl Sql {
         is_array: bool,
     ) {
         if let Ty::Enum(e) = model {
-            if e.options.iter().all(|o| {
-                if let Ty::Tuple(t) = &o.ty {
-                    t.is_empty()
-                } else {
-                    false
-                }
-            }) {
+            if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
+            {
                 return;
             }
         }
@@ -564,13 +559,11 @@ impl Sql {
                 }
             }
             Ty::Enum(e) => {
-                if e.options.iter().all(|o| {
-                    if let Ty::Tuple(t) = &o.ty {
-                        t.is_empty()
-                    } else {
-                        false
-                    }
-                }) {
+                if e.options.iter().all(
+                    |o| {
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                    },
+                ) {
                     return;
                 }
 
@@ -579,7 +572,8 @@ impl Sql {
                 update_members(
                     &[
                         Member { name: "option".to_string(), ty: Ty::Enum(e.clone()), key: false },
-                        Member { name: option.name.clone(), ty: option.ty.clone(), key: false }],
+                        Member { name: option.name.clone(), ty: option.ty.clone(), key: false },
+                    ],
                     &mut self.query_queue,
                     index,
                 );
@@ -844,12 +838,15 @@ impl Sql {
                 self.query_queue.enqueue(statement, arguments);
             }
             Ty::Enum(e) => {
-                for (idx, child) in e.options.iter().chain(vec![
-                    &EnumOption {
+                for (idx, child) in e
+                    .options
+                    .iter()
+                    .chain(vec![&EnumOption {
                         name: "option".to_string(),
                         ty: Ty::Enum(e.clone()),
-                    },
-                ]).enumerate() {
+                    }])
+                    .enumerate()
+                {
                     // Skip enum options that have no type / member
                     if let Ty::Tuple(tuple) = &child.ty {
                         if tuple.is_empty() {
