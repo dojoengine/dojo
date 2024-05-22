@@ -98,23 +98,23 @@ mod tests {
         assert_eq!(connection.edges.len(), 10);
         assert_eq!(connection.total_count, 20);
 
-        // first key param - returns all entities with `0x0` as first key
-        let entities = entities_query(&schema, "(keys: [\"0x0\"])").await;
+        // first key param - returns all entities with `0x1` as first key
+        let entities = entities_query(&schema, "(keys: [\"0x1\"])").await;
         let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
         let first_entity = connection.edges.first().unwrap();
         let last_entity = connection.edges.last().unwrap();
         assert_eq!(connection.edges.len(), 2);
         assert_eq!(connection.total_count, 2);
-        assert_eq!(first_entity.node.keys.clone().unwrap(), vec!["0x0", "0x1"]);
-        assert_eq!(last_entity.node.keys.clone().unwrap(), vec!["0x0"]);
+        assert_eq!(first_entity.node.keys.clone().unwrap(), vec!["0x1", "0x2"]);
+        assert_eq!(last_entity.node.keys.clone().unwrap(), vec!["0x1"]);
 
-        // double key param - returns all entities with `0x0` as first key and `0x1` as second key
-        let entities = entities_query(&schema, "(keys: [\"0x0\", \"0x1\"])").await;
+        // double key param - returns all entities with `0x1` as first key and `0x2` as second key
+        let entities = entities_query(&schema, "(keys: [\"0x1\", \"0x2\"])").await;
         let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
         let first_entity = connection.edges.first().unwrap();
         assert_eq!(connection.edges.len(), 1);
         assert_eq!(connection.total_count, 1);
-        assert_eq!(first_entity.node.keys.clone().unwrap(), vec!["0x0", "0x1"]);
+        assert_eq!(first_entity.node.keys.clone().unwrap(), vec!["0x1", "0x2"]);
 
         // pagination testing
         let entities = entities_query(&schema, "(first: 20)").await;
@@ -226,25 +226,25 @@ mod tests {
         assert_eq!(connection.page_info.end_cursor, None);
 
         // entity model union
-        let id = poseidon_hash_many(&[FieldElement::ZERO]);
+        let id = poseidon_hash_many(&[FieldElement::ONE]);
         let entity = entity_model_query(&schema, &id).await;
         let models = entity.get("models").ok_or("no models found").unwrap();
 
         // models should contain record & recordsibling
         let record: Record = serde_json::from_value(models[0].clone()).unwrap();
         assert_eq!(&record.__typename, "Record");
-        assert_eq!(record.record_id, 0);
+        assert_eq!(record.record_id, 1);
 
         let record_sibling: RecordSibling = serde_json::from_value(models[1].clone()).unwrap();
         assert_eq!(&record_sibling.__typename, "RecordSibling");
-        assert_eq!(record_sibling.record_id, 0);
+        assert_eq!(record_sibling.record_id, 1);
 
-        let id = poseidon_hash_many(&[FieldElement::ZERO, FieldElement::ONE]);
+        let id = poseidon_hash_many(&[FieldElement::ONE, FieldElement::TWO]);
         let entity = entity_model_query(&schema, &id).await;
         let models = entity.get("models").ok_or("no models found").unwrap();
         let subrecord: Subrecord = serde_json::from_value(models[0].clone()).unwrap();
         assert_eq!(&subrecord.__typename, "Subrecord");
-        assert_eq!(subrecord.subrecord_id, 1);
+        assert_eq!(subrecord.subrecord_id, 2);
         Ok(())
     }
 }
