@@ -19,7 +19,7 @@ use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
+use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
