@@ -99,8 +99,8 @@ where
 {
     let mut calls = Vec::new();
 
-    let mut world_reader = WorldContractReader::new(world.address, world.account.provider());
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
+    let world_reader = WorldContractReader::new(world.address, world.account.provider())
+        .with_block(BlockId::Tag(BlockTag::Pending));
 
     for mc in models_contracts {
         let model_name = parse_cairo_short_string(&mc.model)?;

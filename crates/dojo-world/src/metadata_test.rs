@@ -221,6 +221,9 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
     for entry in fs::read_dir(models_dir).unwrap().flatten() {
         let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
         let name = name.replace("_models_", "::models::");
+        // Some models are inside actions, we need a better way to gather those.
+        let name = name.replace("_actions_", "::actions::");
+        let name = name.replace("::actions_", "::actions::");
         artifacts.push(("models".to_string(), name));
     }
 
