@@ -222,10 +222,7 @@ pub enum GenesisJsonError {
     DuplicateClassName(String),
 
     #[error("Class name not found in the genesis classes: {0}")]
-    InvalidClassName(String),
-
-    #[error("Class hash was not provided for a class")]
-    MissingClassHash,
+    UnknownClassName(String),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -308,74 +305,67 @@ impl TryFrom<GenesisJson> for Genesis {
     type Error = GenesisJsonError;
 
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
-        let mut name_to_class_hash: HashMap<String, starknet::core::types::FieldElement> =
-            HashMap::new();
-             let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
+        let mut class_names: HashMap<String, FieldElement> = HashMap::new();
+        let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
         for entry in value.classes.into_iter() {
             let GenesisClassJson { class, class_hash, name } = entry;
-                let artifact = match class {
-                    PathOrFullArtifact::Artifact(artifact) => artifact,
-                    PathOrFullArtifact::Path(path) => {
-                        return Err(GenesisJsonError::UnresolvedClassPath(path));
-                    }
-                };
-            // Insert the name and class_hash into the name_to_class_hash HashMap
-            if let Some(name) = name {
-                if let Some(class_hash) = class_hash {
-                    name_to_class_hash.insert(name, class_hash);
-                } else {
-                    return Err(GenesisJsonError::MissingClassHash);
+            let artifact = match class {
+                PathOrFullArtifact::Artifact(artifact) => artifact,
+                PathOrFullArtifact::Path(path) => {
+                    return Err(GenesisJsonError::UnresolvedClassPath(path));
                 }
+            };
+
+            let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
+
+            let (class_hash, compiled_class_hash, sierra, casm) = match sierra {
+                Ok(sierra) => {
+                    let class = parse_compiled_class_v1(artifact)?;
+
+                    // check if the class hash is provided, otherwise compute it from the
+                    // artifacts
+                    let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
+                    let compiled_hash = class.casm.compiled_class_hash().to_be_bytes();
+
+                    (
+                        class_hash,
+                        FieldElement::from_bytes_be(&compiled_hash)?,
+                        Some(Arc::new(sierra.flatten()?)),
+                        Arc::new(CompiledClass::Class(class)),
+                    )
+                }
+
+                // if the artifact is not a sierra contract, we check if it's a legacy contract
+                Err(_) => {
+                    let casm = parse_deprecated_compiled_class(artifact.clone())?;
+
+                    let class_hash = if let Some(class_hash) = class_hash {
+                        class_hash
+                    } else {
+                        let casm: LegacyContractClass = serde_json::from_value(artifact.clone())?;
+                        casm.class_hash()?
+                    };
+
+                    (class_hash, class_hash, None, Arc::new(CompiledClass::Deprecated(casm)))
+                }
+            };
+            if let Some(name) = name {
+                class_names.insert(name, class_hash);
             }
 
-                let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
-
-                let (class_hash, compiled_class_hash, sierra, casm) = match sierra {
-                    Ok(sierra) => {
-                        let class = parse_compiled_class_v1(artifact)?;
-
-                        // check if the class hash is provided, otherwise compute it from the
-                        // artifacts
-                        let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
-                        let compiled_hash = class.casm.compiled_class_hash().to_be_bytes();
-
-                        (
-                            class_hash,
-                            FieldElement::from_bytes_be(&compiled_hash)?,
-                            Some(Arc::new(sierra.flatten()?)),
-                            Arc::new(CompiledClass::Class(class)),
-                        )
-                    }
-
-                    // if the artifact is not a sierra contract, we check if it's a legacy contract
-                    Err(_) => {
-                        let casm = parse_deprecated_compiled_class(artifact.clone())?;
-
-                        let class_hash = if let Some(class_hash) = class_hash {
-                            class_hash
-                        } else {
-                            let casm: LegacyContractClass =
-                                serde_json::from_value(artifact.clone())?;
-                            casm.class_hash()?
-                        };
-
-                        (class_hash, class_hash, None, Arc::new(CompiledClass::Deprecated(casm)))
-                    }
-                };
-
-                         classes.insert(class_hash, GenesisClass { compiled_class_hash, sierra, casm });
-            }
+            classes.insert(class_hash, GenesisClass { compiled_class_hash, sierra, casm });
+        }
 
         let fee_token = FeeTokenConfig {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
             decimals: value.fee_token.decimals,
             address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
-            class_hash: match value.fee_token.class  {
+            class_hash: match value.fee_token.class {
                 Some(NameOrHash::ClassHash(class_hash)) => class_hash,
-                Some(NameOrHash::ClassName(ref class_name)) => *name_to_class_hash
+                Some(NameOrHash::ClassName(ref class_name)) => *class_names
                     .get(class_name)
-                    .ok_or_else(|| GenesisJsonError::InvalidClassName(class_name.clone()))?,
+                    .ok_or_else(|| GenesisJsonError::UnknownClassName(class_name.clone()))?,
                 None => DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
             },
             storage: value.fee_token.storage,
@@ -389,10 +379,10 @@ impl TryFrom<GenesisJson> for Genesis {
             }
 
             Some(NameOrHash::ClassName(name)) => {
-                let hash = name_to_class_hash
+                let hash = class_names
                     .get(&name)
                     .cloned()
-                    .ok_or_else(|| GenesisJsonError::InvalidClassName(name.clone()))?;
+                    .ok_or_else(|| GenesisJsonError::UnknownClassName(name.clone()))?;
                 if !classes.contains_key(&hash) {
                     return Err(GenesisJsonError::MissingClass(hash));
                 }
@@ -425,9 +415,9 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
 
                 Some(NameOrHash::ClassName(name)) => {
-                    let hash = *name_to_class_hash
+                    let hash = *class_names
                         .get(&name)
-                        .ok_or_else(|| GenesisJsonError::InvalidClassName(name))?;
+                        .ok_or_else(|| GenesisJsonError::UnknownClassName(name))?;
                     if !classes.contains_key(&hash) {
                         return Err(GenesisJsonError::MissingClass(hash));
                     }
@@ -526,13 +516,13 @@ impl TryFrom<GenesisJson> for Genesis {
         for (address, contract) in value.contracts {
             // check that the class hash exists in the classes field
             let class_hash = if let Some(hash) = contract.class {
-                                Some(match hash {
+                Some(match hash {
                     NameOrHash::ClassHash(hash) => hash,
                     NameOrHash::ClassName(name) => {
                         // Handle the case when the class is specified by name.
-                        *name_to_class_hash
+                        *class_names
                             .get(&name)
-                            .ok_or_else(|| GenesisJsonError::InvalidClassName(name))?
+                            .ok_or_else(|| GenesisJsonError::UnknownClassName(name))?
                     }
                 })
             } else {
@@ -548,7 +538,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 address,
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: contract.balance,
-                 class_hash,
+                    class_hash,
                     nonce: contract.nonce,
                     storage: contract.storage,
                 }),
@@ -634,7 +624,6 @@ mod tests {
     use std::io::BufReader;
     use std::path::PathBuf;
     use std::str::FromStr;
-    use crate::genesis::json::NameOrHash;
 
     use alloy_primitives::U256;
     use starknet::macros::felt;
@@ -653,7 +642,7 @@ mod tests {
         DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
         DEFAULT_UDC_ADDRESS,
     };
-    use crate::genesis::json::to_base64;
+    use crate::genesis::json::{to_base64, NameOrHash};
     use crate::genesis::{
         ContractAddress, FeeTokenConfig, Genesis, GenesisAllocation, GenesisClass,
         UniversalDeployerConfig,
@@ -674,7 +663,7 @@ mod tests {
         assert_eq!(json.fee_token.address, Some(ContractAddress::from(felt!("0x55"))));
         assert_eq!(json.fee_token.name, String::from("ETHER"));
         assert_eq!(json.fee_token.symbol, String::from("ETH"));
-                assert_eq!(json.fee_token.class, Some(NameOrHash::ClassName(String::from("MyErc20"))));
+        assert_eq!(json.fee_token.class, Some(NameOrHash::ClassName(String::from("MyErc20"))));
         assert_eq!(json.fee_token.decimals, 18);
         assert_eq!(
             json.fee_token.storage,
@@ -762,7 +751,7 @@ mod tests {
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
         assert_eq!(json.contracts[&contract_1].nonce, None);
-                assert_eq!(
+        assert_eq!(
             json.contracts[&contract_1].class,
             Some(NameOrHash::ClassName(String::from("MyErc20")))
         );
@@ -793,20 +782,18 @@ mod tests {
                 GenesisClassJson {
                     class_hash: Some(felt!("0x8")),
                     class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
-                                        name: Some("MyErc20".to_string()),
+                    name: Some("MyErc20".to_string()),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
                     class: PathBuf::from("../../../contracts/compiled/universal_deployer.json")
                         .into(),
-                                            name:None, 
-                        
+                    name: None,
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0xa55")),
                     class: PathBuf::from("../../../contracts/compiled/oz_account_080.json").into(),
-                                        name:None, 
-                    
+                    name: None,
                 },
             ]
         );
@@ -816,38 +803,38 @@ mod tests {
     fn deserialize_from_json_with_class() {
         let file = File::open("./src/genesis/test-genesis-with-class.json").unwrap();
         let genesis_result: Result<GenesisJson, _> = serde_json::from_reader(BufReader::new(file));
-match genesis_result {
-    Ok(genesis) => {
-        assert_eq!(
-            genesis.classes,
-            vec![
-                GenesisClassJson {
-                    class_hash: None,
-                    class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
-                                        name: Some("MyErc20".to_string()),
-                },
-                GenesisClassJson {
-                    class_hash: Some(felt!("0x80085")),
-                    class: PathBuf::from("../../../contracts/compiled/universal_deployer.json")
-                        .into(),
+        match genesis_result {
+            Ok(genesis) => {
+                assert_eq!(
+                    genesis.classes,
+                    vec![
+                        GenesisClassJson {
+                            class_hash: None,
+                            class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
+                            name: Some("MyErc20".to_string()),
+                        },
+                        GenesisClassJson {
+                            class_hash: Some(felt!("0x80085")),
+                            class: PathBuf::from(
+                                "../../../contracts/compiled/universal_deployer.json"
+                            )
+                            .into(),
                             name: None,
-                },
-                GenesisClassJson {
-                    class_hash: Some(felt!("0xa55")),
-                    class: serde_json::to_value(DEFAULT_OZ_ACCOUNT_CONTRACT.clone())
-                        .unwrap()
-                        .into(),
+                        },
+                        GenesisClassJson {
+                            class_hash: Some(felt!("0xa55")),
+                            class: serde_json::to_value(DEFAULT_OZ_ACCOUNT_CONTRACT.clone())
+                                .unwrap()
+                                .into(),
                             name: None,
-                },
-            ]
-        ); 
-    },
-    Err(e) => {
-        println!("Error parsing JSON: {:?}", e);
-    }
-}
-
-       
+                        },
+                    ]
+                );
+            }
+            Err(e) => {
+                println!("Error parsing JSON: {:?}", e);
+            }
+        }
     }
 
     #[test]
