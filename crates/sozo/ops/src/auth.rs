@@ -165,8 +165,7 @@ where
                 // Should we add the version into the `ModelContract` struct? Can we always know
                 // that?
                 let model_name = parse_cairo_short_string(name)?;
-                let model_selector = get_selector_from_name(&model_name)?;
-                model_selector
+                get_selector_from_name(&model_name)?
             }
             ResourceType::Contract(name_or_address) => {
                 utils::get_contract_address(world, name_or_address.clone()).await?
@@ -272,8 +271,7 @@ where
                 // Should we add the version into the `ModelContract` struct? Can we always know
                 // that?
                 let model_name = parse_cairo_short_string(name)?;
-                let model_selector = get_selector_from_name(&model_name)?;
-                model_selector
+                get_selector_from_name(&model_name)?
             }
             ResourceType::Contract(name_or_address) => {
                 utils::get_contract_address(world, name_or_address.clone()).await?
