@@ -1,5 +1,5 @@
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
-use async_graphql::{Name, Value};
+use async_graphql::Value;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -154,7 +154,7 @@ fn data_objects_recursion(
                 let nested_objects =
                     data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
 
-                return Some(nested_objects);
+                Some(nested_objects)
             }
             _ => None,
         })

@@ -192,7 +192,7 @@ pub async fn model_data_recursive_query(
     let mut nested_value_mappings = Vec::new();
 
     for (idx, row) in rows.iter().enumerate() {
-        let mut nested_value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
+        let mut nested_value_mapping = value_mapping_from_row(row, type_mapping, true)?;
 
         for (field_name, type_data) in type_mapping {
             if let TypeData::Nested((_, nested_mapping)) = type_data {

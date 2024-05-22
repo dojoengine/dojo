@@ -54,10 +54,7 @@ mod tests {
                   type_u32
                   type_u64
                   type_u128
-                  type_u256 {{
-                    _0
-                    _1
-                  }}
+                  type_u256
                   type_bool
                   type_felt
                   type_class_hash

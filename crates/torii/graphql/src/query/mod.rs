@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
