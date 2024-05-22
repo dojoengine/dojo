@@ -89,6 +89,11 @@ pub fn parse_where_argument(
             .filter_map(|(type_name, type_data)| {
                 input_object.get(type_name).map(|input| match type_data {
                     TypeData::Simple(_) => {
+                        if type_data.type_ref() == TypeRef::named("Enum") {
+                            let value = input.string().unwrap();
+                            return Ok(Some(parse_filter(type_name, FilterValue::String(value.to_string()))));
+                        }
+
                         let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
                         let filter_value = match primitive.to_sql_type() {
                             SqlType::Integer => parse_integer(input, type_name, primitive)?,
