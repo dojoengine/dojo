@@ -66,6 +66,8 @@ fn build_type_mapping(
         })
         .collect::<sqlx::Result<TypeMapping>>()?;
 
+    println!("Type Mapping: {:#?}", type_mapping);
+
     Ok(type_mapping)
 }
 
@@ -84,6 +86,11 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                 .expect("Array type should have nested type"),
             nested_members,
         ))),
+        // Enums that do not have a nested member are considered as a simple Enum
+        "Enum" if !nested_members.iter().any(|&nested_member| {
+            nested_member.model_id == member.model_id
+                && nested_member.id.ends_with(&member.name)
+        }) => TypeData::Simple(TypeRef::named("Enum")),
         _ => parse_nested_type(member, nested_members),
     }
 }
@@ -92,18 +99,16 @@ fn parse_nested_type(member: &ModelMember, nested_members: &[&ModelMember]) -> T
     let nested_mapping: TypeMapping = nested_members
         .iter()
         .filter_map(|&nested_member| {
-            if member.model_id == nested_member.model_id && nested_member.id.ends_with(&member.name) {
+            // if the nested member is an Enum and the member is an Enum, we need to inject the Enum type
+            // in order to have a "option" field in the nested Enum for the enum variant
+            if nested_member.type_enum == "Enum" && nested_member.name == "option" && member.type_enum == "Enum" {
+                Some((Name::new("option"), TypeData::Simple(TypeRef::named("Enum"))))
+            } else if member.model_id == nested_member.model_id && nested_member.id.ends_with(&member.name) {
                 let type_data = member_to_type_data(nested_member, nested_members);
                 Some((Name::new(&nested_member.name), type_data))
             } else {
                 None
             }
-        })
-        // add Enum option for Enum types
-        .chain(if member.type_enum == "Enum" {
-            vec![(Name::new("option"), TypeData::Simple(TypeRef::named("Enum")))]
-        } else {
-            vec![]
         })
         .collect();
 
@@ -138,8 +143,9 @@ pub fn value_mapping_from_row(
     let mut value_mapping = types
         .iter()
         .filter(|(_, type_data)| {
+            type_data.is_simple() 
             // ignore Enum fields because the column is not stored in this row. we inejct it later
-            type_data.is_simple() && !(type_data.type_ref().to_string() == "Enum")
+            // && !(type_data.type_ref().to_string() == "Enum")
         })
         .map(|(field_name, type_data)| {
             let mut value =

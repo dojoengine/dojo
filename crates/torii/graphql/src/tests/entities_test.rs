@@ -47,9 +47,7 @@ mod tests {
               models {{
                 ... on Record {{
                   __typename
-                  depth {{
-                    option
-                  }}
+                  depth
                   record_id
                   type_u8
                   type_u16

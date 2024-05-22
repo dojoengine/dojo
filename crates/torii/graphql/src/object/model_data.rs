@@ -1,5 +1,5 @@
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
-use async_graphql::Value;
+use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::{FromRow, Pool, Sqlite};
@@ -18,7 +18,7 @@ use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
 use crate::utils::extract;
 
-#[derive(FromRow, Deserialize, PartialEq, Eq)]
+#[derive(FromRow, Deserialize, PartialEq, Eq, Debug)]
 pub struct ModelMember {
     pub id: String,
     pub model_id: String,

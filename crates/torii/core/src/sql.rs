@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Member, Ty};
+use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
@@ -416,6 +416,18 @@ impl Sql {
         block_timestamp: u64,
         is_array: bool,
     ) {
+        if let Ty::Enum(e) = model {
+            if e.options.iter().all(|o| {
+                if let Ty::Tuple(t) = &o.ty {
+                    t.is_empty()
+                } else {
+                    false
+                }
+            }) {
+                return;
+            }
+        }
+
         self.build_model_query(path.clone(), model, *model_idx, block_timestamp, is_array);
 
         let mut build_member = |pathname: &str, member: &Ty| {
@@ -552,10 +564,22 @@ impl Sql {
                 }
             }
             Ty::Enum(e) => {
+                if e.options.iter().all(|o| {
+                    if let Ty::Tuple(t) = &o.ty {
+                        t.is_empty()
+                    } else {
+                        false
+                    }
+                }) {
+                    return;
+                }
+
                 let option = e.options[e.option.unwrap() as usize].clone();
 
                 update_members(
-                    &[Member { name: option.name.clone(), ty: option.ty.clone(), key: false }],
+                    &[
+                        Member { name: "option".to_string(), ty: Ty::Enum(e.clone()), key: false },
+                        Member { name: option.name.clone(), ty: option.ty.clone(), key: false }],
                     &mut self.query_queue,
                     index,
                 );
@@ -820,7 +844,12 @@ impl Sql {
                 self.query_queue.enqueue(statement, arguments);
             }
             Ty::Enum(e) => {
-                for (idx, child) in e.options.iter().enumerate() {
+                for (idx, child) in e.options.iter().chain(vec![
+                    &EnumOption {
+                        name: "option".to_string(),
+                        ty: Ty::Enum(e.clone()),
+                    },
+                ]).enumerate() {
                     // Skip enum options that have no type / member
                     if let Ty::Tuple(tuple) = &child.ty {
                         if tuple.is_empty() {

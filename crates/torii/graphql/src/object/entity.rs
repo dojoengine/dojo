@@ -137,6 +137,7 @@ fn model_union_field() -> Field {
                     for (id, name) in model_ids {
                         // the model id in the model mmeebrs table is the hashed model name (id)
                         let type_mapping = type_mapping_query(&mut conn, &id).await?;
+                        println!("type_mapping: {:?}", type_mapping);
 
                         // but the table name for the model data is the unhashed model name
                         let data: ValueMapping = match model_data_recursive_query(
@@ -151,6 +152,8 @@ fn model_union_field() -> Field {
                             Value::Object(map) => map,
                             _ => unreachable!(),
                         };
+
+                        println!("data: {:?}", data);
 
                         results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
@@ -196,7 +199,7 @@ pub async fn model_data_recursive_query(
                 let mut nested_path = path_array.clone();
                 nested_path.push(field_name.to_string());
 
-                let mut nested_values = model_data_recursive_query(
+                let nested_values = model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
@@ -204,22 +207,6 @@ pub async fn model_data_recursive_query(
                     nested_mapping,
                 )
                 .await?;
-
-                match nested_mapping.get(&Name::new("option")) {
-                    Some(TypeData::Simple(TypeRef::Named(name))) if name == "Enum" => {
-                        let query = format!(
-                            "SELECT external_{} FROM {} WHERE entity_id = '{}'",
-                            field_name, table_name, entity_id,
-                        );
-
-                        let (value,): (String,) =
-                            sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
-                        if let Value::Object(map) = &mut nested_values {
-                            map.insert(Name::new("option"), Value::from(value));
-                        }
-                    }
-                    _ => {}
-                };
 
                 nested_value_mapping.insert(Name::new(field_name), nested_values);
             } else if let TypeData::List(inner) = type_data {
@@ -250,46 +237,6 @@ pub async fn model_data_recursive_query(
 
                 nested_value_mapping.insert(Name::new(field_name), data);
             }
-            //  else if let TypeData::Enum((_, types)) = type_data {
-            //     let mut enum_union = IndexMap::new();
-            //     for (type_ref, mapping) in types {
-            //         let mut nested_path = path_array.clone();
-            //         nested_path.push(field_name.to_string());
-            //         nested_path.push(type_ref.to_string().split("_").next().unwrap().
-            // to_string());
-
-            //         let mapping: &IndexMap<_, _> = match &mapping {
-            //             TypeData::Nested((_, mapping)) => mapping,
-            //             _ => unreachable!(),
-            //         };
-
-            //         let data = if mapping.get(&Name::new("value")).is_some() {
-            //             let query = format!(
-            //                 "SELECT external_{} FROM {} WHERE entity_id = '{}'",
-            //                 field_name,
-            //                 table_name,
-            //                 entity_id,
-            //             );
-
-            //             let (value,): (String,) =
-            // sqlx::query_as(&query).fetch_one(conn.as_mut()).await?;
-            // Value::Object(IndexMap::from([(Name::new("value"), Value::from(value))]))
-            //         } else {
-            //             model_data_recursive_query(
-            //                 conn,
-            //                 nested_path,
-            //                 entity_id,
-            //                 if rows.len() > 1 { Some(idx as i64) } else { None },
-            //                 mapping,
-            //             )
-            //             .await?
-            //         };
-
-            //         enum_union.insert(Name::new(&type_ref.to_string()), data);
-            //     }
-
-            //     nested_value_mapping.insert(Name::new(field_name), Value::Object(enum_union));
-            // }
         }
 
         nested_value_mappings.push(Value::Object(nested_value_mapping));
