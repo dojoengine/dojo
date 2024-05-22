@@ -91,7 +91,10 @@ pub fn parse_where_argument(
                     TypeData::Simple(_) => {
                         if type_data.type_ref() == TypeRef::named("Enum") {
                             let value = input.string().unwrap();
-                            return Ok(Some(parse_filter(type_name, FilterValue::String(value.to_string()))));
+                            return Ok(Some(parse_filter(
+                                type_name,
+                                FilterValue::String(value.to_string()),
+                            )));
                         }
 
                         let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
