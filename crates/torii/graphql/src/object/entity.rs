@@ -137,7 +137,6 @@ fn model_union_field() -> Field {
                     for (id, name) in model_ids {
                         // the model id in the model mmeebrs table is the hashed model name (id)
                         let type_mapping = type_mapping_query(&mut conn, &id).await?;
-                        println!("type_mapping: {:?}", type_mapping);
 
                         // but the table name for the model data is the unhashed model name
                         let data: ValueMapping = match model_data_recursive_query(
@@ -152,8 +151,6 @@ fn model_union_field() -> Field {
                             Value::Object(map) => map,
                             _ => unreachable!(),
                         };
-
-                        println!("data: {:?}", data);
 
                         results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
