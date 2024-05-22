@@ -261,7 +261,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(data.models.len(), 3);
+        assert_eq!(data.models.len(), 4);
 
         assert_eq!(data.world.name, "dojo_example");
 
