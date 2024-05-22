@@ -10,6 +10,9 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 mod v0 {
     #[dojo::contract]
+    mod contract_v0 {}
+
+    #[dojo::contract]
     mod contract_upgrade {
         #[starknet::interface]
         trait IQuantumLeap<TState> {
@@ -48,6 +51,81 @@ mod contract_not_world_provider {
     struct Storage {}
 }
 
+
+#[starknet::contract]
+mod contract_resource_zero {
+    use dojo::world::{IWorldDispatcher, IWorldProvider, IDojoResourceProvider};
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+        fn dojo_resource(self: @ContractState) -> felt252 {
+            0
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl WorldProviderImpl of IWorldProvider<ContractState> {
+        fn world(self: @ContractState) -> IWorldDispatcher {
+            IWorldDispatcher { contract_address: 'world'.try_into().unwrap() }
+        }
+    }
+}
+
+
+#[starknet::contract]
+mod custom_dojo_resource_conflit {
+    use dojo::world::{IWorldDispatcher, IWorldProvider, IDojoResourceProvider};
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+        fn dojo_resource(self: @ContractState) -> felt252 {
+            'contract_upgrade'
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl WorldProviderImpl of IWorldProvider<ContractState> {
+        fn world(self: @ContractState) -> IWorldDispatcher {
+            IWorldDispatcher { contract_address: 'world'.try_into().unwrap() }
+        }
+    }
+}
+
+#[starknet::contract]
+mod custom_dojo_resource_conflit_model {
+    use dojo::world::{IWorldDispatcher, IWorldProvider, IDojoResourceProvider};
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+        fn dojo_resource(self: @ContractState) -> felt252 {
+            'Capital'
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl WorldProviderImpl of IWorldProvider<ContractState> {
+        fn world(self: @ContractState) -> IWorldDispatcher {
+            IWorldDispatcher { contract_address: 'world'.try_into().unwrap() }
+        }
+    }
+}
+
+#[derive(Model, Copy, Clone, Drop, Serde)]
+struct Capital {
+    #[key]
+    id: u32,
+    name: felt252
+}
+
 use v1::contract_upgrade::{IQuantumLeapDispatcher, IQuantumLeapDispatcherTrait};
 
 // Utils
@@ -80,7 +158,9 @@ fn test_upgrade_from_world_not_world_provider() {
 
     let v0_address = world
         .deploy_contract('salt', v0::contract_upgrade::TEST_CLASS_HASH.try_into().unwrap());
-    let new_class_hash: ClassHash = contract_not_world_provider::TEST_CLASS_HASH.try_into().unwrap();
+    let new_class_hash: ClassHash = contract_not_world_provider::TEST_CLASS_HASH
+        .try_into()
+        .unwrap();
 
     world.upgrade_contract(v0_address, new_class_hash);
 }
@@ -115,7 +195,7 @@ mod invalid_model {
             // Pre-computed address of a contract deployed through the world.
             // To print this addres, run:
             // sozo test --manifest-path crates/dojo-core/Scarb.toml -f test_deploy_from_world_invalid_model
-            0x5c5e3c5bfe74b54f17d81863851b6f87fc9684828e61e6ce2894fb885b51ff1
+            0x5c8db1d037fed94542d5d01429a9e01ae2bcefec50224260ccc83f72bb15298
         }
     }
 }
@@ -157,3 +237,72 @@ fn test_deploy_from_world_invalid_model_world() {
     let world = deploy_world();
     world.register_model(invalid_model_world::TEST_CLASS_HASH.try_into().unwrap());
 }
+
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected: ('resource already decalred', 'ENTRYPOINT_FAILED'))]
+fn test_cannot_deploy_with_same_dojo_resource() {
+    let world = deploy_world();
+    let _v0_address = world
+        .deploy_contract('salt', v0::contract_upgrade::TEST_CLASS_HASH.try_into().unwrap());
+    let _v1_address = world
+        .deploy_contract('salt', v1::contract_upgrade::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected: ('resource already decalred', 'ENTRYPOINT_FAILED'))]
+fn test_cannot_deploy_contract_with_model_name_eq_dojo_resource() {
+    let world = deploy_world();
+
+    world.register_model(capital::TEST_CLASS_HASH.try_into().unwrap());
+
+    let _v0_address = world
+        .deploy_contract(
+            'salt', custom_dojo_resource_conflit_model::TEST_CLASS_HASH.try_into().unwrap()
+        );
+}
+
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected: ('invalid resource', 'ENTRYPOINT_FAILED'))]
+fn test_cannot_deploy_with_dojo_resource_eq_zero() {
+    let world = deploy_world();
+    let _address = world
+        .deploy_contract('salt', contract_resource_zero::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+
+#[test]
+#[available_gas(60000000)]
+fn test_can_upgrade_if_resource_owner() {
+    let world = deploy_world();
+
+    let v0_address = world
+        .deploy_contract('salt', v0::contract_upgrade::TEST_CLASS_HASH.try_into().unwrap());
+
+    let _v1_address = world
+        .upgrade_contract(v0_address, v1::contract_upgrade::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected: ('invalid resource', 'ENTRYPOINT_FAILED'))]
+fn test_cannot_upgrade_with_different_resource_name() {
+    let world = deploy_world();
+
+    // user  deploy contract_v0 ('contract_v0')
+    let v0_address = world
+        .deploy_contract('salt', v0::contract_v0::TEST_CLASS_HASH.try_into().unwrap());
+
+    // user  attempt to update contract_v0 ('contract_v0') to custom_dojo_resource_conflit ('contract_upgrade')
+    let _v1_address = world
+        .upgrade_contract(
+            v0_address, custom_dojo_resource_conflit::TEST_CLASS_HASH.try_into().unwrap()
+        );
+}
+
+

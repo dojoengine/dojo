@@ -632,3 +632,8 @@ fn test_facts_registry_event_emit() {
         Option::Some(FactsRegistryUpdate { address: contract_address_const::<0x12>() })
     );
 }
+
+
+
+
+

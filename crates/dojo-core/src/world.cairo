@@ -448,10 +448,13 @@ mod world {
             assert(dojo_resource_contract_address.is_zero(), Errors::RESOURCE_ALREADY_DECLARED);
             assert(dojo_resource.is_non_zero(), Errors::INVALID_RESOURCE);
 
-            self.contracts.write(dojo_resource, (class_hash, contract_address));
-            self.owners.write((dojo_resource.into(), get_caller_address()), true);
- 
+            // check dojo_resource not already a registered Model
+            let (_, model_contract_address) = self.models.read(dojo_resource);
+            assert(model_contract_address.is_zero(), Errors::RESOURCE_ALREADY_DECLARED);
 
+            self.contracts.write(dojo_resource, (class_hash, contract_address));
+            self.owners.write((dojo_resource.into(), get_caller_address()), true); 
+ 
             EventEmitter::emit(
                 ref self, ContractDeployed { salt, class_hash, address: contract_address }
             );
@@ -474,7 +477,6 @@ mod world {
         ) -> ClassHash {
             assert(is_account_owner(@self, address.into()), Errors::NOT_OWNER);
             let curr_dojo_resource = dojo::contract::get_dojo_resource(address).unwrap_syscall();
-            assert(is_account_owner(@self, curr_dojo_resource.into()), Errors::NOT_RESOURCE_OWNER);
             
             IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
             
