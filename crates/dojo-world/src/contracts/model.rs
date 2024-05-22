@@ -212,7 +212,10 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
                 .children
                 .iter()
                 .map(|(name, ty)| {
-                    let name = parse_cairo_short_string(name)?;
+                    // strip of the type (T) of the enum variant for now
+                    // breaks the db queries
+                    let name =
+                        parse_cairo_short_string(name)?.split("(").next().unwrap().to_string();
                     let ty = parse_schema(ty)?;
 
                     Ok(EnumOption { name, ty })
