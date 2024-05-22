@@ -16,7 +16,7 @@ enum Layout {
     ByteArray,
     // there is one layout per variant.
     // the `selector` field identifies the variant
-    // the `layout` field defines the full variant layout (variant value + optional variant data)
+    // the `layout` defines the variant data (could be empty for variant without data).
     Enum: Span<FieldLayout>,
 }
 
@@ -203,18 +203,10 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
     fn layout() -> Layout {
         Layout::Enum(
             array![
-                FieldLayout {
-                    // Some
-                    selector: 0,
-                    layout: Layout::Tuple(
-                        array![Layout::Fixed(array![8].span()), Introspect::<T>::layout()].span()
-                    )
-                },
-                FieldLayout {
-                    // None
-                    selector: 1,
-                    layout: Layout::Tuple(array![Layout::Fixed(array![8].span())].span())
-                },
+                FieldLayout { // Some
+                selector: 0, layout: Introspect::<T>::layout() },
+                FieldLayout { // None
+                selector: 1, layout: Layout::Fixed(array![].span()) },
             ]
                 .span()
         )

@@ -3,6 +3,7 @@ use dojo_types::schema::deep_print_ty;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
@@ -48,7 +49,7 @@ pub async fn model_layout(
     let layout = model.layout().await?;
     let schema = model.schema().await?;
 
-    deep_print_layout(&layout, &schema);
+    deep_print_layout(&name, &layout, &schema);
 
     Ok(())
 }
@@ -113,7 +114,7 @@ struct FieldLayoutInfo {
     layout: String,
 }
 
-fn format_fixed(layout: &Vec<u8>) -> String {
+fn format_fixed(layout: &[u8]) -> String {
     format!("[{}]", layout.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", "))
 }
 
@@ -134,15 +135,13 @@ fn format_selector(selector: String) -> String {
 }
 
 fn format_name(name: String) -> String {
-    if !name.is_empty() {
-        format!(" {} ", name)
-    } else {
-        name
-    }
+    if !name.is_empty() { format!(" {} ", name) } else { name }
 }
 
 fn format_field(selector: String, name: String, layout: String) -> String {
-    format!("    {:<20}{:<18}: {}", format_selector(selector), format_name(name), layout)
+    let layout = if layout.eq("[]") { "".to_string() } else { format!(": {layout}") };
+
+    format!("    {:<20}{:<18}{}", format_selector(selector), format_name(name), layout)
 }
 
 fn format_field_layout(
@@ -150,7 +149,7 @@ fn format_field_layout(
     schema: &dojo_types::schema::Ty,
 ) -> String {
     match layout {
-        dojo_world::contracts::model::abigen::model::Layout::Fixed(x) => format_fixed(&x),
+        dojo_world::contracts::model::abigen::model::Layout::Fixed(x) => format_fixed(x),
         dojo_world::contracts::model::abigen::model::Layout::ByteArray => {
             "layout(ByteArray)".to_string()
         }
@@ -158,7 +157,7 @@ fn format_field_layout(
     }
 }
 
-fn is_layout_in_list(list: &Vec<LayoutInfo>, name: &String) -> bool {
+fn is_layout_in_list(list: &[LayoutInfo], name: &String) -> bool {
     list.iter().any(|x| x.name.eq(name))
 }
 
@@ -180,10 +179,7 @@ fn get_name_from_schema(schema: &dojo_types::schema::Ty) -> String {
             dojo_types::primitive::Primitive::ContractAddress(_) => "ContractAddress".to_string(),
         },
         dojo_types::schema::Ty::Tuple(t) => {
-            format!(
-                "({})",
-                t.iter().map(|x| get_name_from_schema(x)).collect::<Vec<_>>().join(", ")
-            )
+            format!("({})", t.iter().map(get_name_from_schema).collect::<Vec<_>>().join(", "))
         }
         dojo_types::schema::Ty::Array(a) => format!("Array<{}>", get_name_from_schema(&a[0])),
         _ => "".to_string(),
@@ -191,110 +187,101 @@ fn get_name_from_schema(schema: &dojo_types::schema::Ty) -> String {
 }
 
 fn get_printable_layout_list_from_struct(
-    field_layouts: &Vec<dojo_world::contracts::model::abigen::model::FieldLayout>,
+    field_layouts: &[dojo_world::contracts::model::abigen::model::FieldLayout],
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    match schema {
-        dojo_types::schema::Ty::Struct(ss) => {
-            let name = get_name_from_schema(&schema);
+    if let dojo_types::schema::Ty::Struct(ss) = schema {
+        let name = get_name_from_schema(schema);
 
-            // proces main struct
-            if !is_layout_in_list(layout_list, &name) {
-                layout_list.push(LayoutInfo {
-                    layout_type: LayoutInfoType::Struct,
-                    name,
-                    fields: field_layouts
-                        .iter()
-                        .zip(ss.children.iter().filter(|x| !x.key))
-                        .map(|(l, m)| FieldLayoutInfo {
-                            selector: format!("{:#x}", l.selector),
-                            name: m.name.clone(),
-                            layout: format_field_layout(&l.layout, &m.ty),
-                        })
-                        .collect::<Vec<_>>(),
-                });
-            }
-
-            // process members
-            for (member_layout, member) in
-                field_layouts.iter().zip(ss.children.iter().filter(|x| !x.key))
-            {
-                get_printable_layout_list(&member_layout.layout, &member.ty, layout_list);
-            }
+        // proces main struct
+        if !is_layout_in_list(layout_list, &name) {
+            layout_list.push(LayoutInfo {
+                layout_type: LayoutInfoType::Struct,
+                name,
+                fields: field_layouts
+                    .iter()
+                    .zip(ss.children.iter().filter(|x| !x.key))
+                    .map(|(l, m)| FieldLayoutInfo {
+                        selector: format!("{:#x}", l.selector),
+                        name: m.name.clone(),
+                        layout: format_field_layout(&l.layout, &m.ty),
+                    })
+                    .collect::<Vec<_>>(),
+            });
         }
-        _ => {}
+
+        // process members
+        for (member_layout, member) in
+            field_layouts.iter().zip(ss.children.iter().filter(|x| !x.key))
+        {
+            get_printable_layout_list(&member_layout.layout, &member.ty, layout_list);
+        }
     };
 }
 
 fn get_printable_layout_list_from_enum(
-    field_layouts: &Vec<dojo_world::contracts::model::abigen::model::FieldLayout>,
+    field_layouts: &[dojo_world::contracts::model::abigen::model::FieldLayout],
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    match schema {
-        dojo_types::schema::Ty::Enum(se) => {
-            let name = get_name_from_schema(&schema);
+    if let dojo_types::schema::Ty::Enum(se) = schema {
+        let name = get_name_from_schema(schema);
 
-            // proces main enum
-            if !is_layout_in_list(layout_list, &name) {
-                layout_list.push(LayoutInfo {
-                    layout_type: LayoutInfoType::Enum,
-                    name,
-                    fields: field_layouts
-                        .iter()
-                        .zip(se.options.iter())
-                        .map(|(l, o)| FieldLayoutInfo {
-                            selector: format!("{:#x}", l.selector),
-                            name: o.name.to_string(),
-                            layout: format_field_layout(&l.layout, &o.ty),
-                        })
-                        .collect::<Vec<_>>(),
-                });
-            }
-
-            // process variants
-            for (variant_layout, variant) in field_layouts.iter().zip(se.options.iter()) {
-                get_printable_layout_list(&variant_layout.layout, &variant.ty, layout_list);
-            }
+        // proces main enum
+        if !is_layout_in_list(layout_list, &name) {
+            layout_list.push(LayoutInfo {
+                layout_type: LayoutInfoType::Enum,
+                name,
+                fields: field_layouts
+                    .iter()
+                    .zip(se.options.iter())
+                    .map(|(l, o)| FieldLayoutInfo {
+                        selector: format!("{:#x}", l.selector),
+                        name: o.name.to_string(),
+                        layout: format_field_layout(&l.layout, &o.ty),
+                    })
+                    .collect::<Vec<_>>(),
+            });
         }
-        _ => {}
+
+        // process variants
+        for (variant_layout, variant) in field_layouts.iter().zip(se.options.iter()) {
+            get_printable_layout_list(&variant_layout.layout, &variant.ty, layout_list);
+        }
     }
 }
 
 fn get_printable_layout_list_from_tuple(
-    item_layouts: &Vec<dojo_world::contracts::model::abigen::model::Layout>,
+    item_layouts: &[dojo_world::contracts::model::abigen::model::Layout],
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    match schema {
-        dojo_types::schema::Ty::Tuple(st) => {
-            let name = get_name_from_schema(&schema);
+    if let dojo_types::schema::Ty::Tuple(st) = schema {
+        let name = get_name_from_schema(schema);
 
-            // process tuple
-            if !is_layout_in_list(layout_list, &name) {
-                layout_list.push(LayoutInfo {
-                    layout_type: LayoutInfoType::Tuple,
-                    name,
-                    fields: item_layouts
-                        .iter()
-                        .enumerate()
-                        .zip(st.iter())
-                        .map(|((i, l), s)| FieldLayoutInfo {
-                            selector: format!("{:#x}", i),
-                            name: "".to_string(),
-                            layout: format_field_layout(l, s),
-                        })
-                        .collect::<Vec<_>>(),
-                });
-            }
-
-            // process tuple items
-            for (item_layout, item_schema) in item_layouts.iter().zip(st.iter()) {
-                get_printable_layout_list(&item_layout, &item_schema, layout_list);
-            }
+        // process tuple
+        if !is_layout_in_list(layout_list, &name) {
+            layout_list.push(LayoutInfo {
+                layout_type: LayoutInfoType::Tuple,
+                name,
+                fields: item_layouts
+                    .iter()
+                    .enumerate()
+                    .zip(st.iter())
+                    .map(|((i, l), s)| FieldLayoutInfo {
+                        selector: format!("{:#x}", i),
+                        name: "".to_string(),
+                        layout: format_field_layout(l, s),
+                    })
+                    .collect::<Vec<_>>(),
+            });
         }
-        _ => {}
+
+        // process tuple items
+        for (item_layout, item_schema) in item_layouts.iter().zip(st.iter()) {
+            get_printable_layout_list(item_layout, item_schema, layout_list);
+        }
     }
 }
 
@@ -303,34 +290,24 @@ fn get_printable_layout_list_from_array(
     schema: &dojo_types::schema::Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    match schema {
-        dojo_types::schema::Ty::Array(sa) => {
-            let name = get_name_from_schema(&schema);
+    if let dojo_types::schema::Ty::Array(sa) = schema {
+        let name = get_name_from_schema(schema);
 
-            // process array
-            if !is_layout_in_list(layout_list, &name) {
-                layout_list.push(LayoutInfo {
-                    layout_type: LayoutInfoType::Array,
-                    name,
-                    fields: vec![
-                        FieldLayoutInfo {
-                            selector: "Length".to_string(),
-                            name: "".to_string(),
-                            layout: "[32]".to_string(),
-                        },
-                        FieldLayoutInfo {
-                            selector: "[ItemIndex]".to_string(),
-                            name: "".to_string(),
-                            layout: format_field_layout(item_layout, &sa[0]),
-                        },
-                    ],
-                });
-            }
-
-            // process array item
-            get_printable_layout_list(&item_layout, &sa[0], layout_list);
+        // process array
+        if !is_layout_in_list(layout_list, &name) {
+            layout_list.push(LayoutInfo {
+                layout_type: LayoutInfoType::Array,
+                name,
+                fields: vec![FieldLayoutInfo {
+                    selector: "[ItemIndex]".to_string(),
+                    name: "".to_string(),
+                    layout: format_field_layout(item_layout, &sa[0]),
+                }],
+            });
         }
-        _ => {}
+
+        // process array item
+        get_printable_layout_list(item_layout, &sa[0], layout_list);
     }
 }
 
@@ -364,9 +341,14 @@ fn print_layout_info(layout_info: LayoutInfo) {
         .collect::<Vec<_>>();
     let layout_title = match layout_info.layout_type {
         LayoutInfoType::Struct => format!("Struct {} {{", layout_info.name),
-        LayoutInfoType::Enum => format!("Enum {} {{", layout_info.name),
+
+        LayoutInfoType::Enum => {
+            format!("{:<42}: [251] (variant id)", format!("Enum {} {{", layout_info.name))
+        }
         LayoutInfoType::Tuple => format!("{} (", layout_info.name),
-        LayoutInfoType::Array => format!("{} (", layout_info.name),
+        LayoutInfoType::Array => {
+            format!("{:<42}: [32] (length)", format!("{} (", layout_info.name))
+        }
     };
     let end_token = match layout_info.layout_type {
         LayoutInfoType::Struct => '}',
@@ -385,35 +367,16 @@ fn print_layout_info(layout_info: LayoutInfo) {
 
 // print the full Layout tree
 fn deep_print_layout(
+    name: &String,
     layout: &dojo_world::contracts::model::abigen::model::Layout,
     schema: &dojo_types::schema::Ty,
 ) {
     let mut layout_list = vec![];
-    get_printable_layout_list(&layout, &schema, &mut layout_list);
+    get_printable_layout_list(layout, schema, &mut layout_list);
+
+    println!("\n{} selector: {}\n", name, get_selector_from_name(name).unwrap());
 
     for l in layout_list {
         print_layout_info(l);
     }
 }
-
-/*
-    Struct S1 {
-        [0x123...345] (field_name): layout(S2),
-        [0x123...345] (field_name): layout((u8, u32))
-        [0x456...768]: [8, 16, ..., 251]
-        [0x456...768]: layout(Array<u32>)
-    }
-
-    (u8, u32)
-        [0]: [8]
-        [1]: [32]
-
-    Array<u32>
-        []: array length
-        [item_index]: [32]
-
-
-    Enum E1 {
-        [0]:
-    }
-*/

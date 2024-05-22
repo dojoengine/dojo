@@ -57,12 +57,10 @@ pub fn handle_introspect_enum(
     packed: bool,
 ) -> RewriteNode {
     let enum_name = enum_ast.name(db).text(db).into();
-    let identical_variants = utils::are_enum_variants_identical(db, &enum_ast);
-    let enum_size = size::compute_enum_layout_size(db, &enum_ast, identical_variants);
-    let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
+    let variant_sizes = size::compute_enum_variant_sizes(db, &enum_ast);
 
     let layout = if packed {
-        if identical_variants {
+        if size::is_enum_packable(&variant_sizes) {
             format!(
                 "dojo::database::introspect::Layout::Fixed(
                 array![
@@ -74,7 +72,7 @@ pub fn handle_introspect_enum(
         } else {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: enum_ast.name(db).stable_ptr().0,
-                message: "To be packed, all variants must have exactly the same layout."
+                message: "To be packed, all variants must have fixed layout of same size."
                     .to_string(),
                 severity: Severity::Error,
             });
@@ -92,6 +90,8 @@ pub fn handle_introspect_enum(
     };
 
     let (gen_types, gen_impls) = build_generic_types_and_impls(db, enum_ast.generic_params(db));
+    let enum_size = size::compute_enum_layout_size(&variant_sizes);
+    let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
 
     generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty)
 }

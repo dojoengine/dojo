@@ -275,7 +275,7 @@ fn get_printable_ty_list(root_ty: &Ty, ty_list: &mut Vec<Ty>) {
         }
         Ty::Tuple(tuple) => {
             for item_ty in tuple {
-                if !ty_list.contains(&item_ty) {
+                if !ty_list.contains(item_ty) {
                     get_printable_ty_list(item_ty, ty_list);
                 }
             }

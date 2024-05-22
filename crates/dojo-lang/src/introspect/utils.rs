@@ -1,9 +1,5 @@
 use std::collections::HashMap;
 
-use cairo_lang_syntax::node::ast::ItemEnum;
-use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::TypedSyntaxNode;
-
 #[derive(Clone, Default)]
 pub struct TypeIntrospection(pub usize, pub Vec<usize>);
 
@@ -94,16 +90,6 @@ pub fn get_tuple_item_types(ty: &str) -> Vec<String> {
     items
 }
 
-pub fn are_enum_variants_identical(db: &dyn SyntaxGroup, enum_ast: &ItemEnum) -> bool {
-    let variants = enum_ast
-        .variants(db)
-        .elements(db)
-        .iter()
-        .map(|v| v.as_syntax_node().get_text(db))
-        .collect::<Vec<_>>();
-    variants.iter().all(|item| item == &variants[0])
-}
-
 #[test]
 pub fn test_get_tuple_item_types() {
     pub fn assert_array(got: Vec<String>, expected: Vec<String>) {
@@ -142,7 +128,7 @@ pub fn test_get_tuple_item_types() {
 
     for (value, expected) in test_cases {
         assert_array(
-            get_tuple_item_types(&value.to_string()),
+            get_tuple_item_types(value),
             expected.iter().map(|x| x.to_string()).collect::<Vec<_>>(),
         )
     }
