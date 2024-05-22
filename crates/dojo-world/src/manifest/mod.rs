@@ -178,7 +178,9 @@ impl DeploymentManifest {
         self.contracts.iter_mut().for_each(|contract| {
             let previous_contract = previous.contracts.iter().find(|c| c.name == contract.name);
             if let Some(previous_contract) = previous_contract {
-                contract.inner.base_class_hash = previous_contract.inner.base_class_hash;
+                if previous_contract.inner.base_class_hash != FieldElement::ZERO {
+                    contract.inner.base_class_hash = previous_contract.inner.base_class_hash;
+                }
             }
         });
     }
