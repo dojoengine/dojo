@@ -267,10 +267,10 @@ mod tests {
         let first_record = connection.edges.first().unwrap();
         let last_record = connection.edges.last().unwrap();
         assert_eq!(connection.total_count, 5);
-        assert_eq!(first_record.node.type_u256.0, "0x0");
-        assert_eq!(first_record.node.type_u256.1, "0x4");
-        assert_eq!(last_record.node.type_u256.0, "0x0");
-        assert_eq!(last_record.node.type_u256.1, "0x0");
+        assert_eq!(first_record.node.type_u256.high, "0x0");
+        assert_eq!(first_record.node.type_u256.low, "0x4");
+        assert_eq!(last_record.node.type_u256.high, "0x0");
+        assert_eq!(last_record.node.type_u256.low, "0x0");
 
         // where filter on true bool
         let records = records_model_query(&schema, "(where: { type_bool: true })").await;
