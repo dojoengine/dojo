@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
+use dojo_world::utils::TransactionWaiter;
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
@@ -12,11 +13,12 @@ use katana_rpc_api::starknet::StarknetApiClient;
 use katana_rpc_types::transaction::{
     TransactionsExecutionsPage, TransactionsPageCursor, CHUNK_SIZE_DEFAULT,
 };
-use starknet::accounts::Account;
+use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{FieldElement, TransactionStatus};
+use starknet::macros::felt;
 use tokio::time::sleep;
 
-pub const ENOUGH_GAS: &str = "0x100000000000000000";
+const ENOUGH_GAS: FieldElement = felt!("0x100000000000000000");
 
 mod common;
 
@@ -135,7 +137,6 @@ async fn executions_chunks_logic_ok() {
 
     let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
 
-    let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
     let mut nonce = FieldElement::ONE;
     let mut last_tx_hash = FieldElement::ZERO;
 
@@ -143,7 +144,7 @@ async fn executions_chunks_logic_ok() {
     for i in 0..29 {
         let deploy_call =
             common::build_deploy_cairo1_contract_call(declare_res.class_hash, (i + 2_u32).into());
-        let deploy_txn = account.execute(vec![deploy_call]).nonce(nonce).max_fee(max_fee);
+        let deploy_txn = account.execute(vec![deploy_call]).nonce(nonce).max_fee(ENOUGH_GAS);
         let tx_hash = deploy_txn.send().await.unwrap().transaction_hash;
         nonce += FieldElement::ONE;
 
@@ -221,35 +222,34 @@ async fn fetch_traces_from_block() {
         common::prepare_contract_declaration_params(&path).unwrap();
     let contract = Arc::new(contract);
 
-    let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
-
-    let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
-    let mut nonce = FieldElement::ONE;
+    let res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
+    // wait for the tx to be mined
+    TransactionWaiter::new(res.transaction_hash, account.provider())
+        .with_interval(200)
+        .await
+        .expect("tx failed");
 
     // Store the tx hashes to check the retrieved traces later.
-    let mut tx_hashes = vec![declare_res.transaction_hash];
+    let mut tx_hashes = vec![res.transaction_hash];
 
-    // Prepare 29 transactions to test chunks (30 at total with the previous declare).
     for i in 0..29 {
-        let call =
-            common::build_deploy_cairo1_contract_call(declare_res.class_hash, (i + 2_u32).into());
+        let call = common::build_deploy_cairo1_contract_call(res.class_hash, (i + 2_u32).into());
 
-        // we set the nonce manually so that we can send the tx rapidly without waiting for the
-        // previous tx to be mined first.
         let res = account
             .execute(vec![call])
-            .nonce(nonce)
-            .max_fee(max_fee)
+            .max_fee(ENOUGH_GAS)
             .send()
             .await
             .expect("failed to send tx");
 
-        nonce += FieldElement::ONE;
+        // wait for the tx to be mined
+        TransactionWaiter::new(res.transaction_hash, account.provider())
+            .with_interval(200)
+            .await
+            .expect("tx failed");
+
         tx_hashes.push(res.transaction_hash);
     }
-
-    // Wait for the for all the txs to be mined first.
-    tokio::time::sleep(Duration::from_secs(5)).await;
 
     // Generate a new block.
     let _: () = client.generate_block().await.unwrap();
@@ -291,46 +291,47 @@ async fn fetch_traces_from_pending_block() {
         common::prepare_contract_declaration_params(&path).unwrap();
     let contract = Arc::new(contract);
 
-    let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
-
-    let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
-    let mut nonce = FieldElement::ONE;
+    let res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
+    // wait for the tx to be mined
+    TransactionWaiter::new(res.transaction_hash, account.provider())
+        .with_interval(200)
+        .await
+        .expect("tx failed");
 
     // Store the tx hashes to check the retrieved traces later.
-    let mut tx_hashes = vec![declare_res.transaction_hash];
+    let mut tx_hashes = vec![res.transaction_hash];
 
-    // Prepare 29 transactions to test chunks (30 at total with the previous declare).
     for i in 0..29 {
-        let call =
-            common::build_deploy_cairo1_contract_call(declare_res.class_hash, (i + 2_u32).into());
+        let call = common::build_deploy_cairo1_contract_call(res.class_hash, (i + 2_u32).into());
 
         // we set the nonce manually so that we can send the tx rapidly without waiting for the
         // previous tx to be mined first.
         let res = account
             .execute(vec![call])
-            .nonce(nonce)
-            .max_fee(max_fee)
+            .max_fee(ENOUGH_GAS)
             .send()
             .await
             .expect("failed to send tx");
 
-        nonce += FieldElement::ONE;
+        // wait for the tx to be mined
+        TransactionWaiter::new(res.transaction_hash, account.provider())
+            .with_interval(200)
+            .await
+            .expect("tx failed");
+
         tx_hashes.push(res.transaction_hash);
     }
 
-    // Wait for the for all the txs to be mined first.
-    tokio::time::sleep(Duration::from_secs(5)).await;
-
-    // Get the traces from the latest block.
+    // Get the traces from the pending block.
     let traces = client
         .transaction_executions_by_block(BlockIdOrTag::Tag(BlockTag::Pending))
         .await
-        .expect("failed to get traces from latest block");
+        .expect("failed to get traces from pending block");
 
     assert_eq!(
         tx_hashes.len(),
         traces.len(),
-        "traces count in the latest block must equal to the total txs"
+        "traces count in the pending block must equal to the total txs"
     );
 
     for (expected, actual) in tx_hashes.iter().zip(traces) {
