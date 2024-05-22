@@ -154,7 +154,7 @@ impl Introspect_u256 of Introspect<u256> {
         Layout::Fixed(array![128, 128].span())
     }
     fn ty() -> Ty {
-        Ty::Tuple(array![Ty::Primitive('u128'), Ty::Primitive('u128')].span())
+        Ty::Primitive('u256')
     }
 }
 
