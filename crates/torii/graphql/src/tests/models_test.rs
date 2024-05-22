@@ -91,10 +91,7 @@ mod tests {
                     type_u32
                     type_u64
                     type_u128
-                    type_u256 {{
-                        _0
-                        _1
-                    }}
+                    type_u256
                     type_bool
                     type_felt
                     type_class_hash
@@ -246,20 +243,17 @@ mod tests {
         assert_eq!(last_record.node.type_u128, "0x5");
 
         // where filter LT on u256 (string)
-        // We cant filter by u256 for now as the type has changed to a tuple
-        // let records = records_model_query(
-        //     &schema,
-        //     &format!("(where: {{ type_u256LT: \"{}\" }})", felt_int_5),
-        // )
-        // .await;
-        // let connection: Connection<Record> = serde_json::from_value(records).unwrap();
-        // let first_record = connection.edges.first().unwrap();
-        // let last_record = connection.edges.last().unwrap();
-        // assert_eq!(connection.total_count, 5);
-        // assert_eq!(first_record.node.type_u256.high, "0x4");
-        // assert_eq!(first_record.node.type_u256.low, "0x0");
-        // assert_eq!(last_record.node.type_u256.high, "0x0");
-        // assert_eq!(last_record.node.type_u256.low, "0x0");
+        let records = records_model_query(
+            &schema,
+            &format!("(where: {{ type_u256LT: \"{}\" }})", felt_int_5),
+        )
+        .await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        let first_record = connection.edges.first().unwrap();
+        let last_record = connection.edges.last().unwrap();
+        assert_eq!(connection.total_count, 5);
+        assert_eq!(first_record.node.type_u256, "0x4");
+        assert_eq!(last_record.node.type_u256, "0x0");
 
         // where filter on true bool
         let records = records_model_query(&schema, "(where: { type_bool: true })").await;

@@ -95,14 +95,6 @@ pub struct WorldModel {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-pub struct U256 {
-    #[serde(rename = "_0")]
-    pub high: String,
-    #[serde(rename = "_1")]
-    pub low: String,
-}
-
-#[derive(Deserialize, Debug, PartialEq)]
 pub struct Record {
     pub __typename: String,
     pub depth: String,
@@ -112,7 +104,7 @@ pub struct Record {
     pub type_u32: u32,
     pub type_u64: String,
     pub type_u128: String,
-    pub type_u256: U256,
+    pub type_u256: String,
     pub type_bool: bool,
     pub type_felt: String,
     pub type_class_hash: String,
