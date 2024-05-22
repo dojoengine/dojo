@@ -3765,10 +3765,10 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/neotheprogramist/http-prover?rev=705f1a0e1903377627d5b50c5b332bcd18849250#705f1a0e1903377627d5b50c5b332bcd18849250"
+source = "git+https://github.com/neotheprogramist/http-prover?rev=6ce9c5d6840b1ee67d9abd3fa3becb073c973410#6ce9c5d6840b1ee67d9abd3fa3becb073c973410"
 dependencies = [
  "ed25519-dalek",
- "hex",
+ "prefix-hex",
  "serde",
  "serde_json",
  "serde_with 3.8.1",
@@ -10439,6 +10439,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "prefix-hex"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f1799f398371ad6957951ec446d3ff322d35c46d9db2e217b67e828b311c249"
+dependencies = [
+ "hex",
+]
+
+[[package]]
 name = "pretty_assertions"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10742,14 +10751,14 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/neotheprogramist/http-prover?rev=705f1a0e1903377627d5b50c5b332bcd18849250#705f1a0e1903377627d5b50c5b332bcd18849250"
+source = "git+https://github.com/neotheprogramist/http-prover?rev=6ce9c5d6840b1ee67d9abd3fa3becb073c973410#6ce9c5d6840b1ee67d9abd3fa3becb073c973410"
 dependencies = [
  "bytes",
  "common 0.1.0",
  "ed25519-dalek",
- "hex",
  "http 1.1.0",
  "hyper-util",
+ "prefix-hex",
  "rand",
  "reqwest 0.12.4",
  "reqwest_cookie_store",

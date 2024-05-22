@@ -148,8 +148,8 @@ impl Saya {
                 self.process_block(&mut prove_scheduler, block, p)?;
 
                 if prove_scheduler.is_full() {
-                    // ProverIdentifier::Http(self.config.prover_url.clone()),
-                    self.process_proven(prove_scheduler, block).await?; // TODO: spawn it, but store a handle
+                    self.process_proven(prove_scheduler, block).await?;
+
                     prove_scheduler = Scheduler::new(
                         self.config.batch_size,
                         self.config.world_address,
@@ -223,7 +223,7 @@ impl Saya {
     ///
     /// # Arguments
     ///
-    /// * `prove_scheduler` - A pararell prove scheduler.
+    /// * `prove_scheduler` - A parallel prove scheduler.
     /// * `block_number` - The block number.
     /// * `blocks` - The block to process, along with the state roots of the previous block and the
     ///   genesis block.
@@ -290,7 +290,7 @@ impl Saya {
     ///
     /// # Arguments
     ///
-    /// * `prove_scheduler` - A full pararell prove scheduler.
+    /// * `prove_scheduler` - A full parallel prove scheduler.
     /// * `last_block` - The last block number in the `prove_scheduler`.
     async fn process_proven(
         &self,

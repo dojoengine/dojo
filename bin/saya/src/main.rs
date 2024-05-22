@@ -54,7 +54,7 @@ CONFIGURATION
     if let Some(da_config) = &config.data_availability {
         println!(
             r"
-DATA AVAILBILITY
+DATA AVAILABILITY
 ==================
 {da_config}
     ",

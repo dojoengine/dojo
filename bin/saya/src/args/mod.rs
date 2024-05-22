@@ -127,8 +127,9 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 None => None,
             };
 
-            let prover_key = ProverAccessKey::from_hex_string(&args.prover_key)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+            let prover_key = ProverAccessKey::from_hex_string(&args.prover_key).map_err(|e| {
+                Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
+            })?;
 
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,

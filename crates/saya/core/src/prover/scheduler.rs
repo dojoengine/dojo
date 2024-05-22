@@ -101,7 +101,7 @@ fn prove_recursively(
     world: FieldElement,
     prover: ProverIdentifier,
 ) -> BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>> {
-    async move {
+    let handle = tokio::spawn(async move {
         if inputs.len() == 1 {
             let mut input = inputs.pop().unwrap().await.unwrap();
             input.fill_da(world);
@@ -140,8 +140,9 @@ fn prove_recursively(
             info!(target: LOG_TARGET, first_proven, proof_count, "Merged proofs");
             Ok((merged_proofs, input))
         }
-    }
-    .boxed()
+    });
+
+    async move { handle.await? }.boxed()
 }
 
 #[cfg(test)]
