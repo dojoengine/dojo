@@ -633,7 +633,3 @@ fn test_facts_registry_event_emit() {
     );
 }
 
-
-
-
-

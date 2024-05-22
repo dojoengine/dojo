@@ -211,8 +211,12 @@ mod world {
                 RESOURCE_METADATA_MODEL,
                 (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
             );
-        
-        self.nonce.write(1); // make uuid start at 1 to avoid issues with key 0 beeing default storage value
+
+        self
+            .nonce
+            .write(
+                1
+            ); // make uuid start at 1 to avoid issues with key 0 beeing default storage value
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -441,9 +445,10 @@ mod world {
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
             self.deployed_contracts.write(contract_address.into(), class_hash.into());
- 
+
             // check dojo_resource not already registered
-            let dojo_resource = dojo::contract::get_dojo_resource(contract_address).unwrap_syscall();
+            let dojo_resource = dojo::contract::get_dojo_resource(contract_address)
+                .unwrap_syscall();
             let (_, dojo_resource_contract_address) = self.contracts.read(dojo_resource);
             assert(dojo_resource_contract_address.is_zero(), Errors::RESOURCE_ALREADY_DECLARED);
             assert(dojo_resource.is_non_zero(), Errors::INVALID_RESOURCE);
@@ -453,8 +458,8 @@ mod world {
             assert(model_contract_address.is_zero(), Errors::RESOURCE_ALREADY_DECLARED);
 
             self.contracts.write(dojo_resource, (class_hash, contract_address));
-            self.owners.write((dojo_resource.into(), get_caller_address()), true); 
- 
+            self.owners.write((dojo_resource.into(), get_caller_address()), true);
+
             EventEmitter::emit(
                 ref self, ContractDeployed { salt, class_hash, address: contract_address }
             );
@@ -477,14 +482,14 @@ mod world {
         ) -> ClassHash {
             assert(is_account_owner(@self, address.into()), Errors::NOT_OWNER);
             let curr_dojo_resource = dojo::contract::get_dojo_resource(address).unwrap_syscall();
-            
+
             IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
-            
+
             let dojo_resource = dojo::contract::get_dojo_resource(address).unwrap_syscall();
             assert(curr_dojo_resource == dojo_resource, Errors::INVALID_RESOURCE);
 
             self.contracts.write(dojo_resource, (class_hash, address));
-          
+
             EventEmitter::emit(ref self, ContractUpgraded { class_hash, address });
             class_hash
         }

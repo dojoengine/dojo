@@ -305,4 +305,3 @@ fn test_cannot_upgrade_with_different_resource_name() {
         );
 }
 
-
