@@ -182,10 +182,9 @@ impl Sql {
         self.build_set_entity_queries_recursive(
             path,
             event_id,
-            &entity_id,
+            (&entity_id, false),
             &entity,
             block_timestamp,
-            false,
             None,
         );
         self.query_queue.execute_all().await?;
@@ -238,10 +237,9 @@ impl Sql {
         self.build_set_entity_queries_recursive(
             path,
             event_id,
-            &entity_id,
+            (&entity_id, true),
             &entity,
             block_timestamp,
-            true,
             None,
         );
         self.query_queue.execute_all().await?;
@@ -455,7 +453,7 @@ impl Sql {
             }
         } else if let Ty::Array(array) = model {
             let ty = &array[0];
-            build_member("data", &ty);
+            build_member("data", ty);
         } else if let Ty::Enum(e) = model {
             for child in e.options.iter() {
                 // Skip enum options that have no type / member
@@ -474,12 +472,14 @@ impl Sql {
         &mut self,
         path: Vec<String>,
         event_id: &str,
-        entity_id: &str,
+        // The id of the entity and if the entity is an event message
+        entity_id: (&str, bool),
         entity: &Ty,
         block_timestamp: u64,
-        is_event_message: bool,
         index: Option<i64>,
     ) {
+        let (entity_id, is_event_message) = entity_id;
+
         let update_members =
             |members: &[Member], query_queue: &mut QueryQueue, index: Option<i64>| {
                 let table_id = path.join("$");
@@ -550,10 +550,9 @@ impl Sql {
                     self.build_set_entity_queries_recursive(
                         path_clone,
                         event_id,
-                        entity_id,
+                        (entity_id, is_event_message),
                         &member.ty,
                         block_timestamp,
-                        is_event_message,
                         index,
                     );
                 }
@@ -561,7 +560,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
@@ -587,10 +590,9 @@ impl Sql {
                         self.build_set_entity_queries_recursive(
                             path_clone,
                             event_id,
-                            entity_id,
+                            (entity_id, is_event_message),
                             &option.ty,
                             block_timestamp,
-                            is_event_message,
                             index,
                         );
                     }
@@ -617,10 +619,9 @@ impl Sql {
                     self.build_set_entity_queries_recursive(
                         path_clone,
                         event_id,
-                        entity_id,
-                        &member,
+                        (entity_id, is_event_message),
+                        member,
                         block_timestamp,
-                        is_event_message,
                         index,
                     );
                 }
@@ -638,10 +639,9 @@ impl Sql {
                     self.build_set_entity_queries_recursive(
                         path_clone,
                         event_id,
-                        entity_id,
-                        &member,
+                        (entity_id, is_event_message),
+                        member,
                         block_timestamp,
-                        is_event_message,
                         Some(idx as i64),
                     );
                 }
@@ -783,7 +783,7 @@ impl Sql {
                 for (idx, member) in tuple.iter().enumerate() {
                     let mut options = None; // TEMP: doesnt support complex enums yet
 
-                    build_member(&format!("_{}", idx), &member, &mut options);
+                    build_member(&format!("_{}", idx), member, &mut options);
 
                     let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
                                      model_idx, member_idx, name, type, type_enum, enum_options, \
@@ -813,7 +813,7 @@ impl Sql {
             Ty::Array(array) => {
                 let mut options = None; // TEMP: doesnt support complex enums yet
                 let ty = &array[0];
-                build_member("data", &ty, &mut options);
+                build_member("data", ty, &mut options);
 
                 let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
                                  member_idx, name, type, type_enum, enum_options, key, \
