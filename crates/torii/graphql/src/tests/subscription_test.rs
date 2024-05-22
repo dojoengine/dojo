@@ -35,9 +35,7 @@ mod tests {
                 "keys":vec![keys_str],
                 "models" : [{
                     "__typename": model_name,
-                        "depth": {
-                            "option": "Zero"
-                        },
+                        "depth": "Zero",
                         "record_id": 0,
                         "typeU16": 1,
                         "type_u64": "0x1",
@@ -123,9 +121,7 @@ mod tests {
                     models {
                         __typename
                         ... on Record {
-                            depth {
-                                option
-                            }
+                            depth
                             record_id
                             typeU16
                             type_u64
@@ -162,9 +158,7 @@ mod tests {
                 "keys":vec![keys_str],
                 "models" : [{
                     "__typename": model_name,
-                        "depth": {
-                            "option": "Zero"
-                        },
+                        "depth": "Zero",
                         "record_id": 0,
                         "type_felt": format!("{:#x}", FieldElement::from(1u128)),
                         "typeContractAddress": format!("{:#x}", FieldElement::ONE)
@@ -232,9 +226,7 @@ mod tests {
                     models {
                         __typename
                         ... on Record {
-                            depth {
-                                option
-                            }
+                            depth
                             record_id
                             type_felt
                             typeContractAddress
