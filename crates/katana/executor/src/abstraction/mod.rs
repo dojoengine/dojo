@@ -148,7 +148,13 @@ pub struct ResultAndStates {
 
 /// A wrapper around a boxed [StateProvider] for implementing the executor's own state reader
 /// traits.
-pub(crate) struct StateProviderDb<'a>(pub(crate) Box<dyn StateProvider + 'a>);
+pub struct StateProviderDb<'a>(pub(crate) Box<dyn StateProvider + 'a>);
+
+impl From<Box<dyn StateProvider>> for StateProviderDb<'_> {
+    fn from(provider: Box<dyn StateProvider>) -> Self {
+        Self(provider)
+    }
+}
 
 impl<'a> ContractClassProvider for StateProviderDb<'a> {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {

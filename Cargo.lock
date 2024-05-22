@@ -402,7 +402,7 @@ dependencies = [
  "proc-macro-error",
  "proc-macro2",
  "quote",
- "syn 2.0.55",
+ "syn 2.0.61",
 ]
 
 [[package]]
@@ -1321,7 +1321,7 @@ dependencies = [
 
 [[package]]
 name = "benches"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -2855,7 +2855,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "reqwest 0.12.4",
@@ -2993,6 +2993,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b49ba7ef1ad6107f8824dbe97de947cbaac53c44e7f9756a1fba0d37c1eec505"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "cpp_demangle"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e8227005286ec39567949b33df9896bcadfa6051bccca2488129f108ca23119"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
@@ -3352,6 +3361,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "debugid"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bef552e6f588e446098f6ba40d89ac146c8c7b64aade83c051ee00bb5d2bc18d"
+dependencies = [
+ "uuid 1.7.0",
+]
+
+[[package]]
 name = "deno_task_shell"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3589,7 +3607,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "async-trait",
  "cainome",
@@ -3605,15 +3623,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-core"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 
 [[package]]
 name = "dojo-lang"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3664,7 +3682,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3686,7 +3704,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-metrics"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "hyper 0.14.28",
@@ -3704,7 +3722,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3738,7 +3756,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -3753,7 +3771,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3791,7 +3809,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "cairo-lang-starknet",
  "cairo-lang-starknet-classes",
@@ -4200,6 +4218,18 @@ dependencies = [
  "libc",
  "redox_syscall 0.4.1",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "findshlibs"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40b9e59cd0f7e0806cca4be089683ecb6434e602038df21fe6bf6711b2f07f64"
+dependencies = [
+ "cc",
+ "lazy_static",
+ "libc",
+ "winapi",
 ]
 
 [[package]]
@@ -6182,6 +6212,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e186cfbae8084e513daff4240b4797e342f988cecda4fb6c939150f96315fd8"
 
 [[package]]
+name = "inferno"
+version = "0.11.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "321f0f839cd44a4686e9504b0a62b4d69a50b62072144c71c68f5873c167b8d9"
+dependencies = [
+ "ahash 0.8.8",
+ "indexmap 2.2.5",
+ "is-terminal",
+ "itoa",
+ "log",
+ "num-format",
+ "once_cell",
+ "quick-xml",
+ "rgb",
+ "str_stack",
+]
+
+[[package]]
 name = "inotify"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6750,7 +6798,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6777,7 +6825,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -6785,7 +6833,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6795,7 +6843,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -6843,7 +6891,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "cairo-lang-starknet",
@@ -6865,18 +6913,20 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "alloy-primitives",
  "anyhow",
  "blockifier",
  "cairo-vm",
  "convert_case 0.6.0",
+ "criterion",
  "futures",
  "katana-primitives",
  "katana-provider",
  "katana-rpc-types",
  "parking_lot 0.12.1",
+ "pprof",
  "rstest 0.18.2",
  "rstest_reuse",
  "serde_json",
@@ -6890,7 +6940,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6917,8 +6967,9 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
+ "alloy-primitives",
  "anyhow",
  "auto_impl",
  "futures",
@@ -6942,7 +6993,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -6979,7 +7030,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -6990,7 +7041,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -7011,7 +7062,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -7023,7 +7074,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -7035,7 +7086,6 @@ dependencies = [
  "runner-macro",
  "serde",
  "serde_json",
- "sozo",
  "starknet",
  "tokio",
  "url",
@@ -7043,7 +7093,7 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "futures",
  "rayon",
@@ -8509,6 +8559,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-format"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a652d9771a63711fd3c3deb670acfbe5c30a4072e664d7a3bf5a9e1056ac72c3"
+dependencies = [
+ "arrayvec",
+ "itoa",
+]
+
+[[package]]
 name = "num-integer"
 version = "0.1.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9205,6 +9265,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
+name = "pprof"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef5c97c51bd34c7e742402e216abdeb44d415fbe6ae41d56b114723e953711cb"
+dependencies = [
+ "backtrace",
+ "cfg-if",
+ "criterion",
+ "findshlibs",
+ "inferno",
+ "libc",
+ "log",
+ "nix 0.26.4",
+ "once_cell",
+ "parking_lot 0.12.1",
+ "smallvec",
+ "symbolic-demangle",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9590,6 +9672,15 @@ dependencies = [
  "quick-protobuf",
  "thiserror",
  "unsigned-varint 0.8.0",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f50b1c63b38611e7d4d7f68b82d3ad0cc71a2ad2e7f61fc10f1328d917c93cd"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
@@ -10000,6 +10091,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rgb"
+version = "0.8.37"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05aaa8004b64fd573fc9d002f4e632d51ad4f026c2b5ba95fcb6c2f32c2c47d8"
+dependencies = [
+ "bytemuck",
+]
+
+[[package]]
 name = "ring"
 version = "0.16.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10238,7 +10338,7 @@ checksum = "e666a5496a0b2186dbcd0ff6106e29e093c15591bde62c20d3842007c6978a09"
 
 [[package]]
 name = "runner-macro"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "quote",
  "syn 2.0.61",
@@ -10506,7 +10606,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -10525,7 +10625,7 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -10565,7 +10665,7 @@ dependencies = [
 
 [[package]]
 name = "saya-provider"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -11328,7 +11428,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -11384,7 +11484,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -11438,7 +11538,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "starknet",
@@ -11701,6 +11801,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "stable_deref_trait"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+
+[[package]]
 name = "starknet"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11935,6 +12041,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "str_stack"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9091b6114800a5f2141aee1d1b9d6ca3592ac062dc5decb3764ec5895a47b4eb"
+
+[[package]]
 name = "string_cache"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12059,6 +12171,29 @@ name = "subtle-ng"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
+
+[[package]]
+name = "symbolic-common"
+version = "12.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cccfffbc6bb3bb2d3a26cd2077f4d055f6808d266f9d4d158797a4c60510dfe"
+dependencies = [
+ "debugid",
+ "memmap2",
+ "stable_deref_trait",
+ "uuid 1.7.0",
+]
+
+[[package]]
+name = "symbolic-demangle"
+version = "12.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76a99812da4020a67e76c4eb41f08c87364c14170495ff780f30dd519c221a68"
+dependencies = [
+ "cpp_demangle",
+ "rustc-demangle",
+ "symbolic-common",
+]
 
 [[package]]
 name = "syn"
@@ -12634,7 +12769,7 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12679,7 +12814,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "async-trait",
  "camino",
@@ -12707,7 +12842,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12744,7 +12879,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -12785,7 +12920,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "bytes",
  "crypto-bigint",
@@ -12828,7 +12963,7 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12863,7 +12998,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13168,7 +13303,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 
 [[package]]
 name = "ucd-trie"

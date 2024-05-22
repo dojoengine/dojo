@@ -45,7 +45,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.7.0-alpha.2"
+version = "0.7.0-alpha.3"
 
 [profile.performance]
 codegen-units = 1
@@ -208,6 +208,8 @@ wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "
 
 alloy-primitives = { version = "0.7.2", default-features = false }
 alloy-sol-types = { version = "0.7.2", default-features = false }
+
+criterion = "0.5.1"
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
