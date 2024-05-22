@@ -95,9 +95,14 @@ pub struct WorldModel {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
+pub struct DepthEnum {
+    pub option: String
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct Record {
     pub __typename: String,
-    pub depth: String,
+    pub depth: DepthEnum,
     pub record_id: u32,
     pub type_u8: u8,
     pub type_u16: u16,
@@ -120,7 +125,7 @@ pub struct Record {
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct Nested {
     pub __typename: String,
-    pub depth: String,
+    pub depth: DepthEnum,
     pub type_number: u8,
     pub type_string: String,
     pub type_nested_more: NestedMore,
@@ -129,7 +134,7 @@ pub struct Nested {
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct NestedMore {
     pub __typename: String,
-    pub depth: String,
+    pub depth: DepthEnum,
     pub type_number: u8,
     pub type_string: String,
     pub type_nested_most: NestedMost,
@@ -138,7 +143,7 @@ pub struct NestedMore {
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct NestedMost {
     pub __typename: String,
-    pub depth: String,
+    pub depth: DepthEnum,
     pub type_number: u8,
     pub type_string: String,
 }

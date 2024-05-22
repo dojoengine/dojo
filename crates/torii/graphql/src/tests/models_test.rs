@@ -85,7 +85,9 @@ mod tests {
                 node {{
                     __typename
                     record_id
-                    depth
+                    depth {{
+                        option
+                    }}
                     type_u8
                     type_u16
                     type_u32
@@ -105,12 +107,16 @@ mod tests {
                         type_string
                         type_nested_more {{
                             __typename
-                            depth
+                            depth {{
+                                option
+                            }}
                             type_number
                             type_string
                             type_nested_most {{
                                 __typename
-                                depth
+                                depth {{
+                                    option
+                                }}
                                 type_number
                                 type_string
                             }}
@@ -118,13 +124,17 @@ mod tests {
                     }}
                     type_nested_one {{
                         __typename
-                        depth
+                        depth {{
+                            option
+                        }}
                         type_number
                         type_string
                     }}
                     type_nested_two {{
                         __typename
-                        depth
+                        depth {{
+                            option
+                        }}
                         type_number
                         type_string
                     }}
@@ -171,10 +181,10 @@ mod tests {
         assert_eq!(connection.edges.len(), 10);
         assert_eq!(&record.node.__typename, "Record");
         assert_eq!(entity.keys.clone().unwrap(), vec!["0x0"]);
-        assert_eq!(record.node.depth, "Zero");
-        assert_eq!(deeply_nested.depth, "One");
-        assert_eq!(deeply_nested_more.depth, "Two");
-        assert_eq!(deeply_nested_most.depth, "Three");
+        assert_eq!(record.node.depth.option, "Zero");
+        assert_eq!(deeply_nested.depth.option, "One");
+        assert_eq!(deeply_nested_more.depth.option, "Two");
+        assert_eq!(deeply_nested_most.depth.option, "Three");
         assert_eq!(nested_one.type_number, 1);
         assert_eq!(nested_two.type_number, 2);
 

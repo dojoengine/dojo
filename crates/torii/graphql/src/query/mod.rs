@@ -84,43 +84,6 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                 .expect("Array type should have nested type"),
             nested_members,
         ))),
-        // "Enum" => TypeData::Enum((
-        //     TypeRef::named(format!("{}Union", member.name.to_case(Case::Pascal))),
-        //     nested_members
-        //         .iter()
-        //         .filter_map(|&nested_member| {
-        //             if member.model_id == nested_member.model_id
-        //                 && nested_member.id.ends_with(&member.name)
-        //             {
-        //                 let type_data = member_to_type_data(nested_member, nested_members);
-        //                 let namespace =
-        //                     format!("{}_{}", nested_member.name,
-        // type_data.type_ref().type_name());
-
-        //                 Some((
-        //                     Name::new(&nested_member.name),
-        //                     if let TypeData::Nested((_, mapping)) = type_data {
-        //                         TypeData::Nested((TypeRef::named(namespace), mapping))
-        //                     } else {
-        //                         TypeData::Nested((
-        //                             TypeRef::named(namespace),
-        //                             IndexMap::from([(Name::new("value"), type_data)]),
-        //                         ))
-        //                     },
-        //                 ))
-        //             } else {
-        //                 None
-        //             }
-        //         })
-        //         .chain(
-        //             vec![(
-        //                 Name::new("option"),
-        //                 TypeData::Simple(TypeRef::named("Enum"))
-        //             )]
-        //             .into_iter(),
-        //         )
-        //         .collect(),
-        // )),
         _ => parse_nested_type(member, nested_members),
     }
 }
