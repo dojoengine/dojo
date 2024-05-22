@@ -109,7 +109,7 @@ pub struct Record {
     pub type_u32: u32,
     pub type_u64: String,
     pub type_u128: String,
-    pub type_u256: String,
+    pub type_u256: (String, String),
     pub type_bool: bool,
     pub type_felt: String,
     pub type_class_hash: String,
