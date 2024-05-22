@@ -61,6 +61,22 @@ struct Position {
     vec: Vec2,
 }
 
+#[derive(Copy, Drop, Serde, Introspect)]
+struct PlayerItem {
+    item_id: u32,
+    quantity: u32,
+}
+
+#[derive(Drop, Serde)]
+#[dojo::model]
+struct PlayerConfig {
+    #[key]
+    player: ContractAddress,
+    name: ByteArray,
+    items: Array<PlayerItem>,
+    favorite_item: Option<u32>,
+}
+
 trait Vec2Trait {
     fn is_zero(self: Vec2) -> bool;
     fn is_equal(self: Vec2, b: Vec2) -> bool;

@@ -22,8 +22,8 @@ name = "dojo::base::base"
 [[contracts]]
 kind = "DojoContract"
 address = "0x21d87b58131a6879752e3b658d658fe3a80a42d85228ba8aec5220c4a5c364c"
-class_hash = "0x39a2f561949f88b3d574fdd1143bff62b91b5b43295cfe32d979e6a793efeab"
-original_class_hash = "0x39a2f561949f88b3d574fdd1143bff62b91b5b43295cfe32d979e6a793efeab"
+class_hash = "0x5b617d120767e91d40621dd939b092f48975a8fa1c5236ac68f97a4ffaf45b"
+original_class_hash = "0x5b617d120767e91d40621dd939b092f48975a8fa1c5236ac68f97a4ffaf45b"
 base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
 abi = "manifests/dev/abis/deployments/contracts/dojo_examples_actions_actions.json"
 reads = []
@@ -88,6 +88,67 @@ key = false
 [[models.members]]
 name = "last_direction"
 type = "Direction"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0xb08720e71923b4611204933ab8b088ee8fba8448d080f8084c07d2ceaeff86"
+original_class_hash = "0xb08720e71923b4611204933ab8b088ee8fba8448d080f8084c07d2ceaeff86"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_name.json"
+name = "dojo_examples::models::name"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "name"
+type = "ByteArray"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x74e835af876c9f95977537b91d60d656f6ff2a4a8b2bb8d47448f345980f612"
+original_class_hash = "0x74e835af876c9f95977537b91d60d656f6ff2a4a8b2bb8d47448f345980f612"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_player_config.json"
+name = "dojo_examples::models::player_config"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "name"
+type = "ByteArray"
+key = false
+
+[[models.members]]
+name = "items"
+type = "Array<PlayerItem>"
+key = false
+
+[[models.members]]
+name = "favorite_item"
+type = "Option<u32>"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x6d87830f9835547068ffc5946e25226fee1386c0fe1e49547181d1716ac6be"
+original_class_hash = "0x6d87830f9835547068ffc5946e25226fee1386c0fe1e49547181d1716ac6be"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_player_name.json"
+name = "dojo_examples::models::player_name"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "name"
+type = "ByteArray"
 key = false
 
 [[models]]
