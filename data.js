@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716324928212,
+  "lastUpdate": 1716406411654,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8215,6 +8215,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16635453,
             "range": "± 100011",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "feynmanownage@gmail.com",
+            "name": "Arnaud Fournier",
+            "username": "Yogalholic"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9aa430177c0bd882745cc4664dfc8dbb9c6dc360",
+          "message": "feat(katana): allow choosing the class in the genesis file using name w/o affecting the actual class hash  (#1975)\n\n* resolving issue #1502\r\n\r\n* run clippy\r\n\r\n* create custom deserializer\r\n\r\n* Fills up name_classes HashMap after hash classes computation\r\n\r\n* stuff\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-05-23T03:25:08+08:00",
+          "tree_id": "11f2b66b319b44dbd768aec2915cfea15513f9c1",
+          "url": "https://github.com/dojoengine/dojo/commit/9aa430177c0bd882745cc4664dfc8dbb9c6dc360"
+        },
+        "date": 1716406410817,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17404675,
+            "range": "± 289317",
             "unit": "ns/iter"
           }
         ]
