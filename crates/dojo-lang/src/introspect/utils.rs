@@ -142,7 +142,7 @@ pub fn test_get_tuple_item_types() {
 
     for (value, expected) in test_cases {
         assert_array(
-            get_tuple_item_types(&value.to_string()),
+            get_tuple_item_types(value),
             expected.iter().map(|x| x.to_string()).collect::<Vec<_>>(),
         )
     }
