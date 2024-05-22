@@ -170,7 +170,7 @@ mod tests {
         assert_eq!(connection.total_count, 10);
         assert_eq!(connection.edges.len(), 10);
         assert_eq!(&record.node.__typename, "Record");
-        assert_eq!(entity.keys.clone().unwrap(), vec!["0x0"]);
+        assert_eq!(entity.keys.clone().unwrap(), vec!["0x1"]);
         assert_eq!(record.node.depth, "Zero");
         assert_eq!(deeply_nested.depth, "One");
         assert_eq!(deeply_nested_more.depth, "Two");
@@ -181,7 +181,7 @@ mod tests {
         // *** WHERE FILTER TESTING ***
 
         // where filter EQ on record_id
-        let records = records_model_query(&schema, "(where: { record_id: 0 })").await;
+        let records = records_model_query(&schema, "(where: { record_id: 1 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 1);
@@ -416,22 +416,22 @@ mod tests {
         let subrecord = subrecord_model_query(&schema, "").await;
         let connection: Connection<Subrecord> = serde_json::from_value(subrecord).unwrap();
         let last_record = connection.edges.first().unwrap();
-        assert_eq!(last_record.node.record_id, 18);
-        assert_eq!(last_record.node.subrecord_id, 19);
+        assert_eq!(last_record.node.record_id, 19);
+        assert_eq!(last_record.node.subrecord_id, 20);
 
         // *** DELETE TESTING ***
-        // where filter EQ on record_id, test Record with id 20 is deleted
-        let records = records_model_query(&schema, "(where: { record_id: 20 })").await;
+        // where filter EQ on record_id, test Record with id 21 is deleted
+        let records = records_model_query(&schema, "(where: { record_id: 21 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.edges.len(), 0);
 
-        // where filter GTE on record_id, test Sibling with id 20 is deleted
-        let sibling = record_sibling_query(&schema, "(where: { record_id: 20 })").await;
+        // where filter GTE on record_id, test Sibling with id 21 is deleted
+        let sibling = record_sibling_query(&schema, "(where: { record_id: 21 })").await;
         let connection: Connection<RecordSibling> = serde_json::from_value(sibling).unwrap();
         assert_eq!(connection.edges.len(), 0);
 
-        // where filter GTE on record_id, test Subrecord with id 20 is deleted
-        let subrecord = subrecord_model_query(&schema, "(where: { record_id: 20 })").await;
+        // where filter GTE on record_id, test Subrecord with id 21 is deleted
+        let subrecord = subrecord_model_query(&schema, "(where: { record_id: 21 })").await;
         let connection: Connection<Subrecord> = serde_json::from_value(subrecord).unwrap();
         assert_eq!(connection.edges.len(), 0);
 
