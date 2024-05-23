@@ -8,6 +8,7 @@ pub(crate) mod account;
 pub(crate) mod auth;
 pub(crate) mod build;
 pub(crate) mod call;
+pub(crate) mod calldata_decoder;
 pub(crate) mod clean;
 pub(crate) mod completions;
 pub(crate) mod dev;
