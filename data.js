@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716470679623,
+  "lastUpdate": 1716470805284,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8275,6 +8275,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17266283,
             "range": "± 289685",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5fe059bb4e1a73abbcaaba724a660f0ed46d133b",
+          "message": "Refactor `saya` to fetch the traces using the new API (#1987)\n\n# Description\r\n\r\nbasically refactor the tx traces fetching logic to using the new API introduced in #1986.\r\n\r\nref: https://github.com/dojoengine/dojo/pull/1986#discussion_r1607193514 \r\n\r\nto simplify the process of extracting the l1 -> l2 messages bcs currently we have to compute the message hash in order to find the corresponding tx as seen here:\r\n\r\nhttps://github.com/dojoengine/dojo/blob/855da3112c87faea87646db5a406ac77b4daf149/crates/saya/core/src/prover/program_input.rs#L54-L74\r\n\r\nthese changes (including #1986) make the process more straightforward as we can just filter based on the tx hash which is more straightforward.\r\n\r\n## Related issue\r\n\r\n<!--\r\nPlease link related issues: Fixes #<issue_number>\r\nMore info: https://docs.github.com/en/free-pro-team@latest/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword\r\n-->\r\n\r\n## Tests\r\n\r\n<!--\r\nPlease refer to the CONTRIBUTING.md file to know more about the testing process. Ensure you've tested at least the package you're modifying if running all the tests consumes too much memory on your system.\r\n-->\r\n\r\n- [ ] Yes\r\n- [x] No, because they aren't needed\r\n- [ ] No, because I need help\r\n\r\n## Added to documentation?\r\n\r\n<!--\r\nIf the changes are small, code comments are enough, otherwise, the documentation is needed. It\r\nmay be a README.md file added to your module/package, a DojoBook PR or both.\r\n-->\r\n\r\n- [ ] README.md\r\n- [ ] [Dojo Book](https://github.com/dojoengine/book)\r\n- [x] No documentation needed\r\n\r\n## Checklist\r\n\r\n- [x] I've formatted my code (`scripts/prettier.sh`, `scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)\r\n- [x] I've linted my code (`scripts/clippy.sh`, `scripts/docs.sh`)\r\n- [x] I've commented my code\r\n- [ ] I've requested a review after addressing the comments",
+          "timestamp": "2024-05-23T09:18:30-04:00",
+          "tree_id": "8cf2a1f1cfe0467b02ed5b484bfc2d254b7e5c34",
+          "url": "https://github.com/dojoengine/dojo/commit/5fe059bb4e1a73abbcaaba724a660f0ed46d133b"
+        },
+        "date": 1716470804691,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17282940,
+            "range": "± 297479",
             "unit": "ns/iter"
           }
         ]
