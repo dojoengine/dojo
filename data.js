@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716470928259,
+  "lastUpdate": 1716471122652,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8335,6 +8335,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17085268,
             "range": "± 961762",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3b712254e5fa606089ec58b320bc6b4331986779",
+          "message": "fix(katana): l1/l2 messaging hash computations (#1981)\n\n# Description\r\n\r\nl1 -> l2 messaging should be using a different hash computation, but instead we were using the hash computation for l2 -> l1 message.\r\n\r\nthis pr adds a new `compute_l1_to_l2_message_hash` function for computing the hash of a l1 -> l2 message.\r\n\r\nref : https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/messaging-mechanism/#l1-l2-messages\r\n\r\n## Related issue\r\n\r\n<!--\r\nPlease link related issues: Fixes #<issue_number>\r\nMore info: https://docs.github.com/en/free-pro-team@latest/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword\r\n-->\r\n\r\n## Tests\r\n\r\n<!--\r\nPlease refer to the CONTRIBUTING.md file to know more about the testing process. Ensure you've tested at least the package you're modifying if running all the tests consumes too much memory on your system.\r\n-->\r\n\r\n- [ ] Yes\r\n- [ ] No, because they aren't needed\r\n- [ ] No, because I need help\r\n\r\n## Added to documentation?\r\n\r\n<!--\r\nIf the changes are small, code comments are enough, otherwise, the documentation is needed. It\r\nmay be a README.md file added to your module/package, a DojoBook PR or both.\r\n-->\r\n\r\n- [ ] README.md\r\n- [ ] [Dojo Book](https://github.com/dojoengine/book)\r\n- [x] No documentation needed\r\n\r\n## Checklist\r\n\r\n- [x] I've formatted my code (`scripts/prettier.sh`, `scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)\r\n- [x] I've linted my code (`scripts/clippy.sh`, `scripts/docs.sh`)\r\n- [x] I've commented my code\r\n- [ ] I've requested a review after addressing the comments",
+          "timestamp": "2024-05-23T09:23:41-04:00",
+          "tree_id": "22ba94f4f0a70a9f83179592574efafd5a91f514",
+          "url": "https://github.com/dojoengine/dojo/commit/3b712254e5fa606089ec58b320bc6b4331986779"
+        },
+        "date": 1716471121418,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16785835,
+            "range": "± 55915",
             "unit": "ns/iter"
           }
         ]
