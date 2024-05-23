@@ -92,23 +92,6 @@ key = false
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0xb08720e71923b4611204933ab8b088ee8fba8448d080f8084c07d2ceaeff86"
-original_class_hash = "0xb08720e71923b4611204933ab8b088ee8fba8448d080f8084c07d2ceaeff86"
-abi = "manifests/dev/abis/deployments/models/dojo_examples_models_name.json"
-name = "dojo_examples::models::name"
-
-[[models.members]]
-name = "player"
-type = "ContractAddress"
-key = true
-
-[[models.members]]
-name = "name"
-type = "ByteArray"
-key = false
-
-[[models]]
-kind = "DojoModel"
 class_hash = "0x74e835af876c9f95977537b91d60d656f6ff2a4a8b2bb8d47448f345980f612"
 original_class_hash = "0x74e835af876c9f95977537b91d60d656f6ff2a4a8b2bb8d47448f345980f612"
 abi = "manifests/dev/abis/deployments/models/dojo_examples_models_player_config.json"
@@ -132,23 +115,6 @@ key = false
 [[models.members]]
 name = "favorite_item"
 type = "Option<u32>"
-key = false
-
-[[models]]
-kind = "DojoModel"
-class_hash = "0x6d87830f9835547068ffc5946e25226fee1386c0fe1e49547181d1716ac6be"
-original_class_hash = "0x6d87830f9835547068ffc5946e25226fee1386c0fe1e49547181d1716ac6be"
-abi = "manifests/dev/abis/deployments/models/dojo_examples_models_player_name.json"
-name = "dojo_examples::models::player_name"
-
-[[models.members]]
-name = "player"
-type = "ContractAddress"
-key = true
-
-[[models.members]]
-name = "name"
-type = "ByteArray"
 key = false
 
 [[models]]
