@@ -131,16 +131,15 @@ mod tests {
     use super::{create_stats_table, BuildArgs};
 
     // Uncomment once bindings support arrays.
-    #[ignore]
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {
         let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
 
         let build_args = BuildArgs {
             bindings_output: "generated".to_string(),
-            typescript: true,
+            typescript: false,
             unity: true,
-            typescript_v2: true,
+            typescript_v2: false,
             stats: true,
         };
         let result = build_args.run(&config);

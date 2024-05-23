@@ -183,7 +183,7 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
             let ty = ty.split("::").last().unwrap();
             let primitive = match Primitive::from_str(ty) {
                 Ok(primitive) => primitive,
-                Err(_) => return Err(ParseError::InvalidSchema),
+                Err(_) => return Err(ParseError::invalid_schema()),
             };
 
             Ok(Ty::Primitive(primitive))
