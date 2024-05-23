@@ -156,6 +156,17 @@ fn data_objects_recursion(
 
                 Some(nested_objects)
             }
+            TypeData::List(inner) => {
+                let mut nested_path = path_array.clone();
+                nested_path.push(field_name.to_string());
+                let nested_objects = data_objects_recursion(
+                    &inner.type_ref().to_string(),
+                    inner.type_mapping().unwrap(),
+                    nested_path,
+                );
+
+                Some(nested_objects)
+            }
             _ => None,
         })
         .flatten()

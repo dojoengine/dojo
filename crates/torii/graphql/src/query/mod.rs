@@ -103,14 +103,15 @@ fn parse_nested_type(member: &ModelMember, nested_members: &[&ModelMember]) -> T
             // if the nested member is an Enum and the member is an Enum, we need to inject the Enum
             // type in order to have a "option" field in the nested Enum for the enum
             // variant
-            if nested_member.type_enum == "Enum"
-                && nested_member.name == "option"
-                && member.type_enum == "Enum"
+            if member.model_id == nested_member.model_id && nested_member.id.ends_with(&member.name)
             {
-                Some((Name::new("option"), TypeData::Simple(TypeRef::named("Enum"))))
-            } else if member.model_id == nested_member.model_id
-                && nested_member.id.ends_with(&member.name)
-            {
+                if nested_member.type_enum == "Enum"
+                    && nested_member.name == "option"
+                    && member.type_enum == "Enum"
+                {
+                    return Some((Name::new("Enum"), TypeData::Simple(TypeRef::named("Enum"))));
+                }
+
                 let type_data = member_to_type_data(nested_member, nested_members);
                 Some((Name::new(&nested_member.name), type_data))
             } else {
