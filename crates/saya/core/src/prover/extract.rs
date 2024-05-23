@@ -97,7 +97,7 @@ fn get_message_to_appchain_segment(
 
 #[cfg(test)]
 mod tests {
-    use crate::prover::{prove, ProverIdentifier};
+    use crate::prover::{prove_diff, ProverIdentifier};
 
     use super::*;
     use cairo_proof_parser::output::extract_output;
@@ -177,7 +177,7 @@ mod tests {
             world_da: Some(Vec::new()),
         };
         let serialized_input = serde_json::to_string(&input).unwrap();
-        let proof = prove(serialized_input, ProverIdentifier::Stone).await.unwrap();
+        let proof = prove_diff(serialized_input, ProverIdentifier::Stone).await.unwrap();
         let program_output_from_proof = extract_output(&proof).unwrap().program_output;
         let program_input_from_proof = program_input_from_program_output(
             program_output_from_proof,

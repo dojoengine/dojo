@@ -1,6 +1,9 @@
-use crate::{prover::extract::program_input_from_program_output, LOG_TARGET};
+use crate::{
+    prover::{client::CAIRO_VERSION, extract::program_input_from_program_output, prove_merge},
+    LOG_TARGET,
+};
 
-use super::{prove, ProgramInput, ProverIdentifier};
+use super::{prove_diff, ProgramInput, ProverIdentifier};
 use anyhow::bail;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::BoxFuture;
@@ -77,23 +80,25 @@ async fn combine_proofs(
     let earlier_input = program_input_from_program_output(program_output1, state_updates1).unwrap();
     let later_input = program_input_from_program_output(program_output2, state_updates2).unwrap();
 
-    let _merger_input = ProgramInput::prepare_differ_args(vec![earlier_input, later_input]);
-
     trace!(target: LOG_TARGET, "Merging proofs");
 
-    let prover =
-        if prover == ProverIdentifier::Stone { ProverIdentifier::StoneMerge } else { prover };
+    let prover_input = match (&prover, CAIRO_VERSION) {
+        (ProverIdentifier::Http(_), 1) => {
+            ProgramInput::prepare_differ_args(vec![earlier_input, later_input]);
 
-    // TODO: remove when proof extraction is working.
-    let merger_input = "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into();
-    let merged_proof = prove(merger_input, prover).await?;
+            // MOCK: remove when proof extraction is working.
+            "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into()
+        }
+        _ => todo!(),
+    };
+
+    let merged_proof = prove_merge(prover_input, prover).await?;
 
     Ok(merged_proof)
 }
 
-/// Simulates the proving process with a placeholder function.
-/// Returns a proof string asynchronously.
 /// Handles the recursive proving of blocks using asynchronous futures.
+/// Returns a proof string asynchronously.
 /// It returns a BoxFuture to allow for dynamic dispatch of futures, useful in recursive async
 /// calls.
 fn prove_recursively(
@@ -108,9 +113,14 @@ fn prove_recursively(
             let block_number = input.block_number;
             trace!(target: LOG_TARGET, "Proving block {block_number}");
 
-            let prover_input = ProgramInput::prepare_differ_args(vec![input.clone()]);
+            let prover_input = match (&prover, CAIRO_VERSION) {
+                (ProverIdentifier::Http(_), 1) => {
+                    ProgramInput::prepare_differ_args(vec![input.clone()])
+                }
+                _ => todo!(),
+            };
 
-            let proof = prove(prover_input, prover).await?;
+            let proof = prove_diff(prover_input, prover).await?;
             info!(target: LOG_TARGET, block_number, "Block proven");
             Ok((proof, input))
         } else {
