@@ -6,7 +6,7 @@ use std::path::Path;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use camino::Utf8PathBuf;
 use scarb::core::{Config, TargetKind};
-use scarb::ops::CompileOpts;
+use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 
 const SCARB_MANIFEST: &str = "crates/dojo-core/Scarb.toml";
 const SCARB_MANIFEST_BACKUP: &str = "crates/dojo-core/bak.Scarb.toml";
@@ -123,9 +123,16 @@ sierra = true
         .expect("Could not read Scarb workspace");
     let packages = ws.members().map(|p| p.id).collect();
 
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+
     scarb::ops::compile(
         packages,
-        CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+        CompileOpts {
+            include_targets: vec![],
+            exclude_targets: vec![TargetKind::TEST],
+            features: features_opts,
+        },
         &ws,
     )
     .expect("Could not run Scarb compile");

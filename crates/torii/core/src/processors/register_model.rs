@@ -1,9 +1,9 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, MaybePendingTransactionReceipt};
-use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tracing::{debug, info};
 
@@ -47,14 +47,15 @@ where
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let name = parse_cairo_short_string(&event.data[0])?;
+        let name = ByteArray::cairo_deserialize(&event.data, 0)?;
+        let name = name.to_string()?;
 
         let model = world.model_reader(&name).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 
-        let unpacked_size: u32 = model.unpacked_size().await?.try_into()?;
-        let packed_size: u32 = model.packed_size().await?.try_into()?;
+        let unpacked_size: u32 = model.unpacked_size().await?;
+        let packed_size: u32 = model.packed_size().await?;
 
         let class_hash = event.data[1];
         let contract_address = event.data[3];

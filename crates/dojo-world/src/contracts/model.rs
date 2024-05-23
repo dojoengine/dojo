@@ -1,17 +1,19 @@
+use std::str::FromStr as _;
+
 pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
-use cainome::cairo_serde::{ContractAddress, Error as CainomeError};
-use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
-use dojo_types::primitive::PrimitiveError;
-use dojo_types::schema::Ty;
+use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeError};
+use dojo_types::packing::{PackingError, ParseError};
+use dojo_types::primitive::{Primitive, PrimitiveError};
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{
-    cairo_short_string_to_felt, CairoShortStringToFeltError, ParseCairoShortStringError,
+    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
+    CairoShortStringToFeltError, NonAsciiNameError, ParseCairoShortStringError,
 };
-use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
-use starknet_crypto::poseidon_hash_many;
 
+use super::abi::world::Layout;
 use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
@@ -35,6 +37,8 @@ pub enum ModelError {
     #[error(transparent)]
     CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
+    NonAsciiNameError(#[from] NonAsciiNameError),
+    #[error(transparent)]
     CairoTypeError(#[from] PrimitiveError),
     #[error(transparent)]
     Parse(#[from] ParseError),
@@ -44,16 +48,20 @@ pub enum ModelError {
     Cainome(#[from] CainomeError),
 }
 
+// TODO: to update to match with new model interface
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
+    // TODO: kept for compatibility but should be removed
+    // because it returns the model name hash and not the model name itself.
     fn name(&self) -> String;
+    fn selector(&self) -> FieldElement;
     fn class_hash(&self) -> FieldElement;
     fn contract_address(&self) -> FieldElement;
     async fn schema(&self) -> Result<Ty, E>;
-    async fn packed_size(&self) -> Result<FieldElement, E>;
-    async fn unpacked_size(&self) -> Result<FieldElement, E>;
-    async fn layout(&self) -> Result<Vec<FieldElement>, E>;
+    async fn packed_size(&self) -> Result<u32, E>;
+    async fn unpacked_size(&self) -> Result<u32, E>;
+    async fn layout(&self) -> Result<abigen::model::Layout, E>;
 }
 
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
@@ -77,7 +85,7 @@ where
         name: &str,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        let name = cairo_short_string_to_felt(name)?;
+        let name = get_selector_from_name(name)?;
 
         let (class_hash, contract_address) =
             world.model(&name).block_id(world.block_id).call().await?;
@@ -103,38 +111,22 @@ where
         &self,
         keys: &[FieldElement],
     ) -> Result<Vec<FieldElement>, ModelError> {
-        let packed_size: u8 =
-            self.packed_size().await?.try_into().map_err(ParseError::ValueOutOfRange)?;
+        // As the dojo::database::introspect::Layout type has been pasted
+        // in both `model` and `world` ABI by abigen, the compiler sees both types
+        // as different even if they are strictly identical.
+        // Here is a trick reading the model layout as raw FieldElement
+        // and deserialize it to a world::Layout.
+        let raw_layout = self.model_reader.layout().raw_call().await?;
+        let layout = Layout::cairo_deserialize(raw_layout.as_slice(), 0)?;
 
-        let key = poseidon_hash_many(keys);
-        let key = poseidon_hash_many(&[short_string!("dojo_storage"), self.name, key]);
-
-        let mut packed = Vec::with_capacity(packed_size as usize);
-        for slot in 0..packed_size {
-            let value = self
-                .world_reader
-                .provider()
-                .get_storage_at(
-                    self.world_reader.address,
-                    key + slot.into(),
-                    self.world_reader.block_id,
-                )
-                .await?;
-
-            packed.push(value);
-        }
-
-        Ok(packed)
+        Ok(self.world_reader.entity(&self.selector(), &keys.to_vec(), &layout).call().await?)
     }
 
     pub async fn entity(&self, keys: &[FieldElement]) -> Result<Ty, ModelError> {
         let mut schema = self.schema().await?;
+        let values = self.entity_storage(keys).await?;
 
-        let layout = self.layout().await?;
-        let raw_values = self.entity_storage(keys).await?;
-
-        let unpacked = unpack(raw_values, layout)?;
-        let mut keys_and_unpacked = [keys, &unpacked].concat();
+        let mut keys_and_unpacked = [keys, &values].concat();
 
         schema.deserialize(&mut keys_and_unpacked)?;
 
@@ -152,6 +144,10 @@ where
         self.name.to_string()
     }
 
+    fn selector(&self) -> FieldElement {
+        self.name
+    }
+
     fn class_hash(&self) -> FieldElement {
         self.class_hash
     }
@@ -161,24 +157,83 @@ where
     }
 
     async fn schema(&self) -> Result<Ty, ModelError> {
-        let res = self.model_reader.schema().raw_call().await?;
-        Ok(parse_ty(&res)?)
+        let res = self.model_reader.schema().call().await?;
+        parse_schema(&res).map_err(ModelError::Parse)
     }
 
-    async fn packed_size(&self) -> Result<FieldElement, ModelError> {
-        Ok(self.model_reader.packed_size().raw_call().await?[0])
+    // For non fixed layouts, packed and unpacked sizes are None.
+    // Therefore we return 0 in this case.
+    async fn packed_size(&self) -> Result<u32, ModelError> {
+        Ok(self.model_reader.packed_size().call().await?.unwrap_or(0))
     }
 
-    async fn unpacked_size(&self) -> Result<FieldElement, ModelError> {
-        Ok(self.model_reader.unpacked_size().raw_call().await?[0])
+    async fn unpacked_size(&self) -> Result<u32, ModelError> {
+        Ok(self.model_reader.unpacked_size().call().await?.unwrap_or(0))
     }
 
-    async fn layout(&self) -> Result<Vec<FieldElement>, ModelError> {
-        // Layout entrypoint expanded by the #[model] attribute returns a
-        // `Span`. So cainome generated code will deserialize the result
-        // of `executor.call()` which is a Vec<FieldElement>.
-        // So inside the vec, we skip the first element, which is the length
-        // of the span returned by `layout` entrypoint of the model code.
-        Ok(self.model_reader.layout().raw_call().await?[1..].into())
+    async fn layout(&self) -> Result<abigen::model::Layout, ModelError> {
+        Ok(self.model_reader.layout().call().await?)
+    }
+}
+
+fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
+    match ty {
+        abigen::model::Ty::Primitive(primitive) => {
+            let ty = parse_cairo_short_string(primitive)?;
+            let ty = ty.split("::").last().unwrap();
+            let primitive = match Primitive::from_str(ty) {
+                Ok(primitive) => primitive,
+                Err(_) => return Err(ParseError::invalid_schema()),
+            };
+
+            Ok(Ty::Primitive(primitive))
+        }
+        abigen::model::Ty::Struct(schema) => {
+            let name = parse_cairo_short_string(&schema.name)?;
+
+            let children = schema
+                .children
+                .iter()
+                .map(|child| {
+                    Ok(Member {
+                        name: parse_cairo_short_string(&child.name)?,
+                        ty: parse_schema(&child.ty)?,
+                        key: child.attrs.contains(&cairo_short_string_to_felt("key").unwrap()),
+                    })
+                })
+                .collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::Struct(Struct { name, children }))
+        }
+        abigen::model::Ty::Enum(enum_) => {
+            let name = parse_cairo_short_string(&enum_.name)?;
+
+            let options = enum_
+                .children
+                .iter()
+                .map(|(name, ty)| {
+                    // strip of the type (T) of the enum variant for now
+                    // breaks the db queries
+                    let name =
+                        parse_cairo_short_string(name)?.split('(').next().unwrap().to_string();
+                    let ty = parse_schema(ty)?;
+
+                    Ok(EnumOption { name, ty })
+                })
+                .collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::Enum(Enum { name, option: None, options }))
+        }
+        abigen::model::Ty::Tuple(values) => {
+            let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::Tuple(values))
+        }
+        abigen::model::Ty::Array(values) => {
+            let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::Array(values))
+        }
+        abigen::model::Ty::ByteArray => Ok(Ty::ByteArray("".to_string())),
     }
 }

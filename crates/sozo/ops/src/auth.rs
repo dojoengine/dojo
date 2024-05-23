@@ -9,7 +9,7 @@ use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::parse_cairo_short_string;
+use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet_crypto::FieldElement;
 
 use crate::utils;
@@ -99,15 +99,20 @@ where
 {
     let mut calls = Vec::new();
 
-    let mut world_reader = WorldContractReader::new(world.address, world.account.provider());
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
+    let world_reader = WorldContractReader::new(world.address, world.account.provider())
+        .with_block(BlockId::Tag(BlockTag::Pending));
 
+    // TODO: Is some models have version 0 (using the name of the struct instead of the selector),
+    // we're not able to distinguish that.
+    // Should we add the version into the `ModelContract` struct? Can we always know that?
     for mc in models_contracts {
         let model_name = parse_cairo_short_string(&mc.model)?;
+        let model_selector = get_selector_from_name(&model_name)?;
+
         match world_reader.model_reader(&model_name).await {
             Ok(_) => {
                 let contract = utils::get_contract_address(world, mc.contract).await?;
-                calls.push(world.grant_writer_getcall(&mc.model, &contract.into()));
+                calls.push(world.grant_writer_getcall(&model_selector, &contract.into()));
             }
 
             Err(ModelError::ModelNotFound) => {
@@ -154,7 +159,14 @@ where
 
     for or in owners_resources {
         let resource = match &or.resource {
-            ResourceType::Model(name) => *name,
+            ResourceType::Model(name) => {
+                // TODO: Is some models have version 0 (using the name of the struct instead of the
+                // selector), we're not able to distinguish that.
+                // Should we add the version into the `ModelContract` struct? Can we always know
+                // that?
+                let model_name = parse_cairo_short_string(name)?;
+                get_selector_from_name(&model_name)?
+            }
             ResourceType::Contract(name_or_address) => {
                 utils::get_contract_address(world, name_or_address.clone()).await?
             }
@@ -197,11 +209,16 @@ where
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
     for mc in models_contracts {
+        // TODO: Is some models have version 0 (using the name of the struct instead of the
+        // selector), we're not able to distinguish that.
+        // Should we add the version into the `ModelContract` struct? Can we always know that?
         let model_name = parse_cairo_short_string(&mc.model)?;
+        let model_selector = get_selector_from_name(&model_name)?;
+
         match world_reader.model_reader(&model_name).await {
             Ok(_) => {
                 let contract = utils::get_contract_address(world, mc.contract).await?;
-                calls.push(world.revoke_writer_getcall(&mc.model, &contract.into()));
+                calls.push(world.revoke_writer_getcall(&model_selector, &contract.into()));
             }
 
             Err(ModelError::ModelNotFound) => {
@@ -248,7 +265,14 @@ where
 
     for or in owners_resources {
         let resource = match &or.resource {
-            ResourceType::Model(name) => *name,
+            ResourceType::Model(name) => {
+                // TODO: Is some models have version 0 (using the name of the struct instead of the
+                // selector), we're not able to distinguish that.
+                // Should we add the version into the `ModelContract` struct? Can we always know
+                // that?
+                let model_name = parse_cairo_short_string(name)?;
+                get_selector_from_name(&model_name)?
+            }
             ResourceType::Contract(name_or_address) => {
                 utils::get_contract_address(world, name_or_address.clone()).await?
             }

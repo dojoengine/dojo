@@ -5,6 +5,7 @@ use async_graphql::{Name, Value};
 use chrono::{DateTime, Utc};
 use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
+use regex::Regex;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, SqliteConnection};
 use torii_core::sql::FELT_DELIMITER;
@@ -64,6 +65,8 @@ fn build_type_mapping(
         })
         .collect::<sqlx::Result<TypeMapping>>()?;
 
+    println!("{:#?}", type_mapping);
+
     Ok(type_mapping)
 }
 
@@ -71,38 +74,76 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
     // TODO: convert sql -> Ty directly
     match member.type_enum.as_str() {
         "Primitive" => TypeData::Simple(TypeRef::named(&member.ty)),
-        "Enum" => TypeData::Simple(TypeRef::named("Enum")),
-        _ => parse_nested_type(
-            &member.model_id,
-            &member.id,
-            &member.name,
-            &member.ty,
+        "ByteArray" => TypeData::Simple(TypeRef::named("ByteArray")),
+        "Array" => TypeData::List(Box::new(member_to_type_data(
+            nested_members
+                .iter()
+                .find(|&nested_member| {
+                    nested_member.model_id == member.model_id
+                        && nested_member.id.ends_with(&member.name)
+                        // TEMP FIX: refer to parse_nested_type
+                        && nested_member
+                            .id
+                            .split('$')
+                            .collect::<Vec<_>>()
+                            .starts_with(&member.id.split('$').collect::<Vec<_>>())
+                })
+                .expect("Array type should have nested type"),
             nested_members,
-        ),
+        ))),
+        // Enums that do not have a nested member are considered as a simple Enum
+        "Enum"
+            if !nested_members.iter().any(|&nested_member| {
+                nested_member.model_id == member.model_id
+                    && nested_member.id.ends_with(&member.name)
+            }) =>
+        {
+            TypeData::Simple(TypeRef::named("Enum"))
+        }
+        _ => parse_nested_type(member, nested_members),
     }
 }
 
-fn parse_nested_type(
-    model_id: &str,
-    member_id: &str,
-    member_name: &str,
-    member_type: &str,
-    nested_members: &[&ModelMember],
-) -> TypeData {
+fn parse_nested_type(member: &ModelMember, nested_members: &[&ModelMember]) -> TypeData {
     let nested_mapping: TypeMapping = nested_members
         .iter()
-        .filter_map(|&member| {
-            if model_id == member.model_id && member.id.ends_with(member_name) {
-                let type_data = member_to_type_data(member, nested_members);
-                Some((Name::new(&member.name), type_data))
+        .filter_map(|&nested_member| {
+            if member.model_id == nested_member.model_id
+            && nested_member.id.ends_with(&member.name)
+            // TEMP FIX: a nested member that has the same name as another nested member
+                // and that both have parents that start with the same id (Model$Test1 and Model$Test2)
+                // will end up being assigned to the wrong parent
+                && nested_member
+                    .id
+                    .split('$')
+                    .collect::<Vec<_>>()
+                    .starts_with(&member.id.split('$').collect::<Vec<_>>())
+            {
+                // if the nested member is an Enum and the member is an Enum, we need to inject the
+                // Enum type in order to have a "option" field in the nested Enum
+                // for the enum variant
+                if nested_member.type_enum == "Enum"
+                    && nested_member.name == "option"
+                    && member.type_enum == "Enum"
+                {
+                    return Some((Name::new("option"), TypeData::Simple(TypeRef::named("Enum"))));
+                }
+
+                let type_data = member_to_type_data(nested_member, nested_members);
+                Some((Name::new(&nested_member.name), type_data))
             } else {
                 None
             }
         })
         .collect();
 
-    let model_name = member_id.split('$').next().unwrap();
-    let namespaced = format!("{}_{}", model_name, member_type);
+    let model_name = member.id.split('$').next().unwrap();
+    // sanitizes the member type string
+    // for eg. Position_Array<Vec2> -> Position_ArrayVec2
+    // Position_(u8, Vec2) -> Position_u8Vec2
+    let re = Regex::new(r"[, ()<>]").unwrap();
+    let member_type_name = re.replace_all(&member.ty, "");
+    let namespaced = format!("{}_{}", model_name, member_type_name);
     TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
 
@@ -126,7 +167,11 @@ pub fn value_mapping_from_row(
 ) -> sqlx::Result<ValueMapping> {
     let mut value_mapping = types
         .iter()
-        .filter(|(_, type_data)| type_data.is_simple())
+        .filter(|(_, type_data)| {
+            type_data.is_simple()
+            // ignore Enum fields because the column is not stored in this row. we inejct it later
+            // && !(type_data.type_ref().to_string() == "Enum")
+        })
         .map(|(field_name, type_data)| {
             let mut value =
                 fetch_value(row, field_name, &type_data.type_ref().to_string(), is_external)?;

@@ -313,12 +313,8 @@ impl DojoWorld {
         let (models_str,): (String,) =
             sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
-        println!("models_str: {}", models_str);
-
         let model_ids = models_str.split(',').collect::<Vec<&str>>();
         let schemas = self.model_cache.schemas(model_ids).await?;
-
-        println!("schemas: {:?}", schemas);
 
         // query to filter with limit and offset
         let entities_query = format!(

@@ -88,7 +88,8 @@ pub async fn setup(
         TxnConfig { wait: true, ..Default::default() },
     )
     .await?;
-    let world = WorldContract::new(output.world_address, account);
+    let world = WorldContract::new(output.world_address, account)
+        .with_block(BlockId::Tag(BlockTag::Pending));
 
     Ok(world)
 }

@@ -1,7 +1,8 @@
 use array::ArrayTrait;
 use starknet::{ContractAddress, ClassHash};
 
-#[derive(Model, Drop, Serde)]
+#[derive(Introspect, Drop, Serde)]
+#[dojo::model]
 struct Record {
     #[key]
     record_id: u32,
@@ -24,7 +25,8 @@ struct Record {
     composite_u256: u256,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct RecordSibling {
     #[key]
     record_id: u32,
@@ -54,7 +56,8 @@ struct NestedMost {
     type_string: felt252,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct Subrecord {
     #[key]
     record_id: u32,
@@ -84,7 +87,8 @@ impl DepthIntoFelt252 of Into<Depth, felt252> {
 }
 
 // takes a long time to deploy, uncomment for now
-// #[derive(Model, Copy, Drop, Serde)]
+// #[derive(Introspect, Copy, Drop, Serde)]
+// #[dojo::model]
 // struct FatModel {
 //     #[key]
 //     record_id: u32,

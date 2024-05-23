@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
-use dojo_test_utils::compiler::build_test_config;
+use camino::Utf8PathBuf;
+use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
@@ -57,22 +58,34 @@ async fn test_load_from_remote() {
         SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-    let base_path = "../../../examples/spawn-and-move";
-    let target_path = format!("{}/target/dev", base_path);
-    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+
+    let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move/");
+    let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
+
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+
+    let manifest_path = config.manifest_path();
+    let base_dir = manifest_path.parent().unwrap();
+    let target_dir = format!("{}/target/dev", base_dir);
+
+    let migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
+
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+
     let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+
     let world_address = migration_output.world_address;
 
     assert!(migration.world_address().unwrap() == world_address);
@@ -101,7 +114,7 @@ async fn test_load_from_remote() {
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 4);
+    assert_eq!(models.len(), 5);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
         "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Position'",
@@ -112,7 +125,7 @@ async fn test_load_from_remote() {
 
     assert_eq!(id, format!("{:#x}", get_selector_from_name("Position").unwrap()));
     assert_eq!(name, "Position");
-    assert_eq!(packed_size, 1);
+    assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 2);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
@@ -124,8 +137,20 @@ async fn test_load_from_remote() {
 
     assert_eq!(id, format!("{:#x}", get_selector_from_name("Moves").unwrap()));
     assert_eq!(name, "Moves");
-    assert_eq!(packed_size, 1);
-    assert_eq!(unpacked_size, 2);
+    assert_eq!(packed_size, 0);
+    assert_eq!(unpacked_size, 0);
+
+    let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'PlayerConfig'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(id, format!("{:#x}", get_selector_from_name("PlayerConfig").unwrap()));
+    assert_eq!(name, "PlayerConfig");
+    assert_eq!(packed_size, 0);
+    assert_eq!(unpacked_size, 0);
 
     // print all entities
     let entities = sqlx::query("SELECT * FROM entities").fetch_all(&pool).await.unwrap();
