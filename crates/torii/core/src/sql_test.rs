@@ -82,8 +82,10 @@ async fn test_load_from_remote() {
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+
     let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+
     let world_address = migration_output.world_address;
 
     assert!(migration.world_address().unwrap() == world_address);
