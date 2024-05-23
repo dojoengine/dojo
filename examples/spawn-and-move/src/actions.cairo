@@ -90,16 +90,10 @@ mod actions {
             let player = get_caller_address();
 
             let items = array![
-                PlayerItem { item_id: 1, quantity: 100 },
-                PlayerItem { item_id: 2, quantity: 50 }
+                PlayerItem { item_id: 1, quantity: 100 }, PlayerItem { item_id: 2, quantity: 50 }
             ];
 
-            let config = PlayerConfig {
-                player,
-                name,
-                items,
-                favorite_item: Option::Some(1),
-            };
+            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1), };
 
             set!(world, (config));
         }
