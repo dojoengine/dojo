@@ -29,7 +29,7 @@ mod actions {
         direction: Direction,
     }
 
-    fn dojo_init(other_contract: ContractAddress) {
+    fn dojo_init(other_contract: ContractAddress, test: ContractAddress) {
         // body
         println!("hi1111");
     }

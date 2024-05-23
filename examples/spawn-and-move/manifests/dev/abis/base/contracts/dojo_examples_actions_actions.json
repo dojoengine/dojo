@@ -69,10 +69,14 @@
           {
             "name": "other_contract",
             "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "test",
+            "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
         "outputs": [],
-        "state_mutability": "view"
+        "state_mutability": "external"
       }
     ]
   },

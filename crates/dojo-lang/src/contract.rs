@@ -5,13 +5,11 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_semantic::diagnostic;
 use cairo_lang_syntax::attribute::structured::{
     Attribute, AttributeArg, AttributeArgVariant, AttributeListStructurize,
 };
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
@@ -78,7 +76,7 @@ impl DojoContract {
                         let fn_name = fn_decl.name(db).text(db);
 
                         if fn_name == "dojo_init" {
-                            return Self::handle_init_fn(db, fn_ast);
+                            return system.handle_init_fn(db, fn_ast);
                         }
                     }
 
@@ -135,7 +133,7 @@ impl DojoContract {
                 ]),
             ));
 
-            // println!("{}", builder.code);
+            println!("{}", builder.code);
 
             return PluginResult {
                 code: Some(PluginGeneratedFile {
@@ -159,27 +157,31 @@ impl DojoContract {
         PluginResult::default()
     }
 
-    fn handle_init_fn(db: &dyn SyntaxGroup, fn_ast: &ast::FunctionWithBody) -> Vec<RewriteNode> {
+    fn handle_init_fn(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        fn_ast: &ast::FunctionWithBody,
+    ) -> Vec<RewriteNode> {
         let fn_decl = fn_ast.declaration(db);
         let fn_name = fn_decl.name(db).text(db);
 
-        let params = fn_decl.signature(db).parameters(db);
-        let param_els = params.elements(db);
+        let params_str = self.rewrite_parameters_init(
+            db,
+            fn_decl.signature(db).parameters(db),
+        );
+        
         let body = fn_ast.body(db).as_syntax_node().get_text(db);
-
-        let params_rewrite =
-            param_els.iter().map(|p| RewriteNode::Text(p.as_syntax_node().get_text(db))).collect();
 
         let node = RewriteNode::interpolate_patched(
             "
                 #[starknet::interface]
                 trait IDojoInit<ContractState> {
-                    fn $name$(self: @ContractState, $other_arguments$);
+                    fn $name$($params_str$);
                 }
 
                 #[abi(embed_v0)]
                 impl IDojoInitImpl of IDojoInit<ContractState> {
-                    fn $name$(self: @ContractState, $other_arguments$) {
+                    fn $name$($params_str$) {
                         assert(get_caller_address() == self.world().contract_address, 'Only world \
              can init');
                         $body$
@@ -188,11 +190,11 @@ impl DojoContract {
             ",
             &UnorderedHashMap::from([
                 ("name".to_string(), RewriteNode::Text(fn_name.to_string())),
-                ("other_arguments".to_string(), RewriteNode::new_modified(params_rewrite)),
+                ("params_str".to_string(), RewriteNode::Text(params_str)),
                 ("body".to_string(), RewriteNode::Text(body)),
             ]),
         );
-
+        
         vec![node]
     }
 
@@ -343,6 +345,26 @@ impl DojoContract {
         });
 
         count > 1
+    }
+    /// Rewrites parameter list by:
+    /// * inserting `self` parameter if missing,
+    /// 
+    /// Returns:
+    /// * the list of parameters in a String
+    pub fn rewrite_parameters_init(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        param_list: ast::ParamList,
+    ) -> String {
+        let (add_self, _) = self.check_self_parameter(db, param_list.clone());
+
+        let mut params = param_list.elements(db).iter().map(|p| p.as_syntax_node().get_text(db)).collect::<Vec<String>>();
+        
+        if add_self {
+            params.insert(0, "self: @ContractState".to_string());
+        }
+        
+        params.join(", ")
     }
 
     /// Rewrites parameter list by:

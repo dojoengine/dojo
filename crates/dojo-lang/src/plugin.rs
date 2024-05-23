@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use anyhow::Result;
-use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
+use cairo_lang_defs::patcher::{PatchBuilder};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, MacroPluginMetadata,
     PluginDiagnostic, PluginGeneratedFile, PluginResult,
@@ -16,7 +16,6 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
@@ -130,64 +129,6 @@ impl BuiltinDojoPlugin {
             // All diagnostics are for now error. Severity may be moved as argument
             // if warnings are required in this file.
             diagnostics: vec![PluginDiagnostic { stable_ptr, message, severity: Severity::Error }],
-            remove_original_item: false,
-        }
-    }
-
-    fn handle_init_fn(&self, db: &dyn SyntaxGroup, fn_ast: ast::FunctionWithBody) -> PluginResult {
-        let fn_decl = fn_ast.declaration(db);
-
-        let fn_name = fn_decl.name(db).text(db);
-        let params = fn_decl.signature(db).parameters(db);
-        let param_els = params.elements(db);
-        let body = fn_ast.body(db).as_syntax_node().get_text(db);
-
-        let params_rewrite =
-            param_els.iter().map(|p| RewriteNode::Text(p.as_syntax_node().get_text(db))).collect();
-
-        if fn_name != "dojo_init" {
-            return self.result_with_diagnostic(
-                fn_decl.name(db).stable_ptr().untyped(),
-                "Dojo init function must be named dojo_init.".into(),
-            );
-        }
-
-        let node = RewriteNode::interpolate_patched(
-            "
-                #[starknet::interface]
-                trait IDojoInit<ContractState> {
-                    fn $name$(self: @ContractState, $other_arguments$);
-                }
-
-                #[abi(embed_v0)]
-                impl IDojoInitImpl of IDojoInit<ContractState> {
-                    fn $name$(self: @ContractState, $other_arguments$) {
-                        assert(get_caller_address() == self.world().contract_address, 'Only world \
-             can init');
-                        $body$
-                    }
-                }
-            ",
-            &UnorderedHashMap::from([
-                ("name".to_string(), RewriteNode::Text(fn_name.to_string())),
-                ("other_arguments".to_string(), RewriteNode::new_modified(params_rewrite)),
-                ("body".to_string(), RewriteNode::Text(body)),
-            ]),
-        );
-
-        let mut builder = PatchBuilder::new(db);
-        builder.add_modified(node);
-
-        println!("{}", builder.code);
-
-        PluginResult {
-            code: Some(PluginGeneratedFile {
-                name: fn_name.clone(),
-                content: builder.code,
-                aux_data: None,
-                code_mappings: builder.code_mappings,
-            }),
-            diagnostics: vec![],
             remove_original_item: false,
         }
     }
