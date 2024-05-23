@@ -7002,6 +7002,7 @@ dependencies = [
  "cairo-lang-starknet-classes",
  "dojo-metrics",
  "dojo-test-utils",
+ "dojo-world",
  "flate2",
  "futures",
  "hex",

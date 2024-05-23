@@ -139,7 +139,7 @@ where
 
         let actual_block_tx_count = provider.transaction_count_by_block(block_id)?;
         let actual_receipts = provider.receipts_by_block(block_id)?;
-        let actual_executions = provider.transactions_executions_by_block(block_id)?;
+        let actual_executions = provider.transaction_executions_by_block(block_id)?;
 
         let expected_block_with_tx_hashes = BlockWithTxHashes {
             header: expected_block.header.clone(),
@@ -244,7 +244,7 @@ where
 
         let actual_block_tx_count = provider.transaction_count_by_block(block_id)?;
         let actual_receipts = provider.receipts_by_block(block_id)?;
-        let actual_executions = provider.transactions_executions_by_block(block_id)?;
+        let actual_executions = provider.transaction_executions_by_block(block_id)?;
 
         let expected_block_with_tx_hashes =
             BlockWithTxHashes { header: expected_block.header.clone(), body: vec![] };
