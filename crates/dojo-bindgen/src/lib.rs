@@ -261,7 +261,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(data.models.len(), 4);
+        assert_eq!(data.models.len(), 5);
 
         assert_eq!(data.world.name, "dojo_example");
 
@@ -276,5 +276,9 @@ mod tests {
         let moved = data.models.get("EmoteMessage").unwrap();
         assert_eq!(moved.name, "EmoteMessage");
         assert_eq!(moved.qualified_path, "dojo_examples::models::EmoteMessage");
+
+        let player_config = data.models.get("PlayerConfig").unwrap();
+        assert_eq!(player_config.name, "PlayerConfig");
+        assert_eq!(player_config.qualified_path, "dojo_examples::models::PlayerConfig");
     }
 }
