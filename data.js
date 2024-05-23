@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716406411654,
+  "lastUpdate": 1716470679623,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8245,6 +8245,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17404675,
             "range": "± 289317",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad94ba68430fa154aa73154d77d9cef6ead493e4",
+          "message": "refactor(katana): replace cursor-based api with by block basis for simplicity (#1986)\n\n# Description\r\n\r\ncurrently, the `saya_getTransactionsExecutions` API is based on a cursor to determine how the traces are being fetched. \r\n\r\nhttps://github.com/dojoengine/dojo/blob/855da3112c87faea87646db5a406ac77b4daf149/crates/saya/provider/src/rpc/mod.rs#L160-L175\r\n\r\none issue it currently has it that the api params does not put any constraint on whether the returned traces are guarantee to only be from a specific block. however, the implementation seems to indicate otherwise.\r\n\r\nanyway, this pr basically want to remove the complexity of the pagination logic (which we dont even need!) and to replace it with a basic `get Xs from block Y` api instead.\r\n\r\n\r\nso we can simplify the endpoint itself to just return the traces per block instead of based on a cursor. the cursor is only adding more complexity to the api itself.\r\n\r\n## Related issue\r\n\r\n<!--\r\nPlease link related issues: Fixes #<issue_number>\r\nMore info: https://docs.github.com/en/free-pro-team@latest/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword\r\n-->\r\n\r\n## Tests\r\n\r\n<!--\r\nPlease refer to the CONTRIBUTING.md file to know more about the testing process. Ensure you've tested at least the package you're modifying if running all the tests consumes too much memory on your system.\r\n-->\r\n\r\n- [ ] Yes\r\n- [ ] No, because they aren't needed\r\n- [ ] No, because I need help\r\n\r\n## Added to documentation?\r\n\r\n<!--\r\nIf the changes are small, code comments are enough, otherwise, the documentation is needed. It\r\nmay be a README.md file added to your module/package, a DojoBook PR or both.\r\n-->\r\n\r\n- [ ] README.md\r\n- [x] [Dojo Book](https://github.com/dojoengine/book)\r\n- [ ] No documentation needed\r\n\r\n## Checklist\r\n\r\n- [x] I've formatted my code (`scripts/prettier.sh`, `scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)\r\n- [x] I've linted my code (`scripts/clippy.sh`, `scripts/docs.sh`)\r\n- [x] I've commented my code\r\n- [ ] I've requested a review after addressing the comments",
+          "timestamp": "2024-05-23T09:16:25-04:00",
+          "tree_id": "d4f5f34cfafb0b89c6a5d7c96358e568c5e7a5e0",
+          "url": "https://github.com/dojoengine/dojo/commit/ad94ba68430fa154aa73154d77d9cef6ead493e4"
+        },
+        "date": 1716470679008,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17266283,
+            "range": "± 289685",
             "unit": "ns/iter"
           }
         ]
