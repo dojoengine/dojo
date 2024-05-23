@@ -140,8 +140,10 @@ impl BuiltinDojoPlugin {
         let fn_name = fn_decl.name(db).text(db);
         let params = fn_decl.signature(db).parameters(db);
         let param_els = params.elements(db);
+        let body = fn_ast.body(db).as_syntax_node().get_text(db);
 
-        println!("name {}", fn_name);
+        let params_rewrite =
+            param_els.iter().map(|p| RewriteNode::Text(p.as_syntax_node().get_text(db))).collect();
 
         if fn_name != "dojo_init" {
             return self.result_with_diagnostic(
@@ -150,51 +152,33 @@ impl BuiltinDojoPlugin {
             );
         }
 
-        let node = RewriteNode::text("lambda!");
+        let node = RewriteNode::interpolate_patched(
+            "
+                #[starknet::interface]
+                trait IDojoInit<ContractState> {
+                    fn $name$(self: @ContractState, $other_arguments$);
+                }
 
-        // let node = RewriteNode::interpolate_patched(
-        // "
-        // use dojo::systems::IDojoInit;
-        // #[abi(embed_v0)]
-        // fn  $name$ {
-        // use dojo::world;
-        // use dojo::world::IWorldDispatcher;
-        // use dojo::world::IWorldDispatcherTrait;
-        // use dojo::world::IWorldProvider;
-        // use dojo::world::IDojoResourceProvider;
-        //
-        // component!(path: dojo::components::upgradeable::upgradeable, storage: \
-        // upgradeable, event: UpgradeableEvent);
-        //
-        // #[abi(embed_v0)]
-        // impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
-        // fn dojo_resource(self: @ContractState) -> felt252 {
-        // '$name$'
-        // }
-        // }
-        //
-        // #[abi(embed_v0)]
-        // impl WorldProviderImpl of IWorldProvider<ContractState> {
-        // fn world(self: @ContractState) -> IWorldDispatcher {
-        // self.world_dispatcher.read()
-        // }
-        // }
-        //
-        // #[abi(embed_v0)]
-        // impl UpgradableImpl = \
-        // dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
-        //
-        // $body$
-        // }
-        // ",
-        // &UnorderedHashMap::from([
-        // ("name".to_string(), RewriteNode::Text(name.to_string())),
-        // ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-        // ]),
-        // );
+                #[abi(embed_v0)]
+                impl IDojoInitImpl of IDojoInit<ContractState> {
+                    fn $name$(self: @ContractState, $other_arguments$) {
+                        assert(get_caller_address() == self.world().contract_address, 'Only world \
+             can init');
+                        $body$
+                    }
+                }
+            ",
+            &UnorderedHashMap::from([
+                ("name".to_string(), RewriteNode::Text(fn_name.to_string())),
+                ("other_arguments".to_string(), RewriteNode::new_modified(params_rewrite)),
+                ("body".to_string(), RewriteNode::Text(body)),
+            ]),
+        );
 
         let mut builder = PatchBuilder::new(db);
         builder.add_modified(node);
+        
+        println!("{}", builder.code);
 
         PluginResult {
             code: Some(PluginGeneratedFile {

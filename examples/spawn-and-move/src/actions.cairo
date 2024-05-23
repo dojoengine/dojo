@@ -31,7 +31,8 @@ mod actions {
 
     #[dojo::init]
     fn dojo_init(other_contract: ContractAddress) {
-        // assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+        // body
+        println!("hi");
     }
 
     #[abi(embed_v0)]

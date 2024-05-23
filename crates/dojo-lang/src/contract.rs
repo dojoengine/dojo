@@ -114,6 +114,8 @@ impl DojoContract {
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                 ]),
             ));
+            
+            // println!("{}", builder.code);
 
             return PluginResult {
                 code: Some(PluginGeneratedFile {
