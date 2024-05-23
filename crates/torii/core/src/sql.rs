@@ -633,6 +633,15 @@ impl Sql {
                 }
             }
             Ty::Array(array) => {
+                // delete all previous array elements
+                self.query_queue.enqueue(
+                    format!(
+                        "DELETE FROM [{table_id}] WHERE entity_id = ?",
+                        table_id = path.join("$")
+                    ),
+                    vec![Argument::String(entity_id.to_string())],
+                );
+
                 for (idx, member) in array.iter().enumerate() {
                     update_members(
                         &[Member { name: "data".to_string(), ty: member.clone(), key: false }],
@@ -900,7 +909,7 @@ impl Sql {
 
             if is_parent_array && path.len() > 2 {
                 create_table_query.push_str(&format!(
-                    "FOREIGN KEY (id, idx) REFERENCES {parent_table_id} (id, idx), "
+                    "FOREIGN KEY (id, idx) REFERENCES {parent_table_id} (id, idx) ON DELETE CASCADE, "
                 ));
             } else {
                 create_table_query.push_str(&format!(
