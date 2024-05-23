@@ -121,127 +121,89 @@ pub struct SqlModelMember {
 // `id` is the type id of the model member
 /// A helper function to parse the model members from sql table to `Ty`
 pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]) -> Ty {
-    fn parse_sql_model_members_impl(
-        path: &str,
-        r#type: &str,
-        model_members_all: &[SqlModelMember],
-    ) -> Ty {
-        let children = model_members_all
-            .iter()
-            .filter(|member| member.id == path)
-            .map(|child| match child.type_enum.as_ref() {
-                "Primitive" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    ty: Ty::Primitive(child.r#type.parse().unwrap()),
-                },
-
-                "Struct" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    ty: parse_sql_model_members_impl(
-                        &format!("{}${}", child.id, child.name),
-                        &child.r#type,
-                        model_members_all,
-                    ),
-                },
-
-                "Enum" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    ty: Ty::Enum(Enum {
-                        option: None,
-                        name: child.r#type.to_owned(),
-                        options: child
-                            .enum_options
-                            .as_ref()
-                            .expect("qed; enum_options should exist")
-                            .split(',')
-                            .map(|s| EnumOption {
-                                name: s.to_owned(),
-                                ty: model_members_all
-                                    .iter()
-                                    .find(|member| {
-                                        member.id == format!("{}${}", child.id, child.name)
-                                            && member.name == s
-                                    })
-                                    .map(|member| match member.type_enum.as_ref() {
-                                        "Primitive" => {
-                                            Ty::Primitive(member.r#type.parse().unwrap())
-                                        }
-                                        "ByteArray" => Ty::ByteArray("".to_string()),
-                                        _ => parse_sql_model_members_impl(
-                                            &format!("{}${}${}", child.id, child.name, member.name),
-                                            &member.r#type,
-                                            model_members_all,
-                                        ),
-                                    })
-                                    .unwrap_or(Ty::Tuple(vec![])),
-                            })
-                            .collect::<Vec<_>>(),
-                    }),
-                },
-
-                "Tuple" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    ty: Ty::Tuple(
-                        model_members_all
-                            .iter()
-                            .filter(|member| member.id == format!("{}${}", child.id, child.name))
-                            .map(|member| match member.type_enum.as_ref() {
-                                "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
-                                "ByteArray" => Ty::ByteArray("".to_string()),
-                                _ => parse_sql_model_members_impl(
-                                    &format!("{}${}${}", child.id, child.name, member.name),
-                                    &member.r#type,
-                                    model_members_all,
-                                ),
-                            })
-                            .collect::<Vec<_>>(),
-                    ),
-                },
-                "Array" => {
-                    Member {
+    fn parse_sql_member(member: &SqlModelMember, model_members_all: &[SqlModelMember]) -> Ty {
+        match member.type_enum.as_str() {
+            "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
+            "ByteArray" => Ty::ByteArray("".to_string()),
+            "Struct" => {
+                let children = model_members_all
+                    .iter()
+                    .filter(|m| m.id == format!("{}${}", member.id, member.name))
+                    .map(|child| Member {
                         key: child.key,
                         name: child.name.to_owned(),
-                        // get T from Array<T>
-                        ty: Ty::Array(
-                            model_members_all
-                                .iter()
-                                .filter(|member| {
-                                    member.id == format!("{}${}", child.id, child.name)
-                                })
-                                .map(|member| match member.type_enum.as_ref() {
-                                    "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
-                                    "ByteArray" => Ty::ByteArray("".to_string()),
-                                    _ => parse_sql_model_members_impl(
-                                        &format!("{}${}${}", child.id, child.name, member.name),
-                                        &member.r#type,
-                                        model_members_all,
-                                    ),
-                                })
-                                .collect::<Vec<_>>(),
-                        ),
-                    }
-                }
-                "ByteArray" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    ty: Ty::ByteArray("".to_string()),
-                },
+                        ty: parse_sql_member(child, model_members_all),
+                    })
+                    .collect::<Vec<Member>>();
 
-                ty => {
-                    unimplemented!("unimplemented type_enum: {ty}");
-                }
-            })
-            .collect::<Vec<Member>>();
+                Ty::Struct(Struct { name: member.r#type.clone(), children })
+            }
+            "Enum" => {
+                let options = member
+                    .enum_options
+                    .as_ref()
+                    .expect("qed; enum_options should exist")
+                    .split(',')
+                    .map(|s| {
+                        let member = if let Some(member) = model_members_all.iter().find(|m| {
+                            m.id == format!("{}${}", member.id, member.name) && m.name == s
+                        }) {
+                            parse_sql_member(member, model_members_all)
+                        } else {
+                            Ty::Tuple(vec![])
+                        };
 
-        // refer to the sql table for `model_members`
-        Ty::Struct(Struct { name: r#type.into(), children })
+                        EnumOption { name: s.to_owned(), ty: member }
+                    })
+                    .collect::<Vec<EnumOption>>();
+
+                Ty::Enum(Enum { option: None, name: member.r#type.clone(), options })
+            }
+            "Tuple" => {
+                let children = model_members_all
+                    .iter()
+                    .filter(|m| m.id == format!("{}${}", member.id, member.name))
+                    .map(|child| Member {
+                        key: child.key,
+                        name: child.name.to_owned(),
+                        ty: parse_sql_member(child, model_members_all),
+                    })
+                    .collect::<Vec<Member>>();
+
+                Ty::Tuple(children.into_iter().map(|m| m.ty).collect())
+            }
+            "Array" => {
+                let children = model_members_all
+                    .iter()
+                    .filter(|m| m.id == format!("{}${}", member.id, member.name))
+                    .map(|child| Member {
+                        key: child.key,
+                        name: child.name.to_owned(),
+                        ty: parse_sql_member(child, model_members_all),
+                    })
+                    .collect::<Vec<Member>>();
+
+                Ty::Array(children.into_iter().map(|m| m.ty).collect())
+            }
+            ty => {
+                unimplemented!("unimplemented type_enum: {ty}");
+            }
+        }
     }
 
-    parse_sql_model_members_impl(model, model, model_members_all)
+    Ty::Struct(Struct {
+        name: model.into(),
+        children: model_members_all
+            .iter()
+            .filter(|m| m.id == model)
+            .map(|m| Member {
+                key: m.key,
+                name: m.name.to_owned(),
+                ty: parse_sql_member(m, model_members_all),
+            })
+            .collect::<Vec<Member>>(),
+    })
+    // parse_sql_model_members_impl(model, model, model_members_all)
 }
 
 /// Creates a query that fetches all models and their nested data.

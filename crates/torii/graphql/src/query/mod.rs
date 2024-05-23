@@ -65,6 +65,8 @@ fn build_type_mapping(
         })
         .collect::<sqlx::Result<TypeMapping>>()?;
 
+    println!("{:#?}", type_mapping);
+
     Ok(type_mapping)
 }
 
@@ -79,6 +81,12 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
                 .find(|&nested_member| {
                     nested_member.model_id == member.model_id
                         && nested_member.id.ends_with(&member.name)
+                        // TEMP FIX: refer to parse_nested_type
+                        && nested_member
+                            .id
+                            .split('$')
+                            .collect::<Vec<_>>()
+                            .starts_with(&member.id.split('$').collect::<Vec<_>>())
                 })
                 .expect("Array type should have nested type"),
             nested_members,
@@ -100,16 +108,25 @@ fn parse_nested_type(member: &ModelMember, nested_members: &[&ModelMember]) -> T
     let nested_mapping: TypeMapping = nested_members
         .iter()
         .filter_map(|&nested_member| {
-            // if the nested member is an Enum and the member is an Enum, we need to inject the Enum
-            // type in order to have a "option" field in the nested Enum for the enum
-            // variant
-            if member.model_id == nested_member.model_id && nested_member.id.ends_with(&member.name)
+            if member.model_id == nested_member.model_id
+            && nested_member.id.ends_with(&member.name)
+            // TEMP FIX: a nested member that has the same name as another nested member
+                // and that both have parents that start with the same id (Model$Test1 and Model$Test2)
+                // will end up being assigned to the wrong parent
+                && nested_member
+                    .id
+                    .split('$')
+                    .collect::<Vec<_>>()
+                    .starts_with(&member.id.split('$').collect::<Vec<_>>())
             {
+                // if the nested member is an Enum and the member is an Enum, we need to inject the
+                // Enum type in order to have a "option" field in the nested Enum
+                // for the enum variant
                 if nested_member.type_enum == "Enum"
                     && nested_member.name == "option"
                     && member.type_enum == "Enum"
                 {
-                    return Some((Name::new("Enum"), TypeData::Simple(TypeRef::named("Enum"))));
+                    return Some((Name::new("option"), TypeData::Simple(TypeRef::named("Enum"))));
                 }
 
                 let type_data = member_to_type_data(nested_member, nested_members);

@@ -131,6 +131,7 @@ impl Sql {
             &mut model_idx,
             block_timestamp,
             false,
+            false,
         );
         self.query_queue.execute_all().await?;
 
@@ -413,6 +414,7 @@ impl Sql {
         model_idx: &mut i64,
         block_timestamp: u64,
         is_array: bool,
+        is_parent_array: bool,
     ) {
         if let Ty::Enum(e) = model {
             if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
@@ -421,7 +423,14 @@ impl Sql {
             }
         }
 
-        self.build_model_query(path.clone(), model, *model_idx, block_timestamp, is_array);
+        self.build_model_query(
+            path.clone(),
+            model,
+            *model_idx,
+            block_timestamp,
+            is_array,
+            is_parent_array,
+        );
 
         let mut build_member = |pathname: &str, member: &Ty| {
             if let Ty::Primitive(_) = member {
@@ -440,6 +449,7 @@ impl Sql {
                 block_timestamp,
                 // If the parent is an array, all children are also represented as table arrays
                 if let Ty::Array(_) = member { true } else { is_array },
+                if let Ty::Array(_) = model { true } else { is_parent_array },
             );
         };
 
@@ -686,6 +696,7 @@ impl Sql {
         model_idx: i64,
         block_timestamp: u64,
         is_array: bool,
+        is_parent_array: bool,
     ) {
         let table_id = path.join("$");
         let mut indices = Vec::new();
@@ -887,7 +898,7 @@ impl Sql {
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
 
-            if is_array && path.len() > 2 {
+            if is_parent_array && path.len() > 2 {
                 create_table_query.push_str(&format!(
                     "FOREIGN KEY (id, idx) REFERENCES {parent_table_id} (id, idx), "
                 ));
