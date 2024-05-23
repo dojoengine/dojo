@@ -909,7 +909,8 @@ impl Sql {
 
             if is_parent_array && path.len() > 2 {
                 create_table_query.push_str(&format!(
-                    "FOREIGN KEY (id, idx) REFERENCES {parent_table_id} (id, idx) ON DELETE CASCADE, "
+                    "FOREIGN KEY (id, idx) REFERENCES {parent_table_id} (id, idx) ON DELETE \
+                     CASCADE, "
                 ));
             } else {
                 create_table_query.push_str(&format!(
