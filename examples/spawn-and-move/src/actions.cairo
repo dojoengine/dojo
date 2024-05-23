@@ -29,10 +29,9 @@ mod actions {
         direction: Direction,
     }
 
-    #[dojo::init]
     fn dojo_init(other_contract: ContractAddress) {
         // body
-        println!("hi");
+        println!("hi1111");
     }
 
     #[abi(embed_v0)]

@@ -9,7 +9,9 @@ trait IWorld<T> {
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
     fn model(self: @T, name: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
-    fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>) -> ContractAddress;
+    fn deploy_contract(
+        ref self: T, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>
+    ) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
@@ -424,7 +426,10 @@ mod world {
         ///
         /// * `ContractAddress` - The address of the newly deployed contract.
         fn deploy_contract(
-            ref self: ContractState, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>,
+            ref self: ContractState,
+            salt: felt252,
+            class_hash: ClassHash,
+            init_calldata: Span<felt252>,
         ) -> ContractAddress {
             let (contract_address, _) = deploy_syscall(
                 self.contract_base.read(), salt, array![].span(), false
@@ -436,7 +441,10 @@ mod world {
             if self.initialized_contract.read(contract_address.into()) {
                 panic!("Already initialized");
             } else {
-                starknet::call_contract_syscall(contract_address, selector!("dojo_init"), init_calldata).expect('initialization failed');
+                starknet::call_contract_syscall(
+                    contract_address, selector!("dojo_init"), init_calldata
+                )
+                    .expect('initialization failed');
                 self.initialized_contract.write(contract_address.into(), true);
             }
             self.owners.write((contract_address.into(), get_caller_address()), true);

@@ -177,7 +177,7 @@ impl BuiltinDojoPlugin {
 
         let mut builder = PatchBuilder::new(db);
         builder.add_modified(node);
-        
+
         println!("{}", builder.code);
 
         PluginResult {
@@ -193,10 +193,6 @@ impl BuiltinDojoPlugin {
     }
 
     fn handle_fn(&self, db: &dyn SyntaxGroup, fn_ast: ast::FunctionWithBody) -> PluginResult {
-        if fn_ast.has_attr(db, DOJO_INIT_ATTR) {
-            return self.handle_init_fn(db, fn_ast);
-        }
-
         let attrs = fn_ast.attributes(db).query_attr(db, "computed");
         if attrs.is_empty() {
             return PluginResult::default();

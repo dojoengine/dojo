@@ -5,11 +5,14 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
+use cairo_lang_semantic::diagnostic;
 use cairo_lang_syntax::attribute::structured::{
     Attribute, AttributeArg, AttributeArgVariant, AttributeListStructurize,
 };
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::helpers::QueryAttrs;
+use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
@@ -25,6 +28,16 @@ pub struct DojoContract {
 }
 
 impl DojoContract {
+    fn result_with_diagnostic(stable_ptr: SyntaxStablePtrId, message: String) -> PluginResult {
+        PluginResult {
+            code: None,
+            // All diagnostics are for now error. Severity may be moved as argument
+            // if warnings are required in this file.
+            diagnostics: vec![PluginDiagnostic { stable_ptr, message, severity: Severity::Error }],
+            remove_original_item: false,
+        }
+    }
+
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
 
@@ -59,6 +72,13 @@ impl DojoContract {
                         let trait_path = impl_ast.trait_path(db).node.get_text(db);
                         if trait_path.contains("<ContractState>") {
                             return system.rewrite_impl(db, impl_ast.clone());
+                        }
+                    } else if let ast::ModuleItem::FreeFunction(fn_ast) = el {
+                        let fn_decl = fn_ast.declaration(db);
+                        let fn_name = fn_decl.name(db).text(db);
+
+                        if fn_name == "dojo_init" {
+                            return Self::handle_init_fn(db, fn_ast);
                         }
                     }
 
@@ -114,7 +134,7 @@ impl DojoContract {
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                 ]),
             ));
-            
+
             // println!("{}", builder.code);
 
             return PluginResult {
@@ -137,6 +157,43 @@ impl DojoContract {
         }
 
         PluginResult::default()
+    }
+
+    fn handle_init_fn(db: &dyn SyntaxGroup, fn_ast: &ast::FunctionWithBody) -> Vec<RewriteNode> {
+        let fn_decl = fn_ast.declaration(db);
+        let fn_name = fn_decl.name(db).text(db);
+
+        let params = fn_decl.signature(db).parameters(db);
+        let param_els = params.elements(db);
+        let body = fn_ast.body(db).as_syntax_node().get_text(db);
+
+        let params_rewrite =
+            param_els.iter().map(|p| RewriteNode::Text(p.as_syntax_node().get_text(db))).collect();
+
+        let node = RewriteNode::interpolate_patched(
+            "
+                #[starknet::interface]
+                trait IDojoInit<ContractState> {
+                    fn $name$(self: @ContractState, $other_arguments$);
+                }
+
+                #[abi(embed_v0)]
+                impl IDojoInitImpl of IDojoInit<ContractState> {
+                    fn $name$(self: @ContractState, $other_arguments$) {
+                        assert(get_caller_address() == self.world().contract_address, 'Only world \
+             can init');
+                        $body$
+                    }
+                }
+            ",
+            &UnorderedHashMap::from([
+                ("name".to_string(), RewriteNode::Text(fn_name.to_string())),
+                ("other_arguments".to_string(), RewriteNode::new_modified(params_rewrite)),
+                ("body".to_string(), RewriteNode::Text(body)),
+            ]),
+        );
+
+        vec![node]
     }
 
     pub fn merge_event(
