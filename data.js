@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716471122652,
+  "lastUpdate": 1716506002414,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8365,6 +8365,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16785835,
             "range": "± 55915",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6146516d91fe5e91dc6ca1259b8699e40828e40",
+          "message": "feat: new layout support (#1970)\n\n* Use name hash for model identifiers\r\n\r\n* Dojo layout rework\r\n\r\n* support nested tuple/array/bytearray\r\n\r\n* new Layout::Enum to support enum with different variant data\r\n\r\n* merge from storage-layout branch\r\n\r\n* cleaning\r\n\r\n* support direct array/span introspect instead of generating it during code compilation\r\n\r\n* fix Copy trait implementation for Array<u64>\r\n\r\n* generate the model/field selector value instead of selector!(...)\r\n\r\n* feat: start implementing new layout on torii wip\r\n\r\n* update: cainome for serde & serialize layout\r\n\r\n* feat: handle bytearray in ty\r\n\r\n* feat: add new layout types (tuple/array/bytearray) to types & grpc\r\n\r\n* fix: gql\r\n\r\n* fix: model id for processors\r\n\r\n* featr: start handling sql new tytpes\r\n\r\n* feat: make tuple and bytearray work\r\n\r\n* feat: store set record for tuples\r\n\r\n* feat: start working on array\r\n\r\n* feat: set support for bytearray & tuples\r\n\r\n* feat: primitive arrays working\r\n\r\n* feat: complex array types\r\n\r\n* feat: start work on graphql for arrays\r\n\r\n* fix: tuples for graphql\r\n\r\n* fix: sanitize member type names gql\r\n\r\n* feat: remove tuple from scalar types\r\n\r\n* chore: fetch row by idx\r\n\r\n* feat: add new type data for array\r\n\r\n* feat: add updated_at for entity models data\r\n\r\n* feat: start handle array type datalogic\r\n\r\n* refactor: use list typedata\r\n\r\n* refactor: modela data recursive\r\n\r\n* feat: get list with new type data correctly\r\n\r\n* feat: finished array support with nested types ✨\r\n\r\n* fix: schema\r\n\r\n* feat: torii packing\r\n\r\n* integrates scarb nightly (#1971)\r\n\r\nwip with scarb nightly\r\n\r\n* fix: fmt + regenerate world bindings\r\n\r\n* fix: remove serialization workaround\r\n\r\n* fix: remove cairo warnings for build\r\n\r\n* Storage layout improvement (#1965)\r\n\r\n* Finalize the storage layout rework\r\n\r\n- As the type recursion issue was fixed by Starkware, Layout/FieldLayout\r\n  can be simplified.\r\n- Update introspect size() and ty() methods\r\n- Remove old model layout parsing in model.rs\r\n- Split and reorganize introspect.rs code\r\n\r\n* fix fmt+clippy\r\n\r\n* update ABI binding\r\n\r\n* fix cairo fmt\r\n\r\n* feat: new parse schema function using cainome for model\r\n\r\n* feat: complex enum supported ✨\r\n\r\n* chore: bump blockifier and patch deps to use scarb nightly\r\n\r\n* fix: run CAIRO_FIX tests and rebuild artifacts\r\n\r\n* fix: use Tricks for dojo language server\r\n\r\n* fix: remove async for language server\r\n\r\n* wip: fix tests\r\n\r\n* feat: add union type data for enums\r\n\r\n* feat: continue work on type unions for enums\r\n\r\n* feat: refactor complex enums\r\n\r\n* feat: completely switch to using nested types for enums\r\n\r\n* fmt\r\n\r\n* clippy\r\n\r\n* chore\r\n\r\n* Automatically add Introspect derive attribute for Dojo models (#1982)\r\n\r\n* Automatically add Introspect derive attribute for Dojo models\r\n\r\n* fix fmt+clippy\r\n\r\n* fix warning about trait path in Impl\r\n\r\n* update dojo-lang tests\r\n\r\n* fix dojo-lang system\r\n\r\n* fix dojo-world model test\r\n\r\n* fix option<T> introspect\r\n\r\n* fix: ensure all models are correctly derived\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* fix: adjust tests with missing model\r\n\r\n* wip: auth tests debug\r\n\r\n* fix: ensure auth is using selector\r\n\r\n* fix: fix some tests\r\n\r\n* fix: models tests enum\r\n\r\n* fix: other tests\r\n\r\n* chore: tuple for u256\r\n\r\n* refactor: u256 struct\r\n\r\n* feat: simple enum types non nested + fix texts\r\n\r\n* fmt\r\n\r\n* fix: filtering by enum type name\r\n\r\n* chore: clippy\r\n\r\n* fmt\r\n\r\n* fix: sql test\r\n\r\n* refactor: packed size in tests &  simply functions\r\n\r\n* fix: switch back u256 to primitive\r\n\r\n* feat: use correct primitive u256 type & filtering\r\n\r\n* wip\r\n\r\n* chore: subscription test\r\n\r\n* migration clippy\r\n\r\n* wip\r\n\r\n* feat: add new example with more types\r\n\r\n* fix: strip enum variant type inf\r\n\r\n* fix: nested tuples\r\n\r\n* chore\r\n\r\n* chore: remove debug logs\r\n\r\n* fix: fix tests with new model\r\n\r\n* fix: add missing manifests\r\n\r\n* fix: fix cairo fmt\r\n\r\n* fix: arrays\r\n\r\n* fix: add tests and enhance error messages\r\n\r\n* fix: fix build test and disable typescript for now\r\n\r\n* fix: avoid race on manifest file for sql test\r\n\r\n* feat: refactor schema deser from db & handle nested arrays\r\n\r\n* chore: delete array elements on update\r\n\r\n* fmt\r\n\r\n* feat: add sozo prefix parsing for calldata\r\n\r\n* fix: ensure migration for sql test waits for transactions\r\n\r\n* fix: ensure build test works on a copy project\r\n\r\n* fix: add missing transaction wait\r\n\r\n* temp-fix: arrays\r\n\r\n---------\r\n\r\nCo-authored-by: Tarrence van As <tarrence@vanas.family>\r\nCo-authored-by: remy.baranx@gmail.com <remy.baranx@gmail.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-05-24T01:04:39+02:00",
+          "tree_id": "bce3506ddb41583f70faec2fb2d74e58697658a2",
+          "url": "https://github.com/dojoengine/dojo/commit/e6146516d91fe5e91dc6ca1259b8699e40828e40"
+        },
+        "date": 1716506001782,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17214375,
+            "range": "± 226204",
             "unit": "ns/iter"
           }
         ]
