@@ -67,13 +67,11 @@ mod actions {
         fn spawn(world: IWorldDispatcher) {
             let player = get_caller_address();
             let position = get!(world, player, (Position));
-            
+
             set!(
                 world,
                 (
-                    Moves {
-                        player, remaining: 99, last_direction: Direction::None(())
-                    },
+                    Moves { player, remaining: 99, last_direction: Direction::None(()) },
                     Position {
                         player, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 }
                     },

@@ -1,14 +1,13 @@
 use std::str;
 
+use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-use dojo_test_utils::compiler::build_full_test_config;
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
+use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::manifest::{
+    BaseManifest, DeploymentManifest, OverlayManifest, WORLD_CONTRACT_NAME,
 };
-use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::{BaseManifest, DeploymentManifest, WORLD_CONTRACT_NAME};
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,
     IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
@@ -18,80 +17,69 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
-use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::chain_id;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
+};
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::FieldElement;
 
-use super::setup::{load_config, setup_migration, setup_ws};
-use crate::migration::{execute_strategy, upload_metadata};
+use super::setup;
+use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_auto_mine() {
-    let config = load_config();
-    let ws = setup_ws(&config);
+    let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
 
-    let migration = setup_migration().unwrap();
+    let migration = setup::setup_migration(&config).unwrap();
 
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
-    let mut account = sequencer.account();
+    let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
-
-    sequencer.stop().unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_block_time() {
-    let config = load_config();
-    let ws = setup_ws(&config);
+    let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
 
-    let migration = setup_migration().unwrap();
+    let migration = setup::setup_migration(&config).unwrap();
 
-    let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: Some(1000), ..Default::default() },
-        get_default_test_starknet_config(),
-    )
-    .await;
+    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
+        block_time: Some(1000),
+        ..Default::default()
+    })
+    .expect("Fail to start runner");
 
-    let mut account = sequencer.account();
+    let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
-    sequencer.stop().unwrap();
 }
 
+#[should_panic]
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_small_fee_multiplier_will_fail() {
-    let config = load_config();
-    let ws = setup_ws(&config);
+    let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
 
-    let migration = setup_migration().unwrap();
+    let migration = setup::setup_migration(&config).unwrap();
 
-    let sequencer = TestSequencer::start(
-        Default::default(),
-        StarknetConfig { disable_fee: false, ..Default::default() },
-    )
-    .await;
+    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
+        disable_fee: true,
+        ..Default::default()
+    })
+    .expect("Fail to start runner");
 
-    let account = SingleOwnerAccount::new(
-        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
-        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            sequencer.raw_account().private_key,
-        )),
-        sequencer.raw_account().account_address,
-        chain_id::TESTNET,
-        ExecutionEncoding::New,
-    );
+    let account = sequencer.account(0);
 
     assert!(
         execute_strategy(
@@ -103,34 +91,24 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         .await
         .is_err()
     );
-    sequencer.stop().unwrap();
 }
 
 #[tokio::test]
 async fn migration_from_remote() {
-    let config = load_config();
-    let ws = setup_ws(&config);
+    let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
 
-    let base = "../../../examples/spawn-and-move";
+    let base = config.manifest_path().parent().unwrap();
     let target_dir = format!("{}/target/dev", base);
 
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
-    let account = SingleOwnerAccount::new(
-        JsonRpcClient::new(HttpTransport::new(sequencer.url())),
-        LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            sequencer.raw_account().private_key,
-        )),
-        sequencer.raw_account().account_address,
-        chain_id::TESTNET,
-        ExecutionEncoding::New,
-    );
+    let account = sequencer.account(0);
 
     let profile_name = ws.current_profile().unwrap().to_string();
 
     let manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
+        &base.to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
 
@@ -147,7 +125,7 @@ async fn migration_from_remote() {
     execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
+        &base.to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
 
@@ -158,8 +136,6 @@ async fn migration_from_remote() {
     .await
     .unwrap();
 
-    sequencer.stop().unwrap();
-
     assert_eq!(local_manifest.world.inner.class_hash, remote_manifest.world.inner.class_hash);
     assert_eq!(local_manifest.models.len(), remote_manifest.models.len());
 }
@@ -168,21 +144,19 @@ async fn migration_from_remote() {
 #[ignore]
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_metadata() {
-    let config = build_full_test_config("../../../examples/spawn-and-move/Scarb.toml", false)
-        .unwrap_or_else(|c| panic!("Error loading config: {c:?}"));
-    let ws = setup_ws(&config);
+    let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
 
-    let migration = setup_migration().unwrap();
+    let migration = setup::setup_migration(&config).unwrap();
 
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
-    let mut account = sequencer.account();
+    let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let output = execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 
-    let res = upload_metadata(&ws, &account, output.clone(), TxnConfig::default()).await;
+    let res = upload_metadata(&ws, &account, output.clone(), TxnConfig::init_wait()).await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();
@@ -241,22 +215,86 @@ async fn migrate_with_metadata() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn migrate_with_auto_authorize() {
+    let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
+
+    let migration = setup::setup_migration(&config).unwrap();
+
+    let manifest_base = config.manifest_path().parent().unwrap();
+    let mut manifest =
+        BaseManifest::load_from_path(&manifest_base.join(MANIFESTS_DIR).join("dev").join(BASE_DIR))
+            .unwrap();
+
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &manifest_base.join(MANIFESTS_DIR).join("dev").join(OVERLAYS_DIR),
+    )
+    .unwrap();
+
+    manifest.merge(overlay_manifest);
+
+    let sequencer = KatanaRunner::new().expect("Fail to start runner");
+
+    let mut account = sequencer.account(0);
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+    let txn_config = TxnConfig {
+        // make sure to test the assumption after transaction has been confirmed
+        wait: true,
+        ..Default::default()
+    };
+
+    let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
+
+    let world_address = migration.world_address().expect("must be present");
+    let world = WorldContract::new(world_address, account);
+
+    let res = auto_authorize(&ws, &world, &txn_config, &manifest, &output).await;
+    assert!(res.is_ok());
+
+    let provider = sequencer.provider();
+    let world_reader = WorldContractReader::new(output.world_address, &provider);
+
+    // check contract metadata
+    for c in migration.contracts {
+        let contract_address =
+            get_contract_address_from_reader(&world_reader, c.diff.name.clone()).await.unwrap();
+
+        let contract = manifest.contracts.iter().find(|a| a.name == c.diff.name).unwrap();
+
+        for model in &contract.inner.writes {
+            let model = cairo_short_string_to_felt(model).unwrap();
+            let contract_address = ContractAddress(contract_address);
+            let is_writer = world_reader.is_writer(&model, &contract_address).call().await.unwrap();
+            assert!(is_writer);
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn migration_with_mismatching_world_address_and_seed() {
-    let base_dir = "../../../examples/spawn-and-move";
-    let target_dir = format!("{}/target/dev", base_dir);
+    let config = setup::load_config();
+
+    let base_dir = config.manifest_path().parent().unwrap().to_path_buf();
+    let target_dir = base_dir.join("target").join("dev");
 
     let result = prepare_migration_with_world_and_seed(
-        base_dir.into(),
-        target_dir.into(),
+        base_dir,
+        target_dir,
         Some(felt!("0x1")),
         "sozo_test",
     );
 
-    assert!(result.is_err_and(|e| e.to_string().contains(
+    assert!(result.is_err());
+
+    let error_message = result.unwrap_err().to_string();
+
+    assert_eq!(
+        error_message,
         "Calculated world address doesn't match provided world address.\nIf you are deploying \
          with custom seed make sure `world_address` is correctly configured (or not set) \
          `Scarb.toml`"
-    )));
+    );
 }
 
 /// Get the hash from a IPFS URI

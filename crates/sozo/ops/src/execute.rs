@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
+use scarb_ui::Ui;
 use starknet::accounts::{Call, ConnectedAccount};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_selector_from_name;
@@ -9,6 +10,7 @@ use starknet::core::utils::get_selector_from_name;
 use crate::utils;
 
 pub async fn execute<A>(
+    ui: &Ui,
     contract: String,
     entrypoint: String,
     calldata: Vec<FieldElement>,
@@ -31,6 +33,7 @@ where
         .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
+        ui,
         &world.account.provider(),
         res,
         txn_config.wait,

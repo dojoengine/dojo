@@ -9,6 +9,7 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use assert_fs::TempDir;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
 use katana_primitives::FieldElement;
@@ -25,59 +26,62 @@ pub struct KatanaRunner {
     port: u16,
     provider: JsonRpcClient<HttpTransport>,
     accounts: Vec<(ContractAddress, DevGenesisAccount)>,
-    log_filename: PathBuf,
+    log_file_path: PathBuf,
     contract: Mutex<Option<FieldElement>>,
 }
 
-pub const BLOCK_TIME_IF_ENABLED: u64 = 3000;
+/// Configuration for the KatanaRunner.
+#[derive(Debug)]
+pub struct KatanaRunnerConfig {
+    /// The name of the katana program to run.
+    pub program_name: Option<String>,
+    /// The name used in the log file suffix, the port number is used otherwise.
+    pub run_name: Option<String>,
+    /// The number of accounts to predeployed.
+    pub n_accounts: u16,
+    /// Whether to disable the fee.
+    pub disable_fee: bool,
+    /// The block time in milliseconds.
+    pub block_time: Option<u64>,
+    /// The port to run the katana runner on, if None, a random free port is chosen.
+    pub port: Option<u16>,
+}
+
+impl Default for KatanaRunnerConfig {
+    fn default() -> Self {
+        Self {
+            n_accounts: 2,
+            disable_fee: false,
+            block_time: None,
+            port: None,
+            program_name: None,
+            run_name: None,
+        }
+    }
+}
 
 impl KatanaRunner {
+    /// Creates a new KatanaRunner with default values.
     pub fn new() -> Result<Self> {
-        Self::new_with_port(find_free_port())
+        Self::setup_and_start(KatanaRunnerConfig::default())
     }
 
-    pub fn new_with_name(name: &str) -> Result<Self> {
-        Self::new_with_port_and_filename(
-            "katana",
-            find_free_port(),
-            format!("logs/katana-{}.log", name),
-            2,
-            false,
-        )
+    /// Creates a new KatanaRunner with the given configuration.
+    pub fn new_with_config(config: KatanaRunnerConfig) -> Result<Self> {
+        Self::setup_and_start(config)
     }
 
-    pub fn new_with_args(
-        program: &str,
-        name: &str,
-        n_accounts: u16,
-        with_blocks: bool,
-    ) -> Result<Self> {
-        Self::new_with_port_and_filename(
-            program,
-            find_free_port(),
-            format!("katana-logs/{}.log", name),
-            n_accounts,
-            with_blocks,
-        )
-    }
+    /// Starts a new KatanaRunner with the given configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The configuration for the katana runner.
+    fn setup_and_start(config: KatanaRunnerConfig) -> Result<Self> {
+        let program = config.program_name.clone().unwrap_or_else(determine_default_program_path);
 
-    pub fn new_with_port(port: u16) -> Result<Self> {
-        Self::new_with_port_and_filename(
-            "katana",
-            port,
-            format!("katana-logs/{}.log", port),
-            2,
-            false,
-        )
-    }
+        let port = config.port.unwrap_or_else(find_free_port);
+        let n_accounts = config.n_accounts;
 
-    fn new_with_port_and_filename(
-        program: &str,
-        port: u16,
-        log_filename: String,
-        n_accounts: u16,
-        with_blocks: bool,
-    ) -> Result<Self> {
         let mut command = Command::new(program);
         command
             .args(["-p", &port.to_string()])
@@ -85,8 +89,12 @@ impl KatanaRunner {
             .args(["--max-connections", &format!("{}", 10000)])
             .args(["--accounts", &format!("{}", n_accounts)]);
 
-        if with_blocks {
-            command.args(["--block-time", &format!("{}", BLOCK_TIME_IF_ENABLED)]);
+        if let Some(block_time_ms) = config.block_time {
+            command.args(["--block-time", &format!("{}", block_time_ms)]);
+        }
+
+        if config.disable_fee {
+            command.args(["--disable-fee"]);
         }
 
         let mut child =
@@ -94,11 +102,19 @@ impl KatanaRunner {
 
         let stdout = child.stdout.take().context("failed to take subprocess stdout")?;
 
-        let log_filename_sent = PathBuf::from(log_filename);
-        let log_filename = log_filename_sent.clone();
+        let log_dir = TempDir::new().unwrap();
+
+        let log_filename = PathBuf::from(format!(
+            "katana-{}.log",
+            config.run_name.clone().unwrap_or_else(|| port.to_string())
+        ));
+
+        let log_file_path = log_dir.join(log_filename);
+        let log_file_path_sent = log_file_path.clone();
+
         let (sender, receiver) = mpsc::channel();
         thread::spawn(move || {
-            utils::wait_for_server_started_and_signal(&log_filename_sent, stdout, sender);
+            utils::wait_for_server_started_and_signal(&log_file_path_sent, stdout, sender);
         });
 
         receiver
@@ -118,7 +134,11 @@ impl KatanaRunner {
             .collect();
         let contract = Mutex::new(Option::None);
 
-        Ok(KatanaRunner { child, port, provider, accounts, log_filename, contract })
+        Ok(KatanaRunner { child, port, provider, accounts, log_file_path, contract })
+    }
+
+    pub fn log_file_path(&self) -> &PathBuf {
+        &self.log_file_path
     }
 
     pub fn provider(&self) -> &JsonRpcClient<HttpTransport> {
@@ -127,6 +147,10 @@ impl KatanaRunner {
 
     pub fn endpoint(&self) -> String {
         format!("http://127.0.0.1:{}/", self.port)
+    }
+
+    pub fn url(&self) -> Url {
+        Url::parse(&self.endpoint()).context("Failed to parse url").unwrap()
     }
 
     pub fn owned_provider(&self) -> JsonRpcClient<HttpTransport> {
@@ -155,5 +179,27 @@ impl Drop for KatanaRunner {
         if let Err(e) = self.child.wait() {
             eprintln!("Failed to wait for katana subprocess: {}", e);
         }
+    }
+}
+
+/// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
+/// environment variable. If not set, try to to use katana from the PATH.
+fn determine_default_program_path() -> String {
+    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_determine_default_program_path() {
+        // Set the environment variable to test the first branch
+        std::env::set_var("KATANA_RUNNER_BIN", "custom_katana_path");
+        assert_eq!(determine_default_program_path(), "custom_katana_path");
+
+        // Unset the environment variable to test the fallback branch
+        std::env::remove_var("KATANA_RUNNER_BIN");
+        assert_eq!(determine_default_program_path(), "katana");
     }
 }

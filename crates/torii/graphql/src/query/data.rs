@@ -227,6 +227,18 @@ fn build_conditions(keys: &Option<Vec<String>>, filters: &Option<Vec<Filter>>) -
         conditions.extend(filters.iter().map(|filter| match &filter.value {
             FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
             FilterValue::String(s) => format!("{} {} '{}'", filter.field, filter.comparator, s),
+            FilterValue::List(list) => {
+                let values = list
+                    .iter()
+                    .map(|value| match value {
+                        FilterValue::Int(i) => i.to_string(),
+                        FilterValue::String(s) => format!("'{}'", s),
+                        FilterValue::List(_) => unreachable!(),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{} {} ({})", filter.field, filter.comparator, values)
+            }
         }));
     }
 

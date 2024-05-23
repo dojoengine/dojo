@@ -3,12 +3,10 @@ use std::sync::Arc;
 
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
-use katana_primitives::contract::{
-    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
-};
+use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 
 use super::cache::{CacheSnapshotWithoutClasses, CacheStateDb, SharedContractClasses};
-use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
+use crate::traits::contract::ContractClassProvider;
 use crate::traits::state::StateProvider;
 use crate::ProviderResult;
 
@@ -117,16 +115,9 @@ impl InMemoryStateDb {
     }
 }
 
-impl ContractInfoProvider for InMemorySnapshot {
-    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
-        let info = self.inner.contract_state.get(&address).cloned();
-        Ok(info)
-    }
-}
-
 impl StateProvider for InMemorySnapshot {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        let nonce = ContractInfoProvider::contract(&self, address)?.map(|i| i.nonce);
+        let nonce = self.inner.contract_state.get(&address).map(|i| i.nonce);
         Ok(nonce)
     }
 
@@ -143,7 +134,7 @@ impl StateProvider for InMemorySnapshot {
         &self,
         address: ContractAddress,
     ) -> ProviderResult<Option<ClassHash>> {
-        let class_hash = ContractInfoProvider::contract(&self, address)?.map(|i| i.class_hash);
+        let class_hash = self.inner.contract_state.get(&address).map(|i| i.class_hash);
         Ok(class_hash)
     }
 }
@@ -176,16 +167,9 @@ impl ContractClassProvider for InMemorySnapshot {
 
 pub(super) struct LatestStateProvider(pub(super) Arc<InMemoryStateDb>);
 
-impl ContractInfoProvider for LatestStateProvider {
-    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
-        let info = self.0.contract_state.read().get(&address).cloned();
-        Ok(info)
-    }
-}
-
 impl StateProvider for LatestStateProvider {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        let nonce = ContractInfoProvider::contract(&self, address)?.map(|i| i.nonce);
+        let nonce = self.0.contract_state.read().get(&address).map(|i| i.nonce);
         Ok(nonce)
     }
 
@@ -202,7 +186,7 @@ impl StateProvider for LatestStateProvider {
         &self,
         address: ContractAddress,
     ) -> ProviderResult<Option<ClassHash>> {
-        let class_hash = ContractInfoProvider::contract(&self, address)?.map(|i| i.class_hash);
+        let class_hash = self.0.contract_state.read().get(&address).map(|i| i.class_hash);
         Ok(class_hash)
     }
 }

@@ -19,6 +19,10 @@ impl KatanaRunner {
         self.accounts_data().iter().map(|account| self.account_to_single_owned(account)).collect()
     }
 
+    pub fn account_data(&self, index: usize) -> &(ContractAddress, DevGenesisAccount) {
+        &self.accounts_data()[index]
+    }
+
     pub fn account(
         &self,
         index: usize,

@@ -10,10 +10,10 @@ pub async fn model_class_hash(
     world_address: FieldElement,
     provider: JsonRpcClient<HttpTransport>,
 ) -> Result<()> {
-    let world = WorldContractReader::new(world_address, &provider)
-        .with_block(BlockId::Tag(BlockTag::Pending));
+    let mut world_reader = WorldContractReader::new(world_address, &provider);
+    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world.model_reader(&name).await?;
+    let model = world_reader.model_reader(&name).await?;
 
     println!("{:#x}", model.class_hash());
 
@@ -25,10 +25,10 @@ pub async fn model_contract_address(
     world_address: FieldElement,
     provider: JsonRpcClient<HttpTransport>,
 ) -> Result<()> {
-    let world = WorldContractReader::new(world_address, &provider)
-        .with_block(BlockId::Tag(BlockTag::Pending));
+    let mut world_reader = WorldContractReader::new(world_address, &provider);
+    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world.model_reader(&name).await?;
+    let model = world_reader.model_reader(&name).await?;
 
     println!("{:#x}", model.contract_address());
 
@@ -41,10 +41,10 @@ pub async fn model_schema(
     provider: JsonRpcClient<HttpTransport>,
     to_json: bool,
 ) -> Result<()> {
-    let world = WorldContractReader::new(world_address, &provider)
-        .with_block(BlockId::Tag(BlockTag::Pending));
+    let mut world_reader = WorldContractReader::new(world_address, &provider);
+    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world.model_reader(&name).await?;
+    let model = world_reader.model_reader(&name).await?;
     let schema = model.schema().await?;
 
     if to_json {
@@ -62,10 +62,10 @@ pub async fn model_get(
     world_address: FieldElement,
     provider: JsonRpcClient<HttpTransport>,
 ) -> Result<()> {
-    let world = WorldContractReader::new(world_address, &provider)
-        .with_block(BlockId::Tag(BlockTag::Pending));
+    let mut world_reader = WorldContractReader::new(world_address, &provider);
+    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world.model_reader(&name).await?;
+    let model = world_reader.model_reader(&name).await?;
     let entity = model.entity(&keys).await?;
 
     println!("{entity}");

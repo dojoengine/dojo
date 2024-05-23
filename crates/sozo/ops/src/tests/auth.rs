@@ -1,8 +1,7 @@
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
+use katana_runner::KatanaRunner;
+use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::utils::cairo_short_string_to_felt;
 
@@ -14,13 +13,12 @@ const ACTION_CONTRACT_NAME: &str = "dojo_examples::actions::actions";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_writer_ok() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
 
     // Shouldn't have any permission at this point.
-    let account2 = sequencer.account_at_index(2);
+    let account2 = sequencer.account(1);
 
     // Setup new world contract handler with account 2.
     let world_2 = WorldContract::new(world.address, account2);
@@ -41,6 +39,7 @@ async fn auth_grant_writer_ok() {
     };
 
     auth::grant_writer(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
@@ -53,13 +52,12 @@ async fn auth_grant_writer_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_writer_ok() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
 
     // Shouldn't have any permission at this point.
-    let account2 = sequencer.account_at_index(2);
+    let account2 = sequencer.account(1);
 
     // Setup new world contract handler with account 2.
     let world_2 = WorldContract::new(world.address, account2);
@@ -81,6 +79,7 @@ async fn auth_revoke_writer_ok() {
 
     // Here we are granting the permission to write
     auth::grant_writer(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves_mc.clone(), position_mc.clone()],
         TxnConfig { wait: true, ..Default::default() },
@@ -93,6 +92,7 @@ async fn auth_revoke_writer_ok() {
 
     // Here we are revoking the access again.
     auth::revoke_writer(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
@@ -106,13 +106,12 @@ async fn auth_revoke_writer_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_owner_ok() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
 
     // Shouldn't have any permission at this point.
-    let account_2 = sequencer.account_at_index(2);
+    let account_2 = sequencer.account(1);
     let account_2_addr = account_2.address();
 
     // Setup new world contract handler with account 2.
@@ -133,6 +132,7 @@ async fn auth_grant_owner_ok() {
     };
 
     auth::grant_owner(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves, position],
         TxnConfig { wait: true, ..Default::default() },
@@ -145,13 +145,12 @@ async fn auth_grant_owner_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_owner_ok() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let world = setup::setup(&sequencer).await.unwrap();
 
     // Shouldn't have any permission at this point.
-    let account_2 = sequencer.account_at_index(2);
+    let account_2 = sequencer.account(1);
     let account_2_addr = account_2.address();
 
     // Setup new world contract handler with account 2.
@@ -172,6 +171,7 @@ async fn auth_revoke_owner_ok() {
     };
 
     auth::grant_owner(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves.clone(), position.clone()],
         TxnConfig { wait: true, ..Default::default() },
@@ -181,6 +181,7 @@ async fn auth_revoke_owner_ok() {
 
     assert!(execute_spawn(&world_2).await);
     auth::revoke_owner(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
         vec![moves, position],
         TxnConfig { wait: true, ..Default::default() },
@@ -202,6 +203,7 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
     let system_spawn = "spawn".to_string();
 
     execute::execute(
+        &Ui::new(Verbosity::Normal, OutputFormat::Text),
         contract_actions,
         system_spawn,
         vec![],

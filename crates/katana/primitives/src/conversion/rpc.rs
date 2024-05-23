@@ -3,7 +3,7 @@ use std::io::{self, Read, Write};
 use std::mem;
 
 use anyhow::{Context, Result};
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use serde::Deserialize;
 use serde_json::json;
 use serde_with::serde_as;
@@ -148,7 +148,7 @@ pub fn flattened_sierra_to_compiled_class(
     let entry_points_by_type = class.entry_points_by_type.clone();
     let sierra = SierraProgram { program, entry_points_by_type };
 
-    let casm = CasmContractClass::from_contract_class(class, true)?;
+    let casm = CasmContractClass::from_contract_class(class, true, usize::MAX)?;
     let compiled_hash = FieldElement::from_bytes_be(&casm.compiled_class_hash().to_be_bytes())?;
 
     let class = crate::class::CompiledClass::Class(SierraCompiledClass { casm, sierra });
@@ -160,7 +160,7 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
     contract_class: &FlattenedSierraClass,
 ) -> Result<FieldElement> {
     let contract_class = rpc_to_cairo_contract_class(contract_class)?;
-    let casm = CasmContractClass::from_contract_class(contract_class, true)?;
+    let casm = CasmContractClass::from_contract_class(contract_class, true, usize::MAX)?;
     let compiled_class: CompiledClass = serde_json::from_str(&serde_json::to_string(&casm)?)?;
     Ok(compiled_class.class_hash()?)
 }
@@ -186,10 +186,10 @@ pub fn legacy_rpc_to_compiled_class(
 /// [ContractClass](cairo_lang_starknet::contract_class::ContractClass) type.
 fn rpc_to_cairo_contract_class(
     contract_class: &FlattenedSierraClass,
-) -> Result<cairo_lang_starknet::contract_class::ContractClass, std::io::Error> {
+) -> Result<cairo_lang_starknet_classes::contract_class::ContractClass, std::io::Error> {
     let value = serde_json::to_value(contract_class)?;
 
-    Ok(cairo_lang_starknet::contract_class::ContractClass {
+    Ok(cairo_lang_starknet_classes::contract_class::ContractClass {
         abi: serde_json::from_value(value["abi"].clone()).ok(),
         sierra_program: serde_json::from_value(value["sierra_program"].clone())?,
         entry_points_by_type: serde_json::from_value(value["entry_points_by_type"].clone())?,

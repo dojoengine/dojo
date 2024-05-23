@@ -36,7 +36,7 @@ pub struct CallArgs {
 
 impl CallArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(contract=?self.contract, entrypoint=self.entrypoint, calldata=?self.calldata, block_id=self.block_id, "Executing Call command.");
+        trace!(args = ?self);
 
         let env_metadata = utils::load_metadata_from_config(config)?;
         trace!(?env_metadata, "Loaded metadata from config.");

@@ -65,7 +65,7 @@ impl AccountOptions {
         Ok(account)
     }
 
-    fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
+    pub fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         if let Some(address) = self.account_address {
             trace!(?address, "Account address found.");
             Ok(address)
@@ -146,7 +146,7 @@ mod tests {
         assert!(cmd.account.account_address(None).is_err());
     }
 
-    #[katana_runner::katana_test(2, true, "katana", "")]
+    #[katana_runner::katana_test(2, true)]
     async fn legacy_flag_works_as_expected() {
         let cmd = Command::parse_from([
             "sozo",
@@ -173,7 +173,7 @@ mod tests {
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
     }
 
-    #[katana_runner::katana_test(2, true, "katana", "")]
+    #[katana_runner::katana_test(2, true)]
     async fn without_legacy_flag_works_as_expected() {
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", "0x1"]);
         let dummy_call = vec![Call {

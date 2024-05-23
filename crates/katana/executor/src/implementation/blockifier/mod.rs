@@ -1,12 +1,14 @@
 mod error;
 mod state;
-mod utils;
+pub mod utils;
 
-use blockifier::block_context::BlockContext;
-use blockifier::state::cached_state::{self, MutRefState};
+use std::num::NonZeroU128;
+
+use blockifier::block::{BlockInfo, GasPrices};
+use blockifier::context::BlockContext;
+use blockifier::state::cached_state::{self, GlobalContractCache, MutRefState};
 use blockifier::state::state_api::StateReader;
-use blockifier::transaction::objects::TransactionExecutionInfo;
-use katana_primitives::block::{ExecutableBlock, GasPrices, PartialHeader};
+use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
@@ -16,7 +18,6 @@ use starknet_api::block::{BlockNumber, BlockTimestamp};
 use tracing::info;
 
 use self::state::CachedState;
-use crate::utils::receipt_from_exec_info;
 use crate::{
     BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
     ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
@@ -24,6 +25,12 @@ use crate::{
 };
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
+
+// TODO: @kariy Which value should be considered here? I took the default
+// value from the previous implementation.
+// Previous: https://github.com/dojoengine/blockifier/blob/7459891173b64b148a7ce870c0b1d5907af15b8d/crates/blockifier/src/state/cached_state.rs#L731
+// New code: https://github.com/starkware-libs/blockifier/blob/a6200402ab635d8a8e175f7f135be5914c960007/crates/blockifier/src/state/global_cache.rs#L17C11-L17C46
+pub(crate) const CACHE_SIZE: usize = 100;
 
 #[derive(Debug)]
 pub struct BlockifierFactory {
@@ -88,15 +95,36 @@ impl<'a> StarknetVMProcessor<'a> {
     fn fill_block_env_from_header(&mut self, header: &PartialHeader) {
         let number = BlockNumber(header.number);
         let timestamp = BlockTimestamp(header.timestamp);
-        let eth_l1_gas_price = header.gas_prices.eth;
-        let strk_l1_gas_price = header.gas_prices.strk;
 
-        self.block_context.block_info.block_number = number;
-        self.block_context.block_info.block_timestamp = timestamp;
-        self.block_context.block_info.gas_prices.eth_l1_gas_price = eth_l1_gas_price;
-        self.block_context.block_info.gas_prices.strk_l1_gas_price = strk_l1_gas_price;
-        self.block_context.block_info.sequencer_address =
-            utils::to_blk_address(header.sequencer_address);
+        // TODO: should we enforce the gas price to not be 0,
+        // as there's a flag to disable gas uasge instead?
+        let eth_l1_gas_price = unsafe { NonZeroU128::new_unchecked(header.gas_prices.eth) };
+        let strk_l1_gas_price = unsafe { NonZeroU128::new_unchecked(header.gas_prices.strk) };
+
+        // TODO: which values is correct for those one?
+        let eth_l1_data_gas_price = eth_l1_gas_price;
+        let strk_l1_data_gas_price = strk_l1_gas_price;
+
+        // TODO: @kariy, not sure here if we should add some functions to alter it
+        // instead of cloning. Or did I miss a function?
+        // https://github.com/starkware-libs/blockifier/blob/a6200402ab635d8a8e175f7f135be5914c960007/crates/blockifier/src/context.rs#L23
+        let versioned_constants = self.block_context.versioned_constants();
+        let chain_info = self.block_context.chain_info();
+        let block_info = BlockInfo {
+            block_number: number,
+            block_timestamp: timestamp,
+            sequencer_address: utils::to_blk_address(header.sequencer_address),
+            gas_prices: GasPrices {
+                eth_l1_gas_price,
+                strk_l1_gas_price,
+                eth_l1_data_gas_price,
+                strk_l1_data_gas_price,
+            },
+            use_kzg_da: false,
+        };
+
+        self.block_context =
+            BlockContext::new_unchecked(&block_info, chain_info, versioned_constants);
     }
 
     fn simulate_with<F, T>(
@@ -106,19 +134,19 @@ impl<'a> StarknetVMProcessor<'a> {
         mut op: F,
     ) -> Vec<T>
     where
-        F: FnMut(
-            &mut dyn StateReader,
-            (TxWithHash, Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError>),
-        ) -> T,
+        F: FnMut(&mut dyn StateReader, (TxWithHash, ExecutionResult)) -> T,
     {
         let block_context = &self.block_context;
         let state = &mut self.state.0.write().inner;
-        let mut state = cached_state::CachedState::new(MutRefState::new(state), Default::default());
+        let mut state = cached_state::CachedState::new(
+            MutRefState::new(state),
+            GlobalContractCache::new(CACHE_SIZE),
+        );
 
         let mut results = Vec::with_capacity(transactions.len());
         for exec_tx in transactions {
             let tx = TxWithHash::from(&exec_tx);
-            let res = utils::transact(exec_tx, &mut state, block_context, flags);
+            let res = utils::transact(&mut state, block_context, flags, exec_tx);
             results.push(op(&mut state, (tx, res)));
         }
 
@@ -151,36 +179,29 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
             };
 
             let tx = TxWithHash::from(&exec_tx);
-            let res = match utils::transact(exec_tx, &mut state.inner, block_context, flags) {
-                Ok((info, fee)) => {
-                    // get the trace and receipt from the execution info
-                    let trace = utils::to_exec_info(info);
-                    let receipt = receipt_from_exec_info(&tx, &trace);
+            let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
 
-                    crate::utils::log_resources(&trace.actual_resources);
-                    crate::utils::log_events(receipt.events());
-
-                    self.stats.l1_gas_used += fee.gas_consumed;
+            match &res {
+                ExecutionResult::Success { receipt, trace } => {
+                    self.stats.l1_gas_used += receipt.fee().gas_consumed;
                     self.stats.cairo_steps_used += receipt.resources_used().steps as u128;
 
                     if let Some(reason) = receipt.revert_reason() {
-                        info!(target: LOG_TARGET, reason = %reason, "Transaction reverted.");
+                        info!(target: LOG_TARGET, %reason, "Transaction reverted.");
                     }
 
-                    ExecutionResult::new_success(receipt, trace, fee)
+                    if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
+                        state.declared_classes.insert(class_hash, (compiled, sierra));
+                    }
+
+                    crate::utils::log_resources(&trace.actual_resources);
+                    crate::utils::log_events(receipt.events());
                 }
-                Err(e) => {
-                    info!(target: LOG_TARGET, error = %e, "Executing transaction.");
-                    ExecutionResult::new_failed(e)
+
+                ExecutionResult::Failed { error } => {
+                    info!(target: LOG_TARGET, %error, "Executing transaction.");
                 }
             };
-
-            // if the tx succeed, inserts the class artifacts into the contract class cache
-            if res.is_success() {
-                if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
-                    state.declared_classes.insert(class_hash, (compiled, sierra));
-                }
-            }
 
             self.transactions.push((tx, res));
         }
@@ -204,13 +225,16 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     }
 
     fn block_env(&self) -> BlockEnv {
+        let eth_l1_gas_price = self.block_context.block_info().gas_prices.eth_l1_gas_price;
+        let strk_l1_gas_price = self.block_context.block_info().gas_prices.strk_l1_gas_price;
+
         BlockEnv {
-            number: self.block_context.block_info.block_number.0,
-            timestamp: self.block_context.block_info.block_timestamp.0,
-            sequencer_address: utils::to_address(self.block_context.block_info.sequencer_address),
-            l1_gas_prices: GasPrices {
-                eth: self.block_context.block_info.gas_prices.eth_l1_gas_price,
-                strk: self.block_context.block_info.gas_prices.strk_l1_gas_price,
+            number: self.block_context.block_info().block_number.0,
+            timestamp: self.block_context.block_info().block_timestamp.0,
+            sequencer_address: utils::to_address(self.block_context.block_info().sequencer_address),
+            l1_gas_prices: KatanaGasPrices {
+                eth: eth_l1_gas_price.into(),
+                strk: strk_l1_gas_price.into(),
             },
         }
     }
@@ -222,17 +246,9 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         transactions: Vec<ExecutableTxWithHash>,
         flags: SimulationFlag,
     ) -> Vec<ResultAndStates> {
-        self.simulate_with(transactions, &flags, |_, (tx, res)| {
-            let result = match res {
-                Ok((info, fee)) => {
-                    let trace = utils::to_exec_info(info);
-                    let receipt = receipt_from_exec_info(&tx, &trace);
-                    ExecutionResult::new_success(receipt, trace, fee)
-                }
-                Err(e) => ExecutionResult::new_failed(e),
-            };
-
-            ResultAndStates { result, states: Default::default() }
+        self.simulate_with(transactions, &flags, |_, (_, result)| ResultAndStates {
+            result,
+            states: Default::default(),
         })
     }
 
@@ -242,18 +258,19 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         flags: SimulationFlag,
     ) -> Vec<Result<TxFeeInfo, ExecutionError>> {
         self.simulate_with(transactions, &flags, |_, (_, res)| match res {
-            Ok((info, fee)) => {
+            ExecutionResult::Success { receipt, .. } => {
                 // if the transaction was reverted, return as error
-                if let Some(reason) = info.revert_error {
-                    info!(target: LOG_TARGET, reason = %reason, "Estimating fee.");
-                    Err(ExecutionError::TransactionReverted { revert_error: reason })
+                if let Some(reason) = receipt.revert_reason() {
+                    info!(target: LOG_TARGET, %reason, "Estimating fee.");
+                    Err(ExecutionError::TransactionReverted { revert_error: reason.to_string() })
                 } else {
-                    Ok(fee)
+                    Ok(receipt.fee().clone())
                 }
             }
-            Err(e) => {
-                info!(target: LOG_TARGET, error = %e, "Estimating fee.");
-                Err(e)
+
+            ExecutionResult::Failed { error } => {
+                info!(target: LOG_TARGET, %error, "Estimating fee.");
+                Err(error)
             }
         })
     }
