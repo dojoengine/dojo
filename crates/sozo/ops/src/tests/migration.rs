@@ -41,7 +41,7 @@ async fn migrate_with_auto_mine() {
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -120,7 +120,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
         &base.to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
