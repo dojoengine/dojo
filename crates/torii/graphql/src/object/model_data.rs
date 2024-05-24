@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::Value;
 use chrono::{DateTime, Utc};
@@ -18,7 +20,7 @@ use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
 use crate::utils::extract;
 
-#[derive(FromRow, Deserialize, PartialEq, Eq)]
+#[derive(FromRow, Deserialize, PartialEq, Eq, Debug)]
 pub struct ModelMember {
     pub id: String,
     pub model_id: String,
@@ -140,6 +142,34 @@ impl ResolvableObject for ModelDataObject {
     }
 }
 
+// fn data_objects_recursion(type_data: &TypeData, path_array: Vec<String>) -> Vec<Object> {
+//     let mut objects: Vec<Object> = vec![];
+//     match type_data {
+//         TypeData::Nested((nested_type, nested_mapping)) => {
+//             let mut nested_path = path_array.clone();
+//             nested_path.push(nested_type.to_string());
+//             let nested_objects = nested_mapping.iter().flat_map(|(field_name, type_data)| {
+//                 let mut nested_path = nested_path.clone();
+//                 nested_path.push(field_name.to_string());
+//                 data_objects_recursion(type_data, nested_path)
+//             });
+
+//             objects.extend(nested_objects);
+//             objects.push(object(&nested_type.to_string(), nested_mapping, path_array));
+//         }
+//         TypeData::List(inner) => {
+//             let mut nested_path = path_array.clone();
+//             nested_path.push(inner.type_ref().to_string());
+//             let nested_objects = data_objects_recursion(inner, nested_path);
+
+//             objects.extend(nested_objects);
+//         }
+//         _ => {}
+//     }
+
+//     objects
+// }
+
 fn data_objects_recursion(
     type_name: &str,
     type_mapping: &TypeMapping,
@@ -155,6 +185,20 @@ fn data_objects_recursion(
                     data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
 
                 Some(nested_objects)
+            } else if let TypeData::List(inner) = type_data {
+                if let TypeData::Nested((nested_type, nested_mapping)) = inner.deref() {
+                    let mut nested_path = path_array.clone();
+                    nested_path.push(inner.type_ref().to_string());
+                    let nested_objects = data_objects_recursion(
+                        &nested_type.to_string(),
+                        nested_mapping,
+                        nested_path,
+                    );
+
+                    return Some(nested_objects);
+                }
+
+                None
             } else {
                 None
             }
@@ -191,6 +235,11 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                                 let entity_id =
                                     extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
+
+                                // if we already fetched our model data, return it
+                                if let Some(data) = indexmap.get(&field_name) {
+                                    return Ok(Some(data.clone()));
+                                }
 
                                 // TODO: remove subqueries and use JOIN in parent query
                                 let data = fetch_single_row(

@@ -149,6 +149,9 @@ pub fn function_resolver(db: &RootDatabase, fn_id: FunctionWithBodyId) -> Resolv
                 .unwrap()
                 .clone_with_inference_id(db, interference)
         }
+        FunctionWithBodyId::Trait(_) => {
+            todo!()
+        }
     };
     Resolver::with_data(db, resolver_data)
 }

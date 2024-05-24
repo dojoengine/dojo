@@ -7,25 +7,33 @@ use dojo::resource_metadata::ResourceMetadata;
 trait IWorld<T> {
     fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
-    fn model(self: @T, name: felt252) -> (ClassHash, ContractAddress);
+    fn model(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
-    fn entity(self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>) -> Span<felt252>;
+    fn entity(
+        self: @T, model: felt252, keys: Span<felt252>, layout: dojo::database::introspect::Layout
+    ) -> Span<felt252>;
     fn set_entity(
-        ref self: T, model: felt252, keys: Span<felt252>, values: Span<felt252>, layout: Span<u8>
+        ref self: T,
+        model: felt252,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    );
+    fn delete_entity(
+        ref self: T, model: felt252, keys: Span<felt252>, layout: dojo::database::introspect::Layout
     );
     fn base(self: @T) -> ClassHash;
-    fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, layout: Span<u8>);
     fn is_owner(self: @T, address: ContractAddress, resource: felt252) -> bool;
     fn grant_owner(ref self: T, address: ContractAddress, resource: felt252);
     fn revoke_owner(ref self: T, address: ContractAddress, resource: felt252);
 
-    fn is_writer(self: @T, model: felt252, system: ContractAddress) -> bool;
-    fn grant_writer(ref self: T, model: felt252, system: ContractAddress);
-    fn revoke_writer(ref self: T, model: felt252, system: ContractAddress);
+    fn is_writer(self: @T, model: felt252, contract: ContractAddress) -> bool;
+    fn grant_writer(ref self: T, model: felt252, contract: ContractAddress);
+    fn revoke_writer(ref self: T, model: felt252, contract: ContractAddress);
 }
 
 #[starknet::interface]
@@ -73,7 +81,7 @@ mod world {
     };
 
     use dojo::database;
-    use dojo::database::introspect::Introspect;
+    use dojo::database::introspect::{Introspect, Layout, FieldLayout};
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::config::component::Config;
     use dojo::model::Model;
@@ -83,11 +91,14 @@ mod world {
     };
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
-    use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
+    use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_SELECTOR};
 
     use super::Errors;
 
     const WORLD: felt252 = 0;
+
+    // the minimum internal size of an empty ByteArray 
+    const MIN_BYTE_ARRAY_SIZE: u32 = 3;
 
     component!(path: Config, storage: config, event: ConfigEvent);
 
@@ -143,12 +154,12 @@ mod world {
     #[derive(Drop, starknet::Event)]
     struct MetadataUpdate {
         resource: felt252,
-        uri: Span<felt252>
+        uri: ByteArray
     }
 
     #[derive(Drop, starknet::Event)]
     struct ModelRegistered {
-        name: felt252,
+        name: ByteArray,
         class_hash: ClassHash,
         prev_class_hash: ClassHash,
         address: ContractAddress,
@@ -171,7 +182,7 @@ mod world {
     #[derive(Drop, starknet::Event)]
     struct WriterUpdated {
         model: felt252,
-        system: ContractAddress,
+        contract: ContractAddress,
         value: bool
     }
 
@@ -203,7 +214,7 @@ mod world {
         self
             .models
             .write(
-                RESOURCE_METADATA_MODEL,
+                RESOURCE_METADATA_SELECTOR,
                 (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
             );
 
@@ -218,11 +229,12 @@ mod world {
         ///
         /// `resource_id` - The resource id.
         fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
-            let mut layout = array![];
-            Introspect::<ResourceMetadata>::layout(ref layout);
-
             let mut data = self
-                .entity(RESOURCE_METADATA_MODEL, array![resource_id].span(), layout.span(),);
+                ._read_model_data(
+                    RESOURCE_METADATA_SELECTOR,
+                    array![resource_id].span(),
+                    Model::<ResourceMetadata>::layout()
+                );
 
             let mut model = array![resource_id];
             core::array::serialize_array_helper(data, ref model);
@@ -240,13 +252,12 @@ mod world {
         fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
             assert_can_write(@self, metadata.resource_id, get_caller_address());
 
-            let model = Model::<ResourceMetadata>::name(@metadata);
+            let model = Model::<ResourceMetadata>::selector();
             let keys = Model::<ResourceMetadata>::keys(@metadata);
             let values = Model::<ResourceMetadata>::values(@metadata);
-            let layout = Model::<ResourceMetadata>::layout(@metadata);
+            let layout = Model::<ResourceMetadata>::layout();
 
-            let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, values, layout);
+            self._write_model_data(model, keys, values, layout);
 
             EventEmitter::emit(
                 ref self,
@@ -285,7 +296,7 @@ mod world {
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: true });
         }
 
-        /// Revokes owner permission to the system for the model.
+        /// Revokes owner permission to the contract for the model.
         /// Can only be called by an existing owner or the world admin.
         ///
         /// # Arguments
@@ -302,47 +313,47 @@ mod world {
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: false });
         }
 
-        /// Checks if the provided system is a writer of the model.
+        /// Checks if the provided contract is a writer of the model.
         ///
         /// # Arguments
         ///
         /// * `model` - The name of the model.
-        /// * `system` - The name of the system.
+        /// * `contract` - The name of the contract.
         ///
         /// # Returns
         ///
-        /// * `bool` - True if the system is a writer of the model, false otherwise
-        fn is_writer(self: @ContractState, model: felt252, system: ContractAddress) -> bool {
-            self.writers.read((model, system))
+        /// * `bool` - True if the contract is a writer of the model, false otherwise
+        fn is_writer(self: @ContractState, model: felt252, contract: ContractAddress) -> bool {
+            self.writers.read((model, contract))
         }
 
-        /// Grants writer permission to the system for the model.
+        /// Grants writer permission to the contract for the model.
         /// Can only be called by an existing model owner or the world admin.
         ///
         /// # Arguments
         ///
         /// * `model` - The name of the model.
-        /// * `system` - The name of the system.
-        fn grant_writer(ref self: ContractState, model: felt252, system: ContractAddress) {
+        /// * `contract` - The name of the contract.
+        fn grant_writer(ref self: ContractState, model: felt252, contract: ContractAddress) {
             let caller = get_caller_address();
 
             assert(
                 self.is_owner(caller, model) || self.is_owner(caller, WORLD),
                 Errors::NOT_OWNER_WRITER
             );
-            self.writers.write((model, system), true);
+            self.writers.write((model, contract), true);
 
-            EventEmitter::emit(ref self, WriterUpdated { model, system, value: true });
+            EventEmitter::emit(ref self, WriterUpdated { model, contract, value: true });
         }
 
-        /// Revokes writer permission to the system for the model.
+        /// Revokes writer permission to the contract for the model.
         /// Can only be called by an existing model writer, owner or the world admin.
         ///
         /// # Arguments
         ///
         /// * `model` - The name of the model.
-        /// * `system` - The name of the system.
-        fn revoke_writer(ref self: ContractState, model: felt252, system: ContractAddress) {
+        /// * `contract` - The name of the contract.
+        fn revoke_writer(ref self: ContractState, model: felt252, contract: ContractAddress) {
             let caller = get_caller_address();
 
             assert(
@@ -351,9 +362,9 @@ mod world {
                     || self.is_owner(caller, WORLD),
                 Errors::NOT_OWNER_WRITER
             );
-            self.writers.write((model, system), false);
+            self.writers.write((model, contract), false);
 
-            EventEmitter::emit(ref self, WriterUpdated { model, system, value: false });
+            EventEmitter::emit(ref self, WriterUpdated { model, contract, value: false });
         }
 
         /// Registers a model in the world. If the model is already registered,
@@ -366,7 +377,9 @@ mod world {
             let caller = get_caller_address();
 
             let salt = self.models_count.read();
-            let (address, name) = dojo::model::deploy_and_get_name(salt.into(), class_hash)
+            let (address, name, selector) = dojo::model::deploy_and_get_metadata(
+                salt.into(), class_hash
+            )
                 .unwrap_syscall();
             self.models_count.write(salt + 1);
 
@@ -377,21 +390,21 @@ mod world {
 
             // Avoids a model name to conflict with already deployed contract,
             // which can cause ACL issue with current ACL implementation.
-            if name.is_zero() || self.deployed_contracts.read(name).is_non_zero() {
+            if selector.is_zero() || self.deployed_contracts.read(selector).is_non_zero() {
                 panic_with_felt252(Errors::INVALID_MODEL_NAME);
             }
 
             // If model is already registered, validate permission to update.
-            let (current_class_hash, current_address) = self.models.read(name);
+            let (current_class_hash, current_address) = self.models.read(selector);
             if current_class_hash.is_non_zero() {
-                assert(self.is_owner(caller, name), Errors::OWNER_ONLY_UPDATE);
+                assert(self.is_owner(caller, selector), Errors::OWNER_ONLY_UPDATE);
                 prev_class_hash = current_class_hash;
                 prev_address = current_address;
             } else {
-                self.owners.write((name, caller), true);
+                self.owners.write((selector, caller), true);
             };
 
-            self.models.write(name, (class_hash, address));
+            self.models.write(selector, (class_hash, address));
             EventEmitter::emit(
                 ref self,
                 ModelRegistered { name, prev_address, address, class_hash, prev_class_hash }
@@ -402,13 +415,13 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the model.
+        /// * `selector` - The keccak(name) of the model.
         ///
         /// # Returns
         ///
         /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the model.
-        fn model(self: @ContractState, name: felt252) -> (ClassHash, ContractAddress) {
-            self.models.read(name)
+        fn model(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
+            self.models.read(selector)
         }
 
         /// Deploys a contract associated with the world.
@@ -489,8 +502,9 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name of the model to be set.
+        /// * `model` - The selector of the model to be set.
         /// * `keys` - The key to be used to find the entity.
+        /// * `value_names` - The name of model fields which are not a key.
         /// * `values` - The value to be set.
         /// * `layout` - The memory layout of the entity.
         fn set_entity(
@@ -498,13 +512,11 @@ mod world {
             model: felt252,
             keys: Span<felt252>,
             values: Span<felt252>,
-            layout: Span<u8>
+            layout: dojo::database::introspect::Layout
         ) {
             assert_can_write(@self, model, get_caller_address());
 
-            let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, values, layout);
-
+            self._write_model_data(model, keys, values, layout);
             EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, values });
         }
 
@@ -513,28 +525,19 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name of the model to be deleted.
+        /// * `model` - The selector of the model to be deleted.
         /// * `keys` - The key to be used to find the entity.
+        /// * `value_names` - The name of model fields which are not a key.
         /// * `layout` - The memory layout of the entity.
         fn delete_entity(
-            ref self: ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
+            ref self: ContractState,
+            model: felt252,
+            keys: Span<felt252>,
+            layout: dojo::database::introspect::Layout
         ) {
             assert_can_write(@self, model, get_caller_address());
 
-            let mut empty_values = ArrayTrait::new();
-            let mut i = 0;
-
-            loop {
-                if (i == layout.len()) {
-                    break;
-                }
-                empty_values.append(0);
-                i += 1;
-            };
-
-            let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, empty_values.span(), layout);
-
+            self._delete_model_data(model, keys, layout);
             EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
         }
 
@@ -543,18 +546,21 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name of the model to be retrieved.
+        /// * `model` - The selector of the model to be retrieved.
         /// * `keys` - The keys used to find the entity.
+        /// * `value_names` - The name of model fields which are not a key.
         /// * `layout` - The memory layout of the entity.
         ///
         /// # Returns
         ///
         /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
         fn entity(
-            self: @ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
+            self: @ContractState,
+            model: felt252,
+            keys: Span<felt252>,
+            layout: dojo::database::introspect::Layout
         ) -> Span<felt252> {
-            let key = poseidon::poseidon_hash_span(keys);
-            database::get(model, key, layout)
+            self._read_model_data(model, keys, layout)
         }
 
         /// Gets the base contract class hash.
@@ -642,8 +648,8 @@ mod world {
     ///
     /// # Arguments
     ///
-    /// * `resource` - The name of the resource being written to.
-    /// * `caller` - The name of the caller writing.
+    /// * `resource` - The selector of the resource being written to.
+    /// * `caller` - The selector of the caller writing.
     fn assert_can_write(self: @ContractState, resource: felt252, caller: ContractAddress) {
         assert(
             IWorld::is_writer(self, resource, caller) || is_account_owner(self, resource),
@@ -656,7 +662,7 @@ mod world {
     ///
     /// # Arguments
     ///
-    /// * `resource` - The name of the resource being verified.
+    /// * `resource` - The selector of the resource being verified.
     ///
     /// # Returns
     ///
@@ -665,5 +671,609 @@ mod world {
     fn is_account_owner(self: @ContractState, resource: felt252) -> bool {
         IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, resource)
             || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD)
+    }
+
+    #[generate_trait]
+    impl Self of SelfTrait {
+        /// Write a new model record.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector
+        ///   * `keys` - the list of model keys to identify the record
+        ///   * `values` - the field values of the record
+        ///   * `layout` - the model layout
+        fn _write_model_data(
+            ref self: ContractState,
+            model: felt252,
+            keys: Span<felt252>,
+            values: Span<felt252>,
+            layout: dojo::database::introspect::Layout
+        ) {
+            let model_key = poseidon::poseidon_hash_span(keys);
+            let mut offset = 0;
+
+            match layout {
+                Layout::Fixed(layout) => {
+                    Self::_write_fixed_layout(model, model_key, values, ref offset, layout);
+                },
+                Layout::Struct(layout) => {
+                    Self::_write_struct_layout(model, model_key, values, ref offset, layout);
+                },
+                _ => { panic!("Unexpected layout type for a model."); }
+            };
+        }
+
+        /// Delete a model record.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector
+        ///   * `keys` - the list of model keys to identify the record
+        ///   * `layout` - the model layout
+        fn _delete_model_data(
+            ref self: ContractState,
+            model: felt252,
+            keys: Span<felt252>,
+            layout: dojo::database::introspect::Layout
+        ) {
+            let model_key = poseidon::poseidon_hash_span(keys);
+
+            match layout {
+                Layout::Fixed(layout) => { Self::_delete_fixed_layout(model, model_key, layout); },
+                Layout::Struct(layout) => {
+                    Self::_delete_struct_layout(model, model_key, layout);
+                },
+                _ => { panic!("Unexpected layout type for a model."); }
+            };
+        }
+
+        /// Read a model record.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector
+        ///   * `keys` - the list of model keys to identify the record
+        ///   * `layout` - the model layout
+        fn _read_model_data(
+            self: @ContractState,
+            model: felt252,
+            keys: Span<felt252>,
+            layout: dojo::database::introspect::Layout
+        ) -> Span<felt252> {
+            let model_key = poseidon::poseidon_hash_span(keys);
+            let mut read_data = ArrayTrait::<felt252>::new();
+
+            match layout {
+                Layout::Fixed(layout) => {
+                    Self::_read_fixed_layout(model, model_key, ref read_data, layout);
+                },
+                Layout::Struct(layout) => {
+                    Self::_read_struct_layout(model, model_key, ref read_data, layout);
+                },
+                _ => { panic!("Unexpected layout type for a model."); }
+            };
+
+            read_data.span()
+        }
+
+        /// Compute the full field key from parent key and current field key.
+        fn _field_key(parent_key: felt252, field_key: felt252) -> felt252 {
+            poseidon::poseidon_hash_span(array![parent_key, field_key].span())
+        }
+
+        /// Append some values to an array.
+        ///
+        /// # Arguments
+        ///  * `dest` - the array to extend
+        ///  * `values` - the values to append to the array
+        fn _append_array(ref dest: Array<felt252>, values: Span<felt252>) {
+            let mut i = 0;
+            loop {
+                if i >= values.len() {
+                    break;
+                }
+                dest.append(*values.at(i));
+                i += 1;
+            };
+        }
+
+        fn _find_variant_layout(
+            variant: felt252, variant_layouts: Span<FieldLayout>
+        ) -> Option<Layout> {
+            let mut i = 0;
+            let layout = loop {
+                if i >= variant_layouts.len() {
+                    break Option::None;
+                }
+
+                let variant_layout = *variant_layouts.at(i);
+                if variant == variant_layout.selector {
+                    break Option::Some(variant_layout.layout);
+                }
+
+                i += 1;
+            };
+
+            layout
+        }
+
+        /// Write values to the world storage.
+        /// 
+        /// # Arguments
+        /// * `model` - the model selector.
+        /// * `key` - the object key.
+        /// * `values` - the object values.
+        /// * `offset` - the start of object values in the `values` parameter.
+        /// * `layout` - the object values layout.
+        fn _write_layout(
+            model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Layout,
+        ) {
+            match layout {
+                Layout::Fixed(layout) => {
+                    Self::_write_fixed_layout(model, key, values, ref offset, layout);
+                },
+                Layout::Struct(layout) => {
+                    Self::_write_struct_layout(model, key, values, ref offset, layout);
+                },
+                Layout::Array(layout) => {
+                    Self::_write_array_layout(model, key, values, ref offset, layout);
+                },
+                Layout::Tuple(layout) => {
+                    Self::_write_tuple_layout(model, key, values, ref offset, layout);
+                },
+                Layout::ByteArray => {
+                    Self::_write_byte_array_layout(model, key, values, ref offset);
+                },
+                Layout::Enum(layout) => {
+                    Self::_write_enum_layout(model, key, values, ref offset, layout);
+                }
+            }
+        }
+
+        /// Write fixed layout model record to the world storage.
+        /// 
+        /// # Arguments
+        /// * `model` - the model selector.
+        /// * `key` - the model record key.
+        /// * `values` - the model record values.
+        /// * `offset` - the start of model record values in the `values` parameter.
+        /// * `layout` - the model record layout.
+        fn _write_fixed_layout(
+            model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<u8>
+        ) {
+            database::set(model, key, values, offset, layout);
+            offset += layout.len();
+        }
+
+        /// Write array layout model record to the world storage.
+        /// 
+        /// # Arguments
+        /// * `model` - the model selector.
+        /// * `key` - the model record key.
+        /// * `values` - the model record values.
+        /// * `offset` - the start of model record values in the `values` parameter.
+        /// * `item_layout` - the model record layout (temporary a Span because of type recursion issue).
+        fn _write_array_layout(
+            model: felt252,
+            key: felt252,
+            values: Span<felt252>,
+            ref offset: u32,
+            item_layout: Span<Layout>
+        ) {
+            assert((values.len() - offset) > 0, 'Invalid values length');
+
+            // first, read array size which is the first felt252 from values
+            let array_len = *values.at(offset);
+            assert(array_len.into() <= dojo::database::MAX_ARRAY_LENGTH, 'invalid array length');
+            let array_len: u32 = array_len.try_into().unwrap();
+
+            // then, write the array size
+            database::set(model, key, values, offset, array![251].span());
+            offset += 1;
+
+            // and then, write array items
+            let item_layout = *item_layout.at(0);
+
+            let mut i = 0;
+            loop {
+                if i >= array_len {
+                    break;
+                }
+                let key = Self::_field_key(key, i.into());
+
+                Self::_write_layout(model, key, values, ref offset, item_layout);
+
+                i += 1;
+            };
+        }
+
+        ///
+        fn _write_byte_array_layout(
+            model: felt252, key: felt252, values: Span<felt252>, ref offset: u32
+        ) {
+            // The ByteArray internal structure is
+            // struct ByteArray {
+            //    data: Array<bytes31>,
+            //    pending_word: felt252,
+            //    pending_word_len: usize,
+            // } 
+            //
+            // That means, the length of data to write from 'values' is:
+            // 1 + len(data) + 1 + 1 = len(data) + 3
+            assert((values.len() - offset) >= MIN_BYTE_ARRAY_SIZE, 'Invalid values length');
+
+            let data_len = *values.at(offset);
+            assert(
+                data_len.into() <= (dojo::database::MAX_ARRAY_LENGTH - MIN_BYTE_ARRAY_SIZE.into()),
+                'invalid array length'
+            );
+
+            let array_size: u32 = data_len.try_into().unwrap() + MIN_BYTE_ARRAY_SIZE.into();
+            assert((values.len() - offset) >= array_size, 'Invalid values length');
+
+            database::set_array(model, key, values, offset, array_size);
+            offset += array_size;
+        }
+
+        /// Write struct layout model record to the world storage.
+        /// 
+        /// # Arguments
+        /// * `model` - the model selector.
+        /// * `key` - the model record key.
+        /// * `values` - the model record values.
+        /// * `offset` - the start of model record values in the `values` parameter.
+        /// * `layout` - list of field layouts.
+        fn _write_struct_layout(
+            model: felt252,
+            key: felt252,
+            values: Span<felt252>,
+            ref offset: u32,
+            layout: Span<FieldLayout>
+        ) {
+            let mut i = 0;
+            loop {
+                if i >= layout.len() {
+                    break;
+                }
+
+                let field_layout = *layout.at(i);
+                let field_key = Self::_field_key(key, field_layout.selector);
+
+                Self::_write_layout(model, field_key, values, ref offset, field_layout.layout);
+
+                i += 1;
+            }
+        }
+
+        /// Write tuple layout model record to the world storage.
+        /// 
+        /// # Arguments
+        /// * `model` - the model selector.
+        /// * `key` - the model record key.
+        /// * `values` - the model record values.
+        /// * `offset` - the start of model record values in the `values` parameter.
+        /// * `layout` - list of tuple item layouts.
+        fn _write_tuple_layout(
+            model: felt252,
+            key: felt252,
+            values: Span<felt252>,
+            ref offset: u32,
+            layout: Span<Layout>
+        ) {
+            let mut i = 0;
+            loop {
+                if i >= layout.len() {
+                    break;
+                }
+
+                let field_layout = *layout.at(i);
+                let key = Self::_field_key(key, i.into());
+
+                Self::_write_layout(model, key, values, ref offset, field_layout);
+
+                i += 1;
+            };
+        }
+
+        fn _write_enum_layout(
+            model: felt252,
+            key: felt252,
+            values: Span<felt252>,
+            ref offset: u32,
+            variant_layouts: Span<FieldLayout>
+        ) {
+            // first, get the variant value from `values``
+            let variant = *values.at(offset);
+            assert(variant.into() < 256_u256, 'invalid variant value');
+
+            // find the corresponding layout and then write the full variant
+            match Self::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => Self::_write_layout(model, key, values, ref offset, layout),
+                Option::None => panic!("Unable to find the variant layout")
+            };
+        }
+
+        /// Delete a fixed layout model record from the world storage.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector.
+        ///   * `key` - the model record key.
+        ///   * `layout` - the model layout
+        fn _delete_fixed_layout(model: felt252, key: felt252, layout: Span<u8>) {
+            database::delete(model, key, layout);
+        }
+
+        /// Delete an array layout model record from the world storage.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector.
+        ///   * `key` - the model record key.
+        fn _delete_array_layout(model: felt252, key: felt252) {
+            // just set the array length to 0
+            database::delete(model, key, array![251].span());
+        }
+
+        ///
+        fn _delete_byte_array_layout(model: felt252, key: felt252) {
+            // The ByteArray internal structure is
+            // struct ByteArray {
+            //    data: Array<bytes31>,
+            //    pending_word: felt252,
+            //    pending_word_len: usize,
+            // } 
+            //
+
+            // So, just set the 3 first values to 0 (len(data), pending_world and pending_word_len)
+            database::delete(model, key, array![251, 251, 251].span());
+        }
+
+        /// Delete a model record from the world storage.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector.
+        ///   * `key` - the model record key.
+        ///   * `layout` - the model layout
+        fn _delete_layout(model: felt252, key: felt252, layout: Layout) {
+            match layout {
+                Layout::Fixed(layout) => { Self::_delete_fixed_layout(model, key, layout); },
+                Layout::Struct(layout) => { Self::_delete_struct_layout(model, key, layout); },
+                Layout::Array(_) => { Self::_delete_array_layout(model, key); },
+                Layout::Tuple(layout) => { Self::_delete_tuple_layout(model, key, layout); },
+                Layout::ByteArray => { Self::_delete_byte_array_layout(model, key); },
+                Layout::Enum(layout) => { Self::_delete_enum_layout(model, key, layout); }
+            }
+        }
+
+        /// Delete a struct layout model record from the world storage.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector.
+        ///   * `key` - the model record key.
+        ///   * `layout` - list of field layouts.
+        fn _delete_struct_layout(model: felt252, key: felt252, layout: Span<FieldLayout>) {
+            let mut i = 0;
+            loop {
+                if i >= layout.len() {
+                    break;
+                }
+
+                let field_layout = *layout.at(i);
+                let key = Self::_field_key(key, field_layout.selector);
+
+                Self::_delete_layout(model, key, field_layout.layout);
+
+                i += 1;
+            }
+        }
+
+        /// Delete a tuple layout model record from the world storage.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector.
+        ///   * `key` - the model record key.
+        ///   * `layout` - list of tuple item layouts.
+        fn _delete_tuple_layout(model: felt252, key: felt252, layout: Span<Layout>) {
+            let mut i = 0;
+            loop {
+                if i >= layout.len() {
+                    break;
+                }
+
+                let field_layout = *layout.at(i);
+                let key = Self::_field_key(key, i.into());
+
+                Self::_delete_layout(model, key, field_layout);
+
+                i += 1;
+            }
+        }
+
+        fn _delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<FieldLayout>) {
+            // read the variant value first which is the first stored felt252
+            let res = database::get(model, key, array![251].span());
+            assert(res.len() == 1, 'internal database error');
+
+            let variant = *res.at(0);
+            assert(variant.into() < 256_u256, 'invalid variant value');
+
+            // find the corresponding layout and the delete the full variant
+            match Self::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => Self::_delete_layout(model, key, layout),
+                Option::None => panic!("Unable to find the variant layout")
+            };
+        }
+
+        /// Read a model record.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector
+        ///   * `key` - model record key.
+        ///   * `read_data` - the read data.
+        ///   * `layout` - the model layout
+        fn _read_layout(
+            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Layout
+        ) {
+            match layout {
+                Layout::Fixed(layout) => Self::_read_fixed_layout(
+                    model, key, ref read_data, layout
+                ),
+                Layout::Struct(layout) => Self::_read_struct_layout(
+                    model, key, ref read_data, layout
+                ),
+                Layout::Array(layout) => Self::_read_array_layout(
+                    model, key, ref read_data, layout
+                ),
+                Layout::Tuple(layout) => Self::_read_tuple_layout(
+                    model, key, ref read_data, layout
+                ),
+                Layout::ByteArray => Self::_read_byte_array_layout(model, key, ref read_data),
+                Layout::Enum(layout) => Self::_read_enum_layout(model, key, ref read_data, layout),
+            };
+        }
+
+        /// Read a fixed layout model record.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector
+        ///   * `key` - model record key.
+        ///   * `read_data` - the read data.
+        ///   * `layout` - the model layout
+        fn _read_fixed_layout(
+            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<u8>
+        ) {
+            let data = database::get(model, key, layout);
+            Self::_append_array(ref read_data, data);
+        }
+
+        /// Read an array layout model record.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector
+        ///   * `key` - model record key.
+        ///   * `read_data` - the read data.
+        ///   * `layout` - the array item layout
+        fn _read_array_layout(
+            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
+        ) {
+            // read number of array items
+            let res = database::get(model, key, array![251].span());
+            assert(res.len() == 1, 'internal database error');
+
+            let array_len = *res.at(0);
+            assert(array_len.into() <= dojo::database::MAX_ARRAY_LENGTH, 'invalid array length');
+
+            read_data.append(array_len);
+
+            let item_layout = *layout.at(0);
+            let array_len: u32 = array_len.try_into().unwrap();
+
+            let mut i = 0;
+            loop {
+                if i >= array_len {
+                    break;
+                }
+
+                let field_key = Self::_field_key(key, i.into());
+                Self::_read_layout(model, field_key, ref read_data, item_layout);
+
+                i += 1;
+            };
+        }
+
+        ///
+        fn _read_byte_array_layout(model: felt252, key: felt252, ref read_data: Array<felt252>) {
+            // The ByteArray internal structure is
+            // struct ByteArray {
+            //    data: Array<bytes31>,
+            //    pending_word: felt252,
+            //    pending_word_len: usize,
+            // } 
+            //
+            // So, read the length of data and compute the full size to read
+
+            let res = database::get(model, key, array![251].span());
+            assert(res.len() == 1, 'internal database error');
+
+            let data_len = *res.at(0);
+            assert(
+                data_len.into() <= (dojo::database::MAX_ARRAY_LENGTH - MIN_BYTE_ARRAY_SIZE.into()),
+                'invalid array length'
+            );
+
+            let array_size: u32 = data_len.try_into().unwrap() + MIN_BYTE_ARRAY_SIZE;
+
+            let data = database::get_array(model, key, array_size);
+
+            Self::_append_array(ref read_data, data);
+        }
+
+        /// Read a struct layout model record.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector
+        ///   * `key` - model record key.
+        ///   * `read_data` - the read data.
+        ///   * `layout` - the list of field layouts.
+        fn _read_struct_layout(
+            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<FieldLayout>
+        ) {
+            let mut i = 0;
+            loop {
+                if i >= layout.len() {
+                    break;
+                }
+
+                let field_layout = *layout.at(i);
+                let field_key = Self::_field_key(key, field_layout.selector);
+
+                Self::_read_layout(model, field_key, ref read_data, field_layout.layout);
+
+                i += 1;
+            }
+        }
+
+        /// Read a tuple layout model record.
+        ///
+        /// # Arguments
+        ///   * `model` - the model selector
+        ///   * `key` - model record key.
+        ///   * `read_data` - the read data.
+        ///   * `layout` - the tuple item layouts
+        fn _read_tuple_layout(
+            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
+        ) {
+            let mut i = 0;
+            loop {
+                if i >= layout.len() {
+                    break;
+                }
+
+                let field_layout = *layout.at(i);
+                let field_key = Self::_field_key(key, i.into());
+                Self::_read_layout(model, field_key, ref read_data, field_layout);
+
+                i += 1;
+            };
+        }
+
+        fn _read_enum_layout(
+            model: felt252,
+            key: felt252,
+            ref read_data: Array<felt252>,
+            variant_layouts: Span<FieldLayout>
+        ) {
+            // read the variant value first, which is the first element of the tuple
+            // (because an enum is stored as a tuple).
+            let variant_key = Self::_field_key(key, 0);
+            let res = database::get(model, variant_key, array![8].span());
+            assert(res.len() == 1, 'internal database error');
+
+            let variant = *res.at(0);
+            assert(variant.into() < 256_u256, 'invalid variant value');
+
+            // find the corresponding layout and the read the full variant
+            match Self::_find_variant_layout(variant, variant_layouts) {
+                Option::Some(layout) => Self::_read_layout(model, key, ref read_data, layout),
+                Option::None => panic!("Unable to find the variant layout")
+            };
+        }
     }
 }

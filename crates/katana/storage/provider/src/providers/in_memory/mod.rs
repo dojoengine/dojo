@@ -326,7 +326,7 @@ impl TransactionTraceProvider for InMemoryProvider {
         Ok(exec)
     }
 
-    fn transactions_executions_by_block(
+    fn transaction_executions_by_block(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
@@ -335,26 +335,34 @@ impl TransactionTraceProvider for InMemoryProvider {
             BlockHashOrNumber::Hash(hash) => self.storage.read().block_numbers.get(&hash).cloned(),
         };
 
-        let Some(StoredBlockBodyIndices { tx_offset, tx_count }) =
+        let Some(index) =
             block_num.and_then(|num| self.storage.read().block_body_indices.get(&num).cloned())
         else {
             return Ok(None);
         };
 
-        let offset = tx_offset as usize;
-        let count = tx_count as usize;
+        let traces = self.transaction_executions_in_range(index.into())?;
+        Ok(Some(traces))
+    }
 
-        let execs = self
+    fn transaction_executions_in_range(
+        &self,
+        range: Range<TxNumber>,
+    ) -> ProviderResult<Vec<TxExecInfo>> {
+        let start = range.start as usize;
+        let total = range.end as usize - start;
+
+        let traces = self
             .storage
             .read()
             .transactions_executions
             .iter()
-            .skip(offset)
-            .take(count)
+            .skip(start)
+            .take(total)
             .cloned()
             .collect();
 
-        Ok(Some(execs))
+        Ok(traces)
     }
 }
 

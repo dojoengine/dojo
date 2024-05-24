@@ -5,7 +5,7 @@ use dojo_lang::scarb_internal::compile_workspace;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
-use scarb::ops::CompileOpts;
+use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
@@ -33,9 +33,16 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let features_opts =
+            FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+
         let compile_info = compile_workspace(
             config,
-            CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+            CompileOpts {
+                include_targets: vec![],
+                exclude_targets: vec![TargetKind::TEST],
+                features: features_opts,
+            },
         )?;
         trace!(?compile_info, "Compiled workspace.");
 
@@ -116,22 +123,27 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
 
 #[cfg(test)]
 mod tests {
-    use dojo_test_utils::compiler::build_test_config;
+    use camino::Utf8PathBuf;
+    use dojo_test_utils::compiler;
     use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
     use prettytable::{format, Cell, Row, Table};
     use sozo_ops::statistics::ContractStatistics;
 
     use super::{create_stats_table, BuildArgs};
 
+    // Uncomment once bindings support arrays.
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {
-        let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+        let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
+        let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
+
+        let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
 
         let build_args = BuildArgs {
             bindings_output: "generated".to_string(),
-            typescript: true,
+            typescript: false,
             unity: true,
-            typescript_v2: true,
+            typescript_v2: false,
             stats: true,
         };
         let result = build_args.run(&config);

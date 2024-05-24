@@ -9,6 +9,7 @@ use dojo_test_utils::sequencer::{
 };
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::manifest::DeploymentManifest;
 use dojo_world::migration::TxnConfig;
@@ -258,7 +259,7 @@ pub async fn model_fixtures(db: &mut Sql) {
                 },
             ],
         }),
-        vec![],
+        Layout::Fixed(vec![]),
         FieldElement::ONE,
         FieldElement::TWO,
         0,

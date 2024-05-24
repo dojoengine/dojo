@@ -1,3 +1,4 @@
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
@@ -40,6 +41,8 @@ pub enum Ty {
     Struct(Struct),
     Enum(Enum),
     Tuple(Vec<Ty>),
+    Array(Vec<Ty>),
+    ByteArray(String),
 }
 
 impl Ty {
@@ -47,8 +50,13 @@ impl Ty {
         match self {
             Ty::Primitive(c) => c.to_string(),
             Ty::Struct(s) => s.name.clone(),
-            Ty::Enum(e) => e.name.clone(),
+            Ty::Enum(e) => e.name.replace(
+                'T',
+                &e.options.iter().map(|o| o.ty.name().replace("()", "")).unique().join(""),
+            ),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
+            Ty::Array(ty) => format!("Array<{}>", ty[0].name()),
+            Ty::ByteArray(_) => "ByteArray".to_string(),
         }
     }
 
@@ -89,6 +97,22 @@ impl Ty {
         }
     }
 
+    /// If the `Ty` is an array, returns the associated [`Vec<Ty>`]. Returns `None` otherwise.
+    pub fn as_array(&self) -> Option<&Vec<Ty>> {
+        match self {
+            Ty::Array(tys) => Some(tys),
+            _ => None,
+        }
+    }
+
+    /// If the `Ty` is a byte array, returns the associated [`String`]. Returns `None` otherwise.
+    pub fn as_byte_array(&self) -> Option<&String> {
+        match self {
+            Ty::ByteArray(bytes) => Some(bytes),
+            _ => None,
+        }
+    }
+
     pub fn serialize(&self) -> Result<Vec<FieldElement>, PrimitiveError> {
         let mut felts = vec![];
 
@@ -118,6 +142,20 @@ impl Ty {
                         serialize_inner(ty, felts)?;
                     }
                 }
+                Ty::Array(items_ty) => {
+                    let _ = serialize_inner(
+                        &Ty::Primitive(Primitive::U32(Some(items_ty.len().try_into().unwrap()))),
+                        felts,
+                    );
+                    for item_ty in items_ty {
+                        serialize_inner(item_ty, felts)?;
+                    }
+                }
+                Ty::ByteArray(bytes) => {
+                    let bytearray = ByteArray::from_string(bytes)?;
+
+                    felts.extend(ByteArray::cairo_serialize(&bytearray))
+                }
             }
             Ok(())
         }
@@ -140,14 +178,41 @@ impl Ty {
             Ty::Enum(e) => {
                 e.option =
                     Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-                for EnumOption { ty, .. } in &mut e.options {
-                    ty.deserialize(felts)?;
+
+                match &e.options[e.option.unwrap() as usize].ty {
+                    // Skip deserializing the enum option if it has no type - unit type
+                    Ty::Tuple(tuple) if tuple.is_empty() => {}
+                    _ => {
+                        e.options[e.option.unwrap() as usize].ty.deserialize(felts)?;
+                    }
                 }
             }
             Ty::Tuple(tys) => {
                 for ty in tys {
                     ty.deserialize(felts)?;
                 }
+            }
+            Ty::Array(items_ty) => {
+                let arr_len: u32 =
+                    felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?;
+
+                if arr_len > 0 {
+                    let item_ty = items_ty[0].clone();
+
+                    items_ty.clear();
+
+                    for _ in 0..arr_len {
+                        let mut cur_item_ty = item_ty.clone();
+                        cur_item_ty.deserialize(felts)?;
+                        items_ty.push(cur_item_ty);
+                    }
+                }
+            }
+            Ty::ByteArray(bytes) => {
+                let bytearray = ByteArray::cairo_deserialize(felts, 0)?;
+                felts.drain(0..ByteArray::cairo_serialized_size(&bytearray));
+
+                *bytes = ByteArray::to_string(&bytearray)?;
             }
         }
         Ok(())
@@ -203,12 +268,10 @@ impl std::fmt::Display for Ty {
                     Some(enum_str)
                 }
                 Ty::Tuple(tuple) => {
-                    if tuple.is_empty() {
-                        None
-                    } else {
-                        Some(ty.name())
-                    }
+                    Some(format!("tuple({})", tuple.iter().map(|ty| ty.name()).join(", ")))
                 }
+                Ty::Array(items_ty) => Some(format!("Array<{}>", items_ty[0].name())),
+                Ty::ByteArray(_) => Some("ByteArray".to_string()),
             })
             .collect::<Vec<_>>()
             .join("\n\n");

@@ -4,7 +4,8 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::Ty;
+use dojo_types::schema::{EnumOption, Member, Ty};
+use dojo_world::contracts::abi::model::Layout;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
@@ -96,18 +97,13 @@ impl Sql {
     pub async fn register_model(
         &mut self,
         model: Ty,
-        layout: Vec<FieldElement>,
+        layout: Layout,
         class_hash: FieldElement,
         contract_address: FieldElement,
         packed_size: u32,
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
-        let layout_blob = layout
-            .iter()
-            .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
-            .collect::<Vec<u8>>();
-
         let insert_models =
             "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
              unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
@@ -121,7 +117,7 @@ impl Sql {
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
             .bind(format!("{contract_address:#x}"))
-            .bind(hex::encode(&layout_blob))
+            .bind(serde_json::to_string(&layout)?)
             .bind(packed_size)
             .bind(unpacked_size)
             .bind(utc_dt_string_from_timestamp(block_timestamp))
@@ -134,6 +130,8 @@ impl Sql {
             vec![model.name()],
             &mut model_idx,
             block_timestamp,
+            false,
+            false,
         );
         self.query_queue.execute_all().await?;
 
@@ -185,10 +183,10 @@ impl Sql {
         self.build_set_entity_queries_recursive(
             path,
             event_id,
-            &entity_id,
+            (&entity_id, false),
             &entity,
             block_timestamp,
-            false,
+            None,
         );
         self.query_queue.execute_all().await?;
 
@@ -240,10 +238,10 @@ impl Sql {
         self.build_set_entity_queries_recursive(
             path,
             event_id,
-            &entity_id,
+            (&entity_id, true),
             &entity,
             block_timestamp,
-            true,
+            None,
         );
         self.query_queue.execute_all().await?;
 
@@ -415,29 +413,67 @@ impl Sql {
         path: Vec<String>,
         model_idx: &mut i64,
         block_timestamp: u64,
+        is_array: bool,
+        is_parent_array: bool,
     ) {
-        if let Ty::Enum(_) = model {
-            // Complex enum values not supported yet.
-            return;
+        if let Ty::Enum(e) = model {
+            if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
+            {
+                return;
+            }
         }
 
-        self.build_model_query(path.clone(), model, *model_idx, block_timestamp);
+        self.build_model_query(
+            path.clone(),
+            model,
+            *model_idx,
+            block_timestamp,
+            is_array,
+            is_parent_array,
+        );
+
+        let mut build_member = |pathname: &str, member: &Ty| {
+            if let Ty::Primitive(_) = member {
+                return;
+            } else if let Ty::ByteArray(_) = member {
+                return;
+            }
+
+            let mut path_clone = path.clone();
+            path_clone.push(pathname.to_string());
+
+            self.build_register_queries_recursive(
+                member,
+                path_clone,
+                &mut (*model_idx + 1),
+                block_timestamp,
+                // If the parent is an array, all children are also represented as table arrays
+                if let Ty::Array(_) = member { true } else { is_array },
+                if let Ty::Array(_) = model { true } else { is_parent_array },
+            );
+        };
 
         if let Ty::Struct(s) = model {
             for member in s.children.iter() {
-                if let Ty::Primitive(_) = member.ty {
-                    continue;
+                build_member(&member.name, &member.ty);
+            }
+        } else if let Ty::Tuple(t) = model {
+            for (idx, member) in t.iter().enumerate() {
+                build_member(format!("_{}", idx).as_str(), member);
+            }
+        } else if let Ty::Array(array) = model {
+            let ty = &array[0];
+            build_member("data", ty);
+        } else if let Ty::Enum(e) = model {
+            for child in e.options.iter() {
+                // Skip enum options that have no type / member
+                if let Ty::Tuple(t) = &child.ty {
+                    if t.is_empty() {
+                        continue;
+                    }
                 }
 
-                let mut path_clone = path.clone();
-                path_clone.push(member.name.clone());
-
-                self.build_register_queries_recursive(
-                    &member.ty,
-                    path_clone,
-                    &mut (*model_idx + 1),
-                    block_timestamp,
-                );
+                build_member(&child.name, &child.ty);
             }
         }
     }
@@ -446,24 +482,29 @@ impl Sql {
         &mut self,
         path: Vec<String>,
         event_id: &str,
-        entity_id: &str,
+        // The id of the entity and if the entity is an event message
+        entity_id: (&str, bool),
         entity: &Ty,
         block_timestamp: u64,
-        is_event_message: bool,
+        index: Option<i64>,
     ) {
-        match entity {
-            Ty::Struct(s) => {
+        let (entity_id, is_event_message) = entity_id;
+
+        let update_members =
+            |members: &[Member], query_queue: &mut QueryQueue, index: Option<i64>| {
                 let table_id = path.join("$");
                 let mut columns = vec![
                     "id".to_string(),
                     "event_id".to_string(),
                     "executed_at".to_string(),
+                    "updated_at".to_string(),
                     if is_event_message {
                         "event_message_id".to_string()
                     } else {
                         "entity_id".to_string()
                     },
                 ];
+
                 let mut arguments = vec![
                     Argument::String(if is_event_message {
                         "event:".to_string() + entity_id
@@ -472,10 +513,16 @@ impl Sql {
                     }),
                     Argument::String(event_id.to_string()),
                     Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    Argument::String(chrono::Utc::now().to_rfc3339()),
                     Argument::String(entity_id.to_string()),
                 ];
 
-                for member in s.children.iter() {
+                if let Some(idx) = index {
+                    columns.push("idx".to_string());
+                    arguments.push(Argument::Int(idx));
+                }
+
+                for member in members.iter() {
                     match &member.ty {
                         Ty::Primitive(ty) => {
                             columns.push(format!("external_{}", &member.name));
@@ -484,6 +531,10 @@ impl Sql {
                         Ty::Enum(e) => {
                             columns.push(format!("external_{}", &member.name));
                             arguments.push(Argument::String(e.to_sql_value().unwrap()));
+                        }
+                        Ty::ByteArray(b) => {
+                            columns.push(format!("external_{}", &member.name));
+                            arguments.push(Argument::String(b.clone()));
                         }
                         _ => {}
                     }
@@ -496,34 +547,117 @@ impl Sql {
                     placeholders.join(",")
                 );
 
-                self.query_queue.enqueue(statement, arguments);
+                query_queue.enqueue(statement, arguments);
+            };
+
+        match entity {
+            Ty::Struct(s) => {
+                update_members(&s.children, &mut self.query_queue, index);
 
                 for member in s.children.iter() {
-                    if let Ty::Struct(_) = &member.ty {
+                    let mut path_clone = path.clone();
+                    path_clone.push(member.name.clone());
+                    self.build_set_entity_queries_recursive(
+                        path_clone,
+                        event_id,
+                        (entity_id, is_event_message),
+                        &member.ty,
+                        block_timestamp,
+                        index,
+                    );
+                }
+            }
+            Ty::Enum(e) => {
+                if e.options.iter().all(
+                    |o| {
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                    },
+                ) {
+                    return;
+                }
+
+                let option = e.options[e.option.unwrap() as usize].clone();
+
+                update_members(
+                    &[
+                        Member { name: "option".to_string(), ty: Ty::Enum(e.clone()), key: false },
+                        Member { name: option.name.clone(), ty: option.ty.clone(), key: false },
+                    ],
+                    &mut self.query_queue,
+                    index,
+                );
+
+                match &option.ty {
+                    // Skip enum options that have no type / member
+                    Ty::Tuple(t) if t.is_empty() => {}
+                    _ => {
                         let mut path_clone = path.clone();
-                        path_clone.push(member.name.clone());
+                        path_clone.push(option.name.clone());
                         self.build_set_entity_queries_recursive(
                             path_clone,
                             event_id,
-                            entity_id,
-                            &member.ty,
+                            (entity_id, is_event_message),
+                            &option.ty,
                             block_timestamp,
-                            is_event_message,
+                            index,
                         );
                     }
                 }
             }
-            Ty::Enum(e) => {
-                for child in e.options.iter() {
+            Ty::Tuple(t) => {
+                update_members(
+                    t.iter()
+                        .enumerate()
+                        .map(|(idx, member)| Member {
+                            name: format!("_{}", idx),
+                            ty: member.clone(),
+                            key: false,
+                        })
+                        .collect::<Vec<Member>>()
+                        .as_slice(),
+                    &mut self.query_queue,
+                    index,
+                );
+
+                for (idx, member) in t.iter().enumerate() {
                     let mut path_clone = path.clone();
-                    path_clone.push(child.name.clone());
+                    path_clone.push(format!("_{}", idx));
                     self.build_set_entity_queries_recursive(
                         path_clone,
                         event_id,
-                        entity_id,
-                        &child.ty,
+                        (entity_id, is_event_message),
+                        member,
                         block_timestamp,
-                        is_event_message,
+                        index,
+                    );
+                }
+            }
+            Ty::Array(array) => {
+                // delete all previous array elements
+                self.query_queue.enqueue(
+                    format!(
+                        "DELETE FROM [{table_id}] WHERE entity_id = ?",
+                        table_id = path.join("$")
+                    ),
+                    vec![Argument::String(entity_id.to_string())],
+                );
+
+                for (idx, member) in array.iter().enumerate() {
+                    update_members(
+                        &[Member { name: "data".to_string(), ty: member.clone(), key: false }],
+                        &mut self.query_queue,
+                        Some(idx as i64),
+                    );
+
+                    let mut path_clone = path.clone();
+                    path_clone.push("data".to_string());
+                    self.build_set_entity_queries_recursive(
+                        path_clone,
+                        event_id,
+                        (entity_id, is_event_message),
+                        member,
+                        block_timestamp,
+                        Some(idx as i64),
                     );
                 }
             }
@@ -570,53 +704,132 @@ impl Sql {
         model: &Ty,
         model_idx: i64,
         block_timestamp: u64,
+        is_array: bool,
+        is_parent_array: bool,
     ) {
         let table_id = path.join("$");
         let mut indices = Vec::new();
 
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL PRIMARY KEY, event_id TEXT \
-             NOT NULL, entity_id TEXT, event_message_id TEXT, "
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL, event_id TEXT NOT NULL, \
+             entity_id TEXT, event_message_id TEXT, "
         );
 
-        if let Ty::Struct(s) = model {
-            for (member_idx, member) in s.children.iter().enumerate() {
-                let name = member.name.clone();
-                let mut options = None; // TEMP: doesnt support complex enums yet
+        if is_array {
+            create_table_query.push_str("idx INTEGER NOT NULL, ");
+        }
 
-                if let Ok(cairo_type) = Primitive::from_str(&member.ty.name()) {
-                    create_table_query
-                        .push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
-                    indices.push(format!(
-                        "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
-                         (external_{name});"
-                    ));
-                } else if let Ty::Enum(e) = &member.ty {
-                    let all_options = e
-                        .options
+        let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
+            if let Ok(cairo_type) = Primitive::from_str(&ty.name()) {
+                create_table_query
+                    .push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
+                indices.push(format!(
+                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                     (external_{name});"
+                ));
+            } else if let Ty::Enum(e) = &ty {
+                let all_options = e
+                    .options
+                    .iter()
+                    .map(|c| format!("'{}'", c.name))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                create_table_query.push_str(&format!(
+                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
+                ));
+
+                indices.push(format!(
+                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                     (external_{name});"
+                ));
+
+                *options = Some(Argument::String(
+                    e.options
                         .iter()
-                        .map(|c| format!("'{}'", c.name))
+                        .map(|c: &dojo_types::schema::EnumOption| c.name.clone())
                         .collect::<Vec<_>>()
-                        .join(", ");
+                        .join(",")
+                        .to_string(),
+                ));
+            } else if let Ty::ByteArray(_) = &ty {
+                create_table_query.push_str(&format!("external_{name} TEXT, "));
+                indices.push(format!(
+                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                     (external_{name});"
+                ));
+            }
+        };
 
-                    create_table_query.push_str(&format!(
-                        "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
-                    ));
+        match model {
+            Ty::Struct(s) => {
+                for (member_idx, member) in s.children.iter().enumerate() {
+                    let name = member.name.clone();
+                    let mut options = None; // TEMP: doesnt support complex enums yet
 
-                    indices.push(format!(
-                        "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
-                         (external_{name});"
-                    ));
+                    build_member(&name, &member.ty, &mut options);
 
-                    options = Some(Argument::String(
-                        e.options
-                            .iter()
-                            .map(|c| c.name.clone())
-                            .collect::<Vec<_>>()
-                            .join(",")
-                            .to_string(),
-                    ));
+                    // NOTE: this might cause some errors to fail silently
+                    // due to the ignore clause. check migrations for type_enum check
+                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
+                                     model_idx, member_idx, name, type, type_enum, enum_options, \
+                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+                    let arguments = vec![
+                        Argument::String(table_id.clone()),
+                        // TEMP: this is temporary until the model hash is precomputed
+                        Argument::String(format!(
+                            "{:#x}",
+                            get_selector_from_name(&path[0].clone()).unwrap()
+                        )),
+                        Argument::Int(model_idx),
+                        Argument::Int(member_idx as i64),
+                        Argument::String(name),
+                        Argument::String(member.ty.name()),
+                        Argument::String(member.ty.as_ref().into()),
+                        options.unwrap_or(Argument::Null),
+                        Argument::Bool(member.key),
+                        Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    ];
+
+                    self.query_queue.enqueue(statement, arguments);
                 }
+            }
+            Ty::Tuple(tuple) => {
+                for (idx, member) in tuple.iter().enumerate() {
+                    let mut options = None; // TEMP: doesnt support complex enums yet
+
+                    build_member(&format!("_{}", idx), member, &mut options);
+
+                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
+                                     model_idx, member_idx, name, type, type_enum, enum_options, \
+                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    let arguments = vec![
+                        Argument::String(table_id.clone()),
+                        // TEMP: this is temporary until the model hash is precomputed
+                        Argument::String(format!(
+                            "{:#x}",
+                            get_selector_from_name(&path[0].clone()).unwrap()
+                        )),
+                        Argument::Int(model_idx),
+                        Argument::Int(idx as i64),
+                        Argument::String(format!("_{}", idx)),
+                        Argument::String(member.name()),
+                        Argument::String(member.as_ref().into()),
+                        options.unwrap_or(Argument::Null),
+                        // NOTE: should we consider the case where
+                        // a tuple is used as a key? should its members be keys?
+                        Argument::Bool(false),
+                        Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    ];
+
+                    self.query_queue.enqueue(statement, arguments);
+                }
+            }
+            Ty::Array(array) => {
+                let mut options = None; // TEMP: doesnt support complex enums yet
+                let ty = &array[0];
+                build_member("data", ty, &mut options);
 
                 let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
                                  member_idx, name, type, type_enum, enum_options, key, \
@@ -629,29 +842,89 @@ impl Sql {
                         get_selector_from_name(&path[0].clone()).unwrap()
                     )),
                     Argument::Int(model_idx),
-                    Argument::Int(member_idx as i64),
-                    Argument::String(name),
-                    Argument::String(member.ty.name()),
-                    Argument::String(member.ty.as_ref().into()),
+                    Argument::Int(0),
+                    Argument::String("data".to_string()),
+                    Argument::String(ty.name()),
+                    Argument::String(ty.as_ref().into()),
                     options.unwrap_or(Argument::Null),
-                    Argument::Bool(member.key),
+                    Argument::Bool(false),
                     Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 ];
 
                 self.query_queue.enqueue(statement, arguments);
             }
+            Ty::Enum(e) => {
+                for (idx, child) in e
+                    .options
+                    .iter()
+                    .chain(vec![&EnumOption {
+                        name: "option".to_string(),
+                        ty: Ty::Enum(e.clone()),
+                    }])
+                    .enumerate()
+                {
+                    // Skip enum options that have no type / member
+                    if let Ty::Tuple(tuple) = &child.ty {
+                        if tuple.is_empty() {
+                            continue;
+                        }
+                    }
+
+                    let mut options = None; // TEMP: doesnt support complex enums yet
+                    build_member(&child.name, &child.ty, &mut options);
+
+                    let statement = "INSERT OR IGNORE INTO model_members (id, model_id, \
+                                     model_idx, member_idx, name, type, type_enum, enum_options, \
+                                     key, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    let arguments = vec![
+                        Argument::String(table_id.clone()),
+                        // TEMP: this is temporary until the model hash is precomputed
+                        Argument::String(format!(
+                            "{:#x}",
+                            get_selector_from_name(&path[0].clone()).unwrap()
+                        )),
+                        Argument::Int(model_idx),
+                        Argument::Int(idx as i64),
+                        Argument::String(child.name.clone()),
+                        Argument::String(child.ty.name()),
+                        Argument::String(child.ty.as_ref().into()),
+                        options.unwrap_or(Argument::Null),
+                        Argument::Bool(false),
+                        Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    ];
+
+                    self.query_queue.enqueue(statement, arguments);
+                }
+            }
+            _ => {}
         }
 
         create_table_query.push_str("executed_at DATETIME NOT NULL, ");
         create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+        create_table_query.push_str("updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
-            create_table_query
-                .push_str(&format!("FOREIGN KEY (id) REFERENCES {parent_table_id} (id), "));
+
+            if is_parent_array && path.len() > 2 {
+                create_table_query.push_str(&format!(
+                    "FOREIGN KEY (id, idx) REFERENCES {parent_table_id} (id, idx) ON DELETE \
+                     CASCADE, "
+                ));
+            } else {
+                create_table_query.push_str(&format!(
+                    "FOREIGN KEY (id) REFERENCES {parent_table_id} (id), ",
+                    parent_table_id = parent_table_id
+                ));
+            }
         };
 
+        if is_array {
+            create_table_query.push_str("PRIMARY KEY (id, idx), ");
+        } else {
+            create_table_query.push_str("PRIMARY KEY (id), ");
+        }
         create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id), ");
         // create_table_query.push_str("FOREIGN KEY (event_id) REFERENCES events(id), ");
         create_table_query

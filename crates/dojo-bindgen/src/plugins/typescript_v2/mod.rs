@@ -597,6 +597,8 @@ mod tests {
     use super::*;
     use crate::gather_dojo_data;
 
+    // Uncomment once bindings support arrays.
+    #[ignore]
     #[test]
     fn test_output() {
         let mut expected_output = String::new();

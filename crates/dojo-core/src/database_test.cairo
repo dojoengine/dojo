@@ -8,7 +8,8 @@ use traits::{Into, TryInto};
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
 use dojo::world::{IWorldDispatcher};
-use dojo::database::{get, set};
+use dojo::database::{get, set, MAX_ARRAY_LENGTH};
+use dojo::test_utils::assert_array;
 
 #[test]
 #[available_gas(1000000)]
@@ -17,7 +18,7 @@ fn test_database_basic() {
     values.append('database_test');
     values.append('42');
 
-    set('table', 'key', values.span(), array![251, 251].span());
+    set('table', 'key', values.span(), 0, array![251, 251].span());
     let res = get('table', 'key', array![251, 251].span());
 
     assert(res.at(0) == values.at(0), 'Value at 0 not equal!');
@@ -36,8 +37,8 @@ fn test_database_different_tables() {
     other.append(0x3);
     other.append(0x4);
 
-    set('first', 'key', values.span(), array![251, 251].span());
-    set('second', 'key', other.span(), array![251, 251].span());
+    set('first', 'key', values.span(), 0, array![251, 251].span());
+    set('second', 'key', other.span(), 0, array![251, 251].span());
     let res = get('first', 'key', array![251, 251].span());
     let other_res = get('second', 'key', array![251, 251].span());
 
@@ -58,8 +59,8 @@ fn test_database_different_keys() {
     other.append(0x3);
     other.append(0x4);
 
-    set('table', 'key', values.span(), array![251, 251].span());
-    set('table', 'other', other.span(), array![251, 251].span());
+    set('table', 'key', values.span(), 0, array![251, 251].span());
+    set('table', 'other', other.span(), 0, array![251, 251].span());
     let res = get('table', 'key', array![251, 251].span());
     let other_res = get('table', 'other', array![251, 251].span());
 

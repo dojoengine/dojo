@@ -36,12 +36,18 @@ message Struct {
     repeated Member children = 2;
 }
 
+message Array {
+    repeated Ty children = 1;
+}
+
 message Ty {
     oneof ty_type {
         Primitive primitive = 2;
         Enum enum = 3;
         Struct struct = 4;
-        // TODO: Tuple
+        Array tuple = 5;
+        Array array = 6;
+        string bytearray = 7;
     }
 }
 
