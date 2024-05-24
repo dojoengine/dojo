@@ -63,8 +63,10 @@ impl ResolvableObject for EntityObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "entityUpdated",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let id = match ctx.args.get("id") {
                         Some(id) => Some(id.string()?.to_string()),
@@ -81,9 +83,9 @@ impl ResolvableObject for EntityObject {
                         }
                     }))
                 })
-            })
-            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
-        ])
+            },
+        )
+        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
     }
 }
 
@@ -143,7 +145,7 @@ fn model_union_field() -> Field {
                             &mut conn,
                             vec![name.clone()],
                             &entity_id,
-                            None,
+                            &mut vec![],
                             &type_mapping,
                         )
                         .await?
@@ -151,6 +153,8 @@ fn model_union_field() -> Field {
                             Value::Object(map) => map,
                             _ => unreachable!(),
                         };
+
+                        println!("data: {:#?}", data);
 
                         results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
@@ -169,15 +173,15 @@ pub async fn model_data_recursive_query(
     conn: &mut PoolConnection<Sqlite>,
     path_array: Vec<String>,
     entity_id: &str,
-    idx: Option<i64>,
+    indexes: &Vec<i64>,
     type_mapping: &TypeMapping,
 ) -> sqlx::Result<Value> {
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
     let mut query = format!("SELECT * FROM {} WHERE entity_id = '{}' ", table_name, entity_id);
-    if let Some(idx) = idx {
-        query.push_str(&format!("AND idx = {}", idx));
+    for (column_idx, index) in indexes.iter().enumerate() {
+        query.push_str(&format!("AND idx_{} = {} ", column_idx, index));
     }
 
     let rows = sqlx::query(&query).fetch_all(conn.as_mut()).await?;
@@ -200,7 +204,13 @@ pub async fn model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
-                    if rows.len() > 1 { Some(idx as i64) } else { None },
+                    &mut if rows.len() > 1 {
+                        let mut indexes = indexes.clone();
+                        indexes.push(idx as i64);
+                        indexes
+                    } else {
+                        vec![]
+                    },
                     nested_mapping,
                 )
                 .await?;
@@ -215,7 +225,13 @@ pub async fn model_data_recursive_query(
                     nested_path,
                     entity_id,
                     // this might need to be changed to support 2d+ arrays
-                    None,
+                    &mut if rows.len() > 1 {
+                        let mut indexes = indexes.clone();
+                        indexes.push(idx as i64);
+                        indexes
+                    } else {
+                        vec![]
+                    },
                     &IndexMap::from([(Name::new("data"), *inner.clone())]),
                 )
                 .await?
@@ -229,7 +245,11 @@ pub async fn model_data_recursive_query(
                             _ => unreachable!(),
                         })
                         .collect(),
-                    _ => unreachable!(),
+                    Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
+                    ty => {
+                        println!("unexpected type: {:?}", ty);
+                        unreachable!()
+                    },
                 };
 
                 nested_value_mapping.insert(Name::new(field_name), data);
