@@ -29,9 +29,17 @@ mod actions {
         direction: Direction,
     }
 
-    fn dojo_init(other_contract: ContractAddress, test: ContractAddress) {
-        // body
-        println!("hi1111");
+    #[derive(Model, Copy, Drop, Serde)]
+    #[dojo::event]
+    struct ConstructorTest {
+        #[key]
+        player: ContractAddress,
+        value: u8,
+    }
+
+
+    fn dojo_init(world: IWorldDispatcher, player: ContractAddress, value: u8) {
+        emit!(world, ConstructorTest { player, value});
     }
 
     #[abi(embed_v0)]

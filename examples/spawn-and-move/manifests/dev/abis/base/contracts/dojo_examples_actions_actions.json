@@ -67,16 +67,16 @@
         "name": "dojo_init",
         "inputs": [
           {
-            "name": "other_contract",
+            "name": "player",
             "type": "core::starknet::contract_address::ContractAddress"
           },
           {
-            "name": "test",
-            "type": "core::starknet::contract_address::ContractAddress"
+            "name": "value",
+            "type": "core::integer::u8"
           }
         ],
         "outputs": [],
-        "state_mutability": "external"
+        "state_mutability": "view"
       }
     ]
   },

@@ -1,0 +1,15 @@
+kind = "DojoModel"
+class_hash = "0x37edfc36724cc089399f9ccd2c11a0ffa44d14cfd437fe59d33b1205980094d"
+original_class_hash = "0x37edfc36724cc089399f9ccd2c11a0ffa44d14cfd437fe59d33b1205980094d"
+abi = "manifests/dev/abis/base/models/dojo_examples_actions_actions_constructor_test.json"
+name = "dojo_examples::actions::actions::constructor_test"
+
+[[members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "value"
+type = "u8"
+key = false

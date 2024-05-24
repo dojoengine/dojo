@@ -10,7 +10,6 @@ use cairo_lang_syntax::attribute::structured::{
 };
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
@@ -26,16 +25,6 @@ pub struct DojoContract {
 }
 
 impl DojoContract {
-    fn result_with_diagnostic(stable_ptr: SyntaxStablePtrId, message: String) -> PluginResult {
-        PluginResult {
-            code: None,
-            // All diagnostics are for now error. Severity may be moved as argument
-            // if warnings are required in this file.
-            diagnostics: vec![PluginDiagnostic { stable_ptr, message, severity: Severity::Error }],
-            remove_original_item: false,
-        }
-    }
-
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
 
@@ -133,8 +122,6 @@ impl DojoContract {
                 ]),
             ));
 
-            println!("{}", builder.code);
-
             return PluginResult {
                 code: Some(PluginGeneratedFile {
                     name: name.clone(),
@@ -165,11 +152,17 @@ impl DojoContract {
         let fn_decl = fn_ast.declaration(db);
         let fn_name = fn_decl.name(db).text(db);
 
-        let params_str = self.rewrite_parameters_init(
+        let (params_str, _, world_removed) = self.rewrite_parameters(
             db,
             fn_decl.signature(db).parameters(db),
+            fn_ast.stable_ptr().untyped(),
         );
         
+        let mut world_read = "";
+        if world_removed {
+            world_read = "let world = self.world_dispatcher.read();";
+        }
+
         let body = fn_ast.body(db).as_syntax_node().get_text(db);
 
         let node = RewriteNode::interpolate_patched(
@@ -182,6 +175,7 @@ impl DojoContract {
                 #[abi(embed_v0)]
                 impl IDojoInitImpl of IDojoInit<ContractState> {
                     fn $name$($params_str$) {
+                        $world_read$
                         assert(get_caller_address() == self.world().contract_address, 'Only world \
              can init');
                         $body$
@@ -192,6 +186,7 @@ impl DojoContract {
                 ("name".to_string(), RewriteNode::Text(fn_name.to_string())),
                 ("params_str".to_string(), RewriteNode::Text(params_str)),
                 ("body".to_string(), RewriteNode::Text(body)),
+                ("world_read".to_string(), RewriteNode::Text(world_read.to_string())),
             ]),
         );
         
@@ -345,26 +340,6 @@ impl DojoContract {
         });
 
         count > 1
-    }
-    /// Rewrites parameter list by:
-    /// * inserting `self` parameter if missing,
-    /// 
-    /// Returns:
-    /// * the list of parameters in a String
-    pub fn rewrite_parameters_init(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        param_list: ast::ParamList,
-    ) -> String {
-        let (add_self, _) = self.check_self_parameter(db, param_list.clone());
-
-        let mut params = param_list.elements(db).iter().map(|p| p.as_syntax_node().get_text(db)).collect::<Vec<String>>();
-        
-        if add_self {
-            params.insert(0, "self: @ContractState".to_string());
-        }
-        
-        params.join(", ")
     }
 
     /// Rewrites parameter list by:

@@ -55,6 +55,33 @@
   },
   {
     "type": "impl",
+    "name": "IDojoInitImpl",
+    "interface_name": "dojo_examples::actions::actions::IDojoInit"
+  },
+  {
+    "type": "interface",
+    "name": "dojo_examples::actions::actions::IDojoInit",
+    "items": [
+      {
+        "type": "function",
+        "name": "dojo_init",
+        "inputs": [
+          {
+            "name": "player",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "value",
+            "type": "core::integer::u8"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
     "name": "ActionsComputedImpl",
     "interface_name": "dojo_examples::actions::IActionsComputed"
   },

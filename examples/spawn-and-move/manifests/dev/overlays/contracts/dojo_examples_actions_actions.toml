@@ -2,3 +2,4 @@ computed = [  ]
 name = "dojo_examples::actions::actions"
 reads = [  ]
 writes = [ "Moves", "Position" ]
+constructor_calldata = []
