@@ -1,3 +1,5 @@
+#![warn(unused_crate_dependencies)]
+
 //! Re-export of the Cairo language crates used throughout Katana.
 
 pub mod lang {

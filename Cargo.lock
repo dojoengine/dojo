@@ -7335,7 +7335,6 @@ name = "katana-cairo"
 version = "0.7.0-alpha.4"
 dependencies = [
  "cairo-lang-casm 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
- "cairo-lang-casm 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-runner 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
  "cairo-lang-sierra 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
  "cairo-lang-starknet 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
