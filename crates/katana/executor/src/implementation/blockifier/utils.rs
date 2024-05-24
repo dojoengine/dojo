@@ -26,8 +26,8 @@ use blockifier::transaction::transactions::{
     L1HandlerTransaction,
 };
 use blockifier::versioned_constants::VersionedConstants;
-use cairo_vm::types::errors::program_errors::ProgramError;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
+use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -656,7 +656,7 @@ mod tests {
 
     use std::collections::HashSet;
 
-    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+    use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_primitives::chain::{ChainId, NamedChainId};
     use starknet_api::core::EntryPointSelector;
     use starknet_api::hash::StarkFelt;
