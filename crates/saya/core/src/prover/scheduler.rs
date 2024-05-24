@@ -1,5 +1,5 @@
 use crate::{
-    prover::{client::CAIRO_VERSION, extract::program_input_from_program_output, prove_merge},
+    prover::{extract::program_input_from_program_output, prove_merge},
     LOG_TARGET,
 };
 
@@ -82,14 +82,14 @@ async fn combine_proofs(
 
     trace!(target: LOG_TARGET, "Merging proofs");
 
-    let prover_input = match (&prover, CAIRO_VERSION) {
-        (ProverIdentifier::Http(_), 1) => {
-            ProgramInput::prepare_differ_args(vec![earlier_input, later_input]);
-
-            // MOCK: remove when proof extraction is working.
-            "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into()
-        }
-        _ => todo!(),
+    let prover_input = if cfg!(feature = "cairo1differ") {
+        ProgramInput::prepare_differ_args(vec![earlier_input, later_input]);
+        // MOCK: remove when proof extraction is working.
+        "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into()
+    } else {
+        let input1 = serde_json::to_string(&first)?;
+        let input2 = serde_json::to_string(&second)?;
+        format!("{{\"1\":{},\"2\":{}}}", input1, input2)
     };
 
     let merged_proof = prove_merge(prover_input, prover).await?;
@@ -113,11 +113,10 @@ fn prove_recursively(
             let block_number = input.block_number;
             trace!(target: LOG_TARGET, "Proving block {block_number}");
 
-            let prover_input = match (&prover, CAIRO_VERSION) {
-                (ProverIdentifier::Http(_), 1) => {
-                    ProgramInput::prepare_differ_args(vec![input.clone()])
-                }
-                _ => todo!(),
+            let prover_input = if cfg!(feature = "cairo1differ") {
+                ProgramInput::prepare_differ_args(vec![input.clone()])
+            } else {
+                serde_json::to_string(&input.clone()).unwrap()
             };
 
             let proof = prove_diff(prover_input, prover).await?;

@@ -958,7 +958,7 @@
     "address": "0x2e31cfde9f9990c7fe44b25043e3c6958a849c0a66ab535686d2b710e97f309",
     "transaction_hash": "0x7106054ad5c4ccfcd5e512d286ce7cadc5ddc21b8cf058e4daab09743bace76",
     "block_number": 3,
-    "seed": "mateo-saya-v009",
+    "seed": "mateo-saya-v010",
     "metadata": {
       "profile_name": "dev",
       "rpc_url": "https://starknet-sepolia.g.alchemy.com/v2/PovJ0plog8O9RxyaPMYAZiKHqZ5LLII_"

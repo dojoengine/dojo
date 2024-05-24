@@ -34,7 +34,6 @@ pub enum ProverIdentifier {
 pub enum ProveProgram {
     Differ,
     Merger,
-    Universal,
 }
 
 pub async fn prove_diff(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
