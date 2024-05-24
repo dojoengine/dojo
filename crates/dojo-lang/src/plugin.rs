@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use anyhow::Result;
-use cairo_lang_defs::patcher::{PatchBuilder};
+use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, MacroPluginMetadata,
     PluginDiagnostic, PluginGeneratedFile, PluginResult,

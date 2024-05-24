@@ -1,0 +1,20 @@
+kind = "DojoModel"
+class_hash = "0x747bc3a0f7b92c9a5232a1ae9f66ab433cf45ac1b30889e955d87b6183c17f5"
+original_class_hash = "0x747bc3a0f7b92c9a5232a1ae9f66ab433cf45ac1b30889e955d87b6183c17f5"
+abi = "manifests/dev/abis/base/models/dojo_examples_others_others_contract_initialized.json"
+name = "dojo_examples::others::others::contract_initialized"
+
+[[members]]
+name = "contract_address"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "contract_class"
+type = "ClassHash"
+key = false
+
+[[members]]
+name = "value"
+type = "u8"
+key = false

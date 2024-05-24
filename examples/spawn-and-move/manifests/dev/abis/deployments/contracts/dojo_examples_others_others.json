@@ -55,144 +55,30 @@
   },
   {
     "type": "impl",
-    "name": "ActionsComputedImpl",
-    "interface_name": "dojo_examples::actions::IActionsComputed"
-  },
-  {
-    "type": "struct",
-    "name": "dojo_examples::models::Vec2",
-    "members": [
-      {
-        "name": "x",
-        "type": "core::integer::u32"
-      },
-      {
-        "name": "y",
-        "type": "core::integer::u32"
-      }
-    ]
-  },
-  {
-    "type": "struct",
-    "name": "dojo_examples::models::Position",
-    "members": [
-      {
-        "name": "player",
-        "type": "core::starknet::contract_address::ContractAddress"
-      },
-      {
-        "name": "vec",
-        "type": "dojo_examples::models::Vec2"
-      }
-    ]
-  },
-  {
-    "type": "interface",
-    "name": "dojo_examples::actions::IActionsComputed",
-    "items": [
-      {
-        "type": "function",
-        "name": "tile_terrain",
-        "inputs": [
-          {
-            "name": "vec",
-            "type": "dojo_examples::models::Vec2"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::felt252"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "quadrant",
-        "inputs": [
-          {
-            "name": "pos",
-            "type": "dojo_examples::models::Position"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::integer::u8"
-          }
-        ],
-        "state_mutability": "view"
-      }
-    ]
-  },
-  {
-    "type": "impl",
-    "name": "ActionsImpl",
-    "interface_name": "dojo_examples::actions::IActions"
-  },
-  {
-    "type": "enum",
-    "name": "dojo_examples::models::Direction",
-    "variants": [
-      {
-        "name": "None",
-        "type": "()"
-      },
-      {
-        "name": "Left",
-        "type": "()"
-      },
-      {
-        "name": "Right",
-        "type": "()"
-      },
-      {
-        "name": "Up",
-        "type": "()"
-      },
-      {
-        "name": "Down",
-        "type": "()"
-      }
-    ]
-  },
-  {
-    "type": "interface",
-    "name": "dojo_examples::actions::IActions",
-    "items": [
-      {
-        "type": "function",
-        "name": "spawn",
-        "inputs": [],
-        "outputs": [],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "move",
-        "inputs": [
-          {
-            "name": "direction",
-            "type": "dojo_examples::models::Direction"
-          }
-        ],
-        "outputs": [],
-        "state_mutability": "view"
-      }
-    ]
-  },
-  {
-    "type": "impl",
     "name": "IDojoInitImpl",
-    "interface_name": "dojo_examples::actions::actions::IDojoInit"
+    "interface_name": "dojo_examples::others::others::IDojoInit"
   },
   {
     "type": "interface",
-    "name": "dojo_examples::actions::actions::IDojoInit",
+    "name": "dojo_examples::others::others::IDojoInit",
     "items": [
       {
         "type": "function",
         "name": "dojo_init",
-        "inputs": [],
+        "inputs": [
+          {
+            "name": "actions_address",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "actions_class",
+            "type": "core::starknet::class_hash::ClassHash"
+          },
+          {
+            "name": "value",
+            "type": "core::integer::u8"
+          }
+        ],
         "outputs": [],
         "state_mutability": "view"
       }
@@ -247,7 +133,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::actions::actions::Event",
+    "name": "dojo_examples::others::others::Event",
     "kind": "enum",
     "variants": [
       {

@@ -11,11 +11,13 @@ use cairo_lang_filesystem::ids::{CrateLongId, Directory, FileLongId};
 use cairo_lang_parser::db::ParserDatabase;
 use cairo_lang_plugins::get_base_plugins;
 use cairo_lang_plugins::test_utils::expand_module_text;
+use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_syntax::node::db::{SyntaxDatabase, SyntaxGroup};
 use cairo_lang_test_utils::parse_test_file::TestRunnerResult;
 use cairo_lang_test_utils::verify_diagnostics_expectation;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::Upcast;
+use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 
 use super::BuiltinDojoPlugin;
 
@@ -106,6 +108,9 @@ pub fn test_expand_plugin_inner(
         expand_module_text(db, ModuleId::CrateRoot(crate_id), &mut diagnostic_items);
     let joined_diagnostics = diagnostic_items.join("\n");
     let error = verify_diagnostics_expectation(args, &joined_diagnostics);
+
+    println!("expanded: {}", &expanded_module);
+    println!("diagnostics: {}", &joined_diagnostics);
 
     TestRunnerResult {
         outputs: OrderedHashMap::from([

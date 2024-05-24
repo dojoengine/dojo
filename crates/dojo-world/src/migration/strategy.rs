@@ -64,7 +64,7 @@ impl MigrationStrategy {
         let contracts_clone = self.contracts.clone();
         for contract in self.contracts.iter_mut() {
             for field in contract.diff.constructor_calldata.iter_mut() {
-                if let Some(dependency) = field.strip_prefix("$contract_address") {
+                if let Some(dependency) = field.strip_prefix("$contract_address:") {
                     let dependency_contract =
                         contracts_clone.iter().find(|c| &c.diff.name == &dependency).unwrap();
                     let contract_address = get_contract_address(

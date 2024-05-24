@@ -1,0 +1,5 @@
+reads = []
+writes = []
+computed = []
+constructor_calldata = ["$contract_address:dojo_examples::actions::actions", "$class_hash:dojo_examples::actions::actions", "10"]
+name = "dojo_examples::others::others"

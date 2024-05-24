@@ -36,6 +36,7 @@ impl DojoContract {
             DojoContract { diagnostics: vec![], dependencies: HashMap::new(), do_allow_ref_self };
         let mut has_event = false;
         let mut has_storage = false;
+        let mut has_init = false;
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
@@ -65,6 +66,7 @@ impl DojoContract {
                         let fn_name = fn_decl.name(db).text(db);
 
                         if fn_name == "dojo_init" {
+                            has_init = true;
                             return system.handle_init_fn(db, fn_ast);
                         }
                     }
@@ -72,6 +74,27 @@ impl DojoContract {
                     vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
+
+            if !has_init {
+                let node = RewriteNode::interpolate_patched(
+                    "
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(get_caller_address() == self.world().contract_address, 'Only \
+                     world can init');
+                        }
+                    }
+                ",
+                    &UnorderedHashMap::from([]),
+                );
+                body_nodes.append(&mut vec![node]);
+            }
 
             if !has_event {
                 body_nodes.append(&mut system.create_event())
@@ -157,7 +180,7 @@ impl DojoContract {
             fn_decl.signature(db).parameters(db),
             fn_ast.stable_ptr().untyped(),
         );
-        
+
         let mut world_read = "";
         if world_removed {
             world_read = "let world = self.world_dispatcher.read();";
@@ -189,7 +212,7 @@ impl DojoContract {
                 ("world_read".to_string(), RewriteNode::Text(world_read.to_string())),
             ]),
         );
-        
+
         vec![node]
     }
 

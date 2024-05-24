@@ -31,15 +31,10 @@ mod actions {
 
     #[derive(Model, Copy, Drop, Serde)]
     #[dojo::event]
-    struct ConstructorTest {
+    struct ContractInitialized {
         #[key]
-        player: ContractAddress,
+        contract_address: ContractAddress,
         value: u8,
-    }
-
-
-    fn dojo_init(world: IWorldDispatcher, player: ContractAddress, value: u8) {
-        emit!(world, ConstructorTest { player, value});
     }
 
     #[abi(embed_v0)]

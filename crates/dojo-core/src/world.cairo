@@ -443,8 +443,8 @@ mod world {
             } else {
                 starknet::call_contract_syscall(
                     contract_address, selector!("dojo_init"), init_calldata
-                )
-                    .expect('initialization failed');
+                ).unwrap_syscall();
+
                 self.initialized_contract.write(contract_address.into(), true);
             }
             self.owners.write((contract_address.into(), get_caller_address()), true);

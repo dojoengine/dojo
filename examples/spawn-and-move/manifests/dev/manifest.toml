@@ -1,11 +1,9 @@
 [world]
 kind = "WorldContract"
-class_hash = "0x7bee0937e75598f1149d53a7188feb1790a1149cff5434410f5c1106e022dc9"
-original_class_hash = "0x7bee0937e75598f1149d53a7188feb1790a1149cff5434410f5c1106e022dc9"
+class_hash = "0x59b5c57a4002a1eeb4b7521a6da10a85ec78f7ead8c30ed59a91509ac041ffd"
+original_class_hash = "0x59b5c57a4002a1eeb4b7521a6da10a85ec78f7ead8c30ed59a91509ac041ffd"
 abi = "manifests/dev/abis/deployments/dojo_world_world.json"
-address = "0x3e33ed31f9f1c22f8cef62bed9b4d1bfa308d6c35667ccc5c2f49a1aac83cae"
-transaction_hash = "0x267baeb326edeabc8279ce9b50f1ac7c9200b22c7bb019c4ee03f702c43281"
-block_number = 3
+address = "0x587a2d65e50c44dc5491e7ce69b7d7be1e9bc8a67c25d79bb575339af160cc7"
 seed = "dojo_examples"
 name = "dojo::world::world"
 
@@ -21,10 +19,9 @@ name = "dojo::base::base"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x5ac5211d9593e99d9f1ca5c77d307784280654f680a5322828c3ea5236989c2"
-class_hash = "0x5123ed816cfa4676ae20cd686cd38b8cd44b6375dd73f59d79f1c3d86153f81"
-original_class_hash = "0x5123ed816cfa4676ae20cd686cd38b8cd44b6375dd73f59d79f1c3d86153f81"
-base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
+class_hash = "0x726445fa6e748111e29f6fa824f83d10bcd3bf65749a4cd5b8fbabb0c5c948e"
+original_class_hash = "0x726445fa6e748111e29f6fa824f83d10bcd3bf65749a4cd5b8fbabb0c5c948e"
+base_class_hash = "0x0"
 abi = "manifests/dev/abis/deployments/contracts/dojo_examples_actions_actions.json"
 reads = []
 writes = [
@@ -35,15 +32,31 @@ computed = []
 constructor_calldata = []
 name = "dojo_examples::actions::actions"
 
+[[contracts]]
+kind = "DojoContract"
+class_hash = "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a"
+original_class_hash = "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a"
+base_class_hash = "0x0"
+abi = "manifests/dev/abis/deployments/contracts/dojo_examples_others_others.json"
+reads = []
+writes = []
+computed = []
+constructor_calldata = [
+    "$contract_address:dojo_examples::actions::actions",
+    "$class_hash:dojo_examples::actions::actions",
+    "10",
+]
+name = "dojo_examples::others::others"
+
 [[models]]
 kind = "DojoModel"
-class_hash = "0x37edfc36724cc089399f9ccd2c11a0ffa44d14cfd437fe59d33b1205980094d"
-original_class_hash = "0x37edfc36724cc089399f9ccd2c11a0ffa44d14cfd437fe59d33b1205980094d"
-abi = "manifests/dev/abis/deployments/models/dojo_examples_actions_actions_constructor_test.json"
-name = "dojo_examples::actions::actions::constructor_test"
+class_hash = "0x545dc13fbfd87d20e3deef9cd8213e9f592410e042049279f7eaa7e8c70cf3f"
+original_class_hash = "0x545dc13fbfd87d20e3deef9cd8213e9f592410e042049279f7eaa7e8c70cf3f"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_actions_actions_contract_initialized.json"
+name = "dojo_examples::actions::actions::contract_initialized"
 
 [[models.members]]
-name = "player"
+name = "contract_address"
 type = "ContractAddress"
 key = true
 
@@ -123,4 +136,26 @@ key = true
 [[models.members]]
 name = "vec"
 type = "Vec2"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x747bc3a0f7b92c9a5232a1ae9f66ab433cf45ac1b30889e955d87b6183c17f5"
+original_class_hash = "0x747bc3a0f7b92c9a5232a1ae9f66ab433cf45ac1b30889e955d87b6183c17f5"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_others_others_contract_initialized.json"
+name = "dojo_examples::others::others::contract_initialized"
+
+[[models.members]]
+name = "contract_address"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "contract_class"
+type = "ClassHash"
+key = false
+
+[[models.members]]
+name = "value"
+type = "u8"
 key = false

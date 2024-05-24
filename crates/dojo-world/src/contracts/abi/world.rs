@@ -129,6 +129,10 @@ abigen!(
           {
             "name": "class_hash",
             "type": "core::starknet::class_hash::ClassHash"
+          },
+          {
+            "name": "init_calldata",
+            "type": "core::array::Span::<core::felt252>"
           }
         ],
         "outputs": [

@@ -169,15 +169,15 @@
   },
   {
     "type": "impl",
-    "name": "constructor_testImpl",
-    "interface_name": "dojo_examples::actions::actions::Iconstructor_test"
+    "name": "contract_initializedImpl",
+    "interface_name": "dojo_examples::actions::actions::Icontract_initialized"
   },
   {
     "type": "struct",
-    "name": "dojo_examples::actions::actions::ConstructorTest",
+    "name": "dojo_examples::actions::actions::ContractInitialized",
     "members": [
       {
-        "name": "player",
+        "name": "contract_address",
         "type": "core::starknet::contract_address::ContractAddress"
       },
       {
@@ -188,7 +188,7 @@
   },
   {
     "type": "interface",
-    "name": "dojo_examples::actions::actions::Iconstructor_test",
+    "name": "dojo_examples::actions::actions::Icontract_initialized",
     "items": [
       {
         "type": "function",
@@ -196,7 +196,7 @@
         "inputs": [
           {
             "name": "model",
-            "type": "dojo_examples::actions::actions::ConstructorTest"
+            "type": "dojo_examples::actions::actions::ContractInitialized"
           }
         ],
         "outputs": [],
@@ -206,7 +206,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::actions::actions::constructor_test::Event",
+    "name": "dojo_examples::actions::actions::contract_initialized::Event",
     "kind": "enum",
     "variants": []
   }
