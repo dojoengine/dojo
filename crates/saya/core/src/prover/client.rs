@@ -38,7 +38,6 @@ pub async fn http_prove(
     let prover = ONCE.get_or_init(|| async { ProverSDK::new(access_key, prover_url).await }).await;
     let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-    let program_input = Value::Array(vec![Value::String(input)]);
     let mut program = load_program(prove_program).await?;
 
     let result = if cfg!(feature = "cairo1differ") {
@@ -49,6 +48,8 @@ pub async fn http_prove(
         }
 
         let program = serde_json::from_str(&serde_json::to_string(&program)?)?;
+
+        let program_input = Value::Array(vec![Value::String(input)]);
         let input = Cairo1ProverInput { program, program_input };
 
         prover.prove_cairo1(input).await.context("Failed to prove using the http prover")?
@@ -56,6 +57,8 @@ pub async fn http_prove(
         trace!(target: LOG_TARGET, "Proving with cairo0.");
 
         let program = serde_json::from_str(&serde_json::to_string(&program)?)?;
+        let program_input: Value = serde_json::from_str(&input)?;
+
         let input = Cairo0ProverInput { program, program_input };
 
         prover.prove_cairo0(input).await.context("Failed to prove using the http prover")?

@@ -50,5 +50,5 @@ num-traits = "0.2.18"
 prover-sdk = { git = "https://github.com/neotheprogramist/http-prover", rev = "6ce9c5d6840b1ee67d9abd3fa3becb073c973410" }
 
 [features]
-default = ["cairo1differ"]
+default = []
 cairo1differ = [] # Not fully functional at the moment
