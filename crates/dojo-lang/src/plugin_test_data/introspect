@@ -14,8 +14,8 @@ struct Vec2 {
 
 #[derive(Serde, Copy, Drop, Introspect)]
 enum PlainEnum {
-    Left: (),
-    Right: (),
+    Left,
+    Right,
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
@@ -55,9 +55,9 @@ enum EnumWithComplexTuple {
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumTupleOnePrimitive {
-    Left: (u16,),
-    Right: (u16,),
+enum EnumWithPrimitive {
+    Left: u32,
+    Right: u32,
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
@@ -262,8 +262,8 @@ struct Vec2 {
 
 #[derive(Serde, Copy, Drop, Introspect)]
 enum PlainEnum {
-    Left: (),
-    Right: (),
+    Left,
+    Right,
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
@@ -303,9 +303,9 @@ enum EnumWithComplexTuple {
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumTupleOnePrimitive {
-    Left: (u16,),
-    Right: (u16,),
+enum EnumWithPrimitive {
+    Left: u32,
+    Right: u32,
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
@@ -583,7 +583,7 @@ impl PlainEnumDrop of core::traits::Drop::<PlainEnum>;
 impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        Option::Some(1)
     }
 
     #[inline(always)]
@@ -592,29 +592,11 @@ impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
-            array![
-            
-            ].span()
-        )
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Layout::Fixed(array![].span())
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
-            array![
-            
-            ].span()
-        )
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Layout::Fixed(array![].span())
                 }
             ].span()
         )
@@ -627,16 +609,8 @@ dojo::database::introspect::FieldLayout {
                 name: 'PlainEnum',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::database::introspect::Ty::Tuple(
-            array![
-            
-            ].span()
-        )),
-('Right', dojo::database::introspect::Ty::Tuple(
-            array![
-            
-            ].span()
-        ))
+                ('Left', dojo::database::introspect::Ty::Tuple(array![].span())),
+('Right', dojo::database::introspect::Ty::Tuple(array![].span()))
 
                 ].span()
             }
@@ -667,7 +641,7 @@ impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
 impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumWithPrimitive<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        Option::Some(2)
     }
 
     #[inline(always)]
@@ -676,21 +650,11 @@ impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<Enu
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<u32>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<u32>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
                 }
             ].span()
         )
@@ -735,7 +699,16 @@ impl EnumWithStructDrop of core::traits::Drop::<EnumWithStruct>;
 impl EnumWithStructIntrospect<> of dojo::database::introspect::Introspect<EnumWithStruct<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
     }
 
     #[inline(always)]
@@ -744,21 +717,11 @@ impl EnumWithStructIntrospect<> of dojo::database::introspect::Introspect<EnumWi
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<Vec2>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<Vec2>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
                 }
             ].span()
         )
@@ -812,21 +775,11 @@ impl EnumWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect<E
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<Array<u32>>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<Array<u32>>::layout()
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<Array<u32>>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<Array<u32>>::layout()
                 }
             ].span()
         )
@@ -888,21 +841,11 @@ impl EnumWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<Enu
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<ByteArray>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<ByteArray>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
                 }
             ].span()
         )
@@ -947,7 +890,7 @@ impl EnumWithSimpleTupleDrop of core::traits::Drop::<EnumWithSimpleTuple>;
 impl EnumWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<EnumWithSimpleTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        Option::Some(4)
     }
 
     #[inline(always)]
@@ -957,30 +900,20 @@ impl EnumWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<E
             dojo::database::introspect::FieldLayout {
                     selector: 0,
                     layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
             array![
             dojo::database::introspect::Introspect::<u8>::layout(),
 dojo::database::introspect::Introspect::<u256>::layout()
             ].span()
         )
-                        ].span()
-                    )
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
                     layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
             array![
             dojo::database::introspect::Introspect::<u8>::layout(),
 dojo::database::introspect::Introspect::<u256>::layout()
             ].span()
         )
-                        ].span()
-                    )
                 }
             ].span()
         )
@@ -1035,7 +968,16 @@ impl EnumWithComplexTupleDrop of core::traits::Drop::<EnumWithComplexTuple>;
 impl EnumWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<EnumWithComplexTuple<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(2)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
     }
 
     #[inline(always)]
@@ -1045,30 +987,20 @@ impl EnumWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<
             dojo::database::introspect::FieldLayout {
                     selector: 0,
                     layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
             array![
             dojo::database::introspect::Introspect::<u8>::layout(),
 dojo::database::introspect::Introspect::<Vec2>::layout()
             ].span()
         )
-                        ].span()
-                    )
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
                     layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
             array![
             dojo::database::introspect::Introspect::<u8>::layout(),
 dojo::database::introspect::Introspect::<Vec2>::layout()
             ].span()
         )
-                        ].span()
-                    )
                 }
             ].span()
         )
@@ -1099,31 +1031,31 @@ dojo::database::introspect::Introspect::<Vec2>::ty()
         )
     }
 }
-impl EnumTupleOnePrimitiveSerde of core::serde::Serde::<EnumTupleOnePrimitive> {
-    fn serialize(self: @EnumTupleOnePrimitive, ref output: core::array::Array<felt252>) {
+impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
+    fn serialize(self: @EnumWithPrimitive, ref output: core::array::Array<felt252>) {
         match self {
-            EnumTupleOnePrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
-            EnumTupleOnePrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
         }
     }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTupleOnePrimitive> {
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithPrimitive> {
         let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
         core::option::Option::Some(
             match idx {
-                0 => EnumTupleOnePrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
-                1 => EnumTupleOnePrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
+                0 => EnumWithPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
                 _ => { return core::option::Option::None; }
             }
         )
     }
 }
-impl EnumTupleOnePrimitiveCopy of core::traits::Copy::<EnumTupleOnePrimitive>;
-impl EnumTupleOnePrimitiveDrop of core::traits::Drop::<EnumTupleOnePrimitive>;
+impl EnumWithPrimitiveCopy of core::traits::Copy::<EnumWithPrimitive>;
+impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
 
-impl EnumTupleOnePrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumTupleOnePrimitive<>> {
+impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumWithPrimitive<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        Option::Some(2)
     }
 
     #[inline(always)]
@@ -1132,29 +1064,11 @@ impl EnumTupleOnePrimitiveIntrospect<> of dojo::database::introspect::Introspect
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
-            array![
-            dojo::database::introspect::Introspect::<u16>::layout()
-            ].span()
-        )
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
-            array![
-            dojo::database::introspect::Introspect::<u16>::layout()
-            ].span()
-        )
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
                 }
             ].span()
         )
@@ -1164,19 +1078,11 @@ dojo::database::introspect::FieldLayout {
     fn ty() -> dojo::database::introspect::Ty {
         dojo::database::introspect::Ty::Enum(
             dojo::database::introspect::Enum {
-                name: 'EnumTupleOnePrimitive',
+                name: 'EnumWithPrimitive',
                 attrs: array![].span(),
                 children: array![
-                ('Left', dojo::database::introspect::Ty::Tuple(
-            array![
-            dojo::database::introspect::Introspect::<u16>::ty()
-            ].span()
-        )),
-('Right', dojo::database::introspect::Ty::Tuple(
-            array![
-            dojo::database::introspect::Introspect::<u16>::ty()
-            ].span()
-        ))
+                ('Left', dojo::database::introspect::Introspect::<u32>::ty()),
+('Right', dojo::database::introspect::Introspect::<u32>::ty())
 
                 ].span()
             }
@@ -1207,7 +1113,16 @@ impl EnumCustomDrop of core::traits::Drop::<EnumCustom>;
 impl EnumCustomIntrospect<> of dojo::database::introspect::Introspect<EnumCustom<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
     }
 
     #[inline(always)]
@@ -1216,21 +1131,11 @@ impl EnumCustomIntrospect<> of dojo::database::introspect::Introspect<EnumCustom
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<Vec2>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<Vec2>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
                 }
             ].span()
         )
@@ -1275,7 +1180,17 @@ impl EnumTupleMixDrop of core::traits::Drop::<EnumTupleMix>;
 impl EnumTupleMixIntrospect<> of dojo::database::introspect::Introspect<EnumTupleMix<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+dojo::database::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(2)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
     }
 
     #[inline(always)]
@@ -1285,32 +1200,22 @@ impl EnumTupleMixIntrospect<> of dojo::database::introspect::Introspect<EnumTupl
             dojo::database::introspect::FieldLayout {
                     selector: 0,
                     layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
             array![
             dojo::database::introspect::Introspect::<Vec2>::layout(),
 dojo::database::introspect::Introspect::<u64>::layout(),
 dojo::database::introspect::Introspect::<EnumCustom>::layout()
             ].span()
         )
-                        ].span()
-                    )
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
                     layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
             array![
             dojo::database::introspect::Introspect::<Vec2>::layout(),
 dojo::database::introspect::Introspect::<u64>::layout(),
 dojo::database::introspect::Introspect::<EnumCustom>::layout()
             ].span()
         )
-                        ].span()
-                    )
                 }
             ].span()
         )
@@ -1378,35 +1283,20 @@ impl EnumWithDifferentVariantDataIntrospect<> of dojo::database::introspect::Int
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Layout::Fixed(array![].span())
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 1,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<u32>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
                 },
 dojo::database::introspect::FieldLayout {
                     selector: 2,
                     layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Layout::Tuple(
             array![
             dojo::database::introspect::Introspect::<Vec2>::layout(),
 dojo::database::introspect::Introspect::<u64>::layout()
             ].span()
         )
-                        ].span()
-                    )
                 }
             ].span()
         )
@@ -2347,8 +2237,8 @@ impl EnumWithBadOptionIntrospect<> of dojo::database::introspect::Introspect<Enu
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        8,
-dojo::database::introspect::Introspect::<Option<(u8, u16)>>::size()
+                        dojo::database::introspect::Introspect::<Option<(u8, u16)>>::size(),
+Option::Some(1)
                     ];
 
                     if dojo::database::utils::any_none(@sizes) {
@@ -2364,12 +2254,7 @@ dojo::database::introspect::Introspect::<Option<(u8, u16)>>::size()
             array![
             dojo::database::introspect::FieldLayout {
                     selector: 0,
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            dojo::database::introspect::Introspect::<Option<(u8, u16)>>::layout()
-                        ].span()
-                    )
+                    layout: dojo::database::introspect::Introspect::<Option<(u8, u16)>>::layout()
                 }
             ].span()
         )
@@ -2841,12 +2726,16 @@ dojo::database::introspect::Member {
 impl EnumPacked1Introspect<> of dojo::database::introspect::Introspect<EnumPacked1<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        Option::Some(1)
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        ERROR
+        dojo::database::introspect::Layout::Fixed(
+                array![
+                8,
+                ].span()
+            )
     }
 
     #[inline(always)]
@@ -2869,12 +2758,16 @@ impl EnumPacked1Introspect<> of dojo::database::introspect::Introspect<EnumPacke
 impl EnumPacked2Introspect<> of dojo::database::introspect::Introspect<EnumPacked2<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        Option::Some(2)
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        ERROR
+        dojo::database::introspect::Layout::Fixed(
+                array![
+                8,8
+                ].span()
+            )
     }
 
     #[inline(always)]
@@ -2897,12 +2790,16 @@ impl EnumPacked2Introspect<> of dojo::database::introspect::Introspect<EnumPacke
 impl EnumPacked3Introspect<> of dojo::database::introspect::Introspect<EnumPacked3<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        Option::None
+        Option::Some(3)
     }
 
     #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        ERROR
+        dojo::database::introspect::Layout::Fixed(
+                array![
+                8,128,128
+                ].span()
+            )
     }
 
     #[inline(always)]
@@ -2994,22 +2891,7 @@ error: For now, field with custom type cannot be packed
     y: StructPacked1
      ^*************^
 
-error: To be packed, all variants must have exactly the same layout.
- --> test_src/lib.cairo:223:6
-enum EnumPacked1 {
-     ^*********^
-
-error: To be packed, all variants must have exactly the same layout.
- --> test_src/lib.cairo:230:6
-enum EnumPacked2 {
-     ^*********^
-
-error: To be packed, all variants must have exactly the same layout.
- --> test_src/lib.cairo:237:6
-enum EnumPacked3 {
-     ^*********^
-
-error: To be packed, all variants must have exactly the same layout.
+error: To be packed, all variants must have fixed layout of same size.
  --> test_src/lib.cairo:243:6
 enum EnumNotPackable1 {
      ^**************^

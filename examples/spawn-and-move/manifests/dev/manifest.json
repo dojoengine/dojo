@@ -1248,10 +1248,7 @@
         }
       ],
       "reads": [],
-      "writes": [
-        "Moves",
-        "Position"
-      ],
+      "writes": ["Moves", "Position"],
       "computed": [],
       "name": "dojo_examples::actions::actions"
     }

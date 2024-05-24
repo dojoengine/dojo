@@ -41,6 +41,36 @@ pub enum ModelCommand {
         starknet: StarknetOptions,
     },
 
+    #[command(about = "The Dojo storage system uses the poseidon_hash function to compute \
+                       hashes, called 'hash' in the following documentation.
+        
+        How storage locations are computed ?
+
+        model key               = hash(model_keys)
+
+        fixed layout key        = parent_key
+        struct layout field key = hash(parent_key, field_selector)
+        tuple layout item key   = hash(parent_key, item_index)
+        enum layout 
+                    variant key = parent_key
+                    data key    = hash(parent_key, variant_index)
+        array layout
+                    length key  = parent_key
+                    item key    = hash(parent_key, item_index)
+        byte array layout       = parent_key
+
+        final storage location  = hash('dojo_storage', model_selector, record_key)")]
+    Layout {
+        #[arg(help = "The name of the model")]
+        name: String,
+
+        #[command(flatten)]
+        world: WorldOptions,
+
+        #[command(flatten)]
+        starknet: StarknetOptions,
+    },
+
     #[command(about = "Retrieve the schema for a model")]
     Schema {
         #[arg(help = "The name of the model")]
@@ -91,6 +121,11 @@ impl ModelArgs {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
                     model::model_contract_address(name, world_address, provider).await
+                }
+                ModelCommand::Layout { name, starknet, world } => {
+                    let world_address = world.address(env_metadata.as_ref()).unwrap();
+                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
+                    model::model_layout(name, world_address, provider).await
                 }
                 ModelCommand::Schema { name, to_json, starknet, world } => {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();

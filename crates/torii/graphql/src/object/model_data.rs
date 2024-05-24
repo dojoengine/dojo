@@ -177,8 +177,8 @@ fn data_objects_recursion(
 ) -> Vec<Object> {
     let mut objects: Vec<Object> = type_mapping
         .iter()
-        .filter_map(|(field_name, type_data)| {
-            if let TypeData::Nested((nested_type, nested_mapping)) = type_data {
+        .filter_map(|(field_name, type_data)| match &type_data {
+            TypeData::Nested((nested_type, nested_mapping)) => {
                 let mut nested_path = path_array.clone();
                 nested_path.push(field_name.to_string());
                 let nested_objects =
@@ -202,6 +202,7 @@ fn data_objects_recursion(
             } else {
                 None
             }
+            _ => None,
         })
         .flatten()
         .collect();

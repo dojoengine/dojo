@@ -56,7 +56,9 @@ pub fn build_variant_layouts(
             let selector = format!("{i}");
 
             let variant_layout = match v.type_clause(db) {
-                OptionTypeClause::Empty(_) => "".to_string(),
+                OptionTypeClause::Empty(_) => {
+                    "dojo::database::introspect::Layout::Fixed(array![].span())".to_string()
+                }
                 OptionTypeClause::TypeClause(type_clause) => {
                     get_layout_from_type_clause(db, diagnostics, &type_clause)
                 }
@@ -65,12 +67,7 @@ pub fn build_variant_layouts(
             format!(
                 "dojo::database::introspect::FieldLayout {{
                     selector: {selector},
-                    layout: dojo::database::introspect::Layout::Tuple(
-                        array![
-                            dojo::database::introspect::Layout::Fixed(array![8].span()),
-                            {variant_layout}
-                        ].span()
-                    )
+                    layout: {variant_layout}
                 }}"
             )
         })
