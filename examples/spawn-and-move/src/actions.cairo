@@ -29,14 +29,6 @@ mod actions {
         direction: Direction,
     }
 
-    #[derive(Model, Copy, Drop, Serde)]
-    #[dojo::event]
-    struct ContractInitialized {
-        #[key]
-        contract_address: ContractAddress,
-        value: u8,
-    }
-
     #[abi(embed_v0)]
     impl ActionsComputedImpl of IActionsComputed<ContractState> {
         #[computed]

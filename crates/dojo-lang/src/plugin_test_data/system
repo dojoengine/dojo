@@ -938,7 +938,7 @@ trait IAllowedRefSelf<T> {
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
                 
@@ -995,7 +995,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
                 
@@ -1055,7 +1055,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
                 
@@ -1121,7 +1121,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
                 
@@ -1189,7 +1189,7 @@ impl TestEventDrop of core::traits::Drop::<TestEvent>;
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
 impl EventDrop of core::traits::Drop::<Event>;
@@ -1248,7 +1248,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
                 
@@ -1355,7 +1355,7 @@ self: @ContractState,             world: IWorldDispatcher,             vec: Vec2
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
                 
@@ -1443,7 +1443,7 @@ let world = self.world_dispatcher.read();
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
                 
@@ -1502,7 +1502,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                 impl IDojoInitImpl of IDojoInit<ContractState> {
                     fn dojo_init(self: @ContractState, actions_address: ContractAddress, actions_class: ClassHash, value: u8) {
                         let world = self.world_dispatcher.read();
-                        assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                        assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         {
         emit!(world, ContractInitialized { contract_address: actions_address, contract_class: actions_class, value });
     }
@@ -1560,7 +1560,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only world can init');
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
                         }
                     }
                 

@@ -52,12 +52,15 @@ fn deploy_world() -> IWorldDispatcher {
     spawn_test_world(array![])
 }
 
+#[dojo::contract]
+mod test_contract {}
+
 #[test]
 #[available_gas(6000000)]
 fn test_upgrade_from_world() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world.deploy_contract('salt', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     world.upgrade_contract(base_address, new_class_hash);
@@ -74,7 +77,7 @@ fn test_upgrade_from_world() {
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world.deploy_contract('salt', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
     let new_class_hash: ClassHash = contract_invalid_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     world.upgrade_contract(base_address, new_class_hash);
@@ -86,7 +89,7 @@ fn test_upgrade_from_world_not_world_provider() {
 fn test_upgrade_direct() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world.deploy_contract('salt', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
@@ -106,10 +109,11 @@ mod invalid_model {
     #[abi(embed_v0)]
     impl InvalidModelName of super::INameOnly<ContractState> {
         fn name(self: @ContractState) -> felt252 {
+            // NOTE: Need to update this value if address changes
             // Pre-computed address of a contract deployed through the world.
             // To print this addres, run:
             // sozo test --manifest-path crates/dojo-core/Scarb.toml -f test_deploy_from_world_invalid_model
-            0x2a9a994dd0f235c8f032fdc6252947e4418e5a3001764049016279b8c0ad19a
+            0x4ea3e1f4b700ab03db22585377e6c9356626b2c238cfb2d9237acd693be9f70
         }
     }
 }
@@ -135,7 +139,7 @@ mod invalid_model_world {
 fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract(0, base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world.deploy_contract(0, test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
     // The print is required for invalid_model name to be a valid address as the
     // register_model will use the gas consumed as salt.
     base_address.print();

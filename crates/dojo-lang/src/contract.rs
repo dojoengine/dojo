@@ -86,8 +86,8 @@ impl DojoContract {
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState) {
-                            assert(get_caller_address() == self.world().contract_address, 'Only \
-                     world can init');
+                            assert(starknet::get_caller_address() == \
+                     self.world().contract_address, 'Only world can init');
                         }
                     }
                 ",
@@ -145,6 +145,8 @@ impl DojoContract {
                 ]),
             ));
 
+            // println!("{}", builder.code);
+
             return PluginResult {
                 code: Some(PluginGeneratedFile {
                     name: name.clone(),
@@ -199,8 +201,8 @@ impl DojoContract {
                 impl IDojoInitImpl of IDojoInit<ContractState> {
                     fn $name$($params_str$) {
                         $world_read$
-                        assert(get_caller_address() == self.world().contract_address, 'Only world \
-             can init');
+                        assert(starknet::get_caller_address() == self.world().contract_address, \
+             'Only world can init');
                         $body$
                     }
                 }

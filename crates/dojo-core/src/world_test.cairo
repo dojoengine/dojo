@@ -618,6 +618,7 @@ fn test_program_hash_event_emit() {
         Option::Some(ProgramHashUpdate { program_hash: 98758347158781475198374598718743 })
     );
 }
+
 #[test]
 #[available_gas(6000000)]
 fn test_facts_registry_event_emit() {
@@ -631,4 +632,23 @@ fn test_facts_registry_event_emit() {
         starknet::testing::pop_log(world.contract_address),
         Option::Some(FactsRegistryUpdate { address: contract_address_const::<0x12>() })
     );
+}
+
+#[starknet::interface]
+trait IDojoInit<ContractState> {
+    fn dojo_init(self: @ContractState) -> felt252;
+}
+
+#[dojo::contract]
+mod test_contract {}
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(expected: ('Only world can init', 'ENTRYPOINT_FAILED'))]
+fn test_can_call_init() {
+    let world = deploy_world();
+    let address = world.deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
+
+    let dojo_init = IDojoInitDispatcher { contract_address: address };
+    dojo_init.dojo_init();
 }

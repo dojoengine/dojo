@@ -4,6 +4,8 @@ class_hash = "0x59b5c57a4002a1eeb4b7521a6da10a85ec78f7ead8c30ed59a91509ac041ffd"
 original_class_hash = "0x59b5c57a4002a1eeb4b7521a6da10a85ec78f7ead8c30ed59a91509ac041ffd"
 abi = "manifests/dev/abis/deployments/dojo_world_world.json"
 address = "0x587a2d65e50c44dc5491e7ce69b7d7be1e9bc8a67c25d79bb575339af160cc7"
+transaction_hash = "0x74e7ad7eafea58a8cdbadcd131826a34569010e38cf4c6e4b1b373a81f83168"
+block_number = 3
 seed = "dojo_examples"
 name = "dojo::world::world"
 
@@ -19,9 +21,10 @@ name = "dojo::base::base"
 
 [[contracts]]
 kind = "DojoContract"
+address = "0x639138ace1765fdb3b57979218cda4a9f7af802ed898f45677cedcdec7aa721"
 class_hash = "0x726445fa6e748111e29f6fa824f83d10bcd3bf65749a4cd5b8fbabb0c5c948e"
 original_class_hash = "0x726445fa6e748111e29f6fa824f83d10bcd3bf65749a4cd5b8fbabb0c5c948e"
-base_class_hash = "0x0"
+base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
 abi = "manifests/dev/abis/deployments/contracts/dojo_examples_actions_actions.json"
 reads = []
 writes = [
@@ -34,9 +37,10 @@ name = "dojo_examples::actions::actions"
 
 [[contracts]]
 kind = "DojoContract"
+address = "0x3322d4bfee84450d998d5665d65a647ffc515b43b142af49dea0500dd0fb07"
 class_hash = "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a"
 original_class_hash = "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a"
-base_class_hash = "0x0"
+base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
 abi = "manifests/dev/abis/deployments/contracts/dojo_examples_others_others.json"
 reads = []
 writes = []
@@ -47,23 +51,6 @@ constructor_calldata = [
     "10",
 ]
 name = "dojo_examples::others::others"
-
-[[models]]
-kind = "DojoModel"
-class_hash = "0x545dc13fbfd87d20e3deef9cd8213e9f592410e042049279f7eaa7e8c70cf3f"
-original_class_hash = "0x545dc13fbfd87d20e3deef9cd8213e9f592410e042049279f7eaa7e8c70cf3f"
-abi = "manifests/dev/abis/deployments/models/dojo_examples_actions_actions_contract_initialized.json"
-name = "dojo_examples::actions::actions::contract_initialized"
-
-[[models.members]]
-name = "contract_address"
-type = "ContractAddress"
-key = true
-
-[[models.members]]
-name = "value"
-type = "u8"
-key = false
 
 [[models]]
 kind = "DojoModel"
