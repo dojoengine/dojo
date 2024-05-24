@@ -300,36 +300,40 @@ impl Saya {
         // Prove each of the leaf nodes of the recursion tree and merge them into one
         let (proof, state_diff) = prove_scheduler.proved().await.context("Failed to prove.")?;
 
-        std::io::Write::write_all(
-            &mut std::fs::File::create("proof.json").unwrap(),
-            proof.as_bytes(),
-        )
-        .unwrap();
-
-        // let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
-        // let world_da = state_diff.world_da.unwrap();
-
-        // trace!(target: LOG_TARGET, last_block, "Verifying block.");
-        // let transaction_hash = verifier::verify(
-        //     VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
-        //     serialized_proof,
+        // std::io::Write::write_all(
+        //     &mut std::fs::File::create("proof.json").unwrap(),
+        //     proof.as_bytes(),
         // )
-        // .await?;
-        // info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
+        // .unwrap();
 
-        // let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
-        // println!("Program hash: {}", program_hash);
-        // let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
-        // let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
-        // info!(target: LOG_TARGET, expected_fact, "Expected fact.");
+        let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
+        let world_da = state_diff.world_da.unwrap();
 
-        // sleep(Duration::from_millis(5000)).await;
+        trace!(target: LOG_TARGET, last_block, "Verifying block.");
+        let transaction_hash = verifier::verify(
+            VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
+            serialized_proof,
+        )
+        .await?;
+        info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
 
-        // trace!(target: LOG_TARGET, last_block, "Applying diffs.");
-        // let transaction_hash =
-        //     dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
-        //         .await?;
-        // info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
+        let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
+        println!("Program hash: {:x}", program_hash);
+        let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
+        let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
+        info!(target: LOG_TARGET, expected_fact, "Expected fact.");
+
+        sleep(Duration::from_millis(5000)).await;
+
+        trace!(target: LOG_TARGET, last_block, "Applying diffs.");
+        let transaction_hash = dojo_os::starknet_apply_diffs(
+            self.config.world_address,
+            world_da,
+            program_output,
+            program_hash,
+        )
+        .await?;
+        info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
 
         Ok(())
     }

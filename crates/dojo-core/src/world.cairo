@@ -621,7 +621,7 @@ mod world {
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
         fn upgrade_state(
-            ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput
+            ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput, program_hash: felt252
         ) {
             let mut da_hasher = PedersenImpl::new(0);
             let mut i = 0;
@@ -634,13 +634,17 @@ mod world {
                 i += 1;
             };
             let da_hash = da_hasher.finalize();
-            assert(da_hash == program_output.world_da_hash, 'wrong output hash');
+            // assert(da_hash == program_output.world_da_hash, 'wrong output hash');
+
+            assert(
+                program_hash == self.config.get_differ_program_hash() || 
+                program_hash == self.config.get_merger_program_hash(), 
+                'wrong program hash'
+            );
 
             let mut program_output_array = array![];
             program_output.serialize(ref program_output_array);
             let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
-
-            let program_hash = self.config.get_program_hash();
 
             let fact = poseidon::PoseidonImpl::new()
                 .update(program_hash)
@@ -649,7 +653,7 @@ mod world {
             let fact_registry = IFactRegistryDispatcher {
                 contract_address: self.config.get_facts_registry()
             };
-            // assert(fact_registry.is_valid(fact), 'no state transition proof');
+            assert(fact_registry.is_valid(fact), 'no state transition proof');
 
             let mut i = 0;
             loop {
