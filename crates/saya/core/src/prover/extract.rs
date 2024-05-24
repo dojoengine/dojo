@@ -5,44 +5,52 @@ use katana_primitives::{contract::ContractAddress, FieldElement};
 use num_traits::ToPrimitive;
 
 pub fn program_input_from_program_output(
-    _output: Vec<FieldElement>,
-    _state_updates: StateUpdates,
+    output: Vec<FieldElement>,
+    state_updates: StateUpdates,
 ) -> anyhow::Result<ProgramInput> {
-    // println!("{:?}", serde_json::to_string(&output).unwrap());
-    // let prev_state_root = output[0].clone();
-    // let block_number = serde_json::from_str(&output[2].clone().to_string()).unwrap();
-    // let block_hash = output[3].clone();
-    // let config_hash = output[4].clone();
-    // let message_to_starknet_segment: Vec<MessageToStarknet>;
-    // let message_to_appchain_segment: Vec<MessageToAppchain>;
-    // let mut decimal = output[6].clone().to_big_decimal(0); // Convert with no decimal places
-    // let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
-    // match num {
-    //     0..=3 => {
-    //         message_to_starknet_segment = Default::default(); // TODO: report error here
-    //     }
-    //     4..=u64::MAX => {
-    //         message_to_starknet_segment =
-    //             get_message_to_starknet_segment(&output[7..7 + num as usize].to_vec())?
-    //     }
-    // }
-    // let index = 7 + num as usize;
-    // decimal = output[index].clone().to_big_decimal(0);
-    // let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
-    // match num {
-    //     0..=4 => {
-    //         message_to_appchain_segment = Default::default();
-    //     }
-    //     5..=u64::MAX => {
-    //         message_to_appchain_segment = get_message_to_appchain_segment(
-    //             &output[index + 1..index + 1 + num as usize].to_vec(),
-    //         )?
-    //     }
-    // }
+    let prev_state_root = output[0].clone();
+    let block_number = serde_json::from_str(&output[2].clone().to_string()).unwrap();
+    let block_hash = output[3].clone();
+    let config_hash = output[4].clone();
+    let message_to_starknet_segment: Vec<MessageToStarknet>;
+    let message_to_appchain_segment: Vec<MessageToAppchain>;
+    let mut decimal = output[6].clone().to_big_decimal(0); // Convert with no decimal places
+    let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
+    match num {
+        0..=3 => {
+            message_to_starknet_segment = Default::default();
+        }
+        4..=u64::MAX => {
+            message_to_starknet_segment =
+                get_message_to_starknet_segment(&output[7..7 + num as usize].to_vec())?
+        }
+    }
+    let index = 7 + num as usize;
+    decimal = output[index].clone().to_big_decimal(0);
+    let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
+    match num {
+        0..=4 => {
+            message_to_appchain_segment = Default::default();
+        }
+        5..=u64::MAX => {
+            message_to_appchain_segment = get_message_to_appchain_segment(
+                &output[index + 1..index + 1 + num as usize].to_vec(),
+            )?
+        }
+    }
 
-    let mut input = ProgramInput { ..Default::default() };
+    let mut input = ProgramInput {
+        prev_state_root,
+        block_number,
+        block_hash,
+        config_hash,
+        message_to_starknet_segment,
+        message_to_appchain_segment,
+        state_updates,
+        world_da: None,
+    };
 
-    input.fill_da(FieldElement::default()); // TODO: pass contract address to function
+    input.fill_da(FieldElement::default());
     Ok(input)
 }
 
@@ -101,7 +109,6 @@ mod tests {
 
     use super::*;
     use cairo_proof_parser::output::extract_output;
-    use itertools::Itertools;
     use katana_primitives::state::StateUpdates;
     use std::str::FromStr;
 

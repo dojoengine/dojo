@@ -634,7 +634,7 @@ mod world {
                 i += 1;
             };
             let da_hash = da_hasher.finalize();
-            // assert(da_hash == program_output.world_da_hash, 'wrong output hash');
+            assert(da_hash == program_output.world_da_hash, 'wrong output hash');
 
             assert(
                 program_hash == self.config.get_differ_program_hash() || 
