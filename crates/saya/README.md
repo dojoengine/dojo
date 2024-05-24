@@ -78,6 +78,94 @@ cargo run -r -p sozo -- migrate apply --rpc-url http://localhost:5050 --manifest
 cargo run -r --bin saya -- --rpc-url http://localhost:5050 --registry 0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb --world ... # Run Saya
 ```
 
+## End to end testing
+
+1. Spawn world
+
+```bash
+cargo run -r -p sozo -- \
+    build \
+    --manifest-path examples/spawn-and-move/Scarb.toml
+
+cargo run -r -p sozo -- \
+    migrate apply \
+    --manifest-path examples/spawn-and-move/Scarb.toml \
+    --rpc-url <SEPOIA_ENDPOINT> \
+    --private-key <SEPOIA_PRIVATE_KEY> \
+    --account-address <SEPOIA_ACCOUNT_ADDRESS> \
+    --fee-estimate-multiplier 20 \
+    --name <WORLD_NAME>
+```
+
+2. Set world configs
+
+```bash
+sncast \
+    -u <SEPOIA_ENDPOINT> \
+    -a dev \
+    invoke \
+    -a <WORLD_ADDRESS> \
+    -f set_differ_program_hash \
+    -c 0xa73dd9546f9858577f9fdbe43fd629b6f12dc638652e11b6e29155f4c6328 \
+    --max-fee 644996534717092
+
+sleep 3
+
+sncast \
+    -u <SEPOIA_ENDPOINT> \
+    -a dev \
+    invoke \
+    -a <WORLD_ADDRESS> \
+    -f set_merger_program_hash \
+    -c 0xc105cf2c69201005df3dad0050f5289c53d567d96df890f2142ad43a540334 \
+    --max-fee 644996534717092
+
+sleep 3
+
+sncast \
+    -u <SEPOIA_ENDPOINT> \
+    -a dev \
+    invoke \
+    -a <WORLD_ADDRESS> \
+    -f set_facts_registry \
+    -c 0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb \
+    --max-fee 644996534717092
+```
+
+3. Start katana
+
+```bash
+cargo run -r -p katana -- \
+    --rpc-url <SEPOIA_ENDPOINT> \
+    --fork-block-number <LATEST_BLOCK> \
+    -p 5050
+```
+
+4. Run transactions on `katana`
+
+```bash
+cargo run -r -p sozo -- execute \
+    --rpc-url http://localhost:5050 \
+    --private-key <SEPOIA_PRIVATE_KEY> \
+    --account-address <SEPOIA_ACCOUNT_ADDRESS> \
+    --world <WORLD_ADDRESS> \
+    <CONTRACT_ADDRESS> spawn
+
+```
+
+5. Run saya
+
+```bash
+cargo run -r --bin saya -- \
+    --rpc-url http://localhost:5060 \
+    --registry 0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb \
+    --world <WORLD_ADDRESS> \
+    --prover-url <PROVER_URL> \
+    --prover-key <PROVER_KEY> \
+    --batch-size 2 \
+    --start-block <LATEST_BLOCK>
+```
+
 ## Additional documentation
 
 [Hackmd note](https://hackmd.io/@glihm/saya)
