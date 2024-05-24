@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716514200030,
+  "lastUpdate": 1716566375229,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8455,6 +8455,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16531668,
             "range": "± 145036",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "matthias.monnier@gmail.com",
+            "name": "Matthias",
+            "username": "Matth26"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "35ca97454678ab5e91aa31b53f372ddc914b88de",
+          "message": "Katana and ArgentX wallet (#1958)\n\n* fix: path to Argent account compiled contracts in declare script\r\n\r\n* fix: allow some headers in CORS layer of Katana to work with ArgentX wallet\r\n\r\n* refactor: clean forgotten logs in declare-argent-account.sh script and remove unnecessary var\r\n\r\n* fix: remove vec in favor of array\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-05-24T17:50:52+02:00",
+          "tree_id": "d40fc8fdfaa4909d2087903deb81e1e271dd04ed",
+          "url": "https://github.com/dojoengine/dojo/commit/35ca97454678ab5e91aa31b53f372ddc914b88de"
+        },
+        "date": 1716566374384,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16497846,
+            "range": "± 216559",
             "unit": "ns/iter"
           }
         ]
