@@ -111,7 +111,6 @@ impl BackendRequest {
 
 type BackendRequestFuture = BoxFuture<'static, ()>;
 
-
 // Identifier for pending requests.
 // This is used for request deduplication.
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
@@ -119,7 +118,7 @@ enum BackendRequestIdentifier {
     Nonce(ContractAddress),
     Class(ClassHash),
     ClassHash(ContractAddress),
-    Storage((ContractAddress, StorageKey))
+    Storage((ContractAddress, StorageKey)),
 }
 
 /// The backend for the forked provider.
@@ -657,13 +656,13 @@ pub(crate) mod test_utils {
     }
 
     // Starts a TCP server that never close the connection.
-    pub fn start_tcp_server() {
+    pub fn start_tcp_server(addr: String) {
         use tokio::runtime::Builder;
 
         let (tx, rx) = sync_channel::<()>(1);
         thread::spawn(move || {
             Builder::new_current_thread().enable_all().build().unwrap().block_on(async move {
-                let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+                let listener = TcpListener::bind(addr).await.unwrap();
                 let mut connections = Vec::new();
 
                 tx.send(()).unwrap();
@@ -704,7 +703,7 @@ mod tests {
     #[test]
     fn handle_incoming_requests() {
         // start a mock remote network
-        start_tcp_server();
+        start_tcp_server("127.0.0.1:8080".to_string());
 
         let handle = create_forked_backend("http://127.0.0.1:8080", 1);
 
@@ -723,7 +722,7 @@ mod tests {
         });
         let h3 = handle.clone();
         thread::spawn(move || {
-            h3.get_compiled_class_hash(felt!("0x1")).expect(ERROR_SEND_REQUEST);
+            h3.get_compiled_class_hash(felt!("0x2")).expect(ERROR_SEND_REQUEST);
         });
         let h4 = handle.clone();
         thread::spawn(move || {
@@ -740,6 +739,261 @@ mod tests {
         // check request are handled
         let stats = handle.stats().expect(ERROR_STATS);
         assert_eq!(stats, 5, "Backend should have 5 ongoing requests.")
+    }
+
+    #[test]
+    fn get_nonce_request_should_be_deduplicated() {
+        // start a mock remote network
+        start_tcp_server("127.0.0.1:8081".to_string());
+
+        let handle = create_forked_backend("http://127.0.0.1:8081", 1);
+
+        // check no pending requests
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 0, "Backend should not have any ongoing requests.");
+
+        // send requests to the backend
+        let h1 = handle.clone();
+        thread::spawn(move || {
+            h1.get_nonce(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
+        });
+        let h2 = handle.clone();
+        thread::spawn(move || {
+            h2.get_nonce(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h3 = handle.clone();
+        thread::spawn(move || {
+            h3.get_nonce(felt!("0x2").into()).expect(ERROR_SEND_REQUEST);
+        });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
+        // check request are handled
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 2, "Backend should only have 2 ongoing requests.")
+    }
+
+    #[test]
+    fn get_class_at_request_should_be_deduplicated() {
+        // start a mock remote network
+        start_tcp_server("127.0.0.1:8082".to_string());
+
+        let handle = create_forked_backend("http://127.0.0.1:8082", 1);
+
+        // check no pending requests
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 0, "Backend should not have any ongoing requests.");
+
+        // send requests to the backend
+        let h1 = handle.clone();
+        thread::spawn(move || {
+            h1.get_class_at(felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        let h2 = handle.clone();
+        thread::spawn(move || {
+            h2.get_class_at(felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h3 = handle.clone();
+        thread::spawn(move || {
+            h3.get_class_at(felt!("0x2")).expect(ERROR_SEND_REQUEST);
+        });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
+        // check request are handled
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 2, "Backend should only have 2 ongoing requests.")
+    }
+
+    #[test]
+    fn get_compiled_class_hash_request_should_be_deduplicated() {
+        // start a mock remote network
+        start_tcp_server("127.0.0.1:8083".to_string());
+
+        let handle = create_forked_backend("http://127.0.0.1:8083", 1);
+
+        // check no pending requests
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 0, "Backend should not have any ongoing requests.");
+
+        // send requests to the backend
+        let h1 = handle.clone();
+        thread::spawn(move || {
+            h1.get_compiled_class_hash(felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        let h2 = handle.clone();
+        thread::spawn(move || {
+            h2.get_compiled_class_hash(felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h3 = handle.clone();
+        thread::spawn(move || {
+            h3.get_compiled_class_hash(felt!("0x2")).expect(ERROR_SEND_REQUEST);
+        });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
+        // check request are handled
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 2, "Backend should only have 2 ongoing requests.")
+    }
+
+    #[test]
+    fn get_class_at_and_get_compiled_class_hash_request_should_be_deduplicated() {
+        // start a mock remote network
+        start_tcp_server("127.0.0.1:8084".to_string());
+
+        let handle = create_forked_backend("http://127.0.0.1:8084", 1);
+
+        // check no pending requests
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 0, "Backend should not have any ongoing requests.");
+
+        // send requests to the backend
+        let h1 = handle.clone();
+        thread::spawn(move || {
+            h1.get_class_at(felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        // Since this also calls to the same request as the previous one, it should be deduped
+        let h2 = handle.clone();
+        thread::spawn(move || {
+            h2.get_compiled_class_hash(felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h3 = handle.clone();
+        thread::spawn(move || {
+            h3.get_class_at(felt!("0x2")).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h4 = handle.clone();
+        thread::spawn(move || {
+            h4.get_compiled_class_hash(felt!("0x3")).expect(ERROR_SEND_REQUEST);
+        });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
+        // check request are handled
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 3, "Backend should only have 3 ongoing requests.")
+    }
+
+    #[test]
+    fn get_class_hash_at_request_should_be_deduplicated() {
+        // start a mock remote network
+        start_tcp_server("127.0.0.1:8085".to_string());
+
+        let handle = create_forked_backend("http://127.0.0.1:8085", 1);
+
+        // check no pending requests
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 0, "Backend should not have any ongoing requests.");
+
+        // send requests to the backend
+        let h1 = handle.clone();
+        thread::spawn(move || {
+            h1.get_class_hash_at(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
+        });
+        let h2 = handle.clone();
+        thread::spawn(move || {
+            h2.get_class_hash_at(felt!("0x1").into()).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h3 = handle.clone();
+        thread::spawn(move || {
+            h3.get_class_hash_at(felt!("0x2").into()).expect(ERROR_SEND_REQUEST);
+        });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
+        // check request are handled
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 2, "Backend should only have 2 ongoing requests.")
+    }
+
+    #[test]
+    fn get_storage_request_should_be_deduplicated() {
+        // start a mock remote network
+        start_tcp_server("127.0.0.1:8086".to_string());
+
+        let handle = create_forked_backend("http://127.0.0.1:8086", 1);
+
+        // check no pending requests
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 0, "Backend should not have any ongoing requests.");
+
+        // send requests to the backend
+        let h1 = handle.clone();
+        thread::spawn(move || {
+            h1.get_storage(felt!("0x1").into(), felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        let h2 = handle.clone();
+        thread::spawn(move || {
+            h2.get_storage(felt!("0x1").into(), felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h3 = handle.clone();
+        thread::spawn(move || {
+            h3.get_storage(felt!("0x2").into(), felt!("0x3")).expect(ERROR_SEND_REQUEST);
+        });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
+        // check request are handled
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 2, "Backend should only have 2 ongoing requests.")
+    }
+
+    #[test]
+    fn get_storage_request_on_same_address_with_different_key_should_be_deduplicated() {
+        // start a mock remote network
+        start_tcp_server("127.0.0.1:8087".to_string());
+
+        let handle = create_forked_backend("http://127.0.0.1:8087", 1);
+
+        // check no pending requests
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 0, "Backend should not have any ongoing requests.");
+
+        // send requests to the backend
+        let h1 = handle.clone();
+        thread::spawn(move || {
+            h1.get_storage(felt!("0x1").into(), felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        let h2 = handle.clone();
+        thread::spawn(move || {
+            h2.get_storage(felt!("0x1").into(), felt!("0x1")).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h3 = handle.clone();
+        thread::spawn(move || {
+            h3.get_storage(felt!("0x1").into(), felt!("0x3")).expect(ERROR_SEND_REQUEST);
+        });
+        // Different request, should be counted
+        let h4 = handle.clone();
+        thread::spawn(move || {
+            h4.get_storage(felt!("0x1").into(), felt!("0x6")).expect(ERROR_SEND_REQUEST);
+        });
+
+        // Same request as the last one, shouldn't be counted
+        let h5 = handle.clone();
+        thread::spawn(move || {
+            h5.get_storage(felt!("0x1").into(), felt!("0x6")).expect(ERROR_SEND_REQUEST);
+        });
+
+        // wait for the requests to be handled
+        thread::sleep(Duration::from_secs(1));
+
+        // check request are handled
+        let stats = handle.stats().expect(ERROR_STATS);
+        assert_eq!(stats, 3, "Backend should only have 3 ongoing requests.")
     }
 
     #[test]
