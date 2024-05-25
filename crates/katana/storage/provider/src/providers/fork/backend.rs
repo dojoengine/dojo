@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::pin::Pin;
 use std::sync::mpsc::{
     channel as oneshot, Receiver as OneshotReceiver, RecvError, Sender as OneshotSender,
@@ -111,6 +111,17 @@ impl BackendRequest {
 
 type BackendRequestFuture = BoxFuture<'static, ()>;
 
+
+// Identifier for pending requests.
+// This is used for request deduplication.
+#[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
+enum BackendRequestIdentifier {
+    Nonce(ContractAddress),
+    Class(ClassHash),
+    ClassHash(ContractAddress),
+    Storage((ContractAddress, StorageKey))
+}
+
 /// The backend for the forked provider.
 ///
 /// It is responsible for processing [requests](BackendRequest) to fetch data from the remote
@@ -120,9 +131,9 @@ pub struct Backend<P> {
     /// The Starknet RPC provider that will be used to fetch data from.
     provider: Arc<P>,
     // Set that keep track of current requests, for dedup purposes.
-    request_dedup_set: HashSet<String>,
+    request_dedup_set: HashSet<BackendRequestIdentifier>,
     /// Requests that are currently being poll.
-    pending_requests: Vec<(String, BackendRequestFuture)>,
+    pending_requests: Vec<(BackendRequestIdentifier, BackendRequestFuture)>,
     /// Requests that are queued to be polled.
     queued_requests: VecDeque<BackendRequest>,
     /// A channel for receiving requests from the [BackendHandle]s.
@@ -188,7 +199,7 @@ where
         // Check if there are similar requests in the queue before sending the request
         match request {
             BackendRequest::Nonce(Request { payload, sender }) => {
-                let req_key = format!("nonce_{}", payload);
+                let req_key = BackendRequestIdentifier::Nonce(payload);
 
                 if !self.request_dedup_set.contains(&req_key) {
                     let fut = Box::pin(async move {
@@ -200,13 +211,13 @@ where
                         sender.send(res).expect("failed to send nonce result")
                     });
 
-                    self.pending_requests.push((req_key.clone(), fut));
+                    self.pending_requests.push((req_key, fut));
                     self.request_dedup_set.insert(req_key);
                 }
             }
 
             BackendRequest::Storage(Request { payload: (addr, key), sender }) => {
-                let req_key = format!("storage_{}_{}", addr, key);
+                let req_key = BackendRequestIdentifier::Storage((addr, key));
 
                 if !self.request_dedup_set.contains(&req_key) {
                     let fut = Box::pin(async move {
@@ -218,13 +229,13 @@ where
                         sender.send(res).expect("failed to send storage result")
                     });
 
-                    self.pending_requests.push((req_key.clone(), fut));
+                    self.pending_requests.push((req_key, fut));
                     self.request_dedup_set.insert(req_key);
                 }
             }
 
             BackendRequest::ClassHash(Request { payload, sender }) => {
-                let req_key = format!("classhash_{}", payload);
+                let req_key = BackendRequestIdentifier::ClassHash(payload);
 
                 if !self.request_dedup_set.contains(&req_key) {
                     let fut = Box::pin(async move {
@@ -236,13 +247,13 @@ where
                         sender.send(res).expect("failed to send class hash result")
                     });
 
-                    self.pending_requests.push((req_key.clone(), fut));
+                    self.pending_requests.push((req_key, fut));
                     self.request_dedup_set.insert(req_key);
                 }
             }
 
             BackendRequest::Class(Request { payload, sender }) => {
-                let req_key = format!("class_{}", payload);
+                let req_key = BackendRequestIdentifier::Class(payload);
 
                 if !self.request_dedup_set.contains(&req_key) {
                     let fut = Box::pin(async move {
@@ -254,19 +265,15 @@ where
                         sender.send(res).expect("failed to send class result")
                     });
 
-                    self.pending_requests.push((req_key.clone(), fut));
+                    self.pending_requests.push((req_key, fut));
                     self.request_dedup_set.insert(req_key);
                 }
             }
 
             #[cfg(test)]
             BackendRequest::Stats(sender) => {
-                // let req_key = "stats";
-                // if !self.request_dedup_set.contains(req_key) {
                 let total_ongoing_request = self.pending_requests.len();
                 sender.send(total_ongoing_request).expect("failed to send backend stats");
-                // self.request_dedup_set.insert(req_key.to_string());
-                // }
             }
         }
     }
@@ -307,7 +314,7 @@ where
                 // poll the future and if the future is still pending, push it back to the
                 // pending requests so that it will be polled again
                 if fut.poll_unpin(cx).is_pending() {
-                    pin.pending_requests.push((fut_key.clone(), fut));
+                    pin.pending_requests.push((fut_key, fut));
                 } else {
                     pin.request_dedup_set.remove(&fut_key);
                 }
