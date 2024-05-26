@@ -1,12 +1,12 @@
-use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet_classes::contract_class::ContractClass;
-use scarb_ui::Ui;
 use std::fs::{self, File};
 use std::io::{self, BufReader, Seek, SeekFrom};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use camino::Utf8PathBuf;
+use scarb_ui::Ui;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FlattenedSierraClass;
 
@@ -93,7 +93,8 @@ pub fn get_contract_statistics_for_dir(
         let contract_name: String =
             path.file_stem().context("Error getting file name")?.to_string_lossy().to_string();
 
-        // To ignore files like `contract.contract_class.json` or `contract.compiled_contract_class.json`
+        // To ignore files like `contract.contract_class.json` or
+        // `contract.compiled_contract_class.json`
         if contract_name.contains('.') {
             continue;
         }
@@ -105,8 +106,8 @@ pub fn get_contract_statistics_for_dir(
             Ok(s) => s,
             Err(e) => {
                 ui.verbose(format!("Unable to process file: {:?}\nWith error: {e:?}", &path));
-                // skip any file which cannot be processed properly since there can be other file types in target folder
-                // for example casm contract class.
+                // skip any file which cannot be processed properly since there can be other file
+                // types in target folder for example casm contract class.
                 continue;
             }
         };
@@ -129,12 +130,11 @@ mod tests {
     use camino::Utf8PathBuf;
     use scarb_ui::Ui;
 
-    use crate::statistics::get_casm_byte_code_size;
-
     use super::{
         get_contract_statistics_for_dir, get_contract_statistics_for_file, get_file_size,
         get_sierra_byte_code_size, read_sierra_json_program, ContractStatistics,
     };
+    use crate::statistics::get_casm_byte_code_size;
 
     const TEST_SIERRA_JSON_CONTRACT: &str =
         "../../../bin/sozo/tests/test_data/compiled_contracts/test_contract.json";

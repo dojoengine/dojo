@@ -149,16 +149,14 @@ fn create_stats_table(mut contracts_statistics: Vec<ContractStatistics>) -> Tabl
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use camino::Utf8PathBuf;
     use dojo_test_utils::compiler;
     use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
     use prettytable::{format, Cell, Row, Table};
     use sozo_ops::statistics::ContractStatistics;
 
+    use super::{create_stats_table, BuildArgs, *};
     use crate::commands::build::CONTRACT_NAME_LABEL;
-
-    use super::{create_stats_table, BuildArgs};
 
     // Uncomment once bindings support arrays.
     #[test]
