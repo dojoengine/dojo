@@ -1,7 +1,6 @@
 [package]
 description = "Collection of Cairo language dependencies that are used throughout Katana. Unifying the Cairo language based dependencies to avoid dependency conflict with the versions used by Dojo."
 edition.workspace = true
-license-file.workspace = true
 license.workspace = true
 name = "katana-cairo"
 repository.workspace = true
