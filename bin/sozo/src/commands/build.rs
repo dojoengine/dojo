@@ -9,6 +9,14 @@ use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
+const SIERRA_BYTECODE_SIZE_LABEL: &str = "[Sierra] Bytecode size (felts)";
+const SIERRA_CONTRACT_CLASS_SIZE_LABEL: &str = "[Sierra] Class size (bytes)";
+
+const CASM_BYTECODE_SIZE_LABEL: &str = "[Casm] Bytecode size (felts)";
+const CASM_CONTRACT_CLASS_SIZE_LABEL: &str = "[Casm] Class size (bytes)";
+
+const CONTRACT_NAME_LABEL: &str = "Contract";
+
 #[derive(Debug, Args)]
 pub struct BuildArgs {
     #[arg(long)]
@@ -101,20 +109,35 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
 
     // Add table headers
     table.set_titles(Row::new(vec![
-        Cell::new_align("Contract", format::Alignment::CENTER),
-        Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
-        Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
+        Cell::new_align(CONTRACT_NAME_LABEL, format::Alignment::CENTER),
+        Cell::new_align(SIERRA_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
+        Cell::new_align(SIERRA_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
+        Cell::new_align(CASM_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
+        Cell::new_align(CASM_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
     ]));
 
     for contract_stats in contracts_statistics {
         // Add table rows
         let contract_name = contract_stats.contract_name;
-        let number_felts = contract_stats.number_felts;
-        let file_size = contract_stats.file_size;
+
+        let sierra_bytecode_size = contract_stats.sierra_bytecode_size;
+        let sierra_contract_class_size = contract_stats.sierra_contract_class_size;
+
+        let casm_bytecode_size = contract_stats.casm_bytecode_size;
+        let casm_contract_class_size = contract_stats.casm_contract_class_size;
+
         table.add_row(Row::new(vec![
             Cell::new_align(&contract_name, format::Alignment::LEFT),
-            Cell::new_align(format!("{}", number_felts).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", file_size).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", sierra_bytecode_size).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(
+                format!("{}", sierra_contract_class_size).as_str(),
+                format::Alignment::RIGHT,
+            ),
+            Cell::new_align(format!("{}", casm_bytecode_size).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(
+                format!("{}", casm_contract_class_size).as_str(),
+                format::Alignment::RIGHT,
+            ),
         ]));
     }
 
@@ -123,11 +146,14 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use camino::Utf8PathBuf;
     use dojo_test_utils::compiler;
     use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
     use prettytable::{format, Cell, Row, Table};
     use sozo_ops::statistics::ContractStatistics;
+
+    use crate::commands::build::CONTRACT_NAME_LABEL;
 
     use super::{create_stats_table, BuildArgs};
 
@@ -156,42 +182,56 @@ mod tests {
         let contracts_statistics = vec![
             ContractStatistics {
                 contract_name: "Test1".to_string(),
-                number_felts: 33,
-                file_size: 33,
+                sierra_bytecode_size: 33,
+                sierra_contract_class_size: 33,
+                casm_bytecode_size: 66,
+                casm_contract_class_size: 66,
             },
             ContractStatistics {
                 contract_name: "Test2".to_string(),
-                number_felts: 43,
-                file_size: 24,
+                sierra_bytecode_size: 43,
+                sierra_contract_class_size: 24,
+                casm_bytecode_size: 86,
+                casm_contract_class_size: 48,
             },
             ContractStatistics {
                 contract_name: "Test3".to_string(),
-                number_felts: 36,
-                file_size: 12,
+                sierra_bytecode_size: 36,
+                sierra_contract_class_size: 12,
+                casm_bytecode_size: 72,
+                casm_contract_class_size: 24,
             },
         ];
 
         let mut expected_table = Table::new();
         expected_table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
         expected_table.set_titles(Row::new(vec![
-            Cell::new_align("Contract", format::Alignment::CENTER),
-            Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
-            Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
+            Cell::new_align(CONTRACT_NAME_LABEL, format::Alignment::CENTER),
+            Cell::new_align(SIERRA_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
+            Cell::new_align(SIERRA_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
+            Cell::new_align(CASM_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
+            Cell::new_align(CASM_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test1", format::Alignment::LEFT),
             Cell::new_align(format!("{}", 33).as_str(), format::Alignment::RIGHT),
             Cell::new_align(format!("{}", 33).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 66).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 66).as_str(), format::Alignment::RIGHT),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test2", format::Alignment::LEFT),
             Cell::new_align(format!("{}", 43).as_str(), format::Alignment::RIGHT),
             Cell::new_align(format!("{}", 24).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 86).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 48).as_str(), format::Alignment::RIGHT),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test3", format::Alignment::LEFT),
             Cell::new_align(format!("{}", 36).as_str(), format::Alignment::RIGHT),
             Cell::new_align(format!("{}", 12).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 72).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 24).as_str(), format::Alignment::RIGHT),
         ]));
 
         // Act

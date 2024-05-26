@@ -11615,6 +11615,7 @@ dependencies = [
  "cairo-lang-sierra",
  "cairo-lang-sierra-to-casm",
  "cairo-lang-starknet",
+ "cairo-lang-starknet-classes",
  "cairo-lang-test-plugin",
  "cairo-lang-test-runner",
  "cairo-lang-utils",

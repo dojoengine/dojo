@@ -1,5 +1,7 @@
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use std::fs::{self, File};
-use std::io::{self, BufReader};
+use std::io::{self, BufReader, Seek, SeekFrom};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -10,19 +12,36 @@ use starknet::core::types::FlattenedSierraClass;
 #[derive(Debug, PartialEq)]
 pub struct ContractStatistics {
     pub contract_name: String,
-    pub number_felts: u64,
-    pub file_size: u64,
+
+    pub sierra_bytecode_size: u64,
+    pub sierra_contract_class_size: u64,
+
+    pub casm_bytecode_size: u64,
+    pub casm_contract_class_size: u64,
 }
 
-fn read_sierra_json_program(file: &File) -> Result<FlattenedSierraClass> {
-    let contract_artifact: SierraClass = serde_json::from_reader(BufReader::new(file))?;
+fn read_sierra_json_program(file: &File) -> Result<(FlattenedSierraClass, CasmContractClass)> {
+    let mut buf_reader = BufReader::new(file);
+    let contract_artifact: SierraClass = serde_json::from_reader(&mut buf_reader)?;
+    buf_reader.seek(SeekFrom::Start(0)).unwrap();
+
+    let contract_class: ContractClass = serde_json::from_reader(&mut buf_reader)?;
+    buf_reader.seek(SeekFrom::Start(0)).unwrap();
+
+    let casm_contract_class: CasmContractClass =
+        CasmContractClass::from_contract_class(contract_class, false, usize::MAX)?;
+
     let contract_artifact: FlattenedSierraClass = contract_artifact.flatten()?;
 
-    Ok(contract_artifact)
+    Ok((contract_artifact, casm_contract_class))
 }
 
 fn get_sierra_byte_code_size(contract_artifact: FlattenedSierraClass) -> u64 {
     contract_artifact.sierra_program.len() as u64
+}
+
+fn get_casm_byte_code_size(contract_artifact: CasmContractClass) -> u64 {
+    contract_artifact.bytecode.len() as u64
 }
 
 fn get_file_size(file: &File) -> Result<u64, io::Error> {
@@ -32,11 +51,28 @@ fn get_file_size(file: &File) -> Result<u64, io::Error> {
 fn get_contract_statistics_for_file(
     contract_name: String,
     sierra_json_file: File,
-    contract_artifact: FlattenedSierraClass,
+    sierra_class: FlattenedSierraClass,
+    casm_class: CasmContractClass,
 ) -> Result<ContractStatistics> {
-    let file_size = get_file_size(&sierra_json_file).context("Error getting file size")?;
-    let number_felts = get_sierra_byte_code_size(contract_artifact);
-    Ok(ContractStatistics { file_size, contract_name, number_felts })
+    let sierra_contract_class_size =
+        get_file_size(&sierra_json_file).context("Error getting file size")?;
+    let sierra_bytecode_size = get_sierra_byte_code_size(sierra_class);
+
+    let casm_contract_class_size = serde_json::to_string(&casm_class)
+        .context("should be valid json")
+        .unwrap()
+        .len()
+        .try_into()
+        .unwrap();
+    let casm_bytecode_size = get_casm_byte_code_size(casm_class);
+
+    Ok(ContractStatistics {
+        contract_name,
+        sierra_bytecode_size,
+        sierra_contract_class_size,
+        casm_bytecode_size,
+        casm_contract_class_size,
+    })
 }
 
 pub fn get_contract_statistics_for_dir(
@@ -58,16 +94,14 @@ pub fn get_contract_statistics_for_dir(
         let sierra_json_file: File =
             File::open(&path).context(format!("Error opening file: {}", path.to_string_lossy()))?;
 
-        let contract_artifact: FlattenedSierraClass = read_sierra_json_program(&sierra_json_file)
-            .context(format!(
-            "Error parsing Sierra class artifact: {}",
-            path.to_string_lossy()
-        ))?;
+        let (sierra_class, casm_class) = read_sierra_json_program(&sierra_json_file)
+            .context(format!("Error parsing Sierra class artifact: {}", path.to_string_lossy()))?;
 
         contract_statistics.push(get_contract_statistics_for_file(
             contract_name,
             sierra_json_file,
-            contract_artifact,
+            sierra_class,
+            casm_class,
         )?);
     }
     Ok(contract_statistics)
@@ -79,6 +113,8 @@ mod tests {
     use std::path::Path;
 
     use camino::Utf8PathBuf;
+
+    use crate::statistics::get_casm_byte_code_size;
 
     use super::{
         get_contract_statistics_for_dir, get_contract_statistics_for_file, get_file_size,
@@ -94,16 +130,26 @@ mod tests {
     fn get_sierra_byte_code_size_returns_correct_size() {
         let sierra_json_file = File::open(TEST_SIERRA_JSON_CONTRACT)
             .unwrap_or_else(|err| panic!("Failed to open file: {}", err));
-        let flattened_sierra_class = read_sierra_json_program(&sierra_json_file)
+        let (flattened_sierra_class, casm_class) = read_sierra_json_program(&sierra_json_file)
             .unwrap_or_else(|err| panic!("Failed to read JSON program: {}", err));
-        const EXPECTED_NUMBER_OF_FELTS: u64 = 2175;
 
-        let number_of_felts = get_sierra_byte_code_size(flattened_sierra_class);
+        const SIERRA_EXPECTED_NUMBER_OF_FELTS: u64 = 2175;
+
+        let sierra_bytecode_size = get_sierra_byte_code_size(flattened_sierra_class);
+        let casm_bytecode_size = get_casm_byte_code_size(casm_class);
+
+        const CASM_EXPECTED_NUMBER_OF_FELTS: u64 = 4412;
 
         assert_eq!(
-            number_of_felts, EXPECTED_NUMBER_OF_FELTS,
-            "Number of felts mismatch. Expected {}, got {}",
-            EXPECTED_NUMBER_OF_FELTS, number_of_felts
+            sierra_bytecode_size, SIERRA_EXPECTED_NUMBER_OF_FELTS,
+            "[Sierra] Number of felts mismatch. Expected {}, got {}",
+            SIERRA_EXPECTED_NUMBER_OF_FELTS, sierra_bytecode_size
+        );
+
+        assert_eq!(
+            casm_bytecode_size, CASM_EXPECTED_NUMBER_OF_FELTS,
+            "[Casm] Number of felts mismatch. Expected {}, got {}",
+            CASM_EXPECTED_NUMBER_OF_FELTS, casm_bytecode_size
         );
     }
 
@@ -111,22 +157,32 @@ mod tests {
     fn get_contract_statistics_for_file_returns_correct_statistics() {
         let sierra_json_file = File::open(TEST_SIERRA_JSON_CONTRACT)
             .unwrap_or_else(|err| panic!("Failed to open file: {}", err));
-        let contract_artifact = read_sierra_json_program(&sierra_json_file)
+
+        let (sierra_class, casm_class) = read_sierra_json_program(&sierra_json_file)
             .unwrap_or_else(|err| panic!("Failed to read JSON program: {}", err));
+
         let filename = Path::new(TEST_SIERRA_JSON_CONTRACT)
             .file_stem()
             .expect("Error getting file name")
             .to_string_lossy()
             .to_string();
+
         let expected_contract_statistics: ContractStatistics = ContractStatistics {
             contract_name: String::from("test_contract"),
-            number_felts: 2175,
-            file_size: 114925,
+            sierra_bytecode_size: 2175,
+            sierra_contract_class_size: 114925,
+
+            casm_bytecode_size: 4412,
+            casm_contract_class_size: 95806,
         };
 
-        let statistics =
-            get_contract_statistics_for_file(filename.clone(), sierra_json_file, contract_artifact)
-                .expect("Error getting contract statistics for file");
+        let statistics = get_contract_statistics_for_file(
+            filename.clone(),
+            sierra_json_file,
+            sierra_class,
+            casm_class,
+        )
+        .expect("Error getting contract statistics for file");
 
         assert_eq!(statistics, expected_contract_statistics);
     }
