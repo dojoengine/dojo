@@ -103,7 +103,7 @@ impl BuildArgs {
     }
 }
 
-fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
+fn create_stats_table(mut contracts_statistics: Vec<ContractStatistics>) -> Table {
     let mut table = Table::new();
     table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
 
@@ -115,6 +115,9 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
         Cell::new_align(CASM_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
         Cell::new_align(CASM_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
     ]));
+
+    // sort contracts in alphabetical order
+    contracts_statistics.sort_by(|a, b| a.contract_name.cmp(&b.contract_name));
 
     for contract_stats in contracts_statistics {
         // Add table rows
