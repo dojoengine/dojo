@@ -136,7 +136,7 @@ fn updating_order_as_expected() {
 
     diff.update_order().unwrap();
 
-    let expected_order = vec!["c1", "c2", "c3", "c4", "c5", "c6", "c7"];
+    let expected_order = ["c1", "c2", "c3", "c4", "c5", "c6", "c7"];
     for (i, contract) in diff.contracts.iter().enumerate() {
         assert_eq!(contract.name, expected_order[i]);
     }

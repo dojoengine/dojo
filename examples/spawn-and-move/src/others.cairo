@@ -15,7 +15,17 @@ mod others {
     }
 
 
-    fn dojo_init(world: IWorldDispatcher, actions_address: ContractAddress, actions_class: ClassHash, value: u8) {
-        emit!(world, ContractInitialized { contract_address: actions_address, contract_class: actions_class, value });
+    fn dojo_init(
+        world: IWorldDispatcher,
+        actions_address: ContractAddress,
+        actions_class: ClassHash,
+        value: u8
+    ) {
+        emit!(
+            world,
+            ContractInitialized {
+                contract_address: actions_address, contract_class: actions_class, value
+            }
+        );
     }
 }

@@ -456,7 +456,8 @@ mod world {
             } else {
                 starknet::call_contract_syscall(
                     contract_address, selector!("dojo_init"), init_calldata
-                ).unwrap_syscall();
+                )
+                    .unwrap_syscall();
 
                 self.initialized_contract.write(contract_address.into(), true);
             }

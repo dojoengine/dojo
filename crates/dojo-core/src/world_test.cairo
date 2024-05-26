@@ -848,7 +848,10 @@ mod test_contract {}
 #[should_panic(expected: ('Only world can init', 'ENTRYPOINT_FAILED'))]
 fn test_can_call_init() {
     let world = deploy_world();
-    let address = world.deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
+    let address = world
+        .deploy_contract(
+            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
 
     let dojo_init = IDojoInitDispatcher { contract_address: address };
     dojo_init.dojo_init();

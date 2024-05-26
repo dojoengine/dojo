@@ -175,7 +175,7 @@ pub trait Deployable: Declarable + Sync {
         base_class_hash: FieldElement,
         account: &SingleOwnerAccount<P, S>,
         txn_config: &TxnConfig,
-        calldata: &Vec<String>,
+        calldata: &[String],
     ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,

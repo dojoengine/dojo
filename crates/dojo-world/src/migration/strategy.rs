@@ -66,7 +66,7 @@ impl MigrationStrategy {
             for field in contract.diff.constructor_calldata.iter_mut() {
                 if let Some(dependency) = field.strip_prefix("$contract_address:") {
                     let dependency_contract =
-                        contracts_clone.iter().find(|c| &c.diff.name == &dependency).unwrap();
+                        contracts_clone.iter().find(|c| c.diff.name == dependency).unwrap();
                     let contract_address = get_contract_address(
                         generate_salt(&dependency_contract.diff.name),
                         dependency_contract.diff.base_class_hash,
@@ -76,7 +76,7 @@ impl MigrationStrategy {
                     *field = contract_address.to_string();
                 } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
                     let dependency_contract =
-                        contracts_clone.iter().find(|c| &c.diff.name == &dependency).unwrap();
+                        contracts_clone.iter().find(|c| c.diff.name == dependency).unwrap();
                     *field = dependency_contract.diff.local_class_hash.to_string();
                 }
             }

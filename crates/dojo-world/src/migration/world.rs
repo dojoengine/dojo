@@ -129,7 +129,7 @@ impl WorldDiff {
                     ts.add_dependency(dependency, curr_name);
                 } else {
                     // verify its a field element
-                    match FieldElement::from_str(&field) {
+                    match FieldElement::from_str(field) {
                         Ok(_) => continue,
                         Err(e) => bail!(format!(
                             "Expected constructor_calldata element to be a special variable (i.e. \
@@ -158,7 +158,7 @@ impl WorldDiff {
         let mut new_contracts = vec![];
 
         for c_name in calculated_order {
-            let contract = match self.contracts.iter().find(|c| &c.name == c_name) {
+            let contract = match self.contracts.iter().find(|c| c.name == c_name) {
                 Some(c) => c,
                 None => bail!("Unidentified contract found in `constructor_calldata`"),
             };
