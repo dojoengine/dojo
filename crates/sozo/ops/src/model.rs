@@ -1,6 +1,6 @@
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use dojo_types::schema::deep_print_ty;
+use dojo_types::schema::Ty;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
@@ -525,4 +525,122 @@ fn deep_print_record(
     model_values.extend(values);
 
     println!("{}", format_record_value(schema, &mut model_values, 0, true));
+}
+
+fn get_ty_repr(ty: &Ty) -> String {
+    match ty {
+        Ty::Primitive(p) => p.to_string(),
+        Ty::Struct(s) => s.name.clone(),
+        Ty::Enum(e) => e.name.clone(),
+        Ty::Tuple(items) => {
+            if items.is_empty() {
+                "".to_string()
+            } else {
+                format!("({},)", items.iter().map(get_ty_repr).collect::<Vec<_>>().join(", "))
+            }
+        }
+        Ty::Array(items) => format!("Array<{}>", get_ty_repr(&items[0])),
+        Ty::ByteArray(_) => "ByteArray".to_string(),
+    }
+}
+
+// to verify if a Ty has already been processed (i.e is in the list),
+// just compare their type representation.
+fn is_ty_already_in_list(ty_list: &Vec<Ty>, ty: &Ty) -> bool {
+    let ty_repr = get_ty_repr(ty);
+    ty_list.iter().any(|t| get_ty_repr(t).eq(&ty_repr))
+}
+
+// parse the Ty tree from its root and extract Ty to print.
+// (basically, structs and enums)
+fn get_printable_ty_list(root_ty: &Ty, ty_list: &mut Vec<Ty>) {
+    match root_ty {
+        Ty::Primitive(_) => {}
+        Ty::ByteArray(_) => {}
+        Ty::Struct(s) => {
+            if !is_ty_already_in_list(ty_list, root_ty) {
+                ty_list.push(root_ty.clone());
+            }
+
+            for member in &s.children {
+                if !is_ty_already_in_list(ty_list, &member.ty) {
+                    get_printable_ty_list(&member.ty, ty_list);
+                }
+            }
+        }
+        Ty::Enum(e) => {
+            if !ty_list.contains(root_ty) {
+                ty_list.push(root_ty.clone());
+            }
+
+            for child in &e.options {
+                if !is_ty_already_in_list(ty_list, &child.ty) {
+                    get_printable_ty_list(&child.ty, ty_list);
+                }
+            }
+        }
+        Ty::Tuple(tuple) => {
+            for item_ty in tuple {
+                if !is_ty_already_in_list(ty_list, item_ty) {
+                    get_printable_ty_list(item_ty, ty_list);
+                }
+            }
+        }
+        Ty::Array(items_ty) => {
+            if !is_ty_already_in_list(ty_list, &items_ty[0]) {
+                get_printable_ty_list(&items_ty[0], ty_list)
+            }
+        }
+    };
+}
+
+pub fn format_ty_field(name: &String, ty: &Ty, is_key: bool) -> String {
+    let ty_repr = get_ty_repr(&ty);
+    let ty_repr = if ty_repr.is_empty() { "".to_string() } else { format!(": {ty_repr}") };
+    let key_repr = if is_key { "  #[key]\n".to_string() } else { "".to_string() };
+
+    format! {"{key_repr}  {name}{ty_repr}"}
+}
+
+// print Ty representation if required.
+// For example, there is no need to print any information about arrays or tuples
+// as they are members of struct and their items will be printed.
+pub fn print_ty(ty: &Ty) {
+    let ty_repr = match ty {
+        Ty::Struct(s) => {
+            let mut struct_str = format!("struct {} {{\n", s.name);
+            for member in &s.children {
+                struct_str.push_str(&format!(
+                    "{},\n",
+                    format_ty_field(&member.name, &member.ty, member.key)
+                ));
+            }
+            struct_str.push('}');
+            Some(struct_str)
+        }
+        Ty::Enum(e) => {
+            let mut enum_str = format!("enum {} {{\n", e.name);
+            for child in &e.options {
+                enum_str
+                    .push_str(&format!("{},\n", format_ty_field(&child.name, &child.ty, false)));
+            }
+            enum_str.push('}');
+            Some(enum_str)
+        }
+        _ => None,
+    };
+
+    if let Some(ty_repr) = ty_repr {
+        println!("{}\n\n", ty_repr);
+    }
+}
+
+// print the full Ty tree
+pub fn deep_print_ty(root: Ty) {
+    let mut ty_list = vec![];
+    get_printable_ty_list(&root, &mut ty_list);
+
+    for ty in ty_list {
+        print_ty(&ty);
+    }
 }
