@@ -245,12 +245,64 @@ impl<'a> Iterator for TyIter<'a> {
     }
 }
 
+// parse the Ty tree from its root and extract Ty to print.
+// (basically, structs and enums)
+fn get_printable_ty_list(root_ty: &Ty, ty_list: &mut Vec<Ty>) {
+    match root_ty {
+        Ty::Primitive(_) => {}
+        Ty::ByteArray(_) => {}
+        Ty::Struct(s) => {
+            if !ty_list.contains(root_ty) {
+                ty_list.push(root_ty.clone());
+            }
+
+            for member in &s.children {
+                if !ty_list.contains(&member.ty) {
+                    get_printable_ty_list(&member.ty, ty_list);
+                }
+            }
+        }
+        Ty::Enum(e) => {
+            if !ty_list.contains(root_ty) {
+                ty_list.push(root_ty.clone());
+            }
+
+            for child in &e.options {
+                if !ty_list.contains(&child.ty) {
+                    get_printable_ty_list(&child.ty, ty_list);
+                }
+            }
+        }
+        Ty::Tuple(tuple) => {
+            for item_ty in tuple {
+                if !ty_list.contains(item_ty) {
+                    get_printable_ty_list(item_ty, ty_list);
+                }
+            }
+        }
+        Ty::Array(items_ty) => {
+            if !ty_list.contains(&items_ty[0]) {
+                get_printable_ty_list(&items_ty[0], ty_list)
+            }
+        }
+    };
+}
+
+// print the full Ty tree
+pub fn deep_print_ty(root: Ty) {
+    let mut ty_list = vec![];
+    get_printable_ty_list(&root, &mut ty_list);
+
+    for ty in ty_list {
+        println!("{}\n\n", ty);
+    }
+}
+
 impl std::fmt::Display for Ty {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = self
             .iter()
             .filter_map(|ty| match ty {
-                Ty::Primitive(_) => None,
                 Ty::Struct(s) => {
                     let mut struct_str = format!("struct {} {{\n", s.name);
                     for member in &s.children {
@@ -272,6 +324,7 @@ impl std::fmt::Display for Ty {
                 }
                 Ty::Array(items_ty) => Some(format!("Array<{}>", items_ty[0].name())),
                 Ty::ByteArray(_) => Some("ByteArray".to_string()),
+                _ => None,
             })
             .collect::<Vec<_>>()
             .join("\n\n");

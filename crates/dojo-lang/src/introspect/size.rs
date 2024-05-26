@@ -32,29 +32,47 @@ pub fn compute_struct_layout_size(db: &dyn SyntaxGroup, struct_ast: &ItemStruct)
     build_size_function_body(&mut sizes, cumulated_sizes, is_dynamic_size)
 }
 
-pub fn compute_enum_layout_size(
+pub fn compute_enum_variant_sizes(
     db: &dyn SyntaxGroup,
     enum_ast: &ItemEnum,
-    identical_variants: bool,
-) -> String {
-    if identical_variants {
-        match enum_ast.variants(db).elements(db).first() {
-            Some(first_variant) => {
-                let (mut sizes, cumulated_sizes, is_dynamic_size) =
-                    match first_variant.type_clause(db) {
-                        OptionTypeClause::Empty(_) => (vec![], 0, false),
-                        OptionTypeClause::TypeClause(type_clause) => {
-                            get_field_size_from_type_clause(db, &type_clause)
-                        }
-                    };
-
-                // add 8 bits to store the variant identifier
-                sizes.insert(0, "8".to_string());
-
-                build_size_function_body(&mut sizes, cumulated_sizes, is_dynamic_size)
+) -> Vec<(Vec<String>, u32, bool)> {
+    enum_ast
+        .variants(db)
+        .elements(db)
+        .iter()
+        .map(|v| match v.type_clause(db) {
+            OptionTypeClause::Empty(_) => (vec![], 0, false),
+            OptionTypeClause::TypeClause(type_clause) => {
+                get_field_size_from_type_clause(db, &type_clause)
             }
-            None => "Option::None".to_string(),
-        }
+        })
+        .collect::<Vec<_>>()
+}
+
+pub fn is_enum_packable(variant_sizes: &[(Vec<String>, u32, bool)]) -> bool {
+    if variant_sizes.is_empty() {
+        return true;
+    }
+    let v0_fixed_size = variant_sizes[0].1;
+    variant_sizes.iter().all(|vs| vs.0.is_empty() && vs.1 == v0_fixed_size && !vs.2)
+}
+
+pub fn compute_enum_layout_size(variant_sizes: &[(Vec<String>, u32, bool)]) -> String {
+    if variant_sizes.is_empty() {
+        return "Option::None".to_string();
+    }
+
+    let v0 = variant_sizes[0].clone();
+    let identical_variants =
+        variant_sizes.iter().all(|vs| vs.0 == v0.0 && vs.1 == v0.1 && vs.2 == v0.2);
+
+    if identical_variants {
+        let (mut sizes, mut cumulated_sizes, is_dynamic_size) = v0;
+
+        // add one felt252 to store the variant identifier
+        cumulated_sizes += 1;
+
+        build_size_function_body(&mut sizes, cumulated_sizes, is_dynamic_size)
     } else {
         "Option::None".to_string()
     }
