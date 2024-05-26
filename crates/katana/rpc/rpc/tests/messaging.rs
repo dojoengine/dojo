@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use alloy::primitives::{Uint, B256, U256};
+use alloy::primitives::{Uint, U256};
 use alloy::sol;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
@@ -26,7 +26,6 @@ use tempfile::tempdir;
 mod common;
 
 sol!(
-    #[derive(Debug)]
     #[allow(missing_docs)]
     #[sol(rpc)]
     StarknetContract,
@@ -169,7 +168,8 @@ async fn test_messaging() {
         // Wait for the tx to be mined on L2 (Katana)
         tokio::time::sleep(Duration::from_secs(1)).await;
 
-        // In an l1_handler transaction, the first element of the calldata is always the Ethereum address of the sender (msg.sender).
+        // In an l1_handler transaction, the first element of the calldata is always the Ethereum
+        // address of the sender (msg.sender).
         let mut l1_tx_calldata = vec![FieldElement::from_byte_slice_be(sender.as_slice()).unwrap()];
         l1_tx_calldata.extend(calldata.iter().map(|x| FieldElement::from(*x)));
 
