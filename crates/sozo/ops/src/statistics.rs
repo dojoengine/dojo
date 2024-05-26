@@ -1,5 +1,6 @@
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
+use scarb_ui::Ui;
 use std::fs::{self, File};
 use std::io::{self, BufReader, Seek, SeekFrom};
 use std::path::PathBuf;
@@ -76,6 +77,7 @@ fn get_contract_statistics_for_file(
 }
 
 pub fn get_contract_statistics_for_dir(
+    ui: Ui,
     target_directory: &Utf8PathBuf,
 ) -> Result<Vec<ContractStatistics>> {
     let mut contract_statistics = Vec::new();
@@ -91,11 +93,23 @@ pub fn get_contract_statistics_for_dir(
         let contract_name: String =
             path.file_stem().context("Error getting file name")?.to_string_lossy().to_string();
 
+        // To ignore files like `contract.contract_class.json` or `contract.compiled_contract_class.json`
+        if contract_name.contains('.') {
+            continue;
+        }
+
         let sierra_json_file: File =
             File::open(&path).context(format!("Error opening file: {}", path.to_string_lossy()))?;
 
-        let (sierra_class, casm_class) = read_sierra_json_program(&sierra_json_file)
-            .context(format!("Error parsing Sierra class artifact: {}", path.to_string_lossy()))?;
+        let (sierra_class, casm_class) = match read_sierra_json_program(&sierra_json_file) {
+            Ok(s) => s,
+            Err(e) => {
+                ui.verbose(format!("Unable to process file: {:?}\nWith error: {e:?}", &path));
+                // skip any file which cannot be processed properly since there can be other file types in target folder
+                // for example casm contract class.
+                continue;
+            }
+        };
 
         contract_statistics.push(get_contract_statistics_for_file(
             contract_name,
@@ -113,6 +127,7 @@ mod tests {
     use std::path::Path;
 
     use camino::Utf8PathBuf;
+    use scarb_ui::Ui;
 
     use crate::statistics::get_casm_byte_code_size;
 
@@ -190,8 +205,9 @@ mod tests {
     #[test]
     fn get_contract_statistics_for_dir_returns_correct_statistics() {
         let target_dir = Utf8PathBuf::from(TEST_SIERRA_FOLDER_CONTRACTS);
+        let ui = Ui::new(scarb_ui::Verbosity::Normal, scarb_ui::OutputFormat::Text);
 
-        let contract_statistics = get_contract_statistics_for_dir(&target_dir)
+        let contract_statistics = get_contract_statistics_for_dir(ui, &target_dir)
             .unwrap_or_else(|_| panic!("Error getting contracts in dir {target_dir}"));
 
         assert_eq!(contract_statistics.len(), 1, "Mismatch number of contract statistics");
