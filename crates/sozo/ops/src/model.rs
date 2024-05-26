@@ -128,11 +128,7 @@ fn format_layout_ref(type_name: &str) -> String {
 
 fn format_selector(selector: String) -> String {
     if selector.starts_with("0x") {
-        if selector.len() > 14 {
-            format!("[{}...{}]", &selector[0..8], &selector[selector.len() - 7..])
-        } else {
-            format!("[{}]", selector)
-        }
+        format!("[{}]", selector)
     } else {
         selector
     }
