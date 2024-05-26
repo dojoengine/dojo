@@ -127,19 +127,11 @@ fn format_layout_ref(type_name: &str) -> String {
 }
 
 fn format_selector(selector: String) -> String {
-    if selector.starts_with("0x") {
-        format!("[{}]", selector)
-    } else {
-        selector
-    }
+    if selector.starts_with("0x") { format!("[{}]", selector) } else { selector }
 }
 
 fn format_name(name: String) -> String {
-    if !name.is_empty() {
-        format!(" {} ", name)
-    } else {
-        name
-    }
+    if !name.is_empty() { format!(" {} ", name) } else { name }
 }
 
 fn format_field(selector: String, name: String, layout: String) -> String {
@@ -386,11 +378,7 @@ fn deep_print_layout(
 }
 
 fn _start_indent(level: usize, start_indent: bool) -> String {
-    if start_indent {
-        INDENT.repeat(level)
-    } else {
-        "".to_string()
-    }
+    if start_indent { INDENT.repeat(level) } else { "".to_string() }
 }
 
 fn format_primitive(
@@ -399,7 +387,7 @@ fn format_primitive(
     level: usize,
     start_indent: bool,
 ) -> String {
-    let mut _p = p.clone();
+    let mut _p = *p;
     let _ = _p.deserialize(values);
 
     format!("{}{}", _start_indent(level, start_indent), _p.to_sql_value().unwrap())
@@ -443,7 +431,7 @@ fn format_array(
 }
 
 fn format_tuple(
-    items: &Vec<dojo_types::schema::Ty>,
+    items: &[dojo_types::schema::Ty],
     values: &mut Vec<FieldElement>,
     level: usize,
     start_indent: bool,
@@ -466,7 +454,7 @@ fn format_struct(
     let fields = schema
         .children
         .iter()
-        .map(|m| format_field_value(&m, values, level + 1))
+        .map(|m| format_field_value(m, values, level + 1))
         .collect::<Vec<_>>();
 
     format!(
@@ -485,8 +473,7 @@ fn format_enum(
 ) -> String {
     let variant_index: u8 = values.remove(0).try_into().unwrap();
     let variant_index: usize = variant_index.into();
-    let variant_name =
-        format!("{}::{}", schema.name, schema.options[variant_index].name.to_string());
+    let variant_name = format!("{}::{}", schema.name, schema.options[variant_index].name);
     let variant_data =
         format_record_value(&schema.options[variant_index].ty, values, level + 1, true);
 
@@ -546,7 +533,7 @@ fn get_ty_repr(ty: &Ty) -> String {
 
 // to verify if a Ty has already been processed (i.e is in the list),
 // just compare their type representation.
-fn is_ty_already_in_list(ty_list: &Vec<Ty>, ty: &Ty) -> bool {
+fn is_ty_already_in_list(ty_list: &[Ty], ty: &Ty) -> bool {
     let ty_repr = get_ty_repr(ty);
     ty_list.iter().any(|t| get_ty_repr(t).eq(&ty_repr))
 }
@@ -595,7 +582,7 @@ fn get_printable_ty_list(root_ty: &Ty, ty_list: &mut Vec<Ty>) {
 }
 
 pub fn format_ty_field(name: &String, ty: &Ty, is_key: bool) -> String {
-    let ty_repr = get_ty_repr(&ty);
+    let ty_repr = get_ty_repr(ty);
     let ty_repr = if ty_repr.is_empty() { "".to_string() } else { format!(": {ty_repr}") };
     let key_repr = if is_key { "  #[key]\n".to_string() } else { "".to_string() };
 

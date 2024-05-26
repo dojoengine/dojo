@@ -193,8 +193,8 @@ fn test_layout_of_enum_without_variant_data() {
     let layout = Introspect::<EnumNoData>::layout();
     let expected = _enum(array![ // One
     Option::None, // Two
-    Option::None, // Three
-    Option::None,]);
+     Option::None, // Three
+     Option::None,]);
 
     assert!(layout == expected);
 }

@@ -204,9 +204,9 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
         Layout::Enum(
             array![
                 FieldLayout { // Some
-                selector: 0, layout: Introspect::<T>::layout() },
+                 selector: 0, layout: Introspect::<T>::layout() },
                 FieldLayout { // None
-                selector: 1, layout: Layout::Fixed(array![].span()) },
+                 selector: 1, layout: Layout::Fixed(array![].span()) },
             ]
                 .span()
         )
