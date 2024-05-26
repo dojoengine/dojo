@@ -36,7 +36,12 @@ async fn test_entities_queries() {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
     let base_path = "../../../examples/spawn-and-move";
     let target_path = format!("{}/target/dev", base_path);
-    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+
+    let mut migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
+
+    dbg!(&migration);
+
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));

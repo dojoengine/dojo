@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
-use katana_primitives::utils::transaction::compute_l1_message_hash;
+use katana_primitives::utils::transaction::compute_l2_to_l1_message_hash;
 use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement};
 use starknet::core::utils::starknet_keccak;
@@ -336,7 +336,8 @@ fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L
     let mut calldata = vec![from_address];
     calldata.extend(&event.data[3..]);
 
-    let message_hash = compute_l1_message_hash(from_address, to_address, &calldata);
+    // TODO: this should be using the l1 -> l2 hash computation instead.
+    let message_hash = compute_l2_to_l1_message_hash(from_address, to_address, &calldata);
 
     Ok(L1HandlerTx {
         nonce,
@@ -469,7 +470,7 @@ mod tests {
             transaction_hash,
         };
 
-        let message_hash = compute_l1_message_hash(from_address, to_address, &calldata);
+        let message_hash = compute_l2_to_l1_message_hash(from_address, to_address, &calldata);
 
         let expected = L1HandlerTx {
             nonce,

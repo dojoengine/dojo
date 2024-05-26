@@ -19,9 +19,7 @@ use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
-};
+use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -43,7 +41,7 @@ async fn migrate_with_auto_mine() {
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -122,7 +120,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
         &base.to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
@@ -172,7 +170,7 @@ async fn migrate_with_metadata() {
     let resource = world_reader.metadata(&FieldElement::ZERO).call().await.unwrap();
     let element_name = WORLD_CONTRACT_NAME.to_string();
 
-    let full_uri = get_and_check_metadata_uri(&element_name, &resource.metadata_uri);
+    let full_uri = resource.metadata_uri.to_string().unwrap();
     let resource_bytes = get_ipfs_resource_data(&client, &element_name, &full_uri).await;
 
     let metadata = resource_bytes_to_world_metadata(&resource_bytes, &element_name);
@@ -219,7 +217,8 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let mut migration = setup::setup_migration(&config).unwrap();
+    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =
@@ -238,11 +237,7 @@ async fn migrate_with_auto_authorize() {
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let txn_config = TxnConfig {
-        // make sure to test the assumption after transaction has been confirmed
-        wait: true,
-        ..Default::default()
-    };
+    let txn_config = TxnConfig::init_wait();
 
     let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
 
@@ -263,9 +258,10 @@ async fn migrate_with_auto_authorize() {
         let contract = manifest.contracts.iter().find(|a| a.name == c.diff.name).unwrap();
 
         for model in &contract.inner.writes {
-            let model = cairo_short_string_to_felt(model).unwrap();
+            let model_selector = get_selector_from_name(model).unwrap();
             let contract_address = ContractAddress(contract_address);
-            let is_writer = world_reader.is_writer(&model, &contract_address).call().await.unwrap();
+            let is_writer =
+                world_reader.is_writer(&model_selector, &contract_address).call().await.unwrap();
             assert!(is_writer);
         }
     }
@@ -469,47 +465,6 @@ async fn check_ipfs_metadata(
     check_artifact_fields(client, &metadata, expected_metadata, element_name).await;
 }
 
-/// Rebuild the full metadata URI from an array of 3 FieldElement.
-///
-/// # Arguments
-///
-/// * `element_name` - name of the element (model or contract) linked to the metadata URI.
-/// * `uri` - uri as an array of 3 FieldElement.
-///
-/// # Returns
-///
-/// A [`String`] containing the full metadata URI.
-fn get_and_check_metadata_uri(element_name: &String, uri: &Vec<FieldElement>) -> String {
-    assert!(uri.len() == 3, "bad metadata URI length for {} ({:#?})", element_name, uri);
-
-    let mut i = 0;
-    let mut full_uri = "".to_string();
-
-    while i < uri.len() && uri[i] != FieldElement::ZERO {
-        let uri_str = parse_cairo_short_string(&uri[i]);
-        assert!(
-            uri_str.is_ok(),
-            "unable to parse the part {} of the metadata URI for {}",
-            i + 1,
-            element_name
-        );
-
-        full_uri = format!("{}{}", full_uri, uri_str.unwrap());
-
-        i += 1;
-    }
-
-    assert!(!full_uri.is_empty(), "metadata URI is empty for {}", element_name);
-
-    assert!(
-        full_uri.starts_with("ipfs://"),
-        "metadata URI for {} is not an IPFS artifact",
-        element_name
-    );
-
-    full_uri
-}
-
 /// Check an artifact metadata read from the resource registry against its value
 /// in the local Dojo metadata.
 ///
@@ -537,6 +492,11 @@ async fn check_artifact_metadata<P: starknet::providers::Provider + Sync>(
     );
     let expected_artifact = expected_artifact.unwrap();
 
-    let full_uri = get_and_check_metadata_uri(element_name, &resource.metadata_uri);
-    check_ipfs_metadata(client, element_name, &full_uri, expected_artifact).await;
+    check_ipfs_metadata(
+        client,
+        element_name,
+        &resource.metadata_uri.to_string().unwrap(),
+        expected_artifact,
+    )
+    .await;
 }

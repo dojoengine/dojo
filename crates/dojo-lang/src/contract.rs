@@ -10,7 +10,7 @@ use cairo_lang_syntax::attribute::structured::{
 };
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 
@@ -104,7 +104,7 @@ impl DojoContract {
                 body_nodes.append(&mut system.create_storage())
             }
 
-            let mut builder = PatchBuilder::new(db);
+            let mut builder = PatchBuilder::new(db, &module_ast);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
                 #[starknet::contract]
@@ -114,7 +114,8 @@ impl DojoContract {
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
-                   
+
+
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
                  upgradeable, event: UpgradeableEvent);
 
@@ -145,12 +146,12 @@ impl DojoContract {
                 ]),
             ));
 
-            // println!("{}", builder.code);
+            let (code, code_mappings) = builder.build();
 
             return PluginResult {
                 code: Some(PluginGeneratedFile {
                     name: name.clone(),
-                    content: builder.code,
+                    content: code,
                     aux_data: Some(DynGeneratedFileAuxData::new(DojoAuxData {
                         models: vec![],
                         systems: vec![SystemAuxData {
@@ -159,7 +160,7 @@ impl DojoContract {
                         }],
                         events: vec![],
                     })),
-                    code_mappings: builder.code_mappings,
+                    code_mappings,
                 }),
                 diagnostics: system.diagnostics,
                 remove_original_item: true,
@@ -529,7 +530,7 @@ impl DojoContract {
                 })
                 .collect();
 
-            let mut builder = PatchBuilder::new(db);
+            let mut builder = PatchBuilder::new(db, &impl_ast);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "$body$",
                 &UnorderedHashMap::from([(
@@ -543,7 +544,9 @@ impl DojoContract {
                 .modify_child(db, ast::ItemImpl::INDEX_BODY)
                 .modify_child(db, ast::ImplBody::INDEX_ITEMS);
 
-            rewritten_items.set_str(builder.code);
+            let (code, _) = builder.build();
+
+            rewritten_items.set_str(code);
             return vec![rewritten_impl];
         }
 
@@ -562,7 +565,7 @@ pub(crate) fn extract_allow_ref_self(
 
     #[allow(clippy::collapsible_match)]
     match &attr.args[..] {
-        [AttributeArg { variant: AttributeArgVariant::Unnamed { value, .. }, .. }] => match value {
+        [AttributeArg { variant: AttributeArgVariant::Unnamed(value), .. }] => match value {
             ast::Expr::Path(path)
                 if path.as_syntax_node().get_text_without_trivia(db) == ALLOW_REF_SELF_ARG =>
             {

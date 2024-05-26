@@ -30,14 +30,16 @@ enum Emote {
     Love,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
 struct EmoteMessage {
     #[key]
     identity: ContractAddress,
     emote: Emote,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
 struct Moves {
     #[key]
     player: ContractAddress,
@@ -51,11 +53,28 @@ struct Vec2 {
     y: u32
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
 struct Position {
     #[key]
     player: ContractAddress,
     vec: Vec2,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct PlayerItem {
+    item_id: u32,
+    quantity: u32,
+}
+
+#[derive(Drop, Serde)]
+#[dojo::model]
+struct PlayerConfig {
+    #[key]
+    player: ContractAddress,
+    name: ByteArray,
+    items: Array<PlayerItem>,
+    favorite_item: Option<u32>,
 }
 
 trait Vec2Trait {

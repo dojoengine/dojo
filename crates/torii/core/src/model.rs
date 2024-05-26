@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::model::ModelReader;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
@@ -21,9 +22,9 @@ pub struct ModelSQLReader {
     /// The contract address of the model
     contract_address: FieldElement,
     pool: Pool<Sqlite>,
-    packed_size: FieldElement,
-    unpacked_size: FieldElement,
-    layout: Vec<FieldElement>,
+    packed_size: u32,
+    unpacked_size: u32,
+    layout: Layout,
 }
 
 impl ModelSQLReader {
@@ -47,11 +48,8 @@ impl ModelSQLReader {
             FieldElement::from_hex_be(&class_hash).map_err(error::ParseError::FromStr)?;
         let contract_address =
             FieldElement::from_hex_be(&contract_address).map_err(error::ParseError::FromStr)?;
-        let packed_size = FieldElement::from(packed_size);
-        let unpacked_size = FieldElement::from(unpacked_size);
 
-        let layout = hex::decode(layout).unwrap();
-        let layout = layout.iter().map(|e| FieldElement::from(*e)).collect();
+        let layout = serde_json::from_str(&layout).map_err(error::ParseError::FromJsonStr)?;
 
         Ok(Self { name, class_hash, contract_address, pool, packed_size, unpacked_size, layout })
     }
@@ -62,6 +60,11 @@ impl ModelSQLReader {
 impl ModelReader<Error> for ModelSQLReader {
     fn name(&self) -> String {
         self.name.to_string()
+    }
+
+    fn selector(&self) -> FieldElement {
+        // this should never fail
+        get_selector_from_name(&self.name).unwrap()
     }
 
     fn class_hash(&self) -> FieldElement {
@@ -88,15 +91,15 @@ impl ModelReader<Error> for ModelSQLReader {
         Ok(parse_sql_model_members(&self.name, &model_members))
     }
 
-    async fn packed_size(&self) -> Result<FieldElement, Error> {
+    async fn packed_size(&self) -> Result<u32, Error> {
         Ok(self.packed_size)
     }
 
-    async fn unpacked_size(&self) -> Result<FieldElement, Error> {
+    async fn unpacked_size(&self) -> Result<u32, Error> {
         Ok(self.unpacked_size)
     }
 
-    async fn layout(&self) -> Result<Vec<FieldElement>, Error> {
+    async fn layout(&self) -> Result<Layout, Error> {
         Ok(self.layout.clone())
     }
 }
@@ -118,58 +121,89 @@ pub struct SqlModelMember {
 // `id` is the type id of the model member
 /// A helper function to parse the model members from sql table to `Ty`
 pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]) -> Ty {
-    fn parse_sql_model_members_impl(
-        path: &str,
-        r#type: &str,
-        model_members_all: &[SqlModelMember],
-    ) -> Ty {
-        let children = model_members_all
-            .iter()
-            .filter(|member| member.id == path)
-            .map(|child| match child.type_enum.as_ref() {
-                "Primitive" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    ty: Ty::Primitive(child.r#type.parse().unwrap()),
-                },
+    fn parse_sql_member(member: &SqlModelMember, model_members_all: &[SqlModelMember]) -> Ty {
+        match member.type_enum.as_str() {
+            "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
+            "ByteArray" => Ty::ByteArray("".to_string()),
+            "Struct" => {
+                let children = model_members_all
+                    .iter()
+                    .filter(|m| m.id == format!("{}${}", member.id, member.name))
+                    .map(|child| Member {
+                        key: child.key,
+                        name: child.name.to_owned(),
+                        ty: parse_sql_member(child, model_members_all),
+                    })
+                    .collect::<Vec<Member>>();
 
-                "Struct" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    ty: parse_sql_model_members_impl(
-                        &format!("{}${}", child.id, child.name),
-                        &child.r#type,
-                        model_members_all,
-                    ),
-                },
+                Ty::Struct(Struct { name: member.r#type.clone(), children })
+            }
+            "Enum" => {
+                let options = member
+                    .enum_options
+                    .as_ref()
+                    .expect("qed; enum_options should exist")
+                    .split(',')
+                    .map(|s| {
+                        let member = if let Some(member) = model_members_all.iter().find(|m| {
+                            m.id == format!("{}${}", member.id, member.name) && m.name == s
+                        }) {
+                            parse_sql_member(member, model_members_all)
+                        } else {
+                            Ty::Tuple(vec![])
+                        };
 
-                "Enum" => Member {
-                    key: child.key,
-                    name: child.name.to_owned(),
-                    ty: Ty::Enum(Enum {
-                        option: None,
-                        name: child.r#type.to_owned(),
-                        options: child
-                            .enum_options
-                            .as_ref()
-                            .expect("qed; enum_options should exist")
-                            .split(',')
-                            .map(|s| EnumOption { name: s.to_owned(), ty: Ty::Tuple(vec![]) })
-                            .collect::<Vec<_>>(),
-                    }),
-                },
+                        EnumOption { name: s.to_owned(), ty: member }
+                    })
+                    .collect::<Vec<EnumOption>>();
 
-                ty => {
-                    unimplemented!("unimplemented type_enum: {ty}");
-                }
-            })
-            .collect::<Vec<Member>>();
+                Ty::Enum(Enum { option: None, name: member.r#type.clone(), options })
+            }
+            "Tuple" => {
+                let children = model_members_all
+                    .iter()
+                    .filter(|m| m.id == format!("{}${}", member.id, member.name))
+                    .map(|child| Member {
+                        key: child.key,
+                        name: child.name.to_owned(),
+                        ty: parse_sql_member(child, model_members_all),
+                    })
+                    .collect::<Vec<Member>>();
 
-        // refer to the sql table for `model_members`
-        Ty::Struct(Struct { name: r#type.into(), children })
+                Ty::Tuple(children.into_iter().map(|m| m.ty).collect())
+            }
+            "Array" => {
+                let children = model_members_all
+                    .iter()
+                    .filter(|m| m.id == format!("{}${}", member.id, member.name))
+                    .map(|child| Member {
+                        key: child.key,
+                        name: child.name.to_owned(),
+                        ty: parse_sql_member(child, model_members_all),
+                    })
+                    .collect::<Vec<Member>>();
+
+                Ty::Array(children.into_iter().map(|m| m.ty).collect())
+            }
+            ty => {
+                unimplemented!("unimplemented type_enum: {ty}");
+            }
+        }
     }
 
-    parse_sql_model_members_impl(model, model, model_members_all)
+    Ty::Struct(Struct {
+        name: model.into(),
+        children: model_members_all
+            .iter()
+            .filter(|m| m.id == model)
+            .map(|m| Member {
+                key: m.key,
+                name: m.name.to_owned(),
+                ty: parse_sql_member(m, model_members_all),
+            })
+            .collect::<Vec<Member>>(),
+    })
+    // parse_sql_model_members_impl(model, model, model_members_all)
 }
 
 /// Creates a query that fetches all models and their nested data.

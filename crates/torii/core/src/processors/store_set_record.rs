@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, MaybePendingTransactionReceipt};
-use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use tracing::info;
 
@@ -48,15 +47,15 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
+        let selector = event.data[MODEL_INDEX];
+
+        let model = db.model(&format!("{:#x}", selector)).await?;
+
         info!(
             target: LOG_TARGET,
-            name = %name,
+            name = %model.name(),
             "Store set record.",
         );
-
-        // this is temporary until the model name hash is precomputed
-        let model = db.model(&format!("{:#x}", get_selector_from_name(&name)?)).await?;
 
         let keys_start = NUM_KEYS_INDEX + 1;
         let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);

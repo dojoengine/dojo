@@ -17,6 +17,8 @@ pub enum TypeData {
     Simple(TypeRef),
     Nested((TypeRef, IndexMap<Name, TypeData>)),
     List(Box<TypeData>),
+    // Union can only  represent an object of objects
+    // Enum((TypeRef, IndexMap<Name, TypeData>)),
 }
 
 impl TypeData {
@@ -24,6 +26,7 @@ impl TypeData {
         match self {
             TypeData::Simple(ty) | TypeData::Nested((ty, _)) => ty.clone(),
             TypeData::List(inner) => TypeRef::List(Box::new(inner.type_ref())),
+            // TypeData::Enum((ty, _)) => ty.clone(),
         }
     }
 
@@ -35,11 +38,20 @@ impl TypeData {
         matches!(self, TypeData::Nested(_))
     }
 
+    pub fn is_list(&self) -> bool {
+        matches!(self, TypeData::List(_))
+    }
+
+    // pub fn is_enum(&self) -> bool {
+    //     matches!(self, TypeData::Enum(_))
+    // }
+
     pub fn type_mapping(&self) -> Option<&IndexMap<Name, TypeData>> {
         match self {
             TypeData::Simple(_) => None,
             TypeData::Nested((_, type_mapping)) => Some(type_mapping),
-            TypeData::List(inner) => inner.type_mapping(),
+            TypeData::List(_) => None,
+            // TypeData::Enum((_, type_mapping)) => Some(type_mapping),
         }
     }
 }
@@ -53,6 +65,7 @@ pub enum ScalarType {
 // basic types like ID and Int are handled by async-graphql
 #[derive(AsRefStr, Display, EnumIter, EnumString, Debug)]
 pub enum GraphqlType {
+    ByteArray,
     Enum,
     Cursor,
     DateTime,

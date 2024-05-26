@@ -4,8 +4,9 @@ mod others {
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
 
-    #[derive(Model, Copy, Drop, Serde)]
+    #[derive(Copy, Drop, Serde)]
     #[dojo::event]
+    #[dojo::model]
     struct ContractInitialized {
         #[key]
         contract_address: ContractAddress,
@@ -18,4 +19,3 @@ mod others {
         emit!(world, ContractInitialized { contract_address: actions_address, contract_class: actions_class, value });
     }
 }
-
