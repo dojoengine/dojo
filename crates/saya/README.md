@@ -173,7 +173,7 @@ The <PROVER_KEY> is the private key produced by `cargo run -p keygen` in the abo
 
 ```bash
 cargo run -r --bin saya -- \
-    --rpc-url http://localhost:5060 \
+    --rpc-url http://localhost:5050 \
     --registry <FACT_REGISTRY> \
     --world <WORLD_ADDRESS> \
     --prover-url <PROVER_URL> \
