@@ -4,8 +4,6 @@ use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, StorageKey};
 use katana_primitives::transaction::TxNumber;
 
-use crate::providers::fork::backend::ForkedBackendError;
-
 /// Possible errors returned by the storage provider.
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
@@ -54,6 +52,10 @@ pub enum ProviderError {
     /// Error when a transaction receipt is not found but the transaction exists.
     #[error("Missing transaction receipt for tx number {0}")]
     MissingTxReceipt(TxNumber),
+
+    /// Error when a transaction execution info is not found but the transaction exists.
+    #[error("Missing transaction execution for tx number {0}")]
+    MissingTxExecution(TxNumber),
 
     /// Error when a compiled class hash is not found but the class hash exists.
     #[error("Missing compiled class hash for class hash {0:#x}")]
@@ -104,7 +106,7 @@ pub enum ProviderError {
     /// [ForkedProvider](crate::providers::fork::ForkedProvider).
     #[cfg(feature = "fork")]
     #[error(transparent)]
-    ForkedBackend(#[from] ForkedBackendError),
+    ForkedBackend(#[from] crate::providers::fork::backend::BackendError),
 
     /// Any error that is not covered by the other variants.
     #[error("soemthing went wrong: {0}")]

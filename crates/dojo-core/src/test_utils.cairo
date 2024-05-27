@@ -99,3 +99,25 @@ fn end(start: u128, name: felt252) {
     let used_gas = (start - gas_after - 1070).into() * GAS_OFFSET;
     (used_gas + name).print();
 }
+
+// assert that `value` and `expected` have the same size and the same content
+fn assert_array(value: Span<felt252>, expected: Span<felt252>) {
+    assert!(value.len() == expected.len(), "Bad array length");
+
+    let mut i = 0;
+    loop {
+        if i >= value.len() {
+            break;
+        }
+
+        assert!(
+            *value.at(i) == *expected.at(i),
+            "Bad array value [{}] (expected: {} got: {})",
+            i,
+            *expected.at(i),
+            *value.at(i)
+        );
+
+        i += 1;
+    }
+}

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::PathBuf;
 use std::{env, fs, io};
 
@@ -8,12 +8,30 @@ use camino::{Utf8Path, Utf8PathBuf};
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::{compile_workspace, CompileInfo};
-use scarb::compiler::CompilerRepository;
+use scarb::compiler::{CompilationUnit, CompilerRepository};
 use scarb::core::{Config, TargetKind};
 use scarb::ops;
-use scarb::ops::CompileOpts;
+use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use scarb_ui::Verbosity;
 use toml::{Table, Value};
+
+/// Copies a project into a temporary directory and loads a config from the copied project.
+///
+/// # Returns
+///
+/// A [`Config`] object loaded from the spawn-and-moves Scarb.toml file.
+pub fn copy_tmp_config(source_project_dir: &Utf8PathBuf, dojo_core_path: &Utf8PathBuf) -> Config {
+    let temp_project_dir = Utf8PathBuf::from(
+        assert_fs::TempDir::new().unwrap().to_path_buf().to_string_lossy().to_string(),
+    );
+
+    let temp_project_path = temp_project_dir.join("Scarb").with_extension("toml").to_string();
+
+    // Copy all the files, including manifests. As we will not re-build, mostly only migrate.
+    copy_project_temp(source_project_dir, &temp_project_dir, dojo_core_path, &[]).unwrap();
+
+    build_test_config(&temp_project_path).unwrap_or_else(|c| panic!("Error loading config: {c:?}"))
+}
 
 /// Copies a project to a new location, excluding the manifests
 /// and target directories, build the temporary project and
@@ -28,6 +46,7 @@ use toml::{Table, Value};
 ///   it wisely.
 pub fn copy_build_project_temp(
     source_project_path: &str,
+    dojo_core_path: &str,
     do_build: bool,
 ) -> (Utf8PathBuf, Config, Option<CompileInfo>) {
     let source_project_dir = Utf8PathBuf::from(source_project_path).parent().unwrap().to_path_buf();
@@ -36,17 +55,28 @@ pub fn copy_build_project_temp(
         assert_fs::TempDir::new().unwrap().to_path_buf().to_string_lossy().to_string(),
     );
 
-    let temp_project_path = temp_project_dir.join(&"Scarb").with_extension("toml").to_string();
+    let temp_project_path = temp_project_dir.join("Scarb").with_extension("toml").to_string();
 
-    copy_project_temp(&source_project_dir, &temp_project_dir).unwrap();
+    let dojo_core_path = Utf8PathBuf::from(dojo_core_path);
+    let ignore_dirs = ["manifests", "target"];
 
-    let config = build_test_config_default(&temp_project_path).unwrap();
+    copy_project_temp(&source_project_dir, &temp_project_dir, &dojo_core_path, &ignore_dirs)
+        .unwrap();
+
+    let config = build_test_config(&temp_project_path).unwrap();
+
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
     let compile_info = if do_build {
         Some(
             compile_workspace(
                 &config,
-                CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+                CompileOpts {
+                    include_targets: vec![],
+                    exclude_targets: vec![TargetKind::TEST],
+                    features: features_opts,
+                },
             )
             .unwrap(),
         )
@@ -65,14 +95,14 @@ pub fn copy_build_project_temp(
 pub fn copy_project_temp(
     source_dir: &Utf8PathBuf,
     destination_dir: &Utf8PathBuf,
+    dojo_core_path: &Utf8PathBuf,
+    ignore_dirs: &[&str],
 ) -> io::Result<()> {
-    let ignore_dirs = vec!["manifests", "target"];
-
     if !destination_dir.exists() {
-        fs::create_dir_all(&destination_dir)?;
+        fs::create_dir_all(destination_dir)?;
     }
 
-    for entry in fs::read_dir(&source_dir)? {
+    for entry in fs::read_dir(source_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_dir() {
@@ -88,37 +118,35 @@ pub fn copy_project_temp(
             copy_project_temp(
                 &Utf8PathBuf::from_path_buf(path).unwrap(),
                 &destination_dir.join(dir_name),
+                dojo_core_path,
+                ignore_dirs,
             )?;
         } else {
             let file_name = entry.file_name().to_string_lossy().to_string();
             let dest_path = destination_dir.join(&file_name);
 
+            fs::copy(&path, &dest_path)?;
+
             // Replace in the Scarb.toml the path of dojo crate with the
             // absolute path.
             if file_name == "Scarb.toml" {
                 let mut contents = String::new();
-                File::open(&path)
+                File::open(&dest_path)
                     .and_then(|mut file| file.read_to_string(&mut contents))
-                    .expect(&format!("Failed to read {file_name}"));
+                    .unwrap_or_else(|_| panic!("Failed to read {file_name}"));
 
                 let mut table = contents.parse::<Table>().expect("Failed to parse Scab.toml");
 
                 let dojo = table["dependencies"]["dojo"].as_table_mut().unwrap();
 
-                let absolute_path = Value::String(
-                    fs::canonicalize(Utf8PathBuf::from(dojo["path"].as_str().unwrap()))
-                        .unwrap()
-                        .to_string_lossy()
-                        .to_string(),
-                );
+                if dojo.contains_key("path") {
+                    dojo["path"] = Value::String(
+                        fs::canonicalize(dojo_core_path).unwrap().to_string_lossy().to_string(),
+                    );
 
-                dojo["path"] = absolute_path;
-
-                File::create(&dest_path)
-                    .and_then(|mut file| file.write_all(table.to_string().as_bytes()))
-                    .expect("Failed to write to Scab.toml");
-            } else {
-                fs::copy(path, dest_path)?;
+                    fs::write(dest_path.to_path_buf(), table.to_string().as_bytes())
+                        .expect("Failed to write to Scab.toml");
+                }
             }
         }
     }
@@ -126,14 +154,28 @@ pub fn copy_project_temp(
     Ok(())
 }
 
-pub fn build_test_config_default(path: &str) -> anyhow::Result<Config> {
+/// Builds a test config with a temporary cache directory.
+///
+/// As manifests files are not related to the target_dir, it is recommended
+/// to use copy_build_project_temp to copy the project to a temporary location
+/// and build the config from there. This ensures safe and non conflicting
+/// manipulation of the artifacts and manifests.
+///
+/// # Arguments
+///
+/// * `path` - The path to the Scarb.toml file to build the config for.
+pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
     let cairo_plugins = CairoPluginRepository::default();
 
+    // If the cache_dir is not overriden, we can't run tests in parallel.
+    let cache_dir = TempDir::new().unwrap();
+
     let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
     Config::builder(path.canonicalize_utf8().unwrap())
+        .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .compilers(compilers)
@@ -141,54 +183,21 @@ pub fn build_test_config_default(path: &str) -> anyhow::Result<Config> {
         .build()
 }
 
-pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
-    build_full_test_config(path, true)
-}
-
-pub fn build_full_test_config(path: &str, override_dirs: bool) -> anyhow::Result<Config> {
-    let mut compilers = CompilerRepository::empty();
-    compilers.add(Box::new(DojoCompiler)).unwrap();
-
-    let cairo_plugins = CairoPluginRepository::default();
-    let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
-
-    if override_dirs {
-        let cache_dir = TempDir::new().unwrap();
-        let config_dir = TempDir::new().unwrap();
-        let target_dir = TempDir::new().unwrap();
-
-        Config::builder(path.canonicalize_utf8().unwrap())
-            .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
-            .global_config_dir_override(Some(Utf8Path::from_path(config_dir.path()).unwrap()))
-            .target_dir_override(Some(
-                Utf8Path::from_path(target_dir.path()).unwrap().to_path_buf(),
-            ))
-            .ui_verbosity(Verbosity::Verbose)
-            .log_filter_directive(env::var_os("SCARB_LOG"))
-            .compilers(compilers)
-            .cairo_plugins(cairo_plugins.into())
-            .build()
-    } else {
-        Config::builder(path.canonicalize_utf8().unwrap())
-            .ui_verbosity(Verbosity::Verbose)
-            .log_filter_directive(env::var_os("SCARB_LOG"))
-            .compilers(compilers)
-            .cairo_plugins(cairo_plugins.into())
-            .build()
-    }
-}
-
 pub fn corelib() -> PathBuf {
     let config = build_test_config("./src/manifest_test_data/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     let resolve = ops::resolve_workspace(&ws).unwrap();
-    let compilation_units = ops::generate_compilation_units(&resolve, &ws).unwrap();
-    compilation_units[0]
-        .core_package_component()
-        .expect("should have component")
-        .target
-        .source_root()
-        .into()
+
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+
+    let compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws).unwrap();
+
+    if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
+        unit.core_package_component().expect("should have component").target.source_root().into()
+    } else {
+        panic!("should have cairo compilation unit")
+    }
 }
 
 #[cfg(test)]
@@ -211,27 +220,30 @@ mod tests {
 
         // Create a file in the project directory
         let file_path = project_dir.join("file.txt");
-        let mut file = File::create(&file_path).unwrap();
+        let mut file = File::create(file_path).unwrap();
         writeln!(file, "Hello, world!").unwrap();
 
         // Create a subdirectory with a file in the project directory
         let sub_dir = project_dir.join("subdir");
         fs::create_dir(&sub_dir).unwrap();
         let sub_file_path = sub_dir.join("subfile.txt");
-        let mut sub_file = File::create(&sub_file_path).unwrap();
+        let mut sub_file = File::create(sub_file_path).unwrap();
         writeln!(sub_file, "Hello, from subdir!").unwrap();
 
         // Create a subdir that should be ignored
         let ignored_sub_dir = project_dir.join("manifests");
         fs::create_dir(&ignored_sub_dir).unwrap();
         let ignored_sub_file_path = ignored_sub_dir.join("ignored_file.txt");
-        let mut ignored_sub_file = File::create(&ignored_sub_file_path).unwrap();
+        let mut ignored_sub_file = File::create(ignored_sub_file_path).unwrap();
         writeln!(ignored_sub_file, "This should be ignored!").unwrap();
 
-        // Perform the copy
+        let ignore_dirs = ["manifests", "target"];
+
         copy_project_temp(
             &Utf8PathBuf::from(&project_dir.to_string_lossy()),
             &Utf8PathBuf::from(&dest_dir.to_string_lossy()),
+            &Utf8PathBuf::from("../dojo-core"),
+            &ignore_dirs,
         )
         .unwrap();
 

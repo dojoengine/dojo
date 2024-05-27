@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+# Check if the platform is Windows
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+  echo "Note: Dojoup does not support Powershell or Cmd on Windows."
+  echo "Please use Git BASH (https://gitforwindows.org/) or WSL (https://learn.microsoft.com/en-us/windows/wsl/install)."
+fi
+
 set -e
 
 BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
@@ -34,8 +41,11 @@ main() {
     esac; shift
   done
 
-  # Print the banner after successfully parsing args
-  banner
+  if [ -n "$DOJOUP_BRANCH" ] || [ -n "$DOJOUP_PR" ] || [ -n "$DOJOUP_COMMIT" ] || [ -n "$DOJOUP_LOCAL_REPO" ] || [ -n "$DOJOUP_REPO" ]; then
+    if ! command -v rustc &> /dev/null; then
+      err "Rust is required for building from source. Please install Rust from https://www.rust-lang.org/tools/install."
+    fi
+  fi
 
   if [ -n "$DOJOUP_PR" ]; then
     if [ -z "$DOJOUP_BRANCH" ]; then
@@ -181,6 +191,29 @@ EOF
       fi
     done
 
+    # Extracting the scarb version from the output of 'sozo --version'
+    scarb_version=$(echo "$(sozo --version)" | grep -o 'scarb: [0-9.]*' | cut -d ' ' -f 2)
+
+    # Check if scarb is already installed
+    if [ "$(scarb --version 2>/dev/null)" != "scarb $scarb_version" ]; then
+      # Check if scarb is managed by asdf
+      if command -v asdf &> /dev/null; then
+        if asdf list | grep -q "scarb"; then
+          # Check if default version is set
+          if ! asdf current scarb &> /dev/null; then
+            asdf global scarb $scarb_version
+          fi
+        else
+          # Install scarb using asdf
+          asdf plugin add scarb
+          asdf install scarb $scarb_version
+        fi
+      else
+        # Install scarb using the install script
+        curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v $scarb_version
+      fi
+    fi
+
     say "done!"
     welcome_msg
 
@@ -209,9 +242,11 @@ EOF
       ensure git checkout "$DOJOUP_COMMIT"
     fi
 
-    # Build the repo and install the binaries locally to the .dojo bin directory.
-    # --root appends /bin to the directory it is given, so we pass DOJO_DIR.
-    ensure cargo install --path ./dojo --bin dojo --locked --force --root "$DOJO_DIR"
+    for bin in "${BINS[@]}"; do
+	    # Build the repo and install the binaries locally to the .dojo bin directory.
+	    # --root appends /bin to the directory it is given, so we pass DOJO_DIR.
+	    ensure cargo install --path ./bin/$bin $bin --locked --force --root "$DOJO_DIR"
+    done
 
     say "done"
     welcome_msg
@@ -229,12 +264,12 @@ USAGE:
 
 OPTIONS:
     -h, --help      Print help information
-    -v, --version   Install a specific version
-    -b, --branch    Install a specific branch
-    -P, --pr        Install a specific Pull Request
-    -c, --commit    Install a specific commit
-    -r, --repo      Install from a remote GitHub repo (uses default branch if no other options are set)
-    -p, --path      Install a local repository
+    -v, --version   Install a specific version (e.g., `dojoup --version nightly`)
+    -b, --branch    Install a specific branch (e.g., `dojoup --branch release/0.1.0`)
+    -P, --pr        Install a specific Pull Request (e.g., `dojoup --pr 1071`)
+    -c, --commit    Install a specific commit (e.g., `dojoup -c 94bfdb2`)
+    -r, --repo      Install from a remote GitHub repo (uses default branch if no other options are set) (e.g., `dojoup --repo tarrencev/dojo`)
+    -p, --path      Install a local repository (e.g., `dojoup --path ./git/dojo`)
 EOF
 }
 
@@ -287,31 +322,6 @@ download() {
   fi
 }
 
-# Banner Function for Dojo 
-banner() {
-  printf '
-
-═════════════════════════════════════════════════════════════════════════
- 
-
-                  ██████╗  ██████╗      ██╗ ██████╗ 
-                  ██╔══██╗██╔═══██╗     ██║██╔═══██╗
-                  ██║  ██║██║   ██║     ██║██║   ██║
-                  ██║  ██║██║   ██║██   ██║██║   ██║
-                  ██████╔╝╚██████╔╝╚█████╔╝╚██████╔╝
-                  ╚═════╝  ╚═════╝  ╚════╝  ╚═════╝ 
-
-
-              Repo : https://github.com/dojoengine/dojo
-              Book : https://book.dojoengine.org/
-              Chat : https://discord.gg/dojoengine
-                     https://t.me/dojoengine
-
-═════════════════════════════════════════════════════════════════════════
-
-'
-}
-
 # Welcome message printed after having installed Dojo.
 welcome_msg() {
   dojo='\033[1;34m'
@@ -322,47 +332,30 @@ welcome_msg() {
 
   printf "
 ═════════════════════════════════════════════════════════════════════════
+ 
 
-Ohayo!
+               ██████╗ ██╗  ██╗ █████╗ ██╗   ██╗ ██████╗ 
+              ██╔═══██╗██║  ██║██╔══██╗╚██╗ ██╔╝██╔═══██╗
+              ██║   ██║███████║███████║ ╚████╔╝ ██║   ██║
+              ██║   ██║██╔══██║██╔══██║  ╚██╔╝  ██║   ██║
+              ╚██████╔╝██║  ██║██║  ██║   ██║   ╚██████╔╝
+               ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ 
+                                           
 
-Congratulations on successfully installing ${dojo}Dojo${clear} ${DOJOUP_VERSION}! 🎉
 
-Here’s how you can get started:
+              Repo : https://github.com/dojoengine/dojo
+              Book : https://book.dojoengine.org/
+              Chat : https://discord.gg/dojoengine
+                     https://t.me/dojoengine
 
-${title}1. Explore the Dojo Toolkit${clear}
+Congratulations on successfully installing ${dojo}Dojo${clear} ${DOJOUP_VERSION}! 🥷
 
-Familiarize yourself with the newly installed components:
-   - ${emphasis}Katana${clear}: High performance sequencer for onchain games.
-   - ${emphasis}Sozo${clear}: World contract migration planning and execution.
-   - ${emphasis}Torii${clear}: Automatic indexer for accessing your world state over gRPC and Graphql.
+For more info on how to get started, check out the Dojo Getting Started Guide: https://book.dojoengine.org/getting-started/quick-start
 
-${title}2. Create Your First Project${clear}
+═════════════════════════════════════════════════════════════════════════
 
-Jump straight into action by creating your first project with Dojo.
-Use the command below to get started:
-   ${command}sozo init <project-name>${clear}
-
-${title}3. Access Documentation${clear}
-
-For comprehensive guides and documentation, visit ${emphasis}https://book.dojoengine.org${clear}.
-Here, you'll find everything from getting started tutorials to advanced usage examples.
-
-${title}4. Join the Community${clear}
-
-Become a part of the Dojo community. Connect with other developers, get help, and share your experiences.
-Join us on Discord (${emphasis}https://discord.gg/dojoengine${clear}) or GitHub (${emphasis}https://github.com/dojoengine/dojo${clear})
-
-${title}5. Stay Updated${clear}
-
-Keep your Dojo installation up to date. Check for updates regularly to ensure you have the latest features and improvements:
-   ${command}dojoup${clear}
-
-${title}6. Feedback & Support${clear}
-
-Your feedback is invaluable. If you encounter any issues or have suggestions, please open an issue on our GitHub Issues page: ${emphasis}https://github.com/dojoengine/dojo/issues${clear}
-
-Happy terraforming with ${dojo}Dojo${clear}! 🚀
 "
 }
 
 main "$@" || exit 1
+

@@ -4,18 +4,8 @@
 test_semantics
 
 //! > setup_code
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-
-#[derive(Copy, Drop, Serde, Introspect)]
-struct Health {
-	#[key]
-	id: u32,
-	health: u16,
-}
 
 //! > function_code
-let key: felt252 = 0xb0b;
-let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()};
 
 //! > expression
 set!()
@@ -29,19 +19,9 @@ Missing(
 
 //! > semantic_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
- --> lib.cairo:11:6
+ --> lib.cairo:2:6
 set!()
      ^
-
-warning: Unused variable. Consider ignoring by prefixing with `_`.
- --> lib.cairo:9:22
-fn test_func() { let key: felt252 = 0xb0b;
-                     ^*^
-
-warning: Unused variable. Consider ignoring by prefixing with `_`.
- --> lib.cairo:10:5
-let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
-    ^***^
 
 //! > ==========================================================================
 
@@ -51,18 +31,8 @@ let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
 test_semantics
 
 //! > setup_code
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-
-#[derive(Copy, Drop, Serde, Introspect)]
-struct Health {
-	#[key]
-	id: u32,
-	health: u16,
-}
 
 //! > function_code
-let key: felt252 = 0xb0b;
-let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()};
 
 //! > expression
 set!(world)
@@ -76,19 +46,9 @@ Missing(
 
 //! > semantic_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
- --> lib.cairo:11:6
+ --> lib.cairo:2:6
 set!(world)
      ^***^
-
-warning: Unused variable. Consider ignoring by prefixing with `_`.
- --> lib.cairo:9:22
-fn test_func() { let key: felt252 = 0xb0b;
-                     ^*^
-
-warning: Unused variable. Consider ignoring by prefixing with `_`.
- --> lib.cairo:10:5
-let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
-    ^***^
 
 //! > ==========================================================================
 
@@ -124,7 +84,7 @@ Block(
             Let(
                 StatementLet {
                     pattern: Variable(
-                        __set_macro_value__,
+                        __set_model_instance__,
                     ),
                     expr: StructCtor(
                         ExprStructCtor {
@@ -169,19 +129,20 @@ Block(
                                 Value(
                                     FunctionCall(
                                         ExprFunctionCall {
-                                            function: test::HealthModel::name,
+                                            function: ?7::instance_selector,
                                             args: [
                                                 Value(
                                                     Snapshot(
                                                         ExprSnapshot {
                                                             inner: Var(
-                                                                LocalVarId(test::__set_macro_value__),
+                                                                LocalVarId(test::__set_model_instance__),
                                                             ),
                                                             ty: @test::Health,
                                                         },
                                                     ),
                                                 ),
                                             ],
+                                            coupon_arg: None,
                                             ty: core::felt252,
                                         },
                                     ),
@@ -189,19 +150,20 @@ Block(
                                 Value(
                                     FunctionCall(
                                         ExprFunctionCall {
-                                            function: test::HealthModel::keys,
+                                            function: ?8::keys,
                                             args: [
                                                 Value(
                                                     Snapshot(
                                                         ExprSnapshot {
                                                             inner: Var(
-                                                                LocalVarId(test::__set_macro_value__),
+                                                                LocalVarId(test::__set_model_instance__),
                                                             ),
                                                             ty: @test::Health,
                                                         },
                                                     ),
                                                 ),
                                             ],
+                                            coupon_arg: None,
                                             ty: core::array::Span::<core::felt252>,
                                         },
                                     ),
@@ -209,19 +171,20 @@ Block(
                                 Value(
                                     FunctionCall(
                                         ExprFunctionCall {
-                                            function: test::HealthModel::values,
+                                            function: ?9::values,
                                             args: [
                                                 Value(
                                                     Snapshot(
                                                         ExprSnapshot {
                                                             inner: Var(
-                                                                LocalVarId(test::__set_macro_value__),
+                                                                LocalVarId(test::__set_model_instance__),
                                                             ),
                                                             ty: @test::Health,
                                                         },
                                                     ),
                                                 ),
                                             ],
+                                            coupon_arg: None,
                                             ty: core::array::Span::<core::felt252>,
                                         },
                                     ),
@@ -229,24 +192,26 @@ Block(
                                 Value(
                                     FunctionCall(
                                         ExprFunctionCall {
-                                            function: test::HealthModel::layout,
+                                            function: ?10::instance_layout,
                                             args: [
                                                 Value(
                                                     Snapshot(
                                                         ExprSnapshot {
                                                             inner: Var(
-                                                                LocalVarId(test::__set_macro_value__),
+                                                                LocalVarId(test::__set_model_instance__),
                                                             ),
                                                             ty: @test::Health,
                                                         },
                                                     ),
                                                 ),
                                             ],
-                                            ty: core::array::Span::<core::integer::u8>,
+                                            coupon_arg: None,
+                                            ty: dojo::database::introspect::Layout,
                                         },
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: (),
                         },
                     ),
@@ -259,7 +224,12 @@ Block(
 )
 
 //! > semantic_diagnostics
-warning: Unused variable. Consider ignoring by prefixing with `_`.
+warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
  --> lib.cairo:9:22
 fn test_func() { let key: felt252 = 0xb0b;
                      ^*^
+
+error: Trait has no implementation in context: dojo::model::Model::<test::Health>.
+ --> lib.cairo:11:1
+set!(world, (Health{id: 0xb0b, health: 79}))
+^******************************************^

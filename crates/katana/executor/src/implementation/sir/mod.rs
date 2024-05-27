@@ -1,5 +1,4 @@
 mod error;
-mod output;
 mod state;
 pub mod utils;
 
@@ -17,12 +16,12 @@ use sir::state::cached_state;
 use sir::state::contract_class_cache::PermanentContractClassCache;
 use tracing::info;
 
-use self::output::receipt_from_exec_info;
 use self::state::CachedState;
 use crate::abstraction::{
     BlockExecutor, ExecutionOutput, ExecutorExt, ExecutorFactory, ExecutorResult, SimulationFlag,
     StateProviderDb,
 };
+use crate::utils::build_receipt;
 use crate::{EntryPointCall, ExecutionError, ExecutionResult, ExecutionStats, ResultAndStates};
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::sir";
@@ -156,19 +155,19 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                 Ok((info, fee)) => {
                     // get the trace and receipt from the execution info
                     let trace = utils::to_exec_info(&info);
-                    let receipt = receipt_from_exec_info(&tx, &trace);
+                    let receipt = build_receipt(&tx, fee, &trace);
 
                     crate::utils::log_resources(&trace.actual_resources);
                     crate::utils::log_events(receipt.events());
 
-                    self.stats.l1_gas_used += fee.gas_consumed;
+                    self.stats.l1_gas_used += receipt.fee().gas_consumed;
                     self.stats.cairo_steps_used += receipt.resources_used().steps as u128;
 
                     if let Some(reason) = receipt.revert_reason() {
                         info!(target: LOG_TARGET, reason = %reason, "Transaction reverted.");
                     }
 
-                    ExecutionResult::new_success(receipt, trace, fee)
+                    ExecutionResult::new_success(receipt, trace)
                 }
                 Err(e) => {
                     info!(target: LOG_TARGET, error = %e, "Executing transaction.");
@@ -236,8 +235,8 @@ impl<'a> ExecutorExt for StarknetVMProcessor<'a> {
                 Ok((info, fee)) => {
                     // get the trace and receipt from the execution info
                     let trace = utils::to_exec_info(&info);
-                    let receipt = receipt_from_exec_info(&tx, &trace);
-                    ExecutionResult::new_success(receipt, trace, fee)
+                    let receipt = build_receipt(&tx, fee, &trace);
+                    ExecutionResult::new_success(receipt, trace)
                 }
                 Err(e) => ExecutionResult::new_failed(e),
             };

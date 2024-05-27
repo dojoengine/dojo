@@ -19,14 +19,18 @@ async-trait.workspace = true
 cairo-proof-parser.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
+dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 flate2.workspace = true
 futures.workspace = true
+itertools.workspace = true
 lazy_static.workspace = true
 parking_lot.workspace = true
-rand = { version = "0.8.5", features = [ "small_rng" ] }
+rand = { workspace = true, features = [ "small_rng" ] }
+reqwest = { workspace = true, features = [ "rustls-tls" ] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
+starknet-crypto.workspace = true
 starknet-types-core = { version = "0.0.9", default-features = false, features = [ "curve", "num-traits", "serde" ] }
 starknet.workspace = true
 starknet_api.workspace = true

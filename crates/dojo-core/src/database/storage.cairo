@@ -12,7 +12,9 @@ fn get(address_domain: u32, keys: Span<felt252>) -> felt252 {
         .unwrap_syscall()
 }
 
-fn get_many(address_domain: u32, keys: Span<felt252>, mut layout: Span<u8>) -> SyscallResult<Span<felt252>> {
+fn get_many(
+    address_domain: u32, keys: Span<felt252>, mut layout: Span<u8>
+) -> SyscallResult<Span<felt252>> {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     let base_address = starknet::storage_address_from_base(base);
 
@@ -28,11 +30,12 @@ fn get_many(address_domain: u32, keys: Span<felt252>, mut layout: Span<u8>) -> S
     let mut packed_span = loop {
         let value =
             match starknet::syscalls::storage_read_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(chunk_base, index_in_chunk)
+                address_domain,
+                starknet::storage_address_from_base_and_offset(chunk_base, index_in_chunk)
             ) {
-                Result::Ok(value) => value,
-                Result::Err(err) => { break SyscallResult::<Span<felt252>>::Err(err); },
-            };
+            Result::Ok(value) => value,
+            Result::Err(err) => { break SyscallResult::<Span<felt252>>::Err(err); },
+        };
 
         packed.append(value);
 
@@ -65,15 +68,22 @@ fn set(address_domain: u32, keys: Span<felt252>, value: felt252) {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     starknet::storage_write_syscall(
         address_domain, starknet::storage_address_from_base(base), value
-    ).unwrap_syscall();
+    )
+        .unwrap_syscall();
 }
 
-fn set_many(address_domain: u32, keys: Span<felt252>, mut unpacked: Span<felt252>, mut layout: Span<u8>) -> SyscallResult<()> {
+fn set_many(
+    address_domain: u32,
+    keys: Span<felt252>,
+    mut unpacked: Span<felt252>,
+    offset: u32,
+    mut layout: Span<u8>
+) -> SyscallResult<()> {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     let base_address = starknet::storage_address_from_base(base);
 
     let mut packed = ArrayTrait::new();
-    pack(ref packed, ref unpacked, ref layout);
+    pack(ref packed, ref unpacked, offset, ref layout);
 
     let mut chunk = 0;
     let mut chunk_base = base;
@@ -102,7 +112,96 @@ fn set_many(address_domain: u32, keys: Span<felt252>, mut unpacked: Span<felt252
                 chunk += 1;
                 chunk_base = chunk_segment_pointer(base_address, chunk);
                 0
+            },
+        };
+    }
+}
 
+fn set_packed_array(
+    address_domain: u32, keys: Span<felt252>, mut data: Span<felt252>, offset: u32, array_size: u32
+) -> SyscallResult<()> {
+    // write data+offset by chunk of 256 felts
+    let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
+    let base_address = starknet::storage_address_from_base(base);
+
+    let mut chunk = 0;
+    let mut chunk_base = base;
+    let mut index_in_chunk = 0_u8;
+    let mut i = 0;
+
+    loop {
+        if i >= array_size {
+            break Result::Ok(());
+        }
+
+        let curr_value = *data.at(offset + i);
+
+        match starknet::syscalls::storage_write_syscall(
+            address_domain,
+            starknet::storage_address_from_base_and_offset(chunk_base, index_in_chunk),
+            curr_value.into()
+        ) {
+            Result::Ok(_) => {},
+            Result::Err(err) => { break Result::Err(err); },
+        };
+
+        index_in_chunk = match core::integer::u8_overflowing_add(index_in_chunk, 1) {
+            Result::Ok(x) => x,
+            Result::Err(_) => {
+                // After writing 256 `felt`s, `index_in_chunk` will overflow and we move to the
+                // next chunk which will be stored in an other storage segment.
+                chunk += 1;
+                chunk_base = chunk_segment_pointer(base_address, chunk);
+                0
+            },
+        };
+
+        i += 1;
+    }
+}
+
+fn get_packed_array(
+    address_domain: u32, keys: Span<felt252>, array_size: u32
+) -> SyscallResult<Span<felt252>> {
+    if array_size == 0 {
+        return SyscallResult::<Span<felt252>>::Ok(array![].span());
+    }
+
+    let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
+    let base_address = starknet::storage_address_from_base(base);
+
+    let mut packed = ArrayTrait::new();
+
+    let mut chunk = 0;
+    let mut chunk_base = base;
+    let mut index_in_chunk = 0_u8;
+
+    loop {
+        let value =
+            match starknet::syscalls::storage_read_syscall(
+                address_domain,
+                starknet::storage_address_from_base_and_offset(chunk_base, index_in_chunk)
+            ) {
+            Result::Ok(value) => value,
+            Result::Err(err) => { break SyscallResult::<Span<felt252>>::Err(err); },
+        };
+
+        packed.append(value);
+
+        // Verify first the length to avoid computing the new chunk segment
+        // if not required.
+        if packed.len() == array_size {
+            break Result::Ok(packed.span());
+        }
+
+        index_in_chunk = match core::integer::u8_overflowing_add(index_in_chunk, 1) {
+            Result::Ok(x) => x,
+            Result::Err(_) => {
+                // After reading 256 `felt`s, `index_in_chunk` will overflow and we move to the
+                // next chunk.
+                chunk += 1;
+                chunk_base = chunk_segment_pointer(base_address, chunk);
+                0
             },
         };
     }

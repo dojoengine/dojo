@@ -3,6 +3,7 @@ use clap::{Args, Subcommand};
 use scarb::core::Config;
 use sozo_ops::model;
 use starknet::core::types::FieldElement;
+use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
@@ -76,6 +77,7 @@ pub enum ModelCommand {
 
 impl ModelArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        trace!(args = ?self);
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         config.tokio_handle().block_on(async {

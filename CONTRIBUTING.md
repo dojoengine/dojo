@@ -1,20 +1,47 @@
 # Contributing to Dojo
 
-First of all, thank you for considering contributing to Dojo. It's people like you that make Dojo such a great tool.
+Thank you for considering contributing to Dojo. It's people like you that make Dojo such a great project and community.
 
-Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
+Please follow the following guidelines in order to streamline your contribution. It helps communicate that you respect the time of the developers maintaining this open source project. In return, maintainers will reciprocate that respect when addressing your issue, assessing your changes, and helping you finalize your pull requests.
 
-## Getting Started
+### Check existing issues
 
-### Check the Issues
+Before you start contributing, please check the [Issue Tracker](https://github.com/dojoengine/dojo/issues) to see if there are any existing issues that match what you are intending to do. If the issue doesn't exist, please create it.
 
-Before you start contributing, please check the [Issue Tracker](https://github.com/dojoengine/dojo/issues) to see if there are any existing issues that match what you're intending to do. If the issue doesn't exist, please create it. 
-
-If you're creating a new issue, please provide a descriptive title and detailed description. If possible, include a code sample or an executable test case demonstrating the expected behavior that is not occurring.
+If you are creating a new issue, please provide a descriptive title and detailed description. If possible, include a code sample or an executable test case demonstrating the expected behavior that is not occurring.
 
 ### Fork and Clone the Repository
 
-Once you've found an issue to work on, the next step is to fork the Dojo repo and clone it to your local machine. This is necessary because you probably won't have push access to the main repo. 
+Once you've found an issue to work on, the next step is to fork the Dojo repo and clone it to your local machine. This is necessary because you probably won't have push access to the main repo.
+
+### Setting up your environment
+
+You will need the [Rust](https://rust-lang.org) compiler and Cargo, the Rust package manager.
+The easiest way to install both is with [`rustup.rs`](https://rustup.rs/).
+
+On Windows, you will also need a recent version of [Visual Studio](https://visualstudio.microsoft.com/downloads/),
+installed with the "Desktop Development With C++" Workloads option.
+
+## Architecture
+
+At the top level, dojo is composed of different folders:
+
+- [`crates`](crates/): This folder contains the source code of the different crates (which are libraries) that make up Dojo.
+- [`bin`](bin/): This folder contains the source code of the different binaries that make up Dojo.
+- [`examples`](examples/): This folder contains the source code of simple Dojo projects that can be used as a starting point for new projects and also useful for testing.
+- [`scripts`](scripts/): A set of useful scripts for developers and CI.
+
+Inside `bin` and `crates` you will find source code related to Dojo stack components:
+
+- `katana`: The Starknet sequencer tailored for gaming.
+- `sozo`: The contract manager and Dojo compiler.
+- `torii`: The indexer that store the state of your World.
+- `dojo-core`: The core contract of Dojo written in Cairo.
+- `dojo-lang`: The Dojo plugin for the Cairo compiler.
+
+It is important to note that `bin` should only contain applications that gathers user inputs and delegates the work to the libraries present into the crates.
+
+As an example, `sozo` is a CLI that gathers user inputs and delegates the work to run the commands code to the `sozo` crate.
 
 ## Making Changes
 
@@ -32,15 +59,11 @@ When you submit the pull request, please provide a clear, detailed description o
 
 Your pull request will be reviewed by the maintainers of the Dojo project. They may ask for changes or clarification on certain points. Please address their comments and commit any required changes to the same branch on your repo.
 
-## Running Tests
-
-Before you submit your pull request, you should run the test suite locally to make sure your changes haven't broken anything.
-
-Additionally, when you push your changes, the built-in Continuous Integration (CI) will also run all the tests on the pushed code. You can see the result of these tests in the GitHub interface of your pull request. If the tests fail, you'll need to revise your code and push it again.
-
 ## Documentation
 
 We strive to provide comprehensive, up-to-date documentation for Dojo. If your changes require updates to the documentation, please include those in your pull request.
+
+The [Dojo Book repository](https://github.com/dojoengine/book) is where you should submit your changes to the documentation.
 
 ## Final Notes
 

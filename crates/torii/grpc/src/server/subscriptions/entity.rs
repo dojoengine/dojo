@@ -102,7 +102,10 @@ impl Service {
                 let model_ids: Vec<&str> = model_ids.split(',').collect();
                 let schemas = cache.schemas(model_ids).await?;
 
-                let entity_query = format!("{} WHERE entities.id = ?", build_sql_query(&schemas)?);
+                let entity_query = format!(
+                    "{} WHERE entities.id = ?",
+                    build_sql_query(&schemas, "entities", "entity_id")?
+                );
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
 
                 let models = schemas

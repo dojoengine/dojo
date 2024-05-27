@@ -70,16 +70,6 @@ message RetrieveEntitiesResponse {
     uint32 total_count = 2;
 }
 
-message RetrieveEventMessagesRequest {
-    // The entities to retrieve
-    types.Query query = 1;
-}
-
-message RetrieveEventMessagesResponse {
-    repeated types.Entity events = 1;
-    uint32 total_count = 2;
-}
-
 message RetrieveEventsRequest {
     // The events to retrieve
     types.EventQuery query = 1;

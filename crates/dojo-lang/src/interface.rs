@@ -2,7 +2,7 @@ use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{PluginDiagnostic, PluginGeneratedFile, PluginResult};
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
 pub struct DojoInterface {
@@ -13,7 +13,7 @@ impl DojoInterface {
     pub fn from_trait(db: &dyn SyntaxGroup, trait_ast: ast::ItemTrait) -> PluginResult {
         let name = trait_ast.name(db).text(db);
         let mut system = DojoInterface { diagnostics: vec![] };
-        let mut builder = PatchBuilder::new(db);
+        let mut builder = PatchBuilder::new(db, &trait_ast);
 
         if let ast::MaybeTraitBody::Some(body) = trait_ast.body(db) {
             let body_nodes: Vec<_> = body
@@ -63,12 +63,14 @@ impl DojoInterface {
             ));
         }
 
+        let (code, code_mappings) = builder.build();
+
         PluginResult {
             code: Some(PluginGeneratedFile {
                 name: name.clone(),
-                content: builder.code,
+                content: code,
                 aux_data: None,
-                code_mappings: builder.code_mappings,
+                code_mappings,
             }),
             diagnostics: system.diagnostics,
             remove_original_item: true,

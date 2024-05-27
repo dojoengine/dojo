@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
@@ -98,6 +98,27 @@ pub struct TxnConfig {
     pub fee_estimate_multiplier: Option<f64>,
     pub wait: bool,
     pub receipt: bool,
+    pub max_fee_raw: Option<FieldElement>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum TxnAction {
+    Send {
+        wait: bool,
+        receipt: bool,
+        max_fee_raw: Option<FieldElement>,
+        /// The multiplier for how much the actual transaction max fee should be relative to the
+        /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
+        fee_estimate_multiplier: Option<f64>,
+    },
+    Estimate,
+    Simulate,
+}
+
+impl TxnConfig {
+    pub fn init_wait() -> Self {
+        Self { wait: true, ..Default::default() }
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -127,7 +148,7 @@ pub trait Declarable {
 
         let DeclareTransactionResult { transaction_hash, class_hash } = account
             .declare(Arc::new(flattened_class), casm_class_hash)
-            .send_with_cfg(&txn_config)
+            .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
 
@@ -197,7 +218,7 @@ pub trait Deployable: Declarable + Sync {
 
         let InvokeTransactionResult { transaction_hash } = account
             .execute(vec![call])
-            .send_with_cfg(&txn_config)
+            .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
 
@@ -268,7 +289,7 @@ pub trait Deployable: Declarable + Sync {
         }]);
 
         let InvokeTransactionResult { transaction_hash } =
-            txn.send_with_cfg(&txn_config).await.map_err(MigrationError::Migrator)?;
+            txn.send_with_cfg(txn_config).await.map_err(MigrationError::Migrator)?;
 
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
@@ -329,7 +350,7 @@ pub trait Upgradable: Deployable + Declarable + Sync {
 
         let InvokeTransactionResult { transaction_hash } = account
             .execute(vec![Call { calldata, selector: selector!("upgrade"), to: contract_address }])
-            .send_with_cfg(&txn_config)
+            .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
 
@@ -361,7 +382,8 @@ pub fn read_class(artifact_path: &PathBuf) -> Result<SierraClass> {
 fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
-    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)?;
+    let casm_contract =
+        CasmContractClass::from_contract_class(casm_contract_class, true, usize::MAX)?;
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)

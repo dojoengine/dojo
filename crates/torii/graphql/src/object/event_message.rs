@@ -8,7 +8,7 @@ use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Entity;
+use torii_core::types::EventMessage;
 
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
@@ -75,14 +75,18 @@ impl ResolvableObject for EventMessageObject {
                         };
                         // if id is None, then subscribe to all entities
                         // if id is Some, then subscribe to only the entity with that id
-                        Ok(SimpleBroker::<Entity>::subscribe().filter_map(move |entity: Entity| {
-                            if id.is_none() || id == Some(entity.id.clone()) {
-                                Some(Ok(Value::Object(EventMessageObject::value_mapping(entity))))
-                            } else {
-                                // id != entity.id , then don't send anything, still listening
-                                None
-                            }
-                        }))
+                        Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(
+                            move |entity: EventMessage| {
+                                if id.is_none() || id == Some(entity.id.clone()) {
+                                    Some(Ok(Value::Object(EventMessageObject::value_mapping(
+                                        entity,
+                                    ))))
+                                } else {
+                                    // id != entity.id , then don't send anything, still listening
+                                    None
+                                }
+                            },
+                        ))
                     })
                 },
             )
@@ -92,7 +96,7 @@ impl ResolvableObject for EventMessageObject {
 }
 
 impl EventMessageObject {
-    pub fn value_mapping(entity: Entity) -> ValueMapping {
+    pub fn value_mapping(entity: EventMessage) -> ValueMapping {
         let keys: Vec<&str> = entity.keys.split('/').filter(|&k| !k.is_empty()).collect();
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),

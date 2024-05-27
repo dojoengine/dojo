@@ -12,6 +12,7 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::LocalWallet;
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -22,44 +23,30 @@ use super::options::world::WorldOptions;
 pub struct MigrateArgs {
     #[command(subcommand)]
     pub command: MigrateCommand,
+
+    #[arg(long, global = true)]
+    #[arg(help = "Name of the World.")]
+    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
+                       contract to avoid address conflicts. If not provided root package's name \
+                       will be used.")]
+    name: Option<String>,
+
+    #[command(flatten)]
+    world: WorldOptions,
+
+    #[command(flatten)]
+    starknet: StarknetOptions,
+
+    #[command(flatten)]
+    account: AccountOptions,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum MigrateCommand {
     #[command(about = "Plan the migration and output the manifests.")]
-    Plan {
-        #[arg(long)]
-        #[arg(help = "Name of the World.")]
-        #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying \
-                           the contract to avoid address conflicts.")]
-        name: Option<String>,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-
-        #[command(flatten)]
-        account: AccountOptions,
-    },
+    Plan,
     #[command(about = "Apply the migration on-chain.")]
     Apply {
-        #[arg(long)]
-        #[arg(help = "Name of the World.")]
-        #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying \
-                           the contract to avoid address conflicts.")]
-        name: Option<String>,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-
-        #[command(flatten)]
-        account: AccountOptions,
-
         #[command(flatten)]
         transaction: TransactionOptions,
     },
@@ -67,11 +54,13 @@ pub enum MigrateCommand {
 
 impl MigrateArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
         let env_metadata = if config.manifest_path().exists() {
             dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
+            trace!("Manifest path does not exist.");
             None
         };
 
@@ -80,71 +69,36 @@ impl MigrateArgs {
             return Err(anyhow!("Build project using `sozo build` first"));
         }
 
+        let MigrateArgs { name, world, starknet, account, .. } = self;
+
+        let name = name.unwrap_or_else(|| {
+            ws.root_package().expect("Root package to be present").id.name.to_string()
+        });
+
+        let (world_address, account, rpc_url) = config.tokio_handle().block_on(async {
+            setup_env(&ws, account, starknet, world, &name, env_metadata.as_ref()).await
+        })?;
+
         match self.command {
-            MigrateCommand::Plan { mut name, world, starknet, account } => {
-                if name.is_none() {
-                    if let Some(root_package) = ws.root_package() {
-                        name = Some(root_package.id.name.to_string())
-                    }
-                };
-
-                config.tokio_handle().block_on(async {
-                    let (world_address, account, chain_id, rpc_url) = setup_env(
-                        &ws,
-                        account,
-                        starknet,
-                        world,
-                        name.as_ref(),
-                        env_metadata.as_ref(),
-                    )
-                    .await?;
-
-                    migration::migrate(
-                        &ws,
-                        world_address,
-                        chain_id,
-                        rpc_url,
-                        &account,
-                        name,
-                        true,
-                        TxnConfig::default(),
-                    )
-                    .await
-                })
-            }
-            MigrateCommand::Apply { mut name, world, starknet, account, transaction } => {
+            MigrateCommand::Plan => config.tokio_handle().block_on(async {
+                migration::migrate(
+                    &ws,
+                    world_address,
+                    rpc_url,
+                    account,
+                    &name,
+                    true,
+                    TxnConfig::default(),
+                )
+                .await
+            }),
+            MigrateCommand::Apply { transaction } => config.tokio_handle().block_on(async {
+                trace!(name, "Applying migration.");
                 let txn_config: TxnConfig = transaction.into();
 
-                if name.is_none() {
-                    if let Some(root_package) = ws.root_package() {
-                        name = Some(root_package.id.name.to_string())
-                    }
-                };
-
-                config.tokio_handle().block_on(async {
-                    let (world_address, account, chain_id, rpc_url) = setup_env(
-                        &ws,
-                        account,
-                        starknet,
-                        world,
-                        name.as_ref(),
-                        env_metadata.as_ref(),
-                    )
-                    .await?;
-
-                    migration::migrate(
-                        &ws,
-                        world_address,
-                        chain_id,
-                        rpc_url,
-                        &account,
-                        name,
-                        false,
-                        txn_config,
-                    )
+                migration::migrate(&ws, world_address, rpc_url, account, &name, false, txn_config)
                     .await
-                })
-            }
+            }),
         }
     }
 }
@@ -154,24 +108,27 @@ pub async fn setup_env<'a>(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    name: Option<&'a String>,
+    name: &str,
     env: Option<&'a Environment>,
 ) -> Result<(
     Option<FieldElement>,
     SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     String,
-    String,
 )> {
+    trace!("Setting up environment.");
     let ui = ws.config().ui();
 
     let world_address = world.address(env).ok();
+    trace!(?world_address);
 
-    let (account, chain_id, rpc_url) = {
+    let (account, rpc_url) = {
         let provider = starknet.provider(env)?;
+        trace!(?provider, "Provider initialized.");
 
         let spec_version = provider.spec_version().await?;
+        trace!(spec_version);
 
-        if spec_version != RPC_SPEC_VERSION {
+        if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
             return Err(anyhow!(
                 "Unsupported Starknet RPC version: {}, expected {}.",
                 spec_version,
@@ -180,10 +137,12 @@ pub async fn setup_env<'a>(
         }
 
         let rpc_url = starknet.url(env)?;
+        trace!(?rpc_url);
 
         let chain_id = provider.chain_id().await?;
         let chain_id = parse_cairo_short_string(&chain_id)
             .with_context(|| "Cannot parse chain_id as string")?;
+        trace!(chain_id);
 
         let mut account = account.account(provider, env).await?;
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -191,12 +150,13 @@ pub async fn setup_env<'a>(
         let address = account.address();
 
         ui.print(format!("\nMigration account: {address:#x}"));
-        if let Some(name) = name {
-            ui.print(format!("\nWorld name: {name}\n"));
-        }
+
+        ui.print(format!("\nWorld name: {name}"));
+
+        ui.print(format!("\nChain ID: {chain_id}\n"));
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
-            Ok(_) => Ok((account, chain_id, rpc_url)),
+            Ok(_) => Ok((account, rpc_url)),
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
                 Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
             }
@@ -205,5 +165,71 @@ pub async fn setup_env<'a>(
     }
     .with_context(|| "Problem initializing account for migration.")?;
 
-    Ok((world_address, account, chain_id, rpc_url.to_string()))
+    Ok((world_address, account, rpc_url.to_string()))
+}
+
+/// Checks if the provided version string is compatible with the expected version string using
+/// semantic versioning rules. Includes specific backward compatibility rules, e.g., version 0.6 is
+/// compatible with 0.7.
+///
+/// # Arguments
+///
+/// * `provided_version` - The version string provided by the user.
+/// * `expected_version` - The expected version string.
+///
+/// # Returns
+///
+/// * `Result<bool>` - Returns `true` if the provided version is compatible with the expected
+///   version, `false` otherwise.
+fn is_compatible_version(provided_version: &str, expected_version: &str) -> Result<bool> {
+    use semver::{Version, VersionReq};
+
+    let provided_ver = Version::parse(provided_version)
+        .map_err(|e| anyhow!("Failed to parse provided version '{}': {}", provided_version, e))?;
+    let expected_ver = Version::parse(expected_version)
+        .map_err(|e| anyhow!("Failed to parse expected version '{}': {}", expected_version, e))?;
+
+    // Specific backward compatibility rule: 0.6 is compatible with 0.7.
+    if (provided_ver.major == 0 && provided_ver.minor == 6)
+        && (expected_ver.major == 0 && expected_ver.minor == 7)
+    {
+        return Ok(true);
+    }
+
+    let expected_ver_req = VersionReq::parse(expected_version).map_err(|e| {
+        anyhow!("Failed to parse expected version requirement '{}': {}", expected_version, e)
+    })?;
+
+    Ok(expected_ver_req.matches(&provided_ver))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_compatible_version_major_mismatch() {
+        assert!(!is_compatible_version("1.0.0", "2.0.0").unwrap());
+    }
+
+    #[test]
+    fn test_is_compatible_version_minor_compatible() {
+        assert!(is_compatible_version("1.2.0", "1.1.0").unwrap());
+    }
+
+    #[test]
+    fn test_is_compatible_version_minor_mismatch() {
+        assert!(!is_compatible_version("0.2.0", "0.7.0").unwrap());
+    }
+
+    #[test]
+    fn test_is_compatible_version_specific_backward_compatibility() {
+        assert!(is_compatible_version("0.6.0", "0.7.1").unwrap());
+    }
+
+    #[test]
+    fn test_is_compatible_version_invalid_version_string() {
+        assert!(is_compatible_version("1.0", "1.0.0").is_err());
+        assert!(is_compatible_version("1.0.0", "1.0").is_err());
+    }
 }

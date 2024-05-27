@@ -1,9 +1,9 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 
 pub fn must_utc_datetime_from_timestamp(timestamp: u64) -> DateTime<Utc> {
-    let naive_dt = NaiveDateTime::from_timestamp_opt(timestamp as i64, 0)
+    let naive_dt = DateTime::from_timestamp(timestamp as i64, 0)
         .expect("Failed to convert timestamp to NaiveDateTime");
-    DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc)
+    naive_dt.to_utc()
 }
 
 pub fn utc_dt_string_from_timestamp(timestamp: u64) -> String {

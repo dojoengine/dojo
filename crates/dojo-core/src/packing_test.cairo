@@ -266,7 +266,7 @@ fn test_pack_unpack_u256_single() {
     let mut unpacked_span = unpacked.span();
 
     let mut packed = array::ArrayTrait::new();
-    pack(ref packed, ref unpacked_span, ref layout_span);
+    pack(ref packed, ref unpacked_span, 0, ref layout_span);
 
     let mut layout = ArrayTrait::new();
     layout.append(128);
@@ -312,7 +312,7 @@ fn test_pack_unpack_felt252_single() {
     let mut unpacked_span = unpacked.span();
 
     let mut packed = array::ArrayTrait::new();
-    pack(ref packed, ref unpacked_span, ref layout_span);
+    pack(ref packed, ref unpacked_span, 0, ref layout_span);
 
     let mut layout = ArrayTrait::new();
     layout.append(251);
@@ -324,6 +324,23 @@ fn test_pack_unpack_felt252_single() {
     let mut unpacked_span = unpacked.span();
     let output = serde::Serde::<felt252>::deserialize(ref unpacked_span).unwrap();
     assert(input == output, 'invalid output');
+}
+
+#[test]
+fn test_pack_with_offset() {
+    let mut packed = array![];
+    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = array![16, 128, 128, 8].span();
+
+    pack(ref packed, ref unpacked, 5, ref layout);
+
+    assert!(packed.len() == 2, "bad packed length");
+
+    println!("first item: {}", *packed.at(0));
+    println!("second item: {}", *packed.at(1));
+
+    assert!(*packed.at(0) == 0x70006, "bad packed first item");
+    assert!(*packed.at(1) == 0x0900000000000000000000000000000008, "bad packed second item");
 }
 
 #[test]
@@ -365,5 +382,25 @@ fn test_pack_max_bits_value() {
     let mut unpacked_span = unpacked.span();
 
     let mut packed = array![];
-    pack(ref packed, ref unpacked_span, ref layout_span);
+    pack(ref packed, ref unpacked_span, 0, ref layout_span);
+}
+
+#[test]
+#[should_panic(expected: ('mismatched input lens',))]
+fn test_pack_with_offset_exceeds_length() {
+    let mut packed = array![];
+    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = array![16, 128, 128, 8].span();
+
+    pack(ref packed, ref unpacked, 6, ref layout);
+}
+
+#[test]
+#[should_panic(expected: ('mismatched input lens',))]
+fn test_pack_with_offset_layout_too_long() {
+    let mut packed = array![];
+    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = array![16, 128, 128, 8, 251].span();
+
+    pack(ref packed, ref unpacked, 5, ref layout);
 }

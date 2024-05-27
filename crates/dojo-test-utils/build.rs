@@ -8,7 +8,7 @@ fn main() {
     use dojo_lang::scarb_internal::compile_workspace;
     use scarb::compiler::CompilerRepository;
     use scarb::core::{Config, TargetKind};
-    use scarb::ops::CompileOpts;
+    use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
     use scarb_ui::Verbosity;
 
     let project_paths = ["../../examples/spawn-and-move", "../torii/types-test"];
@@ -45,9 +45,16 @@ fn main() {
             .build()
             .unwrap();
 
+        let features_opts =
+            FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+
         compile_workspace(
             &config,
-            CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+            CompileOpts {
+                include_targets: vec![],
+                exclude_targets: vec![TargetKind::TEST],
+                features: features_opts,
+            },
         )
         .unwrap();
     }

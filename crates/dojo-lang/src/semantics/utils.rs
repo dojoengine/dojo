@@ -2,7 +2,9 @@ use std::collections::{BTreeSet, HashMap};
 
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::ids::{FunctionWithBodyId, ImplItemId, LookupItemId, ModuleId, ModuleItemId};
+use cairo_lang_defs::ids::{
+    FunctionWithBodyId, ImplItemId, LookupItemId, ModuleId, ModuleItemId, NamedLanguageElementId,
+};
 use cairo_lang_lowering::db::LoweringGroup;
 use cairo_lang_lowering::ids::{self as low, SemanticFunctionWithBodyIdEx};
 use cairo_lang_lowering::Statement;
@@ -146,6 +148,9 @@ pub fn function_resolver(db: &RootDatabase, fn_id: FunctionWithBodyId) -> Resolv
             db.impl_function_body_resolver_data(fn_id)
                 .unwrap()
                 .clone_with_inference_id(db, interference)
+        }
+        FunctionWithBodyId::Trait(_) => {
+            todo!()
         }
     };
     Resolver::with_data(db, resolver_data)

@@ -2,11 +2,11 @@ use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
+use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::ast::{Expr, ItemModule};
 use cairo_lang_syntax::node::kind::SyntaxKind;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 use itertools::Itertools;
 
 use super::utils::{parent_of_kind, SYSTEM_READS};
@@ -28,7 +28,7 @@ impl InlineMacroExprPlugin for GetMacro {
         let ast::WrappedArgList::ParenthesizedArgList(arg_list) = syntax.arguments(db) else {
             return unsupported_bracket_diagnostic(db, syntax);
         };
-        let mut builder = PatchBuilder::new(db);
+        let mut builder = PatchBuilder::new(db, syntax);
         builder.add_str(
             "{
                 let mut __get_macro_keys__ = core::array::ArrayTrait::new();\n",
@@ -106,35 +106,12 @@ impl InlineMacroExprPlugin for GetMacro {
             }
             let mut lookup_err_msg = format!("{} not found", model.to_string());
             lookup_err_msg.truncate(CAIRO_ERR_MSG_LEN);
-            // Currently, the main reason to have a deserialization to fail is by having
-            // the user providing the wrong keys length, which causes an invalid offset
-            // in the model deserialization.
-            let deser_err_msg = format!(
-                "\"Model `{}`: deserialization failed. Ensure the length of the keys tuple is \
-                 matching the number of #[key] fields in the model struct.\"",
-                model.to_string()
-            );
 
             builder.add_str(&format!(
-                "\n            let mut __{model}_layout__ = core::array::ArrayTrait::new();
-                 dojo::database::introspect::Introspect::<{model}>::layout(ref __{model}_layout__);
-                 let mut __{model}_layout_clone__ = __{model}_layout__.clone();
-                 let mut __{model}_layout_span__ = \
-                 core::array::ArrayTrait::span(@__{model}_layout__);
-                 let mut __{model}_layout_clone_span__ = \
-                 core::array::ArrayTrait::span(@__{model}_layout_clone__);
-                 let mut __{model}_values__ = {}.entity('{model}', __get_macro_keys__,
-                 __{model}_layout_span__);
-                 let mut __{model}_model__ = core::array::ArrayTrait::new();
-                 core::array::serialize_array_helper(__get_macro_keys__, ref __{model}_model__);
-                 core::array::serialize_array_helper(__{model}_values__, ref __{model}_model__);
-                 let mut __{model}_model_span__ = \
-                 core::array::ArrayTrait::span(@__{model}_model__);
-                 let __{model} = core::serde::Serde::<{model}>::deserialize(
-                    ref __{model}_model_span__
-                ); if core::option::OptionTrait::<{model}>::is_none(@__{model}) {{ \
-                 panic!({deser_err_msg}); }}; let __{model} = \
-                 core::option::OptionTrait::<{model}>::unwrap(__{model});\n",
+                "\n
+                let __{model}_layout__ = dojo::model::Model::<{model}>::layout();
+                let __{model}: {model} = dojo::model::Model::entity({}, __get_macro_keys__, \
+                 __{model}_layout__);\n",
                 world.as_syntax_node().get_text(db),
             ));
         }
@@ -144,11 +121,13 @@ impl InlineMacroExprPlugin for GetMacro {
             models.iter().map(|c| format!("__{c}")).join(",")
         ));
 
+        let (code, code_mappings) = builder.build();
+
         InlinePluginResult {
             code: Some(PluginGeneratedFile {
                 name: "get_inline_macro".into(),
-                content: builder.code,
-                code_mappings: builder.code_mappings,
+                content: code,
+                code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],

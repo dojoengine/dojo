@@ -492,15 +492,49 @@ impl TransactionStatusProvider for DbProvider {
 }
 
 impl TransactionTraceProvider for DbProvider {
-    fn transaction_execution(&self, _hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
-        todo!()
+    fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        let db_tx = self.0.tx()?;
+        if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
+            let execution = db_tx
+                .get::<tables::TxTraces>(num)?
+                .ok_or(ProviderError::MissingTxExecution(num))?;
+
+            db_tx.commit()?;
+            Ok(Some(execution))
+        } else {
+            Ok(None)
+        }
     }
 
-    fn transactions_executions_by_block(
+    fn transaction_executions_by_block(
         &self,
-        _block_id: BlockHashOrNumber,
+        block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
-        todo!()
+        if let Some(index) = self.block_body_indices(block_id)? {
+            let traces = self.transaction_executions_in_range(index.into())?;
+            Ok(Some(traces))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn transaction_executions_in_range(
+        &self,
+        range: Range<TxNumber>,
+    ) -> ProviderResult<Vec<TxExecInfo>> {
+        let db_tx = self.0.tx()?;
+
+        let total = range.end - range.start;
+        let mut traces = Vec::with_capacity(total as usize);
+
+        for i in range {
+            if let Some(trace) = db_tx.get::<tables::TxTraces>(i)? {
+                traces.push(trace);
+            }
+        }
+
+        db_tx.commit()?;
+        Ok(traces)
     }
 }
 
@@ -508,9 +542,8 @@ impl ReceiptProvider for DbProvider {
     fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
         let db_tx = self.0.tx()?;
         if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
-            let receipt = db_tx
-                .get::<katana_db::tables::Receipts>(num)?
-                .ok_or(ProviderError::MissingTxReceipt(num))?;
+            let receipt =
+                db_tx.get::<tables::Receipts>(num)?.ok_or(ProviderError::MissingTxReceipt(num))?;
 
             db_tx.commit()?;
             Ok(Some(receipt))
@@ -561,7 +594,7 @@ impl BlockWriter for DbProvider {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
-        _executions: Vec<TxExecInfo>,
+        executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
             let block_hash = block.block.header.hash;
@@ -581,7 +614,13 @@ impl BlockWriter for DbProvider {
             db_tx.put::<tables::Headers>(block_number, block_header)?;
             db_tx.put::<tables::BlockBodyIndices>(block_number, block_body_indices)?;
 
-            for (i, (transaction, receipt)) in transactions.into_iter().zip(receipts).enumerate() {
+            for (i, (transaction, receipt, execution)) in transactions
+                .into_iter()
+                .zip(receipts.into_iter())
+                .zip(executions.into_iter())
+                .map(|((transaction, receipt), execution)| (transaction, receipt, execution))
+                .enumerate()
+            {
                 let tx_number = tx_offset + i as u64;
                 let tx_hash = transaction.hash;
 
@@ -590,6 +629,7 @@ impl BlockWriter for DbProvider {
                 db_tx.put::<tables::TxBlocks>(tx_number, block_number)?;
                 db_tx.put::<tables::Transactions>(tx_number, transaction.transaction)?;
                 db_tx.put::<tables::Receipts>(tx_number, receipt)?;
+                db_tx.put::<tables::TxTraces>(tx_number, execution)?;
             }
 
             // insert classes
@@ -725,9 +765,12 @@ mod tests {
         Block, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
     };
     use katana_primitives::contract::ContractAddress;
-    use katana_primitives::receipt::Receipt;
+    use katana_primitives::fee::TxFeeInfo;
+    use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+    use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
+    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use super::DbProvider;
@@ -811,8 +854,19 @@ mod tests {
             &provider,
             block.clone(),
             state_updates,
-            vec![Receipt::Invoke(Default::default())],
-            vec![],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
+            vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
 
@@ -889,8 +943,19 @@ mod tests {
             &provider,
             block.clone(),
             state_updates1,
-            vec![Receipt::Invoke(Default::default())],
-            vec![],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
+            vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
 
@@ -899,8 +964,19 @@ mod tests {
             &provider,
             block,
             state_updates2,
-            vec![Receipt::Invoke(Default::default())],
-            vec![],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
+            vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
 

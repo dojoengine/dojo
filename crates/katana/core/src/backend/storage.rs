@@ -138,6 +138,7 @@ mod tests {
     use katana_primitives::block::{
         Block, FinalityStatus, GasPrices, Header, SealedBlockWithStatus,
     };
+    use katana_primitives::fee::TxFeeInfo;
     use katana_primitives::genesis::constant::{
         DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
         DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
@@ -146,6 +147,7 @@ mod tests {
     use katana_primitives::genesis::Genesis;
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+    use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
     use katana_primitives::FieldElement;
     use katana_provider::providers::in_memory::InMemoryProvider;
@@ -154,7 +156,8 @@ mod tests {
         HeaderProvider,
     };
     use katana_provider::traits::state::StateFactoryProvider;
-    use katana_provider::traits::transaction::TransactionProvider;
+    use katana_provider::traits::transaction::{TransactionProvider, TransactionTraceProvider};
+    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use super::Blockchain;
@@ -253,8 +256,19 @@ mod tests {
                 .insert_block_with_states_and_receipts(
                     dummy_block.clone(),
                     StateUpdatesWithDeclaredClasses::default(),
-                    vec![Receipt::Invoke(InvokeTxReceipt::default())],
-                    vec![],
+                    vec![Receipt::Invoke(InvokeTxReceipt {
+                        revert_error: None,
+                        events: Vec::new(),
+                        messages_sent: Vec::new(),
+                        execution_resources: Default::default(),
+                        fee: TxFeeInfo {
+                            gas_price: 0,
+                            overall_fee: 0,
+                            gas_consumed: 0,
+                            unit: PriceUnit::Wei,
+                        },
+                    })],
+                    vec![TxExecInfo::default()],
                 )
                 .unwrap();
 
@@ -310,11 +324,14 @@ mod tests {
                 .unwrap();
 
             let tx = blockchain.provider().transaction_by_hash(dummy_tx.hash).unwrap().unwrap();
+            let tx_exec =
+                blockchain.provider().transaction_execution(dummy_tx.hash).unwrap().unwrap();
 
             assert_eq!(block_hash, dummy_block.block.header.hash);
             assert_eq!(block_number, dummy_block.block.header.header.number);
             assert_eq!(block, dummy_block.block.unseal());
             assert_eq!(tx, dummy_tx);
+            assert_eq!(tx_exec, TxExecInfo::default());
         }
     }
 }
