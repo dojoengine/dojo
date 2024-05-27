@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{self, BufReader, Seek, SeekFrom};
+use std::io::{self, BufReader};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -7,8 +7,6 @@ use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use camino::Utf8PathBuf;
 use scarb_ui::Ui;
-use starknet::core::types::contract::SierraClass;
-use starknet::core::types::FlattenedSierraClass;
 
 #[derive(Debug, PartialEq)]
 pub struct ContractStatistics {
@@ -21,23 +19,15 @@ pub struct ContractStatistics {
     pub casm_contract_class_size: u64,
 }
 
-fn read_sierra_json_program(file: &File) -> Result<(FlattenedSierraClass, CasmContractClass)> {
-    let mut buf_reader = BufReader::new(file);
-    let contract_artifact: SierraClass = serde_json::from_reader(&mut buf_reader)?;
-    buf_reader.seek(SeekFrom::Start(0)).unwrap();
-
-    let contract_class: ContractClass = serde_json::from_reader(&mut buf_reader)?;
-    buf_reader.seek(SeekFrom::Start(0)).unwrap();
-
+fn read_sierra_json_program(file: &File) -> Result<(ContractClass, CasmContractClass)> {
+    let sierra_contract_class: ContractClass = serde_json::from_reader(BufReader::new(file))?;
     let casm_contract_class: CasmContractClass =
-        CasmContractClass::from_contract_class(contract_class, false, usize::MAX)?;
+        CasmContractClass::from_contract_class(sierra_contract_class.clone(), false, usize::MAX)?;
 
-    let contract_artifact: FlattenedSierraClass = contract_artifact.flatten()?;
-
-    Ok((contract_artifact, casm_contract_class))
+    Ok((sierra_contract_class, casm_contract_class))
 }
 
-fn get_sierra_byte_code_size(contract_artifact: FlattenedSierraClass) -> u64 {
+fn get_sierra_byte_code_size(contract_artifact: ContractClass) -> u64 {
     contract_artifact.sierra_program.len() as u64
 }
 
@@ -52,7 +42,7 @@ fn get_file_size(file: &File) -> Result<u64, io::Error> {
 fn get_contract_statistics_for_file(
     contract_name: String,
     sierra_json_file: File,
-    sierra_class: FlattenedSierraClass,
+    sierra_class: ContractClass,
     casm_class: CasmContractClass,
 ) -> Result<ContractStatistics> {
     let sierra_contract_class_size =
