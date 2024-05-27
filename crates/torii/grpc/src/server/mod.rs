@@ -13,7 +13,6 @@ use std::sync::Arc;
 
 use dojo_types::schema::Ty;
 use futures::Stream;
-use prost::Message;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
