@@ -130,19 +130,20 @@ export const {name}Definition = {{
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
         let name = token.type_name();
-    
+
         let mut result = format!(
             "
 // Type definition for `{}` enum
 type {} = ",
             token.type_path, name
         );
-    
+
         let mut variants = Vec::new();
-    
+
         for field in &token.inners {
-            let field_type = TypescriptPlugin::map_type(&field.token, &token.generic_args).replace("()", "");
-    
+            let field_type =
+                TypescriptPlugin::map_type(&field.token, &token.generic_args).replace("()", "");
+
             let variant_definition = if field_type.is_empty() {
                 // No associated data
                 format!("{{ type: '{}'; }}", field.name)
@@ -150,15 +151,14 @@ type {} = ",
                 // With associated data
                 format!("{{ type: '{}'; data: {}; }}", field.name, field_type)
             };
-    
+
             variants.push(variant_definition);
         }
-    
+
         result += &variants.join(" | ");
-    
+
         result
     }
-    
 
     // Token should be a model
     // This will be formatted into a C# class inheriting from ModelInstance
@@ -311,7 +311,7 @@ export function defineContractComponents(world: World) {
                 .to_lowercase(),
                 Token::Composite(t) => format!("models.{}", t.type_name()),
                 Token::Array(t) => format!("{}[]", map_type(&t.inner)),
-                _ => panic!("Unsupported token type: {:?}", token), 
+                _ => panic!("Unsupported token type: {:?}", token),
             }
         }
 

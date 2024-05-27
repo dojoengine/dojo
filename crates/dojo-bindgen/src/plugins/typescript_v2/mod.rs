@@ -57,9 +57,7 @@ impl TypeScriptV2Plugin {
                     let arg = generic_args
                         .iter()
                         .find(|(name, _)| name == generic_arg)
-                        .unwrap_or_else(|| {
-                            panic!("Generic arg not found: {}", generic_arg)
-                        });
+                        .unwrap_or_else(|| panic!("Generic arg not found: {}", generic_arg));
                     TypeScriptV2Plugin::map_type(&arg.1, generic_args)
                 } else {
                     panic!("Invalid generic arg token: {:?}", token);
@@ -490,19 +488,20 @@ export interface {name} {{
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
         let name = token.type_name();
-    
+
         let mut result = format!(
             "
 // Type definition for `{}` enum
 type {} = ",
             token.type_path, name
         );
-    
+
         let mut variants = Vec::new();
-    
+
         for field in &token.inners {
-            let field_type = TypeScriptV2Plugin::map_type(&field.token, &token.generic_args).replace("()", "");
-    
+            let field_type =
+                TypeScriptV2Plugin::map_type(&field.token, &token.generic_args).replace("()", "");
+
             let variant_definition = if field_type.is_empty() {
                 // No associated data
                 format!("{{ type: '{}'; }}", field.name)
@@ -510,12 +509,12 @@ type {} = ",
                 // With associated data
                 format!("{{ type: '{}'; data: {}; }}", field.name, field_type)
             };
-    
+
             variants.push(variant_definition);
         }
-    
+
         result += &variants.join(" | ");
-    
+
         result
     }
 
