@@ -168,6 +168,9 @@ cargo run -r -p sozo -- execute \
 
 6. Run saya
 
+The <PROVER_URL> is a `http://prover.visoft.dev:3618` or a link to a self hosted instance of `https://github.com/neotheprogramist/http-prover`.
+The <PROVER_KEY> is the private key produced by `cargo run -p keygen` in the above repository. Pass the public key to server operator or the prover program.
+
 ```bash
 cargo run -r --bin saya -- \
     --rpc-url http://localhost:5060 \
