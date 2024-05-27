@@ -17,7 +17,7 @@ impl TypeScriptV2Plugin {
     }
 
     // Maps cairo types to TypeScript defined types
-    fn map_type(token: &Token) -> String {
+    fn map_type(token: &Token, generic_args: &Vec<(String, Token)>) -> String {
         match token.type_name().as_str() {
             "bool" => "boolean".to_string(),
             "u8" => "number".to_string(),
@@ -28,12 +28,13 @@ impl TypeScriptV2Plugin {
             "u256" => "bigint".to_string(),
             "usize" => "number".to_string(),
             "felt252" => "string".to_string(),
+            "bytes31" => "string".to_string(),
             "ClassHash" => "string".to_string(),
             "ContractAddress" => "string".to_string(),
             "ByteArray" => "string".to_string(),
             "array" => {
                 if let Token::Array(array) = token {
-                    format!("{}[]", TypeScriptV2Plugin::map_type(&array.inner))
+                    format!("{}[]", TypeScriptV2Plugin::map_type(&array.inner, generic_args))
                 } else {
                     panic!("Invalid array token: {:?}", token);
                 }
@@ -43,12 +44,25 @@ impl TypeScriptV2Plugin {
                     let inners = tuple
                         .inners
                         .iter()
-                        .map(TypeScriptV2Plugin::map_type)
+                        .map(|inner| TypeScriptV2Plugin::map_type(inner, generic_args))
                         .collect::<Vec<String>>()
                         .join(", ");
                     format!("[{}]", inners)
                 } else {
                     panic!("Invalid tuple token: {:?}", token);
+                }
+            }
+            "generic_arg" => {
+                if let Token::GenericArg(generic_arg) = &token {
+                    let arg = generic_args
+                        .iter()
+                        .find(|(name, _)| name == generic_arg)
+                        .unwrap_or_else(|| {
+                            panic!("Generic arg not found: {}", generic_arg)
+                        });
+                    TypeScriptV2Plugin::map_type(&arg.1, generic_args)
+                } else {
+                    panic!("Invalid generic arg token: {:?}", token);
                 }
             }
 
@@ -442,7 +456,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         let mut native_fields: Vec<String> = Vec::new();
 
         for field in &token.inners {
-            let mapped = TypeScriptV2Plugin::map_type(&field.token);
+            let mapped = TypeScriptV2Plugin::map_type(&field.token, &token.generic_args);
             if mapped == field.token.type_name() {
                 let token = handled_tokens
                     .iter()
@@ -475,24 +489,34 @@ export interface {name} {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
-        let fields = token
-            .inners
-            .iter()
-            .map(|field| format!("{},", field.name,))
-            .collect::<Vec<String>>()
-            .join("\n    ");
-
-        format!(
+        let name = token.type_name();
+    
+        let mut result = format!(
             "
 // Type definition for `{}` enum
-export enum {} {{
-    {}
-}}
-",
-            token.type_path,
-            token.type_name(),
-            fields
-        )
+type {} = ",
+            token.type_path, name
+        );
+    
+        let mut variants = Vec::new();
+    
+        for field in &token.inners {
+            let field_type = TypeScriptV2Plugin::map_type(&field.token, &token.generic_args).replace("()", "");
+    
+            let variant_definition = if field_type.is_empty() {
+                // No associated data
+                format!("{{ type: '{}'; }}", field.name)
+            } else {
+                // With associated data
+                format!("{{ type: '{}'; data: {}; }}", field.name, field_type)
+            };
+    
+            variants.push(variant_definition);
+        }
+    
+        result += &variants.join(" | ");
+    
+        result
     }
 
     // Formats a system into a JS method used by the contract class
@@ -506,10 +530,10 @@ export enum {} {{
                 format!(
                     "{}: {}",
                     arg.0,
-                    if TypeScriptV2Plugin::map_type(&arg.1) == arg.1.type_name() {
+                    if TypeScriptV2Plugin::map_type(&arg.1, &vec![]) == arg.1.type_name() {
                         arg.1.type_name()
                     } else {
-                        TypeScriptV2Plugin::map_type(&arg.1)
+                        TypeScriptV2Plugin::map_type(&arg.1, &vec![])
                     }
                 )
             })

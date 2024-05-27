@@ -51,18 +51,15 @@ impl UnityPlugin {
                 }
             }
             "generic_arg" => {
-                let arg = generic_args
-                    .iter()
-                    .find(|arg| {
-                        arg.0
-                            == if let Token::GenericArg(g) = token {
-                                g.clone()
-                            } else {
-                                panic!("Invalid generic arg token: {:?}", token)
-                            }
-                    })
-                    .expect("Generic arg not found");
-                UnityPlugin::map_type(&arg.1, &generic_args)
+                if let Token::GenericArg(g) = &token {
+                    let arg = generic_args
+                        .iter()
+                        .find(|(name, _)| name == g)
+                        .expect("Generic arg not found");
+                    UnityPlugin::map_type(&arg.1, &generic_args)
+                } else {
+                    panic!("Invalid generic arg token: {:?}", token);
+                }
             }
 
             _ => token.type_name().to_string(),
