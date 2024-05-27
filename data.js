@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716795836834,
+  "lastUpdate": 1716796001935,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8545,6 +8545,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16762392,
             "range": "± 224170",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "492f5aeaa717f5f911e0281be3794c5d7ce9e3ec",
+          "message": "Unified crate for Cairo deps used in Katana (#1999)\n\n* unified cairo crate forr katana\r\n\r\n* update\r\n\r\n* remove license file field",
+          "timestamp": "2024-05-27T09:35:37+02:00",
+          "tree_id": "93bb194a0e67d98d135f208b3f73717beca7a2fc",
+          "url": "https://github.com/dojoengine/dojo/commit/492f5aeaa717f5f911e0281be3794c5d7ce9e3ec"
+        },
+        "date": 1716796001310,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16190008,
+            "range": "± 49533",
             "unit": "ns/iter"
           }
         ]
