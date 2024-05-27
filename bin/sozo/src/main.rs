@@ -23,8 +23,7 @@ fn main() {
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
     if let Err(err) = cli_main(args) {
-        ui.error(format!("{err}"));
-        err.chain().skip(1).for_each(|clause| eprintln!("reason: {:?}", clause));
+        ui.anyhow(&err);
         exit(1);
     }
 }
