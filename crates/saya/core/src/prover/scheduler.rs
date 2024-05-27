@@ -77,14 +77,17 @@ async fn combine_proofs(
     prover: ProverIdentifier,
     state_updates1: StateUpdates,
     state_updates2: StateUpdates,
+    world: FieldElement,
 ) -> anyhow::Result<Proof> {
     let ExtractOutputResult { program_output: program_output1, program_output_hash: _ } =
         extract_output(&first)?;
     let ExtractOutputResult { program_output: program_output2, program_output_hash: _ } =
         extract_output(&second)?;
 
-    let earlier_input = program_input_from_program_output(program_output1, state_updates1).unwrap();
-    let later_input = program_input_from_program_output(program_output2, state_updates2).unwrap();
+    let earlier_input =
+        program_input_from_program_output(program_output1, state_updates1, world).unwrap();
+    let later_input =
+        program_input_from_program_output(program_output2, state_updates2, world).unwrap();
 
     trace!(target: LOG_TARGET, "Merging proofs");
 
@@ -147,6 +150,7 @@ fn prove_recursively(
                 prover,
                 earlier_input.state_updates,
                 later_input.state_updates,
+                world,
             )
             .await?;
 

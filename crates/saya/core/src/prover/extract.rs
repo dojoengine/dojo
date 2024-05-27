@@ -7,6 +7,7 @@ use num_traits::ToPrimitive;
 pub fn program_input_from_program_output(
     output: Vec<FieldElement>,
     state_updates: StateUpdates,
+    world: FieldElement,
 ) -> anyhow::Result<ProgramInput> {
     let prev_state_root = output[0].clone();
     let block_number = serde_json::from_str(&output[2].clone().to_string()).unwrap();
@@ -50,7 +51,7 @@ pub fn program_input_from_program_output(
         world_da: None,
     };
 
-    input.fill_da(FieldElement::default());
+    input.fill_da(world);
     Ok(input)
 }
 
@@ -109,7 +110,9 @@ mod tests {
 
     use super::*;
     use cairo_proof_parser::output::extract_output;
+    use dojo_world::contracts::abi::world;
     use katana_primitives::state::StateUpdates;
+    use starknet_crypto::FieldElement;
     use std::str::FromStr;
 
     #[tokio::test]
@@ -189,6 +192,7 @@ mod tests {
         let program_input_from_proof = program_input_from_program_output(
             program_output_from_proof,
             input.clone().state_updates,
+            333u64.into(),
         )
         .unwrap();
         assert_eq!(input, program_input_from_proof);
