@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716802040791,
+  "lastUpdate": 1716831232697,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8605,6 +8605,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16304124,
             "range": "± 600111",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a19201938f79cc522b5d357663864c6bafef19e",
+          "message": "refactor(torii-core): fix double pending indexing & use btreemap for sorted blocks (#2009)",
+          "timestamp": "2024-05-27T13:22:41-04:00",
+          "tree_id": "8234c02922d32c4562a2832be0f3e4497f9bf528",
+          "url": "https://github.com/dojoengine/dojo/commit/3a19201938f79cc522b5d357663864c6bafef19e"
+        },
+        "date": 1716831231844,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16424669,
+            "range": "± 174092",
             "unit": "ns/iter"
           }
         ]
