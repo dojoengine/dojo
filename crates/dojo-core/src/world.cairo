@@ -621,7 +621,10 @@ mod world {
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
         fn upgrade_state(
-            ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput, program_hash: felt252
+            ref self: ContractState,
+            new_state: Span<StorageUpdate>,
+            program_output: ProgramOutput,
+            program_hash: felt252
         ) {
             let mut da_hasher = PedersenImpl::new(0);
             let mut i = 0;
@@ -637,8 +640,8 @@ mod world {
             assert(da_hash == program_output.world_da_hash, 'wrong output hash');
 
             assert(
-                program_hash == self.config.get_differ_program_hash() || 
-                program_hash == self.config.get_merger_program_hash(), 
+                program_hash == self.config.get_differ_program_hash()
+                    || program_hash == self.config.get_merger_program_hash(),
                 'wrong program hash'
             );
 

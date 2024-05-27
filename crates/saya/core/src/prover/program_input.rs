@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::bail;
@@ -7,8 +6,8 @@ use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
-use serde::{ser::SerializeSeq, ser::Serializer, Deserializer};
-use serde::{Deserialize, Serialize};
+use serde::ser::{SerializeSeq, Serializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use starknet::core::types::FieldElement;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
@@ -125,8 +124,7 @@ impl ProgramInput {
             .get(&ContractAddress::from(world))
             .unwrap_or(&std::collections::HashMap::new())
             .iter()
-            .map(|(k, v)| vec![*k, *v])
-            .flatten()
+            .flat_map(|(k, v)| vec![*k, *v])
             .collect::<Vec<_>>();
 
         self.world_da = Some(updates);
@@ -148,11 +146,7 @@ impl ProgramInput {
         });
         other.state_updates.storage_updates.into_iter().for_each(|(c, h)| {
             h.into_iter().for_each(|(k, v)| {
-                self.state_updates
-                    .storage_updates
-                    .entry(c)
-                    .or_insert_with(HashMap::new)
-                    .insert(k, v);
+                self.state_updates.storage_updates.entry(c).or_default().insert(k, v);
             });
         });
 
@@ -241,8 +235,7 @@ impl ProgramInput {
         let starknet_messages = self
             .message_to_starknet_segment
             .iter()
-            .map(|m| m.serialize().unwrap())
-            .flatten()
+            .flat_map(|m| m.serialize().unwrap())
             .collect::<Vec<_>>();
         out.push(FieldElement::from(starknet_messages.len()));
         out.extend(starknet_messages);
@@ -250,8 +243,7 @@ impl ProgramInput {
         let appchain_messages = self
             .message_to_appchain_segment
             .iter()
-            .map(|m| m.serialize().unwrap())
-            .flatten()
+            .flat_map(|m| m.serialize().unwrap())
             .collect::<Vec<_>>();
 
         out.push(FieldElement::from(appchain_messages.len()));
@@ -266,11 +258,8 @@ impl ProgramInput {
     }
 
     pub fn prepare_differ_args(inputs: Vec<ProgramInput>) -> String {
-        let serialized = inputs
-            .iter()
-            .map(|input| input.serialize_to_prover_args())
-            .flatten()
-            .collect::<Vec<_>>();
+        let serialized =
+            inputs.iter().flat_map(|input| input.serialize_to_prover_args()).collect::<Vec<_>>();
 
         let joined = serialized.iter().map(|f| f.to_big_decimal(0).to_string()).collect::<Vec<_>>();
 
@@ -325,7 +314,7 @@ impl MessageToStarknet {
         impl<'de> serde::de::Visitor<'de> for MessageToStarknetVisitor {
             type Value = Vec<MessageToStarknet>;
 
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 formatter.write_str("a flat list of integers for MessageToStarknet")
             }
 
@@ -415,7 +404,7 @@ impl MessageToAppchain {
         impl<'de> serde::de::Visitor<'de> for MessageToAppchainVisitor {
             type Value = Vec<MessageToAppchain>;
 
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 formatter.write_str("a flat list of integers for MessageToAppchain")
             }
 

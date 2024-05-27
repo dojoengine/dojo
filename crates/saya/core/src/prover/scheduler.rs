@@ -1,9 +1,3 @@
-use crate::{
-    prover::{extract::program_input_from_program_output, prove_merge},
-    LOG_TARGET,
-};
-
-use super::{prove_diff, ProgramInput, ProverIdentifier};
 use anyhow::bail;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::BoxFuture;
@@ -12,6 +6,11 @@ use katana_primitives::state::StateUpdates;
 use katana_primitives::FieldElement;
 use tokio::sync::oneshot;
 use tracing::{info, trace};
+
+use super::{prove_diff, ProgramInput, ProverIdentifier};
+use crate::prover::extract::program_input_from_program_output;
+use crate::prover::prove_merge;
+use crate::LOG_TARGET;
 
 type Proof = String;
 
@@ -95,7 +94,11 @@ async fn combine_proofs(
         ProgramInput::prepare_differ_args(vec![earlier_input, later_input]);
 
         // MOCK: remove when proof extraction is working.
-        "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 1092 1102 1112 12 1122 2 44 5552 444 44 0]".into()
+        "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 \
+         123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 \
+         222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 \
+         1092 1102 1112 12 1122 2 44 5552 444 44 0]"
+            .into()
     } else {
         serde_json::to_string(&CombinedInputs { earlier: earlier_input, later: later_input })?
     };
@@ -165,8 +168,9 @@ fn prove_recursively(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use itertools::Itertools;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_combine_proofs() {
@@ -294,18 +298,19 @@ mod tests {
                 "565474555"
             ]
         }"#;
-        let input1: ProgramInput = serde_json::from_str(input1).unwrap();
-        let input2: ProgramInput = serde_json::from_str(input2).unwrap();
+
+        let mut inputs = vec![input1, input2]
+            .into_iter()
+            .map(|s| serde_json::from_str::<ProgramInput>(s).unwrap())
+            .collect_vec();
+
+        let world = FieldElement::from_dec_str("333").unwrap();
+        for input in &mut inputs {
+            input.fill_da(world)
+        }
+
+        let output = Scheduler::merge(inputs, world, ProverIdentifier::Stone).await.unwrap().1;
         let expected: ProgramInput = serde_json::from_str(expected).unwrap();
-        let inputs = vec![input1.clone(), input2.clone()];
-        let output = Scheduler::merge(
-            inputs,
-            FieldElement::from_dec_str("333").unwrap(),
-            ProverIdentifier::Stone,
-        )
-        .await
-        .unwrap()
-        .1;
         assert_eq!(output, expected);
     }
 

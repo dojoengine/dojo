@@ -1,20 +1,20 @@
+use std::fs;
+
 use clap::Parser;
 use katana_primitives::FieldElement;
-use saya_core::prover::Scheduler;
-use saya_core::prover::{ProgramInput, ProverIdentifier};
+use saya_core::prover::{HttpProverParams, ProgramInput, ProverIdentifier, Scheduler};
 use saya_core::ProverAccessKey;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::fs;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
 #[clap(author, version, about, long_about = None)]
 pub struct CliInput {
-    #[arg(short,long)]
+    #[arg(short, long)]
     pub world: FieldElement,
-    #[arg(short,long)]
+    #[arg(short, long)]
     pub key: String,
     pub files: Vec<std::path::PathBuf>,
 }
@@ -57,7 +57,7 @@ async fn main() {
         std::process::exit(1);
     }
 
-    //Process each file, converting JSON data to ProgramInput.
+    // Process each file, converting JSON data to ProgramInput.
     let inputs: Vec<ProgramInput> = args
         .files
         .iter()
@@ -66,9 +66,12 @@ async fn main() {
             program_input_from_json(json_data)
         })
         .collect();
-    let prover_url: Url = Url::parse("http://localhost:3000").unwrap();
-    let secret_key = ProverAccessKey::from_hex_string(&args.key).unwrap();
+    let prover_params = Box::new(HttpProverParams {
+        prover_url: Url::parse("http://localhost:3000").unwrap(),
+        prover_key: ProverAccessKey::from_hex_string(&args.key).unwrap(),
+    });
+
     let result =
-    Scheduler::merge(inputs, args.world, ProverIdentifier::Http((prover_url,secret_key))).await.unwrap();
+        Scheduler::merge(inputs, args.world, ProverIdentifier::Http(prover_params)).await.unwrap();
     prove_to_json(vec![result.0]).await;
 }

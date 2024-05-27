@@ -56,13 +56,17 @@ mod Config {
     impl Config<
         TContractState, +HasComponent<TContractState>
     > of IConfig<ComponentState<TContractState>> {
-        fn set_differ_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252) {
+        fn set_differ_program_hash(
+            ref self: ComponentState<TContractState>, program_hash: felt252
+        ) {
             assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
             self.differ_program_hash.write(program_hash);
             self.emit(DifferProgramHashUpdate { program_hash });
         }
 
-        fn set_merger_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252) {
+        fn set_merger_program_hash(
+            ref self: ComponentState<TContractState>, program_hash: felt252
+        ) {
             assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
             self.merger_program_hash.write(program_hash);
             self.emit(MergerProgramHashUpdate { program_hash });

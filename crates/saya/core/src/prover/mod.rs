@@ -14,10 +14,10 @@ pub mod state_diff;
 mod stone_image;
 mod vec252;
 
+pub use client::HttpProverParams;
 pub use program_input::*;
 pub use scheduler::*;
 pub use stone_image::*;
-use url::Url;
 
 use self::client::http_prove;
 
@@ -28,7 +28,7 @@ pub enum ProverIdentifier {
     Stone,
     Sharp,
     Platinum,
-    Http((Url, prover_sdk::ProverAccessKey)),
+    Http(Box<HttpProverParams>),
 }
 
 pub enum ProveProgram {
@@ -38,9 +38,7 @@ pub enum ProveProgram {
 
 pub async fn prove_diff(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
     match prover {
-        ProverIdentifier::Http((url, access_key)) => {
-            http_prove(url, access_key, input, ProveProgram::Differ).await
-        }
+        ProverIdentifier::Http(params) => http_prove(*params, input, ProveProgram::Differ).await,
         ProverIdentifier::Stone => prove_stone(input).await,
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Platinum => todo!(),
@@ -49,9 +47,7 @@ pub async fn prove_diff(input: String, prover: ProverIdentifier) -> anyhow::Resu
 
 pub async fn prove_merge(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
     match prover {
-        ProverIdentifier::Http((url, access_key)) => {
-            http_prove(url, access_key, input, ProveProgram::Merger).await
-        }
+        ProverIdentifier::Http(params) => http_prove(*params, input, ProveProgram::Merger).await,
         ProverIdentifier::Stone => prove_merge_stone(input).await,
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Platinum => todo!(),

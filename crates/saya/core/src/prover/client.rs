@@ -1,15 +1,23 @@
-use std::{env, path::PathBuf};
+use std::env;
+use std::path::PathBuf;
 
 use anyhow::Context;
 use prover_sdk::{Cairo0ProverInput, Cairo1ProverInput, ProverSDK, ProverSdkErrors};
 use serde_json::Value;
-use tokio::{fs::File, io::AsyncReadExt, sync::OnceCell};
+use tokio::fs::File;
+use tokio::io::AsyncReadExt;
+use tokio::sync::OnceCell;
 use tracing::trace;
 use url::Url;
 
+use super::ProveProgram;
 use crate::LOG_TARGET;
 
-use super::ProveProgram;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HttpProverParams {
+    pub prover_url: Url,
+    pub prover_key: prover_sdk::ProverAccessKey,
+}
 
 static ONCE: OnceCell<Result<ProverSDK, ProverSdkErrors>> = OnceCell::const_new();
 
@@ -30,12 +38,15 @@ async fn load_program(prove_program: ProveProgram) -> anyhow::Result<Value> {
 }
 
 pub async fn http_prove(
-    prover_url: Url,
-    access_key: prover_sdk::ProverAccessKey,
+    prover_params: HttpProverParams,
     input: String,
     prove_program: ProveProgram,
 ) -> anyhow::Result<String> {
-    let prover = ONCE.get_or_init(|| async { ProverSDK::new(access_key, prover_url).await }).await;
+    let prover = ONCE
+        .get_or_init(|| async {
+            ProverSDK::new(prover_params.prover_key, prover_params.prover_url).await
+        })
+        .await;
     let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
     let mut program = load_program(prove_program).await?;

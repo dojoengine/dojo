@@ -14,7 +14,7 @@ use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
-use prover::ProverIdentifier;
+use prover::{HttpProverParams, ProverIdentifier};
 pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
@@ -109,10 +109,10 @@ impl Saya {
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
-        let prover_identifier = ProverIdentifier::Http((
-            self.config.prover_url.clone(),
-            self.config.prover_key.clone(),
-        ));
+        let prover_identifier = ProverIdentifier::Http(Box::new(HttpProverParams {
+            prover_url: self.config.prover_url.clone(),
+            prover_key: self.config.prover_key.clone(),
+        }));
 
         // The structure responsible for proving.
         let mut prove_scheduler = Scheduler::new(
