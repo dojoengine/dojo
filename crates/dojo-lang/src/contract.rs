@@ -17,6 +17,7 @@ use dojo_types::system::Dependency;
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 
 const ALLOW_REF_SELF_ARG: &str = "allow_ref_self";
+const DOJO_INIT_FN: &str = "dojo_init";
 
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
@@ -65,7 +66,7 @@ impl DojoContract {
                         let fn_decl = fn_ast.declaration(db);
                         let fn_name = fn_decl.name(db).text(db);
 
-                        if fn_name == "dojo_init" {
+                        if fn_name == DOJO_INIT_FN {
                             has_init = true;
                             return system.handle_init_fn(db, fn_ast);
                         }
@@ -80,18 +81,21 @@ impl DojoContract {
                     "
                     #[starknet::interface]
                     trait IDojoInit<ContractState> {
-                        fn dojo_init(self: @ContractState);
+                        fn $init_name$(self: @ContractState);
                     }
 
                     #[abi(embed_v0)]
                     impl IDojoInitImpl of IDojoInit<ContractState> {
-                        fn dojo_init(self: @ContractState) {
+                        fn $init_name$(self: @ContractState) {
                             assert(starknet::get_caller_address() == \
                      self.world().contract_address, 'Only world can init');
                         }
                     }
                 ",
-                    &UnorderedHashMap::from([]),
+                    &UnorderedHashMap::from([(
+                        "init_name".to_string(),
+                        RewriteNode::Text(DOJO_INIT_FN.to_string()),
+                    )]),
                 );
                 body_nodes.append(&mut vec![node]);
             }

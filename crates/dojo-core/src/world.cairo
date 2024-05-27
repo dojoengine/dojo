@@ -99,8 +99,10 @@ mod world {
 
     const WORLD: felt252 = 0;
 
-    // the minimum internal size of an empty ByteArray 
+    // the minimum internal size of an empty ByteArray
     const MIN_BYTE_ARRAY_SIZE: u32 = 3;
+
+    const DOJO_INIT_SELECTOR: felt252 = selector!("dojo_init");
 
     component!(path: Config, storage: config, event: ConfigEvent);
 
@@ -433,7 +435,7 @@ mod world {
         ///
         /// * `salt` - The salt use for contract deployment.
         /// * `class_hash` - The class hash of the contract.
-        /// * `init_calldata` - Calldata used to initialize the contract
+        /// * `init_calldata` - Calldata used to initialize the contract.
         ///
         /// # Returns
         ///
@@ -452,15 +454,13 @@ mod world {
             upgradeable_dispatcher.upgrade(class_hash);
 
             if self.initialized_contract.read(contract_address.into()) {
-                panic!("Already initialized");
+                panic!("Contract has been already initialized");
             } else {
-                starknet::call_contract_syscall(
-                    contract_address, selector!("dojo_init"), init_calldata
-                )
+                starknet::call_contract_syscall(contract_address, DOJO_INIT_SELECTOR, init_calldata)
                     .unwrap_syscall();
-
                 self.initialized_contract.write(contract_address.into(), true);
             }
+
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
             self.deployed_contracts.write(contract_address.into(), class_hash.into());
@@ -813,7 +813,7 @@ mod world {
         }
 
         /// Write values to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the object key.
@@ -846,7 +846,7 @@ mod world {
         }
 
         /// Write fixed layout model record to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the model record key.
@@ -861,7 +861,7 @@ mod world {
         }
 
         /// Write array layout model record to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the model record key.
@@ -911,7 +911,7 @@ mod world {
             //    data: Array<bytes31>,
             //    pending_word: felt252,
             //    pending_word_len: usize,
-            // } 
+            // }
             //
             // That means, the length of data to write from 'values' is:
             // 1 + len(data) + 1 + 1 = len(data) + 3
@@ -931,7 +931,7 @@ mod world {
         }
 
         /// Write struct layout model record to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the model record key.
@@ -961,7 +961,7 @@ mod world {
         }
 
         /// Write tuple layout model record to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the model record key.
@@ -1035,7 +1035,7 @@ mod world {
             //    data: Array<bytes31>,
             //    pending_word: felt252,
             //    pending_word_len: usize,
-            // } 
+            // }
             //
 
             // So, just set the 3 first values to 0 (len(data), pending_world and pending_word_len)
@@ -1202,7 +1202,7 @@ mod world {
             //    data: Array<bytes31>,
             //    pending_word: felt252,
             //    pending_word_len: usize,
-            // } 
+            // }
             //
             // So, read the length of data and compute the full size to read
 

@@ -39,7 +39,6 @@ pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
 pub const DOJO_MODEL_ATTR: &str = "dojo::model";
 pub const DOJO_EVENT_ATTR: &str = "dojo::event";
-pub const DOJO_INIT_ATTR: &str = "dojo::init";
 
 pub const DOJO_INTROSPECT_ATTR: &str = "Introspect";
 pub const DOJO_PACKED_ATTR: &str = "IntrospectPacked";
@@ -516,7 +515,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
             DOJO_CONTRACT_ATTR.to_string(),
             DOJO_EVENT_ATTR.to_string(),
             DOJO_MODEL_ATTR.to_string(),
-            DOJO_INIT_ATTR.to_string(),
             "key".to_string(),
             "computed".to_string(),
             // Not adding capacity for now, this will automatically

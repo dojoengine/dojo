@@ -52,7 +52,7 @@ fn deploy_world() -> IWorldDispatcher {
     spawn_test_world(array![])
 }
 
-// A test contract needs to be used instead of previously used base contract since
+// A test contract needs to be used instead of previously used base contract since.
 // contracts now require a `dojo_init` method which normal base contract doesn't have
 #[dojo::contract]
 mod test_contract {}
