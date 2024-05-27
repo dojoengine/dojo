@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716796001935,
+  "lastUpdate": 1716802040791,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8575,6 +8575,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16190008,
             "range": "± 49533",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "03aefc36ea4e8256c50dd7541549f5177b0f21e7",
+          "message": "docs(sozo): update error message for more context (#2005)\n\ndocs: update error message for more context",
+          "timestamp": "2024-05-27T11:15:59+02:00",
+          "tree_id": "e89012ded4f5f1bab0e74c25a7926a34110f42d5",
+          "url": "https://github.com/dojoengine/dojo/commit/03aefc36ea4e8256c50dd7541549f5177b0f21e7"
+        },
+        "date": 1716802040229,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16304124,
+            "range": "± 600111",
             "unit": "ns/iter"
           }
         ]
