@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use dojo_types::schema::Ty;
 use futures::Stream;
+use prost::Message;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
@@ -132,7 +133,7 @@ impl DojoWorld {
                 contract_address: model.3,
                 packed_size: model.4,
                 unpacked_size: model.5,
-                layout: hex::decode(&model.6).unwrap(),
+                layout: model.6.as_bytes().to_vec(),
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
@@ -474,7 +475,7 @@ impl DojoWorld {
         .await?;
 
         let schema = self.model_cache.schema(&model).await?;
-        let layout = hex::decode(&layout).unwrap();
+        let layout = layout.as_bytes().to_vec();
 
         Ok(proto::types::ModelMetadata {
             name,
