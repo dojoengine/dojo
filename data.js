@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716760139786,
+  "lastUpdate": 1716795836834,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8515,6 +8515,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16472571,
             "range": "± 347922",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "matigru@gmail.com",
+            "name": "mgrunwaldt",
+            "username": "mgrunwaldt"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "666d835021f5a4271c914de30cc7a672c8be5979",
+          "message": "Update README.md - Getting Started Link (#2000)\n\nGetting Started Link was broken",
+          "timestamp": "2024-05-27T09:34:40+02:00",
+          "tree_id": "710ad68132109271c4af47bb466891f2d276a150",
+          "url": "https://github.com/dojoengine/dojo/commit/666d835021f5a4271c914de30cc7a672c8be5979"
+        },
+        "date": 1716795835652,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16762392,
+            "range": "± 224170",
             "unit": "ns/iter"
           }
         ]
