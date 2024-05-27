@@ -16,7 +16,7 @@ impl UnityPlugin {
     }
 
     // Maps cairo types to C#/Unity SDK defined types
-    fn map_type(token: &Token) -> String {
+    fn map_type(token: &Token, generic_args: &Vec<(String, Token)>) -> String {
         match token.type_name().as_str() {
             "u8" => "byte".to_string(),
             "u16" => "ushort".to_string(),
@@ -32,7 +32,7 @@ impl UnityPlugin {
             "ByteArray" => "string".to_string(),
             "array" => {
                 if let Token::Array(array) = token {
-                    format!("{}[]", UnityPlugin::map_type(&array.inner))
+                    format!("{}[]", UnityPlugin::map_type(&array.inner, generic_args))
                 } else {
                     panic!("Invalid array token: {:?}", token);
                 }
@@ -42,13 +42,27 @@ impl UnityPlugin {
                     let inners = tuple
                         .inners
                         .iter()
-                        .map(UnityPlugin::map_type)
+                        .map(|i| UnityPlugin::map_type(i, generic_args))
                         .collect::<Vec<String>>()
                         .join(", ");
                     format!("Tuple<{}>", inners)
                 } else {
                     panic!("Invalid tuple token: {:?}", token);
                 }
+            }
+            "generic_arg" => {
+                let arg = generic_args
+                    .iter()
+                    .find(|arg| {
+                        arg.0
+                            == if let Token::GenericArg(g) = token {
+                                g.clone()
+                            } else {
+                                panic!("Invalid generic arg token: {:?}", token)
+                            }
+                    })
+                    .expect("Generic arg not found");
+                UnityPlugin::map_type(&arg.1, &generic_args)
             }
 
             _ => token.type_name().to_string(),
@@ -69,7 +83,13 @@ impl UnityPlugin {
         let fields = token
             .inners
             .iter()
-            .map(|field| format!("public {} {};", UnityPlugin::map_type(&field.token), field.name))
+            .map(|field| {
+                format!(
+                    "public {} {};",
+                    UnityPlugin::map_type(&field.token, &token.generic_args),
+                    field.name
+                )
+            })
             .collect::<Vec<String>>()
             .join("\n    ");
 
@@ -91,24 +111,29 @@ public struct {} {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
-        let fields = token
-            .inners
-            .iter()
-            .map(|field| format!("{},", field.name,))
-            .collect::<Vec<String>>()
-            .join("\n    ");
+        let name = token.type_name();
 
-        format!(
+        let mut result = format!(
             "
 // Type definition for `{}` enum
-public enum {} {{
-    {}
-}}
-",
-            token.type_path,
-            token.type_name(),
-            fields
-        )
+public abstract record {}() {{",
+            token.type_path, name
+        );
+
+        for field in &token.inners {
+            result += format!(
+                "\n    public record {}({}) : {name};",
+                field.name,
+                UnityPlugin::map_type(&field.token, &token.generic_args)
+                    .replace("(", "")
+                    .replace(")", "")
+            )
+            .as_str();
+        }
+
+        result += "\n}\n";
+
+        result
     }
 
     // Token should be a model
@@ -122,7 +147,7 @@ public enum {} {{
                 format!(
                     "[ModelField(\"{}\")]\n    public {} {};",
                     field.name,
-                    UnityPlugin::map_type(&field.token),
+                    UnityPlugin::map_type(&field.token, &model.generic_args),
                     field.name,
                 )
             })
@@ -201,7 +226,7 @@ public class {} : ModelInstance {{
         let args = system
             .inputs
             .iter()
-            .map(|arg| format!("{} {}", UnityPlugin::map_type(&arg.1), &arg.0))
+            .map(|arg| format!("{} {}", UnityPlugin::map_type(&arg.1, &vec![]), &arg.0))
             .collect::<Vec<String>>()
             .join(", ");
 
@@ -232,7 +257,7 @@ public class {} : ModelInstance {{
                             }
                         }
                     }
-                    None => match UnityPlugin::map_type(token).as_str() {
+                    None => match UnityPlugin::map_type(token, &vec![]).as_str() {
                         "FieldElement" => format!("{}.Inner()", type_name),
                         _ => format!("new FieldElement({}).Inner()", type_name),
                     },
