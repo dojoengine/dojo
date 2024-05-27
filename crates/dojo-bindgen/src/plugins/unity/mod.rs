@@ -119,7 +119,7 @@ public abstract record {}() {{",
 
         for field in &token.inners {
             result += format!(
-                "\n    public record {}({}) : {name};",
+                "\n    public record {}({} value) : {name};",
                 field.name,
                 UnityPlugin::map_type(&field.token, &token.generic_args)
                     .replace("(", "")
