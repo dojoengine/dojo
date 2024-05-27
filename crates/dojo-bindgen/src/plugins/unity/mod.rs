@@ -45,7 +45,7 @@ impl UnityPlugin {
                         .map(|i| UnityPlugin::map_type(i, generic_args))
                         .collect::<Vec<String>>()
                         .join(", ");
-                    format!("Tuple<{}>", inners)
+                    format!("({})", inners)
                 } else {
                     panic!("Invalid tuple token: {:?}", token);
                 }
