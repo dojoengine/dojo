@@ -80,7 +80,20 @@ cargo run -r --bin saya -- --rpc-url http://localhost:5050 --registry 0x217746a5
 
 ## End to end testing
 
-1. Spawn world
+1. Prepare fact registry contract
+
+   Declare or use already declared `class-hash`: `0x7f6076572e04d7182a1c5c9f1f4c15aafcb069b1bfdb3de4d7c9e47c99deeb4`.
+
+   Deploy or use already deployed `contract`: `0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb`.
+
+   In the repository https://github.com/HerodotusDev/integrity run
+
+```bash
+    fact_registry/1-declare.sh # extract `class-hash`
+    fact_registry/1-deploy.sh <CLASS_HASH> # use at <FACT_REGISTRY>
+```
+
+2. Spawn world
 
 ```bash
 cargo run -r -p sozo -- \
@@ -97,7 +110,7 @@ cargo run -r -p sozo -- \
     --name <WORLD_NAME>
 ```
 
-2. Set world configs
+3. Set world configs
 
 ```bash
 sncast \
@@ -128,11 +141,11 @@ sncast \
     invoke \
     -a <WORLD_ADDRESS> \
     -f set_facts_registry \
-    -c 0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb \
+    -c <FACT_REGISTRY> \
     --max-fee 644996534717092
 ```
 
-3. Start katana
+4. Start katana
 
 ```bash
 cargo run -r -p katana -- \
@@ -141,7 +154,7 @@ cargo run -r -p katana -- \
     -p 5050
 ```
 
-4. Run transactions on `katana`
+5. Run transactions on `katana`
 
 ```bash
 cargo run -r -p sozo -- execute \
@@ -153,12 +166,12 @@ cargo run -r -p sozo -- execute \
 
 ```
 
-5. Run saya
+6. Run saya
 
 ```bash
 cargo run -r --bin saya -- \
     --rpc-url http://localhost:5060 \
-    --registry 0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb \
+    --registry <FACT_REGISTRY> \
     --world <WORLD_ADDRESS> \
     --prover-url <PROVER_URL> \
     --prover-key <PROVER_KEY> \

@@ -1,7 +1,7 @@
 use std::{env, path::PathBuf};
 
 use anyhow::Context;
-use prover_sdk::{errors::ProverSdkErrors, Cairo0ProverInput, Cairo1ProverInput, ProverSDK};
+use prover_sdk::{Cairo0ProverInput, Cairo1ProverInput, ProverSDK, ProverSdkErrors};
 use serde_json::Value;
 use tokio::{fs::File, io::AsyncReadExt, sync::OnceCell};
 use tracing::trace;

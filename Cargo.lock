@@ -3765,7 +3765,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/neotheprogramist/http-prover?rev=6ce9c5d6840b1ee67d9abd3fa3becb073c973410#6ce9c5d6840b1ee67d9abd3fa3becb073c973410"
+source = "git+https://github.com/neotheprogramist/http-prover?rev=d87553ace5fba13b47b9c31b50f1eb6a97e3ceb4#d87553ace5fba13b47b9c31b50f1eb6a97e3ceb4"
 dependencies = [
  "ed25519-dalek",
  "prefix-hex",
@@ -10751,7 +10751,7 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/neotheprogramist/http-prover?rev=6ce9c5d6840b1ee67d9abd3fa3becb073c973410#6ce9c5d6840b1ee67d9abd3fa3becb073c973410"
+source = "git+https://github.com/neotheprogramist/http-prover?rev=d87553ace5fba13b47b9c31b50f1eb6a97e3ceb4#d87553ace5fba13b47b9c31b50f1eb6a97e3ceb4"
 dependencies = [
  "bytes",
  "common 0.1.0",

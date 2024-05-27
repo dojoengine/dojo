@@ -47,7 +47,7 @@ cairo-felt = "0.9.1"
 num-bigint = "0.4.4"
 num-traits = "0.2.18"
 
-prover-sdk = { git = "https://github.com/neotheprogramist/http-prover", rev = "6ce9c5d6840b1ee67d9abd3fa3becb073c973410" }
+prover-sdk = { git = "https://github.com/neotheprogramist/http-prover", rev = "d87553ace5fba13b47b9c31b50f1eb6a97e3ceb4" }
 
 [features]
 default = []
