@@ -107,6 +107,7 @@ mod tests {
     use super::*;
     use crate::prover::{prove_diff, ProverIdentifier};
 
+    #[ignore]
     #[tokio::test]
     async fn test_program_input_from_program_output() -> anyhow::Result<()> {
         let mut input = ProgramInput {

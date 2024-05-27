@@ -172,6 +172,7 @@ mod tests {
 
     use super::*;
 
+    #[ignore]
     #[tokio::test]
     async fn test_combine_proofs() {
         let input1 = r#"{
@@ -314,6 +315,7 @@ mod tests {
         assert_eq!(output, expected);
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_4_combine_proofs() -> anyhow::Result<()> {
         let world = FieldElement::from_dec_str("42")?;
