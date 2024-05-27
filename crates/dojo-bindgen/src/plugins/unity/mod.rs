@@ -116,11 +116,13 @@ public struct {} {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
-        let name_with_generics = format!(
-            "{}<{}>",
-            token.type_name(),
-            token.generic_args.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>().join(", ")
-        );
+        let mut name_with_generics = token.type_name();
+        if token.generic_args.len() > 0 {
+            name_with_generics += &format!(
+                "<{}>",
+                token.generic_args.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>().join(", ")
+            );
+        }
 
         let mut result = format!(
             "
