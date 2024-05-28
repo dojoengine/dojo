@@ -448,6 +448,10 @@ fn format_tuple(
     level: usize,
     start_indent: bool,
 ) -> String {
+    if items.is_empty() {
+        return "".to_string();
+    }
+
     let items_repr = items
         .iter()
         .map(|x| format_record_value(x, values, level + 1, true))
@@ -489,12 +493,16 @@ fn format_enum(
     let variant_data =
         format_record_value(&schema.options[variant_index].ty, values, level + 1, true);
 
-    format!(
-        "{}{variant_name}(\n{}\n{})",
-        _start_indent(level, start_indent),
-        variant_data,
-        INDENT.repeat(level)
-    )
+    if variant_data.is_empty() {
+        format!("{}{variant_name}", _start_indent(level, start_indent),)
+    } else {
+        format!(
+            "{}{variant_name}(\n{}\n{})",
+            _start_indent(level, start_indent),
+            variant_data,
+            INDENT.repeat(level)
+        )
+    }
 }
 
 fn format_record_value(
