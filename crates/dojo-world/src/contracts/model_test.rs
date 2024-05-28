@@ -65,7 +65,7 @@ async fn test_model() {
 
     assert_eq!(
         position.class_hash(),
-        felt!("0x03c3632f38ab3ba550bd3c596e2af55002d43bc76b7b660a3a57b49795307c58")
+        felt!("0x05e45e3e5ace62e0c09f7ef98662c15dc34fa2b74a313bedfd0b9677a56040eb")
     );
 
     let moves = world.model_reader("Moves").await.unwrap();
