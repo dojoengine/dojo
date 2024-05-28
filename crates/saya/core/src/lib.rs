@@ -109,7 +109,7 @@ impl Saya {
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
-        let prover_identifier = ProverIdentifier::Http(Box::new(HttpProverParams {
+        let prover_identifier = ProverIdentifier::Http(Arc::new(HttpProverParams {
             prover_url: self.config.prover_url.clone(),
             prover_key: self.config.prover_key.clone(),
         }));

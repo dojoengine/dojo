@@ -1,13 +1,14 @@
 //! Prover backends.
 //!
 //! The prover is in charge of generating a proof from the cairo execution trace.
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use anyhow::bail;
 use async_trait::async_trait;
 
 mod client;
 mod extract;
+mod loader;
 mod program_input;
 mod scheduler;
 pub mod state_diff;
@@ -28,7 +29,7 @@ pub enum ProverIdentifier {
     Stone,
     Sharp,
     Platinum,
-    Http(Box<HttpProverParams>),
+    Http(Arc<HttpProverParams>),
 }
 
 pub enum ProveProgram {
@@ -36,19 +37,14 @@ pub enum ProveProgram {
     Merger,
 }
 
-pub async fn prove_diff(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
+pub async fn prove_diff(
+    input: String,
+    prover: ProverIdentifier,
+    program: ProveProgram,
+) -> anyhow::Result<String> {
     match prover {
-        ProverIdentifier::Http(params) => http_prove(*params, input, ProveProgram::Differ).await,
-        ProverIdentifier::Stone => prove_stone(input).await,
-        ProverIdentifier::Sharp => todo!(),
-        ProverIdentifier::Platinum => todo!(),
-    }
-}
-
-pub async fn prove_merge(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
-    match prover {
-        ProverIdentifier::Http(params) => http_prove(*params, input, ProveProgram::Merger).await,
-        ProverIdentifier::Stone => prove_merge_stone(input).await,
+        ProverIdentifier::Http(params) => http_prove(params, input, program).await,
+        ProverIdentifier::Stone => prove_stone(input, program).await,
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Platinum => todo!(),
     }
@@ -60,10 +56,8 @@ pub trait ProverClient {
     fn identifier() -> ProverIdentifier;
 
     /// Generates the proof from the given trace.
-    /// At the moment prover is coupled with the program it proves. Because of this input should
-    /// correspond to the program.
+    /// The proven input has to be valid for the proving program.
     async fn prove(&self, input: String) -> anyhow::Result<String>;
-    async fn local_verify(&self, proof: String) -> anyhow::Result<()>;
 }
 
 impl FromStr for ProverIdentifier {

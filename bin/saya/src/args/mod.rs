@@ -32,13 +32,13 @@ pub struct SayaArgs {
     #[arg(long)]
     #[arg(value_name = "PROVER URL")]
     #[arg(help = "The Prover URL for remote proving.")]
-    pub prover_url: Url,
+    pub url: Url,
 
     /// Specify the Prover Key.
     #[arg(long)]
     #[arg(value_name = "PROVER KEY")]
     #[arg(help = "An authorized prover key for remote proving.")]
-    pub prover_key: String,
+    pub private_key: String,
 
     /// Enable JSON logging.
     #[arg(long)]
@@ -127,13 +127,13 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 None => None,
             };
 
-            let prover_key = ProverAccessKey::from_hex_string(&args.prover_key).map_err(|e| {
+            let prover_key = ProverAccessKey::from_hex_string(&args.private_key).map_err(|e| {
                 Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
             })?;
 
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
-                prover_url: args.prover_url,
+                prover_url: args.url,
                 prover_key,
                 start_block: args.start_block,
                 batch_size: args.batch_size,
@@ -161,8 +161,8 @@ mod tests {
         let args = SayaArgs {
             config_file: Some(config_file_path.clone()),
             rpc_url: Url::parse("http://localhost:5050").unwrap(),
-            prover_url: Url::parse("http://localhost:5050").unwrap(),
-            prover_key: "d0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027".into(),
+            url: Url::parse("http://localhost:5050").unwrap(),
+            private_key: "d0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027".into(),
             json_log: false,
             start_block: 0,
             batch_size: 4,

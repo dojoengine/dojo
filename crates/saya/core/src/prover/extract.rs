@@ -105,7 +105,7 @@ mod tests {
     use starknet_crypto::FieldElement;
 
     use super::*;
-    use crate::prover::{prove_diff, ProverIdentifier};
+    use crate::prover::{prove_diff, ProveProgram, ProverIdentifier};
 
     #[ignore]
     #[tokio::test]
@@ -183,7 +183,9 @@ mod tests {
         input.fill_da(333u64.into());
 
         let serialized_input = serde_json::to_string(&input).unwrap();
-        let proof = prove_diff(serialized_input, ProverIdentifier::Stone).await.unwrap();
+        let proof = prove_diff(serialized_input, ProverIdentifier::Stone, ProveProgram::Differ)
+            .await
+            .unwrap();
         let program_output_from_proof = extract_output(&proof).unwrap().program_output;
         let program_input_from_proof = program_input_from_program_output(
             program_output_from_proof,

@@ -9,7 +9,7 @@ use tracing::{info, trace};
 
 use super::{prove_diff, ProgramInput, ProverIdentifier};
 use crate::prover::extract::program_input_from_program_output;
-use crate::prover::prove_merge;
+use crate::prover::ProveProgram;
 use crate::LOG_TARGET;
 
 type Proof = String;
@@ -103,7 +103,7 @@ async fn combine_proofs(
         serde_json::to_string(&CombinedInputs { earlier: earlier_input, later: later_input })?
     };
 
-    let merged_proof = prove_merge(prover_input, prover).await?;
+    let merged_proof = prove_diff(prover_input, prover, ProveProgram::Merger).await?;
 
     Ok(merged_proof)
 }
@@ -130,7 +130,7 @@ fn prove_recursively(
                 serde_json::to_string(&input.clone()).unwrap()
             };
 
-            let proof = prove_diff(prover_input, prover).await?;
+            let proof = prove_diff(prover_input, prover, ProveProgram::Differ).await?;
             info!(target: LOG_TARGET, block_number, "Block proven");
             Ok((proof, input))
         } else {
