@@ -9,11 +9,8 @@ use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
-const SIERRA_BYTECODE_SIZE_LABEL: &str = "[Sierra] Bytecode size (felts)";
-const SIERRA_CONTRACT_CLASS_SIZE_LABEL: &str = "[Sierra] Class size (bytes)";
-
-const CASM_BYTECODE_SIZE_LABEL: &str = "[Casm] Bytecode size (felts)";
-const CASM_CONTRACT_CLASS_SIZE_LABEL: &str = "[Casm] Class size (bytes)";
+const BYTECODE_SIZE_LABEL: &str = "Bytecode size [in felts]\n(Sierra, Casm)";
+const CONTRACT_CLASS_SIZE_LABEL: &str = "Class size [in bytes]\n(Sierra, Casm)";
 
 const CONTRACT_NAME_LABEL: &str = "Contract";
 
@@ -110,10 +107,8 @@ fn create_stats_table(mut contracts_statistics: Vec<ContractStatistics>) -> Tabl
     // Add table headers
     table.set_titles(Row::new(vec![
         Cell::new_align(CONTRACT_NAME_LABEL, format::Alignment::CENTER),
-        Cell::new_align(SIERRA_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
-        Cell::new_align(SIERRA_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
-        Cell::new_align(CASM_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
-        Cell::new_align(CASM_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
+        Cell::new_align(BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
+        Cell::new_align(CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
     ]));
 
     // sort contracts in alphabetical order
@@ -131,15 +126,13 @@ fn create_stats_table(mut contracts_statistics: Vec<ContractStatistics>) -> Tabl
 
         table.add_row(Row::new(vec![
             Cell::new_align(&contract_name, format::Alignment::LEFT),
-            Cell::new_align(format!("{}", sierra_bytecode_size).as_str(), format::Alignment::RIGHT),
             Cell::new_align(
-                format!("{}", sierra_contract_class_size).as_str(),
-                format::Alignment::RIGHT,
+                format!("({}, {})", sierra_bytecode_size, casm_bytecode_size).as_str(),
+                format::Alignment::CENTER,
             ),
-            Cell::new_align(format!("{}", casm_bytecode_size).as_str(), format::Alignment::RIGHT),
             Cell::new_align(
-                format!("{}", casm_contract_class_size).as_str(),
-                format::Alignment::RIGHT,
+                format!("({}, {})", sierra_contract_class_size, casm_contract_class_size).as_str(),
+                format::Alignment::CENTER,
             ),
         ]));
     }
@@ -208,31 +201,23 @@ mod tests {
         expected_table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
         expected_table.set_titles(Row::new(vec![
             Cell::new_align(CONTRACT_NAME_LABEL, format::Alignment::CENTER),
-            Cell::new_align(SIERRA_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
-            Cell::new_align(SIERRA_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
-            Cell::new_align(CASM_BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
-            Cell::new_align(CASM_CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
+            Cell::new_align(BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
+            Cell::new_align(CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test1", format::Alignment::LEFT),
-            Cell::new_align(format!("{}", 33).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 33).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 66).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 66).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("({}, {})", 33, 66).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("({}, {})", 33, 66).as_str(), format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test2", format::Alignment::LEFT),
-            Cell::new_align(format!("{}", 43).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 24).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 86).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 48).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("({}, {})", 43, 86).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("({}, {})", 24, 48).as_str(), format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test3", format::Alignment::LEFT),
-            Cell::new_align(format!("{}", 36).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 12).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 72).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 24).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("({}, {})", 36, 72).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("({}, {})", 12, 24).as_str(), format::Alignment::CENTER),
         ]));
 
         // Act

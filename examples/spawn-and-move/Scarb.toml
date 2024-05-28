@@ -12,9 +12,6 @@ sierra-replace-ids = true
 [dependencies]
 dojo = { path = "../../crates/dojo-core" }
 
-[[target.starknet-contract]]
-casm = true
-
 [[target.dojo]]
 build-external-contracts = [  ]
 
