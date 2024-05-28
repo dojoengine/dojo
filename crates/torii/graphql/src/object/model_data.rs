@@ -68,7 +68,7 @@ impl BasicObject for ModelDataObject {
     fn objects(&self) -> Vec<Object> {
         let mut objects = data_objects_recursion(
             &TypeData::Nested((TypeRef::named(self.type_name()), self.type_mapping.clone())),
-            &vec![self.type_name().to_string()]
+            &vec![self.type_name().to_string()],
         );
 
         // root object requires entity_field association

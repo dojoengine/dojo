@@ -569,11 +569,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return;
@@ -649,7 +645,6 @@ impl Sql {
                 arguments.extend(indexes.iter().map(|idx| Argument::Int(*idx)));
 
                 self.query_queue.enqueue(query, arguments);
-
 
                 // insert the new array elements
                 for (idx, member) in array.iter().enumerate() {

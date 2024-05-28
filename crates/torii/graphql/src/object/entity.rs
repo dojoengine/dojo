@@ -63,10 +63,8 @@ impl ResolvableObject for EntityObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![SubscriptionField::new(
-            "entityUpdated",
-            TypeRef::named_nn(self.type_name()),
-            |ctx| {
+        Some(vec![
+            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let id = match ctx.args.get("id") {
                         Some(id) => Some(id.string()?.to_string()),
@@ -83,9 +81,9 @@ impl ResolvableObject for EntityObject {
                         }
                     }))
                 })
-            },
-        )
-        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
+            })
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
     }
 }
 
@@ -147,7 +145,7 @@ fn model_union_field() -> Field {
                             &entity_id,
                             &mut vec![],
                             &type_mapping,
-                            false
+                            false,
                         )
                         .await?
                         {
@@ -174,7 +172,7 @@ pub async fn model_data_recursive_query(
     entity_id: &str,
     indexes: &Vec<i64>,
     type_mapping: &TypeMapping,
-    is_list: bool
+    is_list: bool,
 ) -> sqlx::Result<Value> {
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
@@ -212,7 +210,7 @@ pub async fn model_data_recursive_query(
                         indexes.clone()
                     },
                     nested_mapping,
-                    false
+                    false,
                 )
                 .await?;
 
@@ -234,7 +232,7 @@ pub async fn model_data_recursive_query(
                         indexes.clone()
                     },
                     &IndexMap::from([(Name::new("data"), *inner.clone())]),
-                    true
+                    true,
                 )
                 .await?
                 {
@@ -244,13 +242,19 @@ pub async fn model_data_recursive_query(
                         .iter()
                         .map(|v| match v {
                             Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
-                            _ => unreachable!("Expected Value::Object for list \"data\" field, got {:?}", v),
+                            _ => unreachable!(
+                                "Expected Value::Object for list \"data\" field, got {:?}",
+                                v
+                            ),
                         })
                         .collect(),
                     Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
                     ty => {
-                        unreachable!("Expected Value::List or Value::Object for list, got {:?}", ty);
-                    },
+                        unreachable!(
+                            "Expected Value::List or Value::Object for list, got {:?}",
+                            ty
+                        );
+                    }
                 };
 
                 nested_value_mapping.insert(Name::new(field_name), data);
