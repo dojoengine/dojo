@@ -1,4 +1,5 @@
 use std::fs;
+use std::sync::Arc;
 
 use clap::Parser;
 use katana_primitives::FieldElement;
@@ -66,7 +67,7 @@ async fn main() {
             program_input_from_json(json_data)
         })
         .collect();
-    let prover_params = Box::new(HttpProverParams {
+    let prover_params = Arc::new(HttpProverParams {
         prover_url: Url::parse("http://localhost:3000").unwrap(),
         prover_key: ProverAccessKey::from_hex_string(&args.key).unwrap(),
     });

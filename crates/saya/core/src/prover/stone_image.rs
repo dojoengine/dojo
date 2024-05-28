@@ -8,10 +8,9 @@ use tokio::process::Command;
 use tokio::sync::OnceCell;
 use tracing::trace;
 
+use super::{ProveProgram, ProverClient, ProverIdentifier};
 use crate::prover::loader::prepare_input_cairo0;
 use crate::LOG_TARGET;
-
-use super::{ProveProgram, ProverClient, ProverIdentifier};
 
 #[cfg(feature = "cairo1differ")]
 const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo:recursive";

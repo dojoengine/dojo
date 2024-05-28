@@ -1,15 +1,16 @@
-use std::{env, str::FromStr, sync::Arc};
+use std::env;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use cairo_proof_parser::output::extract_output;
-use katana_primitives::{contract::ContractAddress, state::StateUpdates};
-use saya_core::{
-    prover::{
-        extract::program_input_from_program_output, prove_diff, HttpProverParams,
-        MessageToAppchain, MessageToStarknet, ProgramInput, ProveProgram, ProverIdentifier,
-        Scheduler,
-    },
-    ProverAccessKey,
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::state::StateUpdates;
+use saya_core::prover::extract::program_input_from_program_output;
+use saya_core::prover::{
+    prove_diff, HttpProverParams, MessageToAppchain, MessageToStarknet, ProgramInput, ProveProgram,
+    ProverIdentifier, Scheduler,
 };
+use saya_core::ProverAccessKey;
 use starknet_crypto::FieldElement;
 
 fn prover_identifier() -> ProverIdentifier {

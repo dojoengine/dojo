@@ -1,7 +1,8 @@
 //! Prover backends.
 //!
 //! The prover is in charge of generating a proof from the cairo execution trace.
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::bail;
 use async_trait::async_trait;

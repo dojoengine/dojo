@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::bail;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
-use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
+use katana_primitives::trace::{CallInfo, EntryPointType};
 use katana_primitives::transaction::{L1HandlerTx, TxHash};
 use katana_rpc_types::trace::TxExecutionInfo;
 use serde::ser::{SerializeSeq, Serializer};
