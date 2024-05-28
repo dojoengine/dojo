@@ -184,15 +184,33 @@ impl Saya {
 
         let mut state_updates_and_exec_info = vec![];
 
-        for block in block_numbers.clone() {
-            let (state_updates, da_state_update) = self.provider.fetch_state_updates(block).await?;
+        let (state_updates, da_state_updates): (Vec<_>, Vec<_>) = future::try_join_all(
+            block_numbers
+                .clone()
+                .map(|block_number| self.provider.fetch_state_updates(block_number)),
+        )
+        .await?
+        .into_iter()
+        .unzip();
+        let transactions_executions = future::try_join_all(
+            block_numbers
+                .clone()
+                .map(|block_number| self.provider.fetch_transactions_executions(block_number)),
+        )
+        .await?;
+
+        for da_state_update in da_state_updates {
             if let Some(da) = &self.da_client {
                 // Publish state difference if DA client is available
                 da.publish_state_diff_felts(&da_state_update).await?;
             }
-            let exec_infos = self.provider.fetch_transactions_executions(block).await?;
-            state_updates_and_exec_info.push((state_updates, exec_infos));
         }
+
+        state_updates.into_iter().zip(transactions_executions.into_iter()).for_each(
+            |(state_updates, exec_info)| {
+                state_updates_and_exec_info.push((state_updates, exec_info));
+            },
+        );
 
         // Prepare parameters
         let params = fetched_blocks
