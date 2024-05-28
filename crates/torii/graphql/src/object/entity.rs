@@ -170,7 +170,7 @@ pub async fn model_data_recursive_query(
     conn: &mut PoolConnection<Sqlite>,
     path_array: Vec<String>,
     entity_id: &str,
-    indexes: &Vec<i64>,
+    indexes: &[i64],
     type_mapping: &TypeMapping,
     is_list: bool,
 ) -> sqlx::Result<Value> {
@@ -202,12 +202,12 @@ pub async fn model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
-                    &mut if is_list {
-                        let mut indexes = indexes.clone();
+                    &if is_list {
+                        let mut indexes = indexes.to_vec();
                         indexes.push(idx as i64);
                         indexes
                     } else {
-                        indexes.clone()
+                        indexes.to_vec()
                     },
                     nested_mapping,
                     false,
@@ -224,12 +224,12 @@ pub async fn model_data_recursive_query(
                     nested_path,
                     entity_id,
                     // this might need to be changed to support 2d+ arrays
-                    &mut if is_list {
-                        let mut indexes = indexes.clone();
+                    &if is_list {
+                        let mut indexes = indexes.to_vec();
                         indexes.push(idx as i64);
                         indexes
                     } else {
-                        indexes.clone()
+                        indexes.to_vec()
                     },
                     &IndexMap::from([(Name::new("data"), *inner.clone())]),
                     true,
