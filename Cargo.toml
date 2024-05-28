@@ -162,8 +162,8 @@ regex = "1.10.3"
 reqwest = { version = "0.12", features = [ "blocking", "rustls-tls" ], default-features = false }
 rpassword = "7.2.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/software-mansion/scarb", rev = "c6eb1d5" }
-scarb-ui = { git = "https://github.com/software-mansion/scarb", rev = "c6eb1d5" }
+scarb = { git = "https://github.com/software-mansion/scarb", rev = "c6eb1d500ee24470ded335cd5363bc4aafe6ce94" }
+scarb-ui = { git = "https://github.com/software-mansion/scarb", rev = "c6eb1d500ee24470ded335cd5363bc4aafe6ce94" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
