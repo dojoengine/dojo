@@ -9,7 +9,6 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 base64.workspace = true
-cairo-vm.workspace = true
 derive_more.workspace = true
 lazy_static.workspace = true
 rand = { workspace = true, features = [ "small_rng" ] }
@@ -24,10 +23,8 @@ strum_macros.workspace = true
 thiserror.workspace = true
 
 alloy-primitives.workspace = true
-cairo-lang-sierra.workspace = true
-cairo-lang-starknet-classes.workspace = true
-cairo-lang-starknet.workspace = true
 flate2.workspace = true
+katana-cairo.workspace = true
 starknet_api.workspace = true
 
 [dev-dependencies]

@@ -69,8 +69,13 @@ pub fn prepare_for_migration(
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
 ) -> Result<MigrationStrategy> {
-    let entries = fs::read_dir(target_dir)
-        .map_err(|err| anyhow!("Failed reading source directory: {err}"))?;
+    let entries = fs::read_dir(target_dir).with_context(|| {
+        format!(
+            "Failed trying to read target directory ({target_dir})\nNOTE: build files are profile \
+             specified so make sure to run build command with correct profile. For e.g. `sozo -P \
+             my_profile build`"
+        )
+    })?;
 
     let mut artifact_paths = HashMap::new();
     for entry in entries.flatten() {

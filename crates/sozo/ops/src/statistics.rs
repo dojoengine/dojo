@@ -94,8 +94,9 @@ pub fn get_contract_statistics_for_dir(
                 Ok(s) => s,
                 Err(e) => {
                     ui.verbose(format!("Unable to process file: {:?}\nWith error: {e:?}", &path));
-                    // skip any file which cannot be processed properly since there can be other file
-                    // types in target folder for example casm contract class.
+                    // skip any file which cannot be processed properly since there can be other
+                    // file types in target folder for example casm contract
+                    // class.
                     continue;
                 }
             };
@@ -111,8 +112,9 @@ pub fn get_contract_statistics_for_dir(
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::BufReader;
     use std::path::Path;
-    use std::{fs::File, io::BufReader};
 
     use cairo_lang_starknet_classes::contract_class::ContractClass;
     use camino::Utf8PathBuf;

@@ -69,6 +69,7 @@ dojo-types = { path = "crates/dojo-types" }
 dojo-world = { path = "crates/dojo-world" }
 
 # katana
+katana-cairo = { path = "crates/katana/cairo" }
 katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core", default-features = false }
