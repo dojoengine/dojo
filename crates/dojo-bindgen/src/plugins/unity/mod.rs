@@ -132,7 +132,7 @@ public abstract record {}() {{",
         );
 
         for field in &token.inners {
-            let type_name = UnityPlugin::map_type(&field.token).replace('(', "").replace(')', "");
+            let type_name = UnityPlugin::map_type(&field.token).replace(['(', ')'], "");
 
             result += format!(
                 "\n    public record {}({}) : {name_with_generics};",
