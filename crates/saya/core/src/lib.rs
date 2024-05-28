@@ -11,9 +11,9 @@ use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
+use katana_rpc_types::trace::TxExecutionInfo;
 use prover::{HttpProverParams, ProverIdentifier};
 pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
@@ -168,7 +168,7 @@ impl Saya {
         previous_block_state_root: FieldElement,
     ) -> SayaResult<(
         FieldElement,
-        Vec<(SealedBlock, FieldElement, StateUpdatesWithDeclaredClasses, Vec<TxExecInfo>)>,
+        Vec<(SealedBlock, FieldElement, StateUpdatesWithDeclaredClasses, Vec<TxExecutionInfo>)>,
     )> {
         // Fetch all blocks from the current block to the latest block
         let fetched_blocks = future::try_join_all(
@@ -231,7 +231,7 @@ impl Saya {
         &mut self,
         prove_scheduler: &mut Scheduler,
         block_number: BlockNumber,
-        blocks: (SealedBlock, FieldElement, StateUpdatesWithDeclaredClasses, Vec<TxExecInfo>),
+        blocks: (SealedBlock, FieldElement, StateUpdatesWithDeclaredClasses, Vec<TxExecutionInfo>),
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
