@@ -65,8 +65,6 @@ fn build_type_mapping(
         })
         .collect::<sqlx::Result<TypeMapping>>()?;
 
-    println!("{:#?}", type_mapping);
-
     Ok(type_mapping)
 }
 

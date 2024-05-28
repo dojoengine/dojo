@@ -12,7 +12,7 @@ It is designed to significantly reduce the complexity of developing provable app
 
 ## Getting Started
 
-See the [getting started](https://book.dojoengine.org/getting-started/quick-start) section in the Dojo book to start building provable applications with Dojo.
+See the [getting started](https://book.dojoengine.org/getting-started) section in the Dojo book to start building provable applications with Dojo.
 
 You can find more detailed documentation in the Dojo Book [here](https://book.dojoengine.org/).
 

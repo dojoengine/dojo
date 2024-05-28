@@ -75,9 +75,8 @@ where
             |e| {
                 ui.error(e.to_string());
                 anyhow!(
-                    "\n Use `sozo clean` to clean your project, or `sozo clean --manifests-abis` \
-                     to clean manifest and abi files only.\nThen, rebuild your project with `sozo \
-                     build`.",
+                    "\n Use `sozo clean` to clean your project.\nThen, rebuild your project with \
+                     `sozo build`.",
                 )
             },
         )?;
