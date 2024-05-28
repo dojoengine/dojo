@@ -277,7 +277,6 @@ impl BadModelMultipleAttrIntrospect<> of dojo::database::introspect::Introspect<
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -319,7 +318,6 @@ impl BadModelMultipleVersionsIntrospect<> of dojo::database::introspect::Introsp
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -496,7 +494,6 @@ impl BadModelBadVersionTypeIntrospect<> of dojo::database::introspect::Introspec
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -673,7 +670,6 @@ impl BadModelNoVersionValueIntrospect<> of dojo::database::introspect::Introspec
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -850,7 +846,6 @@ impl BadModelUnexpectedArgWithValueIntrospect<> of dojo::database::introspect::I
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1027,7 +1022,6 @@ impl BadModelUnexpectedArgIntrospect<> of dojo::database::introspect::Introspect
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1204,7 +1198,6 @@ impl BadModelNotSupportedVersionIntrospect<> of dojo::database::introspect::Intr
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1381,7 +1374,6 @@ impl Modelv0Introspect<> of dojo::database::introspect::Introspect<Modelv0<>> {
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1558,7 +1550,6 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
         dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1735,7 +1726,6 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1912,7 +1902,6 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2081,7 +2070,6 @@ impl U256KeyModelIntrospect<> of dojo::database::introspect::Introspect<U256KeyM
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2250,7 +2238,6 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
         Option::Some(1)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2432,7 +2419,6 @@ impl ModelWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect<
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2623,7 +2609,6 @@ impl ModelWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<Mo
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2810,7 +2795,6 @@ impl ModelWithComplexArrayIntrospect<> of dojo::database::introspect::Introspect
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -3001,7 +2985,6 @@ impl ModelWithTupleIntrospect<> of dojo::database::introspect::Introspect<ModelW
         Option::Some(4)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -3208,7 +3191,6 @@ Option::Some(3)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![

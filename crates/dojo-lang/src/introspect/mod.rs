@@ -25,14 +25,7 @@ pub fn handle_introspect_struct(
     let ty = ty::build_struct_ty(db, &struct_name, &struct_ast);
 
     let layout = if packed {
-        format!(
-            "dojo::database::introspect::Layout::Fixed(
-            array![
-            {}
-            ].span()
-        )",
-            layout::build_packed_struct_layout(db, diagnostics, &struct_ast)
-        )
+        layout::build_packed_struct_layout(db, diagnostics, &struct_ast)
     } else {
         format!(
             "dojo::database::introspect::Layout::Struct(
@@ -61,14 +54,7 @@ pub fn handle_introspect_enum(
 
     let layout = if packed {
         if size::is_enum_packable(&variant_sizes) {
-            format!(
-                "dojo::database::introspect::Layout::Fixed(
-                array![
-                {}
-                ].span()
-            )",
-                layout::build_packed_enum_layout(db, diagnostics, &enum_ast)
-            )
+            layout::build_packed_enum_layout(db, diagnostics, &enum_ast)
         } else {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: enum_ast.name(db).stable_ptr().0,
@@ -115,7 +101,6 @@ impl $name$Introspect<$generics$> of \
         $size$
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         $layout$
     }

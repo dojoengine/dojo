@@ -180,12 +180,16 @@ pub fn build_item_layout_from_type(
     }
 }
 
+pub fn is_custom_layout(layout: &String) -> bool {
+    layout.starts_with("dojo::database::introspect::Introspect::")
+}
+
 pub fn build_packed_struct_layout(
     db: &dyn SyntaxGroup,
     diagnostics: &mut Vec<PluginDiagnostic>,
     struct_ast: &ItemStruct,
 ) -> String {
-    struct_ast
+    let layouts = struct_ast
         .members(db)
         .elements(db)
         .iter()
@@ -196,8 +200,64 @@ pub fn build_packed_struct_layout(
 
             Some(get_packed_field_layout_from_type_clause(db, diagnostics, &m.type_clause(db)))
         })
+        .flatten()
+        .collect::<Vec<_>>();
+
+    if layouts.iter().any(is_custom_layout) {
+        generate_cairo_code_for_fixed_layout_with_custom_types(&layouts)
+    } else {
+        format!(
+            "dojo::database::introspect::Layout::Fixed(
+            array![
+            {}
+            ].span()
+        )",
+            layouts.join(",")
+        )
+    }
+}
+
+pub fn generate_cairo_code_for_fixed_layout_with_custom_types(layouts: &Vec<String>) -> String {
+    let layouts_repr = layouts
+        .iter()
+        .map(|l| {
+            if is_custom_layout(l) {
+                l.to_string()
+            } else {
+                format!("dojo::database::introspect::Layout::Fixed(array![{l}].span())")
+            }
+        })
         .collect::<Vec<_>>()
-        .join(",")
+        .join(",\n");
+
+    format!(
+        "let mut layouts = array![
+            {layouts_repr}
+        ];
+        let mut merged_layout = ArrayTrait::<u8>::new();
+
+        loop {{
+            match ArrayTrait::pop_front(ref layouts) {{
+                Option::Some(mut layout) => {{
+                    match layout {{
+                        dojo::database::introspect::Layout::Fixed(mut l) => {{
+                            loop {{
+                                match SpanTrait::pop_front(ref l) {{
+                                    Option::Some(x) => merged_layout.append(*x),
+                                    Option::None(_) => {{ break; }}
+                                }};
+                            }};
+                        }},
+                        _ => panic!(\"A packed model layout must contain Fixed layouts only.\"),
+                    }};
+                }},
+                Option::None(_) => {{ break; }}
+            }};
+        }};
+
+        dojo::database::introspect::Layout::Fixed(merged_layout.span())
+        ",
+    )
 }
 
 //
@@ -206,23 +266,36 @@ pub fn build_packed_enum_layout(
     diagnostics: &mut Vec<PluginDiagnostic>,
     enum_ast: &ItemEnum,
 ) -> String {
-    let variant_layouts = enum_ast
-        .variants(db)
-        .elements(db)
-        .iter()
-        .map(|v| match v.type_clause(db) {
-            OptionTypeClause::Empty(_) => "".to_string(),
+    // to be packable, all variants data must have the same size.
+    // as this point has already been checked before calling `build_packed_enum_layout`,
+    // just use the first variant to generate the fixed layout.
+    let elements = enum_ast.variants(db).elements(db);
+    let mut variant_layout = if elements.is_empty() {
+        vec![]
+    } else {
+        match elements.first().unwrap().type_clause(db) {
+            OptionTypeClause::Empty(_) => vec![],
             OptionTypeClause::TypeClause(type_clause) => {
                 get_packed_field_layout_from_type_clause(db, diagnostics, &type_clause)
             }
-        })
-        .collect::<Vec<_>>();
+        }
+    };
 
-    if variant_layouts.is_empty() {
-        return "8".to_string();
+    // don't forget the store the variant value
+    variant_layout.insert(0, "8".to_string());
+
+    if variant_layout.iter().any(is_custom_layout) {
+        generate_cairo_code_for_fixed_layout_with_custom_types(&variant_layout)
+    } else {
+        let layout_repr = format!("{}", variant_layout.join(","));
+        format!(
+            "dojo::database::introspect::Layout::Fixed(
+                array![
+                {layout_repr}
+                ].span()
+            )",
+        )
     }
-
-    format!("8,{}", variant_layouts[0])
 }
 
 //
@@ -230,7 +303,7 @@ pub fn get_packed_field_layout_from_type_clause(
     db: &dyn SyntaxGroup,
     diagnostics: &mut Vec<PluginDiagnostic>,
     type_clause: &TypeClause,
-) -> String {
+) -> Vec<String> {
     match type_clause.ty(db) {
         Expr::Path(path) => {
             let path_type = path.as_syntax_node().get_text(db);
@@ -250,7 +323,7 @@ pub fn get_packed_field_layout_from_type_clause(
                 message: "Unexpected expression for variant data type.".to_string(),
                 severity: Severity::Error,
             });
-            "ERROR".to_string()
+            vec!["ERROR".to_string()]
         }
     }
 }
@@ -260,28 +333,26 @@ pub fn get_packed_item_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
     item_type: &str,
-) -> String {
+) -> Vec<String> {
     if is_array(item_type) || is_byte_array(item_type) {
         diagnostics.push(PluginDiagnostic {
             stable_ptr: diagnostic_item,
             message: "Array field cannot be packed.".into(),
             severity: Severity::Error,
         });
-        "ERROR".to_string()
+        vec!["ERROR".to_string()]
     } else if is_tuple(item_type) {
         get_packed_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else {
         let primitives = primitive_type_introspection();
 
         if let Some(p) = primitives.get(item_type) {
-            p.1.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")
+            vec![p.1.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")]
         } else {
-            diagnostics.push(PluginDiagnostic {
-                stable_ptr: diagnostic_item,
-                message: "For now, field with custom type cannot be packed".into(),
-                severity: Severity::Error,
-            });
-            "ERROR".to_string()
+            // as we cannot verify that an enum/struct custom type is packable,
+            // we suppose it is and let the user verify this.
+            // If it's not the case, the Dojo model layout function will panic.
+            vec![format!("dojo::database::introspect::Introspect::<{}>::layout()", item_type)]
         }
     }
 }
@@ -291,10 +362,9 @@ pub fn get_packed_tuple_layout_from_type(
     diagnostics: &mut Vec<PluginDiagnostic>,
     diagnostic_item: ids::SyntaxStablePtrId,
     item_type: &str,
-) -> String {
+) -> Vec<String> {
     get_tuple_item_types(item_type)
         .iter()
-        .map(|x| get_packed_item_layout_from_type(diagnostics, diagnostic_item, x))
+        .flat_map(|x| get_packed_item_layout_from_type(diagnostics, diagnostic_item, x))
         .collect::<Vec<_>>()
-        .join(",")
 }

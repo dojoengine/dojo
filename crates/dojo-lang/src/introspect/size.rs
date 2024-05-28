@@ -53,8 +53,16 @@ pub fn is_enum_packable(variant_sizes: &[(Vec<String>, u32, bool)]) -> bool {
     if variant_sizes.is_empty() {
         return true;
     }
+
+    let v0_sizes = variant_sizes[0].0.clone();
     let v0_fixed_size = variant_sizes[0].1;
-    variant_sizes.iter().all(|vs| vs.0.is_empty() && vs.1 == v0_fixed_size && !vs.2)
+
+    variant_sizes.iter().all(|vs| {
+        vs.0.len() == v0_sizes.len()
+            && vs.0.iter().zip(v0_sizes.iter()).all(|(a, b)| a == b)
+            && vs.1 == v0_fixed_size
+            && !vs.2
+    })
 }
 
 pub fn compute_enum_layout_size(variant_sizes: &[(Vec<String>, u32, bool)]) -> String {

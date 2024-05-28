@@ -220,7 +220,7 @@ struct StructNotPackable1 {
 }
 
 #[derive(IntrospectPacked)]
-struct StructNotPackable2 {
+struct StructPackableWithWarning {
     x: u8,
     y: StructPacked1
 }
@@ -243,6 +243,13 @@ enum EnumPacked2 {
 enum EnumPacked3 {
     a: (u128, u128),
     b: u256,
+}
+
+
+#[derive(IntrospectPacked)]
+enum EnumPackableWithWarning {
+    a: StructPacked1,
+    b: StructPacked1,
 }
 
 #[derive(IntrospectPacked)]
@@ -468,7 +475,7 @@ struct StructNotPackable1 {
 }
 
 #[derive(IntrospectPacked)]
-struct StructNotPackable2 {
+struct StructPackableWithWarning {
     x: u8,
     y: StructPacked1
 }
@@ -491,6 +498,13 @@ enum EnumPacked2 {
 enum EnumPacked3 {
     a: (u128, u128),
     b: u256,
+}
+
+
+#[derive(IntrospectPacked)]
+enum EnumPackableWithWarning {
+    a: StructPacked1,
+    b: StructPacked1,
 }
 
 #[derive(IntrospectPacked)]
@@ -519,7 +533,6 @@ impl Vec2Introspect<> of dojo::database::introspect::Introspect<Vec2<>> {
         Option::Some(2)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -586,7 +599,6 @@ impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>
         Option::Some(1)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -644,7 +656,6 @@ impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<Enu
         Option::Some(2)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -711,7 +722,6 @@ Option::Some(1)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -769,7 +779,6 @@ impl EnumWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect<E
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -835,7 +844,6 @@ impl EnumWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<Enu
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -893,7 +901,6 @@ impl EnumWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<E
         Option::Some(4)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -980,7 +987,6 @@ Option::Some(2)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -1058,7 +1064,6 @@ impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<Enu
         Option::Some(2)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -1125,7 +1130,6 @@ Option::Some(1)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -1193,7 +1197,6 @@ Option::Some(2)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -1277,7 +1280,6 @@ impl EnumWithDifferentVariantDataIntrospect<> of dojo::database::introspect::Int
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -1332,7 +1334,6 @@ impl StructWithPrimitivesIntrospect<> of dojo::database::introspect::Introspect<
         Option::Some(2)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1394,7 +1395,6 @@ Option::Some(1)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1447,7 +1447,6 @@ impl StructWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1504,7 +1503,6 @@ impl StructWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<S
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1557,7 +1555,6 @@ impl StructWithComplexArrayIntrospect<> of dojo::database::introspect::Introspec
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1614,7 +1611,6 @@ impl StructWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect
         Option::Some(4)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1687,7 +1683,6 @@ Option::Some(2)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1752,7 +1747,6 @@ impl StructWithNestedArraysIntrospect<> of dojo::database::introspect::Introspec
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1835,7 +1829,6 @@ Option::Some(3)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -1918,7 +1911,6 @@ impl StructWithNestedTuplesAndByteArrayIntrospect<> of dojo::database::introspec
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2001,7 +1993,6 @@ impl StructWithNestedEverythingIntrospect<> of dojo::database::introspect::Intro
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2134,7 +2125,6 @@ impl GenericStructIntrospect<T, impl TIntrospect: dojo::database::introspect::In
         dojo::database::introspect::Introspect::<T>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2183,7 +2173,6 @@ impl StructWithBadOptionIntrospect<> of dojo::database::introspect::Introspect<S
         dojo::database::introspect::Introspect::<Option<(u8, u16)>>::size()
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2248,7 +2237,6 @@ Option::Some(1)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -2281,7 +2269,6 @@ impl EnumIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspect
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -2311,7 +2298,6 @@ impl EnumIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspect
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
                 array![
@@ -2341,7 +2327,6 @@ impl StructIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspe
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2371,7 +2356,6 @@ impl StructIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspe
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
             array![
@@ -2401,7 +2385,6 @@ impl StructIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introsp
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Struct(
             array![
@@ -2431,7 +2414,6 @@ impl StructIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introsp
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
             array![
@@ -2461,7 +2443,6 @@ impl EnumIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introspec
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Enum(
             array![
@@ -2491,7 +2472,6 @@ impl EnumIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introspec
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
                 array![
@@ -2521,7 +2501,6 @@ impl StructPacked1Introspect<> of dojo::database::introspect::Introspect<StructP
         Option::Some(1)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
             array![
@@ -2555,7 +2534,6 @@ impl StructPacked2Introspect<> of dojo::database::introspect::Introspect<StructP
         Option::Some(3)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
             array![
@@ -2594,7 +2572,6 @@ impl StructPacked3Introspect<> of dojo::database::introspect::Introspect<StructP
         Option::Some(4)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
             array![
@@ -2638,7 +2615,6 @@ impl StructNotPackable1Introspect<> of dojo::database::introspect::Introspect<St
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
             array![
@@ -2675,7 +2651,7 @@ dojo::database::introspect::Member {
     }
 }
 
-impl StructNotPackable2Introspect<> of dojo::database::introspect::Introspect<StructNotPackable2<>> {
+impl StructPackableWithWarningIntrospect<> of dojo::database::introspect::Introspect<StructPackableWithWarning<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
@@ -2690,20 +2666,41 @@ Option::Some(1)
                     
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Layout::Fixed(
-            array![
-            8,ERROR
-            ].span()
-        )
+        let mut layouts = array![
+            dojo::database::introspect::Layout::Fixed(array![8].span()),
+dojo::database::introspect::Introspect::<StructPacked1>::layout()
+        ];
+        let mut merged_layout = ArrayTrait::<u8>::new();
+
+        loop {
+            match ArrayTrait::pop_front(ref layouts) {
+                Option::Some(mut layout) => {
+                    match layout {
+                        dojo::database::introspect::Layout::Fixed(mut l) => {
+                            loop {
+                                match SpanTrait::pop_front(ref l) {
+                                    Option::Some(x) => merged_layout.append(*x),
+                                    Option::None(_) => { break; }
+                                };
+                            };
+                        },
+                        _ => panic!("A packed model layout must contain Fixed layouts only."),
+                    };
+                },
+                Option::None(_) => { break; }
+            };
+        };
+
+        dojo::database::introspect::Layout::Fixed(merged_layout.span())
+        
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
         dojo::database::introspect::Ty::Struct(
             dojo::database::introspect::Struct {
-                name: 'StructNotPackable2',
+                name: 'StructPackableWithWarning',
                 attrs: array![].span(),
                 children: array![
                 dojo::database::introspect::Member {
@@ -2729,11 +2726,10 @@ impl EnumPacked1Introspect<> of dojo::database::introspect::Introspect<EnumPacke
         Option::Some(1)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
                 array![
-                8,
+                8
                 ].span()
             )
     }
@@ -2761,7 +2757,6 @@ impl EnumPacked2Introspect<> of dojo::database::introspect::Introspect<EnumPacke
         Option::Some(2)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
                 array![
@@ -2793,7 +2788,6 @@ impl EnumPacked3Introspect<> of dojo::database::introspect::Introspect<EnumPacke
         Option::Some(3)
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         dojo::database::introspect::Layout::Fixed(
                 array![
@@ -2823,13 +2817,73 @@ dojo::database::introspect::Introspect::<u128>::ty()
     }
 }
 
+impl EnumPackableWithWarningIntrospect<> of dojo::database::introspect::Introspect<EnumPackableWithWarning<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<StructPacked1>::size(),
+Option::Some(1)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        let mut layouts = array![
+            dojo::database::introspect::Layout::Fixed(array![8].span()),
+dojo::database::introspect::Introspect::<StructPacked1>::layout()
+        ];
+        let mut merged_layout = ArrayTrait::<u8>::new();
+
+        loop {
+            match ArrayTrait::pop_front(ref layouts) {
+                Option::Some(mut layout) => {
+                    match layout {
+                        dojo::database::introspect::Layout::Fixed(mut l) => {
+                            loop {
+                                match SpanTrait::pop_front(ref l) {
+                                    Option::Some(x) => merged_layout.append(*x),
+                                    Option::None(_) => { break; }
+                                };
+                            };
+                        },
+                        _ => panic!("A packed model layout must contain Fixed layouts only."),
+                    };
+                },
+                Option::None(_) => { break; }
+            };
+        };
+
+        dojo::database::introspect::Layout::Fixed(merged_layout.span())
+        
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumPackableWithWarning',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::database::introspect::Introspect::<StructPacked1>::ty()),
+('b', dojo::database::introspect::Introspect::<StructPacked1>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
 impl EnumNotPackable1Introspect<> of dojo::database::introspect::Introspect<EnumNotPackable1<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         ERROR
     }
@@ -2886,12 +2940,7 @@ error: Array field cannot be packed.
     y: Array<u32>
      ^**********^
 
-error: For now, field with custom type cannot be packed
- --> test_src/lib.cairo:219:6
-    y: StructPacked1
-     ^*************^
-
 error: To be packed, all variants must have fixed layout of same size.
- --> test_src/lib.cairo:243:6
+ --> test_src/lib.cairo:250:6
 enum EnumNotPackable1 {
      ^**************^
