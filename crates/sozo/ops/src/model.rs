@@ -49,7 +49,14 @@ pub async fn model_layout(
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
     let model = world_reader.model_reader(&name).await?;
-    let layout = model.layout().await?;
+    let layout = match model.layout().await {
+        Ok(x) => x,
+        Err(_) => anyhow::bail!(
+            "[Incorrect layout]\n\
+            The model is packed but contains at least one custom type field which is not packed.\n\
+            Please check your model to fix this."
+        ),
+    };
     let schema = model.schema().await?;
 
     deep_print_layout(&name, &layout, &schema);
@@ -127,11 +134,19 @@ fn format_layout_ref(type_name: &str) -> String {
 }
 
 fn format_selector(selector: String) -> String {
-    if selector.starts_with("0x") { format!("[{}]", selector) } else { selector }
+    if selector.starts_with("0x") {
+        format!("[{}]", selector)
+    } else {
+        selector
+    }
 }
 
 fn format_name(name: String) -> String {
-    if !name.is_empty() { format!(" {} ", name) } else { name }
+    if !name.is_empty() {
+        format!(" {} ", name)
+    } else {
+        name
+    }
 }
 
 fn format_field(selector: String, name: String, layout: String) -> String {
@@ -367,18 +382,28 @@ fn deep_print_layout(
     layout: &dojo_world::contracts::model::abigen::model::Layout,
     schema: &dojo_types::schema::Ty,
 ) {
-    let mut layout_list = vec![];
-    get_printable_layout_list(layout, schema, &mut layout_list);
+    if let dojo_world::contracts::model::abigen::model::Layout::Fixed(lf) = layout {
+        println!("\n{} (packed)", name);
+        println!("    selector : {:#x}", get_selector_from_name(name).unwrap());
+        println!("    layout   : {}", format_fixed(lf));
+    } else {
+        let mut layout_list = vec![];
+        get_printable_layout_list(layout, schema, &mut layout_list);
 
-    println!("\n{} selector: {}\n", name, get_selector_from_name(name).unwrap());
+        println!("\n{} selector: {:#x}\n", name, get_selector_from_name(name).unwrap());
 
-    for l in layout_list {
-        print_layout_info(l);
+        for l in layout_list {
+            print_layout_info(l);
+        }
     }
 }
 
 fn _start_indent(level: usize, start_indent: bool) -> String {
-    if start_indent { INDENT.repeat(level) } else { "".to_string() }
+    if start_indent {
+        INDENT.repeat(level)
+    } else {
+        "".to_string()
+    }
 }
 
 fn format_primitive(
