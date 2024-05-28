@@ -17,7 +17,7 @@ use dojo::database::introspect::{Introspect, Layout, FieldLayout};
 use dojo::database::MAX_ARRAY_LENGTH;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address, assert_array};
 use dojo::benchmarks::{Character, end};
-use dojo::config::component::Config::{ProgramHashUpdate, FactsRegistryUpdate};
+use dojo::config::component::Config::{DifferProgramHashUpdate, MergerProgramHashUpdate, FactsRegistryUpdate};
 use dojo::model::Model;
 
 #[derive(Introspect, Copy, Drop, Serde)]
@@ -807,16 +807,16 @@ fn drop_all_events(address: ContractAddress) {
 
 #[test]
 #[available_gas(6000000)]
-fn test_program_hash_event_emit() {
+fn test_differ_program_hash_event_emit() {
     let world = deploy_world();
     drop_all_events(world.contract_address);
     let config = IConfigDispatcher { contract_address: world.contract_address };
 
-    config.set_program_hash(program_hash: 98758347158781475198374598718743);
+    config.set_differ_program_hash(program_hash: 98758347158781475198374598718743);
 
     assert_eq!(
         starknet::testing::pop_log(world.contract_address),
-        Option::Some(ProgramHashUpdate { program_hash: 98758347158781475198374598718743 })
+        Option::Some(DifferProgramHashUpdate { program_hash: 98758347158781475198374598718743 })
     );
 }
 
