@@ -101,7 +101,7 @@ pub struct DojoContract {
     #[serde(default)]
     pub computed: Vec<ComputedValueEntrypoint>,
     #[serde(default)]
-    pub constructor_calldata: Vec<String>,
+    pub init_calldata: Vec<String>,
 }
 
 /// Represents a declaration of a model.
@@ -157,7 +157,7 @@ pub struct OverlayDojoContract {
     pub original_class_hash: Option<FieldElement>,
     pub reads: Option<Vec<String>>,
     pub writes: Option<Vec<String>>,
-    pub constructor_calldata: Option<Vec<String>>,
+    pub init_calldata: Option<Vec<String>>,
 }
 
 #[serde_as]

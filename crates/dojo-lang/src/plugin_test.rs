@@ -107,9 +107,6 @@ pub fn test_expand_plugin_inner(
     let joined_diagnostics = diagnostic_items.join("\n");
     let error = verify_diagnostics_expectation(args, &joined_diagnostics);
 
-    println!("expanded: {}", &expanded_module);
-    println!("diagnostics: {}", &joined_diagnostics);
-
     TestRunnerResult {
         outputs: OrderedHashMap::from([
             ("expanded_cairo_code".into(), expanded_module),

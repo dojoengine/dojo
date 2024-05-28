@@ -494,7 +494,7 @@ where
                 contract.diff.base_class_hash,
                 migrator,
                 txn_config,
-                &contract.diff.constructor_calldata,
+                &contract.diff.init_calldata,
             )
             .await
         {
@@ -543,7 +543,8 @@ where
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
                 return Err(anyhow!(
-                    "Failed to migrate {name}: {e}. Please verify constructor calldata is valid."
+                    "Failed to migrate {name}: {e}. Please also verify init calldata is valid, if \
+                     any."
                 ));
             }
         }

@@ -78,7 +78,7 @@ impl WorldDiff {
                             .find(|r| r.inner.class_hash() == contract.inner.class_hash())
                             .map(|r| *r.inner.class_hash())
                     }),
-                    constructor_calldata: contract.inner.constructor_calldata.clone(),
+                    init_calldata: contract.inner.init_calldata.clone(),
                 }
             })
             .collect::<Vec<_>>();
@@ -96,7 +96,7 @@ impl WorldDiff {
             original_class_hash: *local.world.inner.original_class_hash(),
             base_class_hash: *local.base.inner.class_hash(),
             remote_class_hash: remote.map(|m| *m.world.inner.class_hash()),
-            constructor_calldata: vec![],
+            init_calldata: vec![],
         };
 
         WorldDiff { world, base, contracts, models }
@@ -122,7 +122,7 @@ impl WorldDiff {
             let curr_name: &str = &contract.name;
             ts.insert(curr_name);
 
-            for field in &contract.constructor_calldata {
+            for field in &contract.init_calldata {
                 if let Some(dependency) = field.strip_prefix("$contract_address:") {
                     ts.add_dependency(dependency, curr_name);
                 } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
@@ -132,9 +132,9 @@ impl WorldDiff {
                     match FieldElement::from_str(field) {
                         Ok(_) => continue,
                         Err(e) => bail!(format!(
-                            "Expected constructor_calldata element to be a special variable (i.e. \
+                            "Expected init_calldata element to be a special variable (i.e. \
                              starting with $contract_address or $class_hash) or be a \
-                             FieldElement.Failed with error: {e:?}"
+                             FieldElement. Failed with error: {e:?}"
                         )),
                     }
                 }
@@ -148,7 +148,7 @@ impl WorldDiff {
             // if `ts` is not empty and `pop_all` returns an empty vector it means there is a cyclic
             // dependency see: https://docs.rs/topological-sort/latest/topological_sort/struct.TopologicalSort.html#method.pop_all
             if values.is_empty() {
-                bail!("Cyclic dependency detected in `constructor_calldata`");
+                bail!("Cyclic dependency detected in `init_calldata`");
             }
 
             values.sort();
@@ -160,7 +160,7 @@ impl WorldDiff {
         for c_name in calculated_order {
             let contract = match self.contracts.iter().find(|c| c.name == c_name) {
                 Some(c) => c,
-                None => bail!("Unidentified contract found in `constructor_calldata`"),
+                None => bail!("Unidentified contract found in `init_calldata`"),
             };
 
             new_contracts.push(contract.clone());

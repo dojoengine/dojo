@@ -454,7 +454,7 @@ mod world {
             upgradeable_dispatcher.upgrade(class_hash);
 
             if self.initialized_contract.read(contract_address.into()) {
-                panic!("Contract has been already initialized");
+                panic!("Contract has already been initialized");
             } else {
                 starknet::call_contract_syscall(contract_address, DOJO_INIT_SELECTOR, init_calldata)
                     .unwrap_syscall();

@@ -108,7 +108,7 @@ fn diff_when_local_and_remote_are_different() {
 
 #[test]
 fn updating_order_as_expected() {
-    let constructor_calldatas = vec![
+    let init_calldata = vec![
         ("c4", vec!["$contract_address:c1", "0x0"]),
         ("c3", vec!["0x0"]),
         ("c5", vec!["$contract_address:c4", "0x0"]),
@@ -119,9 +119,9 @@ fn updating_order_as_expected() {
     ];
 
     let mut contracts = vec![];
-    for calldata in constructor_calldatas {
+    for calldata in init_calldata {
         contracts.push(ContractDiff {
-            constructor_calldata: calldata.1.iter().map(|c| c.to_string()).collect(),
+            init_calldata: calldata.1.iter().map(|c| c.to_string()).collect(),
             name: calldata.0.to_string(),
             ..Default::default()
         });
@@ -144,7 +144,7 @@ fn updating_order_as_expected() {
 
 #[test]
 fn updating_order_when_cyclic_dependency_fail() {
-    let constructor_calldatas = vec![
+    let init_calldata = vec![
         ("c4", vec!["$contract_address:c1", "$contract_address:c6", "0x0"]),
         ("c3", vec!["0x0"]),
         ("c5", vec!["$contract_address:c4", "0x0"]),
@@ -155,9 +155,9 @@ fn updating_order_when_cyclic_dependency_fail() {
     ];
 
     let mut contracts = vec![];
-    for calldata in constructor_calldatas {
+    for calldata in init_calldata {
         contracts.push(ContractDiff {
-            constructor_calldata: calldata.1.iter().map(|c| c.to_string()).collect(),
+            init_calldata: calldata.1.iter().map(|c| c.to_string()).collect(),
             name: calldata.0.to_string(),
             ..Default::default()
         });

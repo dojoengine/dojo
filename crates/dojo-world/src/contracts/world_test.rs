@@ -115,7 +115,7 @@ pub async fn deploy_world(
                 base_class_hash,
                 &account,
                 &TxnConfig::default(),
-                &contract.diff.constructor_calldata,
+                &contract.diff.init_calldata,
             )
             .await
             .unwrap();

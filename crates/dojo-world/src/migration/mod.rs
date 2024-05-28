@@ -73,8 +73,8 @@ pub enum MigrationError<S> {
     WaitingError(#[from] TransactionWaitingError),
     #[error(transparent)]
     ArtifactError(#[from] anyhow::Error),
-    #[error("Contract Calldata in wrong format")]
-    BadConstructorCalldata,
+    #[error("Bad init calldata.")]
+    BadInitCalldata,
 }
 
 /// Represents the type of migration that should be performed.
@@ -212,7 +212,7 @@ pub trait Deployable: Declarable + Sync {
                     .iter()
                     .map(|s| FieldElement::from_str(s))
                     .collect::<Result<Vec<_>, _>>()
-                    .map_err(|_| MigrationError::BadConstructorCalldata)?;
+                    .map_err(|_| MigrationError::BadInitCalldata)?;
 
                 let mut calldata =
                     vec![self.salt(), class_hash, FieldElement::from(calldata.len())];

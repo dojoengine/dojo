@@ -1,8 +1,8 @@
 {
   "world": {
     "kind": "WorldContract",
-    "class_hash": "0x57f1e18d5e7db5b3790af33d6f0a91a1dbf03d9499d2ea753752a5a2dfd43cc",
-    "original_class_hash": "0x57f1e18d5e7db5b3790af33d6f0a91a1dbf03d9499d2ea753752a5a2dfd43cc",
+    "class_hash": "0x34aafe3ca8fd1aec61deea58541aefd0ec6647299939ad96e4cd3a79c47bb8e",
+    "original_class_hash": "0x34aafe3ca8fd1aec61deea58541aefd0ec6647299939ad96e4cd3a79c47bb8e",
     "abi": [
       {
         "type": "impl",
@@ -955,8 +955,8 @@
         ]
       }
     ],
-    "address": "0x7fdcc57cc0cceaca2ad3378f9cdeb25ed94c53bad870e07ab00d2f001e51390",
-    "transaction_hash": "0x5c59cb31252d18a26d2110d5fa322c7edfae5446806660e94d30f3459cf14e3",
+    "address": "0x29aea29955b6b0c0aabf92e265cd0bca14069575511ec9b6819ca2917277962",
+    "transaction_hash": "0xa32990a5203fc3c67ba905f65a0161fa5435d8c28aa1e889cc09b551f431d3",
     "block_number": 3,
     "seed": "dojo_examples",
     "metadata": {
@@ -975,7 +975,7 @@
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": "0x17650d82804b23b35ad3c77b9d74067e58ab0ebcc84936f87749143cb67785",
+      "address": "0xa0db53af8c89cbaab909bb34635262ffe36bbd414184e830eabfa6b592a17d",
       "class_hash": "0x44838b88a31f6cf954408395e5d4256d53640ca48a46658d08400ddf11790f5",
       "original_class_hash": "0x44838b88a31f6cf954408395e5d4256d53640ca48a46658d08400ddf11790f5",
       "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
@@ -1275,12 +1275,12 @@
         "Position"
       ],
       "computed": [],
-      "constructor_calldata": [],
+      "init_calldata": [],
       "name": "dojo_examples::actions::actions"
     },
     {
       "kind": "DojoContract",
-      "address": "0x455cff4a909abc8d2abcddb4b6a1ecee28ac492df8e171d76b984cb9e887fc6",
+      "address": "0x482b931a82a26a4d8501ff051b1c8e2c125b79c954dc5d5106988749129c9d3",
       "class_hash": "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a",
       "original_class_hash": "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a",
       "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
@@ -1433,7 +1433,7 @@
       "reads": [],
       "writes": [],
       "computed": [],
-      "constructor_calldata": [
+      "init_calldata": [
         "$contract_address:dojo_examples::actions::actions",
         "$class_hash:dojo_examples::actions::actions",
         "10"

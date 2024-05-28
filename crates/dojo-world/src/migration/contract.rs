@@ -16,7 +16,7 @@ pub struct ContractDiff {
     pub original_class_hash: FieldElement,
     pub base_class_hash: FieldElement,
     pub remote_class_hash: Option<FieldElement>,
-    pub constructor_calldata: Vec<String>,
+    pub init_calldata: Vec<String>,
 }
 
 impl StateDiff for ContractDiff {

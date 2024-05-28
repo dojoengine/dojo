@@ -517,9 +517,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
             DOJO_MODEL_ATTR.to_string(),
             "key".to_string(),
             "computed".to_string(),
-            // Not adding capacity for now, this will automatically
-            // makes Scarb emitting a diagnostic saying this attribute is not supported.
-            // "capacity".to_string(),
         ]
     }
 }
