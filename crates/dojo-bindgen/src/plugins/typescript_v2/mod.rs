@@ -17,7 +17,7 @@ impl TypeScriptV2Plugin {
     }
 
     // Maps cairo types to TypeScript defined types
-    fn map_type(token: &Token, generic_args: &Vec<(String, Token)>) -> String {
+    fn map_type(token: &Token) -> String {
         match token.type_name().as_str() {
             "bool" => "boolean".to_string(),
             "u8" => "number".to_string(),
@@ -34,7 +34,7 @@ impl TypeScriptV2Plugin {
             "ByteArray" => "string".to_string(),
             "array" => {
                 if let Token::Array(array) = token {
-                    format!("{}[]", TypeScriptV2Plugin::map_type(&array.inner, generic_args))
+                    format!("{}[]", TypeScriptV2Plugin::map_type(&array.inner))
                 } else {
                     panic!("Invalid array token: {:?}", token);
                 }
@@ -44,7 +44,7 @@ impl TypeScriptV2Plugin {
                     let inners = tuple
                         .inners
                         .iter()
-                        .map(|inner| TypeScriptV2Plugin::map_type(inner, generic_args))
+                        .map(TypeScriptV2Plugin::map_type)
                         .collect::<Vec<String>>()
                         .join(", ");
                     format!("[{}]", inners)
@@ -54,17 +54,31 @@ impl TypeScriptV2Plugin {
             }
             "generic_arg" => {
                 if let Token::GenericArg(generic_arg) = &token {
-                    let arg = generic_args
-                        .iter()
-                        .find(|(name, _)| name == generic_arg)
-                        .unwrap_or_else(|| panic!("Generic arg not found: {}", generic_arg));
-                    TypeScriptV2Plugin::map_type(&arg.1, generic_args)
+                    generic_arg.clone()
                 } else {
-                    panic!("Invalid generic arg token: {:?}", token);
+                    panic!("Invalid generic_arg token: {:?}", token);
                 }
             }
 
-            _ => token.type_name().to_string(),
+            _ => {
+                let mut type_name = token.type_name();
+
+                if let Token::Composite(composite) = token {
+                    if composite.generic_args.len() > 0 {
+                        type_name += &format!(
+                            "<{}>",
+                            composite
+                                .generic_args
+                                .iter()
+                                .map(|(_, t)| TypeScriptV2Plugin::map_type(t))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                    }
+                }
+
+                type_name
+            }
         }
     }
 
@@ -149,36 +163,21 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         for model in models {
             let tokens = &model.tokens;
 
-            for token in &tokens.enums {
-                handled_tokens.push(token.to_composite().unwrap().to_owned());
-            }
             for token in &tokens.structs {
-                handled_tokens.push(token.to_composite().unwrap().to_owned());
-            }
-
-            let mut structs = tokens.structs.to_owned();
-            structs.sort_by(|a, b| {
-                if a.to_composite()
-                    .unwrap()
-                    .inners
-                    .iter()
-                    .any(|field| field.token.type_name() == b.type_name())
-                {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Less
+                if handled_tokens.iter().any(|t| t.type_name() == token.type_name()) {
+                    continue;
                 }
-            });
 
-            for token in &structs {
-                out += TypeScriptV2Plugin::format_struct(
-                    token.to_composite().unwrap(),
-                    handled_tokens,
-                )
-                .as_str();
+                handled_tokens.push(token.to_composite().unwrap().to_owned());
+                out += TypeScriptV2Plugin::format_struct(token.to_composite().unwrap()).as_str();
             }
 
             for token in &tokens.enums {
+                if handled_tokens.iter().any(|t| t.type_name() == token.type_name()) {
+                    continue;
+                }
+
+                handled_tokens.push(token.to_composite().unwrap().to_owned());
                 out += TypeScriptV2Plugin::format_enum(token.to_composite().unwrap()).as_str();
             }
 
@@ -450,24 +449,13 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     // Token should be a struct
     // This will be formatted into a TypeScript interface
     // using TypeScript defined types
-    fn format_struct(token: &Composite, handled_tokens: &[Composite]) -> String {
+    fn format_struct(token: &Composite) -> String {
         let mut native_fields: Vec<String> = Vec::new();
 
         for field in &token.inners {
-            let mapped = TypeScriptV2Plugin::map_type(&field.token, &token.generic_args);
-            if mapped == field.token.type_name() {
-                let token = handled_tokens
-                    .iter()
-                    .find(|t| t.type_name() == field.token.type_name())
-                    .unwrap_or_else(|| panic!("Token not found: {}", field.token.type_name()));
-                if token.r#type == CompositeType::Enum {
-                    native_fields.push(format!("{}: {};", field.name, mapped));
-                } else {
-                    native_fields.push(format!("{}: {};", field.name, field.token.type_name()));
-                }
-            } else {
-                native_fields.push(format!("{}: {};", field.name, mapped));
-            }
+            let mapped = TypeScriptV2Plugin::map_type(&field.token);
+            format!("{}: {};", field.name, mapped);
+            native_fields.push(format!("{}: {};", field.name, mapped));
         }
 
         format!(
@@ -487,7 +475,13 @@ export interface {name} {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
-        let name = token.type_name();
+        let mut name = token.type_name();
+        if token.generic_args.len() > 0 {
+            name += &format!(
+                "<{}>",
+                token.generic_args.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>().join(", ")
+            )
+        }
 
         let mut result = format!(
             "
@@ -499,8 +493,7 @@ type {} = ",
         let mut variants = Vec::new();
 
         for field in &token.inners {
-            let field_type =
-                TypeScriptV2Plugin::map_type(&field.token, &token.generic_args).replace("()", "");
+            let field_type = TypeScriptV2Plugin::map_type(&field.token).replace("()", "");
 
             let variant_definition = if field_type.is_empty() {
                 // No associated data
@@ -529,10 +522,10 @@ type {} = ",
                 format!(
                     "{}: {}",
                     arg.0,
-                    if TypeScriptV2Plugin::map_type(&arg.1, &vec![]) == arg.1.type_name() {
+                    if TypeScriptV2Plugin::map_type(&arg.1) == arg.1.type_name() {
                         arg.1.type_name()
                     } else {
-                        TypeScriptV2Plugin::map_type(&arg.1, &vec![])
+                        TypeScriptV2Plugin::map_type(&arg.1)
                     }
                 )
             })
