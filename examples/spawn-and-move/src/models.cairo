@@ -47,7 +47,7 @@ struct Moves {
     last_direction: Direction
 }
 
-#[derive(Copy, Drop, Serde, Introspect)]
+#[derive(Copy, Drop, Serde, IntrospectPacked)]
 struct Vec2 {
     x: u32,
     y: u32

@@ -298,7 +298,7 @@ fn test_layout_of_packed_enum() {
 fn test_layout_of_inner_packed_enum() {
     let layout = Introspect::<EnumInnerPacked>::layout();
     let expected = Layout::Fixed(array![8, 8, 32, 32, 32, 32].span());
-    
+
     assert!(layout == expected);
 }
 

@@ -52,9 +52,8 @@ pub async fn model_layout(
     let layout = match model.layout().await {
         Ok(x) => x,
         Err(_) => anyhow::bail!(
-            "[Incorrect layout]\n\
-            The model is packed but contains at least one custom type field which is not packed.\n\
-            Please check your model to fix this."
+            "[Incorrect layout]\nThe model is packed but contains at least one custom type field \
+             which is not packed.\nPlease check your model to fix this."
         ),
     };
     let schema = model.schema().await?;
@@ -134,19 +133,11 @@ fn format_layout_ref(type_name: &str) -> String {
 }
 
 fn format_selector(selector: String) -> String {
-    if selector.starts_with("0x") {
-        format!("[{}]", selector)
-    } else {
-        selector
-    }
+    if selector.starts_with("0x") { format!("[{}]", selector) } else { selector }
 }
 
 fn format_name(name: String) -> String {
-    if !name.is_empty() {
-        format!(" {} ", name)
-    } else {
-        name
-    }
+    if !name.is_empty() { format!(" {} ", name) } else { name }
 }
 
 fn format_field(selector: String, name: String, layout: String) -> String {
@@ -205,7 +196,7 @@ fn get_printable_layout_list_from_struct(
     if let dojo_types::schema::Ty::Struct(ss) = schema {
         let name = get_name_from_schema(schema);
 
-        // proces main struct
+        // process main struct
         if !is_layout_in_list(layout_list, &name) {
             layout_list.push(LayoutInfo {
                 layout_type: LayoutInfoType::Struct,
@@ -399,11 +390,7 @@ fn deep_print_layout(
 }
 
 fn _start_indent(level: usize, start_indent: bool) -> String {
-    if start_indent {
-        INDENT.repeat(level)
-    } else {
-        "".to_string()
-    }
+    if start_indent { INDENT.repeat(level) } else { "".to_string() }
 }
 
 fn format_primitive(

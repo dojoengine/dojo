@@ -41,9 +41,10 @@ pub enum ModelCommand {
         starknet: StarknetOptions,
     },
 
-    #[command(about = "The Dojo storage system uses the poseidon_hash function to compute \
-                       hashes, called 'hash' in the following documentation.
-        
+    #[command(about = "Displays the model's layout into dojo storage.\n
+The Dojo storage system uses the poseidon_hash function to compute
+hashes, called 'hash' in the following documentation.
+
         How storage locations are computed ?
 
         model key               = hash(model_keys)

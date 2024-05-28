@@ -180,7 +180,7 @@ pub fn build_item_layout_from_type(
     }
 }
 
-pub fn is_custom_layout(layout: &String) -> bool {
+pub fn is_custom_layout(layout: &str) -> bool {
     layout.starts_with("dojo::database::introspect::Introspect::")
 }
 
@@ -203,7 +203,7 @@ pub fn build_packed_struct_layout(
         .flatten()
         .collect::<Vec<_>>();
 
-    if layouts.iter().any(is_custom_layout) {
+    if layouts.iter().any(|v| is_custom_layout(v.as_str())) {
         generate_cairo_code_for_fixed_layout_with_custom_types(&layouts)
     } else {
         format!(
@@ -217,7 +217,7 @@ pub fn build_packed_struct_layout(
     }
 }
 
-pub fn generate_cairo_code_for_fixed_layout_with_custom_types(layouts: &Vec<String>) -> String {
+pub fn generate_cairo_code_for_fixed_layout_with_custom_types(layouts: &[String]) -> String {
     let layouts_repr = layouts
         .iter()
         .map(|l| {
@@ -284,16 +284,16 @@ pub fn build_packed_enum_layout(
     // don't forget the store the variant value
     variant_layout.insert(0, "8".to_string());
 
-    if variant_layout.iter().any(is_custom_layout) {
+    if variant_layout.iter().any(|v| is_custom_layout(v.as_str())) {
         generate_cairo_code_for_fixed_layout_with_custom_types(&variant_layout)
     } else {
-        let layout_repr = format!("{}", variant_layout.join(","));
         format!(
             "dojo::database::introspect::Layout::Fixed(
                 array![
-                {layout_repr}
+                {}
                 ].span()
             )",
+            variant_layout.join(",")
         )
     }
 }
