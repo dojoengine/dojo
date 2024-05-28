@@ -17,7 +17,9 @@ use dojo::database::introspect::{Introspect, Layout, FieldLayout};
 use dojo::database::MAX_ARRAY_LENGTH;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address, assert_array};
 use dojo::benchmarks::{Character, end};
-use dojo::config::component::Config::{DifferProgramHashUpdate, MergerProgramHashUpdate, FactsRegistryUpdate};
+use dojo::config::component::Config::{
+    DifferProgramHashUpdate, MergerProgramHashUpdate, FactsRegistryUpdate
+};
 use dojo::model::Model;
 
 #[derive(Introspect, Copy, Drop, Serde)]
