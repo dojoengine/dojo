@@ -256,21 +256,18 @@ public class {} : ModelInstance {{
                                 .inners
                                 .iter()
                                 .map(|field| {
-                                    format!(
-                                        "new FieldElement({}.{}).Inner()",
-                                        type_name, field.name
-                                    )
+                                    format!("new FieldElement({}.{}).Inner", type_name, field.name)
                                 })
                                 .collect::<Vec<String>>()
                                 .join(",\n                    "),
                             _ => {
-                                format!("new FieldElement({}).Inner()", type_name)
+                                format!("new FieldElement({}).Inner", type_name)
                             }
                         }
                     }
                     None => match UnityPlugin::map_type(token).as_str() {
-                        "FieldElement" => format!("{}.Inner()", type_name),
-                        _ => format!("new FieldElement({}).Inner()", type_name),
+                        "FieldElement" => format!("{}.Inner", type_name),
+                        _ => format!("new FieldElement({}).Inner", type_name),
                     },
                 }
             })
