@@ -11,10 +11,11 @@ use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct BuildArgs {
-    #[arg(long)]
-    #[arg(help = "Generate Typescript bindings.")]
-    pub typescript: bool,
-
+    // Should we deprecate typescript bindings codegen?
+    // Disabled due to lack of support in dojo.js
+    // #[arg(long)]
+    // #[arg(help = "Generate Typescript bindings.")]
+    // pub typescript: bool,
     #[arg(long)]
     #[arg(help = "Generate Typescript bindings.")]
     pub typescript_v2: bool,
@@ -47,9 +48,11 @@ impl BuildArgs {
         trace!(?compile_info, "Compiled workspace.");
 
         let mut builtin_plugins = vec![];
-        if self.typescript {
-            builtin_plugins.push(BuiltinPlugins::Typescript);
-        }
+
+        // Disable typescript for now. Due to lack of support and maintenance in dojo.js
+        // if self.typescript {
+        //     builtin_plugins.push(BuiltinPlugins::Typescript);
+        // }
 
         if self.typescript_v2 {
             builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
@@ -141,9 +144,9 @@ mod tests {
 
         let build_args = BuildArgs {
             bindings_output: "generated".to_string(),
-            typescript: false,
+            // typescript: false,
             unity: true,
-            typescript_v2: false,
+            typescript_v2: true,
             stats: true,
         };
         let result = build_args.run(&config);
