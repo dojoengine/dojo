@@ -76,7 +76,7 @@ fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToStarknet> {
 
 pub fn extract_messages(
     exec_infos: &[TxExecutionInfo],
-    transactions: &[(TxHash, &L1HandlerTx)],
+    l1_transactions: &[(TxHash, &L1HandlerTx)],
 ) -> (Vec<MessageToStarknet>, Vec<MessageToAppchain>) {
     // extract messages to starknet (ie l2 -> l1)
     let message_to_starknet_segment = exec_infos
@@ -90,8 +90,10 @@ pub fn extract_messages(
         // get the call infos from the trace and the corresponding tx hash
         let calls = exec_infos.iter().filter_map(|t| {
             let calls = t.trace.execute_call_info.as_ref()?;
-            let tx = transactions.iter().find(|tx| tx.0 == t.hash).expect("qed; tx must exist");
-            Some((tx.1, calls))
+            match l1_transactions.iter().find(|tx| tx.0 == t.hash) {
+                Some((_, tx)) => Some((tx, calls)),
+                None => None, // Not present if not a l1 handler tx.
+            }
         });
 
         // filter only the l1 handler tx
