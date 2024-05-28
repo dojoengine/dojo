@@ -4615,6 +4615,7 @@ name = "dojo-language-server"
 version = "0.7.0-alpha.4"
 dependencies = [
  "cairo-lang-language-server",
+ "clap",
  "dojo-lang",
 ]
 

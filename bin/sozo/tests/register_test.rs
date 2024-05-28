@@ -1,11 +1,10 @@
 mod utils;
 
-use dojo_test_utils::compiler::build_test_config;
+use camino::Utf8PathBuf;
+use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
 use dojo_world::migration::TxnConfig;
+use katana_runner::KatanaRunner;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use starknet::accounts::Account;
@@ -14,24 +13,28 @@ use utils::snapbox::get_snapbox;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn reregister_models() {
-    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
+    let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
+
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let base_dir = "../../examples/spawn-and-move";
-    let target_dir = format!("{}/target/dev", base_dir);
-    let migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
+    let base = config.manifest_path().parent().unwrap();
+    let target_dir = format!("{}/target/dev", base);
 
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let migration = prepare_migration(base.into(), target_dir.into()).unwrap();
 
-    let mut account = sequencer.account();
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+
+    let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
     let world_address = &format!("0x{:x}", &migration.world_address().unwrap());
     let account_address = &format!("0x{:x}", account.address());
-    let private_key = &format!("0x{:x}", sequencer.raw_account().private_key);
+    let private_key = &format!("0x{:x}", sequencer.account_data(0).1.private_key);
     let rpc_url = &sequencer.url().to_string();
 
     let moves_model =
