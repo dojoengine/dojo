@@ -133,8 +133,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
 
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
-                prover_url: args.url,
-                prover_key,
+                url: args.url,
+                private_key: prover_key,
                 start_block: args.start_block,
                 batch_size: args.batch_size,
                 data_availability: da_config,
@@ -162,7 +162,8 @@ mod tests {
             config_file: Some(config_file_path.clone()),
             rpc_url: Url::parse("http://localhost:5050").unwrap(),
             url: Url::parse("http://localhost:5050").unwrap(),
-            private_key: "d0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027".into(),
+            private_key: "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
+                .into(),
             json_log: false,
             start_block: 0,
             batch_size: 4,
@@ -183,11 +184,11 @@ mod tests {
         let config: SayaConfig = args.try_into().unwrap();
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
-        assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
+        assert_eq!(config.url.as_str(), "http://localhost:1234/");
         assert_eq!(config.batch_size, 4);
         assert_eq!(
-            config.prover_key.signing_key_as_hex_string(),
-            "d0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
+            config.private_key.signing_key_as_hex_string(),
+            "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
         );
         assert_eq!(config.start_block, 0);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {

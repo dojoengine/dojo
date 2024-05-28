@@ -11814,6 +11814,7 @@ name = "saya"
 version = "0.7.0-alpha.5"
 dependencies = [
  "anyhow",
+ "cairo-proof-parser",
  "clap",
  "clap_complete",
  "console",
@@ -11822,6 +11823,7 @@ dependencies = [
  "katana-rpc-api",
  "saya-core",
  "serde_json",
+ "starknet-crypto 0.6.2",
  "tokio",
  "tracing",
  "tracing-subscriber",

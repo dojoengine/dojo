@@ -7,7 +7,7 @@ use anyhow::bail;
 use async_trait::async_trait;
 
 mod client;
-mod extract;
+pub mod extract;
 mod loader;
 mod program_input;
 mod scheduler;

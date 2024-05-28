@@ -6,6 +6,9 @@ use tokio::signal::ctrl_c;
 
 mod args;
 
+#[cfg(test)]
+mod tests;
+
 use args::SayaArgs;
 
 #[tokio::main]

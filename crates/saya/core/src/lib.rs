@@ -45,8 +45,8 @@ pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
     #[serde(deserialize_with = "url_deserializer")]
-    pub prover_url: Url,
-    pub prover_key: ProverAccessKey,
+    pub url: Url,
+    pub private_key: ProverAccessKey,
     pub start_block: u64,
     pub batch_size: usize,
     pub data_availability: Option<DataAvailabilityConfig>,
@@ -110,8 +110,8 @@ impl Saya {
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
         let prover_identifier = ProverIdentifier::Http(Arc::new(HttpProverParams {
-            prover_url: self.config.prover_url.clone(),
-            prover_key: self.config.prover_key.clone(),
+            prover_url: self.config.url.clone(),
+            prover_key: self.config.private_key.clone(),
         }));
 
         // The structure responsible for proving.
