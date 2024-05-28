@@ -21,7 +21,7 @@ pub fn handle_introspect_struct(
     packed: bool,
 ) -> RewriteNode {
     let struct_name = struct_ast.name(db).text(db).into();
-    let struct_size = size::compute_struct_layout_size(db, &struct_ast);
+    let struct_size = size::compute_struct_layout_size(db, &struct_ast, packed);
     let ty = ty::build_struct_ty(db, &struct_name, &struct_ast);
 
     let layout = if packed {
@@ -76,7 +76,7 @@ pub fn handle_introspect_enum(
     };
 
     let (gen_types, gen_impls) = build_generic_types_and_impls(db, enum_ast.generic_params(db));
-    let enum_size = size::compute_enum_layout_size(&variant_sizes);
+    let enum_size = size::compute_enum_layout_size(&variant_sizes, packed);
     let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
 
     generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty)

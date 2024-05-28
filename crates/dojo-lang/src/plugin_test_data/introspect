@@ -220,7 +220,7 @@ struct StructNotPackable1 {
 }
 
 #[derive(IntrospectPacked)]
-struct StructPackableWithWarning {
+struct StructPackableWithInnerPacked {
     x: u8,
     y: StructPacked1
 }
@@ -247,7 +247,7 @@ enum EnumPacked3 {
 
 
 #[derive(IntrospectPacked)]
-enum EnumPackableWithWarning {
+enum EnumPackableWithInnerPacked {
     a: StructPacked1,
     b: StructPacked1,
 }
@@ -475,7 +475,7 @@ struct StructNotPackable1 {
 }
 
 #[derive(IntrospectPacked)]
-struct StructPackableWithWarning {
+struct StructPackableWithInnerPacked {
     x: u8,
     y: StructPacked1
 }
@@ -502,7 +502,7 @@ enum EnumPacked3 {
 
 
 #[derive(IntrospectPacked)]
-enum EnumPackableWithWarning {
+enum EnumPackableWithInnerPacked {
     a: StructPacked1,
     b: StructPacked1,
 }
@@ -711,15 +711,15 @@ impl EnumWithStructIntrospect<> of dojo::database::introspect::Introspect<EnumWi
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
 Option::Some(1)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -976,15 +976,15 @@ impl EnumWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
 Option::Some(2)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -1119,15 +1119,15 @@ impl EnumCustomIntrospect<> of dojo::database::introspect::Introspect<EnumCustom
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
 Option::Some(1)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -1185,16 +1185,16 @@ impl EnumTupleMixIntrospect<> of dojo::database::introspect::Introspect<EnumTupl
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
 dojo::database::introspect::Introspect::<EnumCustom>::size(),
 Option::Some(2)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -1384,15 +1384,15 @@ impl StructWithStructIntrospect<> of dojo::database::introspect::Introspect<Stru
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
 Option::Some(1)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -1671,16 +1671,16 @@ impl StructWithComplexTupleIntrospect<> of dojo::database::introspect::Introspec
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
 dojo::database::introspect::Introspect::<EnumCustom>::size(),
 Option::Some(2)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -1817,16 +1817,16 @@ impl StructWithNestedTuplesIntrospect<> of dojo::database::introspect::Introspec
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec2>::size(),
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
 dojo::database::introspect::Introspect::<EnumCustom>::size(),
 Option::Some(3)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -2226,15 +2226,15 @@ impl EnumWithBadOptionIntrospect<> of dojo::database::introspect::Introspect<Enu
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Option<(u8, u16)>>::size(),
+                    dojo::database::introspect::Introspect::<Option<(u8, u16)>>::size(),
 Option::Some(1)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -2651,19 +2651,17 @@ dojo::database::introspect::Member {
     }
 }
 
-impl StructPackableWithWarningIntrospect<> of dojo::database::introspect::Introspect<StructPackableWithWarning<>> {
+impl StructPackableWithInnerPackedIntrospect<> of dojo::database::introspect::Introspect<StructPackableWithInnerPacked<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<StructPacked1>::size(),
+                    dojo::database::introspect::Introspect::<StructPacked1>::size(),
 Option::Some(1)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -2700,7 +2698,7 @@ dojo::database::introspect::Introspect::<StructPacked1>::layout()
     fn ty() -> dojo::database::introspect::Ty {
         dojo::database::introspect::Ty::Struct(
             dojo::database::introspect::Struct {
-                name: 'StructPackableWithWarning',
+                name: 'StructPackableWithInnerPacked',
                 attrs: array![].span(),
                 children: array![
                 dojo::database::introspect::Member {
@@ -2817,19 +2815,17 @@ dojo::database::introspect::Introspect::<u128>::ty()
     }
 }
 
-impl EnumPackableWithWarningIntrospect<> of dojo::database::introspect::Introspect<EnumPackableWithWarning<>> {
+impl EnumPackableWithInnerPackedIntrospect<> of dojo::database::introspect::Introspect<EnumPackableWithInnerPacked<>> {
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<StructPacked1>::size(),
+                    dojo::database::introspect::Introspect::<StructPacked1>::size(),
 Option::Some(1)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {
@@ -2866,7 +2862,7 @@ dojo::database::introspect::Introspect::<StructPacked1>::layout()
     fn ty() -> dojo::database::introspect::Ty {
         dojo::database::introspect::Ty::Enum(
             dojo::database::introspect::Enum {
-                name: 'EnumPackableWithWarning',
+                name: 'EnumPackableWithInnerPacked',
                 attrs: array![].span(),
                 children: array![
                 ('a', dojo::database::introspect::Introspect::<StructPacked1>::ty()),

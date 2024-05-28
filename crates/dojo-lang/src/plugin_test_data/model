@@ -3180,15 +3180,15 @@ impl ModelWithTupleNoPrimitivesIntrospect<> of dojo::database::introspect::Intro
     #[inline(always)]
     fn size() -> Option<usize> {
         let sizes : Array<Option<usize>> = array![
-                        dojo::database::introspect::Introspect::<Vec3>::size(),
+                    dojo::database::introspect::Introspect::<Vec3>::size(),
 Option::Some(3)
-                    ];
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {
-                        return Option::None;
-                    }
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
     }
 
     fn layout() -> dojo::database::introspect::Layout {

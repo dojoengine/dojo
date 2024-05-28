@@ -7,7 +7,11 @@ use super::utils::{
     get_tuple_item_types, is_array, is_byte_array, is_tuple, primitive_type_introspection,
 };
 
-pub fn compute_struct_layout_size(db: &dyn SyntaxGroup, struct_ast: &ItemStruct) -> String {
+pub fn compute_struct_layout_size(
+    db: &dyn SyntaxGroup,
+    struct_ast: &ItemStruct,
+    is_packed: bool,
+) -> String {
     let mut cumulated_sizes = 0;
     let mut is_dynamic_size = false;
 
@@ -29,7 +33,7 @@ pub fn compute_struct_layout_size(db: &dyn SyntaxGroup, struct_ast: &ItemStruct)
         })
         .flatten()
         .collect::<Vec<_>>();
-    build_size_function_body(&mut sizes, cumulated_sizes, is_dynamic_size)
+    build_size_function_body(&mut sizes, cumulated_sizes, is_dynamic_size, is_packed)
 }
 
 pub fn compute_enum_variant_sizes(
@@ -65,7 +69,10 @@ pub fn is_enum_packable(variant_sizes: &[(Vec<String>, u32, bool)]) -> bool {
     })
 }
 
-pub fn compute_enum_layout_size(variant_sizes: &[(Vec<String>, u32, bool)]) -> String {
+pub fn compute_enum_layout_size(
+    variant_sizes: &[(Vec<String>, u32, bool)],
+    is_packed: bool,
+) -> String {
     if variant_sizes.is_empty() {
         return "Option::None".to_string();
     }
@@ -80,7 +87,7 @@ pub fn compute_enum_layout_size(variant_sizes: &[(Vec<String>, u32, bool)]) -> S
         // add one felt252 to store the variant identifier
         cumulated_sizes += 1;
 
-        build_size_function_body(&mut sizes, cumulated_sizes, is_dynamic_size)
+        build_size_function_body(&mut sizes, cumulated_sizes, is_dynamic_size, is_packed)
     } else {
         "Option::None".to_string()
     }
@@ -90,6 +97,7 @@ pub fn build_size_function_body(
     sizes: &mut Vec<String>,
     cumulated_sizes: u32,
     is_dynamic_size: bool,
+    is_packed: bool,
 ) -> String {
     if is_dynamic_size {
         return "Option::None".to_string();
@@ -103,16 +111,22 @@ pub fn build_size_function_body(
         0 => "Option::None".to_string(),
         1 => sizes[0].clone(),
         _ => {
+            let none_check = if is_packed {
+                ""
+            } else {
+                "if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }"
+            };
+
             format!(
                 "let sizes : Array<Option<usize>> = array![
-                        {}
-                    ];
+                    {}
+                ];
 
-                    if dojo::database::utils::any_none(@sizes) {{
-                        return Option::None;
-                    }}
-                    Option::Some(dojo::database::utils::sum(sizes))
-                    ",
+                {none_check}
+                Option::Some(dojo::database::utils::sum(sizes))
+                ",
                 sizes.join(",\n")
             )
         }
