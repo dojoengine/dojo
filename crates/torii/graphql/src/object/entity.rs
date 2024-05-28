@@ -147,14 +147,13 @@ fn model_union_field() -> Field {
                             &entity_id,
                             &mut vec![],
                             &type_mapping,
+                            false
                         )
                         .await?
                         {
                             Value::Object(map) => map,
                             _ => unreachable!(),
                         };
-
-                        println!("data: {:#?}", data);
 
                         results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
@@ -175,6 +174,7 @@ pub async fn model_data_recursive_query(
     entity_id: &str,
     indexes: &Vec<i64>,
     type_mapping: &TypeMapping,
+    is_list: bool
 ) -> sqlx::Result<Value> {
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
@@ -204,14 +204,15 @@ pub async fn model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
-                    &mut if rows.len() > 1 {
+                    &mut if is_list {
                         let mut indexes = indexes.clone();
                         indexes.push(idx as i64);
                         indexes
                     } else {
-                        vec![]
+                        indexes.clone()
                     },
                     nested_mapping,
+                    false
                 )
                 .await?;
 
@@ -225,14 +226,15 @@ pub async fn model_data_recursive_query(
                     nested_path,
                     entity_id,
                     // this might need to be changed to support 2d+ arrays
-                    &mut if rows.len() > 1 {
+                    &mut if is_list {
                         let mut indexes = indexes.clone();
                         indexes.push(idx as i64);
                         indexes
                     } else {
-                        vec![]
+                        indexes.clone()
                     },
                     &IndexMap::from([(Name::new("data"), *inner.clone())]),
+                    true
                 )
                 .await?
                 {
@@ -242,13 +244,12 @@ pub async fn model_data_recursive_query(
                         .iter()
                         .map(|v| match v {
                             Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
-                            _ => unreachable!(),
+                            _ => unreachable!("Expected Value::Object for list \"data\" field, got {:?}", v),
                         })
                         .collect(),
                     Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
                     ty => {
-                        println!("unexpected type: {:?}", ty);
-                        unreachable!()
+                        unreachable!("Expected Value::List or Value::Object for list, got {:?}", ty);
                     },
                 };
 
@@ -259,7 +260,7 @@ pub async fn model_data_recursive_query(
         nested_value_mappings.push(Value::Object(nested_value_mapping));
     }
 
-    if nested_value_mappings.len() > 1 {
+    if is_list {
         value_mapping = Value::List(nested_value_mappings);
     } else {
         value_mapping = nested_value_mappings.pop().unwrap();
