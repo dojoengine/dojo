@@ -64,7 +64,7 @@ impl TypeScriptV2Plugin {
                 let mut type_name = token.type_name();
 
                 if let Token::Composite(composite) = token {
-                    if composite.generic_args.len() > 0 {
+                    if !composite.generic_args.is_empty() {
                         type_name += &format!(
                             "<{}>",
                             composite
@@ -476,7 +476,7 @@ export interface {name} {{
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
         let mut name = token.type_name();
-        if token.generic_args.len() > 0 {
+        if !token.generic_args.is_empty() {
             name += &format!(
                 "<{}>",
                 token.generic_args.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>().join(", ")

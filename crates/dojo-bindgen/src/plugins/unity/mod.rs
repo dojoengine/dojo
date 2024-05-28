@@ -62,7 +62,7 @@ impl UnityPlugin {
                 let mut type_name = token.type_name().to_string();
 
                 if let Token::Composite(composite) = token {
-                    if composite.generic_args.len() > 0 {
+                    if !composite.generic_args.is_empty() {
                         type_name += &format!(
                             "<{}>",
                             composite
@@ -117,7 +117,7 @@ public struct {} {{
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
         let mut name_with_generics = token.type_name();
-        if token.generic_args.len() > 0 {
+        if !token.generic_args.is_empty() {
             name_with_generics += &format!(
                 "<{}>",
                 token.generic_args.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>().join(", ")
@@ -132,7 +132,7 @@ public abstract record {}() {{",
         );
 
         for field in &token.inners {
-            let type_name = UnityPlugin::map_type(&field.token).replace("(", "").replace(")", "");
+            let type_name = UnityPlugin::map_type(&field.token).replace('(', "").replace(')', "");
 
             result += format!(
                 "\n    public record {}({}) : {name_with_generics};",
