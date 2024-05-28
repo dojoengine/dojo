@@ -10,7 +10,7 @@ use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
 const BYTECODE_SIZE_LABEL: &str = "Bytecode size [in felts]\n(Sierra, Casm)";
-const CONTRACT_CLASS_SIZE_LABEL: &str = "Class size [in bytes]\n(Sierra, Casm)";
+const CONTRACT_CLASS_SIZE_LABEL: &str = "Contract Class size [in bytes]\n(Sierra, Casm)";
 
 const CONTRACT_NAME_LABEL: &str = "Contract";
 
@@ -74,6 +74,22 @@ impl BuildArgs {
                 "Read contract statistics for target directory."
             );
 
+            let ui = config.ui();
+
+            ui.print(
+                "Bytecode: It is low-level code that constitutes smart contracts and is \
+                 represented by an array of felts.",
+            );
+            ui.print("Bytecode size: It is number of felts in Bytecode.");
+            ui.print(
+                "Contract Class: It serve as the fundamental building blocks of smart contracts.",
+            );
+            ui.print(
+                "Contract Class size: It denotes the file size of the minified JSON \
+                 representation of the contract class.",
+            );
+            ui.print(" ");
+
             let table = create_stats_table(contracts_statistics);
             table.printstd()
         }
@@ -127,11 +143,11 @@ fn create_stats_table(mut contracts_statistics: Vec<ContractStatistics>) -> Tabl
         table.add_row(Row::new(vec![
             Cell::new_align(&contract_name, format::Alignment::LEFT),
             Cell::new_align(
-                format!("({}, {})", sierra_bytecode_size, casm_bytecode_size).as_str(),
+                format!("{}, {}", sierra_bytecode_size, casm_bytecode_size).as_str(),
                 format::Alignment::CENTER,
             ),
             Cell::new_align(
-                format!("({}, {})", sierra_contract_class_size, casm_contract_class_size).as_str(),
+                format!("{}, {}", sierra_contract_class_size, casm_contract_class_size).as_str(),
                 format::Alignment::CENTER,
             ),
         ]));
@@ -206,18 +222,18 @@ mod tests {
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test1", format::Alignment::LEFT),
-            Cell::new_align(format!("({}, {})", 33, 66).as_str(), format::Alignment::CENTER),
-            Cell::new_align(format!("({}, {})", 33, 66).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 33, 66).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 33, 66).as_str(), format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test2", format::Alignment::LEFT),
-            Cell::new_align(format!("({}, {})", 43, 86).as_str(), format::Alignment::CENTER),
-            Cell::new_align(format!("({}, {})", 24, 48).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 43, 86).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 24, 48).as_str(), format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test3", format::Alignment::LEFT),
-            Cell::new_align(format!("({}, {})", 36, 72).as_str(), format::Alignment::CENTER),
-            Cell::new_align(format!("({}, {})", 12, 24).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 36, 72).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 12, 24).as_str(), format::Alignment::CENTER),
         ]));
 
         // Act
