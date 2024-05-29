@@ -105,3 +105,70 @@ fn diff_when_local_and_remote_are_different() {
     assert!(diff.models.iter().any(|m| m.name == "dojo_mock::models::model_2"));
     assert!(diff.contracts.iter().any(|c| c.name == "dojo_mock::contracts::my_contract"));
 }
+
+#[test]
+fn updating_order_as_expected() {
+    let init_calldata = vec![
+        ("c4", vec!["$contract_address:c1", "0x0"]),
+        ("c3", vec!["0x0"]),
+        ("c5", vec!["$contract_address:c4", "0x0"]),
+        ("c7", vec!["$contract_address:c4", "0x0"]),
+        ("c2", vec!["0x0"]),
+        ("c6", vec!["$contract_address:c4", "$contract_address:c3", "0x0"]),
+        ("c1", vec!["0x0"]),
+    ];
+
+    let mut contracts = vec![];
+    for calldata in init_calldata {
+        contracts.push(ContractDiff {
+            init_calldata: calldata.1.iter().map(|c| c.to_string()).collect(),
+            name: calldata.0.to_string(),
+            ..Default::default()
+        });
+    }
+
+    let mut diff = WorldDiff {
+        world: ContractDiff::default(),
+        base: ClassDiff::default(),
+        contracts,
+        models: vec![],
+    };
+
+    diff.update_order().unwrap();
+
+    let expected_order = ["c1", "c2", "c3", "c4", "c5", "c6", "c7"];
+    for (i, contract) in diff.contracts.iter().enumerate() {
+        assert_eq!(contract.name, expected_order[i]);
+    }
+}
+
+#[test]
+fn updating_order_when_cyclic_dependency_fail() {
+    let init_calldata = vec![
+        ("c4", vec!["$contract_address:c1", "$contract_address:c6", "0x0"]),
+        ("c3", vec!["0x0"]),
+        ("c5", vec!["$contract_address:c4", "0x0"]),
+        ("c7", vec!["$contract_address:c4", "0x0"]),
+        ("c2", vec!["0x0"]),
+        ("c6", vec!["$contract_address:c4", "$contract_address:c3", "0x0"]),
+        ("c1", vec!["0x0"]),
+    ];
+
+    let mut contracts = vec![];
+    for calldata in init_calldata {
+        contracts.push(ContractDiff {
+            init_calldata: calldata.1.iter().map(|c| c.to_string()).collect(),
+            name: calldata.0.to_string(),
+            ..Default::default()
+        });
+    }
+
+    let mut diff = WorldDiff {
+        world: ContractDiff::default(),
+        base: ClassDiff::default(),
+        contracts,
+        models: vec![],
+    };
+
+    assert!(diff.update_order().is_err_and(|e| e.to_string().contains("Cyclic")));
+}
