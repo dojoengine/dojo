@@ -13,7 +13,7 @@ use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MigrationStrategy {
     pub world_address: Option<FieldElement>,
     pub world: Option<ContractMigration>,
@@ -59,6 +59,31 @@ impl MigrationStrategy {
 
         MigrationItemsInfo { new, update }
     }
+
+    pub fn resolve_variable(&mut self, world_address: FieldElement) -> Result<()> {
+        let contracts_clone = self.contracts.clone();
+        for contract in self.contracts.iter_mut() {
+            for field in contract.diff.init_calldata.iter_mut() {
+                if let Some(dependency) = field.strip_prefix("$contract_address:") {
+                    let dependency_contract =
+                        contracts_clone.iter().find(|c| c.diff.name == dependency).unwrap();
+                    let contract_address = get_contract_address(
+                        generate_salt(&dependency_contract.diff.name),
+                        dependency_contract.diff.base_class_hash,
+                        &[],
+                        world_address,
+                    );
+                    *field = contract_address.to_string();
+                } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
+                    let dependency_contract =
+                        contracts_clone.iter().find(|c| c.diff.name == dependency).unwrap();
+                    *field = dependency_contract.diff.local_class_hash.to_string();
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// construct migration strategy
@@ -69,8 +94,13 @@ pub fn prepare_for_migration(
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
 ) -> Result<MigrationStrategy> {
-    let entries = fs::read_dir(target_dir)
-        .map_err(|err| anyhow!("Failed reading source directory: {err}"))?;
+    let entries = fs::read_dir(target_dir).with_context(|| {
+        format!(
+            "Failed trying to read target directory ({target_dir})\nNOTE: build files are profile \
+             specified so make sure to run build command with correct profile. For e.g. `sozo -P \
+             my_profile build`"
+        )
+    })?;
 
     let mut artifact_paths = HashMap::new();
     for entry in entries.flatten() {
@@ -110,6 +140,7 @@ pub fn prepare_for_migration(
 
         if let Some(world_address) = world_address {
             if world_address != generated_world_address {
+                println!("generated_world_address: {:?}", generated_world_address);
                 bail!(
                     "Calculated world address doesn't match provided world address.\nIf you are \
                      deploying with custom seed make sure `world_address` is correctly configured \

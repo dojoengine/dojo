@@ -22,8 +22,8 @@ tracing.workspace = true
 alloy-primitives.workspace = true
 
 # blockifier deps
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "935292bb", features = [ "testing" ], optional = true }
-cairo-vm = { workspace = true, optional = true }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "57c11586", features = [ "testing" ], optional = true }
+katana-cairo = { workspace = true, optional = true }
 
 # Disable SIR for now until they support Cairo 2.6.3
 # # starknet_in_rust deps
@@ -33,7 +33,7 @@ cairo-vm = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow.workspace = true
-cairo-vm.workspace = true
+katana-cairo.workspace = true
 katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
 rstest.workspace = true
@@ -46,7 +46,7 @@ criterion.workspace = true
 pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 [features]
-blockifier = [ "dep:blockifier", "dep:cairo-vm" ]
+blockifier = [ "dep:blockifier", "dep:katana-cairo" ]
 default = [ "blockifier" ]
 # native = [ "sir", "sir/cairo-native" ]
 # sir = [ "dep:sir", "dep:starknet-types-core" ]

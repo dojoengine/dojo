@@ -195,11 +195,18 @@ where
         TransactionTraceProvider::transaction_execution(&self.provider, hash)
     }
 
-    fn transactions_executions_by_block(
+    fn transaction_executions_by_block(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
-        TransactionTraceProvider::transactions_executions_by_block(&self.provider, block_id)
+        TransactionTraceProvider::transaction_executions_by_block(&self.provider, block_id)
+    }
+
+    fn transaction_executions_in_range(
+        &self,
+        range: Range<TxNumber>,
+    ) -> ProviderResult<Vec<TxExecInfo>> {
+        TransactionTraceProvider::transaction_executions_in_range(&self.provider, range)
     }
 }
 

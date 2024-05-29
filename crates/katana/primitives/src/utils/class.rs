@@ -1,6 +1,6 @@
 use anyhow::Result;
-use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet_classes::contract_class::ContractClass;
+use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
+use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
 use serde_json::Value;
 
 use crate::class::{

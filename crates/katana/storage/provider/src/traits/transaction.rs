@@ -59,10 +59,16 @@ pub trait TransactionTraceProvider: Send + Sync {
     fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>>;
 
     /// Returns all the transactions executions for a given block.
-    fn transactions_executions_by_block(
+    fn transaction_executions_by_block(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>>;
+
+    /// Retrieves the execution traces for the given range of tx numbers.
+    fn transaction_executions_in_range(
+        &self,
+        range: Range<TxNumber>,
+    ) -> ProviderResult<Vec<TxExecInfo>>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]

@@ -24,7 +24,7 @@ impl WhereInputObject {
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
         let where_mapping = object_types
             .iter()
-            .filter(|(_, type_data)| !type_data.is_nested())
+            .filter(|(_, type_data)| !type_data.is_nested() && !type_data.is_list())
             .flat_map(|(type_name, type_data)| {
                 // TODO: filter on nested and enum objects
                 if type_data.type_ref() == TypeRef::named("Enum")
@@ -89,6 +89,14 @@ pub fn parse_where_argument(
             .filter_map(|(type_name, type_data)| {
                 input_object.get(type_name).map(|input| match type_data {
                     TypeData::Simple(_) => {
+                        if type_data.type_ref() == TypeRef::named("Enum") {
+                            let value = input.string().unwrap();
+                            return Ok(Some(parse_filter(
+                                type_name,
+                                FilterValue::String(value.to_string()),
+                            )));
+                        }
+
                         let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
                         let filter_value = match primitive.to_sql_type() {
                             SqlType::Integer => parse_integer(input, type_name, primitive)?,

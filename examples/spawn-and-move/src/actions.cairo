@@ -4,6 +4,7 @@ use dojo_examples::models::{Direction, Position, Vec2};
 trait IActions {
     fn spawn();
     fn move(direction: Direction);
+    fn set_player_config(name: ByteArray);
 }
 
 #[dojo::interface]
@@ -18,11 +19,12 @@ mod actions {
     use super::IActionsComputed;
 
     use starknet::{ContractAddress, get_caller_address};
-    use dojo_examples::models::{Position, Moves, Direction, Vec2};
+    use dojo_examples::models::{Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem};
     use dojo_examples::utils::next_position;
 
-    #[derive(Model, Copy, Drop, Serde)]
+    #[derive(Copy, Drop, Serde)]
     #[dojo::event]
+    #[dojo::model]
     struct Moved {
         #[key]
         player: ContractAddress,
@@ -82,7 +84,18 @@ mod actions {
             let next = next_position(position, direction);
             set!(world, (moves, next));
             emit!(world, (Moved { player, direction }));
-            return ();
+        }
+
+        fn set_player_config(world: IWorldDispatcher, name: ByteArray) {
+            let player = get_caller_address();
+
+            let items = array![
+                PlayerItem { item_id: 1, quantity: 100 }, PlayerItem { item_id: 2, quantity: 50 }
+            ];
+
+            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1), };
+
+            set!(world, (config));
         }
     }
 }
@@ -110,7 +123,7 @@ mod tests {
 
         // deploy systems contract
         let contract_address = world
-            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap());
+            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
         let actions_system = IActionsDispatcher { contract_address };
 
         // System calls

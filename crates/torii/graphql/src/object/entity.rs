@@ -139,13 +139,19 @@ fn model_union_field() -> Field {
                         let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
                         // but the table name for the model data is the unhashed model name
-                        let data = model_data_recursive_query(
+                        let data: ValueMapping = match model_data_recursive_query(
                             &mut conn,
                             vec![name.clone()],
                             &entity_id,
+                            &[],
                             &type_mapping,
+                            false,
                         )
-                        .await?;
+                        .await?
+                        {
+                            Value::Object(map) => map,
+                            _ => unreachable!(),
+                        };
 
                         results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
@@ -164,25 +170,104 @@ pub async fn model_data_recursive_query(
     conn: &mut PoolConnection<Sqlite>,
     path_array: Vec<String>,
     entity_id: &str,
+    indexes: &[i64],
     type_mapping: &TypeMapping,
-) -> sqlx::Result<ValueMapping> {
+    is_list: bool,
+) -> sqlx::Result<Value> {
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
-    let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", table_name, entity_id);
-    let row = sqlx::query(&query).fetch_one(conn.as_mut()).await?;
-    let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
+    let mut query = format!("SELECT * FROM {} WHERE entity_id = '{}' ", table_name, entity_id);
+    for (column_idx, index) in indexes.iter().enumerate() {
+        query.push_str(&format!("AND idx_{} = {} ", column_idx, index));
+    }
 
-    for (field_name, type_data) in type_mapping {
-        if let TypeData::Nested((_, nested_mapping)) = type_data {
-            let mut nested_path = path_array.clone();
-            nested_path.push(field_name.to_string());
+    let rows = sqlx::query(&query).fetch_all(conn.as_mut()).await?;
+    if rows.is_empty() {
+        return Ok(Value::Null);
+    }
 
-            let nested_values =
-                model_data_recursive_query(conn, nested_path, entity_id, nested_mapping).await?;
+    let value_mapping: Value;
+    let mut nested_value_mappings = Vec::new();
 
-            value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
+    for (idx, row) in rows.iter().enumerate() {
+        let mut nested_value_mapping = value_mapping_from_row(row, type_mapping, true)?;
+
+        for (field_name, type_data) in type_mapping {
+            if let TypeData::Nested((_, nested_mapping)) = type_data {
+                let mut nested_path = path_array.clone();
+                nested_path.push(field_name.to_string());
+
+                let nested_values = model_data_recursive_query(
+                    conn,
+                    nested_path,
+                    entity_id,
+                    &if is_list {
+                        let mut indexes = indexes.to_vec();
+                        indexes.push(idx as i64);
+                        indexes
+                    } else {
+                        indexes.to_vec()
+                    },
+                    nested_mapping,
+                    false,
+                )
+                .await?;
+
+                nested_value_mapping.insert(Name::new(field_name), nested_values);
+            } else if let TypeData::List(inner) = type_data {
+                let mut nested_path = path_array.clone();
+                nested_path.push(field_name.to_string());
+
+                let data = match model_data_recursive_query(
+                    conn,
+                    nested_path,
+                    entity_id,
+                    // this might need to be changed to support 2d+ arrays
+                    &if is_list {
+                        let mut indexes = indexes.to_vec();
+                        indexes.push(idx as i64);
+                        indexes
+                    } else {
+                        indexes.to_vec()
+                    },
+                    &IndexMap::from([(Name::new("data"), *inner.clone())]),
+                    true,
+                )
+                .await?
+                {
+                    // map our list which uses a data field as a place holder
+                    // for all elements to get the elemnt directly
+                    Value::List(data) => data
+                        .iter()
+                        .map(|v| match v {
+                            Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
+                            _ => unreachable!(
+                                "Expected Value::Object for list \"data\" field, got {:?}",
+                                v
+                            ),
+                        })
+                        .collect(),
+                    Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
+                    ty => {
+                        unreachable!(
+                            "Expected Value::List or Value::Object for list, got {:?}",
+                            ty
+                        );
+                    }
+                };
+
+                nested_value_mapping.insert(Name::new(field_name), data);
+            }
         }
+
+        nested_value_mappings.push(Value::Object(nested_value_mapping));
+    }
+
+    if is_list {
+        value_mapping = Value::List(nested_value_mappings);
+    } else {
+        value_mapping = nested_value_mappings.pop().unwrap();
     }
 
     Ok(value_mapping)

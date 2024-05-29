@@ -1,4 +1,6 @@
-use katana_primitives::trace::CallInfo;
+use katana_primitives::trace::{CallInfo, TxExecInfo};
+use katana_primitives::transaction::TxHash;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     CallType, EntryPointType, ExecutionResources, OrderedEvent, OrderedMessage,
 };
@@ -71,4 +73,13 @@ impl From<CallInfo> for FunctionInvocation {
             class_hash: info.class_hash.expect("Class hash mut be set after execution"),
         })
     }
+}
+
+/// The type returned by the `saya_getTransactionExecutionsByBlock` RPC method.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxExecutionInfo {
+    /// The transaction hash.
+    pub hash: TxHash,
+    /// The transaction execution trace.
+    pub trace: TxExecInfo,
 }

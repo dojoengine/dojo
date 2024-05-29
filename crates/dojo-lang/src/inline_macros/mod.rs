@@ -1,10 +1,9 @@
 use cairo_lang_defs::plugin::{InlinePluginResult, PluginDiagnostic};
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use smol_str::SmolStr;
 
-pub mod array_cap;
 pub mod delete;
 pub mod emit;
 pub mod get;

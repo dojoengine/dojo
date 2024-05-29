@@ -9,6 +9,7 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cainome.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 base64.workspace = true
@@ -42,3 +43,4 @@ camino.workspace = true
 dojo-test-utils = { path = "../../dojo-test-utils" }
 scarb.workspace = true
 sozo = { path = "../../../bin/sozo" }
+katana-runner.workspace = true

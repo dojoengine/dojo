@@ -3,6 +3,7 @@ use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::cairo_short_string_to_felt;
 
 use super::setup;
@@ -60,7 +61,8 @@ async fn auth_revoke_writer_ok() {
     let account2 = sequencer.account(1);
 
     // Setup new world contract handler with account 2.
-    let world_2 = WorldContract::new(world.address, account2);
+    let world_2 =
+        WorldContract::new(world.address, account2).with_block(BlockId::Tag(BlockTag::Pending));
 
     assert!(!execute_spawn(&world_2).await);
 
@@ -180,6 +182,7 @@ async fn auth_revoke_owner_ok() {
     .unwrap();
 
     assert!(execute_spawn(&world_2).await);
+
     auth::revoke_owner(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
@@ -202,14 +205,17 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
     let contract_actions = ACTION_CONTRACT_NAME.to_string();
     let system_spawn = "spawn".to_string();
 
-    execute::execute(
+    let r = execute::execute(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         contract_actions,
         system_spawn,
         vec![],
         world,
-        &TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig::init_wait(),
     )
-    .await
-    .is_ok()
+    .await;
+
+    println!("ERR {:?}", r);
+
+    r.is_ok()
 }

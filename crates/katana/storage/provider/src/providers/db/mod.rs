@@ -506,26 +506,35 @@ impl TransactionTraceProvider for DbProvider {
         }
     }
 
-    fn transactions_executions_by_block(
+    fn transaction_executions_by_block(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
-        if let Some(indices) = self.block_body_indices(block_id)? {
-            let db_tx = self.0.tx()?;
-            let mut executions = Vec::with_capacity(indices.tx_count as usize);
-
-            let range = Range::from(indices);
-            for i in range {
-                if let Some(execution) = db_tx.get::<tables::TxTraces>(i)? {
-                    executions.push(execution);
-                }
-            }
-
-            db_tx.commit()?;
-            Ok(Some(executions))
+        if let Some(index) = self.block_body_indices(block_id)? {
+            let traces = self.transaction_executions_in_range(index.into())?;
+            Ok(Some(traces))
         } else {
             Ok(None)
         }
+    }
+
+    fn transaction_executions_in_range(
+        &self,
+        range: Range<TxNumber>,
+    ) -> ProviderResult<Vec<TxExecInfo>> {
+        let db_tx = self.0.tx()?;
+
+        let total = range.end - range.start;
+        let mut traces = Vec::with_capacity(total as usize);
+
+        for i in range {
+            if let Some(trace) = db_tx.get::<tables::TxTraces>(i)? {
+                traces.push(trace);
+            }
+        }
+
+        db_tx.commit()?;
+        Ok(traces)
     }
 }
 

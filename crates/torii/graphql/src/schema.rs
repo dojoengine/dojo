@@ -25,14 +25,16 @@ use crate::query::type_mapping_query;
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // build world gql objects
-    let (objects, union) = build_objects(pool).await?;
+    let (objects, unions) = build_objects(pool).await?;
 
     let mut schema_builder = Schema::build(QUERY_TYPE_NAME, None, Some(SUBSCRIPTION_TYPE_NAME));
     let mut query_root = Object::new(QUERY_TYPE_NAME);
     let mut subscription_root = Subscription::new(SUBSCRIPTION_TYPE_NAME);
 
     // register model data unions
-    schema_builder = schema_builder.register(union);
+    for union in unions {
+        schema_builder = schema_builder.register(union);
+    }
 
     // register default scalars
     for scalar_type in ScalarType::all().iter() {
@@ -98,7 +100,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         .map_err(|e| e.into())
 }
 
-async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Union)> {
+async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Union>)> {
     let mut conn = pool.acquire().await?;
     let models: Vec<Model> = sqlx::query_as("SELECT * FROM models").fetch_all(&mut *conn).await?;
 
@@ -116,25 +118,43 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Union)>
     ];
 
     // model union object
-    let mut union = Union::new("ModelUnion");
+    let mut unions: Vec<Union> = Vec::new();
+    let mut model_union = Union::new("ModelUnion");
 
     // model data objects
     for model in models {
         let type_mapping = type_mapping_query(&mut conn, &model.id).await?;
 
         if !type_mapping.is_empty() {
+            // add models objects & unions
             let field_name = model.name.to_case(Case::Camel);
             let type_name = model.name;
 
-            union = union.possible_type(&type_name);
+            model_union = model_union.possible_type(&type_name);
 
             objects.push(ObjectVariant::Resolvable(Box::new(ModelDataObject::new(
                 field_name,
                 type_name,
-                type_mapping,
+                type_mapping.clone(),
             ))));
+
+            // add enum unions
+            // Should we consider using unions for enums? Not sure about
+            // the practicality and benefit
+            // for (_, type_data) in &type_mapping {
+            //     if let TypeData::Enum((type_ref, types)) = type_data {
+            //         let mut enum_union = Union::new(&type_ref.to_string());
+            //         for (type_ref, _) in types {
+            //             enum_union = enum_union.possible_type(&type_ref.to_string());
+            //         }
+
+            //         unions.push(enum_union);
+            //     }
+            // }
         }
     }
 
-    Ok((objects, union))
+    unions.push(model_union);
+
+    Ok((objects, unions))
 }

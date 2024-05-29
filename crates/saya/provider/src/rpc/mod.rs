@@ -11,11 +11,10 @@ use katana_primitives::block::{
 use katana_primitives::chain::ChainId;
 use katana_primitives::conversion::rpc as rpc_converter;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::version::Version;
 use katana_rpc_api::saya::SayaApiClient;
-use katana_rpc_types::transaction::{TransactionsExecutionsPage, TransactionsPageCursor};
+use katana_rpc_types::trace::TxExecutionInfo;
 use starknet::core::types::{
     ContractClass, FieldElement, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
 };
@@ -155,25 +154,15 @@ impl Provider for JsonRpcProvider {
 
     async fn fetch_transactions_executions(
         &self,
-        block_number: u64,
-    ) -> ProviderResult<Vec<TxExecInfo>> {
+        block_number: BlockNumber,
+    ) -> ProviderResult<Vec<TxExecutionInfo>> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Fetching transactions executions.");
-        let cursor = TransactionsPageCursor { block_number, chunk_size: 50, ..Default::default() };
 
         let client = HttpClientBuilder::default().build(&self.rpc_url).unwrap();
-        let mut executions = vec![];
 
-        loop {
-            let rsp: TransactionsExecutionsPage =
-                client.get_transactions_executions(cursor).await.unwrap();
+        let block_id = BlockIdOrTag::Number(block_number);
+        let traces = client.transaction_executions_by_block(block_id).await.unwrap();
 
-            executions.extend(rsp.transactions_executions);
-
-            if rsp.cursor.block_number > block_number {
-                break;
-            }
-        }
-
-        Ok(executions)
+        Ok(traces)
     }
 }

@@ -30,14 +30,16 @@ enum Emote {
     Love,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
 struct EmoteMessage {
     #[key]
     identity: ContractAddress,
     emote: Emote,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
 struct Moves {
     #[key]
     player: ContractAddress,
@@ -45,17 +47,40 @@ struct Moves {
     last_direction: Direction
 }
 
-#[derive(Copy, Drop, Serde, Introspect)]
+#[derive(Copy, Drop, Serde, IntrospectPacked)]
 struct Vec2 {
     x: u32,
     y: u32
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+// If `Vec2` wasn't packed, the `Position` would be invalid,
+// and a runtime error would be thrown.
+// Any field that is a custom type into a `IntrospectPacked` type
+// must be packed.
+#[derive(Copy, Drop, Serde, IntrospectPacked)]
+#[dojo::model]
 struct Position {
     #[key]
     player: ContractAddress,
     vec: Vec2,
+}
+
+// Every field inside a model must derive `Introspect` or `IntrospectPacked`.
+// `IntrospectPacked` can also be used into models that are only using `Introspect`.
+#[derive(Copy, Drop, Serde, Introspect)]
+struct PlayerItem {
+    item_id: u32,
+    quantity: u32,
+}
+
+#[derive(Drop, Serde)]
+#[dojo::model]
+struct PlayerConfig {
+    #[key]
+    player: ContractAddress,
+    name: ByteArray,
+    items: Array<PlayerItem>,
+    favorite_item: Option<u32>,
 }
 
 trait Vec2Trait {

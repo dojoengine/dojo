@@ -2,10 +2,10 @@ use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
+use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_starknet::plugin::consts::EVENT_TRAIT;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 
 use crate::inline_macros::unsupported_arg_diagnostic;
 
@@ -25,7 +25,7 @@ impl InlineMacroExprPlugin for EmitMacro {
         let ast::WrappedArgList::ParenthesizedArgList(arg_list) = syntax.arguments(db) else {
             return unsupported_bracket_diagnostic(db, syntax);
         };
-        let mut builder = PatchBuilder::new(db);
+        let mut builder = PatchBuilder::new(db, syntax);
         builder.add_str("{");
 
         let args = arg_list.arguments(db).elements(db);
@@ -111,11 +111,13 @@ impl InlineMacroExprPlugin for EmitMacro {
 
         builder.add_str("}");
 
+        let (code, code_mappings) = builder.build();
+
         InlinePluginResult {
             code: Some(PluginGeneratedFile {
                 name: "emit_inline_macro".into(),
-                content: builder.code,
-                code_mappings: builder.code_mappings,
+                content: code,
+                code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],

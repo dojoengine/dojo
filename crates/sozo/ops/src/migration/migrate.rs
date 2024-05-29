@@ -281,14 +281,8 @@ fn create_resource_metadata(
     resource_id: FieldElement,
     hash: String,
 ) -> Result<world::ResourceMetadata> {
-    let mut encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
-
-    // Metadata is expecting an array of capacity 3.
-    if encoded_uri.len() < 3 {
-        encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
-    }
-
-    Ok(world::ResourceMetadata { resource_id, metadata_uri: encoded_uri })
+    let metadata_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+    Ok(world::ResourceMetadata { resource_id, metadata_uri })
 }
 
 /// Upload metadata of the world/models/contracts as IPFS artifacts and then
@@ -500,6 +494,7 @@ where
                 contract.diff.base_class_hash,
                 migrator,
                 txn_config,
+                &contract.diff.init_calldata,
             )
             .await
         {
@@ -547,7 +542,10 @@ where
             }
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
-                return Err(anyhow!("Failed to migrate {name}: {e}"));
+                return Err(anyhow!(
+                    "Failed to migrate {name}: {e}. Please also verify init calldata is valid, if \
+                     any."
+                ));
             }
         }
     }
