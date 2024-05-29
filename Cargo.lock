@@ -12052,6 +12052,7 @@ dependencies = [
  "cairo-lang-sierra 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-sierra-to-casm 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-starknet 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
+ "cairo-lang-starknet-classes 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
  "cairo-lang-test-plugin",
  "cairo-lang-test-runner",
  "cairo-lang-utils 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=290f51f554c978180ca9d91177423305959cbed5)",
