@@ -21,12 +21,14 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
+#[derive(Debug)]
 pub struct TestAccount {
     pub private_key: FieldElement,
     pub account_address: FieldElement,
 }
 
 #[allow(unused)]
+#[derive(Debug)]
 pub struct TestSequencer {
     url: Url,
     handle: NodeHandle,

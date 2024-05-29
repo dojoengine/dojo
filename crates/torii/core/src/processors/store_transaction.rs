@@ -7,7 +7,7 @@ use starknet_crypto::FieldElement;
 use super::TransactionProcessor;
 use crate::sql::Sql;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct StoreTransactionProcessor;
 
 #[async_trait]

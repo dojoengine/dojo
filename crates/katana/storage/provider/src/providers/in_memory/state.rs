@@ -10,6 +10,7 @@ use crate::traits::contract::ContractClassProvider;
 use crate::traits::state::StateProvider;
 use crate::ProviderResult;
 
+#[derive(Debug)]
 pub struct StateSnapshot<Db> {
     // because the classes are shared between snapshots, when trying to fetch check the compiled
     // hash first and then the sierra class to ensure the class should be present in the snapshot.
@@ -165,6 +166,7 @@ impl ContractClassProvider for InMemorySnapshot {
     }
 }
 
+#[derive(Debug)]
 pub(super) struct LatestStateProvider(pub(super) Arc<InMemoryStateDb>);
 
 impl StateProvider for LatestStateProvider {

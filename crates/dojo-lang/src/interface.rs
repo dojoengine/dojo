@@ -5,6 +5,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
+#[derive(Debug)]
 pub struct DojoInterface {
     diagnostics: Vec<PluginDiagnostic>,
 }

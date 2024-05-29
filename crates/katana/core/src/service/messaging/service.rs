@@ -21,6 +21,7 @@ type MessagingFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 type MessageGatheringFuture = MessagingFuture<MessengerResult<(u64, usize)>>;
 type MessageSettlingFuture = MessagingFuture<MessengerResult<Option<(u64, usize)>>>;
 
+#[derive(Debug)]
 pub struct MessagingService<EF: ExecutorFactory> {
     /// The interval at which the service will perform the messaging operations.
     interval: Interval,
@@ -151,6 +152,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
     }
 }
 
+#[derive(Debug)]
 pub enum MessagingOutcome {
     Gather {
         /// The latest block number of the settlement chain from which messages were gathered.

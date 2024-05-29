@@ -22,6 +22,7 @@ use tracing::{error, trace};
 use crate::proto;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
+#[derive(Debug)]
 pub struct EventMessagesSubscriber {
     /// Entity ids that the subscriber is interested in
     hashed_keys: HashSet<FieldElement>,
@@ -29,7 +30,7 @@ pub struct EventMessagesSubscriber {
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EventMessageManager {
     subscribers: RwLock<HashMap<usize, EventMessagesSubscriber>>,
 }
@@ -56,6 +57,7 @@ impl EventMessageManager {
 }
 
 #[must_use = "Service does nothing unless polled"]
+#[derive(Debug)]
 pub struct Service {
     pool: Pool<Sqlite>,
     subs_manager: Arc<EventMessageManager>,

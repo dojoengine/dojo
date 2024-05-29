@@ -30,6 +30,7 @@ use crate::utils::get_current_timestamp;
 
 pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 
+#[derive(Debug)]
 pub struct Backend<EF: ExecutorFactory> {
     /// The config used to generate the backend.
     pub config: StarknetConfig,

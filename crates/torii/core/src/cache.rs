@@ -9,6 +9,7 @@ use crate::model::{parse_sql_model_members, SqlModelMember};
 
 type ModelName = String;
 
+#[derive(Debug)]
 pub struct ModelCache {
     pool: SqlitePool,
     cache: RwLock<HashMap<ModelName, Ty>>,

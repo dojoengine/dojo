@@ -51,6 +51,7 @@ impl Default for EngineConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct Engine<P: Provider + Sync> {
     world: WorldContractReader<P>,
     db: Sql,

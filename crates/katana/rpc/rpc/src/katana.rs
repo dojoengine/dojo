@@ -6,6 +6,7 @@ use katana_executor::ExecutorFactory;
 use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_types::account::Account;
 
+#[derive(Debug)]
 pub struct KatanaApi<EF: ExecutorFactory> {
     sequencer: Arc<KatanaSequencer<EF>>,
 }

@@ -31,6 +31,7 @@ mod state;
 mod transaction;
 
 /// A JSON RPC provider.
+#[derive(Debug)]
 pub struct JsonRpcProvider {
     /// The RPC URL that must be kept for custom endpoints.
     rpc_url: String,

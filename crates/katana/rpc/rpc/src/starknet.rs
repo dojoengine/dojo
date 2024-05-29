@@ -41,6 +41,7 @@ use starknet::core::types::{
     TransactionExecutionStatus, TransactionStatus, TransactionTrace,
 };
 
+#[derive(Debug)]
 pub struct StarknetApi<EF: ExecutorFactory> {
     inner: Arc<StarknetApiInner<EF>>,
 }

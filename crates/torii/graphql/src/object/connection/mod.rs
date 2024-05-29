@@ -27,6 +27,7 @@ pub struct ConnectionArguments {
     pub limit: Option<u64>,
 }
 
+#[derive(Debug)]
 pub struct ConnectionObject {
     pub name: String,
     pub type_name: String,

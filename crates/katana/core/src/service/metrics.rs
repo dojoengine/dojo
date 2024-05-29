@@ -1,11 +1,12 @@
 use dojo_metrics::Metrics;
 use metrics::Counter;
 
+#[derive(Debug)]
 pub(crate) struct ServiceMetrics {
     pub(crate) block_producer: BlockProducerMetrics,
 }
 
-#[derive(Metrics)]
+#[derive(Metrics, Debug)]
 #[metrics(scope = "block_producer")]
 pub(crate) struct BlockProducerMetrics {
     /// The amount of L1 gas processed in a block.

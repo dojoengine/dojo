@@ -18,6 +18,7 @@ use crate::object::resolve_one;
 const ORDER_BY_NAME: &str = "NAME";
 const ORDER_BY_HASH: &str = "CLASS_HASH";
 
+#[derive(Debug)]
 pub struct ModelObject;
 
 impl BasicObject for ModelObject {

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use starknet::core::types::FieldElement;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SQLFieldElement(pub FieldElement);
 
 impl From<SQLFieldElement> for FieldElement {

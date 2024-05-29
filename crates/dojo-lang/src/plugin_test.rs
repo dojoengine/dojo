@@ -39,6 +39,7 @@ pub fn test_expand_plugin(
 }
 
 #[salsa::database(DefsDatabase, ParserDatabase, SyntaxDatabase, FilesDatabase)]
+#[derive(Debug)]
 pub struct DatabaseForTesting {
     storage: salsa::Storage<DatabaseForTesting>,
 }

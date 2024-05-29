@@ -13,6 +13,7 @@ use crate::constants::{DATETIME_FORMAT, EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAM
 use crate::mapping::EVENT_TYPE_MAPPING;
 use crate::types::ValueMapping;
 
+#[derive(Debug)]
 pub struct EventObject;
 
 impl BasicObject for EventObject {

@@ -26,6 +26,7 @@ pub enum Tx {
     DeployAccount(DeployAccountTx),
 }
 
+#[derive(Debug)]
 pub enum TxRef<'a> {
     Invoke(&'a InvokeTx),
     Declare(&'a DeclareTx),

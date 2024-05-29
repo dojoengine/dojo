@@ -4,6 +4,7 @@ use katana_provider::ProviderResult;
 use katana_rpc_types::block::{BlockWithTxHashes, BlockWithTxs};
 
 /// A builder for building RPC block types.
+#[derive(Debug)]
 pub struct BlockBuilder<P> {
     provider: P,
     block_id: BlockHashOrNumber,

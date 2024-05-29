@@ -224,6 +224,7 @@ impl From<DevGenesisAccount> for GenesisAllocation {
 
 /// A helper type for allocating dev accounts in the genesis block.
 #[must_use]
+#[derive(Debug)]
 pub struct DevAllocationsGenerator {
     total: u16,
     seed: [u8; 32],

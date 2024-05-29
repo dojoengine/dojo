@@ -31,6 +31,7 @@ impl Display for CelestiaConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct CelestiaClient {
     client: Client,
     mode: DataAvailabilityMode,

@@ -12,7 +12,7 @@ use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_del_record";
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct StoreDelRecordProcessor;
 
 #[async_trait]

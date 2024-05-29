@@ -5,6 +5,7 @@ use starknet::core::types::{
     CallType, EntryPointType, ExecutionResources, OrderedEvent, OrderedMessage,
 };
 
+#[derive(Debug)]
 pub struct FunctionInvocation(pub starknet::core::types::FunctionInvocation);
 
 impl From<CallInfo> for FunctionInvocation {

@@ -12,7 +12,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 use crate::commands::Commands;
 use crate::utils::generate_version;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(author, version=generate_version(), about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct SozoArgs {

@@ -40,6 +40,9 @@ members = [
     "examples/spawn-and-move",
 ]
 
+[workspace.lints]
+rust.missing_debug_implementations = "warn"
+
 [workspace.package]
 edition = "2021"
 license = "Apache-2.0"

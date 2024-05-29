@@ -12,7 +12,7 @@ use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_model";
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct RegisterModelProcessor;
 
 #[async_trait]

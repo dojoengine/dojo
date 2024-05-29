@@ -148,6 +148,7 @@ pub struct ResultAndStates {
 
 /// A wrapper around a boxed [StateProvider] for implementing the executor's own state reader
 /// traits.
+#[derive(Debug)]
 pub struct StateProviderDb<'a>(pub(crate) Box<dyn StateProvider + 'a>);
 
 impl From<Box<dyn StateProvider>> for StateProviderDb<'_> {

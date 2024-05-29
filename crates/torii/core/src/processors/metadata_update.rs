@@ -22,7 +22,7 @@ const MAX_RETRY: u8 = 3;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::metadata_update";
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MetadataUpdateProcessor;
 
 #[async_trait]

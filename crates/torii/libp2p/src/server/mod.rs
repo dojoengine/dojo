@@ -42,7 +42,7 @@ use crate::types::Message;
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 
-#[derive(NetworkBehaviour)]
+#[derive(Debug, NetworkBehaviouDer)]
 #[behaviour(out_event = "ServerEvent")]
 pub struct Behaviour {
     relay: relay::Behaviour,
@@ -51,6 +51,7 @@ pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
 }
 
+#[derive(Debug)]
 pub struct Relay<P: Provider + Sync> {
     swarm: Swarm<Behaviour>,
     db: Sql,

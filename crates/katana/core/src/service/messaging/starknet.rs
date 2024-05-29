@@ -29,6 +29,7 @@ const EXE_MAGIC: FieldElement = felt!("0x455845");
 
 pub const HASH_EXEC: FieldElement = felt!("0xee");
 
+#[derive(Debug)]
 pub struct StarknetMessaging {
     chain_id: FieldElement,
     provider: AnyProvider,

@@ -68,6 +68,7 @@ type BlockProductionWithTxnsFuture =
 
 /// The type which responsible for block production.
 #[must_use = "BlockProducer does nothing unless polled"]
+#[derive(Debug)]
 pub struct BlockProducer<EF: ExecutorFactory> {
     /// The inner mode of mining.
     pub inner: RwLock<BlockProducerMode<EF>>,
@@ -149,11 +150,13 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
 /// block producer will execute all the transactions in the mempool and mine a new block with the
 /// resulting state. The block context is only updated every time a new block is mined as opposed to
 /// updating it when the block is opened (in _interval_ mode).
+#[derive(Debug)]
 pub enum BlockProducerMode<EF: ExecutorFactory> {
     Interval(IntervalBlockProducer<EF>),
     Instant(InstantBlockProducer<EF>),
 }
 
+#[derive(Debug)]
 #[derive(Clone, derive_more::Deref)]
 pub struct PendingExecutor(#[deref] Arc<RwLock<Box<dyn BlockExecutor<'static>>>>);
 
@@ -163,6 +166,7 @@ impl PendingExecutor {
     }
 }
 
+#[derive(Debug)]
 pub struct IntervalBlockProducer<EF: ExecutorFactory> {
     /// The interval at which new blocks are mined.
     interval: Option<Interval>,
@@ -442,6 +446,7 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
     }
 }
 
+#[derive(Debug)]
 pub struct InstantBlockProducer<EF: ExecutorFactory> {
     /// Holds the backend if no block is being mined
     backend: Arc<Backend<EF>>,

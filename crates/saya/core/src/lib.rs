@@ -55,6 +55,7 @@ where
 }
 
 /// Saya.
+#[derive(Debug)]
 pub struct Saya {
     /// The main Saya configuration.
     config: SayaConfig,

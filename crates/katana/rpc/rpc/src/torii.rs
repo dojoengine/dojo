@@ -16,6 +16,7 @@ use katana_tasks::TokioTaskSpawner;
 
 const MAX_PAGE_SIZE: usize = 100;
 
+#[derive(Debug)]
 pub struct ToriiApi<EF: ExecutorFactory> {
     sequencer: Arc<KatanaSequencer<EF>>,
 }

@@ -23,6 +23,7 @@ use crate::proto;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
 
+#[derive(Debug)]
 pub struct EntitiesSubscriber {
     /// Entity ids that the subscriber is interested in
     hashed_keys: HashSet<FieldElement>,
@@ -30,7 +31,7 @@ pub struct EntitiesSubscriber {
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EntityManager {
     subscribers: RwLock<HashMap<usize, EntitiesSubscriber>>,
 }
@@ -57,6 +58,7 @@ impl EntityManager {
 }
 
 #[must_use = "Service does nothing unless polled"]
+#[derive(Debug)]
 pub struct Service {
     pool: Pool<Sqlite>,
     subs_manager: Arc<EntityManager>,

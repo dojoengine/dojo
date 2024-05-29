@@ -12,7 +12,7 @@ use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct EventMessageProcessor;
 
 #[async_trait]

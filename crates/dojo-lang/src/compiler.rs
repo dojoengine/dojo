@@ -57,6 +57,7 @@ pub(crate) const LOG_TARGET: &str = "dojo_lang::compiler";
 #[path = "compiler_test.rs"]
 mod test;
 
+#[derive(Debug)]
 pub struct DojoCompiler;
 
 #[derive(Debug, Default, Serialize, Deserialize)]

@@ -24,11 +24,13 @@ use crate::types::KeysClause;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::model_diff";
 
+#[derive(Debug)]
 pub struct ModelMetadata {
     pub name: FieldElement,
     pub packed_size: usize,
 }
 
+#[derive(Debug)]
 pub struct ModelDiffRequest {
     pub model: ModelMetadata,
     pub keys: proto::types::KeysClause,
@@ -36,6 +38,7 @@ pub struct ModelDiffRequest {
 
 impl ModelDiffRequest {}
 
+#[derive(Debug)]
 pub struct ModelDiffSubscriber {
     /// The storage addresses that the subscriber is interested in.
     storage_addresses: HashSet<FieldElement>,
@@ -43,7 +46,7 @@ pub struct ModelDiffSubscriber {
     sender: Sender<Result<proto::world::SubscribeModelsResponse, tonic::Status>>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct StateDiffManager {
     subscribers: RwLock<HashMap<usize, ModelDiffSubscriber>>,
 }
@@ -99,6 +102,7 @@ type PublishStateUpdateResult = Result<(), SubscriptionError>;
 type RequestStateUpdateResult = Result<MaybePendingStateUpdate, SubscriptionError>;
 
 #[must_use = "Service does nothing unless polled"]
+#[derive(Debug)]
 pub struct Service<P: Provider> {
     world_address: FieldElement,
     idle_provider: Option<P>,

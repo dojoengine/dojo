@@ -294,6 +294,7 @@ where
 ///
 /// This is the primary interface for sending request to the backend to fetch data from the remote
 /// network.
+#[derive(Debug)]
 pub struct BackendHandle(Mutex<Sender<BackendRequest>>);
 
 impl Clone for BackendHandle {
@@ -371,7 +372,7 @@ impl BackendHandle {
 /// Check in cache first, if not found, then fetch from the forked provider and store it in the
 /// cache to avoid fetching it again. This is shared across multiple instances of
 /// [`ForkedStateDb`](super::state::ForkedStateDb).
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SharedStateProvider(pub(crate) Arc<CacheStateDb<BackendHandle>>);
 
 impl SharedStateProvider {

@@ -4,7 +4,7 @@ use cairo_lang_syntax::node::ast::ItemEnum;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct TypeIntrospection(pub usize, pub Vec<usize>);
 
 // Provides type introspection information for primitive types

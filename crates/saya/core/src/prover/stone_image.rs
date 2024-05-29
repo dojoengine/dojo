@@ -9,7 +9,7 @@ use tracing::warn;
 
 use super::{ProverClient, ProverIdentifier};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct StoneProver(pub String);
 
 pub async fn prove_stone(input: String) -> anyhow::Result<String> {

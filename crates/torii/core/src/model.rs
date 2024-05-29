@@ -14,6 +14,7 @@ use starknet::core::utils::get_selector_from_name;
 use super::error::{self, Error};
 use crate::error::{ParseError, QueryError};
 
+#[derive(Debug)]
 pub struct ModelSQLReader {
     /// The name of the model
     name: String,

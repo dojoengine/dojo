@@ -18,6 +18,7 @@ use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 
 const ALLOW_REF_SELF_ARG: &str = "allow_ref_self";
 
+#[derive(Debug)]
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,
