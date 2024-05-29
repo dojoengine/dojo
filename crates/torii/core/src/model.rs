@@ -226,6 +226,60 @@ pub fn build_sql_query(
 
                     tables.push(table_name);
                 }
+                Ty::Tuple(t) => {
+                    let table_name = format!("{}${}", path, child.name);
+                    let struct_ = Struct {
+                        name: table_name.clone(),
+                        children: t
+                            .iter()
+                            .enumerate()
+                            .map(|(i, ty)| Member {
+                                key: false,
+                                name: format!("_{}", i.to_string()),
+                                ty: ty.clone(),
+                            })
+                            .collect(),
+                    };
+                    parse_struct(&table_name, &struct_, selections, tables);
+                    
+                    tables.push(table_name);
+                }
+                Ty::Array(t) => {
+                    let table_name = format!("{}${}", path, child.name);
+                    let struct_ = Struct {
+                        name: table_name.clone(),
+                        children: vec![Member {
+                            key: false,
+                            name: "data".to_string(),
+                            ty: t[0].clone(),
+                        }],
+                    };
+                    parse_struct(&table_name, &struct_, selections, tables);
+                    
+                    tables.push(table_name);
+                }
+                Ty::Enum(e) => {
+                    let table_name = format!("{}${}", path, child.name);
+                    let struct_ = Struct {
+                        name: table_name.clone(),
+                        children: e.options.iter().filter(|o| if let Ty::Tuple(t) = &o.ty {
+                            !t.is_empty()
+                        } else {
+                            true
+                        }).map(|option| Member {
+                            key: false,
+                            name: option.name.clone(),
+                            ty: option.ty.clone(),
+                        }).chain(std::iter::once(Member {
+                            key: false,
+                            name: "option".to_string(),
+                            ty: Ty::ByteArray("".to_string()),
+                        })).collect(),
+                    };
+                    parse_struct(&table_name, &struct_, selections, tables);
+                    
+                    tables.push(table_name);
+                }
                 _ => {
                     // alias selected columns to avoid conflicts in `JOIN`
                     selections.push(format!(
@@ -340,12 +394,72 @@ pub fn map_row_to_ty(path: &str, struct_ty: &mut Struct, row: &SqliteRow) -> Res
                 };
             }
             Ty::Enum(enum_ty) => {
-                let value = row.try_get::<String, &str>(&column_name)?;
-                enum_ty.set_option(&value)?;
+                let path = [path, &member.name].join("$");
+                let mut struct_ = Struct {
+                    name: enum_ty.name.clone(),
+                    children: enum_ty.options.iter().filter(|o| if let Ty::Tuple(t) = &o.ty {
+                        !t.is_empty()
+                    } else {
+                        true
+                    }).map(|option| Member {
+                        key: false,
+                        name: option.name.clone(),
+                        ty: option.ty.clone(),
+                    }).chain(std::iter::once(Member {
+                        key: false,
+                        name: "option".to_string(),
+                        ty: Ty::ByteArray("".to_string()),
+                    })).collect(),
+                };
+                map_row_to_ty(&path, &mut struct_, row)?;
+
+                // the last element is always gonna be the option
+                let option = struct_.children.pop().expect("qed; option should exist");
+                enum_ty.set_option(option.ty.as_byte_array().expect("qed; option should be byte array"))?;
+
+                // update the options values
+                let children = struct_.children;
+                for option in &mut enum_ty.options {
+                    if let Some(option_member) = children.iter().find(|m| m.name == option.name) {
+                        option.ty = option_member.ty.clone();
+                    }
+                }
             }
             Ty::Struct(struct_ty) => {
                 let path = [path, &member.name].join("$");
                 map_row_to_ty(&path, struct_ty, row)?;
+            }
+            Ty::Tuple(ty) => {
+                let path = [path, &member.name].join("$");
+                let mut struct_ = Struct {
+                    name: path.clone(),
+                    children: ty
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ty)| Member {
+                            key: false,
+                            name: format!("_{}", i.to_string()),
+                            ty: ty.clone(),
+                        })
+                        .collect(),
+                };
+                map_row_to_ty(&path, &mut struct_, row)?;
+            }
+            Ty::Array(ty) => {
+                let path = [path, &member.name].join("$");
+                let mut struct_ = Struct {
+                    name: path.clone(),
+                    children: vec![Member {
+                        key: false,
+                        name: "data".to_string(),
+                        ty: ty[0].clone(),
+                    }],
+                };
+                map_row_to_ty(&path, &mut struct_, row)?;
+            }
+            Ty::ByteArray(bytearray) => {
+                let value = row.try_get::<String, &str>(&column_name)?;
+                *bytearray = value;
             }
             ty => {
                 unimplemented!("unimplemented type_enum: {ty}");
