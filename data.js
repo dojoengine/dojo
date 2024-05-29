@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716975427825,
+  "lastUpdate": 1716981425441,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8695,6 +8695,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16265982,
             "range": "± 887470",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6153192f2388013d17433aa1a5dc8dabab26a357",
+          "message": "Sozo model layout and commands (#2002)",
+          "timestamp": "2024-05-29T13:05:38+02:00",
+          "tree_id": "40741112bd5a9a437b3f30d44b54fa0da63c7f14",
+          "url": "https://github.com/dojoengine/dojo/commit/6153192f2388013d17433aa1a5dc8dabab26a357"
+        },
+        "date": 1716981424158,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16679967,
+            "range": "± 263462",
             "unit": "ns/iter"
           }
         ]
