@@ -13429,6 +13429,7 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "hex",
+ "katana-runner",
  "lazy_static",
  "log",
  "once_cell",
