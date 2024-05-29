@@ -242,12 +242,15 @@ impl DojoWorld {
             let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
 
             let models = schemas
-                .iter()
-                .map(|s| {
-                    let mut struct_ty = s.as_struct().expect("schema should be struct").to_owned();
-                    map_row_to_ty(&s.name(), &mut struct_ty, &row)?;
+                .into_iter()
+                .map(|mut s| {
+                    map_row_to_ty("", &s.name(), &mut s, &row)?;
 
-                    Ok(struct_ty.try_into().unwrap())
+                    Ok(s.as_struct()
+                        .expect("schema should be struct")
+                        .to_owned()
+                        .try_into()
+                        .unwrap())
                 })
                 .collect::<Result<Vec<_>, Error>>()?;
 
@@ -690,10 +693,14 @@ impl DojoWorld {
         let models = schemas
             .iter()
             .map(|schema| {
-                let mut struct_ty = schema.as_struct().expect("schema should be struct").to_owned();
-                map_row_to_ty(&schema.name(), &mut struct_ty, row)?;
-
-                Ok(struct_ty.try_into().unwrap())
+                let mut schema = schema.to_owned();
+                map_row_to_ty("", &schema.name(), &mut schema, row)?;
+                Ok(schema
+                    .as_struct()
+                    .expect("schema should be struct")
+                    .to_owned()
+                    .try_into()
+                    .unwrap())
             })
             .collect::<Result<Vec<_>, Error>>()?;
 

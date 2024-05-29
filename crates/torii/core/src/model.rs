@@ -372,7 +372,7 @@ pub fn map_row_to_ty(path: &str, name: &str, ty: &mut Ty, row: &SqliteRow) -> Re
             let mut option = Ty::ByteArray("".to_string());
             map_row_to_ty(&path, "option", &mut option, row)?;
 
-            enum_ty.set_option(option.as_byte_array().unwrap());
+            enum_ty.set_option(option.as_byte_array().unwrap())?;
         }
         Ty::Struct(struct_ty) => {
             // struct can be the main entrypoint to our model schema

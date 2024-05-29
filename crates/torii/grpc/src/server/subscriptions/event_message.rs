@@ -108,13 +108,14 @@ impl Service {
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
 
                 let models = schemas
-                    .iter()
-                    .map(|s| {
-                        let mut struct_ty =
-                            s.as_struct().expect("schema should be struct").to_owned();
-                        map_row_to_ty(&s.name(), &mut struct_ty, &row)?;
-
-                        Ok(struct_ty.try_into().unwrap())
+                    .into_iter()
+                    .map(|mut s| {
+                        map_row_to_ty("", &s.name(), &mut s, &row)?;
+                        Ok(s.as_struct()
+                            .expect("schema should be a struct")
+                            .to_owned()
+                            .try_into()
+                            .unwrap())
                     })
                     .collect::<Result<Vec<_>, Error>>()?;
 
