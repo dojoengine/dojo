@@ -1,29 +1,33 @@
 use std::collections::{BTreeMap, HashMap};
+use std::num::NonZeroU128;
 use std::sync::Arc;
 
-use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
+use blockifier::block::{BlockInfo, GasPrices};
+use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
 };
 use blockifier::execution::common_hints::ExecutionMode;
-use blockifier::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
-use blockifier::execution::entry_point::{
-    CallEntryPoint, CallType, EntryPointExecutionContext, ExecutionResources,
+use blockifier::execution::contract_class::{
+    ClassInfo, ContractClass, ContractClassV0, ContractClassV1,
 };
-use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_l1_gas_usages};
-use blockifier::state::cached_state::{self};
+use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
+use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_gas_vector};
+use blockifier::state::cached_state::{self, GlobalContractCache};
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::objects::{
-    AccountTransactionContext, DeprecatedAccountTransactionContext, FeeType, HasRelatedFeeType,
-    TransactionExecutionInfo,
+    DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo,
+    TransactionInfo,
 };
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{
     DeclareTransaction, DeployAccountTransaction, ExecutableTransaction, InvokeTransaction,
     L1HandlerTransaction,
 };
-use cairo_vm::types::errors::program_errors::ProgramError;
+use blockifier::versioned_constants::VersionedConstants;
+use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
+use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -31,7 +35,7 @@ use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
-use katana_primitives::{event, message, trace, FieldElement};
+use katana_primitives::{class, event, message, trace, FieldElement};
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::types::PriceUnit;
 use starknet::core::utils::parse_cairo_short_string;
@@ -53,49 +57,73 @@ use starknet_api::transaction::{
 };
 
 use super::state::{CachedState, StateDb};
+use super::CACHE_SIZE;
 use crate::abstraction::{EntryPointCall, SimulationFlag};
-use crate::ExecutionError;
+use crate::utils::build_receipt;
+use crate::{ExecutionError, ExecutionResult};
 
-pub(super) fn transact<S: StateReader>(
-    tx: ExecutableTxWithHash,
+pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
     simulation_flags: &SimulationFlag,
-) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
-    let validate = !simulation_flags.skip_validate;
-    let charge_fee = !simulation_flags.skip_fee_transfer;
+    tx: ExecutableTxWithHash,
+) -> ExecutionResult {
+    fn transact_inner<S: StateReader>(
+        state: &mut cached_state::CachedState<S>,
+        block_context: &BlockContext,
+        simulation_flags: &SimulationFlag,
+        tx: Transaction,
+    ) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
+        let validate = !simulation_flags.skip_validate;
+        let charge_fee = !simulation_flags.skip_fee_transfer;
 
-    let transaction = to_executor_tx(tx);
-    let fee_type = get_fee_type_from_tx(&transaction);
+        let fee_type = get_fee_type_from_tx(&tx);
+        let info = match tx {
+            Transaction::AccountTransaction(tx) => {
+                tx.execute(state, block_context, charge_fee, validate)
+            }
+            Transaction::L1HandlerTransaction(tx) => {
+                tx.execute(state, block_context, charge_fee, validate)
+            }
+        }?;
 
-    let info = match transaction {
-        Transaction::AccountTransaction(tx) => {
-            tx.execute(state, block_context, charge_fee, validate)
+        // There are a few case where the `actual_fee` field of the transaction info is not set
+        // where the fee is skipped and thus not charged for the transaction (e.g. when the
+        // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
+        // these cases, we still want to calculate the fee.
+        let overall_fee = if info.actual_fee == Fee(0) {
+            calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?.0
+        } else {
+            info.actual_fee.0
+        };
+
+        let consts = block_context.versioned_constants();
+        let gas_consumed = calculate_tx_gas_vector(&info.actual_resources, consts)?.l1_gas;
+
+        let (unit, gas_price) = match fee_type {
+            FeeType::Eth => {
+                (PriceUnit::Wei, block_context.block_info().gas_prices.eth_l1_gas_price)
+            }
+            FeeType::Strk => {
+                (PriceUnit::Fri, block_context.block_info().gas_prices.strk_l1_gas_price)
+            }
+        };
+
+        let fee = TxFeeInfo { gas_consumed, gas_price: gas_price.into(), unit, overall_fee };
+
+        Ok((info, fee))
+    }
+
+    match transact_inner(state, block_context, simulation_flags, to_executor_tx(tx.clone())) {
+        Ok((info, fee)) => {
+            // get the trace and receipt from the execution info
+            let trace = to_exec_info(info);
+            let receipt = build_receipt(tx.tx_ref(), fee, &trace);
+            ExecutionResult::new_success(receipt, trace)
         }
-        Transaction::L1HandlerTransaction(tx) => {
-            tx.execute(state, block_context, charge_fee, validate)
-        }
-    }?;
 
-    // There are a few case where the `actual_fee` field of the transaction info is not set where
-    // the fee is skipped and thus not charged for the transaction (e.g. when the
-    // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
-    // these cases, we still want to calculate the fee.
-    let overall_fee = if info.actual_fee == Fee(0) {
-        calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?.0
-    } else {
-        info.actual_fee.0
-    };
-
-    let gas_consumed = calculate_tx_l1_gas_usages(&info.actual_resources, block_context)?.gas_usage;
-
-    let (unit, gas_price) = match fee_type {
-        FeeType::Eth => (PriceUnit::Wei, block_context.block_info.gas_prices.eth_l1_gas_price),
-        FeeType::Strk => (PriceUnit::Fri, block_context.block_info.gas_prices.strk_l1_gas_price),
-    };
-
-    let fee = TxFeeInfo { gas_consumed, gas_price, unit, overall_fee };
-    Ok((info, fee))
+        Err(e) => ExecutionResult::new_failed(e),
+    }
 }
 
 /// Perform a function call on a contract and retrieve the return values.
@@ -105,7 +133,7 @@ pub fn call<S: StateReader>(
     block_context: &BlockContext,
     initial_gas: u128,
 ) -> Result<Vec<FieldElement>, ExecutionError> {
-    let mut state = cached_state::CachedState::new(state, Default::default());
+    let mut state = cached_state::CachedState::new(state, GlobalContractCache::new(CACHE_SIZE));
 
     let call = CallEntryPoint {
         initial_gas: initial_gas as u64,
@@ -120,17 +148,20 @@ pub fn call<S: StateReader>(
 
     // Now, the max step is not given directly to this function.
     // It's computed by a new function max_steps, and it tooks the values
-    // from teh block context itself instead of the input give.
-    // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/execution/entry_point.rs#L165
-    // The blockifier patch must be adjusted to modify this function to return
-    // the limit we have into the block context without min applied:
-    // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/execution/entry_point.rs#L215
+    // from the block context itself instead of the input give. The dojoengine
+    // fork of the blockifier ensures we're not limited by the min function applied
+    // by starkware.
+    // https://github.com/starkware-libs/blockifier/blob/4fd71645b45fd1deb6b8e44802414774ec2a2ec1/crates/blockifier/src/execution/entry_point.rs#L159
+    // https://github.com/dojoengine/blockifier/blob/5f58be8961ddf84022dd739a8ab254e32c435075/crates/blockifier/src/execution/entry_point.rs#L188
+
     let res = call.execute(
         &mut state,
         &mut ExecutionResources::default(),
         &mut EntryPointExecutionContext::new(
-            block_context,
-            &AccountTransactionContext::Deprecated(DeprecatedAccountTransactionContext::default()),
+            Arc::new(TransactionContext {
+                block_context: block_context.clone(),
+                tx_info: TransactionInfo::Deprecated(DeprecatedTransactionInfo::default()),
+            }),
             ExecutionMode::Execute,
             limit_steps_by_resources,
         )
@@ -326,33 +357,40 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 }
 
 /// Create a block context from the chain environment values.
-pub(crate) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
+pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
     let fee_token_addresses = FeeTokenAddresses {
         eth_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.eth),
         strk_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.strk),
     };
 
+    let eth_l1_gas_price = unsafe { NonZeroU128::new_unchecked(block_env.l1_gas_prices.eth) };
+    let strk_l1_gas_price = unsafe { NonZeroU128::new_unchecked(block_env.l1_gas_prices.strk) };
+
     let gas_prices = GasPrices {
-        eth_l1_gas_price: block_env.l1_gas_prices.eth,
-        strk_l1_gas_price: block_env.l1_gas_prices.strk,
-        eth_l1_data_gas_price: 0,
-        strk_l1_data_gas_price: 0,
+        eth_l1_gas_price,
+        strk_l1_gas_price,
+        // TODO: should those be the same value?
+        eth_l1_data_gas_price: eth_l1_gas_price,
+        strk_l1_data_gas_price: strk_l1_gas_price,
     };
 
-    BlockContext {
-        block_info: BlockInfo {
-            gas_prices,
-            use_kzg_da: false,
-            block_number: BlockNumber(block_env.number),
-            block_timestamp: BlockTimestamp(block_env.timestamp),
-            sequencer_address: to_blk_address(block_env.sequencer_address),
-            max_recursion_depth: cfg_env.max_recursion_depth,
-            validate_max_n_steps: cfg_env.validate_max_n_steps,
-            invoke_tx_max_n_steps: cfg_env.invoke_tx_max_n_steps,
-            vm_resource_fee_cost: cfg_env.vm_resource_fee_cost.clone().into(),
-        },
-        chain_info: ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) },
-    }
+    let block_info = BlockInfo {
+        block_number: BlockNumber(block_env.number),
+        block_timestamp: BlockTimestamp(block_env.timestamp),
+        sequencer_address: to_blk_address(block_env.sequencer_address),
+        gas_prices,
+        use_kzg_da: false,
+    };
+
+    let chain_info = ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) };
+
+    let mut versioned_constants = VersionedConstants::latest_constants().clone();
+    versioned_constants.max_recursion_depth = cfg_env.max_recursion_depth;
+    versioned_constants.validate_max_n_steps = cfg_env.validate_max_n_steps;
+    versioned_constants.invoke_tx_max_n_steps = cfg_env.invoke_tx_max_n_steps;
+    versioned_constants.vm_resource_fee_cost = cfg_env.vm_resource_fee_cost.clone().into();
+
+    BlockContext::new_unchecked(&block_info, &chain_info, &versioned_constants)
 }
 
 pub(super) fn state_update_from_cached_state<S: StateDb>(
@@ -489,15 +527,25 @@ pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
     }
 }
 
-pub fn to_class(
-    class: katana_primitives::class::CompiledClass,
-) -> Result<ContractClass, ProgramError> {
+pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> {
+    // TODO: @kariy not sure of the variant that must be used in this case. Should we change the
+    // return type to include this case of error for contract class conversions?
     match class {
-        katana_primitives::class::CompiledClass::Deprecated(class) => {
-            Ok(ContractClass::V0(ContractClassV0::try_from(class)?))
+        class::CompiledClass::Deprecated(class) => {
+            // For cairo 0, the sierra_program_length must be 0.
+            Ok(ClassInfo::new(&ContractClass::V0(ContractClassV0::try_from(class)?), 0, 0)
+                .map_err(|e| ProgramError::ConstWithoutValue(format!("{e}")))?)
         }
-        katana_primitives::class::CompiledClass::Class(class) => {
-            Ok(ContractClass::V1(ContractClassV1::try_from(class.casm)?))
+
+        class::CompiledClass::Class(class) => {
+            let sierra_program_len = class.sierra.program.statements.len();
+            // TODO: @kariy not sure from where the ABI length can be grasped.
+            Ok(ClassInfo::new(
+                &ContractClass::V1(ContractClassV1::try_from(class.casm)?),
+                sierra_program_len,
+                0,
+            )
+            .map_err(|e| ProgramError::ConstWithoutValue(format!("{e}")))?)
         }
     }
 }
@@ -536,10 +584,10 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
     let calldata = call.call.calldata.0.iter().map(|f| (*f).into()).collect();
     let retdata = call.execution.retdata.0.into_iter().map(|f| f.into()).collect();
 
-    let builtin_counter = call.vm_resources.builtin_instance_counter;
+    let builtin_counter = call.resources.builtin_instance_counter;
     let execution_resources = trace::ExecutionResources {
-        n_steps: call.vm_resources.n_steps as u64,
-        n_memory_holes: call.vm_resources.n_memory_holes as u64,
+        n_steps: call.resources.n_steps as u64,
+        n_memory_holes: call.resources.n_memory_holes as u64,
         builtin_instance_counter: builtin_counter.into_iter().map(|(k, v)| (k, v as u64)).collect(),
     };
 
@@ -608,7 +656,7 @@ mod tests {
 
     use std::collections::HashSet;
 
-    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+    use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_primitives::chain::{ChainId, NamedChainId};
     use starknet_api::core::EntryPointSelector;
     use starknet_api::hash::StarkFelt;
@@ -678,7 +726,7 @@ mod tests {
             },
             storage_read_values: vec![stark_felt!(1_u8), stark_felt!(2_u8)],
             accessed_storage_keys: HashSet::from([3u128.into(), 4u128.into(), 5u128.into()]),
-            vm_resources: ExecutionResources {
+            resources: ExecutionResources {
                 n_steps: 1_000_000,
                 n_memory_holes: 9_000,
                 builtin_instance_counter: HashMap::from([
@@ -705,10 +753,10 @@ mod tests {
         let expected_retdata: Vec<FieldElement> =
             call.execution.retdata.0.iter().map(|f| (*f).into()).collect();
 
-        let builtin_counter = call.vm_resources.builtin_instance_counter.clone();
+        let builtin_counter = call.resources.builtin_instance_counter.clone();
         let expected_execution_resources = trace::ExecutionResources {
-            n_steps: call.vm_resources.n_steps as u64,
-            n_memory_holes: call.vm_resources.n_memory_holes as u64,
+            n_steps: call.resources.n_steps as u64,
+            n_memory_holes: call.resources.n_memory_holes as u64,
             builtin_instance_counter: builtin_counter
                 .into_iter()
                 .map(|(k, v)| (k, v as u64))

@@ -1,11 +1,18 @@
 use anyhow::Result;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
+use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
+use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
 use serde_json::Value;
 
 use crate::class::{
     CompiledClass, DeprecatedCompiledClass, SierraClass, SierraCompiledClass, SierraProgram,
 };
+
+// TODO: this was taken from the current network limit
+// https://docs.starknet.io/documentation/tools/limits_and_triggers/.
+// We may want to make this configurable.
+// We also need this value into `dojo-world`.. which is not ideal as we don't want
+// primitives to depend on `dojo-world` or vice-versa.
+// pub const MAX_BYTECODE_SIZE: usize = 81_290;
 
 pub fn parse_compiled_class(artifact: Value) -> Result<CompiledClass> {
     if let Ok(class) = parse_compiled_class_v1(artifact.clone()) {
@@ -22,7 +29,7 @@ pub fn parse_compiled_class_v1(class: Value) -> Result<SierraCompiledClass> {
     let entry_points_by_type = class.entry_points_by_type.clone();
     let sierra = SierraProgram { program, entry_points_by_type };
 
-    let casm = CasmContractClass::from_contract_class(class, true)?;
+    let casm = CasmContractClass::from_contract_class(class, true, usize::MAX)?;
 
     Ok(SierraCompiledClass { casm, sierra })
 }

@@ -4,9 +4,10 @@ use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
+use tracing::trace;
 
 use super::signer::SignerOptions;
 use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
@@ -20,6 +21,7 @@ use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 #[command(next_help_heading = "Account options")]
 pub struct AccountOptions {
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
+    #[arg(global = true)]
     pub account_address: Option<FieldElement>,
 
     #[command(flatten)]
@@ -28,6 +30,7 @@ pub struct AccountOptions {
 
     #[arg(long)]
     #[arg(help = "Use legacy account (cairo0 account)")]
+    #[arg(global = true)]
     pub legacy: bool,
 }
 
@@ -40,21 +43,34 @@ impl AccountOptions {
     where
         P: Provider + Send + Sync,
     {
+        trace!(account_options=?self, "Creating account.");
         let account_address = self.account_address(env_metadata)?;
+        trace!(?account_address, "Account address determined.");
+
         let signer = self.signer.signer(env_metadata, false)?;
+        trace!(?signer, "Signer obtained.");
 
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
-
+        trace!(?chain_id);
         let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
+        trace!(?encoding, "Creating SingleOwnerAccount.");
+        let mut account =
+            SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding);
 
-        Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
+        // The default is `Latest` in starknet-rs, which does not reflect
+        // the nonce changes in the pending block.
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        Ok(account)
     }
 
-    fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
+    pub fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         if let Some(address) = self.account_address {
+            trace!(?address, "Account address found.");
             Ok(address)
         } else if let Some(address) = env_metadata.and_then(|env| env.account_address()) {
+            trace!(address, "Account address found in environment metadata.");
             Ok(FieldElement::from_str(address)?)
         } else {
             Err(anyhow!(
@@ -130,7 +146,7 @@ mod tests {
         assert!(cmd.account.account_address(None).is_err());
     }
 
-    #[katana_runner::katana_test(2, true, "katana", "")]
+    #[katana_runner::katana_test(2, true)]
     async fn legacy_flag_works_as_expected() {
         let cmd = Command::parse_from([
             "sozo",
@@ -157,7 +173,7 @@ mod tests {
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
     }
 
-    #[katana_runner::katana_test(2, true, "katana", "")]
+    #[katana_runner::katana_test(2, true)]
     async fn without_legacy_flag_works_as_expected() {
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", "0x1"]);
         let dummy_call = vec![Call {

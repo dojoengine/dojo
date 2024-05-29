@@ -1,10 +1,10 @@
 [world]
 kind = "WorldContract"
-class_hash = "0x799bc4e9da10bfb3dd88e6f223c9cfbf7745435cd14f5d69675ea448e578cd"
-original_class_hash = "0x799bc4e9da10bfb3dd88e6f223c9cfbf7745435cd14f5d69675ea448e578cd"
-abi = "abis/deployments/dojo_world_world.json"
-address = "0x1385f25d20a724edc9c7b3bd9636c59af64cbaf9fcd12f33b3af96b2452f295"
-transaction_hash = "0x6afefdcc49b3563a4f3657900ba71e9f9356861b15b942a73f2018f046a1048"
+class_hash = "0x1fafbe78a4676c8998d2de2053bc2fba24aebbd4fb86f03ff6af87ad3314092"
+original_class_hash = "0x1fafbe78a4676c8998d2de2053bc2fba24aebbd4fb86f03ff6af87ad3314092"
+abi = "manifests/dev/abis/deployments/dojo_world_world.json"
+address = "0x26a8d9f2ac0348182bea206d913908ef77e439416713592ebc85941a69048d6"
+transaction_hash = "0x4fb663d83b07373bf2844ef51acfb10d1e957a2fd6d573b7360ad64710df6cc"
 block_number = 3
 seed = "dojo_examples"
 name = "dojo::world::world"
@@ -15,27 +15,48 @@ rpc_url = "http://localhost:5050/"
 
 [base]
 kind = "Class"
-class_hash = "0x679177a2cb757694ac4f326d01052ff0963eac0bc2a17116a2b87badcdf6f76"
-original_class_hash = "0x679177a2cb757694ac4f326d01052ff0963eac0bc2a17116a2b87badcdf6f76"
+class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
+original_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
 name = "dojo::base::base"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x3539c9b89b08095ba914653fb0f20e55d4b172a415beade611bc260b346d0f7"
-class_hash = "0x471a1a36581d24f68ae6984c714daa75d424c0a6581872a65e645eb11a8e45"
-original_class_hash = "0x471a1a36581d24f68ae6984c714daa75d424c0a6581872a65e645eb11a8e45"
-base_class_hash = "0x679177a2cb757694ac4f326d01052ff0963eac0bc2a17116a2b87badcdf6f76"
-abi = "abis/deployments/contracts/dojo_examples_actions_actions.json"
+address = "0x43ec1c3a2195bc6adaa4134b7183cec4bae46f1388cb41c0fc808aba7e04b0"
+class_hash = "0xfe09a42928890d712af285559b4452ebbc448428dfa91179bfee66715a2add"
+original_class_hash = "0xfe09a42928890d712af285559b4452ebbc448428dfa91179bfee66715a2add"
+base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
+abi = "manifests/dev/abis/deployments/contracts/dojo_examples_actions_actions.json"
+reads = []
+writes = [
+    "Moves",
+    "Position",
+]
+computed = []
+init_calldata = []
+name = "dojo_examples::actions::actions"
+
+[[contracts]]
+kind = "DojoContract"
+address = "0x55d1b3b80ddfd912e33a6cb331665dfc0b8f1738fcbe8d4c4191e27cd12f9c4"
+class_hash = "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a"
+original_class_hash = "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a"
+base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
+abi = "manifests/dev/abis/deployments/contracts/dojo_examples_others_others.json"
 reads = []
 writes = []
 computed = []
-name = "dojo_examples::actions::actions"
+init_calldata = [
+    "$contract_address:dojo_examples::actions::actions",
+    "$class_hash:dojo_examples::actions::actions",
+    "10",
+]
+name = "dojo_examples::others::others"
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0x52659850f9939482810d9f6b468b91dc99e0b7fa42c2016cf12833ec06ce911"
-original_class_hash = "0x52659850f9939482810d9f6b468b91dc99e0b7fa42c2016cf12833ec06ce911"
-abi = "abis/deployments/models/dojo_examples_actions_actions_moved.json"
+class_hash = "0x6f85952ceeb7783fb265a4b2d235db48e7a36357bbce7a56997ca5798c95187"
+original_class_hash = "0x6f85952ceeb7783fb265a4b2d235db48e7a36357bbce7a56997ca5798c95187"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_actions_actions_moved.json"
 name = "dojo_examples::actions::actions::moved"
 
 [[models.members]]
@@ -50,9 +71,9 @@ key = false
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0x6d5aef0819f5267c840c57d37ff774b4e185fc7da4a10e58cb9f575aa2ed1c"
-original_class_hash = "0x6d5aef0819f5267c840c57d37ff774b4e185fc7da4a10e58cb9f575aa2ed1c"
-abi = "abis/deployments/models/dojo_examples_models_emote_message.json"
+class_hash = "0x3e8f99f02409b7bc3dfffba58ee3807e3fb3513a2dcac1b0bd1f1118ea79ecc"
+original_class_hash = "0x3e8f99f02409b7bc3dfffba58ee3807e3fb3513a2dcac1b0bd1f1118ea79ecc"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_emote_message.json"
 name = "dojo_examples::models::emote_message"
 
 [[models.members]]
@@ -67,9 +88,9 @@ key = false
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0x511fbd833938f5c4b743eea1e67605a125d7ff60e8a09e8dc227ad2fb59ca54"
-original_class_hash = "0x511fbd833938f5c4b743eea1e67605a125d7ff60e8a09e8dc227ad2fb59ca54"
-abi = "abis/deployments/models/dojo_examples_models_moves.json"
+class_hash = "0x402d1ee5171aac681d16fa8c248a0498678082152e0f4c416776a71fc270684"
+original_class_hash = "0x402d1ee5171aac681d16fa8c248a0498678082152e0f4c416776a71fc270684"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_moves.json"
 name = "dojo_examples::models::moves"
 
 [[models.members]]
@@ -89,9 +110,36 @@ key = false
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0xb33ae053213ccb2a57967ffc4411901f3efab24781ca867adcd0b90f2fece5"
-original_class_hash = "0xb33ae053213ccb2a57967ffc4411901f3efab24781ca867adcd0b90f2fece5"
-abi = "abis/deployments/models/dojo_examples_models_position.json"
+class_hash = "0x596f2ea7f78e3828f6daa798a271ef0a98741967afa40e680c2d80879be7d09"
+original_class_hash = "0x596f2ea7f78e3828f6daa798a271ef0a98741967afa40e680c2d80879be7d09"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_player_config.json"
+name = "dojo_examples::models::player_config"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "name"
+type = "ByteArray"
+key = false
+
+[[models.members]]
+name = "items"
+type = "Array<PlayerItem>"
+key = false
+
+[[models.members]]
+name = "favorite_item"
+type = "Option<u32>"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x3ab26e88be7885877f93964880ccb63a8acd8e58f941c48bef52f191fa79868"
+original_class_hash = "0x3ab26e88be7885877f93964880ccb63a8acd8e58f941c48bef52f191fa79868"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_position.json"
 name = "dojo_examples::models::position"
 
 [[models.members]]
@@ -102,4 +150,26 @@ key = true
 [[models.members]]
 name = "vec"
 type = "Vec2"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x6b54d690f4f43e3011fe05fabf3e5f1807b3a026430eb175534336e9a90d5a5"
+original_class_hash = "0x6b54d690f4f43e3011fe05fabf3e5f1807b3a026430eb175534336e9a90d5a5"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_others_others_contract_initialized.json"
+name = "dojo_examples::others::others::contract_initialized"
+
+[[models.members]]
+name = "contract_address"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "contract_class"
+type = "ClassHash"
+key = false
+
+[[models.members]]
+name = "value"
+type = "u8"
 key = false

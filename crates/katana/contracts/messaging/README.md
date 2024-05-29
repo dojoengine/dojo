@@ -4,11 +4,12 @@
 
 Please before starting, install:
 
--   [scarb](https://docs.swmansion.com/scarb/) to build cairo contracts.
--   [starkli](https://github.com/xJonathanLEI/starkli) to interact with Katana.
--   [foundry](https://book.getfoundry.sh/getting-started/installation) to interact with Anvil.
+- [scarb](https://docs.swmansion.com/scarb/) to build cairo contracts.
+- [starkli](https://github.com/xJonathanLEI/starkli) to interact with Katana.
+- [foundry](https://book.getfoundry.sh/getting-started/installation) to interact with Anvil.
 
 If it's the first time you run the example file, please install forge dependencies:
+
 ```bash
 cd ~/dojo/crates/katana/core/contracts/messaging/solidity
 forge install
@@ -38,8 +39,9 @@ To test this scenario, you can use the associated Makefiles. But the flow is the
 
 How to run the scripts:
 
--   Start Anvil in a terminal.
--   Start Katana in an other terminal on default port 5050 with the messaging configuration that is inside the:
+- Start Anvil in a terminal.
+- Start Katana in an other terminal on default port 5050 with the messaging configuration that is inside the:
+
 ```bash
     # From installed katana.
     katana --messaging ~/dojo/crates/katana/contracts/messaging/anvil.messaging.json
@@ -47,7 +49,8 @@ How to run the scripts:
     # Dev mode
     cargo run --bin katana -- --messaging ~/dojo/crates/katana/contracts/messaging/anvil.messaging.json
 ```
--   Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
+
+- Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
 
 Then you can then use pre-defined commands to interact with the contracts.
 If you change the code or addresses, you may want to edit the Makefile. But
@@ -70,10 +73,13 @@ make -sC solidity/ send_msg selector_str=msg_handler_struct payload="[1,2]"
 # Send message L2 -> L1 to be manually consumed.
 make -sC cairo/ send_msg_value_l1 value=2
 ```
+
 Then you've to wait the message to be sent to L1, Katana will display it:
+
 ```
 2024-04-22T23:42:52.478200Z  INFO messaging: Message sent to settlement layer. hash=0xb5c9a1d3b8eb1c9d37ee5ffdacf09560a68d0c9e53fa4b1cc91d967095bc4ac7 from_address=0x609f8e7a76b6cc36f3ff86f09f6e5fdd0e6320f117d817e4344c1bf9fac7d67 to_address=0xe7f1725e7734ce288f8367e1bb143e90bb3f0512 payload=0x2
 ```
+
 ```
 # Consume the messag previously sent. You can try to call it once and see the second one reverting.
 make -sC solidity/ consume_msg payload="[2]"
@@ -98,9 +104,9 @@ You can also use the Makefile to setup the chains, but the flow is the following
    Then you can deploy `contract_1.cairo` to send/consume message and test the execution
    of smart contract function on Starknet from the appchain.
 
-    You can totally deploy `appchain_messaging.cairo` on Starknet to test. **Please be aware
-    this contract is not audited for now and only experimental without security considerations yet**.
-    Be sure you control who is able to send/execute messages to be safe.
+   You can totally deploy `appchain_messaging.cairo` on Starknet to test. **Please be aware
+   this contract is not audited for now and only experimental without security considerations yet**.
+   Be sure you control who is able to send/execute messages to be safe.
 
 2. Starting Katana (2) to represent your appchain. On this Katana instance, you will deploy
    `contract_msg_starknet.cairo` contract. This contract can send/execute/receive message
@@ -110,8 +116,9 @@ You can also use the Makefile to setup the chains, but the flow is the following
 
 How to run the scripts:
 
--   Starts Katana (1) to simulate starknet on a new terminal with default port 5050.
--   Starts Katana (2) for your appchain on a new terminal with port 6060 and the configuration for messaging:
+- Starts Katana (1) to simulate starknet on a new terminal with default port 5050.
+- Starts Katana (2) for your appchain on a new terminal with port 6060 and the configuration for messaging:
+
 ```bash
    # From installed Katana.
    katana --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060`
@@ -120,7 +127,7 @@ How to run the scripts:
    cargo run --bin katana --features "starknet-messaging" -- --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060
 ```
 
--   Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
+- Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
 
 Then you can then use pre-defined commands to interact with the contracts.
 If you change the code or addresses, you may want to edit the Makefile. But

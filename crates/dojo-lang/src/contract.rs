@@ -5,25 +5,39 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
+use cairo_lang_syntax::attribute::structured::{
+    Attribute, AttributeArg, AttributeArgVariant, AttributeListStructurize,
+};
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 
-use crate::plugin::{DojoAuxData, SystemAuxData};
+use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
+
+const ALLOW_REF_SELF_ARG: &str = "allow_ref_self";
+const DOJO_INIT_FN: &str = "dojo_init";
 
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,
+    do_allow_ref_self: bool,
 }
 
 impl DojoContract {
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
-        let mut system = DojoContract { diagnostics: vec![], dependencies: HashMap::new() };
+
+        let attrs = module_ast.attributes(db).structurize(db);
+        let dojo_contract_attr = attrs.iter().find(|attr| attr.id.as_str() == DOJO_CONTRACT_ATTR);
+        let do_allow_ref_self = extract_allow_ref_self(dojo_contract_attr, db).unwrap_or_default();
+
+        let mut system =
+            DojoContract { diagnostics: vec![], dependencies: HashMap::new(), do_allow_ref_self };
         let mut has_event = false;
         let mut has_storage = false;
+        let mut has_init = false;
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
@@ -48,11 +62,43 @@ impl DojoContract {
                         if trait_path.contains("<ContractState>") {
                             return system.rewrite_impl(db, impl_ast.clone());
                         }
+                    } else if let ast::ModuleItem::FreeFunction(fn_ast) = el {
+                        let fn_decl = fn_ast.declaration(db);
+                        let fn_name = fn_decl.name(db).text(db);
+
+                        if fn_name == DOJO_INIT_FN {
+                            has_init = true;
+                            return system.handle_init_fn(db, fn_ast);
+                        }
                     }
 
                     vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
+
+            if !has_init {
+                let node = RewriteNode::interpolate_patched(
+                    "
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn $init_name$(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn $init_name$(self: @ContractState) {
+                            assert(starknet::get_caller_address() == \
+                     self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                ",
+                    &UnorderedHashMap::from([(
+                        "init_name".to_string(),
+                        RewriteNode::Text(DOJO_INIT_FN.to_string()),
+                    )]),
+                );
+                body_nodes.append(&mut vec![node]);
+            }
 
             if !has_event {
                 body_nodes.append(&mut system.create_event())
@@ -62,7 +108,7 @@ impl DojoContract {
                 body_nodes.append(&mut system.create_storage())
             }
 
-            let mut builder = PatchBuilder::new(db);
+            let mut builder = PatchBuilder::new(db, &module_ast);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
                 #[starknet::contract]
@@ -72,7 +118,8 @@ impl DojoContract {
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
-                   
+
+
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
                  upgradeable, event: UpgradeableEvent);
 
@@ -103,10 +150,12 @@ impl DojoContract {
                 ]),
             ));
 
+            let (code, code_mappings) = builder.build();
+
             return PluginResult {
                 code: Some(PluginGeneratedFile {
                     name: name.clone(),
-                    content: builder.code,
+                    content: code,
                     aux_data: Some(DynGeneratedFileAuxData::new(DojoAuxData {
                         models: vec![],
                         systems: vec![SystemAuxData {
@@ -115,7 +164,7 @@ impl DojoContract {
                         }],
                         events: vec![],
                     })),
-                    code_mappings: builder.code_mappings,
+                    code_mappings,
                 }),
                 diagnostics: system.diagnostics,
                 remove_original_item: true,
@@ -123,6 +172,55 @@ impl DojoContract {
         }
 
         PluginResult::default()
+    }
+
+    fn handle_init_fn(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        fn_ast: &ast::FunctionWithBody,
+    ) -> Vec<RewriteNode> {
+        let fn_decl = fn_ast.declaration(db);
+        let fn_name = fn_decl.name(db).text(db);
+
+        let (params_str, _, world_removed) = self.rewrite_parameters(
+            db,
+            fn_decl.signature(db).parameters(db),
+            fn_ast.stable_ptr().untyped(),
+        );
+
+        let mut world_read = "";
+        if world_removed {
+            world_read = "let world = self.world_dispatcher.read();";
+        }
+
+        let body = fn_ast.body(db).as_syntax_node().get_text(db);
+
+        let node = RewriteNode::interpolate_patched(
+            "
+                #[starknet::interface]
+                trait IDojoInit<ContractState> {
+                    fn $name$($params_str$);
+                }
+
+                #[abi(embed_v0)]
+                impl IDojoInitImpl of IDojoInit<ContractState> {
+                    fn $name$($params_str$) {
+                        $world_read$
+                        assert(starknet::get_caller_address() == self.world().contract_address, \
+             'Only world can init');
+                        $body$
+                    }
+                }
+            ",
+            &UnorderedHashMap::from([
+                ("name".to_string(), RewriteNode::Text(fn_name.to_string())),
+                ("params_str".to_string(), RewriteNode::Text(params_str)),
+                ("body".to_string(), RewriteNode::Text(body)),
+                ("world_read".to_string(), RewriteNode::Text(world_read.to_string())),
+            ]),
+        );
+
+        vec![node]
     }
 
     pub fn merge_event(
@@ -351,7 +449,7 @@ impl DojoContract {
             });
         }
 
-        if has_ref_self {
+        if has_ref_self && !self.do_allow_ref_self {
             self.diagnostics.push(PluginDiagnostic {
                 stable_ptr: diagnostic_item,
                 message: "Functions of dojo::contract cannot have 'ref self' parameter."
@@ -436,7 +534,7 @@ impl DojoContract {
                 })
                 .collect();
 
-            let mut builder = PatchBuilder::new(db);
+            let mut builder = PatchBuilder::new(db, &impl_ast);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "$body$",
                 &UnorderedHashMap::from([(
@@ -450,10 +548,35 @@ impl DojoContract {
                 .modify_child(db, ast::ItemImpl::INDEX_BODY)
                 .modify_child(db, ast::ImplBody::INDEX_ITEMS);
 
-            rewritten_items.set_str(builder.code);
+            let (code, _) = builder.build();
+
+            rewritten_items.set_str(code);
             return vec![rewritten_impl];
         }
 
         vec![RewriteNode::Copied(impl_ast.as_syntax_node())]
+    }
+}
+
+/// Extract the allow_ref_self attribute.
+pub(crate) fn extract_allow_ref_self(
+    allow_ref_self_attr: Option<&Attribute>,
+    db: &dyn SyntaxGroup,
+) -> Option<bool> {
+    let Some(attr) = allow_ref_self_attr else {
+        return None;
+    };
+
+    #[allow(clippy::collapsible_match)]
+    match &attr.args[..] {
+        [AttributeArg { variant: AttributeArgVariant::Unnamed(value), .. }] => match value {
+            ast::Expr::Path(path)
+                if path.as_syntax_node().get_text_without_trivia(db) == ALLOW_REF_SELF_ARG =>
+            {
+                Some(true)
+            }
+            _ => None,
+        },
+        _ => None,
     }
 }

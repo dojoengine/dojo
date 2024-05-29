@@ -1,19 +1,21 @@
 use std::io::Write;
 
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
+use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
+use katana_runner::KatanaRunner;
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{EmittedEvent, FieldElement};
-use starknet::macros::{felt, selector, short_string};
+use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
-use super::{parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel};
+use super::{
+    parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel, OverlayManifest,
+};
 use crate::contracts::world::test::deploy_world;
 use crate::manifest::{parse_models_events, AbstractManifestError, DeploymentManifest, Manifest};
 use crate::migration::world::WorldDiff;
@@ -61,13 +63,12 @@ fn parse_registered_model_events() {
 
     let events = vec![
         EmittedEvent {
-            data: vec![
-                short_string!("Model1"),
-                felt!("0x5555"),
-                felt!("0xbeef"),
-                felt!("0xa1"),
-                felt!("0"),
-            ],
+            data: {
+                let mut data =
+                    ByteArray::cairo_serialize(&ByteArray::from_string("Model1").unwrap());
+                data.extend(vec![felt!("0x5555"), felt!("0xbeef"), felt!("0xa1"), felt!("0")]);
+                data
+            },
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -75,13 +76,12 @@ fn parse_registered_model_events() {
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![
-                short_string!("Model1"),
-                felt!("0xbeef"),
-                felt!("0"),
-                felt!("0xa1"),
-                felt!("0xa1"),
-            ],
+            data: {
+                let mut data =
+                    ByteArray::cairo_serialize(&ByteArray::from_string("Model1").unwrap());
+                data.extend(vec![felt!("0xbeef"), felt!("0"), felt!("0xa1"), felt!("0xa1")]);
+                data
+            },
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -89,13 +89,12 @@ fn parse_registered_model_events() {
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![
-                short_string!("Model2"),
-                felt!("0x6666"),
-                felt!("0"),
-                felt!("0xa3"),
-                felt!("0"),
-            ],
+            data: {
+                let mut data =
+                    ByteArray::cairo_serialize(&ByteArray::from_string("Model2").unwrap());
+                data.extend(vec![felt!("0x6666"), felt!("0"), felt!("0xa3"), felt!("0")]);
+                data
+            },
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -364,34 +363,48 @@ fn events_without_block_number_arent_parsed() {
     similar_asserts::assert_eq!(actual_contracts, expected_contracts);
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn fetch_remote_manifest() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+#[test]
+fn fetch_remote_manifest() {
+    let runner = KatanaRunner::new().expect("Fail to set runner");
 
-    let account = sequencer.account();
+    let account = runner.account(0);
     let provider = account.provider();
 
-    let manifest_path = Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap();
-    let artifacts_path =
-        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
-
-    let world_address = deploy_world(&sequencer, &manifest_path, &artifacts_path).await;
-
+    let source_project = "../../examples/spawn-and-move/Scarb.toml";
+    let dojo_core_path = "../dojo-core";
     let profile_name = "dev";
 
-    let local_manifest = BaseManifest::load_from_path(
-        &manifest_path.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+    // Build a completely new project in it's own directory.
+    let (temp_project_dir, config, _) =
+        compiler::copy_build_project_temp(source_project, dojo_core_path, true);
+
+    let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
+
+    let world_address = config
+        .tokio_handle()
+        .block_on(async { deploy_world(&runner, &temp_project_dir, &artifacts_path).await });
+
+    let mut local_manifest = BaseManifest::load_from_path(
+        &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
-    let remote_manifest =
-        DeploymentManifest::load_from_remote(provider, world_address).await.unwrap();
 
-    assert_eq!(local_manifest.models.len(), 4);
-    assert_eq!(local_manifest.contracts.len(), 1);
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
+    )
+    .unwrap();
 
-    assert_eq!(remote_manifest.models.len(), 4);
-    assert_eq!(remote_manifest.contracts.len(), 1);
+    local_manifest.merge(overlay_manifest);
+
+    let remote_manifest = config.tokio_handle().block_on(async {
+        DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
+    });
+
+    assert_eq!(local_manifest.models.len(), 6);
+    assert_eq!(local_manifest.contracts.len(), 2);
+
+    assert_eq!(remote_manifest.models.len(), 6);
+    assert_eq!(remote_manifest.contracts.len(), 2);
 
     // compute diff from local and remote manifest
 

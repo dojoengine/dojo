@@ -7,7 +7,7 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-assert_fs = "1.0.9"
+assert_fs.workspace = true
 async-trait.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-filesystem.workspace = true
@@ -31,12 +31,12 @@ smol_str.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.28.0", features = [ "full" ] }
-toml = "0.7.1"
+toml.workspace = true
 tracing.workspace = true
-url = "2.2.2"
+url.workspace = true
 
 [build-dependencies]
-assert_fs = "1.0.9"
+assert_fs.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 scarb-ui.workspace = true

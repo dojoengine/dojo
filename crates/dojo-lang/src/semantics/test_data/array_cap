@@ -76,6 +76,7 @@ Block(
                                             ExprFunctionCall {
                                                 function: core::array::ArrayImpl::<core::felt252>::new,
                                                 args: [],
+                                                coupon_arg: None,
                                                 ty: core::array::Array::<core::felt252>,
                                             },
                                         ),
@@ -110,6 +111,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: (),
                         },
                     ),
@@ -133,6 +135,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: (),
                         },
                     ),

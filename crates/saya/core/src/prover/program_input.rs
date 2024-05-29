@@ -1,8 +1,8 @@
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
-use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
-use katana_primitives::transaction::L1HandlerTx;
-use katana_primitives::utils::transaction::compute_l1_message_hash;
+use katana_primitives::trace::{CallInfo, EntryPointType};
+use katana_primitives::transaction::{L1HandlerTx, TxHash};
+use katana_rpc_types::trace::TxExecutionInfo;
 use starknet::core::types::FieldElement;
 
 use super::state_diff::state_updates_to_json_like;
@@ -42,56 +42,45 @@ fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToStarknet> {
 }
 
 pub fn extract_messages(
-    exec_infos: &[TxExecInfo],
-    mut transactions: Vec<&L1HandlerTx>,
+    exec_infos: &[TxExecutionInfo],
+    transactions: &[(TxHash, &L1HandlerTx)],
 ) -> (Vec<MessageToStarknet>, Vec<MessageToAppchain>) {
+    // extract messages to starknet (ie l2 -> l1)
     let message_to_starknet_segment = exec_infos
         .iter()
-        .flat_map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter()).chain(t.fee_transfer_call_info.iter())) // Take into account both validate and execute calls.
+        .flat_map(|t| t.trace.execute_call_info.iter().chain(t.trace.validate_call_info.iter()).chain(t.trace.fee_transfer_call_info.iter())) // Take into account both validate and execute calls.
         .flat_map(get_messages_recursively)
         .collect();
 
-    let message_to_appchain_segment = exec_infos
-        .iter()
-        .flat_map(|t| t.execute_call_info.iter())
-        .filter(|c| c.entry_point_type == EntryPointType::L1Handler)
-        .map(|c| {
-            let message_hash =
-                compute_l1_message_hash(*c.caller_address, *c.contract_address, &c.calldata[..]);
+    // extract messages to appchain (ie l1 -> l2)
+    let message_to_appchain_segment = {
+        // get the call infos from the trace and the corresponding tx hash
+        let calls = exec_infos.iter().filter_map(|t| {
+            let calls = t.trace.execute_call_info.as_ref()?;
+            let tx = transactions.iter().find(|tx| tx.0 == t.hash).expect("qed; tx must exist");
+            Some((tx.1, calls))
+        });
 
-            // Matching execution to a transaction to extract nonce.
-            let matching = transactions
-                .iter()
-                .enumerate()
-                .find(|(_, &t)| {
-                    t.message_hash == message_hash
-                        && c.contract_address == t.contract_address
-                        && c.calldata == t.calldata
-                })
-                .unwrap_or_else(|| {
-                    panic!("No matching transaction found for message hash: {}", message_hash)
-                })
-                .0;
+        // filter only the l1 handler tx
+        let l1_handlers = calls.filter(|(_, c)| c.entry_point_type == EntryPointType::L1Handler);
 
-            // Removing, to have different nonces, even for the same message content.
-            let removed = transactions.remove(matching);
-
-            (c, removed)
-        })
-        .map(|(c, t)| MessageToAppchain {
-            from_address: c.caller_address,
-            to_address: c.contract_address,
-            nonce: t.nonce,
-            selector: c.entry_point_selector,
-            payload: c.calldata.clone(),
-        })
-        .collect();
+        // build messages
+        l1_handlers
+            .map(|(t, c)| MessageToAppchain {
+                nonce: t.nonce,
+                payload: c.calldata.clone(),
+                from_address: c.caller_address,
+                to_address: c.contract_address,
+                selector: c.entry_point_selector,
+            })
+            .collect()
+    };
 
     (message_to_starknet_segment, message_to_appchain_segment)
 }
 
 impl ProgramInput {
-    pub fn serialize(&self) -> anyhow::Result<String> {
+    pub fn serialize(&self, world: FieldElement) -> anyhow::Result<String> {
         let message_to_starknet = self
             .message_to_starknet_segment
             .iter()
@@ -123,11 +112,28 @@ impl ProgramInput {
         result.push_str(&format!(r#""message_to_starknet_segment":[{}],"#, message_to_starknet));
         result.push_str(&format!(r#""message_to_appchain_segment":[{}],"#, message_to_appchain));
 
-        result.push_str(&state_updates_to_json_like(&self.state_updates));
+        result.push_str(&state_updates_to_json_like(&self.state_updates, world));
 
         result.push('}');
 
         Ok(result)
+    }
+
+    /// Extracts the storage updates for the given world, and flattens them into a single vector
+    /// that represent the serialized DA. The length is not included as the array contains
+    /// serialiazed struct with two members: key and value.
+    /// TODO: migrate to cainome + simple rust vec for better devX in the future.
+    pub fn da_as_calldata(&self, world: FieldElement) -> Vec<FieldElement> {
+        let updates = self
+            .state_updates
+            .storage_updates
+            .get(&ContractAddress::from(world))
+            .unwrap_or(&std::collections::HashMap::new())
+            .iter()
+            .flat_map(|(k, v)| vec![*k, *v])
+            .collect::<Vec<_>>();
+
+        updates
     }
 }
 
@@ -188,34 +194,44 @@ fn test_program_input() -> anyhow::Result<()> {
         }],
         state_updates: StateUpdates {
             nonce_updates: std::collections::HashMap::new(),
-            storage_updates: std::collections::HashMap::new(),
+            storage_updates: vec![(
+                ContractAddress::from(FieldElement::from_str("113")?),
+                vec![(FieldElement::from_str("114")?, FieldElement::from_str("115")?)]
+                    .into_iter()
+                    .collect(),
+            )]
+            .into_iter()
+            .collect(),
             contract_updates: std::collections::HashMap::new(),
             declared_classes: std::collections::HashMap::new(),
         },
     };
 
-    let serialized = input.serialize().unwrap();
+    // Serialize with the DA.
+    let serialized_with_da = input.serialize(FieldElement::from_str("113")?).unwrap();
+    println!("Serialized: {}", serialized_with_da);
+    pub const EXPECTED_WITH_DA: &str = r#"{
+            "prev_state_root": 101,
+            "block_number": 102,
+            "block_hash": 103,
+            "config_hash": 104,
+            "message_to_starknet_segment": [105,106,1,107],
+            "message_to_appchain_segment": [108,109,110,111,1,112],
+            "nonce_updates": {},
+            "storage_updates": {"113":{"114":115}},
+            "contract_updates": {},
+            "declared_classes": {},
+            "world_da": [114, 115]
+        }"#;
 
-    println!("Serialized: {}", serialized);
-
-    pub const EXPECTED: &str = r#"{
-        "prev_state_root": 101,
-        "block_number": 102,
-        "block_hash": 103,
-        "config_hash": 104,
-        "message_to_starknet_segment": [105,106,1,107],
-        "message_to_appchain_segment": [108,109,110,111,1,112],
-        "nonce_updates": {},
-        "storage_updates": {},
-        "contract_updates": {},
-        "declared_classes": {}
-    }"#;
-
-    let expected = EXPECTED.chars().filter(|c| !c.is_whitespace()).collect::<String>();
-
+    let expected = EXPECTED_WITH_DA.chars().filter(|c| !c.is_whitespace()).collect::<String>();
     println!("{}", expected);
+    assert_eq!(serialized_with_da, expected);
 
-    assert_eq!(serialized, expected);
+    // Serialize just the DA as calldata. The length is not included, only the array of
+    // updates [key, value, key, value...].
+    let da_calldata = input.da_as_calldata(FieldElement::from_str("113")?);
+    assert_eq!(da_calldata, vec![FieldElement::from_str("114")?, FieldElement::from_str("115")?]);
 
     Ok(())
 }

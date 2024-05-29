@@ -178,7 +178,9 @@ impl DeploymentManifest {
         self.contracts.iter_mut().for_each(|contract| {
             let previous_contract = previous.contracts.iter().find(|c| c.name == contract.name);
             if let Some(previous_contract) = previous_contract {
-                contract.inner.base_class_hash = previous_contract.inner.base_class_hash;
+                if previous_contract.inner.base_class_hash != FieldElement::ZERO {
+                    contract.inner.base_class_hash = previous_contract.inner.base_class_hash;
+                }
             }
         });
     }
@@ -451,16 +453,19 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
     let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
 
     for e in events {
-        let model_event = if let WorldEvent::ModelRegistered(m) =
-            e.try_into().expect("ModelRegistered event is expected to be parseable")
-        {
-            m
-        } else {
-            panic!("ModelRegistered expected");
+        let model_event = match e.try_into() {
+            Ok(WorldEvent::ModelRegistered(mr)) => mr,
+            Ok(_) => panic!("ModelRegistered expected as already filtered"),
+            Err(_) => {
+                // As models were registered with the new event type, we can
+                // skip old ones. We are sure at least 1 new event was emitted
+                // when models were migrated.
+                continue;
+            }
         };
 
-        let model_name = parse_cairo_short_string(&model_event.name).unwrap();
-
+        // TODO: Safely unwrap?
+        let model_name = model_event.name.to_string().unwrap();
         if let Some(current_class_hash) = models.get_mut(&model_name) {
             if current_class_hash == &model_event.prev_class_hash.into() {
                 *current_class_hash = model_event.class_hash.into();
@@ -573,6 +578,9 @@ impl ManifestMethods for DojoContract {
         }
         if let Some(writes) = old.writes {
             self.writes = writes;
+        }
+        if let Some(init_calldata) = old.init_calldata {
+            self.init_calldata = init_calldata;
         }
     }
 }

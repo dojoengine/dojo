@@ -22,18 +22,19 @@ tracing.workspace = true
 alloy-primitives.workspace = true
 
 # blockifier deps
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979", optional = true }
-cairo-vm = { workspace = true, optional = true }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "57c11586", features = [ "testing" ], optional = true }
+katana-cairo = { workspace = true, optional = true }
 
-# starknet_in_rust deps
-cairo-lang-sierra = { workspace = true, optional = true }
-sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "601a65e", optional = true }
-starknet-types-core = { version = "0.0.9", optional = true }
+# Disable SIR for now until they support Cairo 2.6.3
+# # starknet_in_rust deps
+# cairo-lang-sierra = { workspace = true, optional = true }
+# sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "601a65e", optional = true }
+# starknet-types-core = { version = "0.0.9", optional = true }
 
 [dev-dependencies]
 anyhow.workspace = true
-cairo-vm.workspace = true
-katana-provider.workspace = true
+katana-cairo.workspace = true
+katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
@@ -41,9 +42,16 @@ serde_json.workspace = true
 similar-asserts.workspace = true
 tokio.workspace = true
 
-[features]
-default = [ "blockifier", "sir" ]
+criterion.workspace = true
+pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
-blockifier = [ "dep:blockifier", "dep:cairo-vm" ]
+[features]
+blockifier = [ "dep:blockifier", "dep:katana-cairo" ]
+default = [ "blockifier" ]
 # native = [ "sir", "sir/cairo-native" ]
-sir = [ "dep:sir", "dep:starknet-types-core" ]
+# sir = [ "dep:sir", "dep:starknet-types-core" ]
+
+[[bench]]
+harness = false
+name = "execution"
+required-features = [ "blockifier" ]

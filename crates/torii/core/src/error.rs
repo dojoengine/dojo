@@ -31,6 +31,10 @@ pub enum ParseError {
     FromByteSliceError(#[from] FromByteSliceError),
     #[error(transparent)]
     ParseIntError(#[from] ParseIntError),
+    #[error(transparent)]
+    CairoSerdeError(#[from] cainome::cairo_serde::Error),
+    #[error(transparent)]
+    FromJsonStr(#[from] serde_json::Error),
 }
 
 #[derive(Debug, thiserror::Error)]

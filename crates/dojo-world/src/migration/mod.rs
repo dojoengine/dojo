@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
@@ -72,6 +73,8 @@ pub enum MigrationError<S> {
     WaitingError(#[from] TransactionWaitingError),
     #[error(transparent)]
     ArtifactError(#[from] anyhow::Error),
+    #[error("Bad init calldata.")]
+    BadInitCalldata,
 }
 
 /// Represents the type of migration that should be performed.
@@ -99,6 +102,26 @@ pub struct TxnConfig {
     pub wait: bool,
     pub receipt: bool,
     pub max_fee_raw: Option<FieldElement>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum TxnAction {
+    Send {
+        wait: bool,
+        receipt: bool,
+        max_fee_raw: Option<FieldElement>,
+        /// The multiplier for how much the actual transaction max fee should be relative to the
+        /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
+        fee_estimate_multiplier: Option<f64>,
+    },
+    Estimate,
+    Simulate,
+}
+
+impl TxnConfig {
+    pub fn init_wait() -> Self {
+        Self { wait: true, ..Default::default() }
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -152,6 +175,7 @@ pub trait Deployable: Declarable + Sync {
         base_class_hash: FieldElement,
         account: &SingleOwnerAccount<P, S>,
         txn_config: &TxnConfig,
+        calldata: &[String],
     ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -183,11 +207,18 @@ pub trait Deployable: Declarable + Sync {
                 }
             }
 
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Call {
-                calldata: vec![self.salt(), class_hash],
-                selector: selector!("deploy_contract"),
-                to: world_address,
-            },
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                let init_calldata: Vec<FieldElement> = calldata
+                    .iter()
+                    .map(|s| FieldElement::from_str(s))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|_| MigrationError::BadInitCalldata)?;
+
+                let mut calldata =
+                    vec![self.salt(), class_hash, FieldElement::from(calldata.len())];
+                calldata.extend(init_calldata);
+                Call { calldata, selector: selector!("deploy_contract"), to: world_address }
+            }
 
             Ok(_) => {
                 return Err(MigrationError::ContractAlreadyDeployed(contract_address));
@@ -362,7 +393,8 @@ pub fn read_class(artifact_path: &PathBuf) -> Result<SierraClass> {
 fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
-    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)?;
+    let casm_contract =
+        CasmContractClass::from_contract_class(casm_contract_class, true, usize::MAX)?;
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)

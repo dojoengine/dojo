@@ -12,16 +12,18 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest-16-cores
+    runs-on: ubuntu-latest-32-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: |
-          cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 10
+          cargo build -r --bin katana
+          KATANA_RUNNER_BIN=$(pwd)/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
-          cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
+          # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
+          # cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
           cargo llvm-cov report --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v4
         with:
@@ -31,7 +33,7 @@ jobs:
   ensure-wasm:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -51,22 +53,21 @@ jobs:
           repo-token: ${{ secrets.github_token }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
-  # cairofmt:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions-rs/toolchain@v1
-  #       with:
-  #         profile: minimal
-  #         toolchain: nightly-2022-11-03
-  #     - uses: Swatinem/rust-cache@v2
-  #     - run: cargo install cairo-lang-formatter
-  #     - run: scripts/cairo_fmt.sh --check
+  cairofmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.6.3"
+      - run: |
+          scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
+          scarb --manifest-path crates/dojo-core/Scarb.toml fmt --check
 
   dojo-core-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -75,7 +76,7 @@ jobs:
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -84,7 +85,7 @@ jobs:
   dojo-world-bindings-check:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -93,7 +94,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -102,7 +103,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -111,7 +112,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2

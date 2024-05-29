@@ -87,13 +87,13 @@ struct Args {
 
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
-    #[arg(long, default_value = "*")]
+    #[arg(long)]
     #[arg(value_delimiter = ',')]
-    allowed_origins: Vec<String>,
+    allowed_origins: Option<Vec<String>>,
 
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
     /// environment
-    #[arg(long)]
+    #[arg(long, value_parser = parse_url)]
     external_url: Option<Url>,
 
     /// Enable Prometheus metrics.
@@ -109,6 +109,10 @@ struct Args {
     /// Chunk size of the events page when indexing using events
     #[arg(long, default_value = "1000")]
     events_chunk_size: u64,
+
+    /// Enable indexing pending blocks
+    #[arg(long)]
+    index_pending: bool,
 }
 
 #[tokio::main]
@@ -179,6 +183,7 @@ async fn main() -> anyhow::Result<()> {
         EngineConfig {
             start_block: args.start_block,
             events_chunk_size: args.events_chunk_size,
+            index_pending: args.index_pending,
             ..Default::default()
         },
         shutdown_tx.clone(),

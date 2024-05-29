@@ -1,0 +1,10 @@
+kind = "DojoContract"
+class_hash = "0x7468fbf6e47eb66fd898a4a68bbe801560fdd42b0d6909ec4f75fb38c613702"
+original_class_hash = "0x7468fbf6e47eb66fd898a4a68bbe801560fdd42b0d6909ec4f75fb38c613702"
+base_class_hash = "0x0"
+abi = "manifests/dev/abis/base/contracts/compiler_cairo_cairo_24_cairo_v240.json"
+reads = []
+writes = []
+computed = []
+init_calldata = []
+name = "compiler_cairo::cairo_24::cairo_v240"

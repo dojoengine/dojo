@@ -1,57 +1,70 @@
 use std::time::Duration;
 
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
+use dojo_test_utils::compiler;
+use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::FieldElement;
 
 use super::{WorldContract, WorldContractReader};
-use crate::manifest::BaseManifest;
+use crate::manifest::{BaseManifest, OverlayManifest};
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
 use crate::migration::{Declarable, Deployable, TxnConfig};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
-    let account = sequencer.account();
+    let runner = KatanaRunner::new().expect("Fail to set runner");
+    let config = compiler::copy_tmp_config(
+        &Utf8PathBuf::from("../../examples/spawn-and-move"),
+        &Utf8PathBuf::from("../dojo-core"),
+    );
+
+    let manifest_dir = config.manifest_path().parent().unwrap();
+    let target_dir = manifest_dir.join("target").join("dev");
+
+    let account = runner.account(0);
     let provider = account.provider();
-    let world_address = deploy_world(
-        &sequencer,
-        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap(),
-        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
-    )
-    .await;
+    let world_address =
+        deploy_world(&runner, &manifest_dir.to_path_buf(), &target_dir.to_path_buf()).await;
 
     let _world = WorldContractReader::new(world_address, provider);
 }
 
 pub async fn deploy_world(
-    sequencer: &TestSequencer,
+    sequencer: &KatanaRunner,
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
 ) -> FieldElement {
     // Dev profile is used by default for testing:
     let profile_name = "dev";
 
-    let manifest = BaseManifest::load_from_path(
+    let mut manifest = BaseManifest::load_from_path(
         &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
-    let world = WorldDiff::compute(manifest.clone(), None);
-    let account = sequencer.account();
 
-    let strategy = prepare_for_migration(
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
+    )
+    .unwrap();
+
+    manifest.merge(overlay_manifest);
+
+    let mut world = WorldDiff::compute(manifest.clone(), None);
+    world.update_order().unwrap();
+
+    let account = sequencer.account(0);
+
+    let mut strategy = prepare_for_migration(
         None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        FieldElement::from_hex_be("0x12345").unwrap(),
         target_dir,
         world,
     )
     .unwrap();
+    strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
 
     let base_class_hash =
         strategy.base.unwrap().declare(&account, &TxnConfig::default()).await.unwrap().class_hash;
@@ -102,6 +115,7 @@ pub async fn deploy_world(
                 base_class_hash,
                 &account,
                 &TxnConfig::default(),
+                &contract.diff.init_calldata,
             )
             .await
             .unwrap();

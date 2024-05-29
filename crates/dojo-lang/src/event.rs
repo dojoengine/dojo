@@ -4,10 +4,11 @@ use cairo_lang_starknet::plugin::aux_data::StarkNetEventAuxData;
 use cairo_lang_starknet::plugin::consts::{
     EVENT_TRAIT, EVENT_TYPE_NAME, KEY_ATTR, NESTED_ATTR, SERDE_ATTR,
 };
-use cairo_lang_starknet::plugin::events::{EventData, EventFieldKind};
+use cairo_lang_starknet::plugin::events::EventData;
+use cairo_lang_starknet_classes::abi::EventFieldKind;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use indoc::formatdoc;
 
 use crate::plugin::DojoAuxData;

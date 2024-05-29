@@ -94,9 +94,14 @@ pub struct DojoContract {
     #[serde_as(as = "UfeHex")]
     pub base_class_hash: FieldElement,
     pub abi: Option<AbiFormat>,
+    #[serde(default)]
     pub reads: Vec<String>,
+    #[serde(default)]
     pub writes: Vec<String>,
+    #[serde(default)]
     pub computed: Vec<ComputedValueEntrypoint>,
+    #[serde(default)]
+    pub init_calldata: Vec<String>,
 }
 
 /// Represents a declaration of a model.
@@ -128,7 +133,7 @@ pub struct WorldContract {
     #[serde_as(as = "Option<UfeHex>")]
     pub transaction_hash: Option<FieldElement>,
     pub block_number: Option<u64>,
-    pub seed: Option<String>,
+    pub seed: String,
     pub metadata: Option<WorldMetadata>,
 }
 
@@ -152,6 +157,7 @@ pub struct OverlayDojoContract {
     pub original_class_hash: Option<FieldElement>,
     pub reads: Option<Vec<String>>,
     pub writes: Option<Vec<String>>,
+    pub init_calldata: Option<Vec<String>>,
 }
 
 #[serde_as]

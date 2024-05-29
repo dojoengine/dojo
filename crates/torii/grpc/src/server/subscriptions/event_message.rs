@@ -16,7 +16,7 @@ use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Entity;
+use torii_core::types::EventMessage;
 use tracing::{error, trace};
 
 use crate::proto;
@@ -60,7 +60,7 @@ pub struct Service {
     pool: Pool<Sqlite>,
     subs_manager: Arc<EventMessageManager>,
     model_cache: Arc<ModelCache>,
-    simple_broker: Pin<Box<dyn Stream<Item = Entity> + Send>>,
+    simple_broker: Pin<Box<dyn Stream<Item = EventMessage> + Send>>,
 }
 
 impl Service {
@@ -73,7 +73,7 @@ impl Service {
             pool,
             subs_manager,
             model_cache,
-            simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()),
+            simple_broker: Box::pin(SimpleBroker::<EventMessage>::subscribe()),
         }
     }
 
@@ -101,8 +101,10 @@ impl Service {
                 let model_ids: Vec<&str> = model_ids.split(',').collect();
                 let schemas = cache.schemas(model_ids).await?;
 
-                let entity_query =
-                    format!("{} WHERE event_messages.id = ?", build_sql_query(&schemas)?);
+                let entity_query = format!(
+                    "{} WHERE event_messages.id = ?",
+                    build_sql_query(&schemas, "event_messages", "event_message_id")?
+                );
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
 
                 let models = schemas

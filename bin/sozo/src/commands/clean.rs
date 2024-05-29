@@ -5,6 +5,7 @@ use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
 use scarb::core::Config;
+use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct CleanArgs {
@@ -21,10 +22,12 @@ impl CleanArgs {
     ///
     /// * `profile_dir` - The directory where the profile files are located.
     pub fn clean_manifests(&self, profile_dir: &Utf8PathBuf) -> Result<()> {
+        trace!(?profile_dir, "Cleaning manifests.");
         let dirs = vec![profile_dir.join(BASE_DIR), profile_dir.join(ABIS_DIR).join(BASE_DIR)];
 
         for d in dirs {
             if d.exists() {
+                trace!(directory=?d, "Removing directory.");
                 fs::remove_dir_all(d)?;
             }
         }
@@ -34,6 +37,7 @@ impl CleanArgs {
 
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        trace!(ws=?ws, "Workspace read successfully.");
 
         let profile_name =
             ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
@@ -45,10 +49,12 @@ impl CleanArgs {
         let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
 
         // By default, this command cleans the build manifests and scarb artifacts.
+        trace!("Cleaning Scarb artifacts and build manifests.");
         scarb::ops::clean(config)?;
         self.clean_manifests(&profile_dir)?;
 
         if self.all && profile_dir.exists() {
+            trace!(?profile_dir, "Removing entire profile directory.");
             fs::remove_dir_all(profile_dir)?;
         }
 
@@ -68,9 +74,11 @@ mod tests {
     #[test]
     fn test_clean() {
         let source_project = "../../examples/spawn-and-move/Scarb.toml";
+        let dojo_core_path = "../../crates/dojo-core";
 
         // Build a completely new project in it's own directory.
-        let (temp_project_dir, config, _) = compiler::copy_build_project_temp(source_project, true);
+        let (temp_project_dir, config, _) =
+            compiler::copy_build_project_temp(source_project, dojo_core_path, true);
 
         let runner = KatanaRunner::new().expect("Fail to set runner");
 
@@ -81,10 +89,9 @@ mod tests {
             migration::migrate(
                 &ws,
                 None,
-                "chain_id".to_string(),
                 runner.endpoint(),
-                &runner.account(0),
-                Some("dojo_examples".to_string()),
+                runner.account(0),
+                "dojo_examples",
                 true,
                 TxnConfig::default(),
             )

@@ -3,8 +3,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use alloy_network::Ethereum;
-use alloy_primitives::{Address, LogData, U256};
-use alloy_provider::{HttpProvider, Provider};
+use alloy_primitives::{Address, U256};
+use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rpc_types::{BlockNumberOrTag, Filter, FilterBlockOption, FilterSet, Log, Topic};
 use alloy_sol_types::{sol, SolEvent};
 use anyhow::Result;
@@ -12,8 +12,11 @@ use async_trait::async_trait;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
-use katana_primitives::utils::transaction::compute_l1_message_hash;
+use katana_primitives::utils::transaction::{
+    compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
+};
 use katana_primitives::FieldElement;
+use starknet::core::types::EthAddress;
 use tracing::{debug, trace, warn};
 
 use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
@@ -41,14 +44,14 @@ sol! {
 }
 
 pub struct EthereumMessaging {
-    provider: Arc<HttpProvider<Ethereum>>,
+    provider: Arc<ReqwestProvider<Ethereum>>,
     messaging_contract_address: Address,
 }
 
 impl EthereumMessaging {
     pub async fn new(config: MessagingConfig) -> Result<EthereumMessaging> {
         Ok(EthereumMessaging {
-            provider: Arc::new(HttpProvider::<Ethereum>::new_http(reqwest::Url::parse(
+            provider: Arc::new(ReqwestProvider::<Ethereum>::new_http(reqwest::Url::parse(
                 &config.rpc_url,
             )?)),
             messaging_contract_address: config.contract_address.parse::<Address>()?,
@@ -98,15 +101,7 @@ impl EthereumMessaging {
             .await?
             .into_iter()
             .filter(|log| log.block_number.is_some())
-            .map(|log| {
-                (
-                    log.block_number
-                        .unwrap()
-                        .try_into()
-                        .expect("Block number couldn't be converted to u64."),
-                    log,
-                )
-            })
+            .map(|log| (log.block_number.unwrap(), log))
             .for_each(|(block_num, log)| {
                 block_to_logs
                     .entry(block_num)
@@ -198,30 +193,36 @@ impl Messenger for EthereumMessaging {
     }
 }
 
+// TODO: refactor this as a method of the message log struct
 fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1HandlerTx> {
-    let parsed_log = LogMessageToL2::LogMessageToL2Event::decode_log(
-        &alloy_primitives::Log::<LogData>::new(log.address, log.topics, log.data).unwrap(),
-        false,
-    )
-    .unwrap();
+    let log = LogMessageToL2::LogMessageToL2Event::decode_log(log.as_ref(), false).unwrap();
 
-    let from_address = felt_from_address(parsed_log.from_address);
-    let contract_address = felt_from_u256(parsed_log.to_address);
-    let entry_point_selector = felt_from_u256(parsed_log.selector);
-    let nonce = felt_from_u256(parsed_log.nonce);
-    let paid_fee_on_l1: u128 = parsed_log.fee.try_into().expect("Fee does not fit into u128.");
+    let from_address = EthAddress::try_from(log.from_address.as_slice()).expect("valid address");
+    let contract_address = felt_from_u256(log.to_address);
+    let entry_point_selector = felt_from_u256(log.selector);
+    let nonce: u64 = log.nonce.try_into().expect("nonce does not fit into u64.");
+    let paid_fee_on_l1: u128 = log.fee.try_into().expect("Fee does not fit into u128.");
+    let payload = log.payload.clone().into_iter().map(felt_from_u256).collect::<Vec<_>>();
 
-    let mut calldata = vec![from_address];
-    calldata.extend(parsed_log.payload.clone().into_iter().map(felt_from_u256));
+    let message_hash = compute_l1_to_l2_message_hash(
+        from_address.clone(),
+        contract_address,
+        entry_point_selector,
+        &payload,
+        nonce,
+    );
 
-    let message_hash = compute_l1_message_hash(from_address, contract_address, &calldata);
+    // In an l1_handler transaction, the first element of the calldata is always the Ethereum
+    // address of the sender (msg.sender). https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/messaging-mechanism/#l1-l2-messages
+    let mut calldata = vec![FieldElement::from(from_address)];
+    calldata.extend(payload.clone());
 
     Ok(L1HandlerTx {
-        nonce,
         calldata,
         chain_id,
         message_hash,
         paid_fee_on_l1,
+        nonce: nonce.into(),
         entry_point_selector,
         version: FieldElement::ZERO,
         contract_address: contract_address.into(),
@@ -233,10 +234,12 @@ fn parse_messages(messages: &[MessageToL1]) -> Vec<U256> {
     messages
         .iter()
         .map(|msg| {
-            U256::from_be_bytes(
-                compute_l1_message_hash(msg.from_address.into(), msg.to_address, &msg.payload)
-                    .into(),
-            )
+            let hash = compute_l2_to_l1_message_hash(
+                msg.from_address.into(),
+                msg.to_address,
+                &msg.payload,
+            );
+            U256::from_be_bytes(hash.into())
         })
         .collect()
 }
@@ -245,62 +248,63 @@ fn felt_from_u256(v: U256) -> FieldElement {
     FieldElement::from_str(format!("{:#064x}", v).as_str()).unwrap()
 }
 
-fn felt_from_address(v: Address) -> FieldElement {
-    FieldElement::from_str(format!("{:#064x}", v).as_str()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
 
-    use alloy_primitives::{Address, B256, U256};
+    use alloy_primitives::{address, b256, LogData, U256};
     use katana_primitives::chain::{ChainId, NamedChainId};
+    use katana_primitives::utils::transaction::compute_l1_to_l2_message_hash;
     use starknet::macros::{felt, selector};
 
     use super::*;
 
     #[test]
     fn l1_handler_tx_from_log_parse_ok() {
-        let from_address = "0x000000000000000000000000be3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be";
-        let to_address = "0x039dc79e64f4bb3289240f88e0bae7d21735bef0d1a51b2bf3c4730cb16983e1";
-        let selector = "0x02f15cff7b0eed8b9beb162696cf4e3e0e35fa7032af69cd1b7d2ac67a13f40f";
-        let nonce = 783082_u128;
+        let from_address = felt!("0xbe3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be");
+        let to_address = felt!("0x39dc79e64f4bb3289240f88e0bae7d21735bef0d1a51b2bf3c4730cb16983e1");
+        let selector = felt!("0x2f15cff7b0eed8b9beb162696cf4e3e0e35fa7032af69cd1b7d2ac67a13f40f");
+        let payload = vec![FieldElement::ONE, FieldElement::TWO];
+        let nonce = 783082_u64;
         let fee = 30000_u128;
-
-        // Payload two values: [1, 2].
-        let payload_buf = hex::decode("000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000bf2ea0000000000000000000000000000000000000000000000000000000000007530000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002").unwrap();
-
-        let calldata = vec![
-            FieldElement::from_hex_be(from_address).unwrap(),
-            FieldElement::ONE,
-            FieldElement::TWO,
-        ];
 
         let expected_tx_hash =
             felt!("0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b");
 
+        let event = LogMessageToL2::LogMessageToL2Event::new(
+            (
+                b256!("db80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b"),
+                address!("be3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be"),
+                U256::from_be_slice(&to_address.to_bytes_be()),
+                U256::from_be_slice(&selector.to_bytes_be()),
+            ),
+            (vec![U256::from(1), U256::from(2)], U256::from(nonce), U256::from(fee)),
+        );
+
         let log = Log {
-            address: Address::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
-            topics: vec![
-                B256::from_str(
-                    "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
-                )
-                .unwrap(),
-                B256::from_str(from_address).unwrap(),
-                B256::from_str(to_address).unwrap(),
-                B256::from_str(selector).unwrap(),
-            ],
-            data: payload_buf.into(),
+            inner: alloy_primitives::Log::<LogData> {
+                address: address!("de29d060D45901Fb19ED6C6e959EB22d8626708e"),
+                data: LogData::from(&event),
+            },
             ..Default::default()
         };
 
         // SN_GOERLI.
         let chain_id = ChainId::Named(NamedChainId::Goerli);
-        let to_address = FieldElement::from_hex_be(to_address).unwrap();
-        let from_address = FieldElement::from_hex_be(from_address).unwrap();
+        let from_address = EthAddress::from_felt(&from_address).unwrap();
 
-        let message_hash = compute_l1_message_hash(from_address, to_address, &calldata);
+        let message_hash = compute_l1_to_l2_message_hash(
+            from_address.clone(),
+            to_address,
+            selector,
+            &payload,
+            nonce,
+        );
 
-        let expected = L1HandlerTx {
+        // the first element of the calldata is always the Ethereum address of the sender
+        // (msg.sender).
+        let calldata = vec![from_address.into()].into_iter().chain(payload.clone()).collect();
+
+        let expected_tx = L1HandlerTx {
             calldata,
             chain_id,
             message_hash,
@@ -308,14 +312,13 @@ mod tests {
             version: FieldElement::ZERO,
             nonce: FieldElement::from(nonce),
             contract_address: to_address.into(),
-            entry_point_selector: FieldElement::from_hex_be(selector).unwrap(),
+            entry_point_selector: selector,
         };
-        let tx_hash = expected.calculate_hash();
 
-        let tx = l1_handler_tx_from_log(log, chain_id).expect("bad log format");
+        let actual_tx = l1_handler_tx_from_log(log, chain_id).expect("bad log format");
 
-        assert_eq!(tx, expected);
-        assert_eq!(tx_hash, expected_tx_hash);
+        assert_eq!(expected_tx, actual_tx);
+        assert_eq!(expected_tx_hash, expected_tx.calculate_hash());
     }
 
     #[test]

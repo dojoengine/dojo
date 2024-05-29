@@ -61,10 +61,20 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
     fi
 
 ARG DOJO_VERSION=stable
+ARG BUILD_TYPE=default
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
-RUN dojoup -v $DOJO_VERSION
+RUN if [ "$BUILD_TYPE" = "release" ]; then \
+    echo "Installing Dojo version $DOJO_VERSION"; \
+    dojoup -v $DOJO_VERSION; \
+    elif [ "$BUILD_TYPE" = "push" ]; then \
+    echo "Installing Dojo at commit $DOJO_VERSION"; \
+    dojoup -c $DOJO_VERSION; \
+    else \
+    echo "Installing latest stable version of Dojo"; \
+    dojoup; \
+    fi
 
 RUN chown -R root:root /usr/local/cargo
 RUN chmod -R 700 /usr/local/cargo

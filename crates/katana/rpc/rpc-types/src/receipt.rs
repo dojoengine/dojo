@@ -1,4 +1,5 @@
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus};
+use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{MessageToL1, Receipt, TxExecutionResources};
 use katana_primitives::transaction::TxHash;
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,7 @@ use starknet::core::types::{
     Hash256, InvokeTransactionReceipt, L1HandlerTransactionReceipt,
     PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
     PendingInvokeTransactionReceipt, PendingL1HandlerTransactionReceipt, PendingTransactionReceipt,
-    PriceUnit, TransactionFinalityStatus, TransactionReceipt,
+    TransactionFinalityStatus, TransactionReceipt,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,7 +41,7 @@ impl TxReceipt {
                     messages_sent,
                     finality_status,
                     transaction_hash,
-                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
+                    actual_fee: to_rpc_fee(rct.fee),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -62,7 +63,7 @@ impl TxReceipt {
                     messages_sent,
                     finality_status,
                     transaction_hash,
-                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
+                    actual_fee: to_rpc_fee(rct.fee),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -84,7 +85,7 @@ impl TxReceipt {
                     messages_sent,
                     finality_status,
                     transaction_hash,
-                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
+                    actual_fee: to_rpc_fee(rct.fee),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     message_hash: Hash256::from_bytes(*rct.message_hash),
                     execution_result: if let Some(reason) = rct.revert_error {
@@ -107,7 +108,7 @@ impl TxReceipt {
                     messages_sent,
                     finality_status,
                     transaction_hash,
-                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
+                    actual_fee: to_rpc_fee(rct.fee),
                     contract_address: rct.contract_address.into(),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
@@ -139,7 +140,7 @@ impl PendingTxReceipt {
                     transaction_hash,
                     events,
                     messages_sent,
-                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
+                    actual_fee: to_rpc_fee(rct.fee),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -158,7 +159,7 @@ impl PendingTxReceipt {
                     events,
                     transaction_hash,
                     messages_sent,
-                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
+                    actual_fee: to_rpc_fee(rct.fee),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -177,7 +178,7 @@ impl PendingTxReceipt {
                     transaction_hash,
                     events,
                     messages_sent,
-                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
+                    actual_fee: to_rpc_fee(rct.fee),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     message_hash: Hash256::from_bytes(rct.message_hash.0),
                     execution_result: if let Some(reason) = rct.revert_error {
@@ -197,7 +198,7 @@ impl PendingTxReceipt {
                     transaction_hash,
                     events,
                     messages_sent,
-                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
+                    actual_fee: to_rpc_fee(rct.fee),
                     contract_address: rct.contract_address.into(),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
@@ -267,4 +268,8 @@ impl From<TxExecutionResources> for ExecutionResources {
             segment_arena_builtin: value.segment_arena_builtin,
         })
     }
+}
+
+fn to_rpc_fee(fee: TxFeeInfo) -> FeePayment {
+    FeePayment { amount: fee.overall_fee.into(), unit: fee.unit }
 }

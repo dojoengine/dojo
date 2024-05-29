@@ -3,7 +3,7 @@ pub mod transaction;
 use std::collections::HashMap;
 
 use alloy_primitives::U256;
-use cairo_vm::vm::runners::builtin_runner::{
+use katana_cairo::cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
     SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
@@ -137,7 +137,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         sierra_class: Some(sierra),
                         transaction: DeclareTx::V2(DeclareTxV2 {
                             nonce: FieldElement::ONE,
-                            max_fee: 982300000000000,
+                            max_fee: 1503400000000000,
                             chain_id,
                             signature: vec![],
                             sender_address,

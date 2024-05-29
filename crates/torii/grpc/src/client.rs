@@ -3,7 +3,7 @@ use std::num::ParseIntError;
 
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
-use starknet::core::types::{FromByteSliceError, FromStrError, StateUpdate};
+use starknet::core::types::{FromStrError, StateUpdate};
 use starknet_crypto::FieldElement;
 
 use crate::proto::world::{
@@ -11,27 +11,22 @@ use crate::proto::world::{
     SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeModelsRequest,
     SubscribeModelsResponse,
 };
-use crate::types::schema::Entity;
+use crate::types::schema::{self, Entity, SchemaError};
 use crate::types::{KeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
     Grpc(tonic::Status),
-    #[error("Missing expected data")]
-    MissingExpectedData,
-    #[error("Unsupported type")]
-    UnsupportedType,
     #[error(transparent)]
     ParseStr(FromStrError),
     #[error(transparent)]
-    SliceError(FromByteSliceError),
-    #[error(transparent)]
     ParseInt(ParseIntError),
-
     #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
     Transport(tonic::transport::Error),
+    #[error(transparent)]
+    Schema(#[from] schema::SchemaError),
 }
 
 /// A lightweight wrapper around the grpc client.
@@ -71,7 +66,9 @@ impl WorldClient {
             .world_metadata(MetadataRequest {})
             .await
             .map_err(Error::Grpc)
-            .and_then(|res| res.into_inner().metadata.ok_or(Error::MissingExpectedData))
+            .and_then(|res| {
+                res.into_inner().metadata.ok_or(Error::Schema(SchemaError::MissingExpectedData))
+            })
             .and_then(|metadata| metadata.try_into().map_err(Error::ParseStr))
     }
 

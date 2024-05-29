@@ -506,26 +506,35 @@ impl TransactionTraceProvider for DbProvider {
         }
     }
 
-    fn transactions_executions_by_block(
+    fn transaction_executions_by_block(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
-        if let Some(indices) = self.block_body_indices(block_id)? {
-            let db_tx = self.0.tx()?;
-            let mut executions = Vec::with_capacity(indices.tx_count as usize);
-
-            let range = Range::from(indices);
-            for i in range {
-                if let Some(execution) = db_tx.get::<tables::TxTraces>(i)? {
-                    executions.push(execution);
-                }
-            }
-
-            db_tx.commit()?;
-            Ok(Some(executions))
+        if let Some(index) = self.block_body_indices(block_id)? {
+            let traces = self.transaction_executions_in_range(index.into())?;
+            Ok(Some(traces))
         } else {
             Ok(None)
         }
+    }
+
+    fn transaction_executions_in_range(
+        &self,
+        range: Range<TxNumber>,
+    ) -> ProviderResult<Vec<TxExecInfo>> {
+        let db_tx = self.0.tx()?;
+
+        let total = range.end - range.start;
+        let mut traces = Vec::with_capacity(total as usize);
+
+        for i in range {
+            if let Some(trace) = db_tx.get::<tables::TxTraces>(i)? {
+                traces.push(trace);
+            }
+        }
+
+        db_tx.commit()?;
+        Ok(traces)
     }
 }
 
@@ -756,10 +765,12 @@ mod tests {
         Block, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
     };
     use katana_primitives::contract::ContractAddress;
-    use katana_primitives::receipt::Receipt;
+    use katana_primitives::fee::TxFeeInfo;
+    use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
+    use starknet::core::types::PriceUnit;
     use starknet::macros::felt;
 
     use super::DbProvider;
@@ -843,7 +854,18 @@ mod tests {
             &provider,
             block.clone(),
             state_updates,
-            vec![Receipt::Invoke(Default::default())],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
             vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
@@ -921,7 +943,18 @@ mod tests {
             &provider,
             block.clone(),
             state_updates1,
-            vec![Receipt::Invoke(Default::default())],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
             vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
@@ -931,7 +964,18 @@ mod tests {
             &provider,
             block,
             state_updates2,
-            vec![Receipt::Invoke(Default::default())],
+            vec![Receipt::Invoke(InvokeTxReceipt {
+                revert_error: None,
+                events: Vec::new(),
+                messages_sent: Vec::new(),
+                execution_resources: Default::default(),
+                fee: TxFeeInfo {
+                    gas_consumed: 0,
+                    gas_price: 0,
+                    overall_fee: 0,
+                    unit: PriceUnit::Wei,
+                },
+            })],
             vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");

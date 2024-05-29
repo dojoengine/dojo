@@ -12,11 +12,19 @@ abigen!(
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<core::felt252>",
+    "name": "core::byte_array::ByteArray",
     "members": [
       {
-        "name": "snapshot",
-        "type": "@core::array::Array::<core::felt252>"
+        "name": "data",
+        "type": "core::array::Array::<core::bytes_31::bytes31>"
+      },
+      {
+        "name": "pending_word",
+        "type": "core::felt252"
+      },
+      {
+        "name": "pending_word_len",
+        "type": "core::integer::u32"
       }
     ]
   },
@@ -30,7 +38,17 @@ abigen!(
       },
       {
         "name": "metadata_uri",
-        "type": "core::array::Span::<core::felt252>"
+        "type": "core::byte_array::ByteArray"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::felt252>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::felt252>"
       }
     ]
   },
@@ -41,6 +59,70 @@ abigen!(
       {
         "name": "snapshot",
         "type": "@core::array::Array::<core::integer::u8>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "dojo::database::introspect::FieldLayout",
+    "members": [
+      {
+        "name": "selector",
+        "type": "core::felt252"
+      },
+      {
+        "name": "layout",
+        "type": "dojo::database::introspect::Layout"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::FieldLayout>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::FieldLayout>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::Layout>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::Layout>"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "dojo::database::introspect::Layout",
+    "variants": [
+      {
+        "name": "Fixed",
+        "type": "core::array::Span::<core::integer::u8>"
+      },
+      {
+        "name": "Struct",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      },
+      {
+        "name": "Tuple",
+        "type": "core::array::Span::<dojo::database::introspect::Layout>"
+      },
+      {
+        "name": "Array",
+        "type": "core::array::Span::<dojo::database::introspect::Layout>"
+      },
+      {
+        "name": "ByteArray",
+        "type": "()"
+      },
+      {
+        "name": "Enum",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
       }
     ]
   },
@@ -95,7 +177,7 @@ abigen!(
         "name": "model",
         "inputs": [
           {
-            "name": "name",
+            "name": "selector",
             "type": "core::felt252"
           }
         ],
@@ -129,6 +211,10 @@ abigen!(
           {
             "name": "class_hash",
             "type": "core::starknet::class_hash::ClassHash"
+          },
+          {
+            "name": "init_calldata",
+            "type": "core::array::Span::<core::felt252>"
           }
         ],
         "outputs": [
@@ -199,7 +285,7 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [
@@ -227,22 +313,11 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [],
         "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "base",
-        "inputs": [],
-        "outputs": [
-          {
-            "type": "core::starknet::class_hash::ClassHash"
-          }
-        ],
-        "state_mutability": "view"
       },
       {
         "type": "function",
@@ -258,11 +333,22 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [],
         "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "base",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::starknet::class_hash::ClassHash"
+          }
+        ],
+        "state_mutability": "view"
       },
       {
         "type": "function",
@@ -325,7 +411,7 @@ abigen!(
             "type": "core::felt252"
           },
           {
-            "name": "system",
+            "name": "contract",
             "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
@@ -345,7 +431,7 @@ abigen!(
             "type": "core::felt252"
           },
           {
-            "name": "system",
+            "name": "contract",
             "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
@@ -361,7 +447,7 @@ abigen!(
             "type": "core::felt252"
           },
           {
-            "name": "system",
+            "name": "contract",
             "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
@@ -390,6 +476,152 @@ abigen!(
         ],
         "outputs": [],
         "state_mutability": "external"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "UpgradeableState",
+    "interface_name": "dojo::interfaces::IUpgradeableState"
+  },
+  {
+    "type": "struct",
+    "name": "dojo::interfaces::StorageUpdate",
+    "members": [
+      {
+        "name": "key",
+        "type": "core::felt252"
+      },
+      {
+        "name": "value",
+        "type": "core::felt252"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::interfaces::StorageUpdate>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::interfaces::StorageUpdate>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "dojo::interfaces::ProgramOutput",
+    "members": [
+      {
+        "name": "prev_state_root",
+        "type": "core::felt252"
+      },
+      {
+        "name": "new_state_root",
+        "type": "core::felt252"
+      },
+      {
+        "name": "block_number",
+        "type": "core::felt252"
+      },
+      {
+        "name": "block_hash",
+        "type": "core::felt252"
+      },
+      {
+        "name": "config_hash",
+        "type": "core::felt252"
+      },
+      {
+        "name": "world_da_hash",
+        "type": "core::felt252"
+      },
+      {
+        "name": "message_to_starknet_segment",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "message_to_appchain_segment",
+        "type": "core::array::Span::<core::felt252>"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "dojo::interfaces::IUpgradeableState",
+    "items": [
+      {
+        "type": "function",
+        "name": "upgrade_state",
+        "inputs": [
+          {
+            "name": "new_state",
+            "type": "core::array::Span::<dojo::interfaces::StorageUpdate>"
+          },
+          {
+            "name": "program_output",
+            "type": "dojo::interfaces::ProgramOutput"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "ConfigImpl",
+    "interface_name": "dojo::config::interface::IConfig"
+  },
+  {
+    "type": "interface",
+    "name": "dojo::config::interface::IConfig",
+    "items": [
+      {
+        "type": "function",
+        "name": "set_program_hash",
+        "inputs": [
+          {
+            "name": "program_hash",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_program_hash",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "set_facts_registry",
+        "inputs": [
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_facts_registry",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "state_mutability": "view"
       }
     ]
   },
@@ -483,7 +715,7 @@ abigen!(
       },
       {
         "name": "uri",
-        "type": "core::array::Span::<core::felt252>",
+        "type": "core::byte_array::ByteArray",
         "kind": "data"
       }
     ]
@@ -495,7 +727,7 @@ abigen!(
     "members": [
       {
         "name": "name",
-        "type": "core::felt252",
+        "type": "core::byte_array::ByteArray",
         "kind": "data"
       },
       {
@@ -570,7 +802,7 @@ abigen!(
         "kind": "data"
       },
       {
-        "name": "system",
+        "name": "contract",
         "type": "core::starknet::contract_address::ContractAddress",
         "kind": "data"
       },
@@ -599,6 +831,59 @@ abigen!(
       {
         "name": "value",
         "type": "core::bool",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::config::component::Config::ProgramHashUpdate",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "program_hash",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::config::component::Config::FactsRegistryUpdate",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::config::component::Config::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "ProgramHashUpdate",
+        "type": "dojo::config::component::Config::ProgramHashUpdate",
+        "kind": "nested"
+      },
+      {
+        "name": "FactsRegistryUpdate",
+        "type": "dojo::config::component::Config::FactsRegistryUpdate",
+        "kind": "nested"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::world::world::StateUpdated",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "da_hash",
+        "type": "core::felt252",
         "kind": "data"
       }
     ]
@@ -657,8 +942,21 @@ abigen!(
         "name": "OwnerUpdated",
         "type": "dojo::world::world::OwnerUpdated",
         "kind": "nested"
+      },
+      {
+        "name": "ConfigEvent",
+        "type": "dojo::config::component::Config::Event",
+        "kind": "nested"
+      },
+      {
+        "name": "StateUpdated",
+        "type": "dojo::world::world::StateUpdated",
+        "kind": "nested"
       }
     ]
   }
-]"#
+]"#,
+type_aliases {
+dojo::config::component::Config::Event as DojoConfigEvent;
+}
 );
