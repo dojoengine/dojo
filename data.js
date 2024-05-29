@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716909144641,
+  "lastUpdate": 1716975427825,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8665,6 +8665,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16220531,
             "range": "± 196472",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3aae095dea4bfa1110dedf85d563e6d769458d10",
+          "message": "feat: init calldata for dojo contract (#1964)\n\n* initial commit\r\n\r\n* add tests\r\n\r\n* pass calldata during deploy_contract\r\n\r\n* complete todo in world.cairo\r\n\r\n* wip: work on dojo-lang macro for dojo init\r\n\r\n* wip: add dojo init impl\r\n\r\n* wip: work on compiler extension for dojo contract\r\n\r\n* clean up macro code\r\n\r\n* use logic similar to functions in other implementations and add to spawn-and-move\r\n\r\nthat is:\r\n* allow ref self only if specified\r\n* add world if specified in parameters\r\n\r\n* update example, handle case where no dojo_init is specified and add plugin test\r\n\r\n* clean up fix tests\r\n\r\n* fix tests and lints\r\n\r\n* make suggested changes\r\n\r\n* fix class hash and address after world update\r\n\r\n* rename constructor_calldata to init_calldata\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-05-29T11:26:23+02:00",
+          "tree_id": "f65faeeb01c29b7f525f70a08cc975af713a5efd",
+          "url": "https://github.com/dojoengine/dojo/commit/3aae095dea4bfa1110dedf85d563e6d769458d10"
+        },
+        "date": 1716975426998,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16265982,
+            "range": "± 887470",
             "unit": "ns/iter"
           }
         ]
