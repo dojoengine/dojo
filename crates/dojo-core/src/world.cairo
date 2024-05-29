@@ -400,7 +400,9 @@ mod world {
             }
 
             // If model is already registered, validate permission to update.
-            let (current_class_hash, current_address) = self.models.read(selector);
+            let model_data: (ClassHash, ContractAddress) = self.models.read(selector);
+            let (current_class_hash, current_address) = model_data;
+
             if current_class_hash.is_non_zero() {
                 assert(self.is_owner(caller, selector), Errors::OWNER_ONLY_UPDATE);
                 prev_class_hash = current_class_hash;

@@ -5,7 +5,7 @@ use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
 use super::{WorldContract, WorldContractReader};
 use crate::manifest::{BaseManifest, OverlayManifest};
@@ -24,8 +24,11 @@ async fn test_world_contract_reader() {
     let manifest_dir = config.manifest_path().parent().unwrap();
     let target_dir = manifest_dir.join("target").join("dev");
 
-    let account = runner.account(0);
+    let mut account = runner.account(0);
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
     let provider = account.provider();
+
     let world_address =
         deploy_world(&runner, &manifest_dir.to_path_buf(), &target_dir.to_path_buf()).await;
 

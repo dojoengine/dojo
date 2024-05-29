@@ -93,9 +93,10 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
 
     let compilation_units = scarb::ops::generate_compilation_units(&resolve, &features_opts, &ws)?
         .into_iter()
-        .filter(|cu| !opts.exclude_targets.contains(&cu.target().kind))
+        .filter(|cu| !opts.exclude_targets.contains(&cu.main_component().target_kind()))
         .filter(|cu| {
-            opts.include_targets.is_empty() || opts.include_targets.contains(&cu.target().kind)
+            opts.include_targets.is_empty()
+                || opts.include_targets.contains(&cu.main_component().target_kind())
         })
         .filter(|cu| packages.contains(&cu.main_package_id()))
         .collect::<Vec<_>>();
@@ -143,11 +144,15 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
         .components()
         .iter()
         .filter(|model| !model.package.id.is_core())
-        .map(|model| (model.cairo_package_name(), model.target.source_root().into()))
+        // NOTE: We're taking the first target of each compilation unit, which should always be the
+        //       main package source root due to the order maintained by scarb.
+        .map(|model| (model.cairo_package_name(), model.targets[0].source_root().into()))
         .collect();
 
     let corelib =
-        unit.core_package_component().map(|c| Directory::Real(c.target.source_root().into()));
+        // NOTE: We're taking the first target of the corelib, which should always be the
+        //       main package source root due to the order maintained by scarb.
+        unit.core_package_component().map(|c| Directory::Real(c.targets[0].source_root().into()));
 
     let content = ProjectConfigContent {
         crate_roots,

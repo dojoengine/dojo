@@ -195,7 +195,9 @@ pub fn corelib() -> PathBuf {
     let compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws).unwrap();
 
     if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
-        unit.core_package_component().expect("should have component").target.source_root().into()
+        unit.core_package_component().expect("should have component").targets[0]
+            .source_root()
+            .into()
     } else {
         panic!("should have cairo compilation unit")
     }
