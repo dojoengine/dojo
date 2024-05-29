@@ -221,7 +221,11 @@ pub fn build_sql_query(
     ) {
         match &ty {
             Ty::Struct(s) => {
-                let table_name = format!("{}${}", path, name);
+                // struct can be the main entrypoint to our model schema
+                // so we dont format the table name if the path is empty
+                let table_name =
+                    if path.is_empty() { s.name.clone() } else { format!("{}${}", path, name) };
+
                 for child in &s.children {
                     parse_ty(&table_name, &child.name, &child.ty, selections, tables);
                 }
@@ -246,6 +250,12 @@ pub fn build_sql_query(
                 let table_name = format!("{}${}", path, name);
 
                 for option in &e.options {
+                    if let Ty::Tuple(t) = &option.ty {
+                        if t.is_empty() {
+                            continue;
+                        }
+                    }
+
                     parse_ty(&table_name, &option.name, &option.ty, selections, tables);
                 }
 
@@ -261,18 +271,11 @@ pub fn build_sql_query(
     }
 
     let mut global_selections = Vec::new();
-    let mut global_tables =
-        model_schemas.iter().enumerate().map(|(_, schema)| schema.name()).collect::<Vec<String>>();
+    let mut global_tables = Vec::new();
 
     for ty in model_schemas {
         let schema = ty.as_struct().expect("schema should be struct");
-        let mut selections = Vec::new();
-        let mut tables = Vec::new();
-
-        parse_ty("", &schema.name, ty, &mut selections, &mut tables);
-
-        global_selections.push(selections.join(", "));
-        global_tables.extend(tables);
+        parse_ty("", &schema.name, ty, &mut global_selections, &mut global_tables);
     }
 
     // TODO: Fallback to subqueries, SQLite has a max limit of 64 on 'table 'JOIN'
@@ -296,152 +299,114 @@ pub fn build_sql_query(
 }
 
 /// Populate the values of a Ty (schema) from SQLite row.
-pub fn map_row_to_ty(path: &str, struct_ty: &mut Struct, row: &SqliteRow) -> Result<(), Error> {
-    for member in struct_ty.children.iter_mut() {
-        let column_name = format!("{}.{}", path, member.name);
-        match &mut member.ty {
-            Ty::Primitive(primitive) => {
-                match &primitive {
-                    Primitive::Bool(_) => {
-                        let value = row.try_get::<bool, &str>(&column_name)?;
-                        primitive.set_bool(Some(value))?;
-                    }
-                    Primitive::USize(_) => {
-                        let value = row.try_get::<u32, &str>(&column_name)?;
-                        primitive.set_usize(Some(value))?;
-                    }
-                    Primitive::U8(_) => {
-                        let value = row.try_get::<u8, &str>(&column_name)?;
-                        primitive.set_u8(Some(value))?;
-                    }
-                    Primitive::U16(_) => {
-                        let value = row.try_get::<u16, &str>(&column_name)?;
-                        primitive.set_u16(Some(value))?;
-                    }
-                    Primitive::U32(_) => {
-                        let value = row.try_get::<u32, &str>(&column_name)?;
-                        primitive.set_u32(Some(value))?;
-                    }
-                    Primitive::U64(_) => {
-                        let value = row.try_get::<String, &str>(&column_name)?;
-                        let hex_str = value.trim_start_matches("0x");
-                        primitive.set_u64(Some(
-                            u64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                        ))?;
-                    }
-                    Primitive::U128(_) => {
-                        let value = row.try_get::<String, &str>(&column_name)?;
-                        let hex_str = value.trim_start_matches("0x");
-                        primitive.set_u128(Some(
-                            u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
-                        ))?;
-                    }
-                    Primitive::U256(_) => {
-                        let value = row.try_get::<String, &str>(&column_name)?;
-                        let hex_str = value.trim_start_matches("0x");
-                        primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
-                    }
-                    Primitive::Felt252(_) => {
-                        let value = row.try_get::<String, &str>(&column_name)?;
-                        primitive.set_felt252(Some(
-                            FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
-                        ))?;
-                    }
-                    Primitive::ClassHash(_) => {
-                        let value = row.try_get::<String, &str>(&column_name)?;
-                        primitive.set_contract_address(Some(
-                            FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
-                        ))?;
-                    }
-                    Primitive::ContractAddress(_) => {
-                        let value = row.try_get::<String, &str>(&column_name)?;
-                        primitive.set_contract_address(Some(
-                            FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
-                        ))?;
-                    }
-                };
-            }
-            Ty::Enum(enum_ty) => {
-                let path = [path, &member.name].join("$");
-                let mut struct_ = Struct {
-                    name: enum_ty.name.clone(),
-                    children: enum_ty
-                        .options
-                        .iter()
-                        .filter(|o| if let Ty::Tuple(t) = &o.ty { !t.is_empty() } else { true })
-                        .map(|option| Member {
-                            key: false,
-                            name: option.name.clone(),
-                            ty: option.ty.clone(),
-                        })
-                        .chain(std::iter::once(Member {
-                            key: false,
-                            name: "option".to_string(),
-                            ty: Ty::ByteArray("".to_string()),
-                        }))
-                        .collect(),
-                };
-                map_row_to_ty(&path, &mut struct_, row)?;
-
-                // the last element is always gonna be the option
-                let option = struct_.children.pop().expect("qed; option should exist");
-                enum_ty.set_option(
-                    option.ty.as_byte_array().expect("qed; option should be byte array"),
-                )?;
-
-                // update the options values
-                let children = struct_.children;
-                for option in &mut enum_ty.options {
-                    if let Some(option_member) = children.iter().find(|m| m.name == option.name) {
-                        option.ty = option_member.ty.clone();
-                    }
+pub fn map_row_to_ty(path: &str, name: &str, ty: &mut Ty, row: &SqliteRow) -> Result<(), Error> {
+    let column_name = format!("{}.{}", path, name);
+    match ty {
+        Ty::Primitive(primitive) => {
+            match &primitive {
+                Primitive::Bool(_) => {
+                    let value = row.try_get::<bool, &str>(&column_name)?;
+                    primitive.set_bool(Some(value))?;
                 }
-            }
-            Ty::Struct(struct_ty) => {
-                let path = [path, &member.name].join("$");
-                map_row_to_ty(&path, struct_ty, row)?;
-            }
-            Ty::Tuple(ty) => {
-                let path = [path, &member.name].join("$");
-                let mut struct_ = Struct {
-                    name: path.clone(),
-                    children: ty
-                        .iter()
-                        .enumerate()
-                        .map(|(i, ty)| Member {
-                            key: false,
-                            name: format!("_{}", i.to_string()),
-                            ty: ty.clone(),
-                        })
-                        .collect(),
-                };
-                map_row_to_ty(&path, &mut struct_, row)?;
-
-                for (i, member) in struct_.children.iter().enumerate() {
-                    ty[i] = member.ty.clone();
+                Primitive::USize(_) => {
+                    let value = row.try_get::<u32, &str>(&column_name)?;
+                    primitive.set_usize(Some(value))?;
                 }
+                Primitive::U8(_) => {
+                    let value = row.try_get::<u8, &str>(&column_name)?;
+                    primitive.set_u8(Some(value))?;
+                }
+                Primitive::U16(_) => {
+                    let value = row.try_get::<u16, &str>(&column_name)?;
+                    primitive.set_u16(Some(value))?;
+                }
+                Primitive::U32(_) => {
+                    let value = row.try_get::<u32, &str>(&column_name)?;
+                    primitive.set_u32(Some(value))?;
+                }
+                Primitive::U64(_) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let hex_str = value.trim_start_matches("0x");
+                    primitive.set_u64(Some(
+                        u64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                    ))?;
+                }
+                Primitive::U128(_) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let hex_str = value.trim_start_matches("0x");
+                    primitive.set_u128(Some(
+                        u128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                    ))?;
+                }
+                Primitive::U256(_) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let hex_str = value.trim_start_matches("0x");
+                    primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
+                }
+                Primitive::Felt252(_) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    primitive.set_felt252(Some(
+                        FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
+                    ))?;
+                }
+                Primitive::ClassHash(_) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    primitive.set_contract_address(Some(
+                        FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
+                    ))?;
+                }
+                Primitive::ContractAddress(_) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    primitive.set_contract_address(Some(
+                        FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
+                    ))?;
+                }
+            };
+        }
+        Ty::Enum(enum_ty) => {
+            let path = [path, &name].join("$");
+            for option in &mut enum_ty.options {
+                map_row_to_ty(&path, &option.name, &mut option.ty, row)?;
             }
-            Ty::Array(ty) => {
-                let path = [path, &member.name].join("$");
-                let mut struct_ = Struct {
-                    name: path.clone(),
-                    children: vec![Member {
-                        key: false,
-                        name: "data".to_string(),
-                        ty: ty[0].clone(),
-                    }],
-                };
-                map_row_to_ty(&path, &mut struct_, row)?;
+
+            let mut option = Ty::ByteArray("".to_string());
+            map_row_to_ty(&path, "option", &mut option, row)?;
+
+            enum_ty.set_option(option.as_byte_array().unwrap());
+        }
+        Ty::Struct(struct_ty) => {
+            // struct can be the main entrypoint to our model schema
+            // so we dont format the table name if the path is empty
+            let path = if path.is_empty() {
+                struct_ty.name.clone()
+            } else {
+                [path, &name].join("$")
+            };
+            
+            for member in &mut struct_ty.children {
+                map_row_to_ty(&path, &member.name, &mut member.ty, row)?;
             }
-            Ty::ByteArray(bytearray) => {
-                let value = row.try_get::<String, &str>(&column_name)?;
-                *bytearray = value;
+        }
+        Ty::Tuple(ty) => {
+            let path = [path, &name].join("$");
+            
+            for (i, member) in ty.iter_mut().enumerate() {
+                map_row_to_ty(&path, &format!("_{}", i), member, row)?;
             }
-            ty => {
-                unimplemented!("unimplemented type_enum: {ty}");
-            }
-        };
-    }
+        }
+        Ty::Array(ty) => {
+            let path = [path, &name].join("$");
+            let member = ty.first_mut().expect("Array should have a member");
+            map_row_to_ty(&path, "data", member, row)?;
+        }
+        Ty::ByteArray(bytearray) => {
+            let value = row.try_get::<String, &str>(&column_name)?;
+            *bytearray = value;
+        }
+        ty => {
+            unimplemented!("unimplemented type_enum: {ty}");
+        }
+    };
 
     Ok(())
 }
