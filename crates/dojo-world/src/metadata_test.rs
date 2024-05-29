@@ -147,7 +147,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(env.world_address.is_some());
     assert_eq!(
         env.world_address.unwrap(),
-        "0x26a8d9f2ac0348182bea206d913908ef77e439416713592ebc85941a69048d6"
+        "0x05134532e5d24c8264e61bb6bbe5c06031d462b8b7bdd15b5554e77e2a97c369"
     );
 
     assert!(env.keystore_path.is_none());
