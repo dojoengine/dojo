@@ -212,6 +212,24 @@
   },
   {
     "type": "impl",
+    "name": "IDojoInitImpl",
+    "interface_name": "dojo_examples::actions::actions::IDojoInit"
+  },
+  {
+    "type": "interface",
+    "name": "dojo_examples::actions::actions::IDojoInit",
+    "items": [
+      {
+        "type": "function",
+        "name": "dojo_init",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
     "name": "UpgradableImpl",
     "interface_name": "dojo::components::upgradeable::IUpgradeable"
   },

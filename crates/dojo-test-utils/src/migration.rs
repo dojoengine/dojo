@@ -15,12 +15,20 @@ pub fn prepare_migration(
     // In testing, profile name is always dev.
     let profile_name = "dev";
 
-    let manifest = BaseManifest::load_from_path(
+    let mut manifest = BaseManifest::load_from_path(
         &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
 
-    let world = WorldDiff::compute(manifest, None);
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
+    )
+    .unwrap();
+
+    manifest.merge(overlay_manifest);
+
+    let mut world = WorldDiff::compute(manifest, None);
+    world.update_order().unwrap();
 
     prepare_for_migration(None, felt!("0x12345"), &target_dir, world)
 }
@@ -46,7 +54,8 @@ pub fn prepare_migration_with_world_and_seed(
 
     manifest.merge(overlay_manifest);
 
-    let world = WorldDiff::compute(manifest, None);
+    let mut world = WorldDiff::compute(manifest, None);
+    world.update_order().unwrap();
 
     let seed = cairo_short_string_to_felt(seed).unwrap();
     prepare_for_migration(world_address, seed, &target_dir, world)

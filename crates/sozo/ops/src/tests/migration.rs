@@ -217,7 +217,8 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let mut migration = setup::setup_migration(&config).unwrap();
+    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =

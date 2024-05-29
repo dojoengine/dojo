@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -72,6 +73,8 @@ pub enum MigrationError<S> {
     WaitingError(#[from] TransactionWaitingError),
     #[error(transparent)]
     ArtifactError(#[from] anyhow::Error),
+    #[error("Bad init calldata.")]
+    BadInitCalldata,
 }
 
 /// Represents the type of migration that should be performed.
@@ -172,6 +175,7 @@ pub trait Deployable: Declarable + Sync {
         base_class_hash: FieldElement,
         account: &SingleOwnerAccount<P, S>,
         txn_config: &TxnConfig,
+        calldata: &[String],
     ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -203,11 +207,18 @@ pub trait Deployable: Declarable + Sync {
                 }
             }
 
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Call {
-                calldata: vec![self.salt(), class_hash],
-                selector: selector!("deploy_contract"),
-                to: world_address,
-            },
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                let init_calldata: Vec<FieldElement> = calldata
+                    .iter()
+                    .map(|s| FieldElement::from_str(s))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|_| MigrationError::BadInitCalldata)?;
+
+                let mut calldata =
+                    vec![self.salt(), class_hash, FieldElement::from(calldata.len())];
+                calldata.extend(init_calldata);
+                Call { calldata, selector: selector!("deploy_contract"), to: world_address }
+            }
 
             Ok(_) => {
                 return Err(MigrationError::ContractAlreadyDeployed(contract_address));
