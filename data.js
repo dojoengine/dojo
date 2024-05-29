@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716995342192,
+  "lastUpdate": 1716997612341,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8845,6 +8845,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16981960,
             "range": "± 237465",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "532ed956617f896bdd5bde50082ccb9f0451cea3",
+          "message": "fix: scarb bump for LS (#2012)\n\n* chore: bump scarb and cairo-lang\r\n\r\n* fix: adjust to new scarb API\r\n\r\n* fix: ensure test-utils is correctly detected in other projects\r\n\r\n* fix: fix fmt\r\n\r\n* fix: impl missing upcast for ParserGroup\r\n\r\n* chore: cleanup LS dependencies\r\n\r\n* fix: add back the clap version argument\r\n\r\n* fix: update tests\r\n\r\n* fix: fix tests\r\n\r\n* ci: test with larger runner\r\n\r\n* chore: bump scarb to include tracing fix\r\n\r\n* fix: add workaround for cairo inference regression",
+          "timestamp": "2024-05-29T17:34:49+02:00",
+          "tree_id": "46ffefa91bfc4d30987d95e559b7be1077c0f849",
+          "url": "https://github.com/dojoengine/dojo/commit/532ed956617f896bdd5bde50082ccb9f0451cea3"
+        },
+        "date": 1716997611626,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17274844,
+            "range": "± 380762",
             "unit": "ns/iter"
           }
         ]
