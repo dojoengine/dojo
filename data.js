@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716993764462,
+  "lastUpdate": 1716995342192,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8815,6 +8815,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16475130,
             "range": "± 241603",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "Artevolve@yahoo.com",
+            "name": "0xevolve",
+            "username": "EvolveArt"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ab7d21d16dd0223bf5eae993a15cea362b15599",
+          "message": "feat: katana runner log path option (#2015)\n\n* feat(katana-runner): add log path option\r\n\r\n* fix: fmt",
+          "timestamp": "2024-05-29T16:57:35+02:00",
+          "tree_id": "b9b63b4e8bd30b9c603d63ea1cf970817d36541d",
+          "url": "https://github.com/dojoengine/dojo/commit/0ab7d21d16dd0223bf5eae993a15cea362b15599"
+        },
+        "date": 1716995341471,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16981960,
+            "range": "± 237465",
             "unit": "ns/iter"
           }
         ]
