@@ -58,6 +58,8 @@ pub struct KatanaRunnerConfig {
     pub block_time: Option<u64>,
     /// The port to run the katana runner on, if None, a random free port is chosen.
     pub port: Option<u16>,
+    /// The path where to log info, if None, logs are stored in a temp dir.
+    pub log_path: Option<PathBuf>,
     /// The messaging config file
     pub messaging: Option<String>,
 }
@@ -71,6 +73,7 @@ impl Default for KatanaRunnerConfig {
             port: None,
             program_name: None,
             run_name: None,
+            log_path: None,
             messaging: None,
         }
     }
@@ -122,14 +125,18 @@ impl KatanaRunner {
 
         let stdout = child.stdout.take().context("failed to take subprocess stdout")?;
 
-        let log_dir = TempDir::new().unwrap();
-
         let log_filename = PathBuf::from(format!(
             "katana-{}.log",
             config.run_name.clone().unwrap_or_else(|| port.to_string())
         ));
 
-        let log_file_path = log_dir.join(log_filename);
+        let log_file_path = if let Some(log_path) = config.log_path {
+            log_path
+        } else {
+            let log_dir = TempDir::new().unwrap();
+            log_dir.join(log_filename)
+        };
+
         let log_file_path_sent = log_file_path.clone();
 
         let (sender, receiver) = mpsc::channel();
@@ -205,7 +212,11 @@ impl Drop for KatanaRunner {
 /// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
 /// environment variable. If not set, try to to use katana from the PATH.
 fn determine_default_program_path() -> String {
-    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
+    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") {
+        bin
+    } else {
+        "katana".to_string()
+    }
 }
 
 type Provider = FillProvider<

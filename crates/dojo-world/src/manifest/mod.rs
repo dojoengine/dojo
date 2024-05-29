@@ -579,6 +579,9 @@ impl ManifestMethods for DojoContract {
         if let Some(writes) = old.writes {
             self.writes = writes;
         }
+        if let Some(init_calldata) = old.init_calldata {
+            self.init_calldata = init_calldata;
+        }
     }
 }
 

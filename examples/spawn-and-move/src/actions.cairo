@@ -123,7 +123,7 @@ mod tests {
 
         // deploy systems contract
         let contract_address = world
-            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap());
+            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
         let actions_system = IActionsDispatcher { contract_address };
 
         // System calls

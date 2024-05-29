@@ -43,3 +43,4 @@ camino.workspace = true
 dojo-test-utils = { path = "../../dojo-test-utils" }
 scarb.workspace = true
 sozo = { path = "../../../bin/sozo" }
+katana-runner.workspace = true

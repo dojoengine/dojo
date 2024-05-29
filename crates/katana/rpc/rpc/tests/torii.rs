@@ -3,13 +3,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
+use dojo_world::utils::TransactionWaiter;
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc_api::dev::DevApiClient;
 use katana_rpc_api::starknet::StarknetApiClient;
 use katana_rpc_api::torii::ToriiApiClient;
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
-use starknet::accounts::{Account, Call};
+use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{FieldElement, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
 use tokio::time::sleep;
@@ -89,6 +90,8 @@ async fn test_get_transactions() {
     let deploy_call = build_deploy_contract_call(declare_res.class_hash, FieldElement::ONE);
     let deploy_txn = account.execute(vec![deploy_call]);
     let deploy_txn_future = deploy_txn.send().await.unwrap();
+
+    TransactionWaiter::new(deploy_txn_future.transaction_hash, &account.provider()).await.unwrap();
 
     // Should properly increment to new pending block
     let response: TransactionsPage = client

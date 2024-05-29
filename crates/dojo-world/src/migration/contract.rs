@@ -16,6 +16,7 @@ pub struct ContractDiff {
     pub original_class_hash: FieldElement,
     pub base_class_hash: FieldElement,
     pub remote_class_hash: Option<FieldElement>,
+    pub init_calldata: Vec<String>,
 }
 
 impl StateDiff for ContractDiff {
@@ -44,7 +45,7 @@ impl Display for ContractDiff {
 }
 
 // Represents a contract that needs to be migrated to the remote state
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ContractMigration {
     pub salt: FieldElement,
     pub diff: ContractDiff,

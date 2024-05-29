@@ -143,8 +143,9 @@ fn model_union_field() -> Field {
                             &mut conn,
                             vec![name.clone()],
                             &entity_id,
-                            None,
+                            &[],
                             &type_mapping,
+                            false,
                         )
                         .await?
                         {
@@ -169,15 +170,16 @@ pub async fn model_data_recursive_query(
     conn: &mut PoolConnection<Sqlite>,
     path_array: Vec<String>,
     entity_id: &str,
-    idx: Option<i64>,
+    indexes: &[i64],
     type_mapping: &TypeMapping,
+    is_list: bool,
 ) -> sqlx::Result<Value> {
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
     let mut query = format!("SELECT * FROM {} WHERE entity_id = '{}' ", table_name, entity_id);
-    if let Some(idx) = idx {
-        query.push_str(&format!("AND idx = {}", idx));
+    for (column_idx, index) in indexes.iter().enumerate() {
+        query.push_str(&format!("AND idx_{} = {} ", column_idx, index));
     }
 
     let rows = sqlx::query(&query).fetch_all(conn.as_mut()).await?;
@@ -200,8 +202,15 @@ pub async fn model_data_recursive_query(
                     conn,
                     nested_path,
                     entity_id,
-                    if rows.len() > 1 { Some(idx as i64) } else { None },
+                    &if is_list {
+                        let mut indexes = indexes.to_vec();
+                        indexes.push(idx as i64);
+                        indexes
+                    } else {
+                        indexes.to_vec()
+                    },
                     nested_mapping,
+                    false,
                 )
                 .await?;
 
@@ -215,8 +224,15 @@ pub async fn model_data_recursive_query(
                     nested_path,
                     entity_id,
                     // this might need to be changed to support 2d+ arrays
-                    None,
+                    &if is_list {
+                        let mut indexes = indexes.to_vec();
+                        indexes.push(idx as i64);
+                        indexes
+                    } else {
+                        indexes.to_vec()
+                    },
                     &IndexMap::from([(Name::new("data"), *inner.clone())]),
+                    true,
                 )
                 .await?
                 {
@@ -226,10 +242,19 @@ pub async fn model_data_recursive_query(
                         .iter()
                         .map(|v| match v {
                             Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
-                            _ => unreachable!(),
+                            _ => unreachable!(
+                                "Expected Value::Object for list \"data\" field, got {:?}",
+                                v
+                            ),
                         })
                         .collect(),
-                    _ => unreachable!(),
+                    Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
+                    ty => {
+                        unreachable!(
+                            "Expected Value::List or Value::Object for list, got {:?}",
+                            ty
+                        );
+                    }
                 };
 
                 nested_value_mapping.insert(Name::new(field_name), data);
@@ -239,7 +264,7 @@ pub async fn model_data_recursive_query(
         nested_value_mappings.push(Value::Object(nested_value_mapping));
     }
 
-    if nested_value_mappings.len() > 1 {
+    if is_list {
         value_mapping = Value::List(nested_value_mappings);
     } else {
         value_mapping = nested_value_mappings.pop().unwrap();

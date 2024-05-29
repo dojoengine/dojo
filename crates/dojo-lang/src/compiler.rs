@@ -90,7 +90,7 @@ impl Compiler for DojoCompiler {
         db: &mut RootDatabase,
         ws: &Workspace<'_>,
     ) -> Result<()> {
-        let props: Props = unit.target().props()?;
+        let props: Props = unit.main_component().target_props()?;
         let target_dir = unit.target_dir(ws);
         let sources_dir = target_dir.child(Utf8Path::new(SOURCES_DIR));
 
