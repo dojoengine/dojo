@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716987167351,
+  "lastUpdate": 1716989919490,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8755,6 +8755,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16389817,
             "range": "± 430461",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d14bc1ca323cec101af09c3e4e804165d01047f9",
+          "message": "feat(sozo): in build stats add bytecode and class size of casm class (#2004)\n\n* feat(sozo): in build stats add bytecode and class size of casm class\r\n\r\n* skip non-dojo build files\r\n\r\n* sort by contract_name\r\n\r\n* fix lints\r\n\r\n* clean up types\r\n\r\n* consider file size of minified json not pretty printed json\r\n\r\n* make table compact\r\n\r\n* add message before table for context",
+          "timestamp": "2024-05-29T18:57:29+05:30",
+          "tree_id": "277228b53544653678a1db571228c3c24590349f",
+          "url": "https://github.com/dojoengine/dojo/commit/d14bc1ca323cec101af09c3e4e804165d01047f9"
+        },
+        "date": 1716989918883,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16302887,
+            "range": "± 276816",
             "unit": "ns/iter"
           }
         ]
