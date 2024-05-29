@@ -12,7 +12,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest-16-cores
+    runs-on: ubuntu-latest-32-cores
     container:
       image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
     steps:
@@ -20,7 +20,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo build -r --bin katana
-          KATANA_RUNNER_BIN=$(pwd)/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 10
+          KATANA_RUNNER_BIN=$(pwd)/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
           # cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir

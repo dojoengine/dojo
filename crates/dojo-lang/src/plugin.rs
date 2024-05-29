@@ -514,9 +514,9 @@ impl MacroPlugin for BuiltinDojoPlugin {
             DOJO_INTERFACE_ATTR.to_string(),
             DOJO_CONTRACT_ATTR.to_string(),
             DOJO_EVENT_ATTR.to_string(),
+            DOJO_MODEL_ATTR.to_string(),
             "key".to_string(),
             "computed".to_string(),
-            DOJO_MODEL_ATTR.to_string(),
         ]
     }
 }

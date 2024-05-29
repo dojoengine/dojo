@@ -68,6 +68,9 @@ dojo-test-utils = { path = "crates/dojo-test-utils" }
 dojo-types = { path = "crates/dojo-types" }
 dojo-world = { path = "crates/dojo-world" }
 
+# dojo-world
+topological-sort = "0.2"
+
 # katana
 katana-cairo = { path = "crates/katana/cairo" }
 katana-codecs = { path = "crates/katana/storage/codecs" }

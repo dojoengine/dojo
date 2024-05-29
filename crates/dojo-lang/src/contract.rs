@@ -17,6 +17,7 @@ use dojo_types::system::Dependency;
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 
 const ALLOW_REF_SELF_ARG: &str = "allow_ref_self";
+const DOJO_INIT_FN: &str = "dojo_init";
 
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
@@ -36,6 +37,7 @@ impl DojoContract {
             DojoContract { diagnostics: vec![], dependencies: HashMap::new(), do_allow_ref_self };
         let mut has_event = false;
         let mut has_storage = false;
+        let mut has_init = false;
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
@@ -60,11 +62,43 @@ impl DojoContract {
                         if trait_path.contains("<ContractState>") {
                             return system.rewrite_impl(db, impl_ast.clone());
                         }
+                    } else if let ast::ModuleItem::FreeFunction(fn_ast) = el {
+                        let fn_decl = fn_ast.declaration(db);
+                        let fn_name = fn_decl.name(db).text(db);
+
+                        if fn_name == DOJO_INIT_FN {
+                            has_init = true;
+                            return system.handle_init_fn(db, fn_ast);
+                        }
                     }
 
                     vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
+
+            if !has_init {
+                let node = RewriteNode::interpolate_patched(
+                    "
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn $init_name$(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn $init_name$(self: @ContractState) {
+                            assert(starknet::get_caller_address() == \
+                     self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                ",
+                    &UnorderedHashMap::from([(
+                        "init_name".to_string(),
+                        RewriteNode::Text(DOJO_INIT_FN.to_string()),
+                    )]),
+                );
+                body_nodes.append(&mut vec![node]);
+            }
 
             if !has_event {
                 body_nodes.append(&mut system.create_event())
@@ -84,8 +118,8 @@ impl DojoContract {
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
-                    
-                   
+
+
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
                  upgradeable, event: UpgradeableEvent);
 
@@ -138,6 +172,55 @@ impl DojoContract {
         }
 
         PluginResult::default()
+    }
+
+    fn handle_init_fn(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        fn_ast: &ast::FunctionWithBody,
+    ) -> Vec<RewriteNode> {
+        let fn_decl = fn_ast.declaration(db);
+        let fn_name = fn_decl.name(db).text(db);
+
+        let (params_str, _, world_removed) = self.rewrite_parameters(
+            db,
+            fn_decl.signature(db).parameters(db),
+            fn_ast.stable_ptr().untyped(),
+        );
+
+        let mut world_read = "";
+        if world_removed {
+            world_read = "let world = self.world_dispatcher.read();";
+        }
+
+        let body = fn_ast.body(db).as_syntax_node().get_text(db);
+
+        let node = RewriteNode::interpolate_patched(
+            "
+                #[starknet::interface]
+                trait IDojoInit<ContractState> {
+                    fn $name$($params_str$);
+                }
+
+                #[abi(embed_v0)]
+                impl IDojoInitImpl of IDojoInit<ContractState> {
+                    fn $name$($params_str$) {
+                        $world_read$
+                        assert(starknet::get_caller_address() == self.world().contract_address, \
+             'Only world can init');
+                        $body$
+                    }
+                }
+            ",
+            &UnorderedHashMap::from([
+                ("name".to_string(), RewriteNode::Text(fn_name.to_string())),
+                ("params_str".to_string(), RewriteNode::Text(params_str)),
+                ("body".to_string(), RewriteNode::Text(body)),
+                ("world_read".to_string(), RewriteNode::Text(world_read.to_string())),
+            ]),
+        );
+
+        vec![node]
     }
 
     pub fn merge_event(
