@@ -16,8 +16,8 @@ impl TypescriptPlugin {
     }
 
     // Maps cairo types to C#/Unity SDK defined types
-    fn map_type(type_name: &str) -> String {
-        match type_name {
+    fn map_type(token: &Token, generic_args: &Vec<(String, Token)>) -> String {
+        match token.type_name().as_str() {
             "bool" => "RecsType.Boolean".to_string(),
             "u8" => "RecsType.Number".to_string(),
             "u16" => "RecsType.Number".to_string(),
@@ -30,8 +30,44 @@ impl TypescriptPlugin {
             "bytes31" => "RecsType.String".to_string(),
             "ClassHash" => "RecsType.BigInt".to_string(),
             "ContractAddress" => "RecsType.BigInt".to_string(),
+            "ByteArray" => "RecsType.String".to_string(),
+            "array" => {
+                if let Token::Array(array) = token {
+                    format!("{}[]", TypescriptPlugin::map_type(&array.inner, generic_args))
+                } else {
+                    panic!("Invalid array token: {:?}", token);
+                }
+            }
+            "tuple" => {
+                if let Token::Tuple(tuple) = token {
+                    let inners = tuple
+                        .inners
+                        .iter()
+                        .map(|inner| TypescriptPlugin::map_type(inner, generic_args))
+                        .collect::<Vec<String>>()
+                        .join(", ");
 
-            _ => type_name.to_string(),
+                    format!("[{}]", inners)
+                } else {
+                    panic!("Invalid tuple token: {:?}", token);
+                }
+            }
+            "generic_arg" => {
+                if let Token::GenericArg(arg) = &token {
+                    let arg_type = generic_args
+                        .iter()
+                        .find(|(name, _)| name == arg)
+                        .unwrap_or_else(|| panic!("Generic arg not found: {}", arg))
+                        .1
+                        .clone();
+
+                    TypescriptPlugin::map_type(&arg_type, generic_args)
+                } else {
+                    panic!("Invalid generic arg token: {:?}", token);
+                }
+            }
+
+            _ => token.type_name().to_string(),
         }
     }
 
@@ -50,7 +86,7 @@ impl TypescriptPlugin {
         let mut fields = String::new();
 
         for field in &token.inners {
-            let mapped = TypescriptPlugin::map_type(field.token.type_name().as_str());
+            let mapped = TypescriptPlugin::map_type(&field.token, &token.generic_args);
             if mapped == field.token.type_name() {
                 let token = handled_tokens
                     .iter()
@@ -93,24 +129,35 @@ export const {name}Definition = {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
-        let fields = token
-            .inners
-            .iter()
-            .map(|field| format!("{},", field.name,))
-            .collect::<Vec<String>>()
-            .join("\n    ");
+        let name = token.type_name();
 
-        format!(
+        let mut result = format!(
             "
 // Type definition for `{}` enum
-export enum {} {{
-    {}
-}}
-",
-            token.type_path,
-            token.type_name(),
-            fields
-        )
+type {} = ",
+            token.type_path, name
+        );
+
+        let mut variants = Vec::new();
+
+        for field in &token.inners {
+            let field_type =
+                TypescriptPlugin::map_type(&field.token, &token.generic_args).replace("()", "");
+
+            let variant_definition = if field_type.is_empty() {
+                // No associated data
+                format!("{{ type: '{}'; }}", field.name)
+            } else {
+                // With associated data
+                format!("{{ type: '{}'; data: {}; }}", field.name, field_type)
+            };
+
+            variants.push(variant_definition);
+        }
+
+        result += &variants.join(" | ");
+
+        result
     }
 
     // Token should be a model
@@ -123,7 +170,7 @@ export enum {} {{
             .inners
             .iter()
             .map(|field| {
-                let mapped = TypescriptPlugin::map_type(field.token.type_name().as_str());
+                let mapped = TypescriptPlugin::map_type(&field.token, &model.generic_args);
                 if mapped == field.token.type_name() {
                     custom_types.push(format!("\"{}\"", field.token.type_name()));
 
@@ -258,7 +305,7 @@ export function defineContractComponents(world: World) {
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
         fn map_type(token: &Token) -> String {
             match token {
-                Token::CoreBasic(t) => TypescriptPlugin::map_type(&t.type_name())
+                Token::CoreBasic(_) => TypescriptPlugin::map_type(token, &vec![])
                 .replace("RecsType.", "")
                 // types should be lowercased
                 .to_lowercase(),
