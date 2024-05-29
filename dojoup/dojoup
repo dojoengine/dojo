@@ -254,7 +254,7 @@ EOF
 }
 
 usage() {
-  cat 1>&2 <<EOF
+  cat 1>&2 <<'EOF'
 The installer for Dojo.
 
 Update or revert to a specific Dojo version with ease.

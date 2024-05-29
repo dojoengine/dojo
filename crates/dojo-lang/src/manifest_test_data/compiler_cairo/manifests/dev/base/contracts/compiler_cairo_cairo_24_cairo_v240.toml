@@ -6,4 +6,5 @@ abi = "manifests/dev/abis/base/contracts/compiler_cairo_cairo_24_cairo_v240.json
 reads = []
 writes = []
 computed = []
+init_calldata = []
 name = "compiler_cairo::cairo_24::cairo_v240"

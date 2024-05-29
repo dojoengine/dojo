@@ -9,7 +9,9 @@ trait IWorld<T> {
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
     fn model(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
-    fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
+    fn deploy_contract(
+        ref self: T, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>
+    ) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
@@ -97,8 +99,10 @@ mod world {
 
     const WORLD: felt252 = 0;
 
-    // the minimum internal size of an empty ByteArray 
+    // the minimum internal size of an empty ByteArray
     const MIN_BYTE_ARRAY_SIZE: u32 = 3;
+
+    const DOJO_INIT_SELECTOR: felt252 = selector!("dojo_init");
 
     component!(path: Config, storage: config, event: ConfigEvent);
 
@@ -204,6 +208,7 @@ mod world {
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
         #[substorage(v0)]
         config: Config::Storage,
+        initialized_contract: LegacyMap::<felt252, bool>,
     }
 
     #[constructor]
@@ -395,7 +400,9 @@ mod world {
             }
 
             // If model is already registered, validate permission to update.
-            let (current_class_hash, current_address) = self.models.read(selector);
+            let model_data: (ClassHash, ContractAddress) = self.models.read(selector);
+            let (current_class_hash, current_address) = model_data;
+
             if current_class_hash.is_non_zero() {
                 assert(self.is_owner(caller, selector), Errors::OWNER_ONLY_UPDATE);
                 prev_class_hash = current_class_hash;
@@ -430,12 +437,16 @@ mod world {
         ///
         /// * `salt` - The salt use for contract deployment.
         /// * `class_hash` - The class hash of the contract.
+        /// * `init_calldata` - Calldata used to initialize the contract.
         ///
         /// # Returns
         ///
         /// * `ContractAddress` - The address of the newly deployed contract.
         fn deploy_contract(
-            ref self: ContractState, salt: felt252, class_hash: ClassHash
+            ref self: ContractState,
+            salt: felt252,
+            class_hash: ClassHash,
+            init_calldata: Span<felt252>,
         ) -> ContractAddress {
             let (contract_address, _) = deploy_syscall(
                 self.contract_base.read(), salt, array![].span(), false
@@ -443,6 +454,14 @@ mod world {
                 .unwrap_syscall();
             let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address };
             upgradeable_dispatcher.upgrade(class_hash);
+
+            if self.initialized_contract.read(contract_address.into()) {
+                panic!("Contract has already been initialized");
+            } else {
+                starknet::call_contract_syscall(contract_address, DOJO_INIT_SELECTOR, init_calldata)
+                    .unwrap_syscall();
+                self.initialized_contract.write(contract_address.into(), true);
+            }
 
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
@@ -796,7 +815,7 @@ mod world {
         }
 
         /// Write values to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the object key.
@@ -829,7 +848,7 @@ mod world {
         }
 
         /// Write fixed layout model record to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the model record key.
@@ -844,7 +863,7 @@ mod world {
         }
 
         /// Write array layout model record to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the model record key.
@@ -894,7 +913,7 @@ mod world {
             //    data: Array<bytes31>,
             //    pending_word: felt252,
             //    pending_word_len: usize,
-            // } 
+            // }
             //
             // That means, the length of data to write from 'values' is:
             // 1 + len(data) + 1 + 1 = len(data) + 3
@@ -914,7 +933,7 @@ mod world {
         }
 
         /// Write struct layout model record to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the model record key.
@@ -944,7 +963,7 @@ mod world {
         }
 
         /// Write tuple layout model record to the world storage.
-        /// 
+        ///
         /// # Arguments
         /// * `model` - the model selector.
         /// * `key` - the model record key.
@@ -984,9 +1003,17 @@ mod world {
             let variant = *values.at(offset);
             assert(variant.into() < 256_u256, 'invalid variant value');
 
+            // and write it
+            database::set(model, key, values, offset, array![251].span());
+            offset += 1;
+
             // find the corresponding layout and then write the full variant
+            let variant_data_key = Self::_field_key(key, variant);
+
             match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_write_layout(model, key, values, ref offset, layout),
+                Option::Some(layout) => Self::_write_layout(
+                    model, variant_data_key, values, ref offset, layout
+                ),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }
@@ -1018,7 +1045,7 @@ mod world {
             //    data: Array<bytes31>,
             //    pending_word: felt252,
             //    pending_word_len: usize,
-            // } 
+            // }
             //
 
             // So, just set the 3 first values to 0 (len(data), pending_world and pending_word_len)
@@ -1087,16 +1114,21 @@ mod world {
         }
 
         fn _delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<FieldLayout>) {
-            // read the variant value first which is the first stored felt252
+            // read the variant value
             let res = database::get(model, key, array![251].span());
             assert(res.len() == 1, 'internal database error');
 
             let variant = *res.at(0);
             assert(variant.into() < 256_u256, 'invalid variant value');
 
+            // reset the variant value
+            database::delete(model, key, array![251].span());
+
             // find the corresponding layout and the delete the full variant
+            let variant_data_key = Self::_field_key(key, variant);
+
             match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_delete_layout(model, key, layout),
+                Option::Some(layout) => Self::_delete_layout(model, variant_data_key, layout),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }
@@ -1185,7 +1217,7 @@ mod world {
             //    data: Array<bytes31>,
             //    pending_word: felt252,
             //    pending_word_len: usize,
-            // } 
+            // }
             //
             // So, read the length of data and compute the full size to read
 
@@ -1260,18 +1292,22 @@ mod world {
             ref read_data: Array<felt252>,
             variant_layouts: Span<FieldLayout>
         ) {
-            // read the variant value first, which is the first element of the tuple
-            // (because an enum is stored as a tuple).
-            let variant_key = Self::_field_key(key, 0);
-            let res = database::get(model, variant_key, array![8].span());
+            // read the variant value first
+            let res = database::get(model, key, array![8].span());
             assert(res.len() == 1, 'internal database error');
 
             let variant = *res.at(0);
             assert(variant.into() < 256_u256, 'invalid variant value');
 
-            // find the corresponding layout and the read the full variant
+            read_data.append(variant);
+
+            // find the corresponding layout and the read the variant data
+            let variant_data_key = Self::_field_key(key, variant);
+
             match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_read_layout(model, key, ref read_data, layout),
+                Option::Some(layout) => Self::_read_layout(
+                    model, variant_data_key, ref read_data, layout
+                ),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }

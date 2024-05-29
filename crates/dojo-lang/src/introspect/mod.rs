@@ -21,18 +21,11 @@ pub fn handle_introspect_struct(
     packed: bool,
 ) -> RewriteNode {
     let struct_name = struct_ast.name(db).text(db).into();
-    let struct_size = size::compute_struct_layout_size(db, &struct_ast);
+    let struct_size = size::compute_struct_layout_size(db, &struct_ast, packed);
     let ty = ty::build_struct_ty(db, &struct_name, &struct_ast);
 
     let layout = if packed {
-        format!(
-            "dojo::database::introspect::Layout::Fixed(
-            array![
-            {}
-            ].span()
-        )",
-            layout::build_packed_struct_layout(db, diagnostics, &struct_ast)
-        )
+        layout::build_packed_struct_layout(db, diagnostics, &struct_ast)
     } else {
         format!(
             "dojo::database::introspect::Layout::Struct(
@@ -57,24 +50,15 @@ pub fn handle_introspect_enum(
     packed: bool,
 ) -> RewriteNode {
     let enum_name = enum_ast.name(db).text(db).into();
-    let identical_variants = utils::are_enum_variants_identical(db, &enum_ast);
-    let enum_size = size::compute_enum_layout_size(db, &enum_ast, identical_variants);
-    let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
+    let variant_sizes = size::compute_enum_variant_sizes(db, &enum_ast);
 
     let layout = if packed {
-        if identical_variants {
-            format!(
-                "dojo::database::introspect::Layout::Fixed(
-                array![
-                {}
-                ].span()
-            )",
-                layout::build_packed_enum_layout(db, diagnostics, &enum_ast)
-            )
+        if size::is_enum_packable(&variant_sizes) {
+            layout::build_packed_enum_layout(db, diagnostics, &enum_ast)
         } else {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: enum_ast.name(db).stable_ptr().0,
-                message: "To be packed, all variants must have exactly the same layout."
+                message: "To be packed, all variants must have fixed layout of same size."
                     .to_string(),
                 severity: Severity::Error,
             });
@@ -92,6 +76,8 @@ pub fn handle_introspect_enum(
     };
 
     let (gen_types, gen_impls) = build_generic_types_and_impls(db, enum_ast.generic_params(db));
+    let enum_size = size::compute_enum_layout_size(&variant_sizes, packed);
+    let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
 
     generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty)
 }
@@ -115,7 +101,6 @@ impl $name$Introspect<$generics$> of \
         $size$
     }
 
-    #[inline(always)]
     fn layout() -> dojo::database::introspect::Layout {
         $layout$
     }

@@ -58,7 +58,8 @@ pub fn copy_build_project_temp(
     let temp_project_path = temp_project_dir.join("Scarb").with_extension("toml").to_string();
 
     let dojo_core_path = Utf8PathBuf::from(dojo_core_path);
-    let ignore_dirs = ["manifests", "target"];
+    // we don't ignore `manifests` because `overylays` are required for successful migration
+    let ignore_dirs = ["target"];
 
     copy_project_temp(&source_project_dir, &temp_project_dir, &dojo_core_path, &ignore_dirs)
         .unwrap();
@@ -194,7 +195,9 @@ pub fn corelib() -> PathBuf {
     let compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws).unwrap();
 
     if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
-        unit.core_package_component().expect("should have component").target.source_root().into()
+        unit.core_package_component().expect("should have component").targets[0]
+            .source_root()
+            .into()
     } else {
         panic!("should have cairo compilation unit")
     }
