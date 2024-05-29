@@ -1001,9 +1001,17 @@ mod world {
             let variant = *values.at(offset);
             assert(variant.into() < 256_u256, 'invalid variant value');
 
+            // and write it
+            database::set(model, key, values, offset, array![251].span());
+            offset += 1;
+
             // find the corresponding layout and then write the full variant
+            let variant_data_key = Self::_field_key(key, variant);
+
             match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_write_layout(model, key, values, ref offset, layout),
+                Option::Some(layout) => Self::_write_layout(
+                    model, variant_data_key, values, ref offset, layout
+                ),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }
@@ -1104,16 +1112,21 @@ mod world {
         }
 
         fn _delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<FieldLayout>) {
-            // read the variant value first which is the first stored felt252
+            // read the variant value
             let res = database::get(model, key, array![251].span());
             assert(res.len() == 1, 'internal database error');
 
             let variant = *res.at(0);
             assert(variant.into() < 256_u256, 'invalid variant value');
 
+            // reset the variant value
+            database::delete(model, key, array![251].span());
+
             // find the corresponding layout and the delete the full variant
+            let variant_data_key = Self::_field_key(key, variant);
+
             match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_delete_layout(model, key, layout),
+                Option::Some(layout) => Self::_delete_layout(model, variant_data_key, layout),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }
@@ -1277,18 +1290,22 @@ mod world {
             ref read_data: Array<felt252>,
             variant_layouts: Span<FieldLayout>
         ) {
-            // read the variant value first, which is the first element of the tuple
-            // (because an enum is stored as a tuple).
-            let variant_key = Self::_field_key(key, 0);
-            let res = database::get(model, variant_key, array![8].span());
+            // read the variant value first
+            let res = database::get(model, key, array![8].span());
             assert(res.len() == 1, 'internal database error');
 
             let variant = *res.at(0);
             assert(variant.into() < 256_u256, 'invalid variant value');
 
-            // find the corresponding layout and the read the full variant
+            read_data.append(variant);
+
+            // find the corresponding layout and the read the variant data
+            let variant_data_key = Self::_field_key(key, variant);
+
             match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_read_layout(model, key, ref read_data, layout),
+                Option::Some(layout) => Self::_read_layout(
+                    model, variant_data_key, ref read_data, layout
+                ),
                 Option::None => panic!("Unable to find the variant layout")
             };
         }

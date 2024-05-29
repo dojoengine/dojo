@@ -250,7 +250,6 @@ impl std::fmt::Display for Ty {
         let str = self
             .iter()
             .filter_map(|ty| match ty {
-                Ty::Primitive(_) => None,
                 Ty::Struct(s) => {
                     let mut struct_str = format!("struct {} {{\n", s.name);
                     for member in &s.children {
@@ -272,6 +271,7 @@ impl std::fmt::Display for Ty {
                 }
                 Ty::Array(items_ty) => Some(format!("Array<{}>", items_ty[0].name())),
                 Ty::ByteArray(_) => Some("ByteArray".to_string()),
+                _ => None,
             })
             .collect::<Vec<_>>()
             .join("\n\n");

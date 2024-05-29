@@ -3,12 +3,10 @@ use std::str::FromStr;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
+use katana_runner::KatanaRunner;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -71,14 +69,13 @@ async fn test_load_from_remote() {
     let mut migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
     migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
 
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
-    let mut account = sequencer.account();
+    let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
@@ -126,7 +123,7 @@ async fn test_load_from_remote() {
 
     assert_eq!(id, format!("{:#x}", get_selector_from_name("Position").unwrap()));
     assert_eq!(name, "Position");
-    assert_eq!(packed_size, 0);
+    assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
@@ -139,7 +136,7 @@ async fn test_load_from_remote() {
     assert_eq!(id, format!("{:#x}", get_selector_from_name("Moves").unwrap()));
     assert_eq!(name, "Moves");
     assert_eq!(packed_size, 0);
-    assert_eq!(unpacked_size, 0);
+    assert_eq!(unpacked_size, 2);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
         "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'PlayerConfig'",
