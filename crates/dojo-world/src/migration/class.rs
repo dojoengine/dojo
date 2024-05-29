@@ -38,7 +38,7 @@ impl Display for ClassDiff {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ClassMigration {
     pub diff: ClassDiff,
     pub artifact_path: PathBuf,

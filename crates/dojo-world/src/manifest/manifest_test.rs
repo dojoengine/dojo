@@ -2,7 +2,7 @@ use std::io::Write;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
@@ -13,7 +13,9 @@ use starknet::core::types::{EmittedEvent, FieldElement};
 use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
-use super::{parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel};
+use super::{
+    parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel, OverlayManifest,
+};
 use crate::contracts::world::test::deploy_world;
 use crate::manifest::{parse_models_events, AbstractManifestError, DeploymentManifest, Manifest};
 use crate::migration::world::WorldDiff;
@@ -382,20 +384,27 @@ fn fetch_remote_manifest() {
         .tokio_handle()
         .block_on(async { deploy_world(&runner, &temp_project_dir, &artifacts_path).await });
 
-    let local_manifest = BaseManifest::load_from_path(
+    let mut local_manifest = BaseManifest::load_from_path(
         &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
+
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
+    )
+    .unwrap();
+
+    local_manifest.merge(overlay_manifest);
 
     let remote_manifest = config.tokio_handle().block_on(async {
         DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
     });
 
-    assert_eq!(local_manifest.models.len(), 5);
-    assert_eq!(local_manifest.contracts.len(), 1);
+    assert_eq!(local_manifest.models.len(), 6);
+    assert_eq!(local_manifest.contracts.len(), 2);
 
-    assert_eq!(remote_manifest.models.len(), 5);
-    assert_eq!(remote_manifest.contracts.len(), 1);
+    assert_eq!(remote_manifest.models.len(), 6);
+    assert_eq!(remote_manifest.contracts.len(), 2);
 
     // compute diff from local and remote manifest
 

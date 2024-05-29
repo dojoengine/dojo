@@ -68,7 +68,8 @@ async fn test_load_from_remote() {
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
+    let mut migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
+    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -114,7 +115,7 @@ async fn test_load_from_remote() {
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 5);
+    assert_eq!(models.len(), 6);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
         "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Position'",
