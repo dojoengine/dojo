@@ -1,8 +1,8 @@
 {
   "world": {
     "kind": "WorldContract",
-    "class_hash": "0x2df73a4ebdcf5658040af9f08e2196e99b9e47df356afe97a276ac25b9c095c",
-    "original_class_hash": "0x2df73a4ebdcf5658040af9f08e2196e99b9e47df356afe97a276ac25b9c095c",
+    "class_hash": "0xf6f44afb3cacbcc01a371aff62c86ca9a45feba065424c99f7cd8637514d8f",
+    "original_class_hash": "0xf6f44afb3cacbcc01a371aff62c86ca9a45feba065424c99f7cd8637514d8f",
     "abi": [
       {
         "type": "impl",
@@ -955,8 +955,8 @@
         ]
       }
     ],
-    "address": "0x468cebdb15d4554064371b80f8b5e96669f5e9b7a62ff4a161b965f565e310b",
-    "transaction_hash": "0x40f3467e169b975fdeb18d1bb704e1620bf5cda974184aef622c21470e5db1",
+    "address": "0x2e31cfde9f9990c7fe44b25043e3c6958a849c0a66ab535686d2b710e97f309",
+    "transaction_hash": "0x7106054ad5c4ccfcd5e512d286ce7cadc5ddc21b8cf058e4daab09743bace76",
     "block_number": 3,
     "seed": "dojo_examples",
     "metadata": {
@@ -975,7 +975,7 @@
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": "0x4ce36ebe24b3ad53dac0a489747ba45bc37d74505236abb34b0edb2611157ff",
+      "address": "0x263f89fc2bdf121a3bdcc9af35eb6b3d5c078f9bcc257e9f5627af81a7607fd",
       "class_hash": "0x6d905953360cf18e3393d128c6ced40b38fc83b033412c8541fd4aba59d2767",
       "original_class_hash": "0x6d905953360cf18e3393d128c6ced40b38fc83b033412c8541fd4aba59d2767",
       "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
@@ -1280,7 +1280,7 @@
     },
     {
       "kind": "DojoContract",
-      "address": "0x1fe99da12c3e61e88f54c332317696da3d1c87ddcf8bd39bcc165c680583e19",
+      "address": "0x2dc27292cc94aa40e4d2d327e511ce02e96f40ca3c41d1f9938860a1a4aee9f",
       "class_hash": "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a",
       "original_class_hash": "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a",
       "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
