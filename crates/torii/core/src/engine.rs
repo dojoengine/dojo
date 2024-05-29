@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -207,7 +207,7 @@ impl<P: Provider + Sync> Engine<P> {
         &mut self,
         from: u64,
         to: u64,
-        mut pending_block_tx: Option<FieldElement>,
+        pending_block_tx: Option<FieldElement>,
     ) -> Result<Option<FieldElement>> {
         // Process all blocks from current to latest.
         let get_events = |token: Option<String>| {
@@ -232,10 +232,11 @@ impl<P: Provider + Sync> Engine<P> {
 
         // Transactions & blocks to process
         let mut last_block = 0_u64;
-        let mut blocks = HashMap::new();
+        let mut blocks = BTreeMap::new();
 
         // Flatten events pages and events according to the pending block cursor
         // to array of (block_number, transaction_hash)
+        let mut pending_block_tx_cursor = pending_block_tx;
         let mut transactions = vec![];
         for events_page in &events_pages {
             for event in &events_page.events {
@@ -269,14 +270,20 @@ impl<P: Provider + Sync> Engine<P> {
 
                 // Then we skip all transactions until we reach the last pending processed
                 // transaction (if any)
-                if let Some(tx) = pending_block_tx {
+                if let Some(tx) = pending_block_tx_cursor {
                     if event.transaction_hash != tx {
                         continue;
                     }
 
-                    // Then we skip that processed transaction
-                    pending_block_tx = None;
-                    continue;
+                    pending_block_tx_cursor = None;
+                }
+
+                // Skip the latest pending block transaction events
+                // * as we might have multiple events for the same transaction
+                if let Some(tx) = pending_block_tx {
+                    if event.transaction_hash == tx {
+                        continue;
+                    }
                 }
 
                 if let Some((_, last_tx_hash)) = transactions.last() {

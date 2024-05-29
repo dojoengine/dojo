@@ -1,5 +1,5 @@
 kind = "Class"
-class_hash = "0xaddf09e93e482181d72694e82a872d138b0a04829900a081dcf7dc83479dc6"
-original_class_hash = "0xaddf09e93e482181d72694e82a872d138b0a04829900a081dcf7dc83479dc6"
+class_hash = "0x2df73a4ebdcf5658040af9f08e2196e99b9e47df356afe97a276ac25b9c095c"
+original_class_hash = "0x2df73a4ebdcf5658040af9f08e2196e99b9e47df356afe97a276ac25b9c095c"
 abi = "manifests/dev/abis/base/dojo_world_world.json"
 name = "dojo::world::world"

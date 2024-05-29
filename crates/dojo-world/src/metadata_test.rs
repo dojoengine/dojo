@@ -147,7 +147,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(env.world_address.is_some());
     assert_eq!(
         env.world_address.unwrap(),
-        "0x763688ab33d79a235541ec71f294ad2293f37c5a2c66253565aff91aa39d7c4",
+        "0x0468cebdb15d4554064371b80f8b5e96669f5e9b7a62ff4a161b965f565e310b"
     );
 
     assert!(env.keystore_path.is_none());
@@ -174,6 +174,7 @@ async fn get_full_dojo_metadata_from_workspace() {
 
     let artifacts = get_artifacts_from_manifest(&manifest_dir);
 
+    dbg!(&artifacts);
     for (abi_subdir, name) in artifacts {
         let artifact = dojo_metadata.artifacts.get(&name);
         assert!(artifact.is_some(), "bad artifact for {}", name);
@@ -223,6 +224,9 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
         // Some models are inside actions, we need a better way to gather those.
         let name = name.replace("_actions_", "::actions::");
         let name = name.replace("::actions_", "::actions::");
+
+        let name = name.replace("_others_", "::others::");
+        let name = name.replace("::others_", "::others::");
         artifacts.push(("models".to_string(), name));
     }
 
@@ -230,6 +234,7 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
     for entry in fs::read_dir(contracts_dir).unwrap().flatten() {
         let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
         let name = name.replace("_actions_", "::actions::");
+        let name = name.replace("_others_", "::others::");
         artifacts.push(("contracts".to_string(), name));
     }
 

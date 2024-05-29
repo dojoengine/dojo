@@ -1,14 +1,14 @@
 use std::time::Duration;
 
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
 use super::{WorldContract, WorldContractReader};
-use crate::manifest::BaseManifest;
+use crate::manifest::{BaseManifest, OverlayManifest};
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
 use crate::migration::{Declarable, Deployable, TxnConfig};
@@ -43,20 +43,31 @@ pub async fn deploy_world(
     // Dev profile is used by default for testing:
     let profile_name = "dev";
 
-    let manifest = BaseManifest::load_from_path(
+    let mut manifest = BaseManifest::load_from_path(
         &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
-    let world = WorldDiff::compute(manifest.clone(), None);
+
+    let overlay_manifest = OverlayManifest::load_from_path(
+        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
+    )
+    .unwrap();
+
+    manifest.merge(overlay_manifest);
+
+    let mut world = WorldDiff::compute(manifest.clone(), None);
+    world.update_order().unwrap();
+
     let account = sequencer.account(0);
 
-    let strategy = prepare_for_migration(
+    let mut strategy = prepare_for_migration(
         None,
         FieldElement::from_hex_be("0x12345").unwrap(),
         target_dir,
         world,
     )
     .unwrap();
+    strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
 
     let base_class_hash =
         strategy.base.unwrap().declare(&account, &TxnConfig::default()).await.unwrap().class_hash;
@@ -107,6 +118,7 @@ pub async fn deploy_world(
                 base_class_hash,
                 &account,
                 &TxnConfig::default(),
+                &contract.diff.init_calldata,
             )
             .await
             .unwrap();
