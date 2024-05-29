@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716989919490,
+  "lastUpdate": 1716993764462,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8785,6 +8785,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16302887,
             "range": "± 276816",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8cfb0ba6d1398c5f77a5ea2fb07a8cd06489f874",
+          "message": "[dojo-core] use const array for pow2 (#1878)\n\n* use const array for pow2\r\n\r\n* fix: fix world address and tests\r\n\r\n* fix: run scarb fmt\r\n\r\n* fix: add tx waiter to avoid test race condition\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-05-29T16:31:22+02:00",
+          "tree_id": "dfc28f26587440b02babb7392cf026c9744f1629",
+          "url": "https://github.com/dojoengine/dojo/commit/8cfb0ba6d1398c5f77a5ea2fb07a8cd06489f874"
+        },
+        "date": 1716993763811,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16475130,
+            "range": "± 241603",
             "unit": "ns/iter"
           }
         ]
