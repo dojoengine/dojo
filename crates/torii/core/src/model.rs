@@ -212,81 +212,50 @@ pub fn build_sql_query(
     entities_table: &str,
     entity_relation_column: &str,
 ) -> Result<String, Error> {
-    fn parse_struct(
+    fn parse_ty(
         path: &str,
-        schema: &Struct,
+        name: &str,
+        ty: &Ty,
         selections: &mut Vec<String>,
         tables: &mut Vec<String>,
     ) {
-        for child in &schema.children {
-            match &child.ty {
-                Ty::Struct(s) => {
-                    let table_name = format!("{}${}", path, child.name);
-                    parse_struct(&table_name, s, selections, tables);
+        match &ty {
+            Ty::Struct(s) => {
+                let table_name = format!("{}${}", path, name);
+                for child in &s.children {
+                    parse_ty(&table_name, &child.name, &child.ty, selections, tables);
+                }
 
-                    tables.push(table_name);
+                tables.push(table_name);
+            }
+            Ty::Tuple(t) => {
+                let table_name = format!("{}${}", path, name);
+                for (i, child) in t.iter().enumerate() {
+                    parse_ty(&table_name, &format!("_{}", i), child, selections, tables);
                 }
-                Ty::Tuple(t) => {
-                    let table_name = format!("{}${}", path, child.name);
-                    let struct_ = Struct {
-                        name: table_name.clone(),
-                        children: t
-                            .iter()
-                            .enumerate()
-                            .map(|(i, ty)| Member {
-                                key: false,
-                                name: format!("_{}", i.to_string()),
-                                ty: ty.clone(),
-                            })
-                            .collect(),
-                    };
-                    parse_struct(&table_name, &struct_, selections, tables);
-                    
-                    tables.push(table_name);
+
+                tables.push(table_name);
+            }
+            Ty::Array(t) => {
+                let table_name = format!("{}${}", path, name);
+                parse_ty(&table_name, "data", &t[0], selections, tables);
+
+                tables.push(table_name);
+            }
+            Ty::Enum(e) => {
+                let table_name = format!("{}${}", path, name);
+
+                for option in &e.options {
+                    parse_ty(&table_name, &option.name, &option.ty, selections, tables);
                 }
-                Ty::Array(t) => {
-                    let table_name = format!("{}${}", path, child.name);
-                    let struct_ = Struct {
-                        name: table_name.clone(),
-                        children: vec![Member {
-                            key: false,
-                            name: "data".to_string(),
-                            ty: t[0].clone(),
-                        }],
-                    };
-                    parse_struct(&table_name, &struct_, selections, tables);
-                    
-                    tables.push(table_name);
-                }
-                Ty::Enum(e) => {
-                    let table_name = format!("{}${}", path, child.name);
-                    let struct_ = Struct {
-                        name: table_name.clone(),
-                        children: e.options.iter().filter(|o| if let Ty::Tuple(t) = &o.ty {
-                            !t.is_empty()
-                        } else {
-                            true
-                        }).map(|option| Member {
-                            key: false,
-                            name: option.name.clone(),
-                            ty: option.ty.clone(),
-                        }).chain(std::iter::once(Member {
-                            key: false,
-                            name: "option".to_string(),
-                            ty: Ty::ByteArray("".to_string()),
-                        })).collect(),
-                    };
-                    parse_struct(&table_name, &struct_, selections, tables);
-                    
-                    tables.push(table_name);
-                }
-                _ => {
-                    // alias selected columns to avoid conflicts in `JOIN`
-                    selections.push(format!(
-                        "{}.external_{} AS \"{}.{}\"",
-                        path, child.name, path, child.name
-                    ));
-                }
+
+                parse_ty(&table_name, "option", &Ty::ByteArray("".to_string()), selections, tables);
+
+                tables.push(table_name);
+            }
+            _ => {
+                // alias selected columns to avoid conflicts in `JOIN`
+                selections.push(format!("{}.external_{} AS \"{}.{}\"", path, name, path, name));
             }
         }
     }
@@ -297,11 +266,10 @@ pub fn build_sql_query(
 
     for ty in model_schemas {
         let schema = ty.as_struct().expect("schema should be struct");
-        let model_table = &schema.name;
         let mut selections = Vec::new();
         let mut tables = Vec::new();
 
-        parse_struct(model_table, schema, &mut selections, &mut tables);
+        parse_ty("", &schema.name, ty, &mut selections, &mut tables);
 
         global_selections.push(selections.join(", "));
         global_tables.extend(tables);
@@ -397,25 +365,29 @@ pub fn map_row_to_ty(path: &str, struct_ty: &mut Struct, row: &SqliteRow) -> Res
                 let path = [path, &member.name].join("$");
                 let mut struct_ = Struct {
                     name: enum_ty.name.clone(),
-                    children: enum_ty.options.iter().filter(|o| if let Ty::Tuple(t) = &o.ty {
-                        !t.is_empty()
-                    } else {
-                        true
-                    }).map(|option| Member {
-                        key: false,
-                        name: option.name.clone(),
-                        ty: option.ty.clone(),
-                    }).chain(std::iter::once(Member {
-                        key: false,
-                        name: "option".to_string(),
-                        ty: Ty::ByteArray("".to_string()),
-                    })).collect(),
+                    children: enum_ty
+                        .options
+                        .iter()
+                        .filter(|o| if let Ty::Tuple(t) = &o.ty { !t.is_empty() } else { true })
+                        .map(|option| Member {
+                            key: false,
+                            name: option.name.clone(),
+                            ty: option.ty.clone(),
+                        })
+                        .chain(std::iter::once(Member {
+                            key: false,
+                            name: "option".to_string(),
+                            ty: Ty::ByteArray("".to_string()),
+                        }))
+                        .collect(),
                 };
                 map_row_to_ty(&path, &mut struct_, row)?;
 
                 // the last element is always gonna be the option
                 let option = struct_.children.pop().expect("qed; option should exist");
-                enum_ty.set_option(option.ty.as_byte_array().expect("qed; option should be byte array"))?;
+                enum_ty.set_option(
+                    option.ty.as_byte_array().expect("qed; option should be byte array"),
+                )?;
 
                 // update the options values
                 let children = struct_.children;
@@ -444,6 +416,10 @@ pub fn map_row_to_ty(path: &str, struct_ty: &mut Struct, row: &SqliteRow) -> Res
                         .collect(),
                 };
                 map_row_to_ty(&path, &mut struct_, row)?;
+
+                for (i, member) in struct_.children.iter().enumerate() {
+                    ty[i] = member.ty.clone();
+                }
             }
             Ty::Array(ty) => {
                 let path = [path, &member.name].join("$");
@@ -500,9 +476,19 @@ mod tests {
                 type_enum: "Primitive".into(),
                 enum_options: None,
             },
+            SqlModelMember {
+                id: "PlayerConfig".into(),
+                name: "name".into(),
+                r#type: "ByteArray".into(),
+                key: false,
+                model_idx: 0,
+                member_idx: 0,
+                type_enum: "ByteArray".into(),
+                enum_options: None,
+            },
         ];
 
-        let expected_ty = Ty::Struct(Struct {
+        let expected_position = Ty::Struct(Struct {
             name: "Position".into(),
             children: vec![
                 dojo_types::schema::Member {
@@ -518,7 +504,17 @@ mod tests {
             ],
         });
 
-        assert_eq!(parse_sql_model_members("Position", &model_members), expected_ty);
+        let expected_player_config = Ty::Struct(Struct {
+            name: "PlayerConfig".into(),
+            children: vec![dojo_types::schema::Member {
+                name: "name".into(),
+                key: false,
+                ty: Ty::ByteArray("".to_string()),
+            }],
+        });
+
+        assert_eq!(parse_sql_model_members("Position", &model_members), expected_position);
+        assert_eq!(parse_sql_model_members("PlayerConfig", &model_members), expected_player_config);
     }
 
     #[test]
@@ -574,9 +570,79 @@ mod tests {
                 type_enum: "Primitive".into(),
                 enum_options: None,
             },
+            SqlModelMember {
+                id: "PlayerConfig".into(),
+                name: "favorite_item".into(),
+                r#type: "Option<u32>".into(),
+                key: false,
+                model_idx: 0,
+                member_idx: 0,
+                type_enum: "Enum".into(),
+                enum_options: Some("None,Some".into()),
+            },
+            SqlModelMember {
+                id: "PlayerConfig".into(),
+                name: "items".into(),
+                r#type: "Array<PlayerItem>".into(),
+                key: false,
+                model_idx: 0,
+                member_idx: 1,
+                type_enum: "Array".into(),
+                enum_options: None,
+            },
+            SqlModelMember {
+                id: "PlayerConfig$items".into(),
+                name: "data".into(),
+                r#type: "PlayerItem".into(),
+                key: false,
+                model_idx: 0,
+                member_idx: 1,
+                type_enum: "Struct".into(),
+                enum_options: None,
+            },
+            SqlModelMember {
+                id: "PlayerConfig$items$data".into(),
+                name: "item_id".into(),
+                r#type: "u32".into(),
+                key: false,
+                model_idx: 0,
+                member_idx: 0,
+                type_enum: "Primitive".into(),
+                enum_options: None,
+            },
+            SqlModelMember {
+                id: "PlayerConfig$items$data".into(),
+                name: "quantity".into(),
+                r#type: "u32".into(),
+                key: false,
+                model_idx: 0,
+                member_idx: 1,
+                type_enum: "Primitive".into(),
+                enum_options: None,
+            },
+            SqlModelMember {
+                id: "PlayerConfig$favorite_item".into(),
+                name: "Some".into(),
+                r#type: "u32".into(),
+                key: false,
+                model_idx: 1,
+                member_idx: 0,
+                type_enum: "Primitive".into(),
+                enum_options: None,
+            },
+            SqlModelMember {
+                id: "PlayerConfig$favorite_item".into(),
+                name: "option".into(),
+                r#type: "Option<u32>".into(),
+                key: false,
+                model_idx: 1,
+                member_idx: 0,
+                type_enum: "Enum".into(),
+                enum_options: Some("None,Some".into()),
+            },
         ];
 
-        let expected_ty = Ty::Struct(Struct {
+        let expected_position = Ty::Struct(Struct {
             name: "Position".into(),
             children: vec![
                 dojo_types::schema::Member {
@@ -611,7 +677,48 @@ mod tests {
             ],
         });
 
-        assert_eq!(parse_sql_model_members("Position", &model_members), expected_ty);
+        let expected_player_config = Ty::Struct(Struct {
+            name: "PlayerConfig".into(),
+            children: vec![
+                dojo_types::schema::Member {
+                    name: "favorite_item".into(),
+                    key: false,
+                    ty: Ty::Enum(Enum {
+                        name: "Option<u32>".into(),
+                        option: None,
+                        options: vec![
+                            EnumOption { name: "None".into(), ty: Ty::Tuple(vec![]) },
+                            EnumOption {
+                                name: "Some".into(),
+                                ty: Ty::Primitive("u32".parse().unwrap()),
+                            },
+                        ],
+                    }),
+                },
+                dojo_types::schema::Member {
+                    name: "items".into(),
+                    key: false,
+                    ty: Ty::Array(vec![Ty::Struct(Struct {
+                        name: "PlayerItem".into(),
+                        children: vec![
+                            Member {
+                                name: "item_id".into(),
+                                key: false,
+                                ty: Ty::Primitive("u32".parse().unwrap()),
+                            },
+                            Member {
+                                name: "quantity".into(),
+                                key: false,
+                                ty: Ty::Primitive("u32".parse().unwrap()),
+                            },
+                        ],
+                    })]),
+                },
+            ],
+        });
+
+        assert_eq!(parse_sql_model_members("Position", &model_members), expected_position);
+        assert_eq!(parse_sql_model_members("PlayerConfig", &model_members), expected_player_config);
     }
 
     #[test]
@@ -650,18 +757,42 @@ mod tests {
 
     #[test]
     fn struct_ty_to_query() {
-        let ty = Ty::Struct(Struct {
+        let position = Ty::Struct(Struct {
             name: "Position".into(),
             children: vec![
+                // dojo_types::schema::Member {
+                //     name: "name".into(),
+                //     key: false,
+                //     ty: Ty::Primitive("felt252".parse().unwrap()),
+                // },
+                // dojo_types::schema::Member {
+                //     name: "age".into(),
+                //     key: false,
+                //     ty: Ty::Primitive("u8".parse().unwrap()),
+                // },
+                // dojo_types::schema::Member {
+                //     name: "vec".into(),
+                //     key: false,
+                //     ty: Ty::Struct(Struct {
+                //         name: "Vec2".into(),
+                //         children: vec![
+                //             Member {
+                //                 name: "x".into(),
+                //                 key: false,
+                //                 ty: Ty::Primitive("u256".parse().unwrap()),
+                //             },
+                //             Member {
+                //                 name: "y".into(),
+                //                 key: false,
+                //                 ty: Ty::Primitive("u256".parse().unwrap()),
+                //             },
+                //         ],
+                //     }),
+                // },
                 dojo_types::schema::Member {
-                    name: "name".into(),
-                    key: false,
-                    ty: Ty::Primitive("felt252".parse().unwrap()),
-                },
-                dojo_types::schema::Member {
-                    name: "age".into(),
-                    key: false,
-                    ty: Ty::Primitive("u8".parse().unwrap()),
+                    name: "player".into(),
+                    key: true,
+                    ty: Ty::Primitive("ContractAddress".parse().unwrap()),
                 },
                 dojo_types::schema::Member {
                     name: "vec".into(),
@@ -672,20 +803,93 @@ mod tests {
                             Member {
                                 name: "x".into(),
                                 key: false,
-                                ty: Ty::Primitive("u256".parse().unwrap()),
+                                ty: Ty::Primitive("u32".parse().unwrap()),
                             },
                             Member {
                                 name: "y".into(),
                                 key: false,
-                                ty: Ty::Primitive("u256".parse().unwrap()),
+                                ty: Ty::Primitive("u32".parse().unwrap()),
                             },
                         ],
                     }),
                 },
+                dojo_types::schema::Member {
+                    name: "test_everything".into(),
+                    key: false,
+                    ty: Ty::Array(vec![Ty::Struct(Struct {
+                        name: "TestEverything".into(),
+                        children: vec![Member {
+                            name: "data".into(),
+                            key: false,
+                            ty: Ty::Tuple(vec![
+                                Ty::Array(vec![Ty::Primitive("u32".parse().unwrap())]),
+                                Ty::Array(vec![Ty::Array(vec![Ty::Tuple(vec![
+                                    Ty::Primitive("u32".parse().unwrap()),
+                                    Ty::Struct(Struct {
+                                        name: "Vec2".into(),
+                                        children: vec![
+                                            Member {
+                                                name: "x".into(),
+                                                key: false,
+                                                ty: Ty::Primitive("u32".parse().unwrap()),
+                                            },
+                                            Member {
+                                                name: "y".into(),
+                                                key: false,
+                                                ty: Ty::Primitive("u32".parse().unwrap()),
+                                            },
+                                        ],
+                                    }),
+                                ])])]),
+                            ]),
+                        }],
+                    })]),
+                },
             ],
         });
 
-        let query = build_sql_query(&vec![ty], "entities", "entity_id").unwrap();
+        let player_config = Ty::Struct(Struct {
+            name: "PlayerConfig".into(),
+            children: vec![
+                dojo_types::schema::Member {
+                    name: "favorite_item".into(),
+                    key: false,
+                    ty: Ty::Enum(Enum {
+                        name: "Option<u32>".into(),
+                        option: None,
+                        options: vec![
+                            EnumOption { name: "None".into(), ty: Ty::Tuple(vec![]) },
+                            EnumOption {
+                                name: "Some".into(),
+                                ty: Ty::Primitive("u32".parse().unwrap()),
+                            },
+                        ],
+                    }),
+                },
+                dojo_types::schema::Member {
+                    name: "items".into(),
+                    key: false,
+                    ty: Ty::Array(vec![Ty::Struct(Struct {
+                        name: "PlayerItem".into(),
+                        children: vec![
+                            Member {
+                                name: "item_id".into(),
+                                key: false,
+                                ty: Ty::Primitive("u32".parse().unwrap()),
+                            },
+                            Member {
+                                name: "quantity".into(),
+                                key: false,
+                                ty: Ty::Primitive("u32".parse().unwrap()),
+                            },
+                        ],
+                    })]),
+                },
+            ],
+        });
+
+        let query =
+            build_sql_query(&vec![position, player_config], "entities", "entity_id").unwrap();
         assert_eq!(
             query,
             r#"SELECT entities.id, entities.keys, Position.external_name AS "Position.name", Position.external_age AS "Position.age", Position$vec.external_x AS "Position$vec.x", Position$vec.external_y AS "Position$vec.y" FROM entities JOIN Position ON entities.id = Position.entity_id  JOIN Position$vec ON entities.id = Position$vec.entity_id"#
