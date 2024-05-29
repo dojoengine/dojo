@@ -1,6 +1,8 @@
 use array::{ArrayTrait, SpanTrait};
 use starknet::{ClassHash, ContractAddress, Felt252TryIntoContractAddress, Felt252TryIntoClassHash};
-use dojo::packing::{shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size};
+use dojo::packing::{
+    shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const
+};
 use integer::U256BitAnd;
 use option::OptionTrait;
 use debug::PrintTrait;
@@ -13,6 +15,17 @@ fn test_bit_fpow() {
     assert(
         fpow(
             2, 250
+        ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
+        ''
+    )
+}
+
+
+#[test]
+fn test_bit_pow2_const() {
+    assert(
+        pow2_const(
+            250
         ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
         ''
     )
