@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716997612341,
+  "lastUpdate": 1717011440723,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8875,6 +8875,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17274844,
             "range": "± 380762",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5af2bc695be959b724e5bb386169d950cd2d3d7a",
+          "message": "feat(dojo-bindgen): support new layout types (#1954)\n\n* feat: new types in unity bindgen\r\n\r\n* feat: add types support to typescript codegen too\r\n\r\n* feat: handle token directly to get type name\r\n\r\n* chore: correct type names\r\n\r\n* chore: update to correct tuple  types\r\n\r\n* fmt\r\n\r\n* Update mod.rs\r\n\r\n* Update mod.rs\r\n\r\n* Update mod.rs\r\n\r\n* feat: add support for complex enums to unity bindgen\r\n\r\n* feat: support generic args in typescript\r\n\r\n* fmt\r\n\r\n* feat: newer tuple type for c#\r\n\r\n* feat: value type name in record field\r\n\r\n* feat: generic rust like enum for unity bindgen\r\n\r\n* refacotr: optional generic args for record\r\n\r\n* feat: add suppport for generic enums for typescript v2\r\n\r\n* feat: update test & disable typescript\r\n\r\n* fix: update unity systsem bindgen to use new felt getter #2008\r\n\r\n* chore: clippy\r\n\r\n* clean uop",
+          "timestamp": "2024-05-29T21:25:26+02:00",
+          "tree_id": "55d17a093a531179da1eea62da9481e0f6452882",
+          "url": "https://github.com/dojoengine/dojo/commit/5af2bc695be959b724e5bb386169d950cd2d3d7a"
+        },
+        "date": 1717011440084,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16946945,
+            "range": "± 251294",
             "unit": "ns/iter"
           }
         ]
