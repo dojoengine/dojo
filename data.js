@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716981425441,
+  "lastUpdate": 1716987167351,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8725,6 +8725,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16679967,
             "range": "± 263462",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "61c6f399447d2bd01073f9e2a8b1d50f658b0d97",
+          "message": "feat(torii-core): multi dimensional array support (#1994)\n\n* feat(torii-core): multi dimensional array support\r\n\r\n* refactor: model data objects construction\r\n\r\n* feat: handle 2d+ arrays in graphql\r\n\r\n* fmt\r\n\r\n* clippy\r\n\r\n* fix: clippy\r\n\r\n* fmt\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-05-29T14:41:31+02:00",
+          "tree_id": "d9b4b6781f2436745a6258ea044b0dee6fcd0838",
+          "url": "https://github.com/dojoengine/dojo/commit/61c6f399447d2bd01073f9e2a8b1d50f658b0d97"
+        },
+        "date": 1716987166139,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16389817,
+            "range": "± 430461",
             "unit": "ns/iter"
           }
         ]
