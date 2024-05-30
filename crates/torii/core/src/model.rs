@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use async_trait::async_trait;
@@ -211,13 +212,17 @@ pub fn build_sql_query(
     model_schemas: &Vec<Ty>,
     entities_table: &str,
     entity_relation_column: &str,
-) -> Result<String, Error> {
+    where_clause: Option<&str>,
+) -> Result<(String, HashMap<String, String>), Error> {
     fn parse_ty(
         path: &str,
         name: &str,
         ty: &Ty,
         selections: &mut Vec<String>,
         tables: &mut Vec<String>,
+        entities_table: &str,
+        entity_relation_column: &str,
+        arrays_queries: &mut HashMap<String, (Vec<String>, Vec<String>)>,
     ) {
         match &ty {
             Ty::Struct(s) => {
@@ -227,7 +232,7 @@ pub fn build_sql_query(
                     if path.is_empty() { s.name.clone() } else { format!("{}${}", path, name) };
 
                 for child in &s.children {
-                    parse_ty(&table_name, &child.name, &child.ty, selections, tables);
+                    parse_ty(&table_name, &child.name, &child.ty, selections, tables, entities_table, entity_relation_column, arrays_queries);
                 }
 
                 tables.push(table_name);
@@ -235,20 +240,26 @@ pub fn build_sql_query(
             Ty::Tuple(t) => {
                 let table_name = format!("{}${}", path, name);
                 for (i, child) in t.iter().enumerate() {
-                    parse_ty(&table_name, &format!("_{}", i), child, selections, tables);
+                    parse_ty(&table_name, &format!("_{}", i), child, selections, tables, entities_table, entity_relation_column, arrays_queries);
                 }
 
                 tables.push(table_name);
             }
             Ty::Array(t) => {
                 let table_name = format!("{}${}", path, name);
-                parse_ty(&table_name, "data", &t[0], selections, tables);
 
-                tables.push(table_name);
+                let mut array_selections = Vec::new();
+                let mut array_tables = vec![table_name.clone()];
+                
+                parse_ty(&table_name, "data", &t[0], &mut array_selections, &mut array_tables, entities_table, entity_relation_column, arrays_queries);
+
+                arrays_queries.insert(table_name, (array_selections, array_tables));
+
             }
             Ty::Enum(e) => {
                 let table_name = format!("{}${}", path, name);
 
+                let mut is_typed = false;
                 for option in &e.options {
                     if let Ty::Tuple(t) = &option.ty {
                         if t.is_empty() {
@@ -256,12 +267,14 @@ pub fn build_sql_query(
                         }
                     }
 
-                    parse_ty(&table_name, &option.name, &option.ty, selections, tables);
+                    parse_ty(&table_name, &option.name, &option.ty, selections, tables, entities_table, entity_relation_column, arrays_queries);
+                    is_typed = true;
                 }
 
-                parse_ty(&table_name, "option", &Ty::ByteArray("".to_string()), selections, tables);
-
-                tables.push(table_name);
+                selections.push(format!("{}.external_{} AS \"{}.{}\"", path, name, path, name));
+                if is_typed {
+                    tables.push(table_name);
+                }
             }
             _ => {
                 // alias selected columns to avoid conflicts in `JOIN`
@@ -273,9 +286,11 @@ pub fn build_sql_query(
     let mut global_selections = Vec::new();
     let mut global_tables = Vec::new();
 
+    let mut arrays_queries = HashMap::new();
+
     for ty in model_schemas {
         let schema = ty.as_struct().expect("schema should be struct");
-        parse_ty("", &schema.name, ty, &mut global_selections, &mut global_tables);
+        parse_ty("", &schema.name, ty, &mut global_selections, &mut global_tables, entities_table, entity_relation_column, &mut arrays_queries);
     }
 
     // TODO: Fallback to subqueries, SQLite has a max limit of 64 on 'table 'JOIN'
@@ -292,14 +307,63 @@ pub fn build_sql_query(
         .collect::<Vec<_>>()
         .join(" ");
 
-    Ok(format!(
+    let mut formatted_arrays_queries: HashMap<String, String> = arrays_queries
+        .into_iter()
+        .map(|(table, (selections, tables))| {
+            let mut selections_clause = selections.join(", ");
+            if !selections_clause.is_empty() {
+                selections_clause = format!(", {}", selections_clause);
+            }
+
+            let join_clause = tables
+                .iter()
+                .enumerate()
+                .map(|(idx, table)| {
+                    if idx == 0 {
+                        format!(" JOIN {table} ON {entities_table}.id = {table}.{entity_relation_column}")
+                    } else {
+                        format!(" JOIN {table} ON {table}.full_array_id = {prev_table}.full_array_id", prev_table = tables[idx - 1])
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+
+            (table, format!(
+                "SELECT {entities_table}.id, {entities_table}.keys{selections_clause} FROM \
+                 {entities_table}{join_clause}",
+            ))
+        })
+        .collect();
+
+    let mut query = format!(
         "SELECT {entities_table}.id, {entities_table}.keys, {selections_clause} FROM \
          {entities_table}{join_clause}"
-    ))
+    );
+
+    if let Some(where_clause) = where_clause {
+        query = format!("{} WHERE {}", query, where_clause);
+        formatted_arrays_queries = formatted_arrays_queries
+            .into_iter()
+            .map(|(table, query)| (table, format!("{} WHERE {}", query, where_clause)))
+            .collect();
+    }
+
+
+    Ok((query, formatted_arrays_queries))
 }
 
 /// Populate the values of a Ty (schema) from SQLite row.
-pub fn map_row_to_ty(path: &str, name: &str, ty: &mut Ty, row: &SqliteRow) -> Result<(), Error> {
+pub fn map_row_to_ty(
+    path: &str,
+    name: &str,
+    ty: &mut Ty,
+    // the row that contains non dynamic data for Ty
+    row: &SqliteRow,
+    // a hashmap where keys are the paths for the model
+    // arrays and values are the rows mapping to each element
+    // in the array
+    arrays_rows: &HashMap<String, Vec<SqliteRow>>,
+) -> Result<(), Error> {
     let column_name = format!("{}.{}", path, name);
     match ty {
         Ty::Primitive(primitive) => {
@@ -364,40 +428,48 @@ pub fn map_row_to_ty(path: &str, name: &str, ty: &mut Ty, row: &SqliteRow) -> Re
             };
         }
         Ty::Enum(enum_ty) => {
+            let option = row.try_get::<String, &str>(&column_name)?;
+            enum_ty.set_option(&option)?;
+
             let path = [path, &name].join("$");
             for option in &mut enum_ty.options {
-                map_row_to_ty(&path, &option.name, &mut option.ty, row)?;
+                map_row_to_ty(&path, &option.name, &mut option.ty, row, arrays_rows)?;
             }
-
-            let mut option = Ty::ByteArray("".to_string());
-            map_row_to_ty(&path, "option", &mut option, row)?;
-
-            enum_ty.set_option(option.as_byte_array().unwrap())?;
         }
         Ty::Struct(struct_ty) => {
             // struct can be the main entrypoint to our model schema
             // so we dont format the table name if the path is empty
-            let path = if path.is_empty() {
-                struct_ty.name.clone()
-            } else {
-                [path, &name].join("$")
-            };
-            
+            let path =
+                if path.is_empty() { struct_ty.name.clone() } else { [path, &name].join("$") };
+
             for member in &mut struct_ty.children {
-                map_row_to_ty(&path, &member.name, &mut member.ty, row)?;
+                map_row_to_ty(&path, &member.name, &mut member.ty, row, arrays_rows)?;
             }
         }
         Ty::Tuple(ty) => {
             let path = [path, &name].join("$");
-            
+
             for (i, member) in ty.iter_mut().enumerate() {
-                map_row_to_ty(&path, &format!("_{}", i), member, row)?;
+                map_row_to_ty(&path, &format!("_{}", i), member, row, arrays_rows)?;
             }
         }
         Ty::Array(ty) => {
             let path = [path, &name].join("$");
-            let member = ty.first_mut().expect("Array should have a member");
-            map_row_to_ty(&path, "data", member, row)?;
+            // filter by entity id in case we have multiple entities
+            let rows = arrays_rows.get(&path).expect("qed; rows should exist").iter().filter(|array_row| {
+                array_row.get::<String, _>("id") == row.get::<String, _>("id")
+            }).collect::<Vec<_>>();
+
+            // map each row to the ty of the array
+            let tys = rows
+                .iter()
+                .map(|row| {
+                    let mut ty = ty[0].clone();
+                    map_row_to_ty(&path, "data", &mut ty, row, arrays_rows).map(|_| ty)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            *ty = tys;
         }
         Ty::ByteArray(bytearray) => {
             let value = row.try_get::<String, &str>(&column_name)?;
@@ -413,6 +485,8 @@ pub fn map_row_to_ty(path: &str, name: &str, ty: &mut Ty, row: &SqliteRow) -> Re
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 
     use super::{build_sql_query, SqlModelMember};
@@ -854,10 +928,16 @@ mod tests {
         });
 
         let query =
-            build_sql_query(&vec![position, player_config], "entities", "entity_id").unwrap();
+            build_sql_query(&vec![position, player_config], "entities", "entity_id", None).unwrap();
+
+        for array_query in query.1.values() {
+            println!("{}", array_query);
+        }
+
+        let expected_query = r#"SELECT entities.id, entities.keys, Position.external_name AS "Position.name", Position.external_age AS "Position.age", Position$vec.external_x AS "Position$vec.x", Position$vec.external_y AS "Position$vec.y" FROM entities JOIN Position ON entities.id = Position.entity_id  JOIN Position$vec ON entities.id = Position$vec.entity_id"#;
         assert_eq!(
             query,
-            r#"SELECT entities.id, entities.keys, Position.external_name AS "Position.name", Position.external_age AS "Position.age", Position$vec.external_x AS "Position$vec.x", Position$vec.external_y AS "Position$vec.y" FROM entities JOIN Position ON entities.id = Position.entity_id  JOIN Position$vec ON entities.id = Position$vec.entity_id"#
+            (expected_query.to_string(), HashMap::new())
         );
     }
 }

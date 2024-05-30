@@ -4,6 +4,7 @@ pub mod subscriptions;
 #[cfg(test)]
 mod tests;
 
+use std::collections::HashMap;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -235,16 +236,19 @@ impl DojoWorld {
             let model_ids: Vec<&str> = models_str.split(',').collect();
             let schemas = self.model_cache.schemas(model_ids).await?;
 
-            let entity_query = format!(
-                "{} WHERE {table}.id = ?",
-                build_sql_query(&schemas, table, entity_relation_column)?
-            );
+            let (entity_query, arrays_queries) = build_sql_query(&schemas, table, entity_relation_column, Some(&format!("{table}.id = ?")))?;
+
             let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
+            let mut arrays_rows = HashMap::new();
+            for (name, query) in arrays_queries {
+                let rows = sqlx::query(&query).bind(&entity_id).fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, rows);
+            }
 
             let models = schemas
                 .into_iter()
                 .map(|mut s| {
-                    map_row_to_ty("", &s.name(), &mut s, &row)?;
+                    map_row_to_ty("", &s.name(), &mut s, &row, &arrays_rows)?;
 
                     Ok(s.as_struct()
                         .expect("schema should be struct")
@@ -320,21 +324,28 @@ impl DojoWorld {
         let schemas = self.model_cache.schemas(model_ids).await?;
 
         // query to filter with limit and offset
-        let entities_query = format!(
-            "{} WHERE {table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?",
-            build_sql_query(&schemas, table, entity_relation_column)?
-        );
+        let (entities_query, arrays_queries) = build_sql_query(&schemas, table, entity_relation_column, Some(&format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")))?;
         let db_entities = sqlx::query(&entities_query)
             .bind(&keys_pattern)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
             .await?;
+        let mut arrays_rows = HashMap::new();
+        for (name, query) in arrays_queries {
+            let rows = sqlx::query(&query)
+                .bind(&keys_pattern)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?;
+            arrays_rows.insert(name, rows);
+        }
 
         Ok((
             db_entities
                 .iter()
-                .map(|row| Self::map_row_to_entity(row, &schemas))
+                .map(|row| Self::map_row_to_entity(row, &arrays_rows, &schemas))
                 .collect::<Result<Vec<_>, Error>>()?,
             total_count,
         ))
@@ -427,16 +438,19 @@ impl DojoWorld {
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
-        let member_query = format!(
-            "{} WHERE {table_name}.{column_name} {comparison_operator} ?",
-            build_sql_query(&schemas, table, entity_relation_column)?
-        );
+        let (entity_query, arrays_queries) = build_sql_query(&schemas, table, entity_relation_column, Some(&format!("{table_name}.{column_name} {comparison_operator} ?")))?;
 
         let db_entities =
-            sqlx::query(&member_query).bind(comparison_value).fetch_all(&self.pool).await?;
+            sqlx::query(&entity_query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
+        let mut arrays_rows = HashMap::new();
+        for (name, query) in arrays_queries {
+            let rows = sqlx::query(&query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
+            arrays_rows.insert(name, rows);
+        }
+        
         let entities_collection = db_entities
             .iter()
-            .map(|row| Self::map_row_to_entity(row, &schemas))
+            .map(|row| Self::map_row_to_entity(row, &arrays_rows, &schemas))
             .collect::<Result<Vec<_>, Error>>()?;
         // Since there is not limit and offset, total_count is same as number of entities
         let total_count = entities_collection.len() as u32;
@@ -687,14 +701,14 @@ impl DojoWorld {
         Ok(RetrieveEventsResponse { events })
     }
 
-    fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
+    fn map_row_to_entity(row: &SqliteRow, arrays_rows: &HashMap<String, Vec<SqliteRow>>, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
         let hashed_keys =
             FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
         let models = schemas
             .iter()
             .map(|schema| {
                 let mut schema = schema.to_owned();
-                map_row_to_ty("", &schema.name(), &mut schema, row)?;
+                map_row_to_ty("", &schema.name(), &mut schema, row, &arrays_rows)?;
                 Ok(schema
                     .as_struct()
                     .expect("schema should be struct")

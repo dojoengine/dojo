@@ -101,16 +101,19 @@ impl Service {
                 let model_ids: Vec<&str> = model_ids.split(',').collect();
                 let schemas = cache.schemas(model_ids).await?;
 
-                let entity_query = format!(
-                    "{} WHERE event_messages.id = ?",
-                    build_sql_query(&schemas, "event_messages", "event_message_id")?
-                );
+                let (entity_query, arrays_queries) = build_sql_query(&schemas, "event_messages", "event_message_id", Some("event_messages.id = ?"))?;
+
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
+                let mut arrays_rows = HashMap::new();
+                for (name, query) in arrays_queries {
+                    let rows = sqlx::query(&query).bind(hashed_keys).fetch_all(&pool).await?;
+                    arrays_rows.insert(name, rows);
+                }
 
                 let models = schemas
                     .into_iter()
                     .map(|mut s| {
-                        map_row_to_ty("", &s.name(), &mut s, &row)?;
+                        map_row_to_ty("", &s.name(), &mut s, &row, &arrays_rows)?;
                         Ok(s.as_struct()
                             .expect("schema should be a struct")
                             .to_owned()
