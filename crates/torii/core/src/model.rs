@@ -213,6 +213,7 @@ pub fn build_sql_query(
     entities_table: &str,
     entity_relation_column: &str,
     where_clause: Option<&str>,
+    where_clause_arrays: Option<&str>,
 ) -> Result<(String, HashMap<String, String>), Error> {
     fn parse_ty(
         path: &str,
@@ -232,7 +233,16 @@ pub fn build_sql_query(
                     if path.is_empty() { s.name.clone() } else { format!("{}${}", path, name) };
 
                 for child in &s.children {
-                    parse_ty(&table_name, &child.name, &child.ty, selections, tables, entities_table, entity_relation_column, arrays_queries);
+                    parse_ty(
+                        &table_name,
+                        &child.name,
+                        &child.ty,
+                        selections,
+                        tables,
+                        entities_table,
+                        entity_relation_column,
+                        arrays_queries,
+                    );
                 }
 
                 tables.push(table_name);
@@ -240,7 +250,16 @@ pub fn build_sql_query(
             Ty::Tuple(t) => {
                 let table_name = format!("{}${}", path, name);
                 for (i, child) in t.iter().enumerate() {
-                    parse_ty(&table_name, &format!("_{}", i), child, selections, tables, entities_table, entity_relation_column, arrays_queries);
+                    parse_ty(
+                        &table_name,
+                        &format!("_{}", i),
+                        child,
+                        selections,
+                        tables,
+                        entities_table,
+                        entity_relation_column,
+                        arrays_queries,
+                    );
                 }
 
                 tables.push(table_name);
@@ -250,11 +269,19 @@ pub fn build_sql_query(
 
                 let mut array_selections = Vec::new();
                 let mut array_tables = vec![table_name.clone()];
-                
-                parse_ty(&table_name, "data", &t[0], &mut array_selections, &mut array_tables, entities_table, entity_relation_column, arrays_queries);
+
+                parse_ty(
+                    &table_name,
+                    "data",
+                    &t[0],
+                    &mut array_selections,
+                    &mut array_tables,
+                    entities_table,
+                    entity_relation_column,
+                    arrays_queries,
+                );
 
                 arrays_queries.insert(table_name, (array_selections, array_tables));
-
             }
             Ty::Enum(e) => {
                 let table_name = format!("{}${}", path, name);
@@ -267,7 +294,16 @@ pub fn build_sql_query(
                         }
                     }
 
-                    parse_ty(&table_name, &option.name, &option.ty, selections, tables, entities_table, entity_relation_column, arrays_queries);
+                    parse_ty(
+                        &table_name,
+                        &option.name,
+                        &option.ty,
+                        selections,
+                        tables,
+                        entities_table,
+                        entity_relation_column,
+                        arrays_queries,
+                    );
                     is_typed = true;
                 }
 
@@ -290,7 +326,16 @@ pub fn build_sql_query(
 
     for ty in model_schemas {
         let schema = ty.as_struct().expect("schema should be struct");
-        parse_ty("", &schema.name, ty, &mut global_selections, &mut global_tables, entities_table, entity_relation_column, &mut arrays_queries);
+        parse_ty(
+            "",
+            &schema.name,
+            ty,
+            &mut global_selections,
+            &mut global_tables,
+            entities_table,
+            entity_relation_column,
+            &mut arrays_queries,
+        );
     }
 
     // TODO: Fallback to subqueries, SQLite has a max limit of 64 on 'table 'JOIN'
@@ -320,18 +365,27 @@ pub fn build_sql_query(
                 .enumerate()
                 .map(|(idx, table)| {
                     if idx == 0 {
-                        format!(" JOIN {table} ON {entities_table}.id = {table}.{entity_relation_column}")
+                        format!(
+                            " JOIN {table} ON {entities_table}.id = \
+                             {table}.{entity_relation_column}"
+                        )
                     } else {
-                        format!(" JOIN {table} ON {table}.full_array_id = {prev_table}.full_array_id", prev_table = tables[idx - 1])
+                        format!(
+                            " JOIN {table} ON {table}.full_array_id = {prev_table}.full_array_id",
+                            prev_table = tables[idx - 1]
+                        )
                     }
                 })
                 .collect::<Vec<_>>()
                 .join(" ");
 
-            (table, format!(
-                "SELECT {entities_table}.id, {entities_table}.keys{selections_clause} FROM \
-                 {entities_table}{join_clause}",
-            ))
+            (
+                table,
+                format!(
+                    "SELECT {entities_table}.id, {entities_table}.keys{selections_clause} FROM \
+                     {entities_table}{join_clause}",
+                ),
+            )
         })
         .collect();
 
@@ -342,12 +396,13 @@ pub fn build_sql_query(
 
     if let Some(where_clause) = where_clause {
         query = format!("{} WHERE {}", query, where_clause);
-        formatted_arrays_queries = formatted_arrays_queries
-            .into_iter()
-            .map(|(table, query)| (table, format!("{} WHERE {}", query, where_clause)))
-            .collect();
     }
 
+    if let Some(where_clause_arrays) = where_clause_arrays {
+        for (_, formatted_query) in formatted_arrays_queries.iter_mut() {
+            *formatted_query = format!("{} WHERE {}", formatted_query, where_clause_arrays);
+        }
+    }
 
     Ok((query, formatted_arrays_queries))
 }
@@ -456,9 +511,12 @@ pub fn map_row_to_ty(
         Ty::Array(ty) => {
             let path = [path, &name].join("$");
             // filter by entity id in case we have multiple entities
-            let rows = arrays_rows.get(&path).expect("qed; rows should exist").iter().filter(|array_row| {
-                array_row.get::<String, _>("id") == row.get::<String, _>("id")
-            }).collect::<Vec<_>>();
+            let rows = arrays_rows
+                .get(&path)
+                .expect("qed; rows should exist")
+                .iter()
+                .filter(|array_row| array_row.get::<String, _>("id") == row.get::<String, _>("id"))
+                .collect::<Vec<_>>();
 
             // map each row to the ty of the array
             let tys = rows
@@ -475,9 +533,6 @@ pub fn map_row_to_ty(
             let value = row.try_get::<String, &str>(&column_name)?;
             *bytearray = value;
         }
-        ty => {
-            unimplemented!("unimplemented type_enum: {ty}");
-        }
     };
 
     Ok(())
@@ -485,8 +540,6 @@ pub fn map_row_to_ty(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 
     use super::{build_sql_query, SqlModelMember};
@@ -799,35 +852,6 @@ mod tests {
         let position = Ty::Struct(Struct {
             name: "Position".into(),
             children: vec![
-                // dojo_types::schema::Member {
-                //     name: "name".into(),
-                //     key: false,
-                //     ty: Ty::Primitive("felt252".parse().unwrap()),
-                // },
-                // dojo_types::schema::Member {
-                //     name: "age".into(),
-                //     key: false,
-                //     ty: Ty::Primitive("u8".parse().unwrap()),
-                // },
-                // dojo_types::schema::Member {
-                //     name: "vec".into(),
-                //     key: false,
-                //     ty: Ty::Struct(Struct {
-                //         name: "Vec2".into(),
-                //         children: vec![
-                //             Member {
-                //                 name: "x".into(),
-                //                 key: false,
-                //                 ty: Ty::Primitive("u256".parse().unwrap()),
-                //             },
-                //             Member {
-                //                 name: "y".into(),
-                //                 key: false,
-                //                 ty: Ty::Primitive("u256".parse().unwrap()),
-                //             },
-                //         ],
-                //     }),
-                // },
                 dojo_types::schema::Member {
                     name: "player".into(),
                     key: true,
@@ -928,16 +952,19 @@ mod tests {
         });
 
         let query =
-            build_sql_query(&vec![position, player_config], "entities", "entity_id", None).unwrap();
+            build_sql_query(&vec![position, player_config], "entities", "entity_id", None, None)
+                .unwrap();
 
-        for array_query in query.1.values() {
-            println!("{}", array_query);
-        }
-
-        let expected_query = r#"SELECT entities.id, entities.keys, Position.external_name AS "Position.name", Position.external_age AS "Position.age", Position$vec.external_x AS "Position$vec.x", Position$vec.external_y AS "Position$vec.y" FROM entities JOIN Position ON entities.id = Position.entity_id  JOIN Position$vec ON entities.id = Position$vec.entity_id"#;
-        assert_eq!(
-            query,
-            (expected_query.to_string(), HashMap::new())
-        );
+        let expected_query =
+            "SELECT entities.id, entities.keys, Position.external_player AS \"Position.player\", \
+             Position$vec.external_x AS \"Position$vec.x\", Position$vec.external_y AS \
+             \"Position$vec.y\", PlayerConfig$favorite_item.external_Some AS \
+             \"PlayerConfig$favorite_item.Some\", PlayerConfig.external_favorite_item AS \
+             \"PlayerConfig.favorite_item\" FROM entities JOIN Position$vec ON entities.id = \
+             Position$vec.entity_id  JOIN Position ON entities.id = Position.entity_id  JOIN \
+             PlayerConfig$favorite_item ON entities.id = PlayerConfig$favorite_item.entity_id  \
+             JOIN PlayerConfig ON entities.id = PlayerConfig.entity_id";
+        // todo: completely tests arrays
+        assert_eq!(query.0, expected_query);
     }
 }

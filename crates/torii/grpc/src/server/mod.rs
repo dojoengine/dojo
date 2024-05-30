@@ -32,6 +32,7 @@ use tonic::{Request, Response, Status};
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
+use tracing::debug;
 
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
@@ -236,7 +237,13 @@ impl DojoWorld {
             let model_ids: Vec<&str> = models_str.split(',').collect();
             let schemas = self.model_cache.schemas(model_ids).await?;
 
-            let (entity_query, arrays_queries) = build_sql_query(&schemas, table, entity_relation_column, Some(&format!("{table}.id = ?")))?;
+            let (entity_query, arrays_queries) = build_sql_query(
+                &schemas,
+                table,
+                entity_relation_column,
+                Some(&format!("{table}.id = ?")),
+                Some(&format!("{table}.id = ?")),
+            )?;
 
             let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
             let mut arrays_rows = HashMap::new();
@@ -324,7 +331,13 @@ impl DojoWorld {
         let schemas = self.model_cache.schemas(model_ids).await?;
 
         // query to filter with limit and offset
-        let (entities_query, arrays_queries) = build_sql_query(&schemas, table, entity_relation_column, Some(&format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")))?;
+        let (entities_query, arrays_queries) = build_sql_query(
+            &schemas,
+            table,
+            entity_relation_column,
+            Some(&format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")),
+            Some(&format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")),
+        )?;
         let db_entities = sqlx::query(&entities_query)
             .bind(&keys_pattern)
             .bind(limit)
@@ -438,16 +451,23 @@ impl DojoWorld {
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
-        let (entity_query, arrays_queries) = build_sql_query(&schemas, table, entity_relation_column, Some(&format!("{table_name}.{column_name} {comparison_operator} ?")))?;
+        let (entity_query, arrays_queries) = build_sql_query(
+            &schemas,
+            table,
+            entity_relation_column,
+            Some(&format!("{table_name}.{column_name} {comparison_operator} ?")),
+            None,
+        )?;
 
         let db_entities =
             sqlx::query(&entity_query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
         let mut arrays_rows = HashMap::new();
         for (name, query) in arrays_queries {
-            let rows = sqlx::query(&query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
+            let rows =
+                sqlx::query(&query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
             arrays_rows.insert(name, rows);
         }
-        
+
         let entities_collection = db_entities
             .iter()
             .map(|row| Self::map_row_to_entity(row, &arrays_rows, &schemas))
@@ -701,7 +721,11 @@ impl DojoWorld {
         Ok(RetrieveEventsResponse { events })
     }
 
-    fn map_row_to_entity(row: &SqliteRow, arrays_rows: &HashMap<String, Vec<SqliteRow>>, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
+    fn map_row_to_entity(
+        row: &SqliteRow,
+        arrays_rows: &HashMap<String, Vec<SqliteRow>>,
+        schemas: &[Ty],
+    ) -> Result<proto::types::Entity, Error> {
         let hashed_keys =
             FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
         let models = schemas

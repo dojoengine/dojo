@@ -64,7 +64,7 @@ impl TryFrom<Ty> for proto::types::Ty {
             Ty::Primitive(primitive) => {
                 Some(proto::types::ty::TyType::Primitive(primitive.try_into()?))
             }
-            Ty::Enum(r#enum) => Some(proto::types::ty::TyType::Enum(r#enum.into())),
+            Ty::Enum(r#enum) => Some(proto::types::ty::TyType::Enum(r#enum.try_into()?)),
             Ty::Struct(r#struct) => Some(proto::types::ty::TyType::Struct(r#struct.try_into()?)),
             Ty::Tuple(tuple) => Some(proto::types::ty::TyType::Tuple(proto::types::Array {
                 children: tuple
@@ -107,35 +107,50 @@ impl TryFrom<Member> for proto::types::Member {
     }
 }
 
-impl From<proto::types::EnumOption> for EnumOption {
-    fn from(option: proto::types::EnumOption) -> Self {
-        EnumOption { name: option.name, ty: Ty::Tuple(vec![]) }
+impl TryFrom<proto::types::EnumOption> for EnumOption {
+    type Error = SchemaError;
+    fn try_from(option: proto::types::EnumOption) -> Result<Self, Self::Error> {
+        Ok(EnumOption {
+            name: option.name,
+            ty: option.ty.ok_or(SchemaError::MissingExpectedData)?.try_into()?,
+        })
     }
 }
 
-impl From<EnumOption> for proto::types::EnumOption {
-    fn from(option: EnumOption) -> Self {
-        proto::types::EnumOption { name: option.name, ty: None }
+impl TryFrom<EnumOption> for proto::types::EnumOption {
+    type Error = SchemaError;
+    fn try_from(option: EnumOption) -> Result<Self, Self::Error> {
+        Ok(proto::types::EnumOption { name: option.name, ty: Some(option.ty.try_into()?) })
     }
 }
 
-impl From<proto::types::Enum> for Enum {
-    fn from(r#enum: proto::types::Enum) -> Self {
-        Enum {
+impl TryFrom<proto::types::Enum> for Enum {
+    type Error = SchemaError;
+    fn try_from(r#enum: proto::types::Enum) -> Result<Self, Self::Error> {
+        Ok(Enum {
             name: r#enum.name.clone(),
             option: Some(r#enum.option as u8),
-            options: r#enum.options.into_iter().map(Into::into).collect::<Vec<_>>(),
-        }
+            options: r#enum
+                .options
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>, _>>()?,
+        })
     }
 }
 
-impl From<Enum> for proto::types::Enum {
-    fn from(r#enum: Enum) -> Self {
-        proto::types::Enum {
+impl TryFrom<Enum> for proto::types::Enum {
+    type Error = SchemaError;
+    fn try_from(r#enum: Enum) -> Result<Self, Self::Error> {
+        Ok(proto::types::Enum {
             name: r#enum.name,
             option: r#enum.option.expect("option value") as u32,
-            options: r#enum.options.into_iter().map(Into::into).collect::<Vec<_>>(),
-        }
+            options: r#enum
+                .options
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>, _>>()?,
+        })
     }
 }
 
@@ -280,7 +295,7 @@ impl TryFrom<proto::types::Ty> for Ty {
                 Ok(Ty::Primitive(primitive.try_into()?))
             }
             proto::types::ty::TyType::Struct(r#struct) => Ok(Ty::Struct(r#struct.try_into()?)),
-            proto::types::ty::TyType::Enum(r#enum) => Ok(Ty::Enum(r#enum.into())),
+            proto::types::ty::TyType::Enum(r#enum) => Ok(Ty::Enum(r#enum.try_into()?)),
             proto::types::ty::TyType::Tuple(array) => Ok(Ty::Tuple(
                 array.children.into_iter().map(TryInto::try_into).collect::<Result<Vec<_>, _>>()?,
             )),

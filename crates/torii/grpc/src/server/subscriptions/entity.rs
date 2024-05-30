@@ -102,7 +102,13 @@ impl Service {
                 let model_ids: Vec<&str> = model_ids.split(',').collect();
                 let schemas = cache.schemas(model_ids).await?;
 
-                let (entity_query, arrays_queries) = build_sql_query(&schemas, "entities", "entity_id", Some("entities.id = ?"))?;
+                let (entity_query, arrays_queries) = build_sql_query(
+                    &schemas,
+                    "entities",
+                    "entity_id",
+                    Some("entities.id = ?"),
+                    Some("entities.id = ?"),
+                )?;
 
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
                 let mut arrays_rows = HashMap::new();
@@ -116,7 +122,7 @@ impl Service {
                     .map(|mut s| {
                         map_row_to_ty("", &s.name(), &mut s, &row, &arrays_rows)?;
 
-                    Ok(s.as_struct()
+                        Ok(s.as_struct()
                             .expect("schema should be a struct")
                             .to_owned()
                             .try_into()
