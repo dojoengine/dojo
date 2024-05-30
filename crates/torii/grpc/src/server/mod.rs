@@ -32,7 +32,6 @@ use tonic::{Request, Response, Status};
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
-use tracing::debug;
 
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
@@ -732,7 +731,7 @@ impl DojoWorld {
             .iter()
             .map(|schema| {
                 let mut schema = schema.to_owned();
-                map_row_to_ty("", &schema.name(), &mut schema, row, &arrays_rows)?;
+                map_row_to_ty("", &schema.name(), &mut schema, row, arrays_rows)?;
                 Ok(schema
                     .as_struct()
                     .expect("schema should be struct")
