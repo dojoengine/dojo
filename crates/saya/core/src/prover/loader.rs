@@ -33,7 +33,7 @@ pub async fn prepare_input_cairo0(
     let program = serde_json::from_str(&serde_json::to_string(&program)?)?;
     let program_input: Value = serde_json::from_str(&arguments)?;
 
-    Ok(Cairo0ProverInput { program, program_input })
+    Ok(Cairo0ProverInput { program, program_input, layout: "recursive".into() })
 }
 
 pub async fn prepare_input_cairo1(
@@ -49,5 +49,5 @@ pub async fn prepare_input_cairo1(
     let program = serde_json::from_str(&serde_json::to_string(&program)?)?;
 
     let program_input = Value::Array(vec![Value::String(arguments)]);
-    Ok(Cairo1ProverInput { program, program_input })
+    Ok(Cairo1ProverInput { program, program_input, layout: "recursive".into() })
 }
