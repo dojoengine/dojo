@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717018127399,
+  "lastUpdate": 1717108576087,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8965,6 +8965,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16379362,
             "range": "± 338822",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ce5602885d0ba34629d623e9c82747cb22408965",
+          "message": "fix: reenable metadata upload test (#2022)",
+          "timestamp": "2024-05-31T00:24:16+02:00",
+          "tree_id": "7643e4ae0aeff899624aeab43e83baf76fcf7df9",
+          "url": "https://github.com/dojoengine/dojo/commit/ce5602885d0ba34629d623e9c82747cb22408965"
+        },
+        "date": 1717108574634,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16607871,
+            "range": "± 150421",
             "unit": "ns/iter"
           }
         ]
