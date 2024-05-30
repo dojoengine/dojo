@@ -744,7 +744,7 @@ impl Sql {
             }
 
             // full array id column
-            create_table_query.push_str(&format!("full_array_id TEXT NOT NULL, "));
+            create_table_query.push_str(&format!("full_array_id TEXT NOT NULL UNIQUE, "));
         }
 
         let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
