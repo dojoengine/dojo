@@ -221,8 +221,6 @@ pub fn build_sql_query(
         ty: &Ty,
         selections: &mut Vec<String>,
         tables: &mut Vec<String>,
-        entities_table: &str,
-        entity_relation_column: &str,
         arrays_queries: &mut HashMap<String, (Vec<String>, Vec<String>)>,
     ) {
         match &ty {
@@ -239,8 +237,6 @@ pub fn build_sql_query(
                         &child.ty,
                         selections,
                         tables,
-                        entities_table,
-                        entity_relation_column,
                         arrays_queries,
                     );
                 }
@@ -256,8 +252,6 @@ pub fn build_sql_query(
                         child,
                         selections,
                         tables,
-                        entities_table,
-                        entity_relation_column,
                         arrays_queries,
                     );
                 }
@@ -276,8 +270,6 @@ pub fn build_sql_query(
                     &t[0],
                     &mut array_selections,
                     &mut array_tables,
-                    entities_table,
-                    entity_relation_column,
                     arrays_queries,
                 );
 
@@ -300,8 +292,6 @@ pub fn build_sql_query(
                         &option.ty,
                         selections,
                         tables,
-                        entities_table,
-                        entity_relation_column,
                         arrays_queries,
                     );
                     is_typed = true;
@@ -332,8 +322,6 @@ pub fn build_sql_query(
             ty,
             &mut global_selections,
             &mut global_tables,
-            entities_table,
-            entity_relation_column,
             &mut arrays_queries,
         );
     }
