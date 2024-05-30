@@ -46,9 +46,9 @@ pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
 pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
 
-pub(crate) static EVENTS_MESSAGES_TABLE: &str = "events_messages";
-pub(crate) static EVENTS_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
-pub(crate) static EVENTS_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
+pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
+pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
 
 #[derive(Clone)]
 pub struct DojoWorld {
@@ -169,9 +169,9 @@ impl DojoWorld {
         offset: u32,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
-            EVENTS_MESSAGES_TABLE,
-            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+            EVENT_MESSAGES_TABLE,
+            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
             None,
             limit,
             offset,
@@ -668,9 +668,9 @@ impl DojoWorld {
                         }
 
                         self.query_by_hashed_keys(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             Some(hashed_keys),
                             query.limit,
                             query.offset,
@@ -687,9 +687,9 @@ impl DojoWorld {
                         }
 
                         self.query_by_keys(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             keys,
                             query.limit,
                             query.offset,
@@ -698,9 +698,9 @@ impl DojoWorld {
                     }
                     ClauseType::Member(member) => {
                         self.query_by_member(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             member,
                             query.limit,
                             query.offset,
@@ -709,8 +709,8 @@ impl DojoWorld {
                     }
                     ClauseType::Composite(composite) => {
                         self.query_by_composite(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             composite,
                             query.limit,
