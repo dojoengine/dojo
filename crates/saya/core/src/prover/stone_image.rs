@@ -13,9 +13,9 @@ use crate::prover::loader::prepare_input_cairo0;
 use crate::LOG_TARGET;
 
 #[cfg(feature = "cairo1differ")]
-const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo:recursive";
+const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo:latest";
 #[cfg(not(feature = "cairo1differ"))]
-const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo0:recursive";
+const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo0:latest";
 
 #[derive(Clone)]
 pub struct StoneProver(pub String);
