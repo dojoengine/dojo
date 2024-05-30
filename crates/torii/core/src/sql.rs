@@ -516,6 +516,16 @@ impl Sql {
                     Argument::String(entity_id.to_string()),
                 ];
 
+                if !indexes.is_empty() {
+                    columns.push("full_array_id".to_string());
+                    arguments.push(Argument::String(
+                        std::iter::once(entity_id.to_string())
+                            .chain(indexes.iter().map(|i| i.to_string()))
+                            .collect::<Vec<String>>()
+                            .join(FELT_DELIMITER),
+                    ));
+                }
+
                 for (column_idx, idx) in indexes.iter().enumerate() {
                     columns.push(format!("idx_{}", column_idx));
                     arguments.push(Argument::Int(*idx));
@@ -569,7 +579,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
@@ -724,9 +738,13 @@ impl Sql {
         );
 
         if array_idx > 0 {
+            // index columns
             for i in 0..array_idx {
                 create_table_query.push_str(&format!("idx_{i} INTEGER NOT NULL, ", i = i));
             }
+
+            // full array id column
+            create_table_query.push_str(&format!("full_array_id TEXT NOT NULL, "));
         }
 
         let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
