@@ -163,6 +163,22 @@ impl DojoWorld {
         .await
     }
 
+    async fn event_messages_all(
+        &self,
+        limit: u32,
+        offset: u32,
+    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
+        self.query_by_hashed_keys(
+            EVENTS_MESSAGES_TABLE,
+            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
+            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+            None,
+            limit,
+            offset,
+        )
+        .await
+    }
+
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
         let query = r#"
             SELECT keys, data, transaction_hash
@@ -640,7 +656,7 @@ impl DojoWorld {
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
         let (entities, total_count) = match query.clause {
-            None => self.entities_all(query.limit, query.offset).await?,
+            None => self.event_messages_all(query.limit, query.offset).await?,
             Some(clause) => {
                 let clause_type =
                     clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
