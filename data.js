@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717108576087,
+  "lastUpdate": 1717163530860,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -8995,6 +8995,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16607871,
             "range": "± 150421",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9c4f4f1e3112142c6f8b80c6e88190b5a90c19d",
+          "message": "feat(torii-grpc): finalize join sql query to support new layout (#2017)\n\n* feat: update join sql query to support new types\r\n\r\n* refactor: clean building slq query\r\n\r\n* refactor: further clean up mapping grpc rows to ty\r\n\r\n* feat: update grpc to use new map to row to ty\r\n\r\n* feat: add full_array_id column for array entities\r\n\r\n* feat: new column for full_array_id that has array indexes with entity ids\r\n\r\n* feat: fetching and filtering arrays rows\r\n\r\n* feat: complete tests & handling complex enums\r\n\r\n* chor: clippy\r\n\r\n* chore: clippy\r\n\r\n* fix: event messages edge case for no clause\r\n\r\n* fix: event messages table",
+          "timestamp": "2024-05-31T09:40:01-04:00",
+          "tree_id": "df2f9634de83dc769e9599fd9d3be25ea2c4777e",
+          "url": "https://github.com/dojoengine/dojo/commit/d9c4f4f1e3112142c6f8b80c6e88190b5a90c19d"
+        },
+        "date": 1717163530257,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16420906,
+            "range": "± 188800",
             "unit": "ns/iter"
           }
         ]
