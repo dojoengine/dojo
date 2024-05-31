@@ -557,8 +557,8 @@
             "type": "dojo::interfaces::ProgramOutput"
           },
           {
-            "name": "proven_by_merger",
-            "type": "core::bool"
+            "name": "program_hash",
+            "type": "core::felt252"
           }
         ],
         "outputs": [],

@@ -122,7 +122,7 @@ mod invalid_legacy_model {
     impl InvalidModelMetadata of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x742c3d09472a40914dedcbd609788fd547bde613d6c4d4c2f15d41f4e241f25
+            0x1b1edb46931b1a98d8c6ecf2703e8483ec1d85fb75b3e9c061eab383fc8f8f1
         }
 
         fn name(self: @ContractState) -> ByteArray {
