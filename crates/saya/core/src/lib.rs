@@ -253,8 +253,8 @@ impl Saya {
     ///
     /// * `prove_scheduler` - A parallel prove scheduler.
     /// * `block_number` - The block number.
-    /// * `block_info` - The block to process, along with the state roots of the previous block and the
-    ///   genesis block.
+    /// * `block_info` - The block to process, along with the state roots of the previous block and
+    /// the genesis block.
     fn process_block(
         &mut self,
         prove_scheduler: &mut Scheduler,
@@ -329,7 +329,7 @@ impl Saya {
         if self.config.store_proofs {
             let filename = format!("proof_{}.json", last_block);
             let mut file = File::create(filename).await.context("Failed to create proof file.")?;
-            file.write_all(&proof.as_bytes()).await.context("Failed to write proof.")?;
+            file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
         }
 
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();

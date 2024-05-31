@@ -98,10 +98,13 @@ impl Scheduler {
 
             match state {
                 ProvingState::Proved => {
-                    self.proving_tasks
-                        .iter_mut()
-                        .find(|(n, _)| *n == block_number)
-                        .map(|(_, s)| *s = ProvingState::Proved);
+                    if let Some((_, s)) =
+                        self.proving_tasks.iter_mut().find(|(n, _)| *n == block_number)
+                    {
+                        *s = ProvingState::Proved;
+                    } else {
+                        bail!("Block number {} was not found in proving tasks", block_number);
+                    }
                 }
                 ProvingState::Proving => {
                     self.proving_tasks.push((block_number, ProvingState::Proved));
@@ -171,11 +174,13 @@ fn prove_recursively(
             input.fill_da(world);
             let block_number = input.block_number;
             trace!(target: LOG_TARGET, block_number, "Proving block");
+            update_channel.send((block_number, ProvingState::Proving)).await.unwrap();
 
             let prover_input = serde_json::to_string(&input.clone()).unwrap();
-
             let proof = prove_diff(prover_input, prover, ProveProgram::Differ).await?;
+
             info!(target: LOG_TARGET, block_number, "Block proven");
+            update_channel.send((block_number, ProvingState::Proved)).await.unwrap();
             Ok((proof, input))
         } else {
             let proof_count = inputs.len();

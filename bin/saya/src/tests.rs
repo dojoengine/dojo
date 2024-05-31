@@ -266,14 +266,14 @@ async fn test_combine_proofs() {
 
     sleep(Duration::from_millis(5)).await;
 
-    assert_eq!(scheduler.is_full(), false);
+    assert!(!scheduler.is_full());
     assert_eq!(scheduler.query(102).await.unwrap(), ProvingState::Proving);
     assert_eq!(scheduler.query(103).await.unwrap(), ProvingState::NotPushed);
 
     scheduler.push_diff(inputs.remove(0)).unwrap();
     sleep(Duration::from_millis(5)).await;
 
-    assert_eq!(scheduler.is_full(), true);
+    assert!(scheduler.is_full());
     assert_eq!(scheduler.query(102).await.unwrap(), ProvingState::Proving);
     assert_eq!(scheduler.query(103).await.unwrap(), ProvingState::Proving);
 
