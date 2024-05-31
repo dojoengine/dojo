@@ -15,6 +15,7 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
 
 use crate::migration;
+use crate::utils::get_default_namespace_from_ws;
 
 /// Load the spawn-and-moves project configuration from a copy of the project
 /// into a temporary directory to avoid any race during multithreading testing.
@@ -53,11 +54,21 @@ pub fn setup_ws(config: &Config) -> Workspace<'_> {
 ///
 /// A [`MigrationStrategy`] to execute to migrate the full spawn-and-moves project.
 pub fn setup_migration(config: &Config) -> Result<MigrationStrategy> {
+    let ws = setup_ws(config);
+
     let manifest_path = config.manifest_path();
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    prepare_migration_with_world_and_seed(base_dir.into(), target_dir.into(), None, "sozo_test")
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
+    prepare_migration_with_world_and_seed(
+        base_dir.into(),
+        target_dir.into(),
+        None,
+        "sozo_test",
+        &default_namespace,
+    )
 }
 
 /// Setups the project by migrating the full spawn-and-moves project.

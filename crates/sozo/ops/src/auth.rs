@@ -5,11 +5,11 @@ use dojo_world::contracts::model::ModelError;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::{cairo_utils, WorldContractReader};
 use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
+use dojo_world::utils::{compute_model_selector_from_names, TransactionExt};
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::core::utils::parse_cairo_short_string;
 use starknet_crypto::FieldElement;
 
 use crate::utils;
@@ -23,7 +23,7 @@ pub enum ResourceType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelContract {
     pub model: FieldElement,
-    pub contract: String,
+    pub contract: String, // contract name or address
 }
 
 impl FromStr for ModelContract {
@@ -108,9 +108,10 @@ where
     // Should we add the version into the `ModelContract` struct? Can we always know that?
     for mc in models_contracts {
         let model_name = parse_cairo_short_string(&mc.model)?;
-        let model_selector = get_selector_from_name(&model_name)?;
+        let namespace = "TODO".to_string();
+        let model_selector = compute_model_selector_from_names(&namespace, &model_name);
 
-        match world_reader.model_reader(&model_name).await {
+        match world_reader.model_reader(&namespace, &model_name).await {
             Ok(_) => {
                 let contract = utils::get_contract_address(world, mc.contract).await?;
                 calls.push(world.grant_writer_getcall(&model_selector, &contract.into()));
@@ -166,7 +167,8 @@ where
                 // Should we add the version into the `ModelContract` struct? Can we always know
                 // that?
                 let model_name = parse_cairo_short_string(name)?;
-                get_selector_from_name(&model_name)?
+                let namespace = "TODO".to_string();
+                compute_model_selector_from_names(&namespace, &model_name)
             }
             ResourceType::Contract(name_or_address) => {
                 utils::get_contract_address(world, name_or_address.clone()).await?
@@ -214,16 +216,17 @@ where
         // selector), we're not able to distinguish that.
         // Should we add the version into the `ModelContract` struct? Can we always know that?
         let model_name = parse_cairo_short_string(&mc.model)?;
-        let model_selector = get_selector_from_name(&model_name)?;
+        let namespace = "TODO".to_string();
+        let model_selector = compute_model_selector_from_names(&namespace, &model_name);
 
-        match world_reader.model_reader(&model_name).await {
+        match world_reader.model_reader(&namespace, &model_name).await {
             Ok(_) => {
                 let contract = utils::get_contract_address(world, mc.contract).await?;
                 calls.push(world.revoke_writer_getcall(&model_selector, &contract.into()));
             }
 
             Err(ModelError::ModelNotFound) => {
-                ui.print(format!("Unknown model '{}' => IGNORED", model_name));
+                ui.print(format!("Unknown model '{}::{}' => IGNORED", namespace, model_name));
             }
 
             Err(err) => {
@@ -272,7 +275,8 @@ where
                 // Should we add the version into the `ModelContract` struct? Can we always know
                 // that?
                 let model_name = parse_cairo_short_string(name)?;
-                get_selector_from_name(&model_name)?
+                let namespace = "TODO".to_string();
+                compute_model_selector_from_names(&namespace, &model_name)
             }
             ResourceType::Contract(name_or_address) => {
                 utils::get_contract_address(world, name_or_address.clone()).await?

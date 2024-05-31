@@ -8,13 +8,14 @@ use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
-    CairoShortStringToFeltError, NonAsciiNameError, ParseCairoShortStringError,
+    cairo_short_string_to_felt, parse_cairo_short_string, CairoShortStringToFeltError,
+    NonAsciiNameError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
 
 use super::abi::world::Layout;
 use crate::contracts::WorldContractReader;
+use crate::utils::compute_model_selector_from_names;
 
 #[cfg(test)]
 #[path = "model_test.rs"]
@@ -82,13 +83,14 @@ where
     P: Provider + Sync + Send,
 {
     pub async fn new(
+        namespace: &str,
         name: &str,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        let name = get_selector_from_name(name)?;
+        let model_selector = compute_model_selector_from_names(namespace, name);
 
         let (class_hash, contract_address) =
-            world.model(&name).block_id(world.block_id).call().await?;
+            world.model(&model_selector).block_id(world.block_id).call().await?;
 
         // World Cairo contract won't raise an error in case of unknown/unregistered
         // model so raise an error here in case of zero address.
@@ -102,7 +104,7 @@ where
             world_reader: world,
             class_hash: class_hash.into(),
             contract_address: contract_address.into(),
-            name,
+            name: model_selector,
             model_reader,
         })
     }

@@ -20,6 +20,9 @@ async fn test_world_contract_reader() {
         &Utf8PathBuf::from("../../examples/spawn-and-move"),
         &Utf8PathBuf::from("../dojo-core"),
     );
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let default_namespace = ws.current_package().unwrap().id.name.to_string();
 
     let manifest_dir = config.manifest_path().parent().unwrap();
     let target_dir = manifest_dir.join("target").join("dev");
@@ -38,6 +41,7 @@ async fn test_world_contract_reader() {
         &manifest_dir.to_path_buf(),
         &target_dir.to_path_buf(),
         dojo_metadata.skip_migration,
+        &default_namespace,
     )
     .await;
 
@@ -49,6 +53,7 @@ pub async fn deploy_world(
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
     skip_migration: Option<Vec<String>>,
+    default_namespace: &str,
 ) -> FieldElement {
     // Dev profile is used by default for testing:
     let profile_name = "dev";
@@ -70,7 +75,7 @@ pub async fn deploy_world(
     manifest.merge(overlay_manifest);
 
     let mut world = WorldDiff::compute(manifest.clone(), None);
-    world.update_order().unwrap();
+    world.update_order(default_namespace).unwrap();
 
     let account = sequencer.account(0);
 
@@ -81,7 +86,7 @@ pub async fn deploy_world(
         world,
     )
     .unwrap();
-    strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
+    strategy.resolve_variable(strategy.world_address().unwrap(), default_namespace).unwrap();
 
     let base_class_hash =
         strategy.base.unwrap().declare(&account, &TxnConfig::default()).await.unwrap().class_hash;

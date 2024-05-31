@@ -13,17 +13,16 @@ use cairo_lang_formatter::format_string;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_starknet::compile::compile_prepared_db;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
-use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_starknet_classes::abi;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_utils::UpcastMut;
 use camino::{Utf8Path, Utf8PathBuf};
-use convert_case::{Case, Casing};
 use dojo_world::manifest::{
     AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
     ABIS_DIR, BASE_CONTRACT_NAME, BASE_DIR, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
     WORLD_CONTRACT_NAME,
 };
+use dojo_world::utils::{get_artifact_name, get_full_world_element_name, get_manifest_name};
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
@@ -36,7 +35,7 @@ use starknet::core::types::FieldElement;
 use tracing::{debug, trace, trace_span};
 
 use crate::inline_macros::utils::{SYSTEM_READS, SYSTEM_WRITES};
-use crate::plugin::{ComputedValuesAuxData, DojoAuxData};
+use crate::plugin::{ComputedValuesAuxData, DojoAuxData, Model, SystemAuxData};
 use crate::semantics::utils::find_module_rw;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
@@ -258,7 +257,8 @@ fn update_manifest(
         &mut Manifest::new(
             // abi path will be written by `write_manifest`
             Class { class_hash: *hash, abi: None, original_class_hash: *hash },
-            WORLD_CONTRACT_NAME.into(),
+            WORLD_CONTRACT_NAME.replace("::", "_"),
+            WORLD_CONTRACT_NAME.to_string(),
         ),
         abi,
     )?;
@@ -270,7 +270,8 @@ fn update_manifest(
         &manifest_dir,
         &mut Manifest::new(
             Class { class_hash: *hash, abi: None, original_class_hash: *hash },
-            BASE_CONTRACT_NAME.into(),
+            BASE_CONTRACT_NAME.replace("::", "_"),
+            BASE_CONTRACT_NAME.to_string(),
         ),
         &None,
     )?;
@@ -293,22 +294,23 @@ fn update_manifest(
                 .filter_map(|info| info.as_ref().map(|i| &i.aux_data))
                 .filter_map(|aux_data| aux_data.as_ref().map(|aux_data| aux_data.0.as_any()))
             {
-                if let Some(aux_data) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
-                    contracts.extend(get_dojo_contract_artifacts(
-                        db,
-                        module_id,
-                        aux_data,
-                        &compiled_artifacts,
-                    )?);
-                }
                 if let Some(aux_data) = aux_data.downcast_ref::<ComputedValuesAuxData>() {
                     get_dojo_computed_values(db, module_id, aux_data, &mut computed);
                 }
 
                 if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
+                    for system in &dojo_aux_data.systems {
+                        contracts.extend(get_dojo_contract_artifacts(
+                            db,
+                            module_id,
+                            system,
+                            &compiled_artifacts,
+                        )?);
+                    }
+
                     models.extend(get_dojo_model_artifacts(
                         db,
-                        dojo_aux_data,
+                        &dojo_aux_data.models,
                         *module_id,
                         &compiled_artifacts,
                     )?);
@@ -317,9 +319,13 @@ fn update_manifest(
         }
     }
 
+    // `get_dojo_computed_values()` uses the module name as contract name to build the `computed`
+    // variable. That means, the namespace of the contract is not taken into account,
+    // but should be retrieved from the dojo::contract attribute.
     computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
-        let contract_data =
-            contracts.get_mut(&contract).expect("Error: Computed value contract doesn't exist.");
+        let contract_data = contracts
+            .get_mut(&contract.to_string())
+            .expect("Error: Computed value contract doesn't exist.");
         contract_data.0.inner.computed = computed_value_entrypoint;
     });
 
@@ -355,42 +361,46 @@ fn update_manifest(
 #[allow(clippy::type_complexity)]
 fn get_dojo_model_artifacts(
     db: &RootDatabase,
-    aux_data: &DojoAuxData,
+    aux_data: &Vec<Model>,
     module_id: ModuleId,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, Option<abi::Contract>)>> {
-    let mut models = HashMap::with_capacity(aux_data.models.len());
+    let mut models = HashMap::with_capacity(aux_data.len());
 
     let module_name = module_id.full_path(db);
     let module_name = module_name.as_str();
 
-    for model in &aux_data.models {
+    for model in aux_data {
         if let Ok(Some(ModuleItemId::Struct(_))) =
             db.module_item_by_name(module_id, model.name.clone().into())
         {
-            let model_contract_name = model.name.to_case(Case::Snake);
-            let model_full_name = format!("{module_name}::{}", &model_contract_name);
+            let full_model_name = get_full_world_element_name(&model.namespace, &model.name);
+            let manifest_name = get_manifest_name(&model.namespace, &model.name);
+            let artifact_name = get_artifact_name(module_name, &model.name);
 
-            let compiled_class = compiled_classes.get(model_full_name.as_str()).cloned();
+            let compiled_class = compiled_classes.get(artifact_name.as_str()).cloned();
 
             if let Some((class_hash, abi)) = compiled_class {
                 models.insert(
-                    model_full_name.clone(),
+                    full_model_name.clone(),
                     (
                         Manifest::new(
                             DojoModel {
+                                name: model.name.clone(),
+                                namespace: model.namespace.clone(),
                                 class_hash,
                                 abi: None,
                                 members: model.members.clone(),
                                 original_class_hash: class_hash,
                             },
-                            model_full_name.into(),
+                            manifest_name,
+                            artifact_name,
                         ),
                         abi,
                     ),
                 );
             } else {
-                println!("Model {} not found in target.", model_full_name.clone());
+                println!("Model {} not found in target.", full_model_name.clone());
             }
         }
     }
@@ -415,6 +425,7 @@ fn get_dojo_computed_values(
         computed_vals.push(ComputedValueEntrypoint {
             contract: module_name,
             entrypoint: aux_data.entrypoint.clone(),
+            namespace: aux_data.namespace.clone(),
             model: aux_data.model.clone(),
         })
     }
@@ -424,17 +435,21 @@ fn get_dojo_computed_values(
 fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
-    aux_data: &StarkNetContractAuxData,
+    aux_data: &SystemAuxData,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
-) -> anyhow::Result<HashMap<SmolStr, (Manifest<DojoContract>, Option<abi::Contract>)>> {
-    let contract_name = &aux_data.contract_name;
+) -> anyhow::Result<HashMap<String, (Manifest<DojoContract>, Option<abi::Contract>)>> {
+    let contract_name = &aux_data.name;
+    let namespace = &aux_data.namespace;
+    let full_contract_name = get_full_world_element_name(namespace, contract_name);
+    let manifest_name = get_manifest_name(namespace, contract_name);
 
     let mut result = HashMap::new();
 
     if !matches!(contract_name.as_ref(), "world" | "resource_metadata" | "base") {
         let module_name: SmolStr = module_id.full_path(db).into();
+        let artifact_name = get_artifact_name(&module_name, contract_name);
 
-        if let Some((class_hash, abi)) = compiled_classes.get(&module_name as &str) {
+        if let Some((class_hash, abi)) = compiled_classes.get(&artifact_name as &str) {
             let reads = SYSTEM_READS
                 .lock()
                 .unwrap()
@@ -451,16 +466,19 @@ fn get_dojo_contract_artifacts(
 
             let manifest = Manifest::new(
                 DojoContract {
+                    name: contract_name.to_string(),
+                    namespace: namespace.to_string(),
                     writes,
                     reads,
                     class_hash: *class_hash,
                     original_class_hash: *class_hash,
                     ..Default::default()
                 },
-                module_name.clone(),
+                manifest_name.to_string(),
+                artifact_name.to_string(),
             );
 
-            result.insert(module_name, (manifest, abi.clone()));
+            result.insert(full_contract_name.to_string(), (manifest, abi.clone()));
         }
     }
 
@@ -477,10 +495,10 @@ fn write_manifest_and_abi<T>(
 where
     T: Serialize + DeserializeOwned + ManifestMethods,
 {
-    let name = manifest.name.to_string().replace("::", "_");
-
-    let relative_manifest_path = relative_manifest_dir.join(name.clone()).with_extension("toml");
-    let relative_abi_path = relative_abis_dir.join(name.clone()).with_extension("json");
+    let relative_manifest_path =
+        relative_manifest_dir.join(manifest.manifest_name.clone()).with_extension("toml");
+    let relative_abi_path =
+        relative_abis_dir.join(manifest.manifest_name.clone()).with_extension("json");
 
     if abi.is_some() {
         manifest.inner.set_abi(Some(AbiFormat::Path(relative_abi_path.clone())));

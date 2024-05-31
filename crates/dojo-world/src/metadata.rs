@@ -11,6 +11,7 @@ use serde_json::json;
 use url::Url;
 
 use crate::manifest::{BaseManifest, WORLD_CONTRACT_NAME};
+use crate::utils::get_full_world_element_name;
 
 #[cfg(test)]
 #[path = "metadata_test.rs"]
@@ -31,9 +32,8 @@ fn build_artifact_from_name(
     abi_dir: &Utf8PathBuf,
     element_name: &str,
 ) -> ArtifactMetadata {
-    let sanitized_name = element_name.replace("::", "_");
-    let abi_file = abi_dir.join(format!("{sanitized_name}.json"));
-    let src_file = source_dir.join(format!("{sanitized_name}.cairo"));
+    let abi_file = abi_dir.join(format!("{element_name}.json"));
+    let src_file = source_dir.join(format!("{element_name}.cairo"));
 
     ArtifactMetadata {
         abi: if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None },
@@ -118,30 +118,32 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
     if manifest_dir.join(BASE_DIR).exists() {
         if let Ok(manifest) = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)) {
             for model in manifest.models {
-                let name = model.name.to_string();
+                let full_name =
+                    get_full_world_element_name(&model.inner.namespace, &model.inner.name);
                 dojo_metadata.resources_artifacts.insert(
-                    name.clone(),
+                    full_name.clone(),
                     ResourceMetadata {
-                        name: name.clone(),
+                        name: full_name.clone(),
                         artifacts: build_artifact_from_name(
                             &sources_dir,
                             &abis_dir.join("models"),
-                            &name,
+                            &full_name,
                         ),
                     },
                 );
             }
 
             for contract in manifest.contracts {
-                let name = contract.name.to_string();
+                let full_name =
+                    get_full_world_element_name(&contract.inner.namespace, &contract.inner.name);
                 dojo_metadata.resources_artifacts.insert(
-                    name.clone(),
+                    full_name.clone(),
                     ResourceMetadata {
-                        name: name.clone(),
+                        name: full_name.clone(),
                         artifacts: build_artifact_from_name(
                             &sources_dir,
                             &abis_dir.join("contracts"),
-                            &name,
+                            &full_name,
                         ),
                     },
                 );

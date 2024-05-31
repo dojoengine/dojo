@@ -2,6 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::fs;
 
 use anyhow::{anyhow, Result};
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
@@ -212,6 +213,16 @@ fn process_inners(
 
         let formatted_value = match &inner.token {
             Token::CoreBasic(ref cb) => parse_core_basic(cb, &value, true)?,
+            Token::Composite(c) => {
+                if c.type_path.eq("core::byte_array::ByteArray") {
+                    data.push_front(value);
+                    let bytearray = ByteArray::cairo_deserialize(data.as_mut_slices().0, 0)?;
+                    data.drain(0..ByteArray::cairo_serialized_size(&bytearray));
+                    ByteArray::to_string(&bytearray)?
+                } else {
+                    return Err(anyhow!("Unhandled Composite token"));
+                }
+            }
             Token::Array(ref array) => {
                 let length = value
                     .to_string()

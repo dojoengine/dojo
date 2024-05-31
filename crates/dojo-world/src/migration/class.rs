@@ -9,7 +9,10 @@ use super::{Declarable, MigrationType, StateDiff};
 /// Represents differences between a local and remote class.
 #[derive(Debug, Default, Clone)]
 pub struct ClassDiff {
-    pub name: String,
+    pub artifact_name: String, /* name used to identify the corresponding artifact produced by
+                                * the compiler */
+    pub name: String,      // class name as defined in Cairo files
+    pub namespace: String, // namespace of the class as defined in Cairo files
     pub local_class_hash: FieldElement,
     pub original_class_hash: FieldElement,
     pub remote_class_hash: Option<FieldElement>,

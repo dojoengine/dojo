@@ -12,6 +12,7 @@ use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
+use crate::utils::split_full_world_element_name;
 
 #[derive(Debug, Clone)]
 pub enum MigrationMetadata {
@@ -66,30 +67,41 @@ impl MigrationStrategy {
         MigrationItemsInfo { new, update }
     }
 
-    pub fn resolve_variable(&mut self, world_address: FieldElement) -> Result<()> {
+    pub fn resolve_variable(
+        &mut self,
+        world_address: FieldElement,
+        default_namespace: &str,
+    ) -> Result<()> {
+        let contracts_clone = self.contracts.clone();
+
+        let find_contract_from_dependency = |dependency: &str| -> Result<ContractMigration> {
+            let (dep_namespace, dep_name) =
+                split_full_world_element_name(dependency, default_namespace)?;
+            match contracts_clone
+                .iter()
+                .find(|c| c.diff.name == dep_name && c.diff.namespace == dep_namespace)
+            {
+                Some(c) => Ok(c.clone()),
+                None => Err(anyhow!("Unable to find the contract: {dependency}")),
+            }
+        };
+
         for contract in self.contracts.iter_mut() {
             for field in contract.diff.init_calldata.iter_mut() {
                 if let Some(dependency) = field.strip_prefix("$contract_address:") {
-                    let dependency_contract = self.metadata.get(dependency).unwrap();
+                    let dependency_contract = find_contract_from_dependency(dependency)?;
 
-                    match dependency_contract {
-                        MigrationMetadata::Contract(c) => {
-                            let contract_address = get_contract_address(
-                                generate_salt(&c.name),
-                                c.base_class_hash,
-                                &[],
-                                world_address,
-                            );
-                            *field = contract_address.to_string();
-                        }
-                    }
+                    let contract_address = get_contract_address(
+                        generate_salt(&dependency_contract.diff.name),
+                        dependency_contract.diff.base_class_hash,
+                        &[],
+                        world_address,
+                    );
+                    *field = contract_address.to_string();
                 } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
-                    let dependency_contract = self.metadata.get(dependency).unwrap();
-                    match dependency_contract {
-                        MigrationMetadata::Contract(c) => {
-                            *field = c.local_class_hash.to_string();
-                        }
-                    }
+                    let dependency_contract = find_contract_from_dependency(dependency)?;
+
+                    *field = dependency_contract.diff.local_class_hash.to_string();
                 }
             }
         }
@@ -199,7 +211,7 @@ fn evaluate_class_to_migrate(
             Ok(None)
         }
         _ => {
-            let path = find_artifact_path(class.name.as_str(), artifact_paths)?;
+            let path = find_artifact_path(&class.artifact_name, artifact_paths)?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
@@ -220,7 +232,7 @@ fn evaluate_contracts_to_migrate(
                 continue;
             }
             _ => {
-                let path = find_artifact_path(c.name.as_str(), artifact_paths)?;
+                let path = find_artifact_path(&c.artifact_name, artifact_paths)?;
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
@@ -243,7 +255,7 @@ fn evaluate_contract_to_migrate(
         || contract.remote_class_hash.is_none()
         || matches!(contract.remote_class_hash, Some(remote_hash) if remote_hash != contract.local_class_hash)
     {
-        let path = find_artifact_path(&contract.name, artifact_paths)?;
+        let path = find_artifact_path(&contract.artifact_name, artifact_paths)?;
 
         Ok(Some(ContractMigration {
             diff: contract.clone(),

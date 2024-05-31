@@ -17,6 +17,7 @@ use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_types::system::Dependency;
 use dojo_world::manifest::Member;
+use dojo_world::utils::split_full_world_element_name;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
 use scarb::core::{PackageId, PackageName, SourceId};
@@ -34,6 +35,7 @@ use crate::interface::DojoInterface;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
+use crate::utils::get_package_id;
 
 pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
@@ -46,12 +48,14 @@ pub const DOJO_PACKED_ATTR: &str = "IntrospectPacked";
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
     pub name: String,
+    pub namespace: String,
     pub members: Vec<Member>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct SystemAuxData {
     pub name: SmolStr,
+    pub namespace: String,
     pub dependencies: Vec<Dependency>,
 }
 
@@ -81,6 +85,7 @@ pub struct ComputedValuesAuxData {
     // Name of entrypoint to get computed value
     pub entrypoint: SmolStr,
     // Model to bind to
+    pub namespace: Option<String>,
     pub model: Option<String>,
 }
 
@@ -103,9 +108,14 @@ pub const PACKAGE_NAME: &str = "dojo_plugin";
 pub struct BuiltinDojoPlugin;
 
 impl BuiltinDojoPlugin {
-    fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
+    fn handle_mod(
+        &self,
+        db: &dyn SyntaxGroup,
+        module_ast: ast::ItemModule,
+        package_id: String,
+    ) -> PluginResult {
         if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
-            return DojoContract::from_module(db, module_ast);
+            return DojoContract::from_module(db, &module_ast, package_id);
         }
 
         PluginResult::default()
@@ -131,7 +141,12 @@ impl BuiltinDojoPlugin {
         }
     }
 
-    fn handle_fn(&self, db: &dyn SyntaxGroup, fn_ast: ast::FunctionWithBody) -> PluginResult {
+    fn handle_fn(
+        &self,
+        db: &dyn SyntaxGroup,
+        fn_ast: ast::FunctionWithBody,
+        package_id: String,
+    ) -> PluginResult {
         let attrs = fn_ast.attributes(db).query_attr(db, "computed");
         if attrs.is_empty() {
             return PluginResult::default();
@@ -155,9 +170,19 @@ impl BuiltinDojoPlugin {
         let params = fn_decl.signature(db).parameters(db);
         let param_els = params.elements(db);
         let mut model = None;
+        let mut namespace = None;
         if args.len() == 1 {
             let model_name = args[0].text(db);
-            model = Some(model_name.clone());
+            match split_full_world_element_name(&model_name, &package_id) {
+                Ok((ns, n)) => {
+                    model = Some(n);
+                    namespace = Some(ns);
+                }
+                Err(e) => {
+                    return self.result_with_diagnostic(attr.args_stable_ptr.0, e.to_string());
+                }
+            };
+
             let model_type_node = param_els[1].type_clause(db).ty(db);
             if let ast::Expr::Path(model_type_path) = model_type_node {
                 let model_type = model_type_path
@@ -167,7 +192,7 @@ impl BuiltinDojoPlugin {
                     .unwrap()
                     .as_syntax_node()
                     .get_text(db);
-                if model_type != model_name {
+                if model_type != model_name.clone() {
                     return self.result_with_diagnostic(
                         model_type_path.stable_ptr().0,
                         "Computed functions second parameter should be the model.".into(),
@@ -195,6 +220,7 @@ impl BuiltinDojoPlugin {
                 name: fn_name.clone(),
                 content: "".into(),
                 aux_data: Some(DynGeneratedFileAuxData::new(ComputedValuesAuxData {
+                    namespace,
                     model,
                     entrypoint: fn_name,
                 })),
@@ -323,8 +349,25 @@ impl MacroPlugin for BuiltinDojoPlugin {
         item_ast: ast::ModuleItem,
         _metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
+        let package_id = match get_package_id(db) {
+            Option::Some(x) => x,
+            Option::None => {
+                return PluginResult {
+                    code: Option::None,
+                    diagnostics: vec![PluginDiagnostic {
+                        stable_ptr: item_ast.stable_ptr().0,
+                        message: "Unable to find the package ID. Be sure to have a 'package.name' \
+                                  field in your Scarb.toml file."
+                            .into(),
+                        severity: Severity::Error,
+                    }],
+                    remove_original_item: false,
+                };
+            }
+        };
+
         match item_ast {
-            ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast),
+            ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast, package_id),
             ast::ModuleItem::Trait(trait_ast) => self.handle_trait(db, trait_ast),
             ast::ModuleItem::Enum(enum_ast) => {
                 let aux_data = DojoAuxData::default();
@@ -464,7 +507,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 match model_attrs.len().cmp(&1) {
                     Ordering::Equal => {
                         let (model_rewrite_nodes, model_diagnostics) =
-                            handle_model_struct(db, &mut aux_data, struct_ast.clone());
+                            handle_model_struct(db, &mut aux_data, struct_ast.clone(), package_id);
                         rewrite_nodes.push(model_rewrite_nodes);
                         diagnostics.extend(model_diagnostics);
                     }
@@ -502,7 +545,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     remove_original_item: false,
                 }
             }
-            ast::ModuleItem::FreeFunction(fn_ast) => self.handle_fn(db, fn_ast),
+            ast::ModuleItem::FreeFunction(fn_ast) => self.handle_fn(db, fn_ast, package_id),
             _ => PluginResult::default(),
         }
     }

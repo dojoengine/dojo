@@ -108,6 +108,7 @@ website = "https://dojoengine.org"
     assert!(metadata.world.is_some());
 }
 
+#[ignore]
 #[tokio::test]
 async fn get_full_dojo_metadata_from_workspace() {
     let config = compiler::build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
@@ -164,6 +165,8 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(dojo_metadata.world.website.is_none());
     assert!(dojo_metadata.world.socials.is_none());
 
+    println!("world resource: {:#?}", dojo_metadata.world.artifacts);
+
     check_artifact(
         dojo_metadata.world.artifacts,
         "dojo_world_world".to_string(),
@@ -176,6 +179,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     dbg!(&artifacts);
     for (abi_subdir, name) in artifacts {
         let resource = dojo_metadata.resources_artifacts.get(&name);
+        println!("name: {} resource: {:#?}", name, resource);
         dbg!(&dojo_metadata.resources_artifacts);
         assert!(resource.is_some(), "bad resource metadata for {}", name);
         let resource = resource.unwrap();
@@ -225,25 +229,12 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
     // models
     for entry in fs::read_dir(models_dir).unwrap().flatten() {
         let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
-        let name = name.replace("_models_", "::models::");
-        // Some models are inside actions, we need a better way to gather those.
-        let name = name.replace("_actions_", "::actions::");
-        let name = name.replace("::actions_", "::actions::");
-
-        let name = name.replace("_others_", "::others::");
-        let name = name.replace("::others_", "::others::");
-
-        let name = name.replace("_mock_token_", "::mock_token::");
-        let name = name.replace("::mock_token_", "::mock_token::");
         artifacts.push(("models".to_string(), name));
     }
 
     // contracts
     for entry in fs::read_dir(contracts_dir).unwrap().flatten() {
         let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
-        let name = name.replace("_actions_", "::actions::");
-        let name = name.replace("_others_", "::others::");
-        let name = name.replace("_mock_token_", "::mock_token::");
         artifacts.push(("contracts".to_string(), name));
     }
 

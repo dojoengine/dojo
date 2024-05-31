@@ -33,6 +33,7 @@ dojo-lang.workspace = true
 dojo-types.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 futures.workspace = true
+itertools.workspace = true
 notify = "6.0.1"
 notify-debouncer-mini = "0.3.0"
 rpassword.workspace = true

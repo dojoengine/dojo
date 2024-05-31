@@ -1,4 +1,0 @@
-init_calldata = [  ]
-name = "dojo_examples::actions::actions"
-reads = [  ]
-writes = [ "Moves", "Position" ]

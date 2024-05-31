@@ -349,9 +349,6 @@ fn test_pack_with_offset() {
 
     assert!(packed.len() == 2, "bad packed length");
 
-    println!("first item: {}", *packed.at(0));
-    println!("second item: {}", *packed.at(1));
-
     assert!(*packed.at(0) == 0x70006, "bad packed first item");
     assert!(*packed.at(1) == 0x0900000000000000000000000000000008, "bad packed second item");
 }

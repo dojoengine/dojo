@@ -11,6 +11,7 @@ use starknet::providers::JsonRpcClient;
 const INDENT: &str = "    ";
 
 pub async fn model_class_hash(
+    namespace: String,
     name: String,
     world_address: FieldElement,
     provider: JsonRpcClient<HttpTransport>,
@@ -18,7 +19,7 @@ pub async fn model_class_hash(
     let mut world_reader = WorldContractReader::new(world_address, &provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world_reader.model_reader(&name).await?;
+    let model = world_reader.model_reader(&namespace, &name).await?;
 
     println!("{:#x}", model.class_hash());
 
@@ -26,6 +27,7 @@ pub async fn model_class_hash(
 }
 
 pub async fn model_contract_address(
+    namespace: String,
     name: String,
     world_address: FieldElement,
     provider: JsonRpcClient<HttpTransport>,
@@ -33,7 +35,7 @@ pub async fn model_contract_address(
     let mut world_reader = WorldContractReader::new(world_address, &provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world_reader.model_reader(&name).await?;
+    let model = world_reader.model_reader(&namespace, &name).await?;
 
     println!("{:#x}", model.contract_address());
 
@@ -41,6 +43,7 @@ pub async fn model_contract_address(
 }
 
 pub async fn model_layout(
+    namespace: String,
     name: String,
     world_address: FieldElement,
     provider: JsonRpcClient<HttpTransport>,
@@ -48,7 +51,7 @@ pub async fn model_layout(
     let mut world_reader = WorldContractReader::new(world_address, &provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world_reader.model_reader(&name).await?;
+    let model = world_reader.model_reader(&namespace, &name).await?;
     let layout = match model.layout().await {
         Ok(x) => x,
         Err(_) => anyhow::bail!(
@@ -64,6 +67,7 @@ pub async fn model_layout(
 }
 
 pub async fn model_schema(
+    namespace: String,
     name: String,
     world_address: FieldElement,
     provider: JsonRpcClient<HttpTransport>,
@@ -72,7 +76,7 @@ pub async fn model_schema(
     let mut world_reader = WorldContractReader::new(world_address, &provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world_reader.model_reader(&name).await?;
+    let model = world_reader.model_reader(&namespace, &name).await?;
     let schema = model.schema().await?;
 
     if to_json {
@@ -85,6 +89,7 @@ pub async fn model_schema(
 }
 
 pub async fn model_get(
+    namespace: String,
     name: String,
     keys: Vec<FieldElement>,
     world_address: FieldElement,
@@ -97,7 +102,7 @@ pub async fn model_get(
     let mut world_reader = WorldContractReader::new(world_address, &provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
-    let model = world_reader.model_reader(&name).await?;
+    let model = world_reader.model_reader(&namespace, &name).await?;
     let schema = model.schema().await?;
     let values = model.entity_storage(&keys).await?;
 

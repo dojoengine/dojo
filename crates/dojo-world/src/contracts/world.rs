@@ -22,7 +22,11 @@ impl<P> WorldContractReader<P>
 where
     P: Provider + Sync + Send,
 {
-    pub async fn model_reader(&self, name: &str) -> Result<ModelRPCReader<'_, P>, ModelError> {
-        ModelRPCReader::new(name, self).await
+    pub async fn model_reader(
+        &self,
+        namespace: &str,
+        name: &str,
+    ) -> Result<ModelRPCReader<'_, P>, ModelError> {
+        ModelRPCReader::new(namespace, name, self).await
     }
 }

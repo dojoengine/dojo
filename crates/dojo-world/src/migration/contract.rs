@@ -11,7 +11,10 @@ pub type DeclareOutput = DeclareTransactionResult;
 /// Represents differences between a local and remote contract.
 #[derive(Debug, Default, Clone)]
 pub struct ContractDiff {
-    pub name: String,
+    pub artifact_name: String, /* name used to identify the corresponding artifact produced by
+                                * the compiler */
+    pub name: String,      // contract name as defined in Cairo files
+    pub namespace: String, // namespace of the contract as defined in Cairo files
     pub local_class_hash: FieldElement,
     pub original_class_hash: FieldElement,
     pub base_class_hash: FieldElement,

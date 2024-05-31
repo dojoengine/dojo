@@ -5,10 +5,10 @@ use std::path::PathBuf;
 use cainome::parser::tokens::Token;
 use cainome::parser::{AbiParser, TokenizedAbi};
 use camino::Utf8PathBuf;
-use convert_case::{Case, Casing};
 use dojo_world::manifest::BaseManifest;
 pub mod error;
-use error::{BindgenResult, Error};
+use dojo_world::utils::get_full_world_element_name;
+use error::BindgenResult;
 
 mod plugins;
 use plugins::typescript::TypescriptPlugin;
@@ -151,7 +151,10 @@ fn gather_dojo_data(
             }
         }
 
-        let contract_name = contract_manifest.name.to_string();
+        let contract_name = get_full_world_element_name(
+            &contract_manifest.inner.namespace,
+            &contract_manifest.inner.name,
+        );
 
         contracts.insert(
             contract_name.clone(),
@@ -170,26 +173,18 @@ fn gather_dojo_data(
 
         let tokens = AbiParser::tokens_from_abi_string(&abi, &HashMap::new())?;
 
-        let name = model_manifest.name.to_string();
+        let full_name = get_full_world_element_name(
+            &model_manifest.inner.namespace,
+            &model_manifest.inner.name,
+        );
 
-        if let Some(model_name) = model_name_from_fully_qualified_path(&name) {
-            let model_pascal_case = model_name.from_case(Case::Snake).to_case(Case::Pascal);
+        let model = DojoModel {
+            name: full_name.clone(),
+            qualified_path: full_name.clone(),
+            tokens: filter_model_tokens(&tokens),
+        };
 
-            let model = DojoModel {
-                name: model_pascal_case.clone(),
-                qualified_path: name
-                    .replace(&model_name, &model_pascal_case)
-                    .trim_end_matches(".json")
-                    .to_string(),
-                tokens: filter_model_tokens(&tokens),
-            };
-
-            models.insert(model_pascal_case, model);
-        } else {
-            return Err(Error::Format(format!(
-                "Could not extract model name from file name `{name}`"
-            )));
-        }
+        models.insert(full_name, model);
     }
 
     let world = DojoWorld { name: root_package_name.to_string() };
@@ -234,35 +229,12 @@ fn filter_model_tokens(tokens: &TokenizedAbi) -> TokenizedAbi {
     TokenizedAbi { structs, enums, ..Default::default() }
 }
 
-/// Extracts a model name from the fully qualified path of the model.
-///
-/// # Example
-///
-/// The fully qualified name "dojo_examples::models::position" should return "position".
-///
-/// # Arguments
-///
-/// * `file_name` - Fully qualified model name.
-fn model_name_from_fully_qualified_path(file_name: &str) -> Option<String> {
-    let parts: Vec<&str> = file_name.split("::").collect();
-
-    // TODO: we may want to have inside the manifest the name of the model struct
-    // instead of extracting it from the file's name.
-    parts.last().map(|last_part| last_part.to_string())
-}
-
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler;
     use dojo_world::metadata::dojo_metadata_from_workspace;
 
     use super::*;
-
-    #[test]
-    fn model_name_from_fully_qualified_path_ok() {
-        let file_name = "dojo_examples::models::position";
-        assert_eq!(model_name_from_fully_qualified_path(file_name), Some("position".to_string()));
-    }
 
     #[test]
     fn gather_data_ok() {

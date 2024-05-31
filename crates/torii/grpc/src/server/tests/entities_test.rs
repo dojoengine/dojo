@@ -13,6 +13,7 @@ use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
+use sozo_ops::utils::get_default_namespace_from_ws;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
 use starknet::core::types::{BlockId, BlockTag};
@@ -49,9 +50,16 @@ async fn test_entities_queries() {
 
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
 
-    let mut migration =
-        prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
-    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
+    let mut migration = prepare_migration(
+        source_project_dir,
+        target_path,
+        dojo_metadata.skip_migration,
+        &default_namespace,
+    )
+    .unwrap();
+    migration.resolve_variable(migration.world_address().unwrap(), &default_namespace).unwrap();
 
     dbg!(&migration);
 

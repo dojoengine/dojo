@@ -8,6 +8,7 @@ use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
+use sozo_ops::utils::get_default_namespace_from_ws;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
 use utils::snapbox::get_snapbox;
@@ -27,9 +28,15 @@ async fn reregister_models() {
     let target_path =
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
 
-    let migration =
-        prepare_migration(source_project_dir.clone(), target_path, dojo_metadata.skip_migration)
-            .unwrap();
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
+    let migration = prepare_migration(
+        source_project_dir.clone(),
+        target_path,
+        dojo_metadata.skip_migration,
+        &default_namespace,
+    )
+    .unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
