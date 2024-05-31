@@ -81,11 +81,12 @@ impl Scheduler {
         prover: ProverIdentifier,
     ) -> anyhow::Result<(Proof, ProgramInput)> {
         let mut scheduler = Scheduler::new(inputs.len(), world, prover);
-        trace!(target: LOG_TARGET, "pushing inputs to scheduler");
+        let number_of_inputs = inputs.len();
+        trace!(target: LOG_TARGET, number_of_inputs, "Pushing inputs to scheduler");
         for input in inputs {
             scheduler.push_diff(input)?;
         }
-        info!(target: LOG_TARGET, "inputs pushed to scheduler");
+        info!(target: LOG_TARGET, number_of_inputs, "inputs pushed to scheduler");
         let (merged_proof, merged_input, _) = scheduler.proved().await?;
         Ok((merged_proof, merged_input))
     }
@@ -131,6 +132,7 @@ async fn combine_proofs(
     state_updates1: StateUpdates,
     state_updates2: StateUpdates,
     world: FieldElement,
+    number_of_inputs: usize,
 ) -> anyhow::Result<Proof> {
     let ExtractOutputResult { program_output: program_output1, program_output_hash: _ } =
         extract_output(&first)?;
@@ -142,7 +144,8 @@ async fn combine_proofs(
     let later_input =
         program_input_from_program_output(program_output2, state_updates2, world).unwrap();
 
-    trace!(target: LOG_TARGET, "Merging proofs");
+    let world = format!("{:x}", world);
+    trace!(target: LOG_TARGET, number_of_inputs, world, "Merging proofs");
 
     let prover_input =
         serde_json::to_string(&CombinedInputs { earlier: earlier_input, later: later_input })?;
@@ -167,7 +170,7 @@ fn prove_recursively(
             let mut input = inputs.pop().unwrap().await.unwrap();
             input.fill_da(world);
             let block_number = input.block_number;
-            trace!(target: LOG_TARGET, "Proving block {block_number}");
+            trace!(target: LOG_TARGET, block_number, "Proving block");
 
             let prover_input = serde_json::to_string(&input.clone()).unwrap();
 
@@ -201,6 +204,7 @@ fn prove_recursively(
                 earlier_input.state_updates,
                 later_input.state_updates,
                 world,
+                proof_count,
             )
             .await?;
 

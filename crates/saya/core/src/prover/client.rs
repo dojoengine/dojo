@@ -25,12 +25,11 @@ pub async fn http_prove(
 ) -> anyhow::Result<String> {
     let prover = ONCE
         .get_or_init(|| async {
+            trace!(target: LOG_TARGET, "Proving with cairo0.");
             ProverSDK::new(prover_params.prover_key.clone(), prover_params.prover_url.clone()).await
         })
         .await;
     let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
-
-    trace!(target: LOG_TARGET, "Proving with cairo0.");
 
     let input = prepare_input_cairo0(input, prove_program).await?;
     prover.prove_cairo0(input).await.context("Failed to prove using the http prover")

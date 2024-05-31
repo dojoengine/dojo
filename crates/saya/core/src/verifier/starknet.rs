@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use anyhow::Context;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use starknet::accounts::{Account, Call, ConnectedAccount};
@@ -25,7 +26,7 @@ pub async fn starknet_verify(
         .nonce(nonce)
         .send_with_cfg(&txn_config)
         .await
-        .expect("Failed to send `verify_and_register_fact` transaction.");
+        .context("Failed to send `verify_and_register_fact` transaction.")?;
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);
