@@ -198,7 +198,7 @@ mod tests {
             config.private_key.signing_key_as_hex_string(),
             "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
         );
-        assert!(config.store_proofs);
+        assert!(!config.store_proofs);
         assert_eq!(config.start_block, 0);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");

@@ -133,21 +133,21 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(env.rpc_url.unwrap().eq("http://localhost:5050/"));
 
     assert!(env.account_address.is_some());
-    assert!(
-        env.account_address
-            .unwrap()
-            .eq("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03")
-    );
+    assert!(env
+        .account_address
+        .unwrap()
+        .eq("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"));
 
     assert!(env.private_key.is_some());
-    assert!(
-        env.private_key.unwrap().eq("0x1800000000300000180000000000030000000000003006001800006600")
-    );
+    assert!(env
+        .private_key
+        .unwrap()
+        .eq("0x1800000000300000180000000000030000000000003006001800006600"));
 
     assert!(env.world_address.is_some());
     assert_eq!(
         env.world_address.unwrap(),
-        "0x2e31cfde9f9990c7fe44b25043e3c6958a849c0a66ab535686d2b710e97f309"
+        "0x07efebb0c2d4cc285d48a97a7174def3be7fdd6b7bd29cca758fa2e17e03ef30"
     );
 
     assert!(env.keystore_path.is_none());
