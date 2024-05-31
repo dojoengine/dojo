@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::{fs, io};
 
 use anyhow::Result;
-use cainome::cairo_serde::Error as CainomeError;
+use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError};
 use camino::Utf8PathBuf;
 use serde::de::DeserializeOwned;
 use smol_str::SmolStr;
@@ -22,6 +22,7 @@ use tracing::error;
 use crate::contracts::model::ModelError;
 use crate::contracts::world::WorldEvent;
 use crate::contracts::WorldContractReader;
+use crate::utils::{get_full_world_element_name, get_manifest_name};
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
@@ -37,8 +38,6 @@ pub use types::{
 
 pub const WORLD_CONTRACT_NAME: &str = "dojo::world::world";
 pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
-pub const RESOURCE_METADATA_CONTRACT_NAME: &str = "dojo::resource_metadata::resource_metadata";
-pub const RESOURCE_METADATA_MODEL_NAME: &str = "0x5265736f757263654d65746164617461";
 
 pub const MANIFESTS_DIR: &str = "manifests";
 pub const BASE_DIR: &str = "base";
@@ -86,7 +85,8 @@ impl From<Manifest<Class>> for Manifest<WorldContract> {
                 original_class_hash: value.inner.original_class_hash,
                 ..Default::default()
             },
-            value.name,
+            value.manifest_name,
+            value.artifact_name,
         )
     }
 }
@@ -124,19 +124,22 @@ impl BaseManifest {
 
     /// Given a list of contract or model names, remove those from the manifest.
     pub fn remove_items(&mut self, items: Vec<String>) {
-        self.contracts.retain(|contract| !items.contains(&contract.name.to_string()));
-        self.models.retain(|model| !items.contains(&model.name.to_string()));
+        self.contracts.retain(|contract| !items.contains(&contract.manifest_name.to_string()));
+        self.models.retain(|model| !items.contains(&model.manifest_name.to_string()));
     }
 
     pub fn merge(&mut self, overlay: OverlayManifest) {
         let mut base_map = HashMap::new();
 
         for contract in self.contracts.iter_mut() {
-            base_map.insert(contract.name.clone(), contract);
+            let full_name =
+                get_full_world_element_name(&contract.inner.namespace, &contract.inner.name);
+            base_map.insert(full_name, contract);
         }
 
         for contract in overlay.contracts {
-            if let Some(manifest) = base_map.get_mut(&contract.name) {
+            let full_name = get_full_world_element_name(&contract.namespace, &contract.name);
+            if let Some(manifest) = base_map.get_mut(&full_name) {
                 manifest.inner.merge(contract);
             } else {
                 error!(
@@ -257,7 +260,8 @@ impl DeploymentManifest {
         self.world.inner.seed = previous.world.inner.seed;
 
         self.contracts.iter_mut().for_each(|contract| {
-            let previous_contract = previous.contracts.iter().find(|c| c.name == contract.name);
+            let previous_contract =
+                previous.contracts.iter().find(|c| c.manifest_name == contract.manifest_name);
             if let Some(previous_contract) = previous_contract {
                 if previous_contract.inner.base_class_hash != FieldElement::ZERO {
                     contract.inner.base_class_hash = previous_contract.inner.base_class_hash;
@@ -343,6 +347,7 @@ impl DeploymentManifest {
                     ..Default::default()
                 },
                 WORLD_CONTRACT_NAME.into(),
+                WORLD_CONTRACT_NAME.to_string(),
             ),
             base: Manifest::new(
                 Class {
@@ -351,6 +356,7 @@ impl DeploymentManifest {
                     original_class_hash: base_class_hash,
                 },
                 BASE_CONTRACT_NAME.into(),
+                BASE_CONTRACT_NAME.to_string(),
             ),
         })
     }
@@ -433,7 +439,7 @@ where
             Err(err) => return Err(err.into()),
         };
 
-        contract.name = name;
+        contract.manifest_name = get_manifest_name(&contract.inner.namespace, name.as_str());
     }
 
     Ok((models, contracts))
@@ -512,6 +518,9 @@ fn parse_contracts_events(
             let _ = data.next().expect("salt is missing from event");
             let mut class_hash = data.next().expect("class hash is missing from event");
             let address = data.next().expect("addresss is missing from event");
+            let namespace = ByteArray::cairo_deserialize(data.as_mut_slice(), 0)
+                .expect("namespace is missing from event");
+            let namespace = namespace.to_string().unwrap();
 
             if let Some(upgrade) = upgradeds.get(&address) {
                 class_hash = *upgrade;
@@ -522,8 +531,10 @@ fn parse_contracts_events(
                     address: Some(address),
                     class_hash,
                     abi: None,
+                    namespace,
                     ..Default::default()
                 },
+                Default::default(),
                 Default::default(),
             )
         })
@@ -531,7 +542,7 @@ fn parse_contracts_events(
 }
 
 fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
-    let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
+    let mut models: HashMap<String, (String, FieldElement)> = HashMap::with_capacity(events.len());
 
     for e in events {
         let model_event = match e.try_into() {
@@ -545,23 +556,31 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
             }
         };
 
-        // TODO: Safely unwrap?
-        let model_name = model_event.name.to_string().unwrap();
-        if let Some(current_class_hash) = models.get_mut(&model_name) {
+        let model_name = model_event.name.to_string().expect("ASCII encoded name");
+        let namespace = model_event.namespace.to_string().expect("ASCII encoded namespace");
+
+        if let Some((_, current_class_hash)) = models.get_mut(&model_name) {
             if current_class_hash == &model_event.prev_class_hash.into() {
                 *current_class_hash = model_event.class_hash.into();
             }
         } else {
-            models.insert(model_name, model_event.class_hash.into());
+            models.insert(model_name, (namespace, model_event.class_hash.into()));
         }
     }
 
     // TODO: include address of the model in the manifest.
     models
         .into_iter()
-        .map(|(name, class_hash)| Manifest::<DojoModel> {
-            inner: DojoModel { class_hash, abi: None, ..Default::default() },
-            name: name.into(),
+        .map(|(name, (namespace, class_hash))| Manifest::<DojoModel> {
+            inner: DojoModel {
+                name: name.to_string(),
+                namespace: namespace.to_string(),
+                class_hash,
+                abi: None,
+                ..Default::default()
+            },
+            manifest_name: get_manifest_name(&namespace, &name),
+            artifact_name: Default::default(),
         })
         .collect()
 }
@@ -663,6 +682,8 @@ impl ManifestMethods for DojoContract {
     }
 
     fn merge(&mut self, old: Self::OverlayType) {
+        // ignore name and namespace
+
         if let Some(class_hash) = old.original_class_hash {
             self.original_class_hash = class_hash;
         }

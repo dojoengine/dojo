@@ -11,8 +11,9 @@ use dojo::benchmarks;
 use dojo::config::interface::{IConfigDispatcher, IConfigDispatcherImpl};
 use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
-    IUpgradeableWorldDispatcherTrait, ResourceMetadata
+    IUpgradeableWorldDispatcherTrait, ResourceMetadata,
 };
+use dojo::world::world::NamespaceRegistered;
 use dojo::database::introspect::{Introspect, Layout, FieldLayout};
 use dojo::database::MAX_ARRAY_LENGTH;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address, assert_array};
@@ -42,6 +43,16 @@ struct Foo {
     a: felt252,
     b: u128,
 }
+
+#[derive(Copy, Drop, Serde)]
+#[dojo::model(namespace: "another_namespace")]
+struct Buzz {
+    #[key]
+    caller: ContractAddress,
+    a: felt252,
+    b: u128,
+}
+
 
 fn create_foo() -> Span<felt252> {
     array![1, 2].span()
@@ -248,6 +259,8 @@ fn get_key_test() -> Span<felt252> {
 trait IMetadataOnly<T> {
     fn selector(self: @T) -> felt252;
     fn name(self: @T) -> ByteArray;
+    fn namespace(self: @T) -> ByteArray;
+    fn namespace_selector(self: @T) -> felt252;
 }
 
 #[starknet::contract]
@@ -258,7 +271,15 @@ mod resource_metadata_malicious {
     #[abi(embed_v0)]
     impl InvalidModelName of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
-            selector!("ResourceMetadata")
+            dojo::model::Model::<dojo::resource_metadata::ResourceMetadata>::selector()
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_selector(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -302,7 +323,7 @@ mod bar {
                 .world
                 .read()
                 .delete_entity(
-                    selector!("Foo"),
+                    dojo::model::Model::<Foo>::selector(),
                     array![get_caller_address().into()].span(),
                     dojo::model::Model::<Foo>::layout()
                 );
@@ -408,7 +429,7 @@ fn test_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let (foo_class_hash, _) = world.model(selector!("Foo"));
+    let (foo_class_hash, _) = world.model(dojo::model::Model::<Foo>::selector());
     assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
 }
 
@@ -421,6 +442,66 @@ fn test_legacy_model_class_hash_getter() {
 
     let (foo_class_hash, _) = world.model('Foo');
     assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+}
+
+#[test]
+fn test_register_namespace() {
+    let world = deploy_world();
+
+    let caller = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_account_contract_address(caller);
+
+    drop_all_events(world.contract_address);
+
+    let namespace = "namespace";
+    let hash = dojo::utils::hash(@namespace);
+
+    world.register_namespace(namespace);
+
+    assert(world.is_owner(caller, hash), 'namespace not registered');
+
+    assert_eq!(
+        starknet::testing::pop_log(world.contract_address),
+        Option::Some(NamespaceRegistered { namespace: "namespace", hash })
+    );
+}
+
+#[test]
+fn test_register_namespace_already_registered_same_caller() {
+    let world = deploy_world();
+
+    let caller = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_account_contract_address(caller);
+
+    let namespace = "namespace";
+    let hash = dojo::utils::hash(@namespace);
+
+    world.register_namespace(namespace);
+
+    drop_all_events(world.contract_address);
+
+    world.register_namespace("namespace");
+
+    assert(world.is_owner(caller, hash), 'namespace not registered');
+
+    let event = starknet::testing::pop_log_raw(world.contract_address);
+    assert(event.is_none(), 'unexpected event');
+}
+
+#[test]
+#[should_panic(expected: ('namespace already registered', 'ENTRYPOINT_FAILED',))]
+fn test_register_namespace_already_registered_other_caller() {
+    let world = deploy_world();
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_account_contract_address(account);
+
+    world.register_namespace("namespace");
+
+    let another_account = starknet::contract_address_const::<0xa11ce>();
+    starknet::testing::set_account_contract_address(another_account);
+
+    world.register_namespace("namespace");
 }
 
 #[test]
@@ -472,7 +553,7 @@ fn test_set_entity_unauthorized() {
 
 // Utils
 fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world(array![])
+    spawn_test_world("dojo", array![])
 }
 
 #[test]
@@ -492,13 +573,13 @@ fn test_set_metadata_world() {
 #[test]
 #[available_gas(60000000)]
 fn test_set_metadata_model_writer() {
-    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
 
     let bar_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
-    world.grant_writer(selector!("Foo"), bar_contract.contract_address);
+    world.grant_writer(dojo::model::Model::<Foo>::selector(), bar_contract.contract_address);
 
     let bob = starknet::contract_address_const::<0xb0b>();
     starknet::testing::set_account_contract_address(bob);
@@ -507,18 +588,18 @@ fn test_set_metadata_model_writer() {
     bar_contract.set_foo(1337, 1337);
 
     let metadata = ResourceMetadata {
-        resource_id: selector!("Foo"), metadata_uri: format!("ipfs:bob")
+        resource_id: dojo::model::Model::<Foo>::selector(), metadata_uri: format!("ipfs:bob")
     };
 
     // A system that has write access on a model should be able to update the metadata.
     // This follows conventional ACL model.
     world.set_metadata(metadata.clone());
-    assert(world.metadata(selector!("Foo")) == metadata, 'bad metadata');
+    assert(world.metadata(dojo::model::Model::<Foo>::selector()) == metadata, 'bad metadata');
 }
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic(expected: ('not writer', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('no write access', 'ENTRYPOINT_FAILED',))]
 fn test_set_metadata_same_model_rules() {
     let world = deploy_world();
 
@@ -543,6 +624,9 @@ fn test_metadata_update_owner_only() {
 
     let bob = starknet::contract_address_const::<0xb0b>();
     starknet::testing::set_contract_address(bob);
+
+    world.grant_owner(bob, dojo::utils::hash(@"dojo"));
+
     starknet::testing::set_account_contract_address(bob);
 
     world.register_model(resource_metadata_malicious::TEST_CLASS_HASH.try_into().unwrap());
@@ -552,24 +636,26 @@ fn test_metadata_update_owner_only() {
 #[available_gas(6000000)]
 fn test_owner() {
     let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let foo_selector = dojo::model::Model::<Foo>::selector();
 
     let alice = starknet::contract_address_const::<0x1337>();
     let bob = starknet::contract_address_const::<0x1338>();
 
     assert(!world.is_owner(alice, 0), 'should not be owner');
-    assert(!world.is_owner(bob, 42), 'should not be owner');
+    assert(!world.is_owner(bob, foo_selector), 'should not be owner');
 
     world.grant_owner(alice, 0);
     assert(world.is_owner(alice, 0), 'should be owner');
 
-    world.grant_owner(bob, 42);
-    assert(world.is_owner(bob, 42), 'should be owner');
+    world.grant_owner(bob, foo_selector);
+    assert(world.is_owner(bob, foo_selector), 'should be owner');
 
     world.revoke_owner(alice, 0);
     assert(!world.is_owner(alice, 0), 'should not be owner');
 
-    world.revoke_owner(bob, 42);
-    assert(!world.is_owner(bob, 42), 'should not be owner');
+    world.revoke_owner(bob, foo_selector);
+    assert(!world.is_owner(bob, foo_selector), 'should not be owner');
 }
 
 #[test]
@@ -579,7 +665,7 @@ fn test_set_owner_fails_for_non_owner() {
     let world = deploy_world();
 
     let alice = starknet::contract_address_const::<0x1337>();
-    starknet::testing::set_contract_address(alice);
+    starknet::testing::set_account_contract_address(alice);
 
     world.revoke_owner(alice, 0);
     assert(!world.is_owner(alice, 0), 'should not be owner');
@@ -591,28 +677,39 @@ fn test_set_owner_fails_for_non_owner() {
 #[available_gas(6000000)]
 fn test_writer() {
     let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let foo_selector = dojo::model::Model::<Foo>::selector();
 
-    assert(!world.is_writer(42, 69.try_into().unwrap()), 'should not be writer');
+    assert(!world.is_writer(foo_selector, 69.try_into().unwrap()), 'should not be writer');
 
+    world.grant_writer(foo_selector, 69.try_into().unwrap());
+    assert(world.is_writer(foo_selector, 69.try_into().unwrap()), 'should be writer');
+
+    world.revoke_writer(foo_selector, 69.try_into().unwrap());
+    assert(!world.is_writer(foo_selector, 69.try_into().unwrap()), 'should not be writer');
+}
+
+#[test]
+#[should_panic(expected: ('resource not registered', 'ENTRYPOINT_FAILED'))]
+fn test_writer_not_registered_resource() {
+    let world = deploy_world();
+
+    // 42 is not a registered resource ID
     world.grant_writer(42, 69.try_into().unwrap());
-    assert(world.is_writer(42, 69.try_into().unwrap()), 'should be writer');
-
-    world.revoke_writer(42, 69.try_into().unwrap());
-    assert(!world.is_writer(42, 69.try_into().unwrap()), 'should not be writer');
 }
 
 #[test]
 #[available_gas(6000000)]
 #[should_panic]
 fn test_system_not_writer_fail() {
-    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
 
     let bar_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world);
     let bar_contract = IbarDispatcher { contract_address: bar_address };
 
     // Caller is not owner now
-    let caller = starknet::contract_address_const::<0x1337>();
-    starknet::testing::set_account_contract_address(caller);
+    let account = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_account_contract_address(account);
 
     // Should panic, system not writer
     bar_contract.set_foo(25, 16);
@@ -620,13 +717,13 @@ fn test_system_not_writer_fail() {
 
 #[test]
 fn test_system_writer_access() {
-    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
 
     let bar_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world);
     let bar_contract = IbarDispatcher { contract_address: bar_address };
 
-    world.grant_writer(selector!("Foo"), bar_address);
-    assert(world.is_writer(selector!("Foo"), bar_address), 'should be writer');
+    world.grant_writer(dojo::model::Model::<Foo>::selector(), bar_address);
+    assert(world.is_writer(dojo::model::Model::<Foo>::selector(), bar_address), 'should be writer');
 
     // Caller is not owner now
     let caller = starknet::contract_address_const::<0x1337>();
@@ -653,14 +750,14 @@ fn test_set_writer_fails_for_non_owner() {
 #[test]
 fn test_execute_multiple_worlds() {
     // Deploy world contract
-    let world1 = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let world1 = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
 
     let bar1_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world1)
     };
 
     // Deploy another world contract
-    let world2 = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let world2 = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
 
     let bar2_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world2)
@@ -682,7 +779,7 @@ fn test_execute_multiple_worlds() {
 #[test]
 #[available_gas(60000000)]
 fn bench_execute() {
-    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
     let bar_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
@@ -702,30 +799,6 @@ fn bench_execute() {
 
     assert(data.a == 1337, 'data not stored');
 }
-
-#[test]
-fn bench_execute_complex() {
-    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
-    let bar_contract = IbarDispatcher {
-        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
-    };
-
-    let alice = starknet::contract_address_const::<0x1337>();
-    starknet::testing::set_contract_address(alice);
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    bar_contract.set_char(1337, 1337);
-    end(gas, 'char set call');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let data = get!(world, alice, Character);
-    end(gas, 'char get macro');
-
-    assert(data.heigth == 1337, 'data not stored');
-}
-
 
 #[starknet::interface]
 trait IWorldUpgrade<TContractState> {
@@ -845,6 +918,9 @@ trait IDojoInit<ContractState> {
 #[dojo::contract]
 mod test_contract {}
 
+#[dojo::contract(namespace: "buzz_namespace")]
+mod buzz_contract {}
+
 #[test]
 #[available_gas(6000000)]
 #[should_panic(expected: ('Only world can init', 'ENTRYPOINT_FAILED'))]
@@ -863,14 +939,12 @@ fn test_can_call_init() {
 fn test_set_entity_with_fixed_layout() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    let selector = selector!("foo");
+    let selector = dojo::model::Model::<Foo>::selector();
     let keys = get_key_test();
     let values = create_foo();
     let layout = dojo::model::Model::<Foo>::layout();
 
     world.set_entity(selector, get_key_test(), values, layout);
-
     let read_values = world.entity(selector, keys, layout);
     assert_array(read_values, values);
 }
@@ -880,7 +954,7 @@ fn test_set_entity_with_struct_layout() {
     let world = deploy_world();
     world.register_model(struct_simple_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_simple_model");
+    let selector = dojo::model::Model::<StructSimpleModel>::selector();
     let keys = get_key_test();
     let values = create_struct_simple_model();
     let layout = dojo::model::Model::<StructSimpleModel>::layout();
@@ -896,7 +970,7 @@ fn test_set_entity_with_struct_tuple_layout() {
     let world = deploy_world();
     world.register_model(struct_with_tuple::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_with_tuple");
+    let selector = dojo::model::Model::<StructWithTuple>::selector();
     let keys = get_key_test();
     let values = create_struct_with_tuple();
     let layout = dojo::model::Model::<StructWithTuple>::layout();
@@ -912,7 +986,7 @@ fn test_set_entity_with_struct_enum_layout() {
     let world = deploy_world();
     world.register_model(struct_with_enum::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_with_enum");
+    let selector = dojo::model::Model::<StructWithEnum>::selector();
     let keys = get_key_test();
     let values = create_struct_with_enum_first_variant();
     let layout = dojo::model::Model::<StructWithEnum>::layout();
@@ -936,7 +1010,7 @@ fn test_set_entity_with_struct_simple_array_layout() {
     let world = deploy_world();
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_simple_array_model");
+    let selector = dojo::model::Model::<StructSimpleArrayModel>::selector();
     let keys = get_key_test();
     let values = create_struct_simple_array_model();
     let layout = dojo::model::Model::<StructSimpleArrayModel>::layout();
@@ -952,7 +1026,7 @@ fn test_set_entity_with_struct_complex_array_layout() {
     let world = deploy_world();
     world.register_model(struct_complex_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_complex_array_model");
+    let selector = dojo::model::Model::<StructComplexArrayModel>::selector();
     let keys = get_key_test();
     let values = create_struct_complex_array_model();
     let layout = dojo::model::Model::<StructComplexArrayModel>::layout();
@@ -968,7 +1042,7 @@ fn test_set_entity_with_struct_layout_and_byte_array() {
     let world = deploy_world();
     world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_byte_array_model");
+    let selector = dojo::model::Model::<StructByteArrayModel>::selector();
     let keys = get_key_test();
     let values = create_struct_byte_array_model();
     let layout = dojo::model::Model::<StructByteArrayModel>::layout();
@@ -984,7 +1058,7 @@ fn test_set_entity_with_nested_elements() {
     let world = deploy_world();
     world.register_model(struct_nested_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_nested_model");
+    let selector = dojo::model::Model::<StructNestedModel>::selector();
     let keys = get_key_test();
     let values = create_struct_nested_model();
     let layout = dojo::model::Model::<StructNestedModel>::layout();
@@ -1011,7 +1085,7 @@ fn test_set_entity_with_struct_generics_enum_layout() {
     let world = deploy_world();
     world.register_model(struct_with_generic::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_with_generic");
+    let selector = dojo::model::Model::<StructWithGeneric>::selector();
     let keys = get_key_test();
     let values = create_struct_generic_first_variant();
     let layout = dojo::model::Model::<StructWithGeneric>::layout();
@@ -1034,13 +1108,12 @@ fn test_set_entity_with_struct_generics_enum_layout() {
 fn test_delete_entity_with_fixed_layout() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    let selector = selector!("foo");
+    let selector = dojo::model::Model::<Foo>::selector();
     let keys = get_key_test();
     let values = create_foo();
     let layout = dojo::model::Model::<Foo>::layout();
 
-    world.set_entity(selector, keys, values, layout);
+    world.set_entity(selector, get_key_test(), values, layout);
 
     world.delete_entity(selector, keys, layout);
 
@@ -1055,7 +1128,7 @@ fn test_delete_entity_with_simple_struct_layout() {
     let world = deploy_world();
     world.register_model(struct_simple_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_simple_model");
+    let selector = dojo::model::Model::<StructSimpleModel>::selector();
     let keys = get_key_test();
     let values = create_struct_simple_model();
     let layout = dojo::model::Model::<StructSimpleModel>::layout();
@@ -1075,7 +1148,7 @@ fn test_delete_entity_with_struct_simple_array_layout() {
     let world = deploy_world();
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_simple_array_model");
+    let selector = dojo::model::Model::<StructSimpleArrayModel>::selector();
     let keys = get_key_test();
     let values = create_struct_simple_array_model();
     let layout = dojo::model::Model::<StructSimpleArrayModel>::layout();
@@ -1098,7 +1171,7 @@ fn test_delete_entity_with_complex_array_struct_layout() {
     let world = deploy_world();
     world.register_model(struct_complex_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_complex_array_model");
+    let selector = dojo::model::Model::<StructComplexArrayModel>::selector();
     let keys = get_key_test();
     let values = create_struct_complex_array_model();
 
@@ -1122,7 +1195,7 @@ fn test_delete_entity_with_struct_tuple_layout() {
     let world = deploy_world();
     world.register_model(struct_with_tuple::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_with_tuple");
+    let selector = dojo::model::Model::<StructWithTuple>::selector();
     let keys = get_key_test();
     let values = create_struct_with_tuple();
     let layout = dojo::model::Model::<StructWithTuple>::layout();
@@ -1143,7 +1216,7 @@ fn test_delete_entity_with_struct_enum_layout() {
     let world = deploy_world();
     world.register_model(struct_with_enum::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_with_enum");
+    let selector = dojo::model::Model::<StructWithEnum>::selector();
     let keys = get_key_test();
     let values = create_struct_with_enum_first_variant();
     let layout = dojo::model::Model::<StructWithEnum>::layout();
@@ -1165,7 +1238,7 @@ fn test_delete_entity_with_struct_layout_and_byte_array() {
     let world = deploy_world();
     world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_byte_array_model");
+    let selector = dojo::model::Model::<StructByteArrayModel>::selector();
     let keys = get_key_test();
     let values = create_struct_byte_array_model();
     let layout = dojo::model::Model::<StructByteArrayModel>::layout();
@@ -1186,7 +1259,7 @@ fn test_delete_entity_with_nested_elements() {
     let world = deploy_world();
     world.register_model(struct_nested_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_nested_model");
+    let selector = dojo::model::Model::<StructNestedModel>::selector();
     let keys = get_key_test();
     let values = create_struct_nested_model();
     let layout = dojo::model::Model::<StructNestedModel>::layout();
@@ -1207,7 +1280,7 @@ fn test_delete_entity_with_struct_generics_enum_layout() {
     let world = deploy_world();
     world.register_model(struct_with_generic::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_with_generic");
+    let selector = dojo::model::Model::<StructWithGeneric>::selector();
     let keys = get_key_test();
     let values = create_struct_generic_first_variant();
     let layout = dojo::model::Model::<StructWithGeneric>::layout();
@@ -1235,7 +1308,10 @@ fn test_set_entity_with_unexpected_array_model_layout() {
 
     world
         .set_entity(
-            selector!("struct_simple_array_model"), array![].span(), array![].span(), layout
+            dojo::model::Model::<StructSimpleArrayModel>::selector(),
+            array![].span(),
+            array![].span(),
+            layout
         );
 }
 
@@ -1251,7 +1327,10 @@ fn test_set_entity_with_unexpected_tuple_model_layout() {
 
     world
         .set_entity(
-            selector!("struct_simple_array_model"), array![].span(), array![].span(), layout
+            dojo::model::Model::<StructSimpleArrayModel>::selector(),
+            array![].span(),
+            array![].span(),
+            layout
         );
 }
 
@@ -1265,7 +1344,10 @@ fn test_delete_entity_with_unexpected_array_model_layout() {
         array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.delete_entity(selector!("struct_simple_array_model"), array![].span(), layout);
+    world
+        .delete_entity(
+            dojo::model::Model::<StructSimpleArrayModel>::selector(), array![].span(), layout
+        );
 }
 
 #[test]
@@ -1278,7 +1360,10 @@ fn test_delete_entity_with_unexpected_tuple_model_layout() {
         array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.delete_entity(selector!("struct_simple_array_model"), array![].span(), layout);
+    world
+        .delete_entity(
+            dojo::model::Model::<StructSimpleArrayModel>::selector(), array![].span(), layout
+        );
 }
 
 #[test]
@@ -1291,7 +1376,7 @@ fn test_get_entity_with_unexpected_array_model_layout() {
         array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.entity(selector!("struct_simple_array_model"), array![].span(), layout);
+    world.entity(dojo::model::Model::<StructSimpleArrayModel>::selector(), array![].span(), layout);
 }
 
 #[test]
@@ -1304,7 +1389,7 @@ fn test_get_entity_with_unexpected_tuple_model_layout() {
         array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
     );
 
-    world.entity(selector!("struct_simple_array_model"), array![].span(), layout);
+    world.entity(dojo::model::Model::<StructSimpleArrayModel>::selector(), array![].span(), layout);
 }
 
 
@@ -1312,22 +1397,13 @@ fn test_get_entity_with_unexpected_tuple_model_layout() {
 #[should_panic(expected: ('Invalid values length', 'ENTRYPOINT_FAILED',))]
 fn test_set_entity_with_bad_values_length_error_for_array_layout() {
     let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("a_selector");
+    let selector = dojo::model::Model::<StructSimpleArrayModel>::selector();
     let keys = get_key_test();
-    let layout = Layout::Struct(
-        array![
-            FieldLayout {
-                selector: selector!("a"),
-                layout: Layout::Array(
-                    array![dojo::database::introspect::Introspect::<felt252>::layout()].span()
-                )
-            },
-        ]
-            .span()
-    );
+    let layout = dojo::model::Model::<StructSimpleArrayModel>::layout();
 
-    world.set_entity(selector, keys, array![].span(), layout);
+    world.set_entity(selector, keys, array![1].span(), layout);
 }
 
 #[test]
@@ -1336,7 +1412,7 @@ fn test_set_entity_with_too_big_array_length() {
     let world = deploy_world();
     world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_simple_array_model");
+    let selector = dojo::model::Model::<StructSimpleArrayModel>::selector();
     let keys = get_key_test();
     let values: Span<felt252> = array![
         1, MAX_ARRAY_LENGTH.try_into().unwrap() + 1, 10, 20, 30, 40, 2
@@ -1353,7 +1429,7 @@ fn test_set_entity_with_struct_layout_and_bad_byte_array_length() {
     let world = deploy_world();
     world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_byte_array_model");
+    let selector = dojo::model::Model::<StructByteArrayModel>::selector();
     let keys = get_key_test();
     let values: Span<felt252> = array![
         1, MAX_ARRAY_LENGTH.try_into().unwrap(), 'first', 'second', 'third', 'pending', 7
@@ -1370,10 +1446,201 @@ fn test_set_entity_with_struct_layout_and_bad_value_length_for_byte_array() {
     let world = deploy_world();
     world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
 
-    let selector = selector!("struct_byte_array_model");
+    let selector = dojo::model::Model::<StructByteArrayModel>::selector();
     let keys = get_key_test();
     let values: Span<felt252> = array![1, 3, 'first', 'second', 'third', 'pending'].span();
     let layout = dojo::model::Model::<StructByteArrayModel>::layout();
 
     world.set_entity(selector, keys, values, layout);
 }
+
+fn write_foo_record(world: dojo::world::IWorldDispatcher) {
+    let selector = dojo::model::Model::<Foo>::selector();
+    let values = create_foo();
+    let layout = dojo::model::Model::<Foo>::layout();
+
+    world.set_entity(selector, get_key_test(), values, layout);
+}
+
+#[test]
+fn test_write_model_for_namespace_owner() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    let contract = starknet::contract_address_const::<0xdeadbeef>();
+
+    // the caller account is a model namespace owner
+    world.grant_owner(account, dojo::model::Model::<Foo>::namespace_selector());
+    starknet::testing::set_account_contract_address(account);
+    starknet::testing::set_contract_address(contract);
+
+    write_foo_record(world);
+}
+
+#[test]
+fn test_write_model_for_model_owner() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    // the caller account is a model owner
+    let account = starknet::contract_address_const::<0xb0b>();
+    let contract = starknet::contract_address_const::<0xdeadbeef>();
+
+    world.grant_owner(account, dojo::model::Model::<Foo>::selector());
+    starknet::testing::set_account_contract_address(account);
+    starknet::testing::set_contract_address(contract);
+
+    write_foo_record(world);
+}
+
+#[test]
+fn test_write_model_for_namespace_writer() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    let contract = starknet::contract_address_const::<0xdeadbeef>();
+
+    world.grant_writer(dojo::model::Model::<Foo>::namespace_selector(), contract);
+
+    // the account does not own anything
+    starknet::testing::set_account_contract_address(account);
+    starknet::testing::set_contract_address(contract);
+
+    write_foo_record(world);
+}
+
+#[test]
+fn test_write_model_for_model_writer() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    let contract = starknet::contract_address_const::<0xdeadbeef>();
+
+    world.grant_writer(dojo::model::Model::<Foo>::selector(), contract);
+
+    // the account does not own anything
+    starknet::testing::set_account_contract_address(account);
+    starknet::testing::set_contract_address(contract);
+
+    write_foo_record(world);
+}
+
+#[test]
+fn test_write_namespace_for_namespace_owner() {
+    let world = deploy_world();
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    let contract = starknet::contract_address_const::<0xdeadbeef>();
+
+    world.grant_owner(account, dojo::model::Model::<Foo>::namespace_selector());
+
+    // the account owns the Foo model namespace so it should be able to deploy
+    // and register the model.
+    starknet::testing::set_account_contract_address(account);
+    starknet::testing::set_contract_address(contract);
+
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+fn test_write_namespace_for_namespace_writer() {
+    let world = deploy_world();
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    let contract = starknet::contract_address_const::<0xdeadbeef>();
+
+    world.grant_writer(dojo::model::Model::<Foo>::namespace_selector(), account);
+
+    // the account has write access to the Foo model namespace so it should be able
+    // to deploy and register the model.
+    starknet::testing::set_account_contract_address(account);
+    starknet::testing::set_contract_address(contract);
+
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+#[should_panic(expected: ('no model write access', 'ENTRYPOINT_FAILED',))]
+fn test_write_model_no_write_access() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    // the caller account does not own the model nor the model namespace nor the world
+    let account = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_account_contract_address(account);
+
+    // the contract is not a writer for the model nor for the model namespace
+    let contract = starknet::contract_address_const::<0xdeadbeef>();
+    starknet::testing::set_contract_address(contract);
+
+    write_foo_record(world);
+}
+
+#[test]
+#[should_panic(expected: ('namespace not registered', 'ENTRYPOINT_FAILED',))]
+fn test_register_model_with_unregistered_namespace() {
+    let world = deploy_world();
+    world.register_model(buzz::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+fn test_deploy_contract_for_namespace_owner() {
+    let world = deploy_world();
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    world.grant_owner(account, dojo::utils::hash(@"dojo"));
+
+    // the account owns the 'test_contract' namespace so it should be able to deploy
+    // and register the model.
+    starknet::testing::set_account_contract_address(account);
+
+    world
+        .deploy_contract(
+            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
+}
+
+#[test]
+fn test_deploy_contract_for_namespace_writer() {
+    let world = deploy_world();
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    world.grant_writer(dojo::utils::hash(@"dojo"), account);
+
+    // the account has write access to the 'test_contract' namespace so it should be able
+    // to deploy and register the model.
+    starknet::testing::set_account_contract_address(account);
+
+    world
+        .deploy_contract(
+            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
+}
+
+#[test]
+#[should_panic(expected: ('namespace not registered', 'ENTRYPOINT_FAILED',))]
+fn test_deploy_contract_with_unregistered_namespace() {
+    let world = deploy_world();
+    world
+        .deploy_contract(
+            'salt1', buzz_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
+}
+
+#[test]
+#[should_panic(expected: ('no namespace write access', 'ENTRYPOINT_FAILED',))]
+fn test_deploy_contract_no_namespace_write_access() {
+    let world = deploy_world();
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_account_contract_address(account);
+
+    world
+        .deploy_contract(
+            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
+}
+

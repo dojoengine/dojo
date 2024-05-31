@@ -50,7 +50,8 @@ where
         let name = ByteArray::cairo_deserialize(&event.data, 0)?;
         let name = name.to_string()?;
 
-        let model = world.model_reader(&name).await?;
+        // TODO: handle namespace
+        let model = world.model_reader("TODO", &name).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 

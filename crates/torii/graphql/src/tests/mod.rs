@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
 use camino::Utf8PathBuf;
-use dojo_test_utils::compiler::{self, build_test_config};
+use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
@@ -20,6 +20,7 @@ use scarb::ops;
 use serde::Deserialize;
 use serde_json::Value;
 use sozo_ops::migration::execute_strategy;
+use sozo_ops::utils::get_default_namespace_from_ws;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::accounts::{Account, Call};
@@ -290,9 +291,17 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
-    let migration =
-        prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
-    let config = build_test_config("../types-test/Scarb.toml").unwrap();
+
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
+    let migration = prepare_migration(
+        source_project_dir,
+        target_path,
+        dojo_metadata.skip_migration,
+        &default_namespace,
+    )
+    .unwrap();
+
     let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
     let sequencer =
@@ -314,8 +323,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
             .unwrap();
 
     //  Execute `create` and insert 11 records into storage
+    // TODO: `manifest_name` is probably not the correct field to use => handle namespace.
     let records_contract =
-        manifest.contracts.iter().find(|contract| contract.name.eq("records")).unwrap();
+        manifest.contracts.iter().find(|contract| contract.manifest_name.eq("records")).unwrap();
     let record_contract_address = records_contract.inner.address.unwrap();
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {

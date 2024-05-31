@@ -5,7 +5,7 @@ use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::DeploymentManifest;
 use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
+use dojo_world::utils::{get_full_world_element_name, TransactionExt};
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
 use starknet::providers::Provider;
@@ -34,20 +34,22 @@ where
         }
     };
 
-    let registered_models_names = manifest.models.iter().map(|m| m.name.as_str());
+    let registered_models =
+        manifest.models.iter().map(|m| (m.inner.namespace.clone(), m.inner.name.clone()));
     let mut model_class_hashes = HashMap::new();
-    for model_name in registered_models_names {
-        let read_model = world_reader.model_reader(model_name).await?;
+    for (namespace, model_name) in registered_models {
+        let read_model = world_reader.model_reader(&namespace, &model_name).await?;
         let class_hash = read_model.class_hash();
-        model_class_hashes.insert(class_hash, model_name);
+        model_class_hashes.insert(class_hash, (namespace, model_name));
     }
 
     let mut models_to_register = Vec::new();
     for input_model in models {
-        if let Some(model_name) = model_class_hashes.get(&input_model) {
+        if let Some((namespace, model_name)) = model_class_hashes.get(&input_model) {
             config.ui().print(format!(
                 "\"{}\" model already registered with the class hash \"{:#x}\"",
-                model_name, input_model
+                get_full_world_element_name(namespace, model_name),
+                input_model
             ));
         } else {
             models_to_register.push(input_model);

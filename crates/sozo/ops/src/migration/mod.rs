@@ -12,8 +12,11 @@ use dojo_world::manifest::{
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
+use smol_str::ToSmolStr;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
+
+use crate::utils::get_default_namespace_from_ws;
 
 mod auto_auth;
 mod migrate;
@@ -36,13 +39,14 @@ pub struct MigrationOutput {
     // If false that means migration got partially completed.
     pub full: bool,
 
-    pub models: Vec<String>,
+    pub models: Vec<(String, String)>,
     pub contracts: Vec<Option<ContractMigrationOutput>>,
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct ContractMigrationOutput {
     pub name: String,
+    pub namespace: String,
     pub contract_address: FieldElement,
     pub base_class_hash: FieldElement,
 }
@@ -75,6 +79,8 @@ where
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
 
+    let default_namespace = get_default_namespace_from_ws(ws);
+
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
         utils::load_world_manifests(&profile_dir, &account, world_address, &ui, skip_manifests)
@@ -90,7 +96,7 @@ where
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
     let mut diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
-    diff.update_order()?;
+    diff.update_order(&default_namespace)?;
 
     let total_diffs = diff.count_diffs();
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
@@ -102,7 +108,7 @@ where
 
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
-    strategy.resolve_variable(world_address)?;
+    strategy.resolve_variable(world_address, &default_namespace)?;
 
     if dry_run {
         print_strategy(&ui, account.provider(), &strategy, world_address).await;
@@ -150,19 +156,26 @@ where
         )
         .await?;
 
+        // TODO: temporary deactivate auto-auth because it should be adapted
+        // with the new namespace feature.
         let account = Arc::new(account);
         let world = WorldContract::new(world_address, account.clone());
         if let Some(migration_output) = migration_output {
-            match auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output).await
-            {
-                Ok(()) => {
-                    ui.print_sub("Auto authorize completed successfully");
-                }
-                Err(e) => {
-                    ui.print_sub(format!("Failed to auto authorize with error: {e}"));
-                }
-            };
+            // TODO
+            if false {
+                match auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output)
+                    .await
+                {
+                    Ok(()) => {
+                        ui.print_sub("Auto authorize completed successfully");
+                    }
+                    Err(e) => {
+                        ui.print_sub(format!("Failed to auto authorize with error: {e}"));
+                    }
+                };
+            }
 
+            //
             if !ws.config().offline() {
                 upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
             }
@@ -232,8 +245,11 @@ fn overlay_dojo_contracts_from_path(path: &Utf8PathBuf) -> Result<Vec<OverlayDoj
         if path.is_file() {
             let manifest: Manifest<DojoContract> = toml::from_str(&fs::read_to_string(path)?)?;
 
-            let overlay_manifest =
-                OverlayDojoContract { name: manifest.name, ..Default::default() };
+            let overlay_manifest = OverlayDojoContract {
+                name: manifest.inner.name.to_smolstr(),
+                namespace: manifest.inner.namespace,
+                ..Default::default()
+            };
             elements.push(overlay_manifest);
         } else {
             continue;
@@ -255,7 +271,11 @@ fn overlay_model_from_path(path: &Utf8PathBuf) -> Result<Vec<OverlayDojoModel>> 
         if path.is_file() {
             let manifest: Manifest<DojoModel> = toml::from_str(&fs::read_to_string(path)?)?;
 
-            let overlay_manifest = OverlayDojoModel { name: manifest.name, ..Default::default() };
+            let overlay_manifest = OverlayDojoModel {
+                name: manifest.inner.name.to_smolstr(),
+                namespace: manifest.inner.namespace,
+                ..Default::default()
+            };
             elements.push(overlay_manifest);
         } else {
             continue;

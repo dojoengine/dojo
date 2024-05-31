@@ -49,7 +49,7 @@ use contract_upgrade::{IQuantumLeapDispatcher, IQuantumLeapDispatcherTrait};
 
 // Utils
 fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world(array![])
+    spawn_test_world("dojo", array![])
 }
 
 // A test contract needs to be used instead of previously used base contract since.
@@ -111,6 +111,8 @@ fn test_upgrade_direct() {
 trait IMetadataOnly<T> {
     fn selector(self: @T) -> felt252;
     fn name(self: @T) -> ByteArray;
+    fn namespace(self: @T) -> ByteArray;
+    fn namespace_selector(self: @T) -> felt252;
 }
 
 #[starknet::contract]
@@ -123,6 +125,14 @@ mod invalid_legacy_model {
         fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
             0x1b1edb46931b1a98d8c6ecf2703e8483ec1d85fb75b3e9c061eab383fc8f8f1
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_selector(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -144,6 +154,14 @@ mod invalid_legacy_model_world {
             0
         }
 
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_selector(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
+        }
+
         fn name(self: @ContractState) -> ByteArray {
             "invalid_legacy_model"
         }
@@ -160,7 +178,15 @@ mod invalid_model {
         fn selector(self: @ContractState) -> felt252 {
             // NOTE: Need to update this value if address changes
             // Pre-computed address of a contract deployed through the world.
-            0x1b1edb46931b1a98d8c6ecf2703e8483ec1d85fb75b3e9c061eab383fc8f8f1
+            0x314a23ab2b297b235fe87bf5acade82bcef62e3a375183ab7bf1fe0a3f5e8dd
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_selector(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -180,6 +206,14 @@ mod invalid_model_world {
             // World address is 0, and not registered as deployed through the world
             // as it's itself.
             0
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_selector(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {

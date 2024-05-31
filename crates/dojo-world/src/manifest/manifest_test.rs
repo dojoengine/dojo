@@ -6,7 +6,6 @@ use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
 use serde_json::json;
-use smol_str::SmolStr;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{EmittedEvent, FieldElement};
@@ -24,6 +23,7 @@ use crate::manifest::{
 };
 use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::world::WorldDiff;
+use crate::utils::get_manifest_name;
 
 #[tokio::test]
 async fn manifest_from_remote_throw_error_on_not_deployed() {
@@ -55,57 +55,43 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
 fn parse_registered_model_events() {
     let expected_models = vec![
         Manifest::new(
-            DojoModel { class_hash: felt!("0x5555"), ..Default::default() },
-            "Model1".into(),
+            DojoModel {
+                namespace: "ns".to_string(),
+                name: "modelA".to_string(),
+                class_hash: felt!("0x5555"),
+                ..Default::default()
+            },
+            get_manifest_name("ns", "modelA"),
+            "".into(),
         ),
         Manifest::new(
-            DojoModel { class_hash: felt!("0x6666"), ..Default::default() },
-            "Model2".into(),
+            DojoModel {
+                namespace: "ns".to_string(),
+                name: "modelB".to_string(),
+                class_hash: felt!("0x6666"),
+                ..Default::default()
+            },
+            get_manifest_name("ns", "modelB"),
+            "".into(),
         ),
     ];
 
-    let selector = selector!("ModelRegistered");
-
     let events = vec![
-        EmittedEvent {
-            data: {
-                let mut data =
-                    ByteArray::cairo_serialize(&ByteArray::from_string("Model1").unwrap());
-                data.extend(vec![felt!("0x5555"), felt!("0xbeef"), felt!("0xa1"), felt!("0")]);
-                data
-            },
-            keys: vec![selector],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: {
-                let mut data =
-                    ByteArray::cairo_serialize(&ByteArray::from_string("Model1").unwrap());
-                data.extend(vec![felt!("0xbeef"), felt!("0"), felt!("0xa1"), felt!("0xa1")]);
-                data
-            },
-            keys: vec![selector],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: {
-                let mut data =
-                    ByteArray::cairo_serialize(&ByteArray::from_string("Model2").unwrap());
-                data.extend(vec![felt!("0x6666"), felt!("0"), felt!("0xa3"), felt!("0")]);
-                data
-            },
-            keys: vec![selector],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
+        build_model_registered_event(
+            vec![felt!("0x5555"), felt!("0xbeef"), felt!("0xa1"), felt!("0")],
+            "ns",
+            "modelA",
+        ),
+        build_model_registered_event(
+            vec![felt!("0xbeef"), felt!("0"), felt!("0xa1"), felt!("0xa1")],
+            "ns",
+            "modelA",
+        ),
+        build_model_registered_event(
+            vec![felt!("0x6666"), felt!("0"), felt!("0xa3"), felt!("0")],
+            "ns",
+            "modelB",
+        ),
     ];
 
     let actual_models = parse_models_events(events);
@@ -122,53 +108,38 @@ fn parse_deployed_contracts_events_without_upgrade() {
             DojoContract {
                 class_hash: felt!("0x1"),
                 address: Some(felt!("0x123")),
+                namespace: "ns1".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x2"),
                 address: Some(felt!("0x456")),
+                namespace: "ns2".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x3"),
                 address: Some(felt!("0x789")),
+                namespace: "ns3".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
     ];
 
     let events = vec![
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x1"), felt!("0x123")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x2"), felt!("0x456")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x3"), felt!("0x789")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
+        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3"),
     ];
 
     let actual_contracts = parse_contracts_events(events, vec![]);
@@ -182,53 +153,38 @@ fn parse_deployed_contracts_events_with_upgrade() {
             DojoContract {
                 class_hash: felt!("0x69"),
                 address: Some(felt!("0x123")),
+                namespace: "ns1".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x2"),
                 address: Some(felt!("0x456")),
+                namespace: "ns2".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x88"),
                 address: Some(felt!("0x789")),
+                namespace: "ns3".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
     ];
 
     let deployed_events = vec![
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x1"), felt!("0x123")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x2"), felt!("0x456")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x3"), felt!("0x789")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
+        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3"),
     ];
 
     let upgrade_events = vec![
@@ -277,53 +233,38 @@ fn events_without_block_number_arent_parsed() {
             DojoContract {
                 class_hash: felt!("0x66"),
                 address: Some(felt!("0x123")),
+                namespace: "ns1".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x2"),
                 address: Some(felt!("0x456")),
+                namespace: "ns2".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x3"),
                 address: Some(felt!("0x789")),
+                namespace: "ns3".to_string(),
                 ..Default::default()
             },
+            "".into(),
             "".into(),
         ),
     ];
 
     let deployed_events = vec![
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x1"), felt!("0x123")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x2"), felt!("0x456")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x3"), felt!("0x789")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
+        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3"),
     ];
 
     // only the first upgrade event has a block number and is parsed
@@ -389,12 +330,15 @@ fn fetch_remote_manifest() {
 
     let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
 
+    let default_namespace = ws.current_package().unwrap().id.name.to_string();
+
     let world_address = config.tokio_handle().block_on(async {
         deploy_world(
             &runner,
             &temp_project_dir,
             &artifacts_path,
             dojo_metadata.skip_migration.clone(),
+            &default_namespace,
         )
         .await
     });
@@ -663,16 +607,32 @@ fn base_manifest_remove_items_work_as_expected() {
     let contracts = ["c1", "c2", "c3"];
     let models = ["m1", "m2", "m3"];
 
-    let world = Manifest { name: "world".into(), inner: Default::default() };
-    let base = Manifest { name: "base".into(), inner: Default::default() };
+    let world = Manifest {
+        manifest_name: "world".into(),
+        artifact_name: "world".into(),
+        inner: Default::default(),
+    };
+    let base = Manifest {
+        manifest_name: "base".into(),
+        artifact_name: "base".into(),
+        inner: Default::default(),
+    };
 
     let contracts = contracts
         .iter()
-        .map(|c| Manifest { name: SmolStr::from(*c), inner: Default::default() })
+        .map(|c| Manifest {
+            manifest_name: c.to_string(),
+            artifact_name: c.to_string(),
+            inner: Default::default(),
+        })
         .collect();
     let models = models
         .iter()
-        .map(|c| Manifest { name: SmolStr::from(*c), inner: Default::default() })
+        .map(|c| Manifest {
+            manifest_name: c.to_string(),
+            artifact_name: c.to_string(),
+            inner: Default::default(),
+        })
         .collect();
 
     let mut base = BaseManifest { contracts, models, world, base };
@@ -681,13 +641,51 @@ fn base_manifest_remove_items_work_as_expected() {
 
     assert_eq!(base.contracts.len(), 1);
     assert_eq!(
-        base.contracts.iter().map(|c| c.name.clone().into()).collect::<Vec<String>>(),
+        base.contracts.iter().map(|c| c.manifest_name.clone()).collect::<Vec<String>>(),
         vec!["c2"]
     );
 
     assert_eq!(base.models.len(), 2);
     assert_eq!(
-        base.models.iter().map(|c| c.name.clone().into()).collect::<Vec<String>>(),
+        base.models.iter().map(|c| c.manifest_name.clone()).collect::<Vec<String>>(),
         vec!["m1", "m3"]
     );
+}
+
+fn serialize_namespace(s: &str) -> Vec<FieldElement> {
+    let ba = ByteArray::from_string(s).unwrap();
+    ByteArray::cairo_serialize(&ba)
+}
+
+fn build_model_registered_event(
+    values: Vec<FieldElement>,
+    namespace: &str,
+    model: &str,
+) -> EmittedEvent {
+    let mut data = ByteArray::cairo_serialize(&ByteArray::from_string(model).unwrap());
+    data.extend(ByteArray::cairo_serialize(&ByteArray::from_string(namespace).unwrap()));
+    data.extend(values);
+
+    EmittedEvent {
+        data,
+        keys: vec![selector!("ModelRegistered")],
+        block_hash: Default::default(),
+        from_address: Default::default(),
+        block_number: Default::default(),
+        transaction_hash: Default::default(),
+    }
+}
+
+fn build_deploy_event(values: Vec<FieldElement>, ns: &str) -> EmittedEvent {
+    let mut data = values.to_vec();
+    data.extend(serialize_namespace(ns).iter());
+
+    EmittedEvent {
+        data,
+        keys: vec![],
+        block_hash: Default::default(),
+        from_address: Default::default(),
+        block_number: Default::default(),
+        transaction_hash: Default::default(),
+    }
 }

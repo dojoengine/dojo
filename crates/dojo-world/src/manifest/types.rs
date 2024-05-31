@@ -45,7 +45,7 @@ pub struct OverlayManifest {
     pub models: Vec<OverlayDojoModel>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Default, Deserialize, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Manifest<T>
 where
@@ -53,7 +53,13 @@ where
 {
     #[serde(flatten)]
     pub inner: T,
-    pub name: SmolStr,
+
+    // name of the manifest which is used as filename
+    pub manifest_name: String,
+
+    // artifact name which is used to be able to match manifests
+    // with artifacts produced during the compilation.
+    pub artifact_name: String,
 }
 
 // Utility methods thats needs to be implemented by manifest types
@@ -75,8 +81,8 @@ impl<T> Manifest<T>
 where
     T: ManifestMethods,
 {
-    pub fn new(inner: T, name: SmolStr) -> Self {
-        Self { inner, name }
+    pub fn new(inner: T, manifest_name: String, artifact_name: String) -> Self {
+        Self { inner, manifest_name, artifact_name }
     }
 }
 
@@ -103,6 +109,8 @@ pub struct DojoContract {
     pub computed: Vec<ComputedValueEntrypoint>,
     #[serde(default)]
     pub init_calldata: Vec<String>,
+    pub name: String,
+    pub namespace: String,
 }
 
 /// Represents a declaration of a model.
@@ -117,6 +125,8 @@ pub struct DojoModel {
     #[serde_as(as = "UfeHex")]
     pub original_class_hash: FieldElement,
     pub abi: Option<AbiFormat>,
+    pub name: String,
+    pub namespace: String,
 }
 
 #[serde_as]
@@ -155,6 +165,7 @@ pub struct Class {
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoContract {
     pub name: SmolStr,
+    pub namespace: String,
     pub original_class_hash: Option<FieldElement>,
     pub reads: Option<Vec<String>>,
     pub writes: Option<Vec<String>>,
@@ -166,6 +177,7 @@ pub struct OverlayDojoContract {
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoModel {
     pub name: SmolStr,
+    pub namespace: String,
     pub original_class_hash: Option<FieldElement>,
 }
 
@@ -206,6 +218,7 @@ pub struct ComputedValueEntrypoint {
     // Name of entrypoint to get computed value
     pub entrypoint: SmolStr,
     // Component to compute for
+    pub namespace: Option<String>,
     pub model: Option<String>,
 }
 

@@ -1,8 +1,0 @@
-init_calldata = [
-    "$class_hash:dojo_examples::actions::actions",
-    "$contract_address:dojo_examples::actions::actions",
-    "10",
-]
-name = "dojo_examples::others::others"
-reads = [  ]
-writes = [  ]

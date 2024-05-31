@@ -4,17 +4,27 @@ use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
-use cairo_lang_syntax::node::ast::MaybeModuleBody;
+use cairo_lang_diagnostics::Severity;
+use cairo_lang_syntax::node::ast::{ArgClause, Expr, MaybeModuleBody, OptionArgListParenthesized};
 use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
+use dojo_world::utils::compute_bytearray_hash;
 
-use crate::plugin::{DojoAuxData, SystemAuxData};
+use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 use crate::syntax::{self_param, utils as syntax_utils};
+use crate::utils::is_namespace_valid;
 
 const DOJO_INIT_FN: &str = "dojo_init";
+const CONTRACT_NAMESPACE: &str = "namespace";
+
+#[derive(Clone, Default)]
+pub struct ContractParameters {
+    namespace: Option<String>,
+}
 
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
@@ -22,13 +32,44 @@ pub struct DojoContract {
 }
 
 impl DojoContract {
-    pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
+    pub fn from_module(
+        db: &dyn SyntaxGroup,
+        module_ast: &ast::ItemModule,
+        package_id: String,
+    ) -> PluginResult {
         let name = module_ast.name(db).text(db);
 
-        let mut system = DojoContract { diagnostics: vec![], dependencies: HashMap::new() };
+        let mut diagnostics = vec![];
+        let parameters = get_parameters(db, module_ast, &mut diagnostics);
+
+        let mut system = DojoContract { diagnostics, dependencies: HashMap::new() };
+
         let mut has_event = false;
         let mut has_storage = false;
         let mut has_init = false;
+
+        let contract_namespace = match parameters.namespace {
+            Some(x) => x.to_string(),
+            None => package_id,
+        };
+
+        if !is_namespace_valid(&contract_namespace) {
+            return PluginResult {
+                code: None,
+                diagnostics: vec![PluginDiagnostic {
+                    stable_ptr: module_ast.stable_ptr().0,
+                    message: format!(
+                        "The contract namespace '{}' can only contain lower case characters (a-z) \
+                         and underscore (_)",
+                        &contract_namespace,
+                    ),
+                    severity: Severity::Error,
+                }],
+                remove_original_item: false,
+            };
+        }
+
+        let contract_namespace_selector = compute_bytearray_hash(&contract_namespace);
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
@@ -99,7 +140,7 @@ impl DojoContract {
                 body_nodes.append(&mut system.create_storage())
             }
 
-            let mut builder = PatchBuilder::new(db, &module_ast);
+            let mut builder = PatchBuilder::new(db, module_ast);
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
                 #[starknet::contract]
@@ -109,7 +150,7 @@ impl DojoContract {
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
-
+                    use dojo::world::INamespace;
 
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
                  upgradeable, event: UpgradeableEvent);
@@ -118,6 +159,17 @@ impl DojoContract {
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             '$name$'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            \"$contract_namespace$\"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            $contract_namespace_selector$
                         }
                     }
 
@@ -138,6 +190,14 @@ impl DojoContract {
                 &UnorderedHashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+                    (
+                        "contract_namespace".to_string(),
+                        RewriteNode::Text(contract_namespace.clone()),
+                    ),
+                    (
+                        "contract_namespace_selector".to_string(),
+                        RewriteNode::Text(contract_namespace_selector.to_string()),
+                    ),
                 ]),
             ));
 
@@ -151,6 +211,7 @@ impl DojoContract {
                         models: vec![],
                         systems: vec![SystemAuxData {
                             name,
+                            namespace: contract_namespace.clone(),
                             dependencies: system.dependencies.values().cloned().collect(),
                         }],
                         events: vec![],
@@ -444,4 +505,105 @@ impl DojoContract {
 
         vec![RewriteNode::Copied(impl_ast.as_syntax_node())]
     }
+}
+
+/// Get the contract namespace from the `Expr` parameter.
+fn get_contract_namespace(
+    db: &dyn SyntaxGroup,
+    arg_value: Expr,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+) -> Option<String> {
+    match arg_value {
+        Expr::ShortString(ss) => Some(ss.string_value(db).unwrap()),
+        Expr::String(s) => Some(s.string_value(db).unwrap()),
+        _ => {
+            diagnostics.push(PluginDiagnostic {
+                message: format!(
+                    "The argument '{}' of dojo::contract must be a string",
+                    CONTRACT_NAMESPACE
+                ),
+                stable_ptr: arg_value.stable_ptr().untyped(),
+                severity: Severity::Error,
+            });
+            Option::None
+        }
+    }
+}
+
+/// Get parameters of the dojo::contract attribute.
+///
+/// Parameters:
+/// * db: The semantic database.
+/// * module_ast: The AST of the contract module.
+/// * diagnostics: vector of compiler diagnostics.
+///
+/// Returns:
+/// * A [`ContractParameters`] object containing all the dojo::contract parameters with their
+/// default values if not set in the code.
+fn get_parameters(
+    db: &dyn SyntaxGroup,
+    module_ast: &ast::ItemModule,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+) -> ContractParameters {
+    let mut parameters = ContractParameters::default();
+    let mut processed_args: HashMap<String, bool> = HashMap::new();
+
+    if let OptionArgListParenthesized::ArgListParenthesized(arguments) =
+        module_ast.attributes(db).query_attr(db, DOJO_CONTRACT_ATTR).first().unwrap().arguments(db)
+    {
+        arguments.arguments(db).elements(db).iter().for_each(|a| match a.arg_clause(db) {
+            ArgClause::Named(x) => {
+                let arg_name = x.name(db).text(db).to_string();
+                let arg_value = x.value(db);
+
+                if processed_args.contains_key(&arg_name) {
+                    diagnostics.push(PluginDiagnostic {
+                        message: format!("Too many '{}' attributes for dojo::contract", arg_name),
+                        stable_ptr: module_ast.stable_ptr().untyped(),
+                        severity: Severity::Error,
+                    });
+                } else {
+                    processed_args.insert(arg_name.clone(), true);
+
+                    match arg_name.as_str() {
+                        CONTRACT_NAMESPACE => {
+                            parameters.namespace =
+                                get_contract_namespace(db, arg_value, diagnostics);
+                        }
+                        _ => {
+                            diagnostics.push(PluginDiagnostic {
+                                message: format!(
+                                    "Unexpected argument '{}' for dojo::contract",
+                                    arg_name
+                                ),
+                                stable_ptr: x.stable_ptr().untyped(),
+                                severity: Severity::Warning,
+                            });
+                        }
+                    }
+                }
+            }
+            ArgClause::Unnamed(arg) => {
+                let arg_name = arg.value(db).as_syntax_node().get_text(db);
+
+                diagnostics.push(PluginDiagnostic {
+                    message: format!("Unexpected argument '{}' for dojo::contract", arg_name),
+                    stable_ptr: arg.stable_ptr().untyped(),
+                    severity: Severity::Warning,
+                });
+            }
+            ArgClause::FieldInitShorthand(x) => {
+                diagnostics.push(PluginDiagnostic {
+                    message: format!(
+                        "Unexpected argument '{}' for dojo::contract",
+                        x.name(db).name(db).text(db).to_string()
+                    ),
+                    stable_ptr: x.stable_ptr().untyped(),
+                    severity: Severity::Warning,
+                });
+            }
+        })
+    }
+
+    parameters
 }

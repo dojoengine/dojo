@@ -10,6 +10,7 @@ use dojo_world::utils::TransactionWaiter;
 use katana_runner::KatanaRunner;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
+use sozo_ops::utils::get_default_namespace_from_ws;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
 use starknet::core::types::{BlockId, BlockTag};
@@ -70,10 +71,16 @@ async fn test_load_from_remote() {
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let mut migration =
-        prepare_migration(base_dir.into(), target_dir.into(), dojo_metadata.skip_migration)
-            .unwrap();
-    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
+    let mut migration = prepare_migration(
+        base_dir.into(),
+        target_dir.into(),
+        dojo_metadata.skip_migration,
+        &default_namespace,
+    )
+    .unwrap();
+    migration.resolve_variable(migration.world_address().unwrap(), &default_namespace).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 

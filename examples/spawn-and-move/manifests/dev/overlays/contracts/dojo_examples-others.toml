@@ -1,0 +1,5 @@
+init_calldata = ["$contract_address:dojo_examples:actions", "$class_hash:dojo_examples:actions", "10"]
+name = "others"
+namespace = "dojo_examples"
+manifest_name = "dojo_examples_others"
+artifact_name = "dojo_examples::others::others"

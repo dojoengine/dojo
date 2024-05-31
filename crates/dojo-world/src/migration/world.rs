@@ -3,7 +3,6 @@ use std::mem;
 use std::str::FromStr;
 
 use anyhow::{bail, Result};
-use convert_case::{Case, Casing};
 use starknet_crypto::FieldElement;
 use topological_sort::TopologicalSort;
 
@@ -13,6 +12,7 @@ use super::StateDiff;
 use crate::manifest::{
     BaseManifest, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
 };
+use crate::utils::split_full_world_element_name;
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -33,23 +33,16 @@ impl WorldDiff {
             .models
             .iter()
             .map(|model| ClassDiff {
-                name: model.name.to_string(),
+                artifact_name: model.artifact_name.to_string(),
+                name: model.inner.name.to_string(),
+                namespace: model.inner.namespace.clone(),
                 local_class_hash: *model.inner.class_hash(),
                 original_class_hash: *model.inner.original_class_hash(),
                 remote_class_hash: remote.as_ref().and_then(|m| {
-                    // Remote models are detected from events, where only the struct
-                    // name (pascal case) is emitted.
-                    // Local models uses the fully qualified name of the model,
-                    // always in snake_case from cairo compiler.
-                    let model_name = model
-                        .name
-                        .split("::")
-                        .last()
-                        .unwrap_or(&model.name)
-                        .from_case(Case::Snake)
-                        .to_case(Case::Pascal);
-
-                    m.models.iter().find(|e| e.name == model_name).map(|s| *s.inner.class_hash())
+                    m.models
+                        .iter()
+                        .find(|e| e.manifest_name == model.manifest_name)
+                        .map(|s| *s.inner.class_hash())
                 }),
             })
             .collect::<Vec<_>>();
@@ -68,7 +61,9 @@ impl WorldDiff {
                 };
 
                 ContractDiff {
-                    name: contract.name.to_string(),
+                    artifact_name: contract.artifact_name.to_string(),
+                    name: contract.inner.name.to_string(),
+                    namespace: contract.inner.namespace.clone(),
                     local_class_hash: *contract.inner.class_hash(),
                     original_class_hash: *contract.inner.original_class_hash(),
                     base_class_hash,
@@ -84,14 +79,18 @@ impl WorldDiff {
             .collect::<Vec<_>>();
 
         let base = ClassDiff {
+            artifact_name: local.base.artifact_name.clone(),
             name: BASE_CONTRACT_NAME.into(),
+            namespace: "__DOJO__".to_string(),
             local_class_hash: *local.base.inner.class_hash(),
             original_class_hash: *local.base.inner.original_class_hash(),
             remote_class_hash: remote.as_ref().map(|m| *m.base.inner.class_hash()),
         };
 
         let world = ContractDiff {
+            artifact_name: local.world.artifact_name.clone(),
             name: WORLD_CONTRACT_NAME.into(),
+            namespace: "__DOJO__".to_string(),
             local_class_hash: *local.world.inner.class_hash(),
             original_class_hash: *local.world.inner.original_class_hash(),
             base_class_hash: *local.base.inner.class_hash(),
@@ -114,19 +113,23 @@ impl WorldDiff {
         count
     }
 
-    pub fn update_order(&mut self) -> Result<()> {
-        let mut ts = TopologicalSort::<&str>::new();
+    pub fn update_order(&mut self, default_namespace: &str) -> Result<()> {
+        let mut ts = TopologicalSort::<(String, String)>::new();
 
         // make the dependency graph by reading the constructor_calldata
         for contract in self.contracts.iter() {
-            let curr_name: &str = &contract.name;
-            ts.insert(curr_name);
+            let cur_full_name = (contract.namespace.clone(), contract.name.clone());
+            ts.insert(cur_full_name.clone());
 
             for field in &contract.init_calldata {
                 if let Some(dependency) = field.strip_prefix("$contract_address:") {
-                    ts.add_dependency(dependency, curr_name);
+                    let full_dep_name =
+                        split_full_world_element_name(dependency, default_namespace)?;
+                    ts.add_dependency(full_dep_name, cur_full_name.clone());
                 } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
-                    ts.add_dependency(dependency, curr_name);
+                    let full_dep_name =
+                        split_full_world_element_name(dependency, default_namespace)?;
+                    ts.add_dependency(full_dep_name, cur_full_name.clone());
                 } else {
                     // verify its a field element
                     match FieldElement::from_str(field) {
@@ -157,8 +160,12 @@ impl WorldDiff {
 
         let mut new_contracts = vec![];
 
-        for c_name in calculated_order {
-            let contract = match self.contracts.iter().find(|c| c.name == c_name) {
+        for (c_namespace, c_name) in calculated_order {
+            let contract = match self
+                .contracts
+                .iter()
+                .find(|c| c.namespace == c_namespace && c.name == c_name)
+            {
                 Some(c) => c,
                 None => bail!("Unidentified contract found in `init_calldata`"),
             };

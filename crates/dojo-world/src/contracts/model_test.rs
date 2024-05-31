@@ -29,12 +29,19 @@ async fn test_model() {
     let dojo_metadata =
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
-    let world_address =
-        deploy_world(&runner, &manifest_dir.into(), &target_dir, dojo_metadata.skip_migration)
-            .await;
+    let default_namespace = ws.current_package().unwrap().id.name.to_string();
+
+    let world_address = deploy_world(
+        &runner,
+        &manifest_dir.into(),
+        &target_dir,
+        dojo_metadata.skip_migration,
+        &default_namespace,
+    )
+    .await;
 
     let world = WorldContractReader::new(world_address, provider);
-    let position = world.model_reader("Position").await.unwrap();
+    let position = world.model_reader("Dojo", "Position").await.unwrap();
     let schema = position.schema().await.unwrap();
 
     assert_eq!(
@@ -75,7 +82,7 @@ async fn test_model() {
         felt!("0x027942375b09862291ece780c573e8c625df4ba41fd7524e0658ca75fff014ff")
     );
 
-    let moves = world.model_reader("Moves").await.unwrap();
+    let moves = world.model_reader("Dojo", "Moves").await.unwrap();
     let schema = moves.schema().await.unwrap();
 
     assert_eq!(

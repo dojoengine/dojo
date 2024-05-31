@@ -27,7 +27,7 @@ use starknet_crypto::FieldElement;
 
 use super::setup;
 use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
-use crate::utils::get_contract_address_from_reader;
+use crate::utils::{get_contract_address_from_reader, get_default_namespace_from_ws};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_auto_mine() {
@@ -218,8 +218,10 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
     let mut migration = setup::setup_migration(&config).unwrap();
-    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
+    migration.resolve_variable(migration.world_address().unwrap(), &default_namespace).unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =
@@ -256,7 +258,11 @@ async fn migrate_with_auto_authorize() {
         let contract_address =
             get_contract_address_from_reader(&world_reader, c.diff.name.clone()).await.unwrap();
 
-        let contract = manifest.contracts.iter().find(|a| a.name == c.diff.name).unwrap();
+        let contract = manifest
+            .contracts
+            .iter()
+            .find(|a| a.inner.namespace == c.diff.namespace && a.inner.name == c.diff.name)
+            .unwrap();
 
         for model in &contract.inner.writes {
             let model_selector = get_selector_from_name(model).unwrap();
@@ -271,15 +277,19 @@ async fn migrate_with_auto_authorize() {
 #[tokio::test(flavor = "multi_thread")]
 async fn migration_with_mismatching_world_address_and_seed() {
     let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
 
     let base_dir = config.manifest_path().parent().unwrap().to_path_buf();
     let target_dir = base_dir.join("target").join("dev");
+
+    let default_namespace = get_default_namespace_from_ws(&ws);
 
     let result = prepare_migration_with_world_and_seed(
         base_dir,
         target_dir,
         Some(felt!("0x1")),
         "sozo_test",
+        &default_namespace,
     );
 
     assert!(result.is_err());

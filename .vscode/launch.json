@@ -24,6 +24,21 @@
       ]
     },
     {
+      "name": "Sozo",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/sozo",
+      "args": [
+        "--manifest-path",
+        "examples/spawn-and-move/Scarb.toml",
+        "events",
+        "--world",
+        "0x04c972a756d796d716f665a8079dbf9aff05bbba41a2b8194553073f31d7d393",
+        "--chunk-size",
+        "100"
+      ]
+    },
+    {
       "type": "lldb",
       "request": "launch",
       "name": "Debug unit tests in 'dojo-world'",

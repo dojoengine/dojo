@@ -4,7 +4,17 @@
 test_expand_plugin
 
 //! > cairo_code
-#[dojo::contract]
+#[dojo::contract(namespace: 'MyNamespace')]
+mod bad_namespace_format {
+    use traits::Into;
+    use dojo::world::Context;
+
+    fn execute(ctx: Context, name: felt252) {
+        return ();
+    }
+}
+
+#[dojo::contract(namespace: 'my_namespace')]
 mod spawn {
     use traits::Into;
     use dojo::world::Context;
@@ -14,7 +24,7 @@ mod spawn {
     }
 }
 
-#[dojo::contract]
+#[dojo::contract(namespace: "my_namespace")]
 mod proxy {
     fn execute(value: felt252) -> felt252 {
         value
@@ -311,70 +321,70 @@ mod ctxnamed {
 }
 
 //! > expected_diagnostics
+error: The contract namespace 'MyNamespace' can only contain lower case characters (a-z) and underscore (_)
+ --> test_src/lib.cairo:1:1
+#[dojo::contract(namespace: 'MyNamespace')]
+^*****************************************^
+
 error: Unsupported attribute.
- --> test_src/lib.cairo:42:1
+ --> test_src/lib.cairo:52:1
 #[starknet::component]
 ^********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:48:1
+ --> test_src/lib.cairo:58:1
 #[starknet::component]
 ^********************^
 
 error: Anything other than functions is not supported in a dojo::interface
- --> test_src/lib.cairo:80:5
+ --> test_src/lib.cairo:90:5
     const ONE: u8;
     ^************^
 
 error: In a dojo contract or interface, you should use `world: @IWorldDispatcher` instead of `self: @ContractState`.
- --> test_src/lib.cairo:98:5
+ --> test_src/lib.cairo:108:5
     fn do_with_self(self: @ContractState) -> felt252;
     ^***********************************************^
 
 error: In a dojo contract or interface, you should use `ref world: IWorldDispatcher` instead of `ref self: ContractState`.
- --> test_src/lib.cairo:99:5
+ --> test_src/lib.cairo:109:5
     fn do_with_ref_self(ref self: ContractState) -> felt252;
     ^******************************************************^
 
 error: World parameter must be the first parameter.
- --> test_src/lib.cairo:104:5
+ --> test_src/lib.cairo:114:5
     fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252;
     ^****************************************************************************^
 
 error: In a dojo contract or interface, you should use `ref world: IWorldDispatcher` instead of `ref self: ContractState`.
- --> test_src/lib.cairo:111:9
+ --> test_src/lib.cairo:121:9
         fn do_with_self(ref self: ContractState) -> felt252 {
         ^***************************************************^
 
 error: In a dojo contract or interface, you should use `ref world: IWorldDispatcher` instead of `ref self: ContractState`.
- --> test_src/lib.cairo:115:9
+ --> test_src/lib.cairo:125:9
         fn do_with_ref_self(ref self: ContractState) -> felt252 {
         ^*******************************************************^
 
 error: World parameter must be the first parameter.
- --> test_src/lib.cairo:129:9
+ --> test_src/lib.cairo:139:9
         fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252 {
         ^*****************************************************************************^
 
 error: World parameter must be a snapshot if `ref` is not used.
- --> test_src/lib.cairo:180:5
+ --> test_src/lib.cairo:190:5
     fn dojo_init(
     ^***********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
  --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo:28:1
@@ -382,164 +392,139 @@ error: Unsupported attribute.
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:38:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:82:5
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:92:5
     #[my_attr]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:44:5
+ --> test_src/lib.cairo:54:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:50:5
+ --> test_src/lib.cairo:60:5
     #[storage]
     ^********^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:1:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:11:1
-#[dojo::contract]
-^***************^
-
-error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:18:1
-#[dojo::contract]
-^***************^
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
 
 error: Unknown inline item macro: 'component'.
  --> test_src/lib.cairo:28:1
@@ -581,242 +566,326 @@ error: Unsupported attribute.
 #[dojo::contract]
 ^***************^
 
-error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:54:1
-#[dojo::contract]
-^***************^
-
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:28:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:56:5
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:66:5
     component!(path: testcomponent1, storage: testcomponent1_storage, event: testcomponent1_event);
     ^*********************************************************************************************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:57:5
+ --> test_src/lib.cairo:67:5
     component!(path: testcomponent2, storage: testcomponent2_storage, event: testcomponent2_event);
     ^*********************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:64:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:64:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:64:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:64:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:64:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:64:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:54:1
+ --> test_src/lib.cairo:64:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:109:5
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:119:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:107:1
+ --> test_src/lib.cairo:117:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:142:5
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:152:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:135:1
+ --> test_src/lib.cairo:145:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:178:1
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:195:1
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
 #[dojo::contract]
 ^***************^
 
 //! > expanded_cairo_code
+#[dojo::contract(namespace: 'MyNamespace')]
+mod bad_namespace_format {
+    use traits::Into;
+    use dojo::world::Context;
+
+    fn execute(ctx: Context, name: felt252) {
+        return ();
+    }
+}
 
 #[starknet::component]
 mod testcomponent1 {
@@ -837,11 +906,23 @@ mod testcomponent2 {
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'spawn'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "my_namespace"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            1685136890688416384941629523783652800960468745356230625531475538826800548713
                         }
                     }
 
@@ -897,11 +978,23 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'proxy'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "my_namespace"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            1685136890688416384941629523783652800960468745356230625531475538826800548713
                         }
                     }
 
@@ -954,11 +1047,23 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'ctxnamed'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
                         }
                     }
 
@@ -1014,11 +1119,23 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'withevent'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
                         }
                     }
 
@@ -1075,11 +1192,23 @@ impl TestEventDrop of core::traits::Drop::<TestEvent>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'withcomponent'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
                         }
                     }
 
@@ -1169,11 +1298,23 @@ self: @TContractState, vec: Vec2, ref another_world: IWorldDispatcher
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'MyFaultyContract'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
                         }
                     }
 
@@ -1248,11 +1389,23 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'MyNominalContract'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
                         }
                     }
 
@@ -1349,11 +1502,23 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'init_test'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
                         }
                     }
 
@@ -1415,11 +1580,23 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
 
                     #[abi(embed_v0)]
                     impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
                         fn dojo_resource(self: @ContractState) -> felt252 {
                             'no_init_test'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
                         }
                     }
 

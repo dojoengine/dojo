@@ -51,7 +51,7 @@ pub struct UpgradeOutput {
 pub struct RegisterOutput {
     pub transaction_hash: FieldElement,
     pub declare_output: Vec<DeclareOutput>,
-    pub registered_model_names: Vec<String>,
+    pub registered_models: Vec<(String, String)>,
 }
 
 #[derive(Debug, Error)]

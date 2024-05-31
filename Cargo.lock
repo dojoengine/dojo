@@ -4606,6 +4606,7 @@ name = "dojo-lang"
 version = "0.7.0"
 dependencies = [
  "anyhow",
+ "cainome",
  "cairo-lang-compiler 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-debug 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-defs 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
@@ -4637,6 +4638,7 @@ dependencies = [
  "num-traits 0.2.19",
  "once_cell",
  "pretty_assertions",
+ "regex",
  "salsa",
  "scarb",
  "semver 1.0.23",
@@ -4645,6 +4647,7 @@ dependencies = [
  "serde_with 2.3.3",
  "smol_str",
  "starknet",
+ "starknet-crypto 0.6.2",
  "test-log",
  "thiserror",
  "toml 0.8.13",
@@ -12775,6 +12778,7 @@ dependencies = [
  "dojo-world",
  "futures",
  "ipfs-api-backend-hyper",
+ "itertools 0.12.1",
  "katana-runner",
  "notify",
  "notify-debouncer-mini",

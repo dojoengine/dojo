@@ -11,6 +11,7 @@ pub fn prepare_migration(
     manifest_dir: Utf8PathBuf,
     target_dir: Utf8PathBuf,
     skip_migration: Option<Vec<String>>,
+    default_namespace: &str,
 ) -> Result<MigrationStrategy> {
     // In testing, profile name is always dev.
     let profile_name = "dev";
@@ -32,10 +33,10 @@ pub fn prepare_migration(
     manifest.merge(overlay_manifest);
 
     let mut world = WorldDiff::compute(manifest, None);
-    world.update_order().unwrap();
+    world.update_order(default_namespace).unwrap();
 
     let mut strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world).unwrap();
-    strat.resolve_variable(strat.world_address().unwrap()).unwrap();
+    strat.resolve_variable(strat.world_address().unwrap(), default_namespace).unwrap();
 
     Ok(strat)
 }
@@ -45,6 +46,7 @@ pub fn prepare_migration_with_world_and_seed(
     target_dir: Utf8PathBuf,
     world_address: Option<FieldElement>,
     seed: &str,
+    default_namespace: &str,
 ) -> Result<MigrationStrategy> {
     // In testing, profile name is always dev.
     let profile_name = "dev";
@@ -62,7 +64,7 @@ pub fn prepare_migration_with_world_and_seed(
     manifest.merge(overlay_manifest);
 
     let mut world = WorldDiff::compute(manifest, None);
-    world.update_order().unwrap();
+    world.update_order(default_namespace).unwrap();
 
     let seed = cairo_short_string_to_felt(seed).unwrap();
     prepare_for_migration(world_address, seed, &target_dir, world)

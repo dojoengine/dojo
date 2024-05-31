@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use scarb::core::Config;
 use sozo_ops::model;
+use sozo_ops::utils::get_default_namespace_from_ws;
 use starknet::core::types::FieldElement;
 use tracing::trace;
 
@@ -22,6 +23,10 @@ pub enum ModelCommand {
         #[arg(help = "The name of the model")]
         name: String,
 
+        #[arg(short, long)]
+        #[arg(help = "The model namespace. If not set, the main package ID is used.")]
+        namespace: Option<String>,
+
         #[command(flatten)]
         world: WorldOptions,
 
@@ -33,6 +38,10 @@ pub enum ModelCommand {
     ContractAddress {
         #[arg(help = "The name of the model")]
         name: String,
+
+        #[arg(short, long)]
+        #[arg(help = "The model namespace. If not set, the main package ID is used.")]
+        namespace: Option<String>,
 
         #[command(flatten)]
         world: WorldOptions,
@@ -65,6 +74,10 @@ hashes, called 'hash' in the following documentation.
         #[arg(help = "The name of the model")]
         name: String,
 
+        #[arg(short, long)]
+        #[arg(help = "The model namespace. If not set, the main package ID is used.")]
+        namespace: Option<String>,
+
         #[command(flatten)]
         world: WorldOptions,
 
@@ -76,6 +89,10 @@ hashes, called 'hash' in the following documentation.
     Schema {
         #[arg(help = "The name of the model")]
         name: String,
+
+        #[arg(short, long)]
+        #[arg(help = "The model namespace. If not set, the main package ID is used.")]
+        namespace: Option<String>,
 
         #[command(flatten)]
         world: WorldOptions,
@@ -93,6 +110,10 @@ hashes, called 'hash' in the following documentation.
         #[arg(help = "The name of the model")]
         name: String,
 
+        #[arg(short, long)]
+        #[arg(help = "The model namespace. If not set, the main package ID is used.")]
+        namespace: Option<String>,
+
         #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
         #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
@@ -109,34 +130,50 @@ hashes, called 'hash' in the following documentation.
 impl ModelArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         let env_metadata = utils::load_metadata_from_config(config)?;
+        let get_namespace = |ns: Option<String>| -> String {
+            match ns {
+                Some(x) => x,
+                None => {
+                    let default_namespace = get_default_namespace_from_ws(&ws);
+                    println!("[default namespace: {}]", default_namespace);
+                    default_namespace
+                }
+            }
+        };
 
         config.tokio_handle().block_on(async {
             match self.command {
-                ModelCommand::ClassHash { name, starknet, world } => {
+                ModelCommand::ClassHash { name, namespace, starknet, world } => {
+                    let namespace = get_namespace(namespace);
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_class_hash(name, world_address, provider).await
+                    model::model_class_hash(namespace, name, world_address, provider).await
                 }
-                ModelCommand::ContractAddress { name, starknet, world } => {
+                ModelCommand::ContractAddress { name, namespace, starknet, world } => {
+                    let namespace = get_namespace(namespace);
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_contract_address(name, world_address, provider).await
+                    model::model_contract_address(namespace, name, world_address, provider).await
                 }
-                ModelCommand::Layout { name, starknet, world } => {
+                ModelCommand::Layout { name, namespace, starknet, world } => {
+                    let namespace = get_namespace(namespace);
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_layout(name, world_address, provider).await
+                    model::model_layout(namespace, name, world_address, provider).await
                 }
-                ModelCommand::Schema { name, to_json, starknet, world } => {
+                ModelCommand::Schema { name, namespace, to_json, starknet, world } => {
+                    let namespace = get_namespace(namespace);
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_schema(name, world_address, provider, to_json).await
+                    model::model_schema(namespace, name, world_address, provider, to_json).await
                 }
-                ModelCommand::Get { name, keys, starknet, world } => {
+                ModelCommand::Get { name, namespace, keys, starknet, world } => {
+                    let namespace = get_namespace(namespace);
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    model::model_get(name, keys, world_address, provider).await
+                    model::model_get(namespace, name, keys, world_address, provider).await
                 }
             }
         })

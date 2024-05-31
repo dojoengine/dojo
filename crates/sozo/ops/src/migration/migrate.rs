@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
+use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
 use dojo_world::contracts::abi::world;
 use dojo_world::contracts::{cairo_utils, WorldContract};
@@ -17,8 +18,12 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
     Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
 };
-use dojo_world::utils::{TransactionExt, TransactionWaiter};
+use dojo_world::utils::{
+    compute_model_selector_from_names, get_full_world_element_name, TransactionExt,
+    TransactionWaiter,
+};
 use futures::future;
+use itertools::Itertools;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
@@ -214,11 +219,21 @@ where
 
     let world_address = strategy.world_address()?;
 
+    // register namespaces
+    let mut namespaces =
+        strategy.models.iter().map(|m| m.diff.namespace.to_string()).collect::<Vec<_>>();
+    namespaces.extend(
+        strategy.contracts.iter().map(|c| c.diff.namespace.to_string()).collect::<Vec<_>>(),
+    );
+    namespaces = namespaces.into_iter().unique().collect::<Vec<_>>();
+
+    register_namespaces(&namespaces, world_address, &migrator, &ui, &txn_config).await?;
+
     // Once Torii supports indexing arrays, we should declare and register the
     // ResourceMetadata model.
     match register_dojo_models(&strategy.models, world_address, &migrator, &ui, &txn_config).await {
         Ok(output) => {
-            migration_output.models = output.registered_model_names;
+            migration_output.models = output.registered_models;
         }
         Err(e) => {
             ui.anyhow(&e);
@@ -333,11 +348,12 @@ where
 
     // models
     if !migration_output.models.is_empty() {
-        for model_name in migration_output.models {
-            if let Some(m) = dojo_metadata.resources_artifacts.get(&model_name) {
+        for (namespace, model_name) in migration_output.models {
+            let full_name = get_full_world_element_name(&namespace, &model_name);
+            if let Some(m) = dojo_metadata.resources_artifacts.get(&full_name) {
                 ipfs.push(upload_on_ipfs_and_create_resource(
                     &ui,
-                    get_selector_from_name(&model_name).expect("ASCII model name"),
+                    compute_model_selector_from_names(&namespace, &model_name),
                     m.clone(),
                 ));
             }
@@ -349,7 +365,8 @@ where
 
     if !migrated_contracts.is_empty() {
         for contract in migrated_contracts {
-            if let Some(m) = dojo_metadata.resources_artifacts.get(&contract.name) {
+            let full_name = get_full_world_element_name(&contract.namespace, &contract.name);
+            if let Some(m) = dojo_metadata.resources_artifacts.get(&full_name) {
                 ipfs.push(upload_on_ipfs_and_create_resource(
                     &ui,
                     contract.contract_address,
@@ -392,10 +409,46 @@ where
     Ok(())
 }
 
+async fn register_namespaces<A>(
+    namespaces: &[String],
+    world_address: FieldElement,
+    migrator: &A,
+    ui: &Ui,
+    txn_config: &TxnConfig,
+) -> Result<()>
+where
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+{
+    ui.print_header(format!("# Namespaces ({})", namespaces.len()));
+
+    let world = WorldContract::new(world_address, migrator);
+
+    let calls = namespaces
+        .iter()
+        .map(|ns| {
+            ui.print(italic_message(&ns).to_string());
+            world.register_namespace_getcall(&ByteArray::from_string(ns).unwrap())
+        })
+        .collect::<Vec<_>>();
+
+    let InvokeTransactionResult { transaction_hash } =
+        world.account.execute(calls).send_with_cfg(txn_config).await.map_err(|e| {
+            ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to register namespace to World: {e}")
+        })?;
+
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+    ui.print(format!("All namespaces are registered at: {transaction_hash:#x}\n"));
+
+    Ok(())
+}
+
 async fn register_dojo_models<A>(
     models: &[ClassMigration],
     world_address: FieldElement,
-    migrator: A,
+    migrator: &A,
     ui: &Ui,
     txn_config: &TxnConfig,
 ) -> Result<RegisterOutput>
@@ -407,14 +460,14 @@ where
         return Ok(RegisterOutput {
             transaction_hash: FieldElement::ZERO,
             declare_output: vec![],
-            registered_model_names: vec![],
+            registered_models: vec![],
         });
     }
 
     ui.print_header(format!("# Models ({})", models.len()));
 
     let mut declare_output = vec![];
-    let mut registered_model_names = vec![];
+    let mut registered_models = vec![];
 
     for c in models.iter() {
         ui.print(italic_message(&c.diff.name).to_string());
@@ -449,7 +502,7 @@ where
     let calls = models
         .iter()
         .map(|c| {
-            registered_model_names.push(c.diff.name.clone());
+            registered_models.push((c.diff.namespace.clone(), c.diff.name.clone()));
             world.register_model_getcall(&c.diff.local_class_hash.into())
         })
         .collect::<Vec<_>>();
@@ -462,9 +515,9 @@ where
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
-    ui.print(format!("All models are registered at: {transaction_hash:#x}"));
+    ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
 
-    Ok(RegisterOutput { transaction_hash, declare_output, registered_model_names })
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_models })
 }
 
 async fn register_dojo_contracts<A>(
@@ -531,6 +584,7 @@ where
                 }
                 deploy_output.push(Some(ContractMigrationOutput {
                     name: name.to_string(),
+                    namespace: contract.diff.namespace.to_string(),
                     contract_address: output.contract_address,
                     base_class_hash: output.base_class_hash,
                 }));
@@ -800,7 +854,7 @@ pub async fn update_manifests_and_abis(
                 let local = local_manifest
                     .contracts
                     .iter_mut()
-                    .find(|c| c.name == output.name)
+                    .find(|c| c.inner.namespace == output.namespace && c.inner.name == output.name)
                     .expect("contract got migrated, means it should be present here");
 
                 local.inner.base_class_hash = output.base_class_hash;
@@ -810,7 +864,7 @@ pub async fn update_manifests_and_abis(
 
     local_manifest.contracts.iter_mut().for_each(|contract| {
         if contract.inner.base_class_hash != FieldElement::ZERO {
-            let salt = generate_salt(&contract.name);
+            let salt = generate_salt(&contract.inner.name);
             contract.inner.address = Some(get_contract_address(
                 salt,
                 contract.inner.base_class_hash,

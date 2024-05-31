@@ -8,21 +8,25 @@ fn no_diff_when_local_and_remote_are_equal() {
     let world_contract = Manifest::new(
         Class { class_hash: 66_u32.into(), ..Default::default() },
         WORLD_CONTRACT_NAME.into(),
+        WORLD_CONTRACT_NAME.into(),
     );
 
     let base_contract = Manifest::new(
         Class { class_hash: 77_u32.into(), ..Default::default() },
         BASE_CONTRACT_NAME.into(),
+        BASE_CONTRACT_NAME.into(),
     );
 
     let models = vec![Manifest::new(
         DojoModel { members: vec![], class_hash: 11_u32.into(), ..Default::default() },
+        "dojo_mock_model".into(),
         "dojo_mock::models::model".into(),
     )];
 
     let remote_models = vec![Manifest::new(
         DojoModel { members: vec![], class_hash: 11_u32.into(), ..Default::default() },
-        "Model".into(),
+        "dojo_mock_model".into(),
+        "dojo_mock::models::model".into(),
     )];
 
     let local =
@@ -43,50 +47,86 @@ fn diff_when_local_and_remote_are_different() {
     let world_contract = Manifest::new(
         Class { class_hash: 66_u32.into(), ..Default::default() },
         WORLD_CONTRACT_NAME.into(),
+        WORLD_CONTRACT_NAME.into(),
     );
 
     let base_contract = Manifest::new(
         Class { class_hash: 77_u32.into(), ..Default::default() },
         BASE_CONTRACT_NAME.into(),
+        BASE_CONTRACT_NAME.into(),
     );
 
     let models = vec![
         Manifest::new(
-            DojoModel { members: vec![], class_hash: felt!("0x11"), ..Default::default() },
+            DojoModel {
+                name: "model".to_string(),
+                namespace: "dojo_mock".to_string(),
+                members: vec![],
+                class_hash: felt!("0x11"),
+                ..Default::default()
+            },
+            "dojo_mock:model".into(),
             "dojo_mock::models::model".into(),
         ),
         Manifest::new(
-            DojoModel { members: vec![], class_hash: felt!("0x22"), ..Default::default() },
+            DojoModel {
+                name: "model_2".to_string(),
+                namespace: "dojo_mock".to_string(),
+                members: vec![],
+                class_hash: felt!("0x22"),
+                ..Default::default()
+            },
+            "dojo_mock:model_2".into(),
             "dojo_mock::models::model_2".into(),
         ),
     ];
 
     let remote_models = vec![
         Manifest::new(
-            DojoModel { members: vec![], class_hash: felt!("0x11"), ..Default::default() },
-            "Model".into(),
+            DojoModel {
+                name: "model".to_string(),
+                namespace: "dojo_mock".to_string(),
+                members: vec![],
+                class_hash: felt!("0x11"),
+                ..Default::default()
+            },
+            "dojo_mock:model".into(),
+            "dojo_mock::models::model".into(),
         ),
         Manifest::new(
-            DojoModel { members: vec![], class_hash: felt!("0x33"), ..Default::default() },
-            "Model2".into(),
+            DojoModel {
+                name: "model_2".to_string(),
+                namespace: "dojo_mock".to_string(),
+                members: vec![],
+                class_hash: felt!("0x33"),
+                ..Default::default()
+            },
+            "dojo_mock:model_2".into(),
+            "dojo_mock::models::model_2".into(),
         ),
     ];
 
     let contracts = vec![
         Manifest::new(
             DojoContract {
+                name: "my_contract".to_string(),
+                namespace: "dojo_mock".to_string(),
                 class_hash: felt!("0x1111"),
                 address: Some(felt!("0x2222")),
                 ..DojoContract::default()
             },
+            "dojo_mock:my_contract".into(),
             "dojo_mock::contracts::my_contract".into(),
         ),
         Manifest::new(
             DojoContract {
+                name: "my_contract_2".to_string(),
+                namespace: "dojo_mock".to_string(),
                 class_hash: felt!("0x3333"),
                 address: Some(felt!("4444")),
                 ..DojoContract::default()
             },
+            "dojo_mock:my_contract_2".into(),
             "dojo_mock::contracts::my_contract_2".into(),
         ),
     ];
@@ -102,27 +142,28 @@ fn diff_when_local_and_remote_are_different() {
     let diff = WorldDiff::compute(local, Some(remote));
 
     assert_eq!(diff.count_diffs(), 3);
-    assert!(diff.models.iter().any(|m| m.name == "dojo_mock::models::model_2"));
-    assert!(diff.contracts.iter().any(|c| c.name == "dojo_mock::contracts::my_contract"));
+    assert!(diff.models.iter().any(|m| m.name == "model_2" && m.namespace == "dojo_mock"));
+    assert!(diff.contracts.iter().any(|c| c.name == "my_contract" && c.namespace == "dojo_mock"));
 }
 
 #[test]
 fn updating_order_as_expected() {
     let init_calldata = vec![
-        ("c4", vec!["$contract_address:c1", "0x0"]),
-        ("c3", vec!["0x0"]),
-        ("c5", vec!["$contract_address:c4", "0x0"]),
-        ("c7", vec!["$contract_address:c4", "0x0"]),
-        ("c2", vec!["0x0"]),
-        ("c6", vec!["$contract_address:c4", "$contract_address:c3", "0x0"]),
-        ("c1", vec!["0x0"]),
+        ("ns", "c4", vec!["$contract_address:ns:c1", "0x0"]),
+        ("ns", "c3", vec!["0x0"]),
+        ("ns", "c5", vec!["$contract_address:ns:c4", "0x0"]),
+        ("ns", "c7", vec!["$contract_address:ns:c4", "0x0"]),
+        ("ns", "c2", vec!["0x0"]),
+        ("ns", "c6", vec!["$contract_address:ns:c4", "$contract_address:ns:c3", "0x0"]),
+        ("ns", "c1", vec!["0x0"]),
     ];
 
     let mut contracts = vec![];
     for calldata in init_calldata {
         contracts.push(ContractDiff {
-            init_calldata: calldata.1.iter().map(|c| c.to_string()).collect(),
-            name: calldata.0.to_string(),
+            init_calldata: calldata.2.iter().map(|c| c.to_string()).collect(),
+            name: calldata.1.to_string(),
+            namespace: calldata.0.to_string(),
             ..Default::default()
         });
     }
@@ -134,7 +175,7 @@ fn updating_order_as_expected() {
         models: vec![],
     };
 
-    diff.update_order().unwrap();
+    diff.update_order("ns").unwrap();
 
     let expected_order = ["c1", "c2", "c3", "c4", "c5", "c6", "c7"];
     for (i, contract) in diff.contracts.iter().enumerate() {
@@ -145,20 +186,21 @@ fn updating_order_as_expected() {
 #[test]
 fn updating_order_when_cyclic_dependency_fail() {
     let init_calldata = vec![
-        ("c4", vec!["$contract_address:c1", "$contract_address:c6", "0x0"]),
-        ("c3", vec!["0x0"]),
-        ("c5", vec!["$contract_address:c4", "0x0"]),
-        ("c7", vec!["$contract_address:c4", "0x0"]),
-        ("c2", vec!["0x0"]),
-        ("c6", vec!["$contract_address:c4", "$contract_address:c3", "0x0"]),
-        ("c1", vec!["0x0"]),
+        ("ns", "c4", vec!["$contract_address:ns:c1", "$contract_address:ns:c6", "0x0"]),
+        ("ns", "c3", vec!["0x0"]),
+        ("ns", "c5", vec!["$contract_address:ns:c4", "0x0"]),
+        ("ns", "c7", vec!["$contract_address:ns:c4", "0x0"]),
+        ("ns", "c2", vec!["0x0"]),
+        ("ns", "c6", vec!["$contract_address:ns:c4", "$contract_address:ns:c3", "0x0"]),
+        ("ns", "c1", vec!["0x0"]),
     ];
 
     let mut contracts = vec![];
     for calldata in init_calldata {
         contracts.push(ContractDiff {
-            init_calldata: calldata.1.iter().map(|c| c.to_string()).collect(),
-            name: calldata.0.to_string(),
+            init_calldata: calldata.2.iter().map(|c| c.to_string()).collect(),
+            namespace: calldata.0.to_string(),
+            name: calldata.1.to_string(),
             ..Default::default()
         });
     }
@@ -170,5 +212,5 @@ fn updating_order_when_cyclic_dependency_fail() {
         models: vec![],
     };
 
-    assert!(diff.update_order().is_err_and(|e| e.to_string().contains("Cyclic")));
+    assert!(diff.update_order("ns").is_err_and(|e| e.to_string().contains("Cyclic")));
 }
