@@ -2,7 +2,6 @@
 
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Context;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
@@ -22,7 +21,6 @@ use serde::{Deserialize, Serialize};
 use starknet_crypto::poseidon_hash_many;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use tokio::time::sleep;
 use tracing::{error, info, trace};
 use url::Url;
 
@@ -338,7 +336,7 @@ impl Saya {
         let world_da = state_diff.world_da.unwrap();
 
         trace!(target: LOG_TARGET, last_block, "Verifying block.");
-        let transaction_hash = verifier::verify(
+        let (transaction_hash, nonce_after) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
         )
@@ -346,12 +344,9 @@ impl Saya {
         info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
 
         let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
-        println!("Program hash: {:x}", program_hash);
         let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
         info!(target: LOG_TARGET, expected_fact, "Expected fact.");
-
-        sleep(Duration::from_millis(5000)).await;
 
         trace!(target: LOG_TARGET, last_block, "Applying diffs.");
         let transaction_hash = dojo_os::starknet_apply_diffs(
@@ -359,6 +354,7 @@ impl Saya {
             world_da,
             program_output,
             program_hash,
+            nonce_after + 1u64.into(),
         )
         .await?;
         info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");

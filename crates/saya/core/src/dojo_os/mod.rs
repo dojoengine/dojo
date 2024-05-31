@@ -53,6 +53,7 @@ pub async fn starknet_apply_diffs(
     new_state: Vec<FieldElement>,
     program_output: Vec<FieldElement>,
     program_hash: FieldElement,
+    nonce: FieldElement,
 ) -> anyhow::Result<String> {
     let calldata = chain![
         vec![FieldElement::from(new_state.len() as u64 / 2)].into_iter(),
@@ -69,6 +70,7 @@ pub async fn starknet_apply_diffs(
             selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
             calldata,
         }])
+        .nonce(nonce)
         .send_with_cfg(&txn_config)
         .await
         .context("Failed to send `upgrade state` transaction.")?;

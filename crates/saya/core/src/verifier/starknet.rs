@@ -13,14 +13,16 @@ use crate::dojo_os::STARKNET_ACCOUNT;
 pub async fn starknet_verify(
     fact_registry_address: FieldElement,
     serialized_proof: Vec<FieldElement>,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<(String, FieldElement)> {
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
+    let nonce = STARKNET_ACCOUNT.get_nonce().await?;
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
             calldata: serialized_proof,
         }])
+        .nonce(nonce)
         .send_with_cfg(&txn_config)
         .await
         .expect("Failed to send `verify_and_register_fact` transaction.");
@@ -64,5 +66,5 @@ pub async fn starknet_verify(
         }
     }
 
-    Ok(format!("{:#x}", tx.transaction_hash))
+    Ok((format!("{:#x}", tx.transaction_hash), nonce))
 }
