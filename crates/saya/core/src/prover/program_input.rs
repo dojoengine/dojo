@@ -130,32 +130,32 @@ impl ProgramInput {
         self.world_da = Some(updates);
     }
 
-    pub fn combine(mut self, other: ProgramInput) -> anyhow::Result<ProgramInput> {
-        self.message_to_appchain_segment.extend(other.message_to_appchain_segment);
-        self.message_to_starknet_segment.extend(other.message_to_starknet_segment);
+    pub fn combine(mut self, latter: ProgramInput) -> anyhow::Result<ProgramInput> {
+        self.message_to_appchain_segment.extend(latter.message_to_appchain_segment);
+        self.message_to_starknet_segment.extend(latter.message_to_starknet_segment);
 
         // the later state should overwrite the previous one.
-        other.state_updates.contract_updates.into_iter().for_each(|(k, v)| {
+        latter.state_updates.contract_updates.into_iter().for_each(|(k, v)| {
             self.state_updates.contract_updates.insert(k, v);
         });
-        other.state_updates.declared_classes.into_iter().for_each(|(k, v)| {
+        latter.state_updates.declared_classes.into_iter().for_each(|(k, v)| {
             self.state_updates.declared_classes.insert(k, v);
         });
-        other.state_updates.nonce_updates.into_iter().for_each(|(k, v)| {
+        latter.state_updates.nonce_updates.into_iter().for_each(|(k, v)| {
             self.state_updates.nonce_updates.insert(k, v);
         });
-        other.state_updates.storage_updates.into_iter().for_each(|(c, h)| {
+        latter.state_updates.storage_updates.into_iter().for_each(|(c, h)| {
             h.into_iter().for_each(|(k, v)| {
                 self.state_updates.storage_updates.entry(c).or_default().insert(k, v);
             });
         });
 
-        if self.world_da.is_none() || other.world_da.is_none() {
+        if self.world_da.is_none() || latter.world_da.is_none() {
             bail!("Both world_da must be present to combine them");
         }
 
         let mut world_da = self.world_da.unwrap_or_default();
-        for later in other.world_da.unwrap_or_default().chunks(2) {
+        for later in latter.world_da.unwrap_or_default().chunks(2) {
             let mut replaced = false;
             for earlier in world_da.chunks_mut(2) {
                 if later[0] == earlier[0] {
@@ -173,8 +173,8 @@ impl ProgramInput {
         // The block number is the one from the last block.
         Ok(ProgramInput {
             prev_state_root: self.prev_state_root,
-            block_number: other.block_number,
-            block_hash: other.block_hash,
+            block_number: latter.block_number,
+            block_hash: latter.block_hash,
             config_hash: self.config_hash,
             message_to_appchain_segment: self.message_to_appchain_segment,
             message_to_starknet_segment: self.message_to_starknet_segment,

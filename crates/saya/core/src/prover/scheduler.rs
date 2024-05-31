@@ -1,10 +1,10 @@
-use anyhow::bail;
+use anyhow::{bail, Context};
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::FieldElement;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tracing::{info, trace};
 
 use super::{prove_diff, ProgramInput, ProverIdentifier};
@@ -14,9 +14,20 @@ use crate::LOG_TARGET;
 
 type Proof = String;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProvingState {
+    Proving,
+    Proved,
+    NotPushed,
+}
+type ProvingStateWithBlock = (u64, ProvingState);
+
 pub struct Scheduler {
     root_task: BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>>,
     free_differs: Vec<oneshot::Sender<ProgramInput>>,
+    proving_tasks: Vec<ProvingStateWithBlock>,
+    update_channel: mpsc::Receiver<ProvingStateWithBlock>,
+    block_range: (u64, u64),
 }
 
 impl Scheduler {
@@ -24,9 +35,16 @@ impl Scheduler {
         let (senders, receivers): (Vec<_>, Vec<_>) =
             (0..capacity).map(|_| oneshot::channel::<ProgramInput>()).unzip();
 
-        let root_task = prove_recursively(receivers, world, prover);
+        let (update_sender, update_channel) = mpsc::channel(capacity);
+        let root_task = prove_recursively(receivers, world, prover, update_sender);
 
-        Scheduler { root_task, free_differs: senders }
+        Scheduler {
+            root_task,
+            free_differs: senders,
+            proving_tasks: Vec::with_capacity(capacity),
+            update_channel,
+            block_range: (u64::MAX, 0),
+        }
     }
 
     pub fn is_full(&self) -> bool {
@@ -37,16 +55,24 @@ impl Scheduler {
         if self.is_full() {
             bail!("Scheduler is full");
         }
+        let block_number = input.block_number;
 
         let sender = self.free_differs.remove(0);
+        self.proving_tasks.push((block_number, ProvingState::Proving));
+
         if sender.send(input).is_err() {
             bail!("Failed to send input to differ");
         }
+
+        self.block_range =
+            (self.block_range.0.min(block_number), self.block_range.1.max(block_number));
+
         Ok(())
     }
 
-    pub async fn proved(self) -> anyhow::Result<(Proof, ProgramInput)> {
-        self.root_task.await
+    pub async fn proved(self) -> anyhow::Result<(Proof, ProgramInput, (u64, u64))> {
+        let (proof, input) = self.root_task.await?;
+        Ok((proof, input, self.block_range))
     }
 
     pub async fn merge(
@@ -60,7 +86,35 @@ impl Scheduler {
             scheduler.push_diff(input)?;
         }
         info!(target: LOG_TARGET, "inputs pushed to scheduler");
-        scheduler.proved().await
+        let (merged_proof, merged_input, _) = scheduler.proved().await?;
+        Ok((merged_proof, merged_input))
+    }
+
+    pub async fn query(&mut self, block_number: u64) -> anyhow::Result<ProvingState> {
+        while !self.update_channel.is_empty() {
+            let (block_number, state) =
+                self.update_channel.recv().await.context("Failed to recv")?;
+
+            match state {
+                ProvingState::Proved => {
+                    self.proving_tasks
+                        .iter_mut()
+                        .find(|(n, _)| *n == block_number)
+                        .map(|(_, s)| *s = ProvingState::Proved);
+                }
+                ProvingState::Proving => {
+                    self.proving_tasks.push((block_number, ProvingState::Proved));
+                }
+                _ => {
+                    unreachable!("Update should be either Proving or Proved");
+                }
+            }
+        }
+
+        match self.proving_tasks.iter().find(|(n, _)| *n == block_number) {
+            Some((_, s)) => Ok(*s),
+            None => Ok(ProvingState::NotPushed),
+        }
     }
 }
 
@@ -90,18 +144,8 @@ async fn combine_proofs(
 
     trace!(target: LOG_TARGET, "Merging proofs");
 
-    let prover_input = if cfg!(feature = "cairo1differ") {
-        ProgramInput::prepare_differ_args(vec![earlier_input, later_input]);
-
-        // MOCK: remove when proof extraction is working.
-        "[2 101 102 103 104 1 1111 22222 1 333 2 44 555 44444 4444 1 66666 7777 1 88888 99999 4 \
-         123 456 123 128 6 108 109 110 111 1 112 2 44 555 44444 4444 0 1012 103 1032 1042 1 11112 \
-         222222 1 333 2 44 5552 444 44 1 666662 77772 1 888882 999992 4 1232 4562 1232 1282 6 1082 \
-         1092 1102 1112 12 1122 2 44 5552 444 44 0]"
-            .into()
-    } else {
-        serde_json::to_string(&CombinedInputs { earlier: earlier_input, later: later_input })?
-    };
+    let prover_input =
+        serde_json::to_string(&CombinedInputs { earlier: earlier_input, later: later_input })?;
 
     let merged_proof = prove_diff(prover_input, prover, ProveProgram::Merger).await?;
 
@@ -116,6 +160,7 @@ fn prove_recursively(
     mut inputs: Vec<oneshot::Receiver<ProgramInput>>,
     world: FieldElement,
     prover: ProverIdentifier,
+    update_channel: mpsc::Sender<(u64, ProvingState)>,
 ) -> BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>> {
     let handle = tokio::spawn(async move {
         if inputs.len() == 1 {
@@ -124,11 +169,7 @@ fn prove_recursively(
             let block_number = input.block_number;
             trace!(target: LOG_TARGET, "Proving block {block_number}");
 
-            let prover_input = if cfg!(feature = "cairo1differ") {
-                ProgramInput::prepare_differ_args(vec![input.clone()])
-            } else {
-                serde_json::to_string(&input.clone()).unwrap()
-            };
+            let prover_input = serde_json::to_string(&input.clone()).unwrap();
 
             let proof = prove_diff(prover_input, prover, ProveProgram::Differ).await?;
             info!(target: LOG_TARGET, block_number, "Block proven");
@@ -138,9 +179,15 @@ fn prove_recursively(
             let last = inputs.split_off(proof_count / 2);
 
             let provers = (prover.clone(), prover.clone());
+
+            let second_update_sender = update_channel.clone();
             let (earlier_result, later_result) = tokio::try_join!(
-                tokio::spawn(async move { prove_recursively(inputs, world, provers.0).await }),
-                tokio::spawn(async move { prove_recursively(last, world, provers.1).await }),
+                tokio::spawn(async move {
+                    prove_recursively(inputs, world, provers.0, update_channel).await
+                }),
+                tokio::spawn(async move {
+                    prove_recursively(last, world, provers.1, second_update_sender).await
+                }),
             )?;
 
             let ((earlier_result, earlier_input), (later_result, later_input)) =

@@ -1,6 +1,7 @@
 use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use cairo_proof_parser::output::extract_output;
 use katana_primitives::contract::ContractAddress;
@@ -8,10 +9,11 @@ use katana_primitives::state::StateUpdates;
 use saya_core::prover::extract::program_input_from_program_output;
 use saya_core::prover::{
     prove_diff, HttpProverParams, MessageToAppchain, MessageToStarknet, ProgramInput, ProveProgram,
-    ProverIdentifier, Scheduler,
+    ProverIdentifier, ProvingState, Scheduler,
 };
 use saya_core::ProverAccessKey;
 use starknet_crypto::FieldElement;
+use tokio::time::sleep;
 
 fn prover_identifier() -> ProverIdentifier {
     let prover_key = env::var("PROVER_ACCESS_KEY").expect("PROVER_ACCESS_KEY not set.");
@@ -161,7 +163,7 @@ async fn test_combine_proofs() {
     }"#;
     let input2 = r#"{
         "prev_state_root": "201",
-        "block_number": 202,
+        "block_number": 103,
         "block_hash": "203",
         "config_hash": "204",
         "message_to_starknet_segment": [
@@ -196,7 +198,7 @@ async fn test_combine_proofs() {
     }"#;
     let expected = r#"{
         "prev_state_root": "101",
-        "block_number": 202,
+        "block_number": 103,
         "block_hash": "203",
         "config_hash": "104",
         "message_to_starknet_segment": [
@@ -259,9 +261,26 @@ async fn test_combine_proofs() {
         input.fill_da(world)
     }
 
-    let output = Scheduler::merge(inputs, world, prover_identifier()).await.unwrap().1;
+    let mut scheduler = Scheduler::new(2, world, prover_identifier());
+    scheduler.push_diff(inputs.remove(0)).unwrap();
+
+    sleep(Duration::from_millis(5)).await;
+
+    assert_eq!(scheduler.is_full(), false);
+    assert_eq!(scheduler.query(102).await.unwrap(), ProvingState::Proving);
+    assert_eq!(scheduler.query(103).await.unwrap(), ProvingState::NotPushed);
+
+    scheduler.push_diff(inputs.remove(0)).unwrap();
+    sleep(Duration::from_millis(5)).await;
+
+    assert_eq!(scheduler.is_full(), true);
+    assert_eq!(scheduler.query(102).await.unwrap(), ProvingState::Proving);
+    assert_eq!(scheduler.query(103).await.unwrap(), ProvingState::Proving);
+
+    let (_, output, block_range) = scheduler.proved().await.unwrap();
     let expected: ProgramInput = serde_json::from_str(expected).unwrap();
     assert_eq!(output, expected);
+    assert_eq!(block_range, (102, 103));
 }
 
 #[ignore]

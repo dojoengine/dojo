@@ -12,9 +12,6 @@ use super::{ProveProgram, ProverClient, ProverIdentifier};
 use crate::prover::loader::prepare_input_cairo0;
 use crate::LOG_TARGET;
 
-#[cfg(feature = "cairo1differ")]
-const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo:latest";
-#[cfg(not(feature = "cairo1differ"))]
 const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo0:latest";
 
 #[derive(Clone)]
@@ -22,19 +19,14 @@ pub struct StoneProver(pub String);
 
 pub async fn prove_stone(input: String, prove_program: ProveProgram) -> anyhow::Result<String> {
     let prover = StoneProver::new().await?;
+    trace!(target: LOG_TARGET, "Proving with cairo0.");
 
-    if cfg!(feature = "cairo1differ") {
-        unimplemented!("Cairo1 prover for `StoneProver` not supported yet.")
-    } else {
-        trace!(target: LOG_TARGET, "Proving with cairo0.");
+    let input = prepare_input_cairo0(input, prove_program).await?;
+    let input = serde_json::to_string(&input).context("Failed to serialize input")?;
 
-        let input = prepare_input_cairo0(input, prove_program).await?;
-        let input = serde_json::to_string(&input).context("Failed to serialize input")?;
+    std::io::Write::write_all(&mut File::create("input.json")?, input.as_bytes())?;
 
-        std::io::Write::write_all(&mut File::create("input.json")?, input.as_bytes())?;
-
-        prover.prove(input).await.context("Failed to prove using the http prover")
-    }
+    prover.prove(input).await.context("Failed to prove using the http prover")
 }
 
 #[async_trait]

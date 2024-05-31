@@ -9,7 +9,7 @@
 
 use std::time::Duration;
 
-use anyhow::bail;
+use anyhow::{bail, Context};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use itertools::chain;
@@ -55,7 +55,7 @@ pub async fn starknet_apply_diffs(
     program_hash: FieldElement,
 ) -> anyhow::Result<String> {
     let calldata = chain![
-        vec![FieldElement::from_dec_str(&(new_state.len() / 2).to_string()).unwrap()].into_iter(),
+        vec![FieldElement::from(new_state.len() as u64 / 2)].into_iter(),
         new_state.clone().into_iter(),
         program_output.into_iter(),
         vec![program_hash],
@@ -71,7 +71,7 @@ pub async fn starknet_apply_diffs(
         }])
         .send_with_cfg(&txn_config)
         .await
-        .expect("Failed to send `upgrade state` transaction.");
+        .context("Failed to send `upgrade state` transaction.")?;
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);

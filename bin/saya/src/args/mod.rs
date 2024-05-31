@@ -40,6 +40,12 @@ pub struct SayaArgs {
     #[arg(help = "An authorized prover key for remote proving.")]
     pub private_key: String,
 
+    #[arg(long)]
+    #[arg(value_name = "STORE PROOFS")]
+    #[arg(help = "When enabled all proofs are saved as a file.")]
+    #[arg(default_value_t = false)]
+    pub store_proofs: bool,
+
     /// Enable JSON logging.
     #[arg(long)]
     #[arg(help = "Output logs in JSON format.")]
@@ -135,6 +141,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 katana_rpc: args.rpc_url,
                 url: args.url,
                 private_key: prover_key,
+                store_proofs: args.store_proofs,
                 start_block: args.start_block,
                 batch_size: args.batch_size,
                 data_availability: da_config,
@@ -164,6 +171,7 @@ mod tests {
             url: Url::parse("http://localhost:5050").unwrap(),
             private_key: "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
                 .into(),
+            store_proofs: true,
             json_log: false,
             start_block: 0,
             batch_size: 4,
@@ -190,6 +198,7 @@ mod tests {
             config.private_key.signing_key_as_hex_string(),
             "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
         );
+        assert_eq!(config.store_proofs, true);
         assert_eq!(config.start_block, 0);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");

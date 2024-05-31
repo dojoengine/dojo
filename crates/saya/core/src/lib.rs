@@ -20,6 +20,8 @@ use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
 use starknet_crypto::poseidon_hash_many;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 use tokio::time::sleep;
 use tracing::{error, info, trace};
 use url::Url;
@@ -47,6 +49,7 @@ pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub url: Url,
     pub private_key: ProverAccessKey,
+    pub store_proofs: bool,
     pub start_block: u64,
     pub batch_size: usize,
     pub data_availability: Option<DataAvailabilityConfig>,
@@ -72,6 +75,14 @@ pub struct Saya {
     provider: Arc<dyn SayaProvider>,
     /// The blockchain state.
     blockchain: Blockchain,
+}
+
+struct FetchedBlockInfo {
+    block_number: BlockNumber,
+    block: SealedBlock,
+    prev_state_root: FieldElement,
+    state_updates: StateUpdatesWithDeclaredClasses,
+    exec_infos: Vec<TxExecutionInfo>,
 }
 
 impl Saya {
@@ -144,11 +155,11 @@ impl Saya {
             // Updating the local state sequentially, as there is only one instance of
             // `self.blockchain` This part does no actual  proving, so should not be a
             // problem
-            for p in params.clone() {
+            for p in params {
                 self.process_block(&mut prove_scheduler, block, p)?;
 
                 if prove_scheduler.is_full() {
-                    self.process_proven(prove_scheduler, block).await?;
+                    self.process_proven(prove_scheduler).await?;
 
                     prove_scheduler = Scheduler::new(
                         self.config.batch_size,
@@ -166,10 +177,7 @@ impl Saya {
         &mut self,
         block_numbers: RangeInclusive<BlockNumber>,
         previous_block_state_root: FieldElement,
-    ) -> SayaResult<(
-        FieldElement,
-        Vec<(SealedBlock, FieldElement, StateUpdatesWithDeclaredClasses, Vec<TxExecutionInfo>)>,
-    )> {
+    ) -> SayaResult<(FieldElement, Vec<FetchedBlockInfo>)> {
         // Fetch all blocks from the current block to the latest block
         let fetched_blocks = future::try_join_all(
             block_numbers.clone().map(|block_number| self.provider.fetch_block(block_number)),
@@ -217,8 +225,12 @@ impl Saya {
             .into_iter()
             .zip(state_roots)
             .zip(state_updates_and_exec_info)
-            .map(|((block, state_root), (state_updates, exec_infos))| {
-                (block, state_root, state_updates, exec_infos)
+            .map(|((block, prev_state_root), (state_updates, exec_infos))| FetchedBlockInfo {
+                block_number: block.header.header.number,
+                block,
+                prev_state_root,
+                state_updates,
+                exec_infos,
             })
             .collect::<Vec<_>>();
 
@@ -243,17 +255,18 @@ impl Saya {
     ///
     /// * `prove_scheduler` - A parallel prove scheduler.
     /// * `block_number` - The block number.
-    /// * `blocks` - The block to process, along with the state roots of the previous block and the
+    /// * `block_info` - The block to process, along with the state roots of the previous block and the
     ///   genesis block.
     fn process_block(
         &mut self,
         prove_scheduler: &mut Scheduler,
         block_number: BlockNumber,
-        blocks: (SealedBlock, FieldElement, StateUpdatesWithDeclaredClasses, Vec<TxExecutionInfo>),
+        block_info: FetchedBlockInfo,
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        let (block, prev_state_root, state_updates, exec_infos) = blocks;
+        let FetchedBlockInfo { block, prev_state_root, state_updates, exec_infos, block_number } =
+            block_info;
 
         let block =
             SealedBlockWithStatus { block: block.clone(), status: FinalityStatus::AcceptedOnL2 };
@@ -296,7 +309,7 @@ impl Saya {
         };
         state_diff_prover_input.fill_da(self.config.world_address);
 
-        prove_scheduler.push_diff(state_diff_prover_input).unwrap();
+        prove_scheduler.push_diff(state_diff_prover_input)?;
 
         info!(target: LOG_TARGET, block_number, "Block processed.");
 
@@ -310,19 +323,16 @@ impl Saya {
     ///
     /// * `prove_scheduler` - A full parallel prove scheduler.
     /// * `last_block` - The last block number in the `prove_scheduler`.
-    async fn process_proven(
-        &self,
-        prove_scheduler: Scheduler,
-        last_block: BlockNumber,
-    ) -> SayaResult<()> {
+    async fn process_proven(&self, prove_scheduler: Scheduler) -> SayaResult<()> {
         // Prove each of the leaf nodes of the recursion tree and merge them into one
-        let (proof, state_diff) = prove_scheduler.proved().await.context("Failed to prove.")?;
+        let (proof, state_diff, (_, last_block)) =
+            prove_scheduler.proved().await.context("Failed to prove.")?;
 
-        // std::io::Write::write_all(
-        //     &mut std::fs::File::create("proof.json").unwrap(),
-        //     proof.as_bytes(),
-        // )
-        // .unwrap();
+        if self.config.store_proofs {
+            let filename = format!("proof_{}.json", last_block);
+            let mut file = File::create(filename).await.context("Failed to create proof file.")?;
+            file.write_all(&proof.as_bytes()).await.context("Failed to write proof.")?;
+        }
 
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
         let world_da = state_diff.world_da.unwrap();

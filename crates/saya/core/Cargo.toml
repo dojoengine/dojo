@@ -48,7 +48,3 @@ num-bigint = "0.4.4"
 num-traits = "0.2.18"
 
 prover-sdk = { git = "https://github.com/neotheprogramist/http-prover", rev = "05aa9dbb7fdd5618693cead978d4ab0eebbf8f80" }
-
-[features]
-cairo1differ = [  ] # Not fully functional at the moment
-default = [  ]

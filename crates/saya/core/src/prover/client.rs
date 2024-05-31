@@ -7,7 +7,7 @@ use tracing::trace;
 use url::Url;
 
 use super::ProveProgram;
-use crate::prover::loader::{prepare_input_cairo0, prepare_input_cairo1};
+use crate::prover::loader::prepare_input_cairo0;
 use crate::LOG_TARGET;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,17 +30,8 @@ pub async fn http_prove(
         .await;
     let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-    let result = if cfg!(feature = "cairo1differ") {
-        trace!(target: LOG_TARGET, "Proving with cairo1.");
+    trace!(target: LOG_TARGET, "Proving with cairo0.");
 
-        let input = prepare_input_cairo1(input, prove_program).await?;
-        prover.prove_cairo1(input).await.context("Failed to prove using the http prover")?
-    } else {
-        trace!(target: LOG_TARGET, "Proving with cairo0.");
-
-        let input = prepare_input_cairo0(input, prove_program).await?;
-        prover.prove_cairo0(input).await.context("Failed to prove using the http prover")?
-    };
-
-    Ok(result)
+    let input = prepare_input_cairo0(input, prove_program).await?;
+    prover.prove_cairo0(input).await.context("Failed to prove using the http prover")
 }
