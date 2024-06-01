@@ -39,6 +39,15 @@ pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
 pub const RESOURCE_METADATA_CONTRACT_NAME: &str = "dojo::resource_metadata::resource_metadata";
 pub const RESOURCE_METADATA_MODEL_NAME: &str = "0x5265736f757263654d65746164617461";
 
+pub const MANIFESTS_DIR: &str = "manifests";
+pub const BASE_DIR: &str = "base";
+pub const OVERLAYS_DIR: &str = "overlays";
+pub const DEPLOYMENTS_DIR: &str = "deployments";
+pub const ABIS_DIR: &str = "abis";
+
+pub const CONTRACTS_DIR: &str = "contracts";
+pub const MODELS_DIR: &str = "models";
+
 #[derive(Error, Debug)]
 pub enum AbstractManifestError {
     #[error("Remote World not found.")]
@@ -56,7 +65,9 @@ pub enum AbstractManifestError {
     #[error(transparent)]
     Model(#[from] ModelError),
     #[error(transparent)]
-    TOML(#[from] toml::de::Error),
+    TomlDe(#[from] toml::de::Error),
+    #[error(transparent)]
+    TomlSer(#[from] toml::ser::Error),
     #[error(transparent)]
     IO(#[from] io::Error),
     #[error("Abi couldn't be loaded from path: {0}")]
@@ -93,8 +104,8 @@ impl From<BaseManifest> for DeploymentManifest {
 impl BaseManifest {
     /// Load the manifest from a file at the given path.
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
-        let contract_dir = path.join("contracts");
-        let model_dir = path.join("models");
+        let contract_dir = path.join(CONTRACTS_DIR);
+        let model_dir = path.join(MODELS_DIR);
 
         let world: Manifest<Class> = toml::from_str(&fs::read_to_string(
             path.join(WORLD_CONTRACT_NAME.replace("::", "_")).with_extension("toml"),
@@ -151,7 +162,7 @@ impl OverlayManifest {
             base = Some(toml::from_str(&fs::read_to_string(base_path)?)?);
         }
 
-        let contract_dir = path.join("contracts");
+        let contract_dir = path.join(CONTRACTS_DIR);
 
         let contracts = if contract_dir.exists() {
             overlay_elements_from_path::<OverlayDojoContract>(&contract_dir)?
@@ -160,6 +171,44 @@ impl OverlayManifest {
         };
 
         Ok(Self { world, base, contracts })
+    }
+
+    pub fn write_to_path_nested(&self, path: &Utf8PathBuf) -> Result<(), AbstractManifestError> {
+        fs::create_dir_all(path.parent().unwrap())?;
+
+        if let Some(ref world) = self.world {
+            let world = toml::to_string(world)?;
+            let file_name =
+                path.join(WORLD_CONTRACT_NAME.replace("::", "_")).with_extension("toml");
+            fs::write(file_name, world)?;
+        }
+
+        if let Some(ref base) = self.base {
+            let base = toml::to_string(base)?;
+            let file_name = path.join(BASE_CONTRACT_NAME.replace("::", "_")).with_extension("toml");
+            fs::write(file_name, base)?;
+        }
+
+        overlay_dojo_contracts_to_path(&path.join(CONTRACTS_DIR), self.contracts.as_slice())?;
+        // overlay_elements_to_path(&path.join(MODELS_DIR), self.models.as_slice())?;
+        Ok(())
+    }
+
+    pub fn merge(&mut self, other: OverlayManifest) {
+        if self.world.is_none() {
+            self.world = other.world;
+        }
+
+        if self.base.is_none() {
+            self.base = other.base;
+        }
+
+        for other_contract in other.contracts {
+            let found = self.contracts.iter().find(|c| c.name == other_contract.name);
+            if found.is_none() {
+                self.contracts.push(other_contract);
+            }
+        }
     }
 }
 
@@ -485,20 +534,6 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
         .collect()
 }
 
-// fn elements_to_path<T>(item_dir: &Utf8PathBuf, items: &Vec<Manifest<T>>) -> Result<()>
-// where
-//     T: Serialize + ManifestMethods,
-// {
-//     fs::create_dir_all(item_dir)?;
-//     for item in items {
-//         let item_toml = toml::to_string_pretty(&item)?;
-//         let item_name = item.name.split("::").last().unwrap();
-//         fs::write(item_dir.join(item_name).with_extension("toml"), item_toml)?;
-//     }
-
-//     Ok(())
-// }
-
 fn elements_from_path<T>(path: &Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
 where
     T: DeserializeOwned + ManifestMethods,
@@ -544,6 +579,19 @@ where
     }
 
     Ok(elements)
+}
+
+fn overlay_dojo_contracts_to_path(
+    path: &Utf8PathBuf,
+    elements: &[OverlayDojoContract],
+) -> Result<(), AbstractManifestError> {
+    fs::create_dir_all(path.parent().unwrap())?;
+
+    for element in elements {
+        let path = path.join(element.name.replace("::", "_")).with_extension("toml");
+        fs::write(path, toml::to_string(&element)?)?;
+    }
+    Ok(())
 }
 
 impl ManifestMethods for DojoContract {

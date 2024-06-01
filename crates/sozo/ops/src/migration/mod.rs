@@ -1,8 +1,13 @@
 use std::sync::Arc;
+use std::{fs, io};
 
-use anyhow::{anyhow, Result};
-use dojo_lang::compiler::MANIFESTS_DIR;
+use anyhow::{anyhow, Context, Result};
+use camino::Utf8PathBuf;
 use dojo_world::contracts::WorldContract;
+use dojo_world::manifest::{
+    DojoContract, Manifest, OverlayClass, OverlayDojoContract, OverlayManifest, BASE_CONTRACT_NAME,
+    BASE_DIR, CONTRACTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_NAME,
+};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
@@ -174,3 +179,88 @@ enum ContractDeploymentOutput {
 enum ContractUpgradeOutput {
     Output(UpgradeOutput),
 }
+
+pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
+    let profile_name =
+        ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
+
+    // its path to a file so `parent` should never return `None`
+    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+    let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
+
+    let base_manifests = profile_dir.join(BASE_DIR);
+
+    let world = OverlayClass { name: WORLD_CONTRACT_NAME.into(), original_class_hash: None };
+    let base = OverlayClass { name: BASE_CONTRACT_NAME.into(), original_class_hash: None };
+
+    let contracts = overlay_dojo_contracts_from_path(&base_manifests.join(CONTRACTS_DIR))
+        .with_context(|| "Failed to build default DojoContract Overlays from path.")?;
+    // let models = overlay_model_from_path(&base_manifests.join(MODELS_DIR))?;
+
+    let default_overlay = OverlayManifest { world: Some(world), base: Some(base), contracts };
+
+    let overlay_path = profile_dir.join(OVERLAYS_DIR);
+    let mut overlay_manifest = OverlayManifest::load_from_path(&overlay_path)
+        .with_context(|| "Failed to load OverlayManifest from path.")?;
+    overlay_manifest.merge(default_overlay);
+
+    overlay_manifest
+        .write_to_path_nested(&overlay_path)
+        .with_context(|| "Failed to write OverlayManifest to path.")?;
+    Ok(())
+}
+
+fn overlay_dojo_contracts_from_path(path: &Utf8PathBuf) -> Result<Vec<OverlayDojoContract>> {
+    let mut elements = vec![];
+
+    let entries = path
+        .read_dir()?
+        .map(|entry| entry.map(|e| e.path()))
+        .collect::<Result<Vec<_>, io::Error>>()?;
+
+    for path in entries {
+        if path.is_file() {
+            let manifest: Manifest<DojoContract> = toml::from_str(&fs::read_to_string(path)?)?;
+
+            let overlay_manifest = OverlayDojoContract {
+                name: manifest.name,
+                original_class_hash: None,
+                reads: None,
+                writes: None,
+                init_calldata: None,
+            };
+            elements.push(overlay_manifest);
+        } else {
+            continue;
+        }
+    }
+
+    Ok(elements)
+}
+
+// fn overlay_model_from_path(path: &Utf8PathBuf) -> Result<Vec<OverlayDojoModel>> {
+//     let mut elements = vec![];
+
+//     let mut entries = path
+//         .read_dir()?
+//         .map(|entry| entry.map(|e| e.path()))
+//         .collect::<Result<Vec<_>, io::Error>>()?;
+
+//     // `read_dir` doesn't guarantee any order, so we sort the entries ourself.
+//     // see: https://doc.rust-lang.org/std/fs/fn.read_dir.html#platform-specific-behavior
+//     entries.sort();
+
+//     for path in entries {
+//         if path.is_file() {
+//             let manifest: Manifest<DojoContract> = toml::from_str(&fs::read_to_string(path)?)?;
+
+//             let overlay_manifest =
+//                 OverlayDojoModel { name: manifest.name, original_class_hash: None };
+//             elements.push(overlay_manifest);
+//         } else {
+//             continue;
+//         }
+//     }
+
+//     Ok(elements)
+// }

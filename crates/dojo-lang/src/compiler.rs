@@ -21,7 +21,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
     AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
-    BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+    ABIS_DIR, BASE_CONTRACT_NAME, BASE_DIR, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
+    WORLD_CONTRACT_NAME,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
@@ -39,15 +40,6 @@ use crate::plugin::{ComputedValuesAuxData, DojoAuxData};
 use crate::semantics::utils::find_module_rw;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
-
-pub const MANIFESTS_DIR: &str = "manifests";
-pub const BASE_DIR: &str = "base";
-pub const OVERLAYS_DIR: &str = "overlays";
-pub const DEPLOYMENTS_DIR: &str = "deployments";
-pub const ABIS_DIR: &str = "abis";
-
-pub const CONTRACTS_DIR: &str = "contracts";
-pub const MODELS_DIR: &str = "models";
 
 pub const SOURCES_DIR: &str = "src";
 

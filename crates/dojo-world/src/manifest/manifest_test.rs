@@ -2,7 +2,6 @@ use std::io::Write;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
@@ -17,7 +16,10 @@ use super::{
     parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel, OverlayManifest,
 };
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::{parse_models_events, AbstractManifestError, DeploymentManifest, Manifest};
+use crate::manifest::{
+    parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, BASE_DIR,
+    MANIFESTS_DIR, OVERLAYS_DIR,
+};
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]

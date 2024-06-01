@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
-use dojo_lang::compiler::MANIFESTS_DIR;
+use dojo_world::manifest::MANIFESTS_DIR;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use dojo_world::migration::TxnConfig;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
@@ -50,6 +50,9 @@ pub enum MigrateCommand {
         #[command(flatten)]
         transaction: TransactionOptions,
     },
+
+    #[command(about = "Generate overlays file.")]
+    GenerateOverlays,
 }
 
 impl MigrateArgs {
@@ -81,6 +84,7 @@ impl MigrateArgs {
 
         match self.command {
             MigrateCommand::Plan => config.tokio_handle().block_on(async {
+                trace!(name, "Planning migration.");
                 migration::migrate(
                     &ws,
                     world_address,
@@ -99,6 +103,10 @@ impl MigrateArgs {
                 migration::migrate(&ws, world_address, rpc_url, account, &name, false, txn_config)
                     .await
             }),
+            MigrateCommand::GenerateOverlays => {
+                trace!(name, "Generating Overlay files.");
+                migration::generate_overlays(&ws)
+            }
         }
     }
 }
