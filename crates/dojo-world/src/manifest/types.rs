@@ -42,6 +42,7 @@ pub struct OverlayManifest {
     pub world: Option<OverlayClass>,
     pub base: Option<OverlayClass>,
     pub contracts: Vec<OverlayDojoContract>,
+    pub models: Vec<OverlayDojoModel>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

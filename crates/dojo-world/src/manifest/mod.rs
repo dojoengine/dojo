@@ -163,14 +163,20 @@ impl OverlayManifest {
         }
 
         let contract_dir = path.join(CONTRACTS_DIR);
-
         let contracts = if contract_dir.exists() {
             overlay_elements_from_path::<OverlayDojoContract>(&contract_dir)?
         } else {
             vec![]
         };
 
-        Ok(Self { world, base, contracts })
+        let model_dir = path.join(MODELS_DIR);
+        let models = if model_dir.exists() {
+            overlay_elements_from_path::<OverlayDojoModel>(&model_dir)?
+        } else {
+            vec![]
+        };
+
+        Ok(Self { world, base, contracts, models })
     }
 
     pub fn write_to_path_nested(&self, path: &Utf8PathBuf) -> Result<(), AbstractManifestError> {
@@ -190,7 +196,7 @@ impl OverlayManifest {
         }
 
         overlay_dojo_contracts_to_path(&path.join(CONTRACTS_DIR), self.contracts.as_slice())?;
-        // overlay_elements_to_path(&path.join(MODELS_DIR), self.models.as_slice())?;
+        overlay_dojo_model_to_path(&path.join(MODELS_DIR), self.models.as_slice())?;
         Ok(())
     }
 
@@ -207,6 +213,13 @@ impl OverlayManifest {
             let found = self.contracts.iter().find(|c| c.name == other_contract.name);
             if found.is_none() {
                 self.contracts.push(other_contract);
+            }
+        }
+
+        for other_model in other.models {
+            let found = self.models.iter().find(|m| m.name == other_model.name);
+            if found.is_none() {
+                self.models.push(other_model);
             }
         }
     }
@@ -585,7 +598,20 @@ fn overlay_dojo_contracts_to_path(
     path: &Utf8PathBuf,
     elements: &[OverlayDojoContract],
 ) -> Result<(), AbstractManifestError> {
-    fs::create_dir_all(path.parent().unwrap())?;
+    fs::create_dir_all(path)?;
+
+    for element in elements {
+        let path = path.join(element.name.replace("::", "_")).with_extension("toml");
+        fs::write(path, toml::to_string(&element)?)?;
+    }
+    Ok(())
+}
+
+fn overlay_dojo_model_to_path(
+    path: &Utf8PathBuf,
+    elements: &[OverlayDojoModel],
+) -> Result<(), AbstractManifestError> {
+    fs::create_dir_all(path)?;
 
     for element in elements {
         let path = path.join(element.name.replace("::", "_")).with_extension("toml");
