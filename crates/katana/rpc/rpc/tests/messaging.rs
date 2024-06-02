@@ -78,6 +78,7 @@ async fn test_messaging() {
         program_name: None,
         run_name: None,
         messaging: Some(path.to_str().unwrap().to_string()),
+        log_path: None,
     })
     .unwrap();
 
