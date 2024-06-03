@@ -240,7 +240,7 @@ public class {} : ModelInstance {{
             handled_tokens: &[Composite],
         ) -> String {
             let mapped_type = UnityPlugin::map_type(token);
-            
+
             match handled_tokens.iter().find(|t| t.type_name() == token.type_name()) {
                 Some(t) => {
                     // Need to flatten the struct members.
@@ -269,7 +269,7 @@ public class {} : ModelInstance {{
                 None => match mapped_type.as_str() {
                     "FieldElement" => format!("calldata.Add({}.Inner);", type_name),
                     _ => format!("calldata.Add(new FieldElement({}).Inner);", type_name),
-                }
+                },
             }
         }
 
@@ -283,9 +283,7 @@ public class {} : ModelInstance {{
         let calldata = system
             .inputs
             .iter()
-            .map(|(name, token)| {
-                handle_arg_recursive(name, token, handled_tokens)
-            })
+            .map(|(name, token)| handle_arg_recursive(name, token, handled_tokens))
             .collect::<Vec<String>>()
             .join("\n\t\t");
 
