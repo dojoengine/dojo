@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use cainome::parser::tokens::{
-    Composite, CompositeType, Function, FunctionOutputKind, StateMutability, Token,
-};
+use cainome::parser::tokens::{Composite, CompositeType, Function, FunctionOutputKind, Token};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
