@@ -239,12 +239,14 @@ public class {} : ModelInstance {{
             token: &Token,
             handled_tokens: &[Composite],
         ) -> String {
+            let mapped_type = UnityPlugin::map_type(token);
+            
             match handled_tokens.iter().find(|t| t.type_name() == token.type_name()) {
                 Some(t) => {
                     // Need to flatten the struct members.
                     match t.r#type {
                         CompositeType::Struct if t.type_name() == "ByteArray" => format!(
-                            "calldata.AddRange(ByteArray.Serialize({}));",
+                            "calldata.AddRange(ByteArray.Serialize({}).Select(f => f.Inner));",
                             type_name
                         ),
                         CompositeType::Struct => t
@@ -264,7 +266,7 @@ public class {} : ModelInstance {{
                         }
                     }
                 }
-                None => match UnityPlugin::map_type(token).as_str() {
+                None => match mapped_type.as_str() {
                     "FieldElement" => format!("calldata.Add({}.Inner);", type_name),
                     _ => format!("calldata.Add(new FieldElement({}).Inner);", type_name),
                 }
@@ -293,8 +295,7 @@ public class {} : ModelInstance {{
     // Returns the transaction hash. Use `WaitForTransaction` to wait for the transaction to be \
              confirmed.
     public async Task<FieldElement> {system_name}(Account account{arg_sep}{args}) {{
-        List<FieldElement> calldata = new List<FieldElement>();
-
+        List<dojo.FieldElement> calldata = new List<dojo.FieldElement>();
         {calldata}
 
         return await account.ExecuteRaw(new dojo.Call[] {{
@@ -339,6 +340,7 @@ public class {} : ModelInstance {{
         out += "using Dojo.Starknet;\n";
         out += "using UnityEngine;\n";
         out += "using dojo_bindings;\n";
+        out += "using System.Collections.Generic;\n";
 
         let systems = contract
             .systems
