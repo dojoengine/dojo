@@ -9,7 +9,7 @@ use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler, TestRunConfig};
 use clap::Args;
-use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
+use dojo_lang::compiler::{collect_core_crate_ids, collect_crate_ids, Props};
 use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
@@ -101,7 +101,7 @@ impl TestArgs {
             }
 
             if let Some(external_contracts) = props.build_external_contracts {
-                main_crate_ids.extend(collect_external_crate_ids(&db, external_contracts));
+                main_crate_ids.extend(collect_crate_ids(&db, external_contracts));
             }
 
             let config = TestRunConfig {
