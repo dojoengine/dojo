@@ -104,6 +104,9 @@ using System.Linq;
         "using System;
 using Dojo;
 using Dojo.Starknet;
+using System.Reflection;
+using System.Linq;
+using System.Collections.Generic;
 "
         .to_string()
     }
@@ -137,7 +140,8 @@ public struct {} {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
-        let mut name_with_generics = token.type_name();
+        let name = token.type_name();
+        let mut name_with_generics = name.clone();
         if !token.generic_args.is_empty() {
             name_with_generics += &format!(
                 "<{}>",
@@ -162,6 +166,22 @@ public abstract record {}() {{",
             )
             .as_str();
         }
+
+        result += format!(
+            "\n    public static readonly IReadOnlyDictionary<Type, int> TypeIndices = typeof({name_with_generics})
+                .GetNestedTypes(BindingFlags.Public)
+                .OrderBy(t => t.MetadataToken)
+                .Select((type, index) => new {{ type, index }})
+                .ToDictionary(t => t.type, t => t.index);
+
+    public static int GetIndex({name_with_generics} value)
+    {{
+        return TypeIndices[value.GetType()];
+    }}
+",
+            name_with_generics = name_with_generics
+        )
+        .as_str();
 
         result += "\n}\n";
 
@@ -280,6 +300,11 @@ public class {} : ModelInstance {{
                             })
                             .collect::<Vec<String>>()
                             .join("\n\t\t"),
+                        CompositeType::Enum => format!(
+                            "calldata.Add(new FieldElement({}.GetIndex({})).Inner);",
+                            t.type_name(),
+                            type_name
+                        ),
                         _ => {
                             format!("calldata.Add(new FieldElement({}).Inner);", type_name)
                         }
