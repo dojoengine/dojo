@@ -4,6 +4,7 @@ pub mod subscriptions;
 #[cfg(test)]
 mod tests;
 
+use std::collections::HashMap;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -45,9 +46,9 @@ pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
 pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
 
-pub(crate) static EVENTS_MESSAGES_TABLE: &str = "events_messages";
-pub(crate) static EVENTS_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
-pub(crate) static EVENTS_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
+pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
+pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
 
 #[derive(Clone)]
 pub struct DojoWorld {
@@ -162,6 +163,22 @@ impl DojoWorld {
         .await
     }
 
+    async fn event_messages_all(
+        &self,
+        limit: u32,
+        offset: u32,
+    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
+        self.query_by_hashed_keys(
+            EVENT_MESSAGES_TABLE,
+            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
+            None,
+            limit,
+            offset,
+        )
+        .await
+    }
+
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
         let query = r#"
             SELECT keys, data, transaction_hash
@@ -235,19 +252,31 @@ impl DojoWorld {
             let model_ids: Vec<&str> = models_str.split(',').collect();
             let schemas = self.model_cache.schemas(model_ids).await?;
 
-            let entity_query = format!(
-                "{} WHERE {table}.id = ?",
-                build_sql_query(&schemas, table, entity_relation_column)?
-            );
+            let (entity_query, arrays_queries) = build_sql_query(
+                &schemas,
+                table,
+                entity_relation_column,
+                Some(&format!("{table}.id = ?")),
+                Some(&format!("{table}.id = ?")),
+            )?;
+
             let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
+            let mut arrays_rows = HashMap::new();
+            for (name, query) in arrays_queries {
+                let rows = sqlx::query(&query).bind(&entity_id).fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, rows);
+            }
 
             let models = schemas
-                .iter()
-                .map(|s| {
-                    let mut struct_ty = s.as_struct().expect("schema should be struct").to_owned();
-                    map_row_to_ty(&s.name(), &mut struct_ty, &row)?;
+                .into_iter()
+                .map(|mut s| {
+                    map_row_to_ty("", &s.name(), &mut s, &row, &arrays_rows)?;
 
-                    Ok(struct_ty.try_into().unwrap())
+                    Ok(s.as_struct()
+                        .expect("schema should be struct")
+                        .to_owned()
+                        .try_into()
+                        .unwrap())
                 })
                 .collect::<Result<Vec<_>, Error>>()?;
 
@@ -317,21 +346,34 @@ impl DojoWorld {
         let schemas = self.model_cache.schemas(model_ids).await?;
 
         // query to filter with limit and offset
-        let entities_query = format!(
-            "{} WHERE {table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?",
-            build_sql_query(&schemas, table, entity_relation_column)?
-        );
+        let (entities_query, arrays_queries) = build_sql_query(
+            &schemas,
+            table,
+            entity_relation_column,
+            Some(&format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")),
+            Some(&format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")),
+        )?;
         let db_entities = sqlx::query(&entities_query)
             .bind(&keys_pattern)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
             .await?;
+        let mut arrays_rows = HashMap::new();
+        for (name, query) in arrays_queries {
+            let rows = sqlx::query(&query)
+                .bind(&keys_pattern)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.pool)
+                .await?;
+            arrays_rows.insert(name, rows);
+        }
 
         Ok((
             db_entities
                 .iter()
-                .map(|row| Self::map_row_to_entity(row, &schemas))
+                .map(|row| Self::map_row_to_entity(row, &arrays_rows, &schemas))
                 .collect::<Result<Vec<_>, Error>>()?,
             total_count,
         ))
@@ -424,16 +466,26 @@ impl DojoWorld {
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
-        let member_query = format!(
-            "{} WHERE {table_name}.{column_name} {comparison_operator} ?",
-            build_sql_query(&schemas, table, entity_relation_column)?
-        );
+        let (entity_query, arrays_queries) = build_sql_query(
+            &schemas,
+            table,
+            entity_relation_column,
+            Some(&format!("{table_name}.{column_name} {comparison_operator} ?")),
+            None,
+        )?;
 
         let db_entities =
-            sqlx::query(&member_query).bind(comparison_value).fetch_all(&self.pool).await?;
+            sqlx::query(&entity_query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
+        let mut arrays_rows = HashMap::new();
+        for (name, query) in arrays_queries {
+            let rows =
+                sqlx::query(&query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
+            arrays_rows.insert(name, rows);
+        }
+
         let entities_collection = db_entities
             .iter()
-            .map(|row| Self::map_row_to_entity(row, &schemas))
+            .map(|row| Self::map_row_to_entity(row, &arrays_rows, &schemas))
             .collect::<Result<Vec<_>, Error>>()?;
         // Since there is not limit and offset, total_count is same as number of entities
         let total_count = entities_collection.len() as u32;
@@ -604,7 +656,7 @@ impl DojoWorld {
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
         let (entities, total_count) = match query.clause {
-            None => self.entities_all(query.limit, query.offset).await?,
+            None => self.event_messages_all(query.limit, query.offset).await?,
             Some(clause) => {
                 let clause_type =
                     clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
@@ -616,9 +668,9 @@ impl DojoWorld {
                         }
 
                         self.query_by_hashed_keys(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             Some(hashed_keys),
                             query.limit,
                             query.offset,
@@ -635,9 +687,9 @@ impl DojoWorld {
                         }
 
                         self.query_by_keys(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             keys,
                             query.limit,
                             query.offset,
@@ -646,9 +698,9 @@ impl DojoWorld {
                     }
                     ClauseType::Member(member) => {
                         self.query_by_member(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             member,
                             query.limit,
                             query.offset,
@@ -657,8 +709,8 @@ impl DojoWorld {
                     }
                     ClauseType::Composite(composite) => {
                         self.query_by_composite(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             composite,
                             query.limit,
@@ -684,16 +736,24 @@ impl DojoWorld {
         Ok(RetrieveEventsResponse { events })
     }
 
-    fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
+    fn map_row_to_entity(
+        row: &SqliteRow,
+        arrays_rows: &HashMap<String, Vec<SqliteRow>>,
+        schemas: &[Ty],
+    ) -> Result<proto::types::Entity, Error> {
         let hashed_keys =
             FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
         let models = schemas
             .iter()
             .map(|schema| {
-                let mut struct_ty = schema.as_struct().expect("schema should be struct").to_owned();
-                map_row_to_ty(&schema.name(), &mut struct_ty, row)?;
-
-                Ok(struct_ty.try_into().unwrap())
+                let mut schema = schema.to_owned();
+                map_row_to_ty("", &schema.name(), &mut schema, row, arrays_rows)?;
+                Ok(schema
+                    .as_struct()
+                    .expect("schema should be struct")
+                    .to_owned()
+                    .try_into()
+                    .unwrap())
             })
             .collect::<Result<Vec<_>, Error>>()?;
 

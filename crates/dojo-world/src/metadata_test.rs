@@ -64,8 +64,6 @@ socials.x = "https://x.com/dojostarknet"
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
 }
 
-// TODO: remove ignore once IPFS node is running.
-#[ignore]
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
     let meta = WorldMetadata {
