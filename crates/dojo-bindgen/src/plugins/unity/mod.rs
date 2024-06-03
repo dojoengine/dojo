@@ -244,7 +244,7 @@ public class {} : ModelInstance {{
                     // Need to flatten the struct members.
                     match t.r#type {
                         CompositeType::Struct if t.type_name() == "ByteArray" => format!(
-                            "calldata.AddRange(ByteArray.Serialize({}))",
+                            "calldata.AddRange(ByteArray.Serialize({}));",
                             type_name
                         ),
                         CompositeType::Struct => t
@@ -258,15 +258,15 @@ public class {} : ModelInstance {{
                                 )
                             })
                             .collect::<Vec<String>>()
-                            .join(",\n                    "),
+                            .join("\n\t\t"),
                         _ => {
-                            format!("calldata.Add(new FieldElement({}).Inner)", type_name)
+                            format!("calldata.Add(new FieldElement({}).Inner);", type_name)
                         }
                     }
                 }
                 None => match UnityPlugin::map_type(token).as_str() {
-                    "FieldElement" => format!("calldata.Add({}.Inner)", type_name),
-                    _ => format!("calldata.Add(new FieldElement({}).Inner)", type_name),
+                    "FieldElement" => format!("calldata.Add({}.Inner);", type_name),
+                    _ => format!("calldata.Add(new FieldElement({}).Inner);", type_name),
                 }
             }
         }
@@ -285,7 +285,7 @@ public class {} : ModelInstance {{
                 handle_arg_recursive(name, token, handled_tokens)
             })
             .collect::<Vec<String>>()
-            .join(";\n\t\t");
+            .join("\n\t\t");
 
         format!(
             "
