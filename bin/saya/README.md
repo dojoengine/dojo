@@ -47,9 +47,9 @@ cargo run -r -p sozo -- \
 cargo run -r -p sozo -- \
     migrate apply \
     --manifest-path examples/spawn-and-move/Scarb.toml \
-    --rpc-url <SEPOIA_ENDPOINT> \
-    --private-key <SEPOIA_PRIVATE_KEY> \
-    --account-address <SEPOIA_ACCOUNT_ADDRESS> \
+    --rpc-url <SEPOLIA_ENDPOINT> \
+    --private-key <SEPOLIA_PRIVATE_KEY> \
+    --account-address <SEPOLIA_ACCOUNT_ADDRESS> \
     --fee-estimate-multiplier 20 \
     --name <WORLD_NAME>
 ```
@@ -58,7 +58,7 @@ cargo run -r -p sozo -- \
 
 ```bash
 sncast \
-    -u <SEPOIA_ENDPOINT> \
+    -u <SEPOLIA_ENDPOINT> \
     -a dev \
     --wait invoke \
     -a <WORLD_ADDRESS> \
@@ -67,7 +67,7 @@ sncast \
     --max-fee 644996534717092
 
 sncast \
-    -u <SEPOIA_ENDPOINT> \
+    -u <SEPOLIA_ENDPOINT> \
     -a dev \
     --wait invoke \
     -a <WORLD_ADDRESS> \
@@ -76,7 +76,7 @@ sncast \
     --max-fee 644996534717092
 
 sncast \
-    -u <SEPOIA_ENDPOINT> \
+    -u <SEPOLIA_ENDPOINT> \
     -a dev \
     --wait invoke \
     -a <WORLD_ADDRESS> \
@@ -91,7 +91,7 @@ Start a local instance of Katana configured to work with the newly deployed cont
 
 ```bash
 cargo run -r -p katana -- \
-    --rpc-url <SEPOIA_ENDPOINT> \
+    --rpc-url <SEPOLIA_ENDPOINT> \
     --fork-block-number <LATEST_BLOCK> \
     -p 5050
 ```
@@ -103,8 +103,8 @@ Finally, modify the state of the world using specific actions:
 ```bash
 cargo run -r -p sozo -- execute \
     --rpc-url http://localhost:5050 \
-    --private-key <SEPOIA_PRIVATE_KEY> \
-    --account-address <SEPOIA_ACCOUNT_ADDRESS> \
+    --private-key <SEPOLIA_PRIVATE_KEY> \
+    --account-address <SEPOLIA_ACCOUNT_ADDRESS> \
     --world <WORLD_ADDRESS> \
     <CONTRACT_ADDRESS> spawn
 
