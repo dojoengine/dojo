@@ -168,7 +168,8 @@ public abstract record {}() {{",
         }
 
         result += format!(
-            "\n    public static readonly IReadOnlyDictionary<Type, int> TypeIndices = typeof({name_with_generics})
+            "\n    public static readonly IReadOnlyDictionary<Type, int> TypeIndices = \
+             typeof({name_with_generics})
                 .GetNestedTypes(BindingFlags.Public)
                 .OrderBy(t => t.MetadataToken)
                 .Select((type, index) => new {{ type, index }})
