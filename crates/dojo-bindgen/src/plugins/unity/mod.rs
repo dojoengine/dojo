@@ -234,6 +234,43 @@ public class {} : ModelInstance {{
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
+        fn handle_arg_recursive(
+            type_name: &str,
+            token: &Token,
+            handled_tokens: &[Composite],
+        ) -> String {
+            match handled_tokens.iter().find(|t| t.type_name() == token.type_name()) {
+                Some(t) => {
+                    // Need to flatten the struct members.
+                    match t.r#type {
+                        CompositeType::Struct if t.type_name() == "ByteArray" => format!(
+                            "calldata.AddRange(ByteArray.Serialize({}))",
+                            type_name
+                        ),
+                        CompositeType::Struct => t
+                            .inners
+                            .iter()
+                            .map(|field| {
+                                handle_arg_recursive(
+                                    &format!("{}.{}", type_name, field.name),
+                                    &field.token,
+                                    handled_tokens,
+                                )
+                            })
+                            .collect::<Vec<String>>()
+                            .join(",\n                    "),
+                        _ => {
+                            format!("calldata.Add(new FieldElement({}).Inner)", type_name)
+                        }
+                    }
+                }
+                None => match UnityPlugin::map_type(token).as_str() {
+                    "FieldElement" => format!("calldata.Add({}.Inner)", type_name),
+                    _ => format!("calldata.Add(new FieldElement({}).Inner)", type_name),
+                }
+            }
+        }
+
         let args = system
             .inputs
             .iter()
@@ -244,35 +281,11 @@ public class {} : ModelInstance {{
         let calldata = system
             .inputs
             .iter()
-            .map(|arg| {
-                let token = &arg.1;
-                let type_name = &arg.0;
-
-                match handled_tokens.iter().find(|t| t.type_name() == token.type_name()) {
-                    Some(t) => {
-                        // Need to flatten the struct members.
-                        match t.r#type {
-                            CompositeType::Struct => t
-                                .inners
-                                .iter()
-                                .map(|field| {
-                                    format!("new FieldElement({}.{}).Inner", type_name, field.name)
-                                })
-                                .collect::<Vec<String>>()
-                                .join(",\n                    "),
-                            _ => {
-                                format!("new FieldElement({}).Inner", type_name)
-                            }
-                        }
-                    }
-                    None => match UnityPlugin::map_type(token).as_str() {
-                        "FieldElement" => format!("{}.Inner", type_name),
-                        _ => format!("new FieldElement({}).Inner", type_name),
-                    },
-                }
+            .map(|(name, token)| {
+                handle_arg_recursive(name, token, handled_tokens)
             })
             .collect::<Vec<String>>()
-            .join(",\n                ");
+            .join(";\n\t\t");
 
         format!(
             "
@@ -280,13 +293,15 @@ public class {} : ModelInstance {{
     // Returns the transaction hash. Use `WaitForTransaction` to wait for the transaction to be \
              confirmed.
     public async Task<FieldElement> {system_name}(Account account{arg_sep}{args}) {{
+        List<FieldElement> calldata = new List<FieldElement>();
+
+        {calldata}
+
         return await account.ExecuteRaw(new dojo.Call[] {{
             new dojo.Call{{
                 to = contractAddress,
                 selector = \"{system_name}\",
-                calldata = new dojo.FieldElement[] {{
-                    {calldata}
-                }}
+                calldata = calldata.ToArray()
             }}
         }});
     }}
