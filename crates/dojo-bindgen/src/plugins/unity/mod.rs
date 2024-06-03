@@ -358,7 +358,7 @@ public class {} : ModelInstance {{
             .systems
             .iter()
             // we assume systems dont have outputs
-            .filter(|s| s.to_function().unwrap().outputs.is_empty())
+            .filter(|s| s.to_function().unwrap().get_output_kind() as u8 == FunctionOutputKind::NoOutput as u8)
             .map(|system| UnityPlugin::format_system(system.to_function().unwrap(), handled_tokens))
             .collect::<Vec<String>>()
             .join("\n\n    ");
