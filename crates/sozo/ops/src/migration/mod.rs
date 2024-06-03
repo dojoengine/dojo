@@ -194,6 +194,7 @@ pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
     let world = OverlayClass { name: WORLD_CONTRACT_NAME.into(), original_class_hash: None };
     let base = OverlayClass { name: BASE_CONTRACT_NAME.into(), original_class_hash: None };
 
+    // generate default OverlayManifest from base manifests
     let contracts = overlay_dojo_contracts_from_path(&base_manifests.join(CONTRACTS_DIR))
         .with_context(|| "Failed to build default DojoContract Overlays from path.")?;
     let models = overlay_model_from_path(&base_manifests.join(MODELS_DIR))
@@ -203,9 +204,13 @@ pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
         OverlayManifest { world: Some(world), base: Some(base), contracts, models };
 
     let overlay_path = profile_dir.join(OVERLAYS_DIR);
+
+    // read existing OverlayManifest from path
     let mut overlay_manifest = OverlayManifest::load_from_path(&overlay_path)
         .with_context(|| "Failed to load OverlayManifest from path.")?;
 
+    // merge them to get OverlayManifest which contains all the contracts and models from base
+    // manifests
     overlay_manifest.merge(default_overlay);
 
     overlay_manifest

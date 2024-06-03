@@ -50,7 +50,6 @@ pub enum MigrateCommand {
         #[command(flatten)]
         transaction: TransactionOptions,
     },
-
     #[command(about = "Generate overlays file.")]
     GenerateOverlays,
 }

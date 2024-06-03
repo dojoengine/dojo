@@ -179,6 +179,10 @@ impl OverlayManifest {
         Ok(Self { world, base, contracts, models })
     }
 
+    /// Writes `Self` to overlay manifests folder.
+    ///
+    /// - `world` and `base` manifest are written to root of the folder.
+    /// - `contracts` and `models` are written to their respective directories.
     pub fn write_to_path_nested(&self, path: &Utf8PathBuf) -> Result<(), AbstractManifestError> {
         fs::create_dir_all(path.parent().unwrap())?;
 
@@ -200,6 +204,7 @@ impl OverlayManifest {
         Ok(())
     }
 
+    /// Add missing overlay items from `others` to `self`.
     pub fn merge(&mut self, other: OverlayManifest) {
         if self.world.is_none() {
             self.world = other.world;
