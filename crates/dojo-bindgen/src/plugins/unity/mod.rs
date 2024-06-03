@@ -95,6 +95,7 @@ using Dojo.Starknet;
 using UnityEngine;
 using dojo_bindings;
 using System.Collections.Generic;
+using System.Linq;
 "
         .to_string()
     }
