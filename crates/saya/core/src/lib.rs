@@ -53,6 +53,7 @@ pub struct SayaConfig {
     pub data_availability: Option<DataAvailabilityConfig>,
     pub world_address: FieldElement,
     pub fact_registry_address: FieldElement,
+    pub skip_publishing_proof: bool,
 }
 
 fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -330,11 +331,15 @@ impl Saya {
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
         let world_da = state_diff.world_da.unwrap();
 
+        // Publish state difference if DA client is available
         if let Some(da) = &self.da_client {
             trace!(target: LOG_TARGET, last_block, "Publishing DA.");
 
-            // Publish state difference if DA client is available
-            da.publish_state_diff_and_proof_felts(&world_da, &serialized_proof).await?;
+            if self.config.skip_publishing_proof {
+                da.publish_state_diff_felts(&world_da).await?;
+            } else {
+                da.publish_state_diff_and_proof_felts(&world_da, &serialized_proof).await?;
+            }
         }
 
         trace!(target: LOG_TARGET, last_block, "Verifying block.");
