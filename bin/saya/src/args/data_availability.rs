@@ -43,6 +43,11 @@ pub struct CelestiaOptions {
     #[arg(help = "The namespace used to submit blobs.")]
     #[arg(requires = "celestia_node_url")]
     pub celestia_namespace: Option<String>,
+
+    #[arg(long)]
+    #[arg(help = "Whether to include a proof to the publish DA.")]
+    #[arg(default_value_t = false)]
+    pub skip_publishing_proof: bool,
 }
 
 // -- Clap enums impls --
