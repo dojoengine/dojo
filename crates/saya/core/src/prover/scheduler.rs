@@ -35,7 +35,7 @@ impl Scheduler {
         let (senders, receivers): (Vec<_>, Vec<_>) =
             (0..capacity).map(|_| oneshot::channel::<ProgramInput>()).unzip();
 
-        let (update_sender, update_channel) = mpsc::channel(capacity);
+        let (update_sender, update_channel) = mpsc::channel(capacity * 2);
         let root_task = prove_recursively(receivers, world, prover, update_sender);
 
         Scheduler {
@@ -58,7 +58,6 @@ impl Scheduler {
         let block_number = input.block_number;
 
         let sender = self.free_differs.remove(0);
-        self.proving_tasks.push((block_number, ProvingState::Proving));
 
         if sender.send(input).is_err() {
             bail!("Failed to send input to differ");
