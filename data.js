@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717163530860,
+  "lastUpdate": 1717593182781,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9025,6 +9025,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16420906,
             "range": "± 188800",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9e257131620f78d7339c326c9047a7f6bfab9617",
+          "message": "feat(sozo): make few argument global (#2029)\n\n* make profile arguments global\r\n\r\n* make offline flag global",
+          "timestamp": "2024-06-05T18:31:04+05:30",
+          "tree_id": "ecb2fbb366efbef1bc507f36abe3d8783aaeee56",
+          "url": "https://github.com/dojoengine/dojo/commit/9e257131620f78d7339c326c9047a7f6bfab9617"
+        },
+        "date": 1717593181484,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16221905,
+            "range": "± 55305",
             "unit": "ns/iter"
           }
         ]
