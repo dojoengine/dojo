@@ -205,6 +205,7 @@ impl OverlayManifest {
     }
 
     /// Add missing overlay items from `others` to `self`.
+    /// Note that this method don't override if certain item already exists in `self`.
     pub fn merge(&mut self, other: OverlayManifest) {
         if self.world.is_none() {
             self.world = other.world;

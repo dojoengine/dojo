@@ -36,7 +36,7 @@ pub struct DeploymentManifest {
     pub models: Vec<Manifest<DojoModel>>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayManifest {
     pub world: Option<OverlayClass>,
