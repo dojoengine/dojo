@@ -484,19 +484,19 @@ async fn check_artifact_metadata<P: starknet::providers::Provider + Sync>(
 ) {
     let resource = world_reader.metadata(&resource_id).call().await.unwrap();
 
-    let expected_artifact = dojo_metadata.artifacts.get(element_name);
+    let expected_resource = dojo_metadata.resources_artifacts.get(element_name);
     assert!(
-        expected_artifact.is_some(),
+        expected_resource.is_some(),
         "Unable to find local artifact metadata for {}",
         element_name
     );
-    let expected_artifact = expected_artifact.unwrap();
+    let expected_resource = expected_resource.unwrap();
 
     check_ipfs_metadata(
         client,
         element_name,
         &resource.metadata_uri.to_string().unwrap(),
-        expected_artifact,
+        &expected_resource.artifacts,
     )
     .await;
 }

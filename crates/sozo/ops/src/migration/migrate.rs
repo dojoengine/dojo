@@ -9,7 +9,7 @@ use dojo_world::manifest::{
     AbiFormat, BaseManifest, DeploymentManifest, DojoContract, DojoModel, Manifest,
     ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata,
 };
-use dojo_world::metadata::{dojo_metadata_from_workspace, ArtifactMetadata};
+use dojo_world::metadata::{dojo_metadata_from_workspace, ResourceMetadata};
 use dojo_world::migration::class::ClassMigration;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
@@ -255,13 +255,12 @@ where
 /// on success.
 async fn upload_on_ipfs_and_create_resource(
     ui: &Ui,
-    element_name: String,
     resource_id: FieldElement,
-    artifact: ArtifactMetadata,
+    metadata: ResourceMetadata,
 ) -> Result<world::ResourceMetadata> {
-    match artifact.upload().await {
+    match metadata.upload().await {
         Ok(hash) => {
-            ui.print_sub(format!("{}: ipfs://{}", element_name, hash));
+            ui.print_sub(format!("{}: ipfs://{}", metadata.name, hash));
             create_resource_metadata(resource_id, hash)
         }
         Err(_) => Err(anyhow!("Failed to upload IPFS resource.")),
@@ -330,10 +329,9 @@ where
     // models
     if !migration_output.models.is_empty() {
         for model_name in migration_output.models {
-            if let Some(m) = dojo_metadata.artifacts.get(&model_name) {
+            if let Some(m) = dojo_metadata.resources_artifacts.get(&model_name) {
                 ipfs.push(upload_on_ipfs_and_create_resource(
                     &ui,
-                    model_name.clone(),
                     get_selector_from_name(&model_name).expect("ASCII model name"),
                     m.clone(),
                 ));
@@ -346,10 +344,9 @@ where
 
     if !migrated_contracts.is_empty() {
         for contract in migrated_contracts {
-            if let Some(m) = dojo_metadata.artifacts.get(&contract.name) {
+            if let Some(m) = dojo_metadata.resources_artifacts.get(&contract.name) {
                 ipfs.push(upload_on_ipfs_and_create_resource(
                     &ui,
-                    contract.name.clone(),
                     contract.contract_address,
                     m.clone(),
                 ));
