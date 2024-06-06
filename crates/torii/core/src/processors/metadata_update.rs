@@ -61,12 +61,7 @@ where
         let resource = &event.data[0];
         let uri_len: u8 = event.data[1].try_into().unwrap();
 
-        let uri_str = if uri_len > 0 {
-            ByteArray::cairo_deserialize(&event.data[2..=uri_len as usize + 1], 0)?.to_string()?
-        } else {
-            "".to_string()
-        };
-
+        let uri_str = ByteArray::cairo_deserialize(&event.data[1..=uri_len as usize + 1], 0)?.to_string()?;
         info!(
             target: LOG_TARGET,
             resource = %format!("{:#x}", resource),
