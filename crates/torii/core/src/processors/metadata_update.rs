@@ -4,6 +4,7 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use base64::engine::general_purpose;
 use base64::Engine as _;
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::{Uri, WorldMetadata};
 use reqwest::Client;
@@ -61,11 +62,7 @@ where
         let uri_len: u8 = event.data[1].try_into().unwrap();
 
         let uri_str = if uri_len > 0 {
-            event.data[2..=uri_len as usize + 1]
-                .iter()
-                .map(parse_cairo_short_string)
-                .collect::<Result<Vec<_>, _>>()?
-                .concat()
+            ByteArray::cairo_deserialize(&event.data[2..=uri_len as usize + 1], 0)?.to_string()?
         } else {
             "".to_string()
         };
