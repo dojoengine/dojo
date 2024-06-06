@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717593182781,
+  "lastUpdate": 1717710397101,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9055,6 +9055,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16221905,
             "range": "± 55305",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9ea6574d45770d24197ae44947d15068f2a01e2a",
+          "message": "fix: metadata update use bytearray (#2031)\n\n* fix: metadataupdate use bytearray\r\n\r\n* chore: get rid of metadata update\r\n\r\n* fix: remove uri len\r\n\r\n* chore: clippy\r\n\r\n* feat: rework resource metadata to match artifacts format\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-06T15:35:02-06:00",
+          "tree_id": "83a6783728a48b96fd884537e8a80d9a1985f036",
+          "url": "https://github.com/dojoengine/dojo/commit/9ea6574d45770d24197ae44947d15068f2a01e2a"
+        },
+        "date": 1717710396421,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16365154,
+            "range": "± 245539",
             "unit": "ns/iter"
           }
         ]
