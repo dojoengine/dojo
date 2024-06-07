@@ -445,20 +445,38 @@ fn ty_keys(ty: &Ty) -> Result<Vec<FieldElement>, Error> {
 
 pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error> {
     match value {
-        PrimitiveType::Object(object) => {
-            let struct_ = if let Ty::Struct(struct_) = ty {
-                struct_
-            } else {
-                return Err(Error::InvalidMessageError("Expected Struct type".to_string()));
-            };
+        PrimitiveType::Object(object) => match ty {
+            Ty::Struct(struct_) => {
+                for (key, value) in object {
+                    let member =
+                        struct_.children.iter_mut().find(|member| member.name == *key).ok_or_else(
+                            || Error::InvalidMessageError(format!("Member {} not found", key)),
+                        )?;
+    
+                    parse_value_to_ty(value, &mut member.ty)?;
+                }
+            }
+            // U256 is an object with two u128 fields
+            // low and high
+            Ty::Primitive(Primitive::U256(u256)) => {
+                let mut low = Ty::Primitive(Primitive::U128(None));
+                let mut high = Ty::Primitive(Primitive::U128(None));
 
-            for (key, value) in object {
-                let member =
-                    struct_.children.iter_mut().find(|member| member.name == *key).ok_or_else(
-                        || Error::InvalidMessageError(format!("Member {} not found", key)),
-                    )?;
+                // parse the low and high fields
+                parse_value_to_ty(&object["low"], &mut low)?;
+                parse_value_to_ty(&object["high"], &mut high)?;
+    
+                let low = low.as_primitive().unwrap().as_u128().unwrap();
+                let high = high.as_primitive().unwrap().as_u128().unwrap();
 
-                parse_value_to_ty(value, &mut member.ty)?;
+                let mut bytes = [0u8; 32];
+                bytes[..16].copy_from_slice(&low.to_be_bytes());
+                bytes[16..].copy_from_slice(&high.to_be_bytes());
+
+                *u256 = Some(U256::from_be_slice(&bytes));
+            }
+            _ => {
+                return Err(Error::InvalidMessageError("Invalid object type".to_string()));
             }
         }
         PrimitiveType::Array(values) => match ty {
@@ -538,6 +556,9 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 Primitive::U128(v) => {
                     *v = Some(u128::from_str(string).unwrap());
                 }
+                // an U256 object should be instead used
+                // according to the SNIp-12 spec. but we fallback to this
+                // if a string is passed
                 Primitive::U256(v) => {
                     *v = Some(U256::from_be_hex(string));
                 }
@@ -728,6 +749,40 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+
+    fn test_parse_primitive_to_ty() {
+        let mut ty = Ty::Primitive(Primitive::U8(None));
+        let value = PrimitiveType::Number(Number::from(1u64));
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::U8(Some(1))));
+
+        let mut ty = Ty::Primitive(Primitive::U16(None));
+        let value = PrimitiveType::Number(Number::from(1u64));
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::U16(Some(1))));
+
+        let mut ty = Ty::Primitive(Primitive::U32(None));
+        let value = PrimitiveType::Number(Number::from(1u64));
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::U32(Some(1))));
+
+        let mut ty = Ty::Primitive(Primitive::USize(None));
+        let value = PrimitiveType::Number(Number::from(1u64));
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::USize(Some(1))));
+
+        let mut ty = Ty::Primitive(Primitive::U64(None));
+        let value = PrimitiveType::Number(Number::from(1u64));
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::U64(Some(1))));
+
+        let mut ty = Ty::Primitive(Primitive::U128(None));
+        let value = PrimitiveType::String("1".to_string());
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::U128(Some(1))));
+
+
+    }
 
     #[tokio::test]
     async fn test_read_or_create_identity() {
