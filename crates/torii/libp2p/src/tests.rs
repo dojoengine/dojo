@@ -95,8 +95,6 @@ mod test {
             ),
         );
 
-        println!("object ty: {:?}", parse_ty_to_object(&Ty::Struct(data)).unwrap());
-
         client
             .command_sender
             .publish(Message {
