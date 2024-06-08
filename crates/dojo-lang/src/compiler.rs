@@ -63,7 +63,6 @@ pub struct DojoCompiler;
 #[serde(rename_all = "kebab-case")]
 pub struct Props {
     pub build_external_contracts: Option<Vec<ContractSelector>>,
-    pub skip_migration: Option<Vec<ContractSelector>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -158,14 +157,7 @@ impl Compiler for DojoCompiler {
             compiled_classes.insert(contract_full_path.into(), (class_hash, class.abi));
         }
 
-        update_manifest(
-            db,
-            ws,
-            &main_crate_ids,
-            compiled_classes,
-            props.build_external_contracts,
-            props.skip_migration,
-        )?;
+        update_manifest(db, ws, &main_crate_ids, compiled_classes, props.build_external_contracts)?;
         Ok(())
     }
 }
@@ -228,8 +220,11 @@ pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     .collect::<Vec<_>>()
 }
 
-pub fn collect_crate_ids(db: &RootDatabase, contracts: Vec<ContractSelector>) -> Vec<CrateId> {
-    contracts
+pub fn collect_external_crate_ids(
+    db: &RootDatabase,
+    external_contracts: Vec<ContractSelector>,
+) -> Vec<CrateId> {
+    external_contracts
         .iter()
         .map(|selector| selector.package().into())
         .unique()
@@ -243,7 +238,6 @@ fn update_manifest(
     crate_ids: &[CrateId],
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     external_contracts: Option<Vec<ContractSelector>>,
-    skip_migration: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
     let profile_name =
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
@@ -294,15 +288,8 @@ fn update_manifest(
     let mut computed = BTreeMap::new();
 
     if let Some(external_contracts) = external_contracts {
-        let external_crate_ids = collect_crate_ids(db, external_contracts);
+        let external_crate_ids = collect_external_crate_ids(db, external_contracts);
         crate_ids.extend(external_crate_ids);
-    }
-
-    if let Some(skip_contracts) = skip_migration {
-        let skip_crate_ids = collect_crate_ids(db, skip_contracts);
-
-        // remove crate_ids present in `skip_crate_ids`
-        crate_ids.retain(|id| !skip_crate_ids.contains(id))
     }
 
     for crate_id in crate_ids {
