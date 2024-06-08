@@ -65,7 +65,7 @@ impl CleanArgs {
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler;
-    use dojo_world::migration::TxnConfig;
+    use dojo_world::{metadata::dojo_metadata_from_workspace, migration::TxnConfig};
     use katana_runner::KatanaRunner;
     use sozo_ops::migration;
 
@@ -84,6 +84,8 @@ mod tests {
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
 
+        let dojo_metadata = dojo_metadata_from_workspace(&ws);
+
         // Plan the migration to generate some manifests other than base.
         config.tokio_handle().block_on(async {
             migration::migrate(
@@ -94,6 +96,7 @@ mod tests {
                 "dojo_examples",
                 true,
                 TxnConfig::default(),
+                dojo_metadata.skip_migration,
             )
             .await
             .unwrap()
