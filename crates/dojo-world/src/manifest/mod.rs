@@ -147,6 +147,8 @@ impl BaseManifest {
 
 impl OverlayManifest {
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        fs::create_dir_all(path)?;
+
         let mut world: Option<OverlayClass> = None;
 
         let world_path = path.join(WORLD_CONTRACT_NAME.replace("::", "_")).with_extension("toml");
@@ -184,7 +186,7 @@ impl OverlayManifest {
     /// - `world` and `base` manifest are written to root of the folder.
     /// - `contracts` and `models` are written to their respective directories.
     pub fn write_to_path_nested(&self, path: &Utf8PathBuf) -> Result<(), AbstractManifestError> {
-        fs::create_dir_all(path.parent().unwrap())?;
+        fs::create_dir_all(path)?;
 
         if let Some(ref world) = self.world {
             let world = toml::to_string(world)?;
