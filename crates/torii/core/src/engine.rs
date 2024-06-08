@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
+use std::fmt::Debug;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
@@ -17,14 +18,14 @@ use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
-
-pub struct Processors<P: Provider + Sync> {
+#[derive(Debug)]
+pub struct Processors<P: Provider + Sync + Debug> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
     pub event: Vec<Box<dyn EventProcessor<P>>>,
 }
 
-impl<P: Provider + Sync> Default for Processors<P> {
+impl<P: Provider + Sync + Debug> Default for Processors<P> {
     fn default() -> Self {
         Self { block: vec![], event: vec![], transaction: vec![] }
     }
@@ -52,7 +53,7 @@ impl Default for EngineConfig {
 }
 
 #[derive(Debug)]
-pub struct Engine<P: Provider + Sync> {
+pub struct Engine<P: Provider + Sync + Debug> {
     world: WorldContractReader<P>,
     db: Sql,
     provider: Box<P>,
@@ -67,7 +68,7 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<P: Provider + Sync> Engine<P> {
+impl<P: Provider + Sync + Debug> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: Sql,

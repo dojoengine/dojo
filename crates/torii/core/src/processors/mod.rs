@@ -4,6 +4,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, MaybePendingTransactionReceipt, Transaction};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
+use std::fmt::Debug;
 
 use crate::sql::Sql;
 
@@ -20,7 +21,7 @@ const NUM_KEYS_INDEX: usize = 1;
 #[async_trait]
 pub trait EventProcessor<P>
 where
-    P: Provider + Sync,
+    P: Provider + Sync + Debug,
 {
     fn event_key(&self) -> String;
 
@@ -44,7 +45,7 @@ where
 }
 
 #[async_trait]
-pub trait BlockProcessor<P: Provider + Sync> {
+pub trait BlockProcessor<P: Provider + Sync + Debug> {
     fn get_block_number(&self) -> String;
     async fn process(
         &self,
@@ -56,7 +57,7 @@ pub trait BlockProcessor<P: Provider + Sync> {
 }
 
 #[async_trait]
-pub trait TransactionProcessor<P: Provider + Sync> {
+pub trait TransactionProcessor<P: Provider + Sync + Debug> {
     #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,

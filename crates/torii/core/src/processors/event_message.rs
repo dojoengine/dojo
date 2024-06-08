@@ -18,7 +18,7 @@ pub struct EventMessageProcessor;
 #[async_trait]
 impl<P> EventProcessor<P> for EventMessageProcessor
 where
-    P: Provider + Send + Sync,
+    P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
         "".to_string()

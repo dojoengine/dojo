@@ -11,7 +11,7 @@ use crate::sql::Sql;
 pub struct StoreTransactionProcessor;
 
 #[async_trait]
-impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
+impl<P: Provider + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTransactionProcessor {
     async fn process(
         &self,
         db: &mut Sql,

@@ -24,6 +24,7 @@ const MIN_HISTORY_LIMIT: usize = 10;
 /// Represents the complete state of a single block.
 ///
 /// It should store at N - 1 states, where N is the latest block number.
+#[derive(Debug)]
 pub struct HistoricalStates {
     /// The states at a certain block based on the block number
     states: HashMap<BlockNumber, Arc<dyn StateProvider>>,
