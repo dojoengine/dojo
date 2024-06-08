@@ -59,6 +59,11 @@ impl MigrateArgs {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
+        if let MigrateCommand::GenerateOverlays = self.command {
+            trace!("Planning migration.");
+            return migration::generate_overlays(&ws);
+        }
+
         let env_metadata = if config.manifest_path().exists() {
             dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
@@ -102,10 +107,7 @@ impl MigrateArgs {
                 migration::migrate(&ws, world_address, rpc_url, account, &name, false, txn_config)
                     .await
             }),
-            MigrateCommand::GenerateOverlays => {
-                trace!(name, "Generating Overlay files.");
-                migration::generate_overlays(&ws)
-            }
+            _ => unreachable!("other case handled above."),
         }
     }
 }
