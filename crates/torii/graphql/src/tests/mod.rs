@@ -290,8 +290,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
     let migration =
-        prepare_migration(source_project_dir, target_path.into(), dojo_metadata.skip_migration)
-            .unwrap();
+        prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
     let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 

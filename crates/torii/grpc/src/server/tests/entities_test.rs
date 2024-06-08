@@ -1,7 +1,7 @@
-use camino::Utf8PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::{self, build_test_config};
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
@@ -48,12 +48,8 @@ async fn test_entities_queries() {
 
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
 
-    let mut migration = prepare_migration(
-        source_project_dir.into(),
-        target_path.into(),
-        dojo_metadata.skip_migration,
-    )
-    .unwrap();
+    let mut migration =
+        prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
     migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     dbg!(&migration);

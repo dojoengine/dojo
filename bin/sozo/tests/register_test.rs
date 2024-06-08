@@ -26,12 +26,8 @@ async fn reregister_models() {
     let target_path =
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
 
-    let migration = prepare_migration(
-        source_project_dir.into(),
-        target_path.into(),
-        dojo_metadata.skip_migration,
-    )
-    .unwrap();
+    let migration =
+        prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
