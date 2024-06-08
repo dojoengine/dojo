@@ -20,6 +20,7 @@ pub(super) async fn load_world_manifests<P, S>(
     account: &SingleOwnerAccount<P, S>,
     world_address: Option<FieldElement>,
     ui: &Ui,
+    skip_manifests: Option<Vec<String>>,
 ) -> Result<(BaseManifest, Option<DeploymentManifest>)>
 where
     P: Provider + Sync + Send,
@@ -29,6 +30,20 @@ where
 
     let mut local_manifest = BaseManifest::load_from_path(&profile_dir.join(BASE_DIR))
         .map_err(|e| anyhow!("Fail to load local manifest file: {e}."))?;
+
+    if let Some(skip_manifests) = skip_manifests {
+        for contract_or_model in skip_manifests {
+            if let Some(index) =
+                local_manifest.contracts.iter().position(|c| c.name == contract_or_model)
+            {
+                local_manifest.contracts.remove(index);
+            } else if let Some(index) =
+                local_manifest.models.iter().position(|m| m.name == contract_or_model)
+            {
+                local_manifest.models.remove(index);
+            };
+        }
+    }
 
     let overlay_path = profile_dir.join(OVERLAYS_DIR);
     if overlay_path.exists() {

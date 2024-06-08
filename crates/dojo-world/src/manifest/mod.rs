@@ -17,6 +17,7 @@ use starknet::macros::selector;
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 use toml;
+use tracing::error;
 
 use crate::contracts::model::ModelError;
 use crate::contracts::world::WorldEvent;
@@ -118,11 +119,14 @@ impl BaseManifest {
         }
 
         for contract in overlay.contracts {
-            base_map
-                .get_mut(&contract.name)
-                .expect("qed; overlay contract not found")
-                .inner
-                .merge(contract);
+            if let Some(manifest) = base_map.get_mut(&contract.name) {
+                manifest.inner.merge(contract);
+            } else {
+                error!(
+                    "OverlayManifest configured for contract \"{}\", but contract is not present in BaseManifest.",
+                    contract.name
+                );
+            }
         }
 
         if let Some(overlay_world) = overlay.world {

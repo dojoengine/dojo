@@ -47,6 +47,14 @@ struct Moves {
     last_direction: Direction
 }
 
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
+struct Skipped {
+    #[key]
+    player: ContractAddress,
+    value: u8,
+}
+
 #[derive(Copy, Drop, Serde, IntrospectPacked)]
 struct Vec2 {
     x: u32,

@@ -15,6 +15,12 @@ dojo = { path = "../../crates/dojo-core" }
 [[target.dojo]]
 build-external-contracts = [  ]
 
+[tool.dojo]
+skip_migration = [
+    "dojo_examples::models::skipped",
+    "dojo_examples::skipped::skipped",
+]
+
 [tool.dojo.world]
 description = "example world"
 name = "example"

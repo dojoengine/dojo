@@ -56,9 +56,10 @@ impl MigrateArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let dojo_metadata = dojo_metadata_from_workspace(&ws);
 
         let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata_from_workspace(&ws).env().cloned()
+            dojo_metadata.env().cloned()
         } else {
             trace!("Manifest path does not exist.");
             None
@@ -89,6 +90,7 @@ impl MigrateArgs {
                     &name,
                     true,
                     TxnConfig::default(),
+                    dojo_metadata.skip_migration,
                 )
                 .await
             }),
@@ -96,8 +98,17 @@ impl MigrateArgs {
                 trace!(name, "Applying migration.");
                 let txn_config: TxnConfig = transaction.into();
 
-                migration::migrate(&ws, world_address, rpc_url, account, &name, false, txn_config)
-                    .await
+                migration::migrate(
+                    &ws,
+                    world_address,
+                    rpc_url,
+                    account,
+                    &name,
+                    false,
+                    txn_config,
+                    dojo_metadata.skip_migration,
+                )
+                .await
             }),
         }
     }

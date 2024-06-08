@@ -1,0 +1,15 @@
+kind = "DojoModel"
+class_hash = "0x5c3f9746762159dcb1cbf9633c67d5f61bf502b03ab034d3de5dd79bf809301"
+original_class_hash = "0x5c3f9746762159dcb1cbf9633c67d5f61bf502b03ab034d3de5dd79bf809301"
+abi = "manifests/dev/abis/base/models/dojo_examples_models_skipped.json"
+name = "dojo_examples::models::skipped"
+
+[[members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "value"
+type = "u8"
+key = false
