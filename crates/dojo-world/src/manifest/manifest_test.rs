@@ -18,6 +18,7 @@ use super::{
 };
 use crate::contracts::world::test::deploy_world;
 use crate::manifest::{parse_models_events, AbstractManifestError, DeploymentManifest, Manifest};
+use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]
@@ -378,16 +379,39 @@ fn fetch_remote_manifest() {
     let (temp_project_dir, config, _) =
         compiler::copy_build_project_temp(source_project, dojo_core_path, true);
 
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+
     let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
 
-    let world_address = config
-        .tokio_handle()
-        .block_on(async { deploy_world(&runner, &temp_project_dir, &artifacts_path).await });
+    let world_address = config.tokio_handle().block_on(async {
+        deploy_world(
+            &runner,
+            &temp_project_dir,
+            &artifacts_path,
+            dojo_metadata.skip_migration.clone(),
+        )
+        .await
+    });
 
     let mut local_manifest = BaseManifest::load_from_path(
         &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
+
+    if let Some(skip_manifests) = dojo_metadata.skip_migration {
+        for contract_or_model in skip_manifests {
+            if let Some(index) =
+                local_manifest.contracts.iter().position(|c| c.name == contract_or_model)
+            {
+                local_manifest.contracts.remove(index);
+            } else if let Some(index) =
+                local_manifest.models.iter().position(|m| m.name == contract_or_model)
+            {
+                local_manifest.models.remove(index);
+            };
+        }
+    }
 
     let overlay_manifest = OverlayManifest::load_from_path(
         &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),

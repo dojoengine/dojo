@@ -73,13 +73,17 @@ pub struct PluginManager {
 
 impl PluginManager {
     /// Generates the bindings for all the given Plugin.
-    pub async fn generate(&self) -> BindgenResult<()> {
+    pub async fn generate(&self, skip_migration: Option<Vec<String>>) -> BindgenResult<()> {
         if self.builtin_plugins.is_empty() && self.plugins.is_empty() {
             return Ok(());
         }
 
-        let data =
-            gather_dojo_data(&self.manifest_path, &self.root_package_name, &self.profile_name)?;
+        let data = gather_dojo_data(
+            &self.manifest_path,
+            &self.root_package_name,
+            &self.profile_name,
+            skip_migration,
+        )?;
 
         for plugin in &self.builtin_plugins {
             // Get the plugin builder from the plugin enum.
@@ -111,10 +115,25 @@ fn gather_dojo_data(
     manifest_path: &Utf8PathBuf,
     root_package_name: &str,
     profile_name: &str,
+    skip_migration: Option<Vec<String>>,
 ) -> BindgenResult<DojoData> {
     let root_dir: Utf8PathBuf = manifest_path.parent().unwrap().into();
     let base_manifest_dir: Utf8PathBuf = root_dir.join("manifests").join(profile_name).join("base");
-    let base_manifest = BaseManifest::load_from_path(&base_manifest_dir)?;
+    let mut base_manifest = BaseManifest::load_from_path(&base_manifest_dir)?;
+
+    if let Some(skip_manifests) = skip_migration {
+        for contract_or_model in skip_manifests {
+            if let Some(index) =
+                base_manifest.contracts.iter().position(|c| c.name == contract_or_model)
+            {
+                base_manifest.contracts.remove(index);
+            } else if let Some(index) =
+                base_manifest.models.iter().position(|m| m.name == contract_or_model)
+            {
+                base_manifest.models.remove(index);
+            };
+        }
+    }
 
     let mut models = HashMap::new();
     let mut contracts = HashMap::new();
@@ -244,6 +263,9 @@ fn model_name_from_fully_qualified_path(file_name: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use dojo_test_utils::compiler;
+    use dojo_world::metadata::dojo_metadata_from_workspace;
+
     use super::*;
 
     #[test]
@@ -254,12 +276,19 @@ mod tests {
 
     #[test]
     fn gather_data_ok() {
-        let data = gather_dojo_data(
-            &Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml"),
-            "dojo_example",
-            "dev",
-        )
-        .unwrap();
+        let manifest_path = Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml");
+
+        let config = compiler::copy_tmp_config(
+            &Utf8PathBuf::from("../../examples/spawn-and-move"),
+            &Utf8PathBuf::from("../dojo-core"),
+        );
+
+        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+        let dojo_metadata = dojo_metadata_from_workspace(&ws);
+
+        let data =
+            gather_dojo_data(&manifest_path, "dojo_example", "dev", dojo_metadata.skip_migration)
+                .unwrap();
 
         assert_eq!(data.models.len(), 6);
 

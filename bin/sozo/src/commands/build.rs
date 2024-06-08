@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
@@ -110,9 +111,12 @@ impl BuildArgs {
         };
         trace!(pluginManager=?bindgen, "Generating bindings.");
 
+        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+        let dojo_metadata = dojo_metadata_from_workspace(&ws);
+
         tokio::runtime::Runtime::new()
             .unwrap()
-            .block_on(bindgen.generate())
+            .block_on(bindgen.generate(dojo_metadata.skip_migration))
             .expect("Error generating bindings");
 
         Ok(())

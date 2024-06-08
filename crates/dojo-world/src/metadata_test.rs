@@ -131,16 +131,16 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(env.rpc_url.unwrap().eq("http://localhost:5050/"));
 
     assert!(env.account_address.is_some());
-    assert!(
-        env.account_address
-            .unwrap()
-            .eq("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03")
-    );
+    assert!(env
+        .account_address
+        .unwrap()
+        .eq("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"));
 
     assert!(env.private_key.is_some());
-    assert!(
-        env.private_key.unwrap().eq("0x1800000000300000180000000000030000000000003006001800006600")
-    );
+    assert!(env
+        .private_key
+        .unwrap()
+        .eq("0x1800000000300000180000000000030000000000003006001800006600"));
 
     assert!(env.world_address.is_some());
     assert_eq!(
@@ -230,6 +230,9 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
 
         let name = name.replace("_others_", "::others::");
         let name = name.replace("::others_", "::others::");
+
+        let name = name.replace("_skipped", "::skipped::");
+        let name = name.replace("::skipped_", "::skipped::");
         artifacts.push(("models".to_string(), name));
     }
 
@@ -238,6 +241,7 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
         let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
         let name = name.replace("_actions_", "::actions::");
         let name = name.replace("_others_", "::others::");
+        let name = name.replace("_skipped_", "::skipped::");
         artifacts.push(("contracts".to_string(), name));
     }
 

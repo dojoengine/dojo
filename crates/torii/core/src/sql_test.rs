@@ -4,6 +4,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_world::contracts::world::WorldContractReader;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use katana_runner::KatanaRunner;
@@ -61,12 +62,16 @@ async fn test_load_from_remote() {
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
     let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let dojo_metadata = dojo_metadata_from_workspace(&ws);
 
     let manifest_path = config.manifest_path();
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let mut migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
+    let mut migration =
+        prepare_migration(base_dir.into(), target_dir.into(), dojo_metadata.skip_migration)
+            .unwrap();
     migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");

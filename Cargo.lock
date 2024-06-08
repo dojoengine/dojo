@@ -4544,7 +4544,9 @@ dependencies = [
  "camino",
  "chrono",
  "convert_case 0.6.0",
+ "dojo-test-utils",
  "dojo-world",
+ "scarb",
  "serde",
  "serde_json",
  "starknet",
@@ -14020,6 +14022,7 @@ name = "torii-grpc"
 version = "0.7.0-alpha.5"
 dependencies = [
  "bytes",
+ "camino",
  "crypto-bigint",
  "dojo-test-utils",
  "dojo-types",
