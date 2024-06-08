@@ -123,7 +123,8 @@ impl BaseManifest {
                 manifest.inner.merge(contract);
             } else {
                 error!(
-                    "OverlayManifest configured for contract \"{}\", but contract is not present in BaseManifest.",
+                    "OverlayManifest configured for contract \"{}\", but contract is not present \
+                     in BaseManifest.",
                     contract.name
                 );
             }
