@@ -64,8 +64,6 @@ socials.x = "https://x.com/dojostarknet"
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
 }
 
-// TODO: remove ignore once IPFS node is running.
-#[ignore]
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
     let meta = WorldMetadata {
@@ -176,13 +174,18 @@ async fn get_full_dojo_metadata_from_workspace() {
 
     dbg!(&artifacts);
     for (abi_subdir, name) in artifacts {
-        let artifact = dojo_metadata.artifacts.get(&name);
-        assert!(artifact.is_some(), "bad artifact for {}", name);
-        let artifact = artifact.unwrap();
+        let resource = dojo_metadata.resources_artifacts.get(&name);
+        assert!(resource.is_some(), "bad resource metadata for {}", name);
+        let resource = resource.unwrap();
 
         let sanitized_name = name.replace("::", "_");
 
-        check_artifact(artifact.clone(), sanitized_name, &abis_dir.join(abi_subdir), &sources_dir);
+        check_artifact(
+            resource.artifacts.clone(),
+            sanitized_name,
+            &abis_dir.join(abi_subdir),
+            &sources_dir,
+        );
     }
 }
 

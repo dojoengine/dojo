@@ -2,11 +2,11 @@ use std::str;
 
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
-    BaseManifest, DeploymentManifest, OverlayManifest, WORLD_CONTRACT_NAME,
+    BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
+    WORLD_CONTRACT_NAME,
 };
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,
@@ -484,19 +484,19 @@ async fn check_artifact_metadata<P: starknet::providers::Provider + Sync>(
 ) {
     let resource = world_reader.metadata(&resource_id).call().await.unwrap();
 
-    let expected_artifact = dojo_metadata.artifacts.get(element_name);
+    let expected_resource = dojo_metadata.resources_artifacts.get(element_name);
     assert!(
-        expected_artifact.is_some(),
+        expected_resource.is_some(),
         "Unable to find local artifact metadata for {}",
         element_name
     );
-    let expected_artifact = expected_artifact.unwrap();
+    let expected_resource = expected_resource.unwrap();
 
     check_ipfs_metadata(
         client,
         element_name,
         &resource.metadata_uri.to_string().unwrap(),
-        expected_artifact,
+        &expected_resource.artifacts,
     )
     .await;
 }
