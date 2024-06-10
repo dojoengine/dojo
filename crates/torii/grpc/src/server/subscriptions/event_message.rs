@@ -20,6 +20,7 @@ use torii_core::types::EventMessage;
 use tracing::{error, trace};
 
 use crate::proto;
+use crate::proto::world::SubscribeEntityResponse;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
 pub struct EventMessagesSubscriber {
@@ -46,6 +47,16 @@ impl EventMessageManager {
             id,
             EventMessagesSubscriber { hashed_keys: hashed_keys.iter().cloned().collect(), sender },
         );
+
+        // unlock issue with firefox/safari
+        // send empty model update to unlock browsers ...
+        let subscribers = self.subscribers.write().await;
+        let _ = subscribers
+            .get(&id)
+            .unwrap()
+            .sender
+            .send(Ok(SubscribeEntityResponse { entity: None }))
+            .await;
 
         Ok(receiver)
     }
