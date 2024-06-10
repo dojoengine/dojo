@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717710397101,
+  "lastUpdate": 1718044496006,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9085,6 +9085,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16365154,
             "range": "± 245539",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "196732baef4386262003ef0df3fc7f9cbc4ccaf2",
+          "message": "feat(torii-libp2p): support new layout types for SNIP-12 typed data (#2032)\n\n* feat(torii-libp2p): support new layout types\r\n\r\n* feat: handle u256 low high\r\n\r\n* feat: parse SNIP-12 compliant enum\r\n\r\n* feat: tests for new typed data\r\n\r\n* chore: move tests to tests.rs",
+          "timestamp": "2024-06-10T12:22:48-06:00",
+          "tree_id": "f2f089c5054e3998e0416982d28e36a0a96be872",
+          "url": "https://github.com/dojoengine/dojo/commit/196732baef4386262003ef0df3fc7f9cbc4ccaf2"
+        },
+        "date": 1718044494850,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16807777,
+            "range": "± 150780",
             "unit": "ns/iter"
           }
         ]
