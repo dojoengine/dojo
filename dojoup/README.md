@@ -4,4 +4,10 @@
 curl -L https://install.dojoengine.org | bash
 ```
 
-[Documentation](https://book.dojoengine.org/toolchain/dojoup)
+For more details, you can then issue the following command:
+
+```sh
+dojoup --help
+```
+
+[Documentation](https://book.dojoengine.org/getting-started#getting-started)
