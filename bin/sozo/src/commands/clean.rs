@@ -3,7 +3,7 @@ use std::fs;
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
+use dojo_world::manifest::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
 use scarb::core::Config;
 use tracing::trace;
 
