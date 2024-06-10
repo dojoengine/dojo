@@ -452,7 +452,7 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                         struct_.children.iter_mut().find(|member| member.name == *key).ok_or_else(
                             || Error::InvalidMessageError(format!("Member {} not found", key)),
                         )?;
-    
+
                     parse_value_to_ty(value, &mut member.ty)?;
                 }
             }
@@ -465,13 +465,13 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 // parse the low and high fields
                 parse_value_to_ty(&object["low"], &mut low)?;
                 parse_value_to_ty(&object["high"], &mut high)?;
-    
+
                 let low = low.as_primitive().unwrap().as_u128().unwrap();
                 let high = high.as_primitive().unwrap().as_u128().unwrap();
 
                 let mut bytes = [0u8; 32];
-                bytes[..16].copy_from_slice(&low.to_be_bytes());
-                bytes[16..].copy_from_slice(&high.to_be_bytes());
+                bytes[..16].copy_from_slice(&high.to_be_bytes());
+                bytes[16..].copy_from_slice(&low.to_be_bytes());
 
                 *u256 = Some(U256::from_be_slice(&bytes));
             }
@@ -494,9 +494,12 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 })?;
             }
             _ => {
-                return Err(Error::InvalidMessageError("Invalid object type".to_string()));
+                return Err(Error::InvalidMessageError(format!(
+                    "Invalid object type for {}",
+                    ty.name()
+                )));
             }
-        }
+        },
         PrimitiveType::Array(values) => match ty {
             Ty::Array(array) => {
                 let inner_type = array[0].clone();
@@ -522,7 +525,10 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 }
             }
             _ => {
-                return Err(Error::InvalidMessageError("Invalid array type".to_string()));
+                return Err(Error::InvalidMessageError(format!(
+                    "Invalid array type for {}",
+                    ty.name()
+                )));
             }
         },
         PrimitiveType::Number(number) => match ty {
@@ -543,10 +549,18 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                     *u64 = Some(number.as_u64().unwrap());
                 }
                 _ => {
-                    return Err(Error::InvalidMessageError("Invalid number type".to_string()));
+                    return Err(Error::InvalidMessageError(format!(
+                        "Invalid number type for {}",
+                        ty.name()
+                    )));
                 }
             },
-            _ => return Err(Error::InvalidMessageError("Invalid number type".to_string())),
+            _ => {
+                return Err(Error::InvalidMessageError(format!(
+                    "Invalid number type for {}",
+                    ty.name()
+                )));
+            }
         },
         PrimitiveType::Bool(boolean) => {
             *ty = Ty::Primitive(Primitive::Bool(Some(*boolean)));
@@ -571,12 +585,6 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 Primitive::U128(v) => {
                     *v = Some(u128::from_str(string).unwrap());
                 }
-                // an U256 object should be instead used
-                // according to the SNIp-12 spec. but we fallback to this
-                // if a string is passed
-                Primitive::U256(v) => {
-                    *v = Some(U256::from_be_hex(string));
-                }
                 Primitive::Felt252(v) => {
                     *v = Some(FieldElement::from_str(string).unwrap());
                 }
@@ -589,9 +597,18 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 Primitive::Bool(v) => {
                     *v = Some(bool::from_str(string).unwrap());
                 }
+                _ => {
+                    return Err(Error::InvalidMessageError("Invalid primitive type".to_string()));
+                }
             },
+            Ty::ByteArray(s) => {
+                *s = string.clone();
+            }
             _ => {
-                return Err(Error::InvalidMessageError("Invalid string type".to_string()));
+                return Err(Error::InvalidMessageError(format!(
+                    "Invalid string type for {}",
+                    ty.name()
+                )));
             }
         },
     }
@@ -761,11 +778,12 @@ pub fn parse_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
 
 #[cfg(test)]
 mod tests {
-    use dojo_types::schema::{Member, Struct};
+    use dojo_types::schema::{Enum, EnumOption, Member, Struct};
     use tempfile::tempdir;
 
     use super::*;
 
+    #[test]
     fn test_parse_primitive_to_ty() {
         // primitives
         let mut ty = Ty::Primitive(Primitive::U8(None));
@@ -798,17 +816,12 @@ mod tests {
         parse_value_to_ty(&value, &mut ty).unwrap();
         assert_eq!(ty, Ty::Primitive(Primitive::U128(Some(1))));
 
-        let mut ty = Ty::Primitive(Primitive::U256(None));
-        let value = PrimitiveType::String("1".to_string());
-        parse_value_to_ty(&value, &mut ty).unwrap();
-        assert_eq!(ty, Ty::Primitive(Primitive::U256(Some(U256::ONE))));
-
         // test u256 with low high
         let mut ty = Ty::Primitive(Primitive::U256(None));
         let value = PrimitiveType::Object(
             vec![
-                ("low".to_string(), PrimitiveType::Number(Number::from(1u64))),
-                ("high".to_string(), PrimitiveType::Number(Number::from(1u64))),
+                ("low".to_string(), PrimitiveType::String("1".to_string())),
+                ("high".to_string(), PrimitiveType::String("0".to_string())),
             ]
             .into_iter()
             .collect(),
@@ -843,17 +856,183 @@ mod tests {
         assert_eq!(ty, Ty::ByteArray("mimi".to_string()));
     }
 
+    #[test]
     fn test_parse_complex_to_ty() {
         let mut ty = Ty::Struct(Struct {
             name: "PlayerConfig".to_string(),
             children: vec![
-                
+                Member {
+                    name: "player".to_string(),
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
+                    key: true,
+                },
+                Member { name: "name".to_string(), ty: Ty::ByteArray("".to_string()), key: false },
+                Member {
+                    name: "items".to_string(),
+                    // array of PlayerItem struct
+                    ty: Ty::Array(vec![Ty::Struct(Struct {
+                        name: "PlayerItem".to_string(),
+                        children: vec![
+                            Member {
+                                name: "item_id".to_string(),
+                                ty: Ty::Primitive(Primitive::U32(None)),
+                                key: false,
+                            },
+                            Member {
+                                name: "quantity".to_string(),
+                                ty: Ty::Primitive(Primitive::U32(None)),
+                                key: false,
+                            },
+                        ],
+                    })]),
+                    key: false,
+                },
+                // a favorite_item field with enum type Option<PlayerItem>
+                Member {
+                    name: "favorite_item".to_string(),
+                    ty: Ty::Enum(Enum {
+                        name: "Option".to_string(),
+                        option: None,
+                        options: vec![
+                            EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption {
+                                name: "Some".to_string(),
+                                ty: Ty::Struct(Struct {
+                                    name: "PlayerItem".to_string(),
+                                    children: vec![
+                                        Member {
+                                            name: "item_id".to_string(),
+                                            ty: Ty::Primitive(Primitive::U32(None)),
+                                            key: false,
+                                        },
+                                        Member {
+                                            name: "quantity".to_string(),
+                                            ty: Ty::Primitive(Primitive::U32(None)),
+                                            key: false,
+                                        },
+                                    ],
+                                }),
+                            },
+                        ],
+                    }),
+                    key: false,
+                },
             ],
         });
+
+        let value = PrimitiveType::Object(
+            vec![
+                ("player".to_string(), PrimitiveType::String("1".to_string())),
+                ("name".to_string(), PrimitiveType::String("mimi".to_string())),
+                (
+                    "items".to_string(),
+                    PrimitiveType::Array(vec![PrimitiveType::Object(
+                        vec![
+                            ("item_id".to_string(), PrimitiveType::String("1".to_string())),
+                            ("quantity".to_string(), PrimitiveType::Number(Number::from(1u64))),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    )]),
+                ),
+                (
+                    "favorite_item".to_string(),
+                    PrimitiveType::Object(
+                        vec![(
+                            "Some".to_string(),
+                            PrimitiveType::Object(
+                                vec![
+                                    ("item_id".to_string(), PrimitiveType::String("1".to_string())),
+                                    (
+                                        "quantity".to_string(),
+                                        PrimitiveType::Number(Number::from(1u64)),
+                                    ),
+                                ]
+                                .into_iter()
+                                .collect(),
+                            ),
+                        )]
+                        .into_iter()
+                        .collect(),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+
+        parse_value_to_ty(&value, &mut ty).unwrap();
+
+        assert_eq!(
+            ty,
+            Ty::Struct(Struct {
+                name: "PlayerConfig".to_string(),
+                children: vec![
+                    Member {
+                        name: "player".to_string(),
+                        ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
+                        key: true,
+                    },
+                    Member {
+                        name: "name".to_string(),
+                        ty: Ty::ByteArray("mimi".to_string()),
+                        key: false,
+                    },
+                    Member {
+                        name: "items".to_string(),
+                        ty: Ty::Array(vec![Ty::Struct(Struct {
+                            name: "PlayerItem".to_string(),
+                            children: vec![
+                                Member {
+                                    name: "item_id".to_string(),
+                                    ty: Ty::Primitive(Primitive::U32(Some(1))),
+                                    key: false,
+                                },
+                                Member {
+                                    name: "quantity".to_string(),
+                                    ty: Ty::Primitive(Primitive::U32(Some(1))),
+                                    key: false,
+                                },
+                            ],
+                        })]),
+                        key: false,
+                    },
+                    Member {
+                        name: "favorite_item".to_string(),
+                        ty: Ty::Enum(Enum {
+                            name: "Option".to_string(),
+                            option: Some(1_u8),
+                            options: vec![
+                                EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
+                                EnumOption {
+                                    name: "Some".to_string(),
+                                    ty: Ty::Struct(Struct {
+                                        name: "PlayerItem".to_string(),
+                                        children: vec![
+                                            Member {
+                                                name: "item_id".to_string(),
+                                                ty: Ty::Primitive(Primitive::U32(Some(1))),
+                                                key: false,
+                                            },
+                                            Member {
+                                                name: "quantity".to_string(),
+                                                ty: Ty::Primitive(Primitive::U32(Some(1))),
+                                                key: false,
+                                            },
+                                        ],
+                                    }),
+                                },
+                            ]
+                        }),
+                        key: false,
+                    },
+                ],
+            })
+        );
     }
 
-    #[tokio::test]
-    async fn test_read_or_create_identity() {
+    #[test]
+    fn test_read_or_create_identity() {
         let dir = tempdir().unwrap();
         let identity_path = dir.path().join("identity");
 
@@ -868,8 +1047,8 @@ mod tests {
         dir.close().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_read_or_create_certificate() {
+    #[test]
+    fn test_read_or_create_certificate() {
         let dir = tempdir().unwrap();
         let cert_path = dir.path().join("certificate");
 
