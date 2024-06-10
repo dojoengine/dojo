@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718044504631,
+  "lastUpdate": 1718049594299,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9145,6 +9145,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16303364,
             "range": "± 183921",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "taikoonwang@proton.me",
+            "name": "taikoon",
+            "username": "taikoonwang"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "920500986855fdaf203471ac11900b15dcf6035f",
+          "message": "update dead links (#2036)\n\n* update dead links\r\n\r\n* fix: correct link for dojoup info\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-10T13:47:58-06:00",
+          "tree_id": "0fcbbe2535fbd8d3cec7e51fc101ec2dd41deba1",
+          "url": "https://github.com/dojoengine/dojo/commit/920500986855fdaf203471ac11900b15dcf6035f"
+        },
+        "date": 1718049593137,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16583024,
+            "range": "± 153861",
             "unit": "ns/iter"
           }
         ]
