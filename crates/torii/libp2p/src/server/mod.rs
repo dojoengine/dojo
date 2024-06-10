@@ -475,6 +475,24 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
 
                 *u256 = Some(U256::from_be_slice(&bytes));
             }
+            // an enum is a SNIP-12 compliant object with a single key
+            // where the K is the variant name
+            // and the value is the variant value
+            Ty::Enum(enum_) => {
+                let (option_name, value) = object.first().ok_or_else(|| {
+                    Error::InvalidMessageError("Enum variant not found".to_string())
+                })?;
+
+                enum_.options.iter_mut().for_each(|option| {
+                    if option.name == *option_name {
+                        parse_value_to_ty(value, &mut option.ty).unwrap();
+                    }
+                });
+
+                enum_.set_option(option_name).map_err(|e| {
+                    Error::InvalidMessageError(format!("Failed to set enum option: {}", e))
+                })?;
+            }
             _ => {
                 return Err(Error::InvalidMessageError("Invalid object type".to_string()));
             }
@@ -528,9 +546,6 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                     return Err(Error::InvalidMessageError("Invalid number type".to_string()));
                 }
             },
-            Ty::Enum(enum_) => {
-                enum_.option = Some(number.as_u64().unwrap() as u8);
-            }
             _ => return Err(Error::InvalidMessageError("Invalid number type".to_string())),
         },
         PrimitiveType::Bool(boolean) => {
@@ -746,11 +761,13 @@ pub fn parse_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
 
 #[cfg(test)]
 mod tests {
+    use dojo_types::schema::{Member, Struct};
     use tempfile::tempdir;
 
     use super::*;
 
     fn test_parse_primitive_to_ty() {
+        // primitives
         let mut ty = Ty::Primitive(Primitive::U8(None));
         let value = PrimitiveType::Number(Number::from(1u64));
         parse_value_to_ty(&value, &mut ty).unwrap();
@@ -781,7 +798,58 @@ mod tests {
         parse_value_to_ty(&value, &mut ty).unwrap();
         assert_eq!(ty, Ty::Primitive(Primitive::U128(Some(1))));
 
+        let mut ty = Ty::Primitive(Primitive::U256(None));
+        let value = PrimitiveType::String("1".to_string());
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::U256(Some(U256::ONE))));
 
+        // test u256 with low high
+        let mut ty = Ty::Primitive(Primitive::U256(None));
+        let value = PrimitiveType::Object(
+            vec![
+                ("low".to_string(), PrimitiveType::Number(Number::from(1u64))),
+                ("high".to_string(), PrimitiveType::Number(Number::from(1u64))),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::U256(Some(U256::ONE))));
+
+        let mut ty = Ty::Primitive(Primitive::Felt252(None));
+        let value = PrimitiveType::String("1".to_string());
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::Felt252(Some(FieldElement::ONE))));
+
+        let mut ty = Ty::Primitive(Primitive::ClassHash(None));
+        let value = PrimitiveType::String("1".to_string());
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::ClassHash(Some(FieldElement::ONE))));
+
+        let mut ty = Ty::Primitive(Primitive::ContractAddress(None));
+        let value = PrimitiveType::String("1".to_string());
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))));
+
+        let mut ty = Ty::Primitive(Primitive::Bool(None));
+        let value = PrimitiveType::Bool(true);
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::Primitive(Primitive::Bool(Some(true))));
+
+        // bytearray
+        let mut ty = Ty::ByteArray("".to_string());
+        let value = PrimitiveType::String("mimi".to_string());
+        parse_value_to_ty(&value, &mut ty).unwrap();
+        assert_eq!(ty, Ty::ByteArray("mimi".to_string()));
+    }
+
+    fn test_parse_complex_to_ty() {
+        let mut ty = Ty::Struct(Struct {
+            name: "PlayerConfig".to_string(),
+            children: vec![
+                
+            ],
+        });
     }
 
     #[tokio::test]
