@@ -59,8 +59,10 @@ impl MigrateArgs {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
+        // This variant is tested before the match on `self.command` to avoid
+        // having the need to spin up a Katana to generate the files.
         if let MigrateCommand::GenerateOverlays = self.command {
-            trace!("Planning migration.");
+            trace!("Generating overlays.");
             return migration::generate_overlays(&ws);
         }
 
