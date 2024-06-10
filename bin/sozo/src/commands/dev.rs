@@ -48,13 +48,13 @@ pub struct DevArgs {
     #[command(flatten)]
     pub account: AccountOptions,
 }
-
 impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let dojo_metadata = dojo_metadata_from_workspace(&ws);
 
         let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata_from_workspace(&ws).env().cloned()
+            dojo_metadata.env().cloned()
         } else {
             trace!("Manifest path does not exist.");
             None
@@ -98,6 +98,7 @@ impl DevArgs {
             &name,
             &context.ws,
             previous_manifest.clone(),
+            dojo_metadata.skip_migration.clone(),
         )) {
             Ok((manifest, address)) => {
                 previous_manifest = Some(manifest);
@@ -132,6 +133,7 @@ impl DevArgs {
                     &name,
                     &context.ws,
                     previous_manifest.clone(),
+                    dojo_metadata.skip_migration.clone(),
                 )) {
                     Ok((manifest, address)) => {
                         previous_manifest = Some(manifest);
@@ -223,12 +225,14 @@ fn build(context: &mut DevContext<'_>) -> Result<()> {
     Ok(())
 }
 
+// TODO: fix me
 async fn migrate<P, S>(
     mut world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
     name: &str,
     ws: &Workspace<'_>,
     previous_manifest: Option<DeploymentManifest>,
+    skip_migration: Option<Vec<String>>,
 ) -> Result<(DeploymentManifest, Option<FieldElement>)>
 where
     P: Provider + Sync + Send + 'static,
@@ -244,8 +248,22 @@ where
         return Err(anyhow!("Build project using `sozo build` first"));
     }
 
-    let new_manifest =
+    let mut new_manifest =
         BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
+
+    if let Some(skip_manifests) = skip_migration {
+        for contract_or_model in skip_manifests {
+            if let Some(index) =
+                new_manifest.contracts.iter().position(|c| c.name == contract_or_model)
+            {
+                new_manifest.contracts.remove(index);
+            } else if let Some(index) =
+                new_manifest.models.iter().position(|m| m.name == contract_or_model)
+            {
+                new_manifest.models.remove(index);
+            };
+        }
+    }
 
     let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
     let total_diffs = diff.count_diffs();
