@@ -8,7 +8,7 @@ use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
 use dojo_world::utils::TransactionWaiter;
 use katana_primitives::utils::transaction::{
-    compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash,
+    compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
 };
 use katana_runner::{AnvilRunner, KatanaRunner, KatanaRunnerConfig};
 use serde_json::json;
@@ -257,21 +257,39 @@ async fn test_messaging() {
             .await
             .expect("send message to l1 tx failed");
 
+        // Wait for the tx to be mined on L1 (Anvil)
+        tokio::time::sleep(Duration::from_secs(3)).await;
+
+        // Query the core messaging contract to check that the l2 -> l1 message hash have been registered.
+        // If the message is registered, calling `l2ToL1Messages` of the L1 core contract with the message
+        // hash should return a non-zero value.
+
+        let l2_l1_msg_hash = compute_l2_to_l1_message_hash(
+            l2_test_contract,
+            l1_contract_address,
+            &[FieldElement::TWO],
+        );
+
+        let msg_fee = core_contract
+            .l2ToL1Messages(l2_l1_msg_hash)
+            .call()
+            .await
+            .expect("failed to get msg fee");
+
+        assert_ne!(msg_fee._0, U256::ZERO, "msg fee must be non-zero if exist");
+
+        // We then consume the message.
+        // Upon consuming the message, the value returned by `l2ToL1Messages` should be zeroed.
+
         // The L2 contract address that sent the message
         let from_address = U256::from_str(&l2_test_contract.to_string()).unwrap();
         // The message payload
         let payload = vec![U256::from(2)];
 
-        let call = l1_test_contract
+        let receipt = l1_test_contract
             .consumeMessage(from_address, payload)
-            .value(Uint::from(1))
             .gas(12000000)
-            .nonce(4);
-
-        // Wait for the tx to be mined on L1 (Anvil)
-        tokio::time::sleep(Duration::from_secs(8)).await;
-
-        let receipt = call
+            .nonce(4)
             .send()
             .await
             .expect("failed to send tx")
@@ -281,6 +299,13 @@ async fn test_messaging() {
 
         assert!(receipt.status(), "failed to consume L2 message from L1");
 
-        // TODO: query the core messaging contract to check that the message hash do exist
+        // Check that the message fee is zero after consuming the message.
+        let msg_fee = core_contract
+            .l2ToL1Messages(l2_l1_msg_hash)
+            .call()
+            .await
+            .expect("failed to get msg fee");
+
+        assert_eq!(msg_fee._0, U256::ZERO, "msg fee must be zero after consuming");
     }
 }
