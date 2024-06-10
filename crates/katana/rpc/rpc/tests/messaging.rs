@@ -218,7 +218,7 @@ async fn test_messaging() {
                     recipient,
                     selector,
                     &calldata.iter().map(|x| FieldElement::from(*x)).collect::<Vec<_>>(),
-                    nonce.to::<u64>().into(),
+                    nonce.to::<u64>(),
                 );
 
                 let msg_fee = core_contract
@@ -260,9 +260,9 @@ async fn test_messaging() {
         // Wait for the tx to be mined on L1 (Anvil)
         tokio::time::sleep(Duration::from_secs(3)).await;
 
-        // Query the core messaging contract to check that the l2 -> l1 message hash have been registered.
-        // If the message is registered, calling `l2ToL1Messages` of the L1 core contract with the message
-        // hash should return a non-zero value.
+        // Query the core messaging contract to check that the l2 -> l1 message hash have been
+        // registered. If the message is registered, calling `l2ToL1Messages` of the L1 core
+        // contract with the message hash should return a non-zero value.
 
         let l2_l1_msg_hash = compute_l2_to_l1_message_hash(
             l2_test_contract,
