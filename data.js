@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718044496006,
+  "lastUpdate": 1718044504631,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9115,6 +9115,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16807777,
             "range": "± 150780",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a636d23da43d0e9ae249cfdc4a0c8417e2a9dda1",
+          "message": "feat(sozo): add a subcommand to generate overlay files (#2025)\n\n* initial commit\r\n\r\n* add support for model overlays\r\n\r\n* clean up\r\n\r\n* add test for merge\r\n\r\n* separate out match statement\r\n\r\n* fix directory creation\r\n\r\n* fix: fix test typo + add comment on isolated variant test\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-10T12:23:25-06:00",
+          "tree_id": "972b610c3b90d1f4a96104c3733d17432ce53ac5",
+          "url": "https://github.com/dojoengine/dojo/commit/a636d23da43d0e9ae249cfdc4a0c8417e2a9dda1"
+        },
+        "date": 1718044504037,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16303364,
+            "range": "± 183921",
             "unit": "ns/iter"
           }
         ]
