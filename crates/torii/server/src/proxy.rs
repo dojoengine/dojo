@@ -17,7 +17,7 @@ use tower::ServiceBuilder;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::error;
 
-const DEFAULT_ALLOW_HEADERS: [&str; 12] = [
+const DEFAULT_ALLOW_HEADERS: [&str; 11] = [
     "accept",
     "origin",
     "content-type",
@@ -27,7 +27,6 @@ const DEFAULT_ALLOW_HEADERS: [&str; 12] = [
     "x-grpc-timeout",
     "x-user-agent",
     "connection",
-    "upgrade",
     "sec-websocket-key",
     "sec-websocket-version",
 ];
