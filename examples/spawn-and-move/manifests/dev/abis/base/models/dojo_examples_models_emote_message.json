@@ -323,32 +323,6 @@
     "interface_name": "dojo_examples::models::Iemote_message"
   },
   {
-    "type": "enum",
-    "name": "dojo_examples::models::Emote",
-    "variants": [
-      {
-        "name": "None",
-        "type": "()"
-      },
-      {
-        "name": "Happy",
-        "type": "()"
-      },
-      {
-        "name": "Sad",
-        "type": "()"
-      },
-      {
-        "name": "Angry",
-        "type": "()"
-      },
-      {
-        "name": "Love",
-        "type": "()"
-      }
-    ]
-  },
-  {
     "type": "struct",
     "name": "dojo_examples::models::EmoteMessage",
     "members": [
@@ -357,8 +331,12 @@
         "type": "core::starknet::contract_address::ContractAddress"
       },
       {
-        "name": "emote",
-        "type": "dojo_examples::models::Emote"
+        "name": "message",
+        "type": "core::byte_array::ByteArray"
+      },
+      {
+        "name": "channel",
+        "type": "core::felt252"
       }
     ]
   },
