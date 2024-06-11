@@ -26,6 +26,7 @@ starknet.workspace = true
 thiserror.workspace = true
 tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 tracing.workspace = true
+cainome.workspace = true
 
 [dev-dependencies]
 dojo-test-utils.workspace = true
