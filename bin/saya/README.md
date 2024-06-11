@@ -39,8 +39,13 @@ cargo run --bin saya -- --rpc-url http://localhost:5050 --da-chain celestia --ce
 
 2. Spawn world
 
+You must choose a world's name as you may deploy the exact same code as an other person trying this example. The world's name must fit into 31 characters.
+
+**IMPORTANT NOTE:**
+At the moment until a bug is fixed, you must comment out the `world_address` that is present into the `examples/spawn-and-move/Scarb.toml` file to allow the use of the `--name` flag.
+
 ```bash
-cargo run -r -p sozo -- \
+cargo run -r --bin sozo -- \
     build \
     --manifest-path examples/spawn-and-move/Scarb.toml
 
@@ -53,8 +58,9 @@ cargo run -r -p sozo -- \
     --fee-estimate-multiplier 20 \
     --name <WORLD_NAME>
 ```
+Once the migration is done, please take note of the address of the world as it will be re-used in the commands below.
 
-3. Set world configs
+1. Set world configs
 
 ```bash
 cargo run -r -p sozo -- \
@@ -64,7 +70,8 @@ cargo run -r -p sozo -- \
     --rpc-url <SEPOLIA_ENDPOINT> \
     --private-key <SEPOLIA_PRIVATE_KEY> \
     --account-address <SEPOLIA_ACCOUNT_ADDRESS> \
-    --fee-estimate-multiplier 20
+    --fee-estimate-multiplier 20 \
+    --world <WORLD_ADDRESS> \
     --wait
 
 cargo run -r -p sozo -- \
@@ -74,7 +81,8 @@ cargo run -r -p sozo -- \
     --rpc-url <SEPOLIA_ENDPOINT> \
     --private-key <SEPOLIA_PRIVATE_KEY> \
     --account-address <SEPOLIA_ACCOUNT_ADDRESS> \
-    --fee-estimate-multiplier 20
+    --fee-estimate-multiplier 20 \
+    --world <WORLD_ADDRESS> \
     --wait
 
 cargo run -r -p sozo -- \
@@ -84,13 +92,15 @@ cargo run -r -p sozo -- \
     --rpc-url <SEPOLIA_ENDPOINT> \
     --private-key <SEPOLIA_PRIVATE_KEY> \
     --account-address <SEPOLIA_ACCOUNT_ADDRESS> \
-    --fee-estimate-multiplier 20
+    --fee-estimate-multiplier 20 \
+    --world <WORLD_ADDRESS> \
     --wait
 ```
 
 4. Start katana
 
-Start a local instance of Katana configured to work with the newly deployed contract:
+Start a local instance of Katana configured to work with the newly deployed contract. You should wait your world to be integrated into the latest block (and not the pending).
+Once block in which the transaction that deploys the world is mined, you can start `katana` in forking mode.
 
 ```bash
 cargo run -r -p katana -- \
@@ -112,12 +122,49 @@ cargo run -r -p sozo -- execute dojo_examples::actions::actions spawn \
     --wait
 ```
 
+Before running `saya`, we can check the actual value for some models on Sepolia, to then see them updated by the proof being verified and the state of the world being updated.
+In the `spawn-and-move` example, the `Position` model is used to store some data associated with the player,
+being the contract address of the contract that called `spawn` (hence, your account address).
+By default on Sepolia, it should be set like to unknown position, being like:
+
+```bash
+cargo run -r --bin sozo -- model get Position <ACCOUNT_ADDRESS> \
+    --manifest-path examples/spawn-and-move/Scarb.toml \
+    --rpc-url <SEPOLIA_ENDPOINT> \
+    --world <WORLD_ADDRESS>
+```
+```json
+// Expected on Sepolia as we've executed the transaction on the Katana shard.
+{
+    player          : <SEPOLIA_ACCOUNT_ADDRESS>,
+    vec             : {
+        x               : 0,
+        y               : 0
+    }
+}
+
+// Expected on Katana.
+{
+    player          : <SEPOLIA_ACCOUNT_ADDRESS>,
+    vec             : {
+        x               : 10,
+        y               : 10
+    }
+}
+```
+
 6. Run saya
 
-The <PROVER_URL> is a `http://prover.visoft.dev:3618` or a link to a self hosted instance of `https://github.com/neotheprogramist/http-prover`.
+The <PROVER_URL> could be `http://prover.visoft.dev:3618` if you have a registered key or a link to a self hosted instance of `https://github.com/neotheprogramist/http-prover`.
 The <PROVER_KEY> is the private key produced by `keygen` installed with `cargo install --git https://github.com/neotheprogramist/http-prover keygen`. Pass the public key to server operator or the prover program.
 
-It's important that the `--start-block` of Saya is the first block produced by Katana as for now Katana is not fetching events in forked mode.
+If you are on an `amd64` architecture, go ahead and run the `http-prover` locally to see how it works and run this whole pipeline locally.
+If not (this includes Apple Silicon), some emulation will take place to run the prover on your machine, and this is very very slow.
+
+It's important that the `--start-block` of Saya is the first block produced by Katana as for now Katana is not fetching events from the forked network.
+
+**IMPORTANT NOTE:**
+For now, please add your account address and account private key in `saya/core/src/dojo_os/mod.rs` as those parameters are still not exposed currently. As you are using `cargo run`, it will rebuild with your account configuration before running `saya`.
 
 ```bash
 cargo run -r --bin saya -- \
@@ -126,9 +173,11 @@ cargo run -r --bin saya -- \
     --world <WORLD_ADDRESS> \
     --url <PROVER_URL> \
     --private-key <PROVER_KEY> \
-    --start-block <LATEST_BLOCK_PLUS_1>
+    --start-block <FORKED_BLOCK_PLUS_1>
 ```
 
 After this command, Saya will pick up the blocks with transactions, generate the proof for the state transition, and send it to the base layer world contract.
+
+Once the world on Sepolia is updated, you can issue again the `model get` command as seen before, and you should see the `katana` shard state reflected on Sepolia.
 
 Ensure to replace placeholders (`<>`) with appropriate values for your configuration and environment. This documentation provides a comprehensive overview for developers and operators to effectively utilize the Saya service in blockchain applications.
