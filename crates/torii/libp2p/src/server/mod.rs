@@ -20,7 +20,6 @@ use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
-use serde_json::Number;
 use starknet::core::types::{BlockId, BlockTag, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;

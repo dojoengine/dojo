@@ -277,7 +277,6 @@ mod test {
         use dojo_world::contracts::abi::model::Layout;
         use indexmap::IndexMap;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-        use starknet::accounts::Account;
         use starknet::providers::jsonrpc::HttpTransport;
         use starknet::providers::JsonRpcClient;
         use starknet::signers::SigningKey;
