@@ -4,9 +4,7 @@ use cainome::cairo_serde::ByteArray;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name,
-};
+use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 use crate::errors::Error;
@@ -299,7 +297,10 @@ impl PrimitiveType {
                 let type_hash =
                     encode_type(r#type, if ctx.is_preset { preset_types } else { types })?;
                 hashes.push(get_selector_from_name(&type_hash).map_err(|e| {
-                    Error::InvalidMessageError(format!("Invalid type {} for selector: {}", r#type, e))
+                    Error::InvalidMessageError(format!(
+                        "Invalid type {} for selector: {}",
+                        r#type, e
+                    ))
                 })?);
 
                 for (field_name, value) in obj {
@@ -351,9 +352,8 @@ impl PrimitiveType {
 
                     Ok(poseidon_hash_many(hashes.as_slice()))
                 }
-                "selector" => get_selector_from_name(string).map_err(|e| {
-                    Error::InvalidMessageError(format!("Invalid selector: {}", e))
-                }),
+                "selector" => get_selector_from_name(string)
+                    .map_err(|e| Error::InvalidMessageError(format!("Invalid selector: {}", e))),
                 "felt" => get_hex(string),
                 "ContractAddress" => get_hex(string),
                 "ClassHash" => get_hex(string),
