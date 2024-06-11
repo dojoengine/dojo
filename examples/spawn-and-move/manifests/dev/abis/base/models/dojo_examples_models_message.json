@@ -331,11 +331,15 @@
         "type": "core::starknet::contract_address::ContractAddress"
       },
       {
+        "name": "channel",
+        "type": "core::felt252"
+      },
+      {
         "name": "message",
         "type": "core::byte_array::ByteArray"
       },
       {
-        "name": "channel",
+        "name": "salt",
         "type": "core::felt252"
       }
     ]

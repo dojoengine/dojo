@@ -26,8 +26,12 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
 struct Message {
     #[key]
     identity: ContractAddress,
+    #[key]
+    channel: felt252,
     message: ByteArray,
-    channel: felt252
+    
+    #[key]
+    salt: felt252
 }
 
 #[derive(Copy, Drop, Serde)]

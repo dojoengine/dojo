@@ -1,6 +1,6 @@
 kind = "DojoModel"
-class_hash = "0x3ccc02f75eb62a2c3b1cacd1d5df433c5275868073288ff2e5b976674a2d414"
-original_class_hash = "0x3ccc02f75eb62a2c3b1cacd1d5df433c5275868073288ff2e5b976674a2d414"
+class_hash = "0x33bdb1a470ea0ee7d77faa3c75151934b3b129c0bad7333ec6c2dad1b98ec5"
+original_class_hash = "0x33bdb1a470ea0ee7d77faa3c75151934b3b129c0bad7333ec6c2dad1b98ec5"
 abi = "manifests/dev/abis/base/models/dojo_examples_models_message.json"
 name = "dojo_examples::models::message"
 
@@ -10,11 +10,16 @@ type = "ContractAddress"
 key = true
 
 [[members]]
+name = "channel"
+type = "felt252"
+key = true
+
+[[members]]
 name = "message"
 type = "ByteArray"
 key = false
 
 [[members]]
-name = "channel"
+name = "salt"
 type = "felt252"
-key = false
+key = true
