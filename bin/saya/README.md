@@ -49,7 +49,7 @@ cargo run -r --bin sozo -- \
     build \
     --manifest-path examples/spawn-and-move/Scarb.toml
 
-cargo run -r -p sozo -- \
+cargo run -r --bin sozo -- \
     migrate apply \
     --manifest-path examples/spawn-and-move/Scarb.toml \
     --rpc-url <SEPOLIA_ENDPOINT> \
@@ -63,7 +63,7 @@ Once the migration is done, please take note of the address of the world as it w
 1. Set world configs
 
 ```bash
-cargo run -r -p sozo -- \
+cargo run -r --bin sozo -- \
     execute <WORLD_ADDRESS> set_differ_program_hash \
     -c 0xa73dd9546f9858577f9fdbe43fd629b6f12dc638652e11b6e29155f4c6328 \
     --manifest-path examples/spawn-and-move/Scarb.toml \
@@ -74,7 +74,7 @@ cargo run -r -p sozo -- \
     --world <WORLD_ADDRESS> \
     --wait
 
-cargo run -r -p sozo -- \
+cargo run -r --bin sozo -- \
     execute <WORLD_ADDRESS> set_merger_program_hash \
     -c 0xc105cf2c69201005df3dad0050f5289c53d567d96df890f2142ad43a540334 \
     --manifest-path examples/spawn-and-move/Scarb.toml \
@@ -85,7 +85,7 @@ cargo run -r -p sozo -- \
     --world <WORLD_ADDRESS> \
     --wait
 
-cargo run -r -p sozo -- \
+cargo run -r --bin sozo -- \
     execute <WORLD_ADDRESS> set_facts_registry \
     -c 0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb \
     --manifest-path examples/spawn-and-move/Scarb.toml \
@@ -103,7 +103,7 @@ Start a local instance of Katana configured to work with the newly deployed cont
 Once block in which the transaction that deploys the world is mined, you can start `katana` in forking mode.
 
 ```bash
-cargo run -r -p katana -- \
+cargo run -r --bin katana -- \
     --rpc-url <SEPOLIA_ENDPOINT> \
     --fork-block-number <LATEST_BLOCK>
 ```
@@ -113,7 +113,7 @@ cargo run -r -p katana -- \
 Finally, modify the state of the world using specific actions:
 
 ```bash
-cargo run -r -p sozo -- execute dojo_examples::actions::actions spawn \
+cargo run -r --bin sozo -- execute dojo_examples::actions::actions spawn \
     --manifest-path examples/spawn-and-move/Scarb.toml \
     --rpc-url http://localhost:5050 \
     --private-key <SEPOLIA_PRIVATE_KEY> \
