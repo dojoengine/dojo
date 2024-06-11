@@ -1902,13 +1902,23 @@
           "key": true
         },
         {
-          "name": "emote",
-          "type": "Emote",
+          "name": "channel",
+          "type": "felt252",
+          "key": true
+        },
+        {
+          "name": "message",
+          "type": "ByteArray",
           "key": false
+        },
+        {
+          "name": "salt",
+          "type": "felt252",
+          "key": true
         }
       ],
-      "class_hash": "0x6ec8bf0a073e509e5b442ee5d4bee75aa85b87671a110dff2b9e6a58cc2aaa5",
-      "original_class_hash": "0x6ec8bf0a073e509e5b442ee5d4bee75aa85b87671a110dff2b9e6a58cc2aaa5",
+      "class_hash": "0x33bdb1a470ea0ee7d77faa3c75151934b3b129c0bad7333ec6c2dad1b98ec5",
+      "original_class_hash": "0x33bdb1a470ea0ee7d77faa3c75151934b3b129c0bad7333ec6c2dad1b98ec5",
       "abi": [
         {
           "type": "impl",
@@ -2230,52 +2240,34 @@
         },
         {
           "type": "impl",
-          "name": "emote_messageImpl",
-          "interface_name": "dojo_examples::models::Iemote_message"
-        },
-        {
-          "type": "enum",
-          "name": "dojo_examples::models::Emote",
-          "variants": [
-            {
-              "name": "None",
-              "type": "()"
-            },
-            {
-              "name": "Happy",
-              "type": "()"
-            },
-            {
-              "name": "Sad",
-              "type": "()"
-            },
-            {
-              "name": "Angry",
-              "type": "()"
-            },
-            {
-              "name": "Love",
-              "type": "()"
-            }
-          ]
+          "name": "messageImpl",
+          "interface_name": "dojo_examples::models::Imessage"
         },
         {
           "type": "struct",
-          "name": "dojo_examples::models::EmoteMessage",
+          "name": "dojo_examples::models::Message",
           "members": [
             {
               "name": "identity",
               "type": "core::starknet::contract_address::ContractAddress"
             },
             {
-              "name": "emote",
-              "type": "dojo_examples::models::Emote"
+              "name": "channel",
+              "type": "core::felt252"
+            },
+            {
+              "name": "message",
+              "type": "core::byte_array::ByteArray"
+            },
+            {
+              "name": "salt",
+              "type": "core::felt252"
             }
           ]
         },
         {
           "type": "interface",
-          "name": "dojo_examples::models::Iemote_message",
+          "name": "dojo_examples::models::Imessage",
           "items": [
             {
               "type": "function",
@@ -2283,7 +2275,7 @@
               "inputs": [
                 {
                   "name": "model",
-                  "type": "dojo_examples::models::EmoteMessage"
+                  "type": "dojo_examples::models::Message"
                 }
               ],
               "outputs": [],
@@ -2293,12 +2285,12 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::models::emote_message::Event",
+          "name": "dojo_examples::models::message::Event",
           "kind": "enum",
           "variants": []
         }
       ],
-      "name": "dojo_examples::models::emote_message"
+      "name": "dojo_examples::models::message"
     },
     {
       "kind": "DojoModel",
