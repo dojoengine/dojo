@@ -29,7 +29,6 @@ struct Message {
     #[key]
     channel: felt252,
     message: ByteArray,
-    
     #[key]
     salt: felt252
 }
