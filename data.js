@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718049594299,
+  "lastUpdate": 1718075758241,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9175,6 +9175,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16583024,
             "range": "± 153861",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "128649481+neotheprogramist@users.noreply.github.com",
+            "name": "Neo",
+            "username": "neotheprogramist"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d3c33517722fc0cf91eef3321591010a18bcafb9",
+          "message": "[saya] Scheduler (#1917)\n\n* proof scheduler\r\n\r\n* cleared leftovers\r\n\r\n* feature fix\r\n\r\n* Deserialization and tests fix\r\n\r\n* uncommented apply diffs logic\r\n\r\n* genesis block fix\r\n\r\n* fetching last block\r\n\r\n* moved fetching to separate function\r\n\r\n* process_block no async\r\n\r\n* Adding traces and infos for async functions\r\n\r\n* made dojo core work with merger program\r\n\r\n* minor logs adjustments in saya\r\n\r\n* final world contract\r\n\r\n* preparation for http prover\r\n\r\n* proving example data by\r\n\r\n* serializing arguments\r\n\r\n* debug print\r\n\r\n* only one program in verifier\r\n\r\n* preparing args for prover\r\n\r\n* batch size arg\r\n\r\n* moved extraction of data from proof to separate module\r\n\r\n* minor cleanup\r\n\r\n* updated bin/scheduler\r\n\r\n* laziness fix and update prover sdk\r\n\r\n* half done\r\n\r\n* cairo 1 behind flag\r\n\r\n* added cairo 0 differ and merger\r\n\r\n* support for 2 programs in `upgrade_state`\r\n\r\n* end 2 end saya readme\r\n\r\n* data extraction from proof\r\n\r\n* saya working with cairo 0\r\n\r\n* updated prover and readme\r\n\r\n* added a clause about keygen\r\n\r\n* updated port in readme\r\n\r\n* clippy and formatting\r\n\r\n* ignored heavy tests\r\n\r\n* moved readme to bin\r\n\r\n* updated stone prover image\r\n\r\n* made tests pass\r\n\r\n* removed unneeded files and fixed compilation\r\n\r\n* formatting after rebase\r\n\r\n* better fetch parallelization\r\n\r\n* fixed valid ignoring of not l1_handler\r\n\r\n* fixed most tests and made compiled programs one line\r\n\r\n* cairo import formatting\r\n\r\n* using recursive layout\r\n\r\n* changed docker images to latest\r\n\r\n* Update examples/spawn-and-move/Scarb.toml\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* most of pr comments\r\n\r\n* keeping track of nonce to avoid sleep\r\n\r\n* rest of PR comments\r\n\r\n* made changes to fix the tests\r\n\r\n* formatting\r\n\r\n* fixed all the tests\r\n\r\n* final formatting\r\n\r\n* rebuilt artifacts\r\n\r\n* fix: typo in README\r\n\r\n* fixed duplicated proving state update\r\n\r\n* fix: remove cargo warning for dual license source\r\n\r\n* fix: reword some commands + fix options for saya\r\n\r\n* fix: update README\r\n\r\n* fix: ensure model get fails if no key is provided\r\n\r\n* fix: use --bin instead of -p\r\n\r\n---------\r\n\r\nCo-authored-by: Mateusz Zając <matzayonc@gmail.com>\r\nCo-authored-by: Mateusz <mateuszchudy03@gmail.com>\r\nCo-authored-by: Mateusz Zając <60236390+matzayonc@users.noreply.github.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-10T21:04:06-06:00",
+          "tree_id": "9a61d2bb207746ba3782f4edb14cfbb3a6ea489f",
+          "url": "https://github.com/dojoengine/dojo/commit/d3c33517722fc0cf91eef3321591010a18bcafb9"
+        },
+        "date": 1718075756703,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16675694,
+            "range": "± 512142",
             "unit": "ns/iter"
           }
         ]
