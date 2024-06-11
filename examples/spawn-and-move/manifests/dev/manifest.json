@@ -1,8 +1,8 @@
 {
   "world": {
     "kind": "WorldContract",
-    "class_hash": "0xf6f44afb3cacbcc01a371aff62c86ca9a45feba065424c99f7cd8637514d8f",
-    "original_class_hash": "0xf6f44afb3cacbcc01a371aff62c86ca9a45feba065424c99f7cd8637514d8f",
+    "class_hash": "0x3f63cecdc4964acafb921ba2934c6507d1b3c344edb64c2762cf08053169ab9",
+    "original_class_hash": "0x3f63cecdc4964acafb921ba2934c6507d1b3c344edb64c2762cf08053169ab9",
     "abi": [
       {
         "type": "impl",
@@ -560,6 +560,10 @@
               {
                 "name": "program_output",
                 "type": "dojo::interfaces::ProgramOutput"
+              },
+              {
+                "name": "program_hash",
+                "type": "core::felt252"
               }
             ],
             "outputs": [],
@@ -578,7 +582,7 @@
         "items": [
           {
             "type": "function",
-            "name": "set_program_hash",
+            "name": "set_differ_program_hash",
             "inputs": [
               {
                 "name": "program_hash",
@@ -590,7 +594,30 @@
           },
           {
             "type": "function",
-            "name": "get_program_hash",
+            "name": "set_merger_program_hash",
+            "inputs": [
+              {
+                "name": "program_hash",
+                "type": "core::felt252"
+              }
+            ],
+            "outputs": [],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "get_differ_program_hash",
+            "inputs": [],
+            "outputs": [
+              {
+                "type": "core::felt252"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "get_merger_program_hash",
             "inputs": [],
             "outputs": [
               {
@@ -836,7 +863,19 @@
       },
       {
         "type": "event",
-        "name": "dojo::config::component::Config::ProgramHashUpdate",
+        "name": "dojo::config::component::Config::DifferProgramHashUpdate",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "program_hash",
+            "type": "core::felt252",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
+        "name": "dojo::config::component::Config::MergerProgramHashUpdate",
         "kind": "struct",
         "members": [
           {
@@ -864,8 +903,13 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "ProgramHashUpdate",
-            "type": "dojo::config::component::Config::ProgramHashUpdate",
+            "name": "DifferProgramHashUpdate",
+            "type": "dojo::config::component::Config::DifferProgramHashUpdate",
+            "kind": "nested"
+          },
+          {
+            "name": "MergerProgramHashUpdate",
+            "type": "dojo::config::component::Config::MergerProgramHashUpdate",
             "kind": "nested"
           },
           {
@@ -955,8 +999,8 @@
         ]
       }
     ],
-    "address": "0x2e31cfde9f9990c7fe44b25043e3c6958a849c0a66ab535686d2b710e97f309",
-    "transaction_hash": "0x7106054ad5c4ccfcd5e512d286ce7cadc5ddc21b8cf058e4daab09743bace76",
+    "address": "0x7efebb0c2d4cc285d48a97a7174def3be7fdd6b7bd29cca758fa2e17e03ef30",
+    "transaction_hash": "0x60316eb232789f4d8352c6afdc36b76d33362d72b43bf78183b43f196779a9d",
     "block_number": 3,
     "seed": "dojo_examples",
     "metadata": {
@@ -975,7 +1019,7 @@
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": "0x263f89fc2bdf121a3bdcc9af35eb6b3d5c078f9bcc257e9f5627af81a7607fd",
+      "address": "0x5c70a663d6b48d8e4c6aaa9572e3735a732ac3765700d470463e670587852af",
       "class_hash": "0x6d905953360cf18e3393d128c6ced40b38fc83b033412c8541fd4aba59d2767",
       "original_class_hash": "0x6d905953360cf18e3393d128c6ced40b38fc83b033412c8541fd4aba59d2767",
       "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
@@ -1280,7 +1324,7 @@
     },
     {
       "kind": "DojoContract",
-      "address": "0x2dc27292cc94aa40e4d2d327e511ce02e96f40ca3c41d1f9938860a1a4aee9f",
+      "address": "0x3f51cd82daaf5907d2fd082ae3f45ae2ef96ab61677f46abc16e0a54d3392d1",
       "class_hash": "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a",
       "original_class_hash": "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a",
       "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
