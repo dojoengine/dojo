@@ -22,16 +22,7 @@ pub fn prepare_migration(
     .unwrap();
 
     if let Some(skip_manifests) = skip_migration {
-        for contract_or_model in skip_manifests {
-            if let Some(index) = manifest.contracts.iter().position(|c| c.name == contract_or_model)
-            {
-                manifest.contracts.remove(index);
-            } else if let Some(index) =
-                manifest.models.iter().position(|m| m.name == contract_or_model)
-            {
-                manifest.models.remove(index);
-            };
-        }
+        manifest.remove_items(skip_manifests);
     }
 
     let overlay_manifest = OverlayManifest::load_from_path(

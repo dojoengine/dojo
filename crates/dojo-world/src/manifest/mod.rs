@@ -111,6 +111,12 @@ impl BaseManifest {
         Ok(Self { world, base, contracts, models })
     }
 
+    /// Given a list of contract or model names, remove those from the manifest.
+    pub fn remove_items(&mut self, items: Vec<String>) {
+        self.contracts.retain(|contract| !items.contains(&contract.name.to_string()));
+        self.models.retain(|model| !items.contains(&model.name.to_string()));
+    }
+
     pub fn merge(&mut self, overlay: OverlayManifest) {
         let mut base_map = HashMap::new();
 

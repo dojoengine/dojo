@@ -122,17 +122,7 @@ fn gather_dojo_data(
     let mut base_manifest = BaseManifest::load_from_path(&base_manifest_dir)?;
 
     if let Some(skip_manifests) = skip_migration {
-        for contract_or_model in skip_manifests {
-            if let Some(index) =
-                base_manifest.contracts.iter().position(|c| c.name == contract_or_model)
-            {
-                base_manifest.contracts.remove(index);
-            } else if let Some(index) =
-                base_manifest.models.iter().position(|m| m.name == contract_or_model)
-            {
-                base_manifest.models.remove(index);
-            };
-        }
+        base_manifest.remove_items(skip_manifests);
     }
 
     let mut models = HashMap::new();

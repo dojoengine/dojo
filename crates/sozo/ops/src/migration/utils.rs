@@ -32,17 +32,7 @@ where
         .map_err(|e| anyhow!("Fail to load local manifest file: {e}."))?;
 
     if let Some(skip_manifests) = skip_migration {
-        for contract_or_model in skip_manifests {
-            if let Some(index) =
-                local_manifest.contracts.iter().position(|c| c.name == contract_or_model)
-            {
-                local_manifest.contracts.remove(index);
-            } else if let Some(index) =
-                local_manifest.models.iter().position(|m| m.name == contract_or_model)
-            {
-                local_manifest.models.remove(index);
-            };
-        }
+        local_manifest.remove_items(skip_manifests);
     }
 
     let overlay_path = profile_dir.join(OVERLAYS_DIR);
