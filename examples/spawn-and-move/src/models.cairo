@@ -23,7 +23,7 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
 
 #[derive(Drop, Serde)]
 #[dojo::model]
-struct EmoteMessage {
+struct Message {
     #[key]
     identity: ContractAddress,
     message: ByteArray,
