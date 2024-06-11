@@ -116,6 +116,7 @@ dependencies = [
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-genesis 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-network 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
+ "alloy-node-bindings",
  "alloy-provider 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-rpc-client 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-serde 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
@@ -338,6 +339,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "alloy-node-bindings"
+version = "0.1.0"
+source = "git+https://github.com/alloy-rs/alloy?rev=7128c53#7128c53169736a0f4f93362a73bb7109ce93d59d"
+dependencies = [
+ "alloy-genesis 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
+ "alloy-primitives",
+ "k256",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "alloy-primitives"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -396,10 +412,12 @@ dependencies = [
  "alloy-eips 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-json-rpc 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-network 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
+ "alloy-node-bindings",
  "alloy-primitives",
  "alloy-rpc-client 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-rpc-types 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-rpc-types-trace 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
+ "alloy-signer-wallet 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-transport 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "alloy-transport-http 0.1.0 (git+https://github.com/alloy-rs/alloy?rev=7128c53)",
  "async-stream",
@@ -6720,25 +6738,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "h2"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa82e28a107a8cc405f0839610bdc9b15f1e25ec7d696aa5cf173edbcb1486ab"
-dependencies = [
- "atomic-waker",
- "bytes",
- "fnv",
- "futures-core",
- "futures-sink",
- "http 1.1.0",
- "indexmap 2.2.6",
- "slab",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
 name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7062,7 +7061,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2 0.3.26",
+ "h2",
  "http 0.2.12",
  "http-body 0.4.6",
  "httparse",
@@ -7085,7 +7084,6 @@ dependencies = [
  "bytes",
  "futures-channel",
  "futures-util",
- "h2 0.4.5",
  "http 1.1.0",
  "http-body 1.0.0",
  "httparse",
@@ -8367,11 +8365,9 @@ dependencies = [
  "assert_fs",
  "chrono",
  "home",
- "hyper 0.14.28",
  "katana-core",
  "katana-primitives",
  "lazy_static",
- "reqwest 0.12.4",
  "runner-macro",
  "serde",
  "serde_json",
@@ -11297,7 +11293,7 @@ dependencies = [
  "encoding_rs",
  "futures-core",
  "futures-util",
- "h2 0.3.26",
+ "h2",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.28",
@@ -11341,11 +11337,9 @@ checksum = "566cafdd92868e0939d3fb961bd0dc25fcfaaed179291093b3d43e6b3150ea10"
 dependencies = [
  "base64 0.22.1",
  "bytes",
- "encoding_rs",
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2 0.4.5",
  "http 1.1.0",
  "http-body 1.0.0",
  "http-body-util",
@@ -11368,7 +11362,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sync_wrapper",
- "system-configuration",
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.25.0",
@@ -14082,7 +14075,7 @@ dependencies = [
  "axum",
  "base64 0.21.7",
  "bytes",
- "h2 0.3.26",
+ "h2",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.28",
