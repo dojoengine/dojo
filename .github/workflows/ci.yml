@@ -14,7 +14,7 @@ jobs:
   test:
     runs-on: ubuntu-latest-32-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.5
+      image: ghcr.io/dojoengine/dojo-dev:1fe0488
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
