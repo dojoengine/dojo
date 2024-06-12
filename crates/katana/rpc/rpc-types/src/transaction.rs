@@ -243,6 +243,13 @@ pub struct Tx(pub starknet::core::types::Transaction);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
+pub struct TxWithReceipt {
+    pub transaction: Tx,
+    pub receipt: Receipt,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct DeployAccountTxResult(DeployAccountTransactionResult);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

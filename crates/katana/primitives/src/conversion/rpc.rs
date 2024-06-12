@@ -47,7 +47,14 @@ pub fn legacy_inner_to_rpc_class(
                 .iter()
                 .map(|e| LegacyContractEntryPoint {
                     offset: e.offset.0 as u64,
-                    selector: FieldElement::from(e.selector.0),
+                    selector: FieldElement::from_bytes_be(
+                        e.selector
+                            .0
+                            .bytes()
+                            .try_into()
+                            .expect("Invalid array of bytes for felt conversion"),
+                    )
+                    .expect("Invalid felt conversion"),
                 })
                 .collect::<Vec<_>>())
         }

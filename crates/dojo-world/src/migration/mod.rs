@@ -11,7 +11,7 @@ use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOw
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
+    InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
 use starknet::macros::{felt, selector};
@@ -150,7 +150,7 @@ pub trait Declarable {
         }
 
         let DeclareTransactionResult { transaction_hash, class_hash } = account
-            .declare(Arc::new(flattened_class), casm_class_hash)
+            .declare_v2(Arc::new(flattened_class), casm_class_hash)
             .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
@@ -228,13 +228,13 @@ pub trait Deployable: Declarable + Sync {
         };
 
         let InvokeTransactionResult { transaction_hash } = account
-            .execute(vec![call])
+            .execute_v1(vec![call])
             .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
 
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
-        let block_number = get_block_number_from_receipt(receipt);
+        let block_number = receipt.block.block_number();
 
         Ok(DeployOutput {
             transaction_hash,
@@ -292,7 +292,7 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        let txn = account.execute(vec![Call {
+        let txn = account.execute_v1(vec![Call {
             calldata,
             // devnet UDC address
             selector: selector!("deployContract"),
@@ -303,7 +303,7 @@ pub trait Deployable: Declarable + Sync {
             txn.send_with_cfg(txn_config).await.map_err(MigrationError::Migrator)?;
 
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
-        let block_number = get_block_number_from_receipt(receipt);
+        let block_number = receipt.block.block_number();
 
         Ok(DeployOutput {
             transaction_hash,
@@ -360,13 +360,17 @@ pub trait Upgradable: Deployable + Declarable + Sync {
         let calldata = vec![class_hash];
 
         let InvokeTransactionResult { transaction_hash } = account
-            .execute(vec![Call { calldata, selector: selector!("upgrade"), to: contract_address }])
+            .execute_v1(vec![Call {
+                calldata,
+                selector: selector!("upgrade"),
+                to: contract_address,
+            }])
             .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
 
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
-        let block_number = get_block_number_from_receipt(receipt);
+        let block_number = receipt.block.block_number();
 
         Ok(UpgradeOutput { transaction_hash, block_number, contract_address, declare })
     }
@@ -398,15 +402,4 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
-}
-
-fn get_block_number_from_receipt(receipt: MaybePendingTransactionReceipt) -> Option<u64> {
-    match receipt {
-        MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
-            TransactionReceipt::Deploy(r) => Some(r.block_number),
-            TransactionReceipt::Invoke(r) => Some(r.block_number),
-            _ => None,
-        },
-        MaybePendingTransactionReceipt::PendingReceipt(_receipt) => None,
-    }
 }

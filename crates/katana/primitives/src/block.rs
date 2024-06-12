@@ -1,7 +1,8 @@
 use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
-use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
+use crate::receipt::Receipt;
+use crate::transaction::{ExecutableTxWithHash, Tx, TxHash, TxWithHash};
 use crate::version::Version;
 use crate::FieldElement;
 
@@ -118,6 +119,14 @@ pub struct Block {
 pub struct BlockWithTxHashes {
     pub header: Header,
     pub body: Vec<TxHash>,
+}
+
+/// Represents a Starknet full block.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct BlockWithReceipts {
+    pub header: Header,
+    pub body: Vec<(Tx, Receipt)>,
 }
 
 impl Block {

@@ -5,13 +5,13 @@ use std::time::Duration;
 
 use futures::FutureExt;
 use starknet::accounts::{
-    AccountDeployment, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
-    Declaration, Execution,
+    AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
+    DeclarationV2, ExecutionV1,
 };
 use starknet::core::types::{
     DeclareTransactionResult, DeployAccountTransactionResult, ExecutionResult, FieldElement,
-    InvokeTransactionResult, MaybePendingTransactionReceipt, PendingTransactionReceipt,
-    StarknetError, TransactionFinalityStatus, TransactionReceipt, TransactionStatus,
+    InvokeTransactionResult, StarknetError, TransactionFinalityStatus, TransactionReceipt,
+    TransactionReceiptWithBlockInfo, TransactionStatus,
 };
 use starknet::providers::{Provider, ProviderError};
 use tokio::time::{Instant, Interval};
@@ -19,7 +19,7 @@ use tokio::time::{Instant, Interval};
 use crate::migration::TxnConfig;
 
 type GetTxStatusResult = Result<TransactionStatus, ProviderError>;
-type GetTxReceiptResult = Result<MaybePendingTransactionReceipt, ProviderError>;
+type GetTxReceiptResult = Result<TransactionReceiptWithBlockInfo, ProviderError>;
 
 type GetTxStatusFuture<'a> = Pin<Box<dyn Future<Output = GetTxStatusResult> + Send + 'a>>;
 type GetTxReceiptFuture<'a> = Pin<Box<dyn Future<Output = GetTxReceiptResult> + Send + 'a>>;
@@ -130,55 +130,33 @@ where
     // Helper function to evaluate if the transaction receipt should be accepted yet or not, based
     // on the waiter's parameters. Used in the `Future` impl.
     fn evaluate_receipt_from_params(
-        receipt: MaybePendingTransactionReceipt,
+        receipt: TransactionReceiptWithBlockInfo,
         expected_finality_status: Option<TransactionFinalityStatus>,
         must_succeed: bool,
-    ) -> Option<Result<MaybePendingTransactionReceipt, TransactionWaitingError>> {
-        match &receipt {
-            MaybePendingTransactionReceipt::PendingReceipt(r) => {
-                // pending receipt doesn't include finality status, so we cant check it.
-                if expected_finality_status.is_some() {
-                    return None;
+    ) -> Option<Result<TransactionReceiptWithBlockInfo, TransactionWaitingError>> {
+        if let Some(expected_status) = expected_finality_status {
+            match finality_status_from_receipt(&receipt) {
+                TransactionFinalityStatus::AcceptedOnL2
+                    if expected_status == TransactionFinalityStatus::AcceptedOnL1 =>
+                {
+                    None
                 }
 
-                if !must_succeed {
-                    return Some(Ok(receipt));
-                }
+                _ => {
+                    if !must_succeed {
+                        return Some(Ok(receipt));
+                    }
 
-                match execution_status_from_pending_receipt(r) {
-                    ExecutionResult::Succeeded => Some(Ok(receipt)),
-                    ExecutionResult::Reverted { reason } => {
-                        Some(Err(TransactionWaitingError::TransactionReverted(reason.clone())))
+                    match execution_status_from_receipt(&receipt) {
+                        ExecutionResult::Succeeded => Some(Ok(receipt)),
+                        ExecutionResult::Reverted { reason } => {
+                            Some(Err(TransactionWaitingError::TransactionReverted(reason.clone())))
+                        }
                     }
                 }
             }
-
-            MaybePendingTransactionReceipt::Receipt(r) => {
-                if let Some(expected_status) = expected_finality_status {
-                    match finality_status_from_receipt(r) {
-                        TransactionFinalityStatus::AcceptedOnL2
-                            if expected_status == TransactionFinalityStatus::AcceptedOnL1 =>
-                        {
-                            None
-                        }
-
-                        _ => {
-                            if !must_succeed {
-                                return Some(Ok(receipt));
-                            }
-
-                            match execution_status_from_receipt(r) {
-                                ExecutionResult::Succeeded => Some(Ok(receipt)),
-                                ExecutionResult::Reverted { reason } => Some(Err(
-                                    TransactionWaitingError::TransactionReverted(reason.clone()),
-                                )),
-                            }
-                        }
-                    }
-                } else {
-                    Some(Ok(receipt))
-                }
-            }
+        } else {
+            Some(Ok(receipt))
         }
     }
 }
@@ -187,7 +165,7 @@ impl<'a, P> Future for TransactionWaiter<'a, P>
 where
     P: Provider + Send,
 {
-    type Output = Result<MaybePendingTransactionReceipt, TransactionWaitingError>;
+    type Output = Result<TransactionReceiptWithBlockInfo, TransactionWaitingError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
@@ -255,9 +233,9 @@ where
                             return Poll::Ready(Err(TransactionWaitingError::Provider(e)));
                         }
 
-                        Ok(receipt) => {
+                        Ok(receipt_info) => {
                             if let Some(res) = Self::evaluate_receipt_from_params(
-                                receipt,
+                                receipt_info,
                                 this.tx_finality_status,
                                 this.must_succeed,
                             ) {
@@ -281,20 +259,10 @@ where
 }
 
 #[inline]
-pub fn execution_status_from_maybe_pending_receipt(
-    receipt: &MaybePendingTransactionReceipt,
+fn execution_status_from_receipt(
+    receipt_info: &TransactionReceiptWithBlockInfo,
 ) -> &ExecutionResult {
-    match &receipt {
-        MaybePendingTransactionReceipt::PendingReceipt(r) => {
-            execution_status_from_pending_receipt(r)
-        }
-        MaybePendingTransactionReceipt::Receipt(r) => execution_status_from_receipt(r),
-    }
-}
-
-#[inline]
-fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResult {
-    match receipt {
+    match &receipt_info.receipt {
         TransactionReceipt::Invoke(receipt) => &receipt.execution_result,
         TransactionReceipt::Deploy(receipt) => &receipt.execution_result,
         TransactionReceipt::Declare(receipt) => &receipt.execution_result,
@@ -304,34 +272,15 @@ fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResu
 }
 
 #[inline]
-fn execution_status_from_pending_receipt(receipt: &PendingTransactionReceipt) -> &ExecutionResult {
-    match receipt {
-        PendingTransactionReceipt::Invoke(receipt) => &receipt.execution_result,
-        PendingTransactionReceipt::Declare(receipt) => &receipt.execution_result,
-        PendingTransactionReceipt::L1Handler(receipt) => &receipt.execution_result,
-        PendingTransactionReceipt::DeployAccount(receipt) => &receipt.execution_result,
-    }
-}
-
-#[inline]
-fn finality_status_from_receipt(receipt: &TransactionReceipt) -> TransactionFinalityStatus {
-    match receipt {
+fn finality_status_from_receipt(
+    receipt_info: &TransactionReceiptWithBlockInfo,
+) -> TransactionFinalityStatus {
+    match &receipt_info.receipt {
         TransactionReceipt::Invoke(receipt) => receipt.finality_status,
         TransactionReceipt::Deploy(receipt) => receipt.finality_status,
         TransactionReceipt::Declare(receipt) => receipt.finality_status,
         TransactionReceipt::L1Handler(receipt) => receipt.finality_status,
         TransactionReceipt::DeployAccount(receipt) => receipt.finality_status,
-    }
-}
-
-#[inline]
-pub fn block_number_from_receipt(receipt: &TransactionReceipt) -> u64 {
-    match receipt {
-        TransactionReceipt::Invoke(tx) => tx.block_number,
-        TransactionReceipt::L1Handler(tx) => tx.block_number,
-        TransactionReceipt::Declare(tx) => tx.block_number,
-        TransactionReceipt::Deploy(tx) => tx.block_number,
-        TransactionReceipt::DeployAccount(tx) => tx.block_number,
     }
 }
 
@@ -349,7 +298,7 @@ pub trait TransactionExt<T> {
     async fn send_with_cfg(self, txn_config: &TxnConfig) -> Result<Self::R, Self::U>;
 }
 
-impl<T> TransactionExt<T> for Execution<'_, T>
+impl<T> TransactionExt<T> for ExecutionV1<'_, T>
 where
     T: ConnectedAccount + Sync,
 {
@@ -372,7 +321,7 @@ where
     }
 }
 
-impl<T> TransactionExt<T> for Declaration<'_, T>
+impl<T> TransactionExt<T> for DeclarationV2<'_, T>
 where
     T: ConnectedAccount + Sync,
 {
@@ -395,7 +344,7 @@ where
     }
 }
 
-impl<T> TransactionExt<T> for AccountDeployment<'_, T>
+impl<T> TransactionExt<T> for AccountDeploymentV1<'_, T>
 where
     T: AccountFactory + Sync,
 {
@@ -443,16 +392,8 @@ mod tests {
     }
 
     const EXECUTION_RESOURCES: ExecutionResources = ExecutionResources {
-        steps: 0,
-        memory_holes: None,
-        ec_op_builtin_applications: Some(0),
-        ecdsa_builtin_applications: Some(0),
-        keccak_builtin_applications: Some(0),
-        bitwise_builtin_applications: Some(0),
-        pedersen_builtin_applications: Some(0),
-        poseidon_builtin_applications: Some(0),
-        range_check_builtin_applications: Some(0),
-        segment_arena_builtin: Some(0),
+        computation_resources: ComputationResources::default(),
+        data_resources: DataResources::default(),
     };
 
     fn mock_receipt(
@@ -464,8 +405,6 @@ mod tests {
             execution_result,
             events: Default::default(),
             actual_fee: FeePayment { amount: Default::default(), unit: PriceUnit::Wei },
-            block_hash: Default::default(),
-            block_number: Default::default(),
             messages_sent: Default::default(),
             transaction_hash: Default::default(),
             execution_resources: EXECUTION_RESOURCES,

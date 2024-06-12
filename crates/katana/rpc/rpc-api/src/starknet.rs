@@ -44,6 +44,10 @@ pub trait StarknetApi {
     #[method(name = "getBlockWithTxs")]
     async fn block_with_txs(&self, block_id: BlockIdOrTag) -> RpcResult<MaybePendingBlockWithTxs>;
 
+    /// Get block information with full transactions and receipts given the block id.
+    #[method(name = "getBlockWithReceipts")]
+    async fn block_with_receipts(&self, block_id: BlockIdOrTag) -> RpcResult;
+
     /// Get the information about the result of executing the requested block.
     #[method(name = "getStateUpdate")]
     async fn state_update(&self, block_id: BlockIdOrTag) -> RpcResult<StateUpdate>;

@@ -39,6 +39,51 @@ impl BlockWithTxs {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
+pub struct BlockWithReceipts(starknet::core::types::BlockWithReceipts);
+
+impl BlockWithReceipts {
+    pub fn new(
+        block_hash: BlockHash,
+        block: BlockWithReceipts,
+        finality_status: FinalityStatus,
+    ) -> Self {
+        let l1_gas_price = ResourcePrice {
+            price_in_wei: block.header.gas_prices.eth.into(),
+            price_in_fri: block.header.gas_prices.strk.into(),
+        };
+
+        // Need the starknet-rs type here.
+        let (transactions, receipts) = block
+            .body
+            .into_iter()
+            .map(|tx| {
+                (
+                    crate::transaction::Tx::from(tx.transaction).0,
+                    crate::receipt::Receipt::from(tx.receipt).0,
+                )
+            })
+            .collect();
+
+        Self(starknet::core::types::BlockWithReceipts {
+            block_hash,
+            l1_gas_price,
+            transactions,
+            new_root: block.header.state_root,
+            timestamp: block.header.timestamp,
+            block_number: block.header.number,
+            parent_hash: block.header.parent_hash,
+            starknet_version: block.header.version.to_string(),
+            sequencer_address: block.header.sequencer_address.into(),
+            status: match finality_status {
+                FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
+                FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
+            },
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct PendingBlockWithTxs(starknet::core::types::PendingBlockWithTxs);
 
 impl PendingBlockWithTxs {
