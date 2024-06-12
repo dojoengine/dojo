@@ -96,6 +96,7 @@ using UnityEngine;
 using dojo_bindings;
 using System.Collections.Generic;
 using System.Linq;
+using Enum = Dojo.Starknet.Enum;
 "
         .to_string()
     }
@@ -107,6 +108,7 @@ using Dojo.Starknet;
 using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
+using Enum = Dojo.Starknet.Enum;
 "
         .to_string()
     }
@@ -152,7 +154,7 @@ public struct {} {{
         let mut result = format!(
             "
 // Type definition for `{}` enum
-public abstract record {}() {{",
+public abstract record {}() : Enum {{",
             token.type_path, name_with_generics
         );
 
@@ -166,23 +168,6 @@ public abstract record {}() {{",
             )
             .as_str();
         }
-
-        result += format!(
-            "\n    public static readonly IReadOnlyDictionary<Type, int> TypeIndices = \
-             typeof({name_with_generics})
-                .GetNestedTypes(BindingFlags.Public)
-                .OrderBy(t => t.MetadataToken)
-                .Select((type, index) => new {{ type, index }})
-                .ToDictionary(t => t.type, t => t.index);
-
-    public static int GetIndex({name_with_generics} value)
-    {{
-        return TypeIndices[value.GetType()];
-    }}
-",
-            name_with_generics = name_with_generics
-        )
-        .as_str();
 
         result += "\n}\n";
 
@@ -299,7 +284,7 @@ public class {} : ModelInstance {{
                             true,
                         )],
                         CompositeType::Struct => {
-                            let tokens = vec![];
+                            let mut tokens = vec![];
                             t.inners.iter().for_each(|f| {
                                 tokens.extend(handle_arg_recursive(
                                     &format!("{}.{}", arg_name, f.name),
@@ -310,7 +295,7 @@ public class {} : ModelInstance {{
                             tokens
                         }
                         CompositeType::Enum => {
-                            let tokens = vec![(
+                            let mut tokens = vec![(
                                 "new FieldElement({}.GetIndex({})).Inner".to_string(),
                                 false,
                             )];
@@ -343,22 +328,32 @@ public class {} : ModelInstance {{
 
                             tokens
                         }
+                        CompositeType::Unknown => panic!("Unknown composite type"),
                     }
                 }
                 Token::Array(array) => {
+                    let inner: Vec<(String, bool)> = handle_arg_recursive("f", &array.inner);
+
                     
+                    // (
+                    //     format!("{}.Select(f => {})", arg_name, 
+                    //     true
+                    // )
+
+                    vec![]
                 }
                 Token::Tuple(tuple) => {
                     tuple
                         .inners
                         .iter()
-                        .map(|(name, token)| handle_arg_recursive(name, token))
+                        .enumerate()
+                        .map(|(idx, token)| handle_arg_recursive(&format!("Item{}", idx), token))
                         .flatten()
                         .collect()
                 }
                 _ => match mapped_type.as_str() {
-                    "FieldElement" => format!("calldata.Add({}.Inner);", arg_name),
-                    _ => format!("calldata.Add(new FieldElement({}).Inner);", arg_name),
+                    "FieldElement" => vec![(format!("{}.Inner", arg_name), false)],
+                    _ => vec![("new FieldElement({}).Inner".to_string(), false)],
                 },
             }
         }
@@ -373,7 +368,21 @@ public class {} : ModelInstance {{
         let calldata = system
             .inputs
             .iter()
-            .map(|(name, token)| handle_arg_recursive(name, token))
+            .map(|(name, token)| {
+                let tokens = handle_arg_recursive(name, token);
+
+                tokens
+                    .iter()
+                    .map(|(arg, is_array)| {
+                        if *is_array {
+                            format!("calldata.AddRange({});", arg)
+                        } else {
+                            format!("calldata.Add({});", arg)
+                        }
+                    })
+                    .collect::<Vec<String>>()
+            })
+            .flatten()
             .collect::<Vec<String>>()
             .join("\n\t\t");
 
