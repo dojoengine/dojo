@@ -49,10 +49,10 @@ struct Moves {
 
 #[derive(Copy, Drop, Serde)]
 #[dojo::model]
-struct Skipped {
+struct MockToken {
     #[key]
-    player: ContractAddress,
-    value: u8,
+    account: ContractAddress,
+    amount: u128,
 }
 
 #[derive(Copy, Drop, Serde, IntrospectPacked)]

@@ -319,16 +319,20 @@
   },
   {
     "type": "impl",
-    "name": "skippedImpl",
-    "interface_name": "dojo_examples::models::Iskipped"
+    "name": "contract_initializedImpl",
+    "interface_name": "dojo_examples::others::others::Icontract_initialized"
   },
   {
     "type": "struct",
-    "name": "dojo_examples::models::Skipped",
+    "name": "dojo_examples::others::others::ContractInitialized",
     "members": [
       {
-        "name": "player",
+        "name": "contract_address",
         "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "name": "contract_class",
+        "type": "core::starknet::class_hash::ClassHash"
       },
       {
         "name": "value",
@@ -338,7 +342,7 @@
   },
   {
     "type": "interface",
-    "name": "dojo_examples::models::Iskipped",
+    "name": "dojo_examples::others::others::Icontract_initialized",
     "items": [
       {
         "type": "function",
@@ -346,7 +350,7 @@
         "inputs": [
           {
             "name": "model",
-            "type": "dojo_examples::models::Skipped"
+            "type": "dojo_examples::others::others::ContractInitialized"
           }
         ],
         "outputs": [],
@@ -356,7 +360,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::models::skipped::Event",
+    "name": "dojo_examples::others::others::contract_initialized::Event",
     "kind": "enum",
     "variants": []
   }

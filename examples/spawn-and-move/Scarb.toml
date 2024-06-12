@@ -15,11 +15,7 @@ dojo = { path = "../../crates/dojo-core" }
 [[target.dojo]]
 build-external-contracts = [  ]
 
-[tool.dojo]
-skip_migration = [
-    "dojo_examples::models::skipped",
-    "dojo_examples::skipped::skipped",
-]
+# `dev` profile
 
 [tool.dojo.world]
 description = "example world"
@@ -32,3 +28,27 @@ rpc_url = "http://localhost:5050/"
 account_address = "0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
 world_address = "0x2e31cfde9f9990c7fe44b25043e3c6958a849c0a66ab535686d2b710e97f309"
+
+# `release` profile
+#
+# for now configurations in `tool` are not merged recursively so to override
+# `skip_migration` we need to redefine the whole `tool.dojo` table
+[profile.release]
+
+[profile.release.tool.dojo.world]
+description = "example world"
+name = "example"
+
+[profile.release.tool.dojo.env]
+rpc_url = "http://localhost:5050/"
+
+# Default account for katana with seed = 0
+account_address = "0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"
+private_key = "0x1800000000300000180000000000030000000000003006001800006600"
+world_address = "0x2e31cfde9f9990c7fe44b25043e3c6958a849c0a66ab535686d2b710e97f309"
+
+[profile.release.tool.dojo]
+skip_migration = [
+    "dojo_examples::mock_token::mock_token",
+    "dojo_examples::models::mock_token",
+]

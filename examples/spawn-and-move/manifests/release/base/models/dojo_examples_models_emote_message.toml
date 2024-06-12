@@ -1,0 +1,15 @@
+kind = "DojoModel"
+class_hash = "0x6ec8bf0a073e509e5b442ee5d4bee75aa85b87671a110dff2b9e6a58cc2aaa5"
+original_class_hash = "0x6ec8bf0a073e509e5b442ee5d4bee75aa85b87671a110dff2b9e6a58cc2aaa5"
+abi = "manifests/release/abis/base/models/dojo_examples_models_emote_message.json"
+name = "dojo_examples::models::emote_message"
+
+[[members]]
+name = "identity"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "emote"
+type = "Emote"
+key = false

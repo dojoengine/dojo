@@ -56,16 +56,29 @@
   {
     "type": "impl",
     "name": "IDojoInitImpl",
-    "interface_name": "dojo_examples::skipped::skipped::IDojoInit"
+    "interface_name": "dojo_examples::others::others::IDojoInit"
   },
   {
     "type": "interface",
-    "name": "dojo_examples::skipped::skipped::IDojoInit",
+    "name": "dojo_examples::others::others::IDojoInit",
     "items": [
       {
         "type": "function",
         "name": "dojo_init",
-        "inputs": [],
+        "inputs": [
+          {
+            "name": "actions_address",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "actions_class",
+            "type": "core::starknet::class_hash::ClassHash"
+          },
+          {
+            "name": "value",
+            "type": "core::integer::u8"
+          }
+        ],
         "outputs": [],
         "state_mutability": "view"
       }
@@ -120,7 +133,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::skipped::skipped::Event",
+    "name": "dojo_examples::others::others::Event",
     "kind": "enum",
     "variants": [
       {

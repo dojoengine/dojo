@@ -1,2 +1,0 @@
-#[dojo::contract]
-mod skipped {}
