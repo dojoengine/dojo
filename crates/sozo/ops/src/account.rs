@@ -236,7 +236,7 @@ pub async fn deploy(
         }
     };
 
-    let account_deployment = factory.deploy(undeployed_status.salt);
+    let account_deployment = factory.deploy_v1(undeployed_status.salt);
 
     let target_deployment_address = account.deploy_account_address()?;
 
@@ -324,7 +324,7 @@ async fn do_account_deploy(
     txn_config: TxnConfig,
     target_deployment_address: FieldElement,
     no_confirmation: bool,
-    account_deployment: starknet::accounts::AccountDeployment<
+    account_deployment: starknet::accounts::AccountDeploymentV1<
         '_,
         OpenZeppelinAccountFactory<LocalWallet, &JsonRpcClient<HttpTransport>>,
     >,
@@ -412,7 +412,7 @@ fn write_account_to_file(file: PathBuf, account: AccountConfig) -> Result<(), an
 }
 
 async fn simulate_account_deploy(
-    account_deployment: &starknet::accounts::AccountDeployment<
+    account_deployment: &starknet::accounts::AccountDeploymentV1<
         '_,
         OpenZeppelinAccountFactory<LocalWallet, &JsonRpcClient<HttpTransport>>,
     >,
