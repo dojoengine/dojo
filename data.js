@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718150429471,
+  "lastUpdate": 1718165261123,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9235,6 +9235,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16619928,
             "range": "± 224102",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc35dd0b1a7ea0ccb0bdb17583ef89c6c6b90d58",
+          "message": "[dev] add foundry tools to the dev container (#2045)\n\n* feat: add foundry install\r\n\r\n* fix: attempt a new path for bashrc\r\n\r\n* fix: use dot as we're in shell instead of source",
+          "timestamp": "2024-06-11T21:55:51-06:00",
+          "tree_id": "90889130656eaab8fb0f0c2b6f908566929d1be2",
+          "url": "https://github.com/dojoengine/dojo/commit/bc35dd0b1a7ea0ccb0bdb17583ef89c6c6b90d58"
+        },
+        "date": 1718165259872,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16330084,
+            "range": "± 180656",
             "unit": "ns/iter"
           }
         ]
