@@ -1,11 +1,10 @@
 use std::str::FromStr;
 
+use cainome::cairo_serde::ByteArray;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
-};
+use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 use crate::errors::Error;
@@ -176,39 +175,6 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<S
     Ok(type_hash)
 }
 
-fn byte_array_from_string(
-    target_string: &str,
-) -> Result<(Vec<FieldElement>, FieldElement, usize), CairoShortStringToFeltError> {
-    let short_strings: Vec<&str> = split_long_string(target_string);
-    let remainder = short_strings.last().unwrap_or(&"");
-
-    let mut short_strings_encoded = short_strings
-        .iter()
-        .map(|&s| cairo_short_string_to_felt(s))
-        .collect::<Result<Vec<FieldElement>, _>>()?;
-
-    let (pending_word, pending_word_length) = if remainder.is_empty() || remainder.len() == 31 {
-        (FieldElement::ZERO, 0)
-    } else {
-        (short_strings_encoded.pop().unwrap(), remainder.len())
-    };
-
-    Ok((short_strings_encoded, pending_word, pending_word_length))
-}
-
-fn split_long_string(long_str: &str) -> Vec<&str> {
-    let mut result = Vec::new();
-
-    let mut start = 0;
-    while start < long_str.len() {
-        let end = (start + 31).min(long_str.len());
-        result.push(&long_str[start..end]);
-        start = end;
-    }
-
-    result
-}
-
 #[derive(Debug, Default)]
 pub struct Ctx {
     pub base_type: String,
@@ -273,7 +239,7 @@ fn get_hex(value: &str) -> Result<FieldElement, Error> {
     } else {
         // assume its a short string and encode
         cairo_short_string_to_felt(value)
-            .map_err(|_| Error::InvalidMessageError("Invalid short string".to_string()))
+            .map_err(|e| Error::InvalidMessageError(format!("Invalid shortstring for felt: {}", e)))
     }
 }
 
@@ -330,8 +296,11 @@ impl PrimitiveType {
 
                 let type_hash =
                     encode_type(r#type, if ctx.is_preset { preset_types } else { types })?;
-                hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
-                    Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
+                hashes.push(get_selector_from_name(&type_hash).map_err(|e| {
+                    Error::InvalidMessageError(format!(
+                        "Invalid type {} for selector: {}",
+                        r#type, e
+                    ))
                 })?);
 
                 for (field_name, value) in obj {
@@ -368,24 +337,23 @@ impl PrimitiveType {
                 "shortstring" => get_hex(string),
                 "string" => {
                     // split the string into short strings and encode
-                    let byte_array = byte_array_from_string(string).map_err(|_| {
-                        Error::InvalidMessageError("Invalid short string".to_string())
+                    let byte_array = ByteArray::from_string(string).map_err(|e| {
+                        Error::InvalidMessageError(format!("Invalid string for bytearray: {}", e))
                     })?;
 
-                    let mut hashes = vec![FieldElement::from(byte_array.0.len())];
+                    let mut hashes = vec![FieldElement::from(byte_array.data.len())];
 
-                    for hash in byte_array.0 {
-                        hashes.push(hash);
+                    for hash in byte_array.data {
+                        hashes.push(hash.felt());
                     }
 
-                    hashes.push(byte_array.1);
-                    hashes.push(FieldElement::from(byte_array.2));
+                    hashes.push(byte_array.pending_word);
+                    hashes.push(FieldElement::from(byte_array.pending_word_len));
 
                     Ok(poseidon_hash_many(hashes.as_slice()))
                 }
-                "selector" => get_selector_from_name(string).map_err(|_| {
-                    Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
-                }),
+                "selector" => get_selector_from_name(string)
+                    .map_err(|e| Error::InvalidMessageError(format!("Invalid selector: {}", e))),
                 "felt" => get_hex(string),
                 "ContractAddress" => get_hex(string),
                 "ClassHash" => get_hex(string),
