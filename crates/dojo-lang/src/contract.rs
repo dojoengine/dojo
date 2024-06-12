@@ -11,9 +11,8 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 
 use crate::plugin::{DojoAuxData, SystemAuxData};
-use crate::syntax::utils as syntax_utils;
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
-use crate::syntax::self_param;
+use crate::syntax::{self_param, utils as syntax_utils};
 
 const DOJO_INIT_FN: &str = "dojo_init";
 
@@ -315,7 +314,12 @@ impl DojoContract {
         param_list: ast::ParamList,
         fn_diagnostic_item: ids::SyntaxStablePtrId,
     ) -> (String, bool) {
-        self_param::check_self_parameter(db, &param_list, fn_diagnostic_item, &mut self.diagnostics);
+        self_param::check_self_parameter(
+            db,
+            &param_list,
+            fn_diagnostic_item,
+            &mut self.diagnostics,
+        );
 
         let world_injection = world_param::parse_world_injection(
             db,
