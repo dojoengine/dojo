@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718204907519,
+  "lastUpdate": 1718224305424,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9295,6 +9295,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16778715,
             "range": "± 467352",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9fcd5abd6ac1b5e3f38742f16643e296f849c788",
+          "message": "fix: fix RPC version checking (#2048)",
+          "timestamp": "2024-06-12T14:20:13-06:00",
+          "tree_id": "e7654db391cf7f7ba0920efc25531c5c716b4f0e",
+          "url": "https://github.com/dojoengine/dojo/commit/9fcd5abd6ac1b5e3f38742f16643e296f849c788"
+        },
+        "date": 1718224304766,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16525572,
+            "range": "± 619357",
             "unit": "ns/iter"
           }
         ]
