@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718224305424,
+  "lastUpdate": 1718234136186,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9325,6 +9325,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16525572,
             "range": "± 619357",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1fe04888932ae429b09939dbbebfde79cdfd4ee1",
+          "message": "fix(ci): add missing path to foundry binaries (#2051)\n\nfix: add missing path to foundry binaries",
+          "timestamp": "2024-06-12T17:03:57-06:00",
+          "tree_id": "9c2847bff64902513aa22f4afdce8f9879749b09",
+          "url": "https://github.com/dojoengine/dojo/commit/1fe04888932ae429b09939dbbebfde79cdfd4ee1"
+        },
+        "date": 1718234135314,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16693401,
+            "range": "± 234894",
             "unit": "ns/iter"
           }
         ]
