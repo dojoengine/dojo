@@ -117,7 +117,7 @@ async fn test_load_from_remote() {
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 6);
+    assert_eq!(models.len(), 7);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
         "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Position'",
@@ -157,7 +157,7 @@ async fn test_load_from_remote() {
 
     // print all entities
     let entities = sqlx::query("SELECT * FROM entities").fetch_all(&pool).await.unwrap();
-    assert_eq!(entities.len(), 1);
+    assert_eq!(entities.len(), 2);
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(

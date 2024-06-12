@@ -175,6 +175,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     dbg!(&artifacts);
     for (abi_subdir, name) in artifacts {
         let resource = dojo_metadata.resources_artifacts.get(&name);
+        dbg!(&dojo_metadata.resources_artifacts);
         assert!(resource.is_some(), "bad resource metadata for {}", name);
         let resource = resource.unwrap();
 
@@ -231,8 +232,8 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
         let name = name.replace("_others_", "::others::");
         let name = name.replace("::others_", "::others::");
 
-        let name = name.replace("_skipped", "::skipped::");
-        let name = name.replace("::skipped_", "::skipped::");
+        let name = name.replace("_mock_token_", "::mock_token::");
+        let name = name.replace("::mock_token_", "::mock_token::");
         artifacts.push(("models".to_string(), name));
     }
 
@@ -241,7 +242,7 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
         let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
         let name = name.replace("_actions_", "::actions::");
         let name = name.replace("_others_", "::others::");
-        let name = name.replace("_skipped_", "::skipped::");
+        let name = name.replace("_mock_token_", "::mock_token::");
         artifacts.push(("contracts".to_string(), name));
     }
 

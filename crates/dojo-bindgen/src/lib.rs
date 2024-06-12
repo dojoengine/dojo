@@ -280,7 +280,7 @@ mod tests {
             gather_dojo_data(&manifest_path, "dojo_example", "dev", dojo_metadata.skip_migration)
                 .unwrap();
 
-        assert_eq!(data.models.len(), 6);
+        assert_eq!(data.models.len(), 7);
 
         assert_eq!(data.world.name, "dojo_example");
 

@@ -403,17 +403,7 @@ fn fetch_remote_manifest() {
     .unwrap();
 
     if let Some(skip_manifests) = dojo_metadata.skip_migration {
-        for contract_or_model in skip_manifests {
-            if let Some(index) =
-                local_manifest.contracts.iter().position(|c| c.name == contract_or_model)
-            {
-                local_manifest.contracts.remove(index);
-            } else if let Some(index) =
-                local_manifest.models.iter().position(|m| m.name == contract_or_model)
-            {
-                local_manifest.models.remove(index);
-            };
-        }
+        local_manifest.remove_items(skip_manifests);
     }
 
     let overlay_manifest = OverlayManifest::load_from_path(
@@ -427,11 +417,11 @@ fn fetch_remote_manifest() {
         DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
     });
 
-    assert_eq!(local_manifest.models.len(), 6);
-    assert_eq!(local_manifest.contracts.len(), 2);
+    assert_eq!(local_manifest.models.len(), 7);
+    assert_eq!(local_manifest.contracts.len(), 3);
 
-    assert_eq!(remote_manifest.models.len(), 6);
-    assert_eq!(remote_manifest.contracts.len(), 2);
+    assert_eq!(remote_manifest.models.len(), 7);
+    assert_eq!(remote_manifest.contracts.len(), 3);
 
     // compute diff from local and remote manifest
 
