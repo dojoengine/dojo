@@ -444,7 +444,7 @@ mod test {
 
         loop {
             select! {
-                entity = sqlx::query("SELECT * FROM entities").fetch_one(&pool) => if let Ok(_) = entity {
+                entity = sqlx::query("SELECT * FROM entities").fetch_one(&pool) => if entity.is_ok() {
                     println!("Test OK: Received message within 5 seconds.");
                     return Ok(());
                 },
