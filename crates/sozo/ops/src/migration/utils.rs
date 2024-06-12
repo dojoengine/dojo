@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, OVERLAYS_DIR};
 use dojo_world::manifest::{
-    AbstractManifestError, BaseManifest, DeploymentManifest, OverlayManifest,
+    AbstractManifestError, BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR,
+    OVERLAYS_DIR,
 };
 use scarb_ui::Ui;
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};

@@ -2,12 +2,12 @@ use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_world::contracts::abi::world;
 use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::manifest::{
     AbiFormat, BaseManifest, DeploymentManifest, DojoContract, DojoModel, Manifest,
-    ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata,
+    ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,
+    DEPLOYMENTS_DIR, MANIFESTS_DIR,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, ResourceMetadata};
 use dojo_world::migration::class::ClassMigration;

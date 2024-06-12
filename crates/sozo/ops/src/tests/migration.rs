@@ -2,11 +2,11 @@ use std::str;
 
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
-    BaseManifest, DeploymentManifest, OverlayManifest, WORLD_CONTRACT_NAME,
+    BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
+    WORLD_CONTRACT_NAME,
 };
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,

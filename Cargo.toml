@@ -5,6 +5,7 @@ members = [
     "bin/dojo-language-server",
     "bin/katana",
     "bin/saya",
+    "bin/scheduler",
     "bin/sozo",
     "bin/torii",
     "crates/benches",
@@ -189,7 +190,6 @@ tower-http = "0.4.4"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 url = { version = "2.4.0", features = [ "serde" ] }
-
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 

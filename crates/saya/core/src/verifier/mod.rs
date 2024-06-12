@@ -23,7 +23,7 @@ pub enum VerifierIdentifier {
 pub async fn verify(
     verifier: VerifierIdentifier,
     serialized_proof: Vec<FieldElement>,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<(String, FieldElement)> {
     match verifier {
         VerifierIdentifier::HerodotusStarknetSepolia(fact_registry_address) => {
             starknet::starknet_verify(fact_registry_address, serialized_proof).await

@@ -1,7 +1,6 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
-use dojo_world::manifest::{BaseManifest, OverlayManifest};
+use dojo_world::manifest::{BaseManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use katana_primitives::FieldElement;

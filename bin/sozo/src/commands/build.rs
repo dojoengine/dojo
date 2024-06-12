@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
-use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_lang::scarb_internal::compile_workspace;
+use dojo_world::manifest::MANIFESTS_DIR;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};

@@ -90,6 +90,10 @@ pub async fn model_get(
     world_address: FieldElement,
     provider: JsonRpcClient<HttpTransport>,
 ) -> Result<()> {
+    if keys.is_empty() {
+        anyhow::bail!("Models always have at least one key. Please provide it (or them).");
+    }
+
     let mut world_reader = WorldContractReader::new(world_address, &provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 

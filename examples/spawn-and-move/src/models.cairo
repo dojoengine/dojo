@@ -21,21 +21,16 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
-#[derive(Serde, Copy, Drop, Introspect)]
-enum Emote {
-    None,
-    Happy,
-    Sad,
-    Angry,
-    Love,
-}
-
-#[derive(Copy, Drop, Serde)]
+#[derive(Drop, Serde)]
 #[dojo::model]
-struct EmoteMessage {
+struct Message {
     #[key]
     identity: ContractAddress,
-    emote: Emote,
+    #[key]
+    channel: felt252,
+    message: ByteArray,
+    #[key]
+    salt: felt252
 }
 
 #[derive(Copy, Drop, Serde)]

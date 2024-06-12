@@ -17,6 +17,8 @@ RUN curl -s https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gp
 RUN echo "deb http://apt.llvm.org/${VARIANT}/ llvm-toolchain-${VARIANT}-17 main" | tee /etc/apt/sources.list.d/llvm.list && apt-get update
 RUN apt-get -y install -t llvm-toolchain-${VARIANT}-17 llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
 
+RUN curl -L https://foundry.paradigm.xyz/ | bash && . /root/.bashrc && foundryup
+
 # To build Katana with 'native' feature, we need to set the following environment variables
 ENV MLIR_SYS_170_PREFIX=/usr/lib/llvm-17
 ENV LLVM_SYS_170_PREFIX=/usr/lib/llvm-17

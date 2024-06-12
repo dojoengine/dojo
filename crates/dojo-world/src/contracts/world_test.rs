@@ -1,14 +1,13 @@
 use std::time::Duration;
 
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
 use super::{WorldContract, WorldContractReader};
-use crate::manifest::{BaseManifest, OverlayManifest};
+use crate::manifest::{BaseManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;

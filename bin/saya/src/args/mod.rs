@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
-use saya_core::SayaConfig;
+use saya_core::{ProverAccessKey, SayaConfig};
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
@@ -32,7 +32,19 @@ pub struct SayaArgs {
     #[arg(long)]
     #[arg(value_name = "PROVER URL")]
     #[arg(help = "The Prover URL for remote proving.")]
-    pub prover_url: Url,
+    pub url: Url,
+
+    /// Specify the Prover Key.
+    #[arg(long)]
+    #[arg(value_name = "PROVER KEY")]
+    #[arg(help = "An authorized prover key for remote proving.")]
+    pub private_key: String,
+
+    #[arg(long)]
+    #[arg(value_name = "STORE PROOFS")]
+    #[arg(help = "When enabled all proofs are saved as a file.")]
+    #[arg(default_value_t = false)]
+    pub store_proofs: bool,
 
     /// Enable JSON logging.
     #[arg(long)]
@@ -49,6 +61,10 @@ pub struct SayaArgs {
     /// Specify a block to start fetching data from.
     #[arg(short, long, default_value = "0")]
     pub start_block: u64,
+
+    #[arg(short, long, default_value = "1")]
+    #[arg(help = "The number of blocks to be merged into a single proof.")]
+    pub batch_size: usize,
 
     #[command(flatten)]
     #[command(next_help_heading = "Data availability options")]
@@ -117,10 +133,17 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 None => None,
             };
 
+            let prover_key = ProverAccessKey::from_hex_string(&args.private_key).map_err(|e| {
+                Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
+            })?;
+
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
-                prover_url: args.prover_url,
+                url: args.url,
+                private_key: prover_key,
+                store_proofs: args.store_proofs,
                 start_block: args.start_block,
+                batch_size: args.batch_size,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
@@ -145,9 +168,13 @@ mod tests {
         let args = SayaArgs {
             config_file: Some(config_file_path.clone()),
             rpc_url: Url::parse("http://localhost:5050").unwrap(),
-            prover_url: Url::parse("http://localhost:5050").unwrap(),
+            url: Url::parse("http://localhost:5050").unwrap(),
+            private_key: "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
+                .into(),
+            store_proofs: true,
             json_log: false,
             start_block: 0,
+            batch_size: 4,
             data_availability: DataAvailabilityOptions {
                 da_chain: None,
                 celestia: CelestiaOptions {
@@ -165,7 +192,13 @@ mod tests {
         let config: SayaConfig = args.try_into().unwrap();
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
-        assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
+        assert_eq!(config.url.as_str(), "http://localhost:1234/");
+        assert_eq!(config.batch_size, 4);
+        assert_eq!(
+            config.private_key.signing_key_as_hex_string(),
+            "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
+        );
+        assert!(!config.store_proofs);
         assert_eq!(config.start_block, 0);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");
