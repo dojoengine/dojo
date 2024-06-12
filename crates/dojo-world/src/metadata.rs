@@ -109,17 +109,31 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
         if let Ok(manifest) = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)) {
             for model in manifest.models {
                 let name = model.name.to_string();
-                dojo_metadata.artifacts.insert(
+                dojo_metadata.resources_artifacts.insert(
                     name.clone(),
-                    build_artifact_from_name(&sources_dir, &abis_dir.join("models"), &name),
+                    ResourceMetadata {
+                        name: name.clone(),
+                        artifacts: build_artifact_from_name(
+                            &sources_dir,
+                            &abis_dir.join("models"),
+                            &name,
+                        ),
+                    },
                 );
             }
 
             for contract in manifest.contracts {
                 let name = contract.name.to_string();
-                dojo_metadata.artifacts.insert(
+                dojo_metadata.resources_artifacts.insert(
                     name.clone(),
-                    build_artifact_from_name(&sources_dir, &abis_dir.join("contracts"), &name),
+                    ResourceMetadata {
+                        name: name.clone(),
+                        artifacts: build_artifact_from_name(
+                            &sources_dir,
+                            &abis_dir.join("contracts"),
+                            &name,
+                        ),
+                    },
                 );
             }
         }
@@ -135,12 +149,19 @@ pub struct ProjectMetadata {
     pub env: Option<Environment>,
 }
 
+/// Metadata for a user defined resource (models, contracts).
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct ResourceMetadata {
+    pub name: String,
+    pub artifacts: ArtifactMetadata,
+}
+
 /// Metadata collected from the project configuration and the Dojo workspace
 #[derive(Default, Deserialize, Debug, Clone)]
 pub struct DojoMetadata {
     pub world: WorldMetadata,
     pub env: Option<Environment>,
-    pub artifacts: HashMap<String, ArtifactMetadata>,
+    pub resources_artifacts: HashMap<String, ResourceMetadata>,
 }
 
 #[derive(Debug)]
@@ -332,6 +353,34 @@ impl ArtifactMetadata {
             let reader = Cursor::new(source_data);
             let response = client.add(reader).await?;
             meta.source = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
+        };
+
+        let serialized = json!(meta).to_string();
+        let reader = Cursor::new(serialized);
+        let response = client.add(reader).await?;
+
+        Ok(response.hash)
+    }
+}
+
+impl ResourceMetadata {
+    pub async fn upload(&self) -> Result<String> {
+        let mut meta = self.clone();
+        let client =
+            IpfsClient::from_str(IPFS_CLIENT_URL)?.with_credentials(IPFS_USERNAME, IPFS_PASSWORD);
+
+        if let Some(Uri::File(abi)) = &self.artifacts.abi {
+            let abi_data = std::fs::read(abi)?;
+            let reader = Cursor::new(abi_data);
+            let response = client.add(reader).await?;
+            meta.artifacts.abi = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
+        };
+
+        if let Some(Uri::File(source)) = &self.artifacts.source {
+            let source_data = std::fs::read(source)?;
+            let reader = Cursor::new(source_data);
+            let response = client.add(reader).await?;
+            meta.artifacts.source = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
         };
 
         let serialized = json!(meta).to_string();

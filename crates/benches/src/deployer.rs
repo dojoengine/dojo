@@ -3,9 +3,9 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Context, Ok, Result};
 use clap::Parser;
-use dojo_lang::compiler::{DojoCompiler, DEPLOYMENTS_DIR, MANIFESTS_DIR};
+use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
-use dojo_world::manifest::DeploymentManifest;
+use dojo_world::manifest::{DeploymentManifest, DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use futures::executor::block_on;
 use katana_runner::KatanaRunner;
 use scarb::compiler::CompilerRepository;

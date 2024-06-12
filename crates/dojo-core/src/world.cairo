@@ -108,6 +108,7 @@ mod world {
 
     #[abi(embed_v0)]
     impl ConfigImpl = Config::ConfigImpl<ContractState>;
+    impl ConfigInternalImpl = Config::InternalImpl<ContractState>;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -222,6 +223,8 @@ mod world {
                 RESOURCE_METADATA_SELECTOR,
                 (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
             );
+
+        self.config.initializer(creator);
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -618,7 +621,10 @@ mod world {
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
         fn upgrade_state(
-            ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput
+            ref self: ContractState,
+            new_state: Span<StorageUpdate>,
+            program_output: ProgramOutput,
+            program_hash: felt252
         ) {
             let mut da_hasher = PedersenImpl::new(0);
             let mut i = 0;
@@ -633,11 +639,16 @@ mod world {
             let da_hash = da_hasher.finalize();
             assert(da_hash == program_output.world_da_hash, 'wrong output hash');
 
+            assert(
+                program_hash == self.config.get_differ_program_hash()
+                    || program_hash == self.config.get_merger_program_hash(),
+                'wrong program hash'
+            );
+
             let mut program_output_array = array![];
             program_output.serialize(ref program_output_array);
             let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
 
-            let program_hash = self.config.get_program_hash();
             let fact = poseidon::PoseidonImpl::new()
                 .update(program_hash)
                 .update(program_output_hash)
@@ -657,7 +668,7 @@ mod world {
                     0, starknet::storage_address_from_base(base), *new_state.at(i).value
                 )
                     .unwrap_syscall();
-                i += 2;
+                i += 1;
             };
             EventEmitter::emit(ref self, StateUpdated { da_hash: da_hash });
         }

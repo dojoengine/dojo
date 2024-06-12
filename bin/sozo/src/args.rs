@@ -33,7 +33,7 @@ pub struct SozoArgs {
 
     #[arg(long)]
     #[arg(env = "SOZO_OFFLINE")]
-    #[arg(hide_short_help = true)]
+    #[arg(hide_short_help = true, global = true)]
     #[arg(help = "Run without accessing the network.")]
     pub offline: bool,
 
@@ -70,15 +70,15 @@ impl SozoArgs {
 #[derive(Parser, Clone, Debug)]
 #[group(multiple = false)]
 pub struct ProfileSpec {
-    #[arg(short = 'P', long)]
+    #[arg(short = 'P', long, global = true)]
     #[arg(help = "Specify profile to use by name.")]
     pub profile: Option<SmolStr>,
 
-    #[arg(long, hide_short_help = true)]
+    #[arg(long, hide_short_help = true, global = true)]
     #[arg(help = "Use release profile.")]
     pub release: bool,
 
-    #[arg(long, hide_short_help = true)]
+    #[arg(long, hide_short_help = true, global = true)]
     #[arg(help = "Use dev profile.")]
     pub dev: bool,
 }

@@ -4,11 +4,11 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use base64::engine::general_purpose;
 use base64::Engine as _;
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::{Uri, WorldMetadata};
 use reqwest::Client;
 use starknet::core::types::{Event, MaybePendingTransactionReceipt};
-use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 use tokio_util::bytes::Bytes;
@@ -58,18 +58,7 @@ where
         event: &Event,
     ) -> Result<(), Error> {
         let resource = &event.data[0];
-        let uri_len: u8 = event.data[1].try_into().unwrap();
-
-        let uri_str = if uri_len > 0 {
-            event.data[2..=uri_len as usize + 1]
-                .iter()
-                .map(parse_cairo_short_string)
-                .collect::<Result<Vec<_>, _>>()?
-                .concat()
-        } else {
-            "".to_string()
-        };
-
+        let uri_str = ByteArray::cairo_deserialize(&event.data, 1)?.to_string()?;
         info!(
             target: LOG_TARGET,
             resource = %format!("{:#x}", resource),

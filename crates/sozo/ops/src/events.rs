@@ -5,8 +5,7 @@ use anyhow::{anyhow, Result};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::MANIFESTS_DIR;
-use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods};
+use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods, MANIFESTS_DIR};
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -249,8 +248,7 @@ fn process_inners(
 mod tests {
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
-    use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-    use dojo_world::manifest::BaseManifest;
+    use dojo_world::manifest::{BaseManifest, BASE_DIR};
     use starknet::core::types::EmittedEvent;
 
     use super::*;
@@ -267,7 +265,7 @@ mod tests {
         let result = extract_events(&manifest, &manifest_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 14);
+        assert_eq!(result.len(), 15);
     }
 
     #[test]

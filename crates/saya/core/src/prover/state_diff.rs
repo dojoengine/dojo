@@ -1,4 +1,3 @@
-use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use starknet::core::types::FieldElement;
 
@@ -54,64 +53,6 @@ pub const EXAMPLE_KATANA_DIFF: &str = r#"{
         "2927827620326415540917522810963695348790596370636511605071677066526091865974": 3454128523693959991357220485501659129201494257878487792088502805686335557901
     }
 }"#;
-
-pub fn state_updates_to_json_like(state_updates: &StateUpdates, world: FieldElement) -> String {
-    let mut result = String::new();
-
-    result.push_str(&format!(r#""nonce_updates":{}"#, "{"));
-    let nonce_updates = state_updates
-        .nonce_updates
-        .iter()
-        .map(|(k, v)| format!(r#""{}":{}"#, k.0, v))
-        .collect::<Vec<_>>()
-        .join(",");
-    result.push_str(&format!("{}{}", nonce_updates, "}"));
-
-    result.push_str(&format!(r#","storage_updates":{}"#, "{"));
-    let storage_updates = state_updates
-        .storage_updates
-        .iter()
-        .map(|(k, v)| {
-            let storage =
-                v.iter().map(|(k, v)| format!(r#""{}":{}"#, k, v)).collect::<Vec<_>>().join(",");
-
-            format!(r#""{}":{{{}}}"#, k.0, storage)
-        })
-        .collect::<Vec<_>>()
-        .join(",");
-    result.push_str(&format!("{}{}", storage_updates, "}"));
-
-    result.push_str(&format!(r#","contract_updates":{}"#, "{"));
-    let contract_updates = state_updates
-        .contract_updates
-        .iter()
-        .map(|(k, v)| format!(r#""{}":{}"#, k.0, v))
-        .collect::<Vec<_>>()
-        .join(",");
-    result.push_str(&format!("{}{}", contract_updates, "}"));
-
-    result.push_str(&format!(r#","declared_classes":{}"#, "{"));
-    let declared_classes = state_updates
-        .declared_classes
-        .iter()
-        .map(|(k, v)| format!(r#""{}":{}"#, k, v))
-        .collect::<Vec<_>>()
-        .join(",");
-
-    result.push_str(&format!("{}{}", declared_classes, "}"));
-
-    result.push_str(r#","world_da":"#);
-    let storage =
-        if let Some(storage) = state_updates.storage_updates.get(&ContractAddress::from(world)) {
-            storage.iter().map(|(k, v)| format!("{},{}", k, v)).collect::<Vec<_>>().join(",")
-        } else {
-            String::new()
-        };
-
-    result.push_str(&format!("[{}]", storage));
-
-    result
-}
 
 /// We need custom implementation because of dynamic keys in json
 impl ProvedStateDiff {

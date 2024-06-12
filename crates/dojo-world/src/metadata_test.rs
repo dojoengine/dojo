@@ -145,7 +145,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(env.world_address.is_some());
     assert_eq!(
         env.world_address.unwrap(),
-        "0x2e31cfde9f9990c7fe44b25043e3c6958a849c0a66ab535686d2b710e97f309"
+        "0x07efebb0c2d4cc285d48a97a7174def3be7fdd6b7bd29cca758fa2e17e03ef30"
     );
 
     assert!(env.keystore_path.is_none());
@@ -174,13 +174,18 @@ async fn get_full_dojo_metadata_from_workspace() {
 
     dbg!(&artifacts);
     for (abi_subdir, name) in artifacts {
-        let artifact = dojo_metadata.artifacts.get(&name);
-        assert!(artifact.is_some(), "bad artifact for {}", name);
-        let artifact = artifact.unwrap();
+        let resource = dojo_metadata.resources_artifacts.get(&name);
+        assert!(resource.is_some(), "bad resource metadata for {}", name);
+        let resource = resource.unwrap();
 
         let sanitized_name = name.replace("::", "_");
 
-        check_artifact(artifact.clone(), sanitized_name, &abis_dir.join(abi_subdir), &sources_dir);
+        check_artifact(
+            resource.artifacts.clone(),
+            sanitized_name,
+            &abis_dir.join(abi_subdir),
+            &sources_dir,
+        );
     }
 }
 
