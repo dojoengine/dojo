@@ -21,7 +21,7 @@ impl CleanArgs {
     /// # Arguments
     ///
     /// * `profile_dir` - The directory where the profile files are located.
-    pub fn clean_manifests(&self, profile_dir: &Utf8PathBuf) -> Result<()> {
+    pub fn clean_manifests(profile_dir: &Utf8PathBuf) -> Result<()> {
         trace!(?profile_dir, "Cleaning manifests.");
         let dirs = vec![profile_dir.join(BASE_DIR), profile_dir.join(ABIS_DIR).join(BASE_DIR)];
 
@@ -51,7 +51,7 @@ impl CleanArgs {
         // By default, this command cleans the build manifests and scarb artifacts.
         trace!("Cleaning Scarb artifacts and build manifests.");
         scarb::ops::clean(config)?;
-        self.clean_manifests(&profile_dir)?;
+        Self::clean_manifests(&profile_dir)?;
 
         if self.all && profile_dir.exists() {
             trace!(?profile_dir, "Removing entire profile directory.");
