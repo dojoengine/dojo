@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718075758241,
+  "lastUpdate": 1718150429471,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9205,6 +9205,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16675694,
             "range": "± 512142",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4f94695f3a547220264bb36f244881be12c49f5c",
+          "message": "feat(spawn-and-move): modify example to take use of new layout for offchain msg (#2042)\n\n* feat(spawn-and-move): modify exmaple to take use of new layout for offchain msg\r\n\r\n* refactor: rename EmoteMessage to Message\r\n\r\n* chore; remove old emotemessage manifests\r\n\r\n* feat: add salt to offchain message\r\n\r\n* chore: fmt and manifests\r\n\r\n* fix: tests\r\n\r\n* fix: remove old abi file\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-11T19:48:36-04:00",
+          "tree_id": "4cdab1b1bf152dbb9fd82641de49f2c1e01402e5",
+          "url": "https://github.com/dojoengine/dojo/commit/4f94695f3a547220264bb36f244881be12c49f5c"
+        },
+        "date": 1718150428843,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16619928,
+            "range": "± 224102",
             "unit": "ns/iter"
           }
         ]
