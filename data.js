@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718165261123,
+  "lastUpdate": 1718204907519,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9265,6 +9265,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16330084,
             "range": "± 180656",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b91c7f3a4176cef5355c97c1f3f4de06ef9d6629",
+          "message": "refactor(torii-libp2p): use cainome + integration test (#2044)\n\n* feat: use cainome + integration test\r\n\r\n* fmt\r\n\r\n* chore: remove unused imports\r\n\r\n* Update tests.rs",
+          "timestamp": "2024-06-12T08:56:05-06:00",
+          "tree_id": "39dea093b60e3ed58fb1a1694c7768f995978fac",
+          "url": "https://github.com/dojoengine/dojo/commit/b91c7f3a4176cef5355c97c1f3f4de06ef9d6629"
+        },
+        "date": 1718204906285,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16778715,
+            "range": "± 467352",
             "unit": "ns/iter"
           }
         ]
