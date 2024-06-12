@@ -1,9 +1,9 @@
 use starknet::{ContractAddress, ClassHash};
 
-#[starknet::interface]
-trait IRecords<TContractState> {
-    fn create(self: @TContractState, num_records: u8);
-    fn delete(self: @TContractState, record_id: u32);
+#[dojo::interface]
+trait IRecords {
+    fn create(ref world: IWorldDispatcher, num_records: u8);
+    fn delete(ref world: IWorldDispatcher, record_id: u32);
 }
 
 #[dojo::contract]
@@ -33,8 +33,7 @@ mod records {
 
     #[abi(embed_v0)]
     impl RecordsImpl of IRecords<ContractState> {
-        fn create(self: @ContractState, num_records: u8) {
-            let world = self.world_dispatcher.read();
+        fn create(ref world: IWorldDispatcher, num_records: u8) {
             let mut record_idx = 0;
 
             loop {
@@ -118,7 +117,7 @@ mod records {
             return ();
         }
         // Implemment fn delete, input param: record_id
-        fn delete(self: @ContractState, record_id: u32) {
+        fn delete(ref world: IWorldDispatcher, record_id: u32) {
             let world = self.world_dispatcher.read();
             let (record, record_sibling) = get!(world, record_id, (Record, RecordSibling));
             let subrecord_id = record_id + 1;

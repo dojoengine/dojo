@@ -2,9 +2,10 @@ use dojo_examples::models::{Direction, Position, Vec2};
 
 #[dojo::interface]
 trait IActions {
-    fn spawn();
-    fn move(direction: Direction);
-    fn set_player_config(name: ByteArray);
+    fn spawn(ref world: IWorldDispatcher);
+    fn move(ref world: IWorldDispatcher, direction: Direction);
+    fn set_player_config(ref world: IWorldDispatcher, name: ByteArray);
+    fn get_player_position(world: @IWorldDispatcher) -> Position;
 }
 
 #[dojo::interface]
@@ -61,7 +62,7 @@ mod actions {
     #[abi(embed_v0)]
     impl ActionsImpl of IActions<ContractState> {
         // ContractState is defined by system decorator expansion
-        fn spawn(world: IWorldDispatcher) {
+        fn spawn(ref world: IWorldDispatcher) {
             let player = get_caller_address();
             let position = get!(world, player, (Position));
 
@@ -76,7 +77,7 @@ mod actions {
             );
         }
 
-        fn move(world: IWorldDispatcher, direction: Direction) {
+        fn move(ref world: IWorldDispatcher, direction: Direction) {
             let player = get_caller_address();
             let (mut position, mut moves) = get!(world, player, (Position, Moves));
             moves.remaining -= 1;
@@ -86,7 +87,7 @@ mod actions {
             emit!(world, (Moved { player, direction }));
         }
 
-        fn set_player_config(world: IWorldDispatcher, name: ByteArray) {
+        fn set_player_config(ref world: IWorldDispatcher, name: ByteArray) {
             let player = get_caller_address();
 
             let items = array![
@@ -96,6 +97,11 @@ mod actions {
             let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1), };
 
             set!(world, (config));
+        }
+
+        fn get_player_position(world: @IWorldDispatcher) -> Position {
+            let player = get_caller_address();
+            get!(world, player, (Position))
         }
     }
 }
