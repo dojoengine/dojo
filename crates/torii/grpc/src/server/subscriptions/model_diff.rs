@@ -83,14 +83,15 @@ impl StateDiffManager {
             .flatten()
             .collect::<HashSet<FieldElement>>();
 
+        // NOTE: unlock issue with firefox/safari
+        // initially send empty stream message to return from
+        // initial subscribe call
+        let _ = sender.send(Ok(SubscribeModelsResponse { model_update: None })).await;
+
         self.subscribers
             .write()
             .await
-            .insert(id, ModelDiffSubscriber { storage_addresses, sender: sender.clone() });
-
-        // NOTE: unlock issue with firefox/safari
-        // initially send empty stream message to call
-        let _ = sender.send(Ok(SubscribeModelsResponse { model_update: None })).await;
+            .insert(id, ModelDiffSubscriber { storage_addresses, sender });
 
         Ok(receiver)
     }

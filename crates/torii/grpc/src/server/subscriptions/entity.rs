@@ -44,14 +44,15 @@ impl EntityManager {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
 
+        // NOTE: unlock issue with firefox/safari
+        // initially send empty stream message to return from
+        // initial subscribe call
+        let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
+
         self.subscribers.write().await.insert(
             id,
-            EntitiesSubscriber { hashed_keys: hashed_keys.iter().cloned().collect(), sender: sender.clone() },
+            EntitiesSubscriber { hashed_keys: hashed_keys.iter().cloned().collect(), sender },
         );
-
-        // NOTE: unlock issue with firefox/safari
-        // initially send empty stream message to call
-        let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
 
         Ok(receiver)
     }
