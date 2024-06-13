@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718234136186,
+  "lastUpdate": 1718290905052,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9355,6 +9355,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16693401,
             "range": "± 234894",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a5f043e39d4cc41da137b0cf20b24a1ebb8b4f77",
+          "message": "[trick] to unlock toriiClient with safari/firefox (#2038)\n\n* trick: to unlock toriiClient with safari/firefox\r\n\r\n* same trick for other subscribers\r\n\r\n* refactor: send initial stream message directly\r\n\r\n* chore: avoid sender clone\r\n\r\n---------\r\n\r\nCo-authored-by: Nasr <larko236@outlook.com>",
+          "timestamp": "2024-06-13T10:49:56-04:00",
+          "tree_id": "fdbcdb974fe3aaa9a7e4620ddf002207bbc6c57b",
+          "url": "https://github.com/dojoengine/dojo/commit/a5f043e39d4cc41da137b0cf20b24a1ebb8b4f77"
+        },
+        "date": 1718290903767,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17044084,
+            "range": "± 568206",
             "unit": "ns/iter"
           }
         ]
