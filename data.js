@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718290905052,
+  "lastUpdate": 1718310493323,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9385,6 +9385,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17044084,
             "range": "± 568206",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "78c88e5c4ffaa81134fb95e783c839efddf8e56b",
+          "message": "feat(dojo-bindgen): 2d+ arrays, bytearrays and enums serialization (#2028)\n\n* refacotr: handle bytearrays in systems\r\n\r\n* fix: system gen for calldata\r\n\r\n* chore: correctly map type\r\n\r\n* fmt\r\n\r\n* feat: only generate systems (funcs with no outputs)\r\n\r\n* compare by u8\r\n\r\n* remove unused import\r\n\r\n* feat: add linq\r\n\r\n* feat: get index helper for new record enums\r\n\r\n* chore: fmt\r\n\r\n* refactor: to handle arrays\r\n\r\n* refactor: bindgen system gen logic\r\n\r\n* feat: support 2d+ arrays in system codegen\r\n\r\n* chore: flat map\r\n\r\n* chore: reset actions",
+          "timestamp": "2024-06-13T16:16:30-04:00",
+          "tree_id": "e21eedab669e1b3ae20607bfa8dd6cf23433ddfd",
+          "url": "https://github.com/dojoengine/dojo/commit/78c88e5c4ffaa81134fb95e783c839efddf8e56b"
+        },
+        "date": 1718310492657,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17376101,
+            "range": "± 137478",
             "unit": "ns/iter"
           }
         ]
