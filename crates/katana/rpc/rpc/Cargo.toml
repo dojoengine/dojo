@@ -47,4 +47,11 @@ jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-rpc-api = { workspace = true, features = [ "client" ] }
 katana-runner.workspace = true
 url.workspace = true
-alloy = { git = "https://github.com/alloy-rs/alloy", rev = "7128c53", features = ["contract"]}
+alloy = { git = "https://github.com/alloy-rs/alloy", features = [
+    "contract",
+    "network",
+    "providers",
+    "provider-http",
+    "signer-wallet",
+    "node-bindings"
+] }

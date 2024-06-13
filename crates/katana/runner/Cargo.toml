@@ -19,10 +19,3 @@ serde_json.workspace = true
 starknet.workspace = true
 tokio.workspace = true
 url.workspace = true
-alloy = { git = "https://github.com/alloy-rs/alloy", rev = "7128c53", features = [
-    "network",
-    "providers",
-    "provider-http",
-    "signer-wallet",
-    "node-bindings"
-] }
