@@ -44,6 +44,25 @@ pub struct CelestiaOptions {
     #[arg(requires = "celestia_node_url")]
     pub celestia_namespace: Option<String>,
 }
+#[derive(Debug, Args, Clone)]
+pub struct StarknetAccountCliInput{
+    #[arg(long)]
+    #[arg(env)]
+    #[arg(help = "The url of the starknet node.")]
+    pub starknet_url: Url,
+    #[arg(long)]
+    #[arg(env)]
+    #[arg(help = "The chain id of the starknet node.")]
+    pub chain_id:String,
+    #[arg(long)]
+    #[arg(env)]
+    #[arg(help = "The address of the starknet account.")]
+    pub signer_address: String,
+    #[arg(long)]
+    #[arg(env)]
+    #[arg(help = "The private key of the starknet account.")]
+    pub signer_key: String,
+}
 
 // -- Clap enums impls --
 //

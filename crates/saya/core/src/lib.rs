@@ -7,6 +7,7 @@ use anyhow::Context;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
+use data_availability::StarknetAccountInput;
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
@@ -53,6 +54,7 @@ pub struct SayaConfig {
     pub data_availability: Option<DataAvailabilityConfig>,
     pub world_address: FieldElement,
     pub fact_registry_address: FieldElement,
+    pub starknet_account: StarknetAccountInput,
 }
 
 fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -339,6 +341,7 @@ impl Saya {
         let (transaction_hash, nonce_after) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
+            self.config.starknet_account.clone(),
         )
         .await?;
         info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
@@ -348,13 +351,15 @@ impl Saya {
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
         info!(target: LOG_TARGET, expected_fact, "Expected fact.");
 
-        trace!(target: LOG_TARGET, last_block, "Applying diffs.");
+        sleep(Duration::from_millis(5000)).await;
+        trace!(target: LOG_TARGET, block_number, "Applying diffs.");
         let transaction_hash = dojo_os::starknet_apply_diffs(
             self.config.world_address,
             world_da,
             program_output,
             program_hash,
             nonce_after + 1u64.into(),
+            self.config.starknet_account.clone(),
         )
         .await?;
         info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");

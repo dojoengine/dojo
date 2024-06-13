@@ -4,8 +4,9 @@ use std::io::BufReader;
 use std::path::PathBuf;
 
 use clap::Parser;
+use data_availability::StarknetAccountCliInput;
 use saya_core::data_availability::celestia::CelestiaConfig;
-use saya_core::data_availability::DataAvailabilityConfig;
+use saya_core::data_availability::{DataAvailabilityConfig, StarknetAccountInput};
 use saya_core::{ProverAccessKey, SayaConfig};
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -73,6 +74,9 @@ pub struct SayaArgs {
     #[command(flatten)]
     #[command(next_help_heading = "Choose the proof pipeline configuration")]
     pub proof: ProofOptions,
+    #[command(flatten)]
+    #[command(next_help_heading = "Starknet account configuration")]
+    pub starknet_account: StarknetAccountCliInput,
 }
 
 impl SayaArgs {
@@ -147,6 +151,12 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
+                starknet_account: StarknetAccountInput {
+                    starknet_url: args.starknet_account.starknet_url,
+                    chain_id: args.starknet_account.chain_id,
+                    signer_address: args.starknet_account.signer_address,
+                    signer_key: args.starknet_account.signer_key,
+                },
             })
         }
     }
@@ -186,6 +196,12 @@ mod tests {
             proof: ProofOptions {
                 world_address: Default::default(),
                 fact_registry_address: Default::default(),
+            },
+            starknet_account: StarknetAccountCliInput {
+                starknet_url: Url::parse("http://localhost:5030").unwrap(),
+                chain_id: "0x".to_string(),
+                signer_address: "0x".to_string(),
+                signer_key: "0x".to_string(),
             },
         };
 

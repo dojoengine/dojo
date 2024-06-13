@@ -13,6 +13,7 @@ pub mod celestia;
 
 pub mod error;
 use error::DataAvailabilityResult;
+use url::Url;
 
 /// All possible chains configuration for data availability.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -29,7 +30,13 @@ impl Display for DataAvailabilityConfig {
         }
     }
 }
-
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StarknetAccountInput {
+    pub starknet_url: Url,
+    pub chain_id: String,
+    pub signer_address: String,
+    pub signer_key: String,
+}
 /// The data availability mode.
 #[derive(Debug, Copy, Clone)]
 pub enum DataAvailabilityMode {
