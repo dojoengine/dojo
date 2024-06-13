@@ -262,26 +262,35 @@ public class {} : ModelInstance {{
     // Formats a system into a C# method used by the contract class
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
-    fn format_system(system: &Function) -> String {
+    fn format_system(system: &Function, handled_tokens: &HashMap<String, Composite>) -> String {
         fn handle_arg_recursive(
             arg_name: &str,
             token: &Token,
+            handled_tokens: &HashMap<String, Composite>,
+            // variant name
+            // if its an enum variant data
+            enum_variant: Option<String>,
         ) -> Vec<(
             // formatted arg
             String,
             // if its an array
             bool,
+            // enum name and variant name
+            // if its an enum variant data
+            Option<String>,
         )> {
-            println!("Handling arg: {:?}", token);
             let mapped_type = UnityPlugin::map_type(token);
 
             match token {
                 Token::Composite(t) => {
+                    let t = handled_tokens.get(&t.type_path).unwrap_or(t);
+
                     // Need to flatten the struct members.
                     match t.r#type {
                         CompositeType::Struct if t.type_name() == "ByteArray" => vec![(
                             format!("ByteArray.Serialize({}).Select(f => f.Inner)", arg_name),
                             true,
+                            enum_variant,
                         )],
                         CompositeType::Struct => {
                             let mut tokens = vec![];
@@ -289,6 +298,8 @@ public class {} : ModelInstance {{
                                 tokens.extend(handle_arg_recursive(
                                     &format!("{}.{}", arg_name, f.name),
                                     &f.token,
+                                    handled_tokens,
+                                    enum_variant.clone(),
                                 ));
                             });
 
@@ -296,8 +307,9 @@ public class {} : ModelInstance {{
                         }
                         CompositeType::Enum => {
                             let mut tokens = vec![(
-                                "new FieldElement({}.GetIndex({})).Inner".to_string(),
+                                format!("new FieldElement(Enum.GetIndex({})).Inner", arg_name),
                                 false,
+                                enum_variant,
                             )];
 
                             t.inners.iter().for_each(|field| {
@@ -307,9 +319,14 @@ public class {} : ModelInstance {{
                                         return;
                                     }
                                 }
-    
+
                                 tokens.extend(handle_arg_recursive(
-                                    &format!("{}.value", arg_name),
+                                    &format!(
+                                        "(({}.{}){}).value",
+                                        mapped_type,
+                                        field.name.clone(),
+                                        arg_name
+                                    ),
                                     &if let Token::GenericArg(generic_arg) = &field.token {
                                         let generic_token = t
                                             .generic_args
@@ -318,42 +335,66 @@ public class {} : ModelInstance {{
                                             .unwrap()
                                             .1
                                             .clone();
-                                        println!("Generic token: {:?}", generic_token);
                                         generic_token
                                     } else {
                                         field.token.clone()
                                     },
+                                    handled_tokens,
+                                    Some(field.name.clone()),
                                 ))
                             });
 
                             tokens
                         }
-                        CompositeType::Unknown => panic!("Unknown composite type"),
+                        CompositeType::Unknown => panic!("Unknown composite type: {:?}", t),
                     }
                 }
                 Token::Array(array) => {
-                    let inner: Vec<(String, bool)> = handle_arg_recursive("f", &array.inner);
+                    let is_inner_array = matches!(array.inner.as_ref(), Token::Array(_));
+                    let inner = handle_arg_recursive(
+                        &format!("{arg_name}Item"),
+                        &array.inner,
+                        handled_tokens,
+                        enum_variant.clone(),
+                    );
 
-                    
-                    // (
-                    //     format!("{}.Select(f => {})", arg_name, 
-                    //     true
-                    // )
+                    let inners = inner
+                        .into_iter()
+                        .map(|(arg, _, _)| arg)
+                        .collect::<Vec<String>>()
+                        .join(", ");
 
-                    vec![]
+                    vec![(
+                        if is_inner_array {
+                            format!("{arg_name}.SelectMany({arg_name}Item => new dojo.FieldElement[] {{ }}.Concat({inners}))")
+                        } else {
+                            format!(
+                                "{arg_name}.SelectMany({arg_name}Item => new [] {{ {inners} }})"
+                            )
+                        },
+                        true,
+                        enum_variant.clone(),
+                    )]
                 }
-                Token::Tuple(tuple) => {
-                    tuple
-                        .inners
-                        .iter()
-                        .enumerate()
-                        .map(|(idx, token)| handle_arg_recursive(&format!("Item{}", idx), token))
-                        .flatten()
-                        .collect()
-                }
+                Token::Tuple(tuple) => tuple
+                    .inners
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, token)| {
+                        handle_arg_recursive(
+                            &format!("{}.Item{}", arg_name, idx + 1),
+                            token,
+                            handled_tokens,
+                            enum_variant.clone(),
+                        )
+                    })
+                    .flatten()
+                    .collect(),
                 _ => match mapped_type.as_str() {
-                    "FieldElement" => vec![(format!("{}.Inner", arg_name), false)],
-                    _ => vec![("new FieldElement({}).Inner".to_string(), false)],
+                    "FieldElement" => vec![(format!("{}.Inner", arg_name), false, enum_variant)],
+                    _ => {
+                        vec![(format!("new FieldElement({}).Inner", arg_name), false, enum_variant)]
+                    }
                 },
             }
         }
@@ -369,15 +410,24 @@ public class {} : ModelInstance {{
             .inputs
             .iter()
             .map(|(name, token)| {
-                let tokens = handle_arg_recursive(name, token);
+                let tokens = handle_arg_recursive(name, token, handled_tokens, None);
 
                 tokens
                     .iter()
-                    .map(|(arg, is_array)| {
-                        if *is_array {
-                            format!("calldata.AddRange({});", arg)
+                    .map(|(arg, is_array, enum_variant)| {
+                        let calldata_op = if *is_array {
+                            format!("calldata.AddRange({arg});")
                         } else {
-                            format!("calldata.Add({});", arg)
+                            format!("calldata.Add({arg});")
+                        };
+
+                        if let Some(variant) = enum_variant {
+                            let mapped_token = UnityPlugin::map_type(token);
+                            let mapped_variant_type = format!("{}.{}", mapped_token, variant);
+
+                            format!("if ({name} is {mapped_variant_type}) {calldata_op}",)
+                        } else {
+                            calldata_op
                         }
                     })
                     .collect::<Vec<String>>()
@@ -428,7 +478,11 @@ public class {} : ModelInstance {{
     // Will format the contract into a C# class and
     // all systems into C# methods
     // Handled tokens should be a list of all structs and enums used by the contract
-    fn handle_contract(&self, contract: &DojoContract) -> String {
+    fn handle_contract(
+        &self,
+        contract: &DojoContract,
+        handled_tokens: &HashMap<String, Composite>,
+    ) -> String {
         let mut out = String::new();
         out += UnityPlugin::generated_header().as_str();
         out += UnityPlugin::contract_imports().as_str();
@@ -438,7 +492,7 @@ public class {} : ModelInstance {{
             .iter()
             // we assume systems dont have outputs
             .filter(|s| s.to_function().unwrap().get_output_kind() as u8 == FunctionOutputKind::NoOutput as u8)
-            .map(|system| UnityPlugin::format_system(system.to_function().unwrap()))
+            .map(|system| UnityPlugin::format_system(system.to_function().unwrap(), handled_tokens))
             .collect::<Vec<String>>()
             .join("\n\n    ");
 
@@ -483,7 +537,7 @@ impl BuiltinPlugin for UnityPlugin {
             let contracts_path = Path::new(&format!("Contracts/{}.gen.cs", name)).to_owned();
 
             println!("Generating contract: {}", name);
-            let code = self.handle_contract(contract);
+            let code = self.handle_contract(contract, &handled_tokens);
 
             out.insert(contracts_path, code.as_bytes().to_vec());
         }
