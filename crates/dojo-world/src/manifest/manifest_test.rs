@@ -6,6 +6,7 @@ use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
 use serde_json::json;
+use smol_str::SmolStr;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{EmittedEvent, FieldElement};
@@ -654,4 +655,38 @@ fn overlay_merge_for_base_work_as_expected() {
 
     current.merge(other);
     assert_eq!(current, expected);
+}
+
+#[test]
+fn base_manifest_remove_items_work_as_expected() {
+    let contracts = ["c1", "c2", "c3"];
+    let models = ["m1", "m2", "m3"];
+
+    let world = Manifest { name: "world".into(), inner: Default::default() };
+    let base = Manifest { name: "base".into(), inner: Default::default() };
+
+    let contracts = contracts
+        .iter()
+        .map(|c| Manifest { name: SmolStr::from(*c), inner: Default::default() })
+        .collect();
+    let models = models
+        .iter()
+        .map(|c| Manifest { name: SmolStr::from(*c), inner: Default::default() })
+        .collect();
+
+    let mut base = BaseManifest { contracts, models, world, base };
+
+    base.remove_items(vec!["c1".to_string(), "c3".to_string(), "m2".to_string()]);
+
+    assert_eq!(base.contracts.len(), 1);
+    assert_eq!(
+        base.contracts.iter().map(|c| c.name.clone().into()).collect::<Vec<String>>(),
+        vec!["c2"]
+    );
+
+    assert_eq!(base.models.len(), 2);
+    assert_eq!(
+        base.models.iter().map(|c| c.name.clone().into()).collect::<Vec<String>>(),
+        vec!["m1", "m3"]
+    );
 }
