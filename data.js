@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718310493323,
+  "lastUpdate": 1718321404186,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9415,6 +9415,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17376101,
             "range": "± 137478",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af5be666fb9b5096705b1041d8ebc8c89a55d4bb",
+          "message": "feat(core): add state mutability computation from world param (#2049)\n\n* rework: add state mutability computation from world param\r\n\r\n* fix: run fmt\r\n\r\n* fix: apply review comments\r\n\r\n* fix: address missing review comment",
+          "timestamp": "2024-06-13T17:18:20-06:00",
+          "tree_id": "65c9212655d0898667e838358b065ea7be98f4ad",
+          "url": "https://github.com/dojoengine/dojo/commit/af5be666fb9b5096705b1041d8ebc8c89a55d4bb"
+        },
+        "date": 1718321402866,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17517424,
+            "range": "± 168969",
             "unit": "ns/iter"
           }
         ]
