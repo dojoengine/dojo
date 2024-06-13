@@ -47,9 +47,7 @@ pub fn parse_world_injection(
     param_list.elements(db).iter().enumerate().for_each(|(idx, param)| {
         let (name, modifiers, param_type) = syntax_utils::get_parameter_info(db, param.clone());
 
-        let is_world = is_world_param(&name, &param_type);
-
-        if !is_world {
+        if !is_world_param(&name, &param_type) {
             return;
         }
 
