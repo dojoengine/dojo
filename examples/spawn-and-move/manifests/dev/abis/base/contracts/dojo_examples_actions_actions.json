@@ -174,34 +174,6 @@
     ]
   },
   {
-    "type": "enum",
-    "name": "core::option::Option::<(core::integer::u32, dojo_examples::models::Vec2)>",
-    "variants": [
-      {
-        "name": "Some",
-        "type": "(core::integer::u32, dojo_examples::models::Vec2)"
-      },
-      {
-        "name": "None",
-        "type": "()"
-      }
-    ]
-  },
-  {
-    "type": "struct",
-    "name": "dojo_examples::models::PlayerItem",
-    "members": [
-      {
-        "name": "item_id",
-        "type": "core::integer::u32"
-      },
-      {
-        "name": "quantity",
-        "type": "core::integer::u32"
-      }
-    ]
-  },
-  {
     "type": "interface",
     "name": "dojo_examples::actions::IActions",
     "items": [
@@ -231,18 +203,6 @@
           {
             "name": "name",
             "type": "core::byte_array::ByteArray"
-          },
-          {
-            "name": "option",
-            "type": "core::option::Option::<(core::integer::u32, dojo_examples::models::Vec2)>"
-          },
-          {
-            "name": "items",
-            "type": "core::array::Array::<dojo_examples::models::PlayerItem>"
-          },
-          {
-            "name": "items_items",
-            "type": "core::array::Array::<core::array::Array::<dojo_examples::models::PlayerItem>>"
           }
         ],
         "outputs": [],
