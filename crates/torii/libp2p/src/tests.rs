@@ -268,20 +268,25 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
+        use std::time::Duration;
+
         use dojo_test_utils::sequencer::{
             get_default_test_starknet_config, SequencerConfig, TestSequencer,
         };
         use dojo_types::schema::{Member, Struct, Ty};
+        use dojo_world::contracts::abi::model::Layout;
         use indexmap::IndexMap;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use starknet::providers::jsonrpc::HttpTransport;
         use starknet::providers::JsonRpcClient;
+        use starknet::signers::SigningKey;
         use starknet_crypto::FieldElement;
+        use tokio::select;
         use tokio::time::sleep;
         use torii_core::sql::Sql;
 
-        use crate::server::{parse_ty_to_object, Relay};
-        use crate::typed_data::{Domain, TypedData};
+        use crate::server::Relay;
+        use crate::typed_data::{Domain, Field, SimpleField, TypedData};
         use crate::types::Message;
 
         let _ = tracing_subscriber::fmt()
@@ -300,7 +305,36 @@ mod test {
                 .await;
         let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
 
-        let db = Sql::new(pool.clone(), FieldElement::from_bytes_be(&[0; 32]).unwrap()).await?;
+        let account = sequencer.raw_account();
+
+        let mut db = Sql::new(pool.clone(), FieldElement::from_bytes_be(&[0; 32]).unwrap()).await?;
+
+        // Register the model of our Message
+        db.register_model(
+            Ty::Struct(Struct {
+                name: "Message".to_string(),
+                children: vec![
+                    Member {
+                        name: "identity".to_string(),
+                        ty: Ty::Primitive(Primitive::ContractAddress(None)),
+                        key: true,
+                    },
+                    Member {
+                        name: "message".to_string(),
+                        ty: Ty::ByteArray("".to_string()),
+                        key: false,
+                    },
+                ],
+            }),
+            Layout::Fixed(vec![]),
+            FieldElement::ZERO,
+            FieldElement::ZERO,
+            0,
+            0,
+            0,
+        )
+        .await
+        .unwrap();
 
         // Initialize the relay server
         let mut relay_server = Relay::new(db, provider, 9900, 9901, None, None)?;
@@ -314,27 +348,57 @@ mod test {
             client.event_loop.lock().await.run().await;
         });
 
-        let mut data = Struct { name: "Message".to_string(), children: vec![] };
-
-        data.children.push(Member {
-            name: "player".to_string(),
-            ty: dojo_types::schema::Ty::Primitive(
-                dojo_types::primitive::Primitive::ContractAddress(Some(
-                    FieldElement::from_bytes_be(&[0; 32]).unwrap(),
-                )),
-            ),
-            key: true,
-        });
-
-        data.children.push(Member {
-            name: "message".to_string(),
-            ty: dojo_types::schema::Ty::Primitive(dojo_types::primitive::Primitive::U8(Some(0))),
-            key: false,
-        });
-
         let mut typed_data = TypedData::new(
-            IndexMap::new(),
-            "Message",
+            IndexMap::from_iter(vec![
+                (
+                    "OffchainMessage".to_string(),
+                    vec![
+                        Field::SimpleType(SimpleField {
+                            name: "model".to_string(),
+                            r#type: "shortstring".to_string(),
+                        }),
+                        Field::SimpleType(SimpleField {
+                            name: "Message".to_string(),
+                            r#type: "Model".to_string(),
+                        }),
+                    ],
+                ),
+                (
+                    "Model".to_string(),
+                    vec![
+                        Field::SimpleType(SimpleField {
+                            name: "identity".to_string(),
+                            r#type: "ContractAddress".to_string(),
+                        }),
+                        Field::SimpleType(SimpleField {
+                            name: "message".to_string(),
+                            r#type: "string".to_string(),
+                        }),
+                    ],
+                ),
+                (
+                    "StarknetDomain".to_string(),
+                    vec![
+                        Field::SimpleType(SimpleField {
+                            name: "name".to_string(),
+                            r#type: "shortstring".to_string(),
+                        }),
+                        Field::SimpleType(SimpleField {
+                            name: "version".to_string(),
+                            r#type: "shortstring".to_string(),
+                        }),
+                        Field::SimpleType(SimpleField {
+                            name: "chainId".to_string(),
+                            r#type: "shortstring".to_string(),
+                        }),
+                        Field::SimpleType(SimpleField {
+                            name: "revision".to_string(),
+                            r#type: "shortstring".to_string(),
+                        }),
+                    ],
+                ),
+            ]),
+            "OffchainMessage",
             Domain::new("Message", "1", "0x0", Some("1")),
             IndexMap::new(),
         );
@@ -346,37 +410,50 @@ mod test {
         typed_data.message.insert(
             "Message".to_string(),
             crate::typed_data::PrimitiveType::Object(
-                parse_ty_to_object(&Ty::Struct(data.clone())).unwrap(),
+                vec![
+                    (
+                        "identity".to_string(),
+                        crate::typed_data::PrimitiveType::String(
+                            account.account_address.to_string(),
+                        ),
+                    ),
+                    (
+                        "message".to_string(),
+                        crate::typed_data::PrimitiveType::String("mimi".to_string()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
             ),
         );
+
+        let message_hash = typed_data.encode(account.account_address).unwrap();
+        let signature =
+            SigningKey::from_secret_scalar(account.private_key).sign(&message_hash).unwrap();
 
         client
             .command_sender
             .publish(Message {
                 message: typed_data,
-                signature_r: FieldElement::from_bytes_be(&[0; 32]).unwrap(),
-                signature_s: FieldElement::from_bytes_be(&[0; 32]).unwrap(),
+                signature_r: signature.r,
+                signature_s: signature.s,
             })
             .await?;
 
         sleep(std::time::Duration::from_secs(2)).await;
 
-        Ok(())
-        // loop {
-        //     select! {
-        //         entity = sqlx::query("SELECT * FROM entities WHERE id = ?")
-        //         .bind(format!("{:#x}", FieldElement::from_bytes_be(&[0;
-        // 32]).unwrap())).fetch_one(&pool) => {             if let Ok(_) = entity {
-        //                 println!("Test OK: Received message within 5 seconds.");
-        //                 return Ok(());
-        //             }
-        //         }
-        //         _ = sleep(Duration::from_secs(5)) => {
-        //             println!("Test Failed: Did not receive message within 5 seconds.");
-        //             return Err("Timeout reached without receiving a message".into());
-        //         }
-        //     }
-        // }
+        loop {
+            select! {
+                entity = sqlx::query("SELECT * FROM entities").fetch_one(&pool) => if entity.is_ok() {
+                    println!("Test OK: Received message within 5 seconds.");
+                    return Ok(());
+                },
+                _ = sleep(Duration::from_secs(5)) => {
+                    println!("Test Failed: Did not receive message within 5 seconds.");
+                    return Err("Timeout reached without receiving a message".into());
+                }
+            }
+        }
     }
 
     #[cfg(target_arch = "wasm32")]

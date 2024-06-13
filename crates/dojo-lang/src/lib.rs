@@ -13,6 +13,7 @@ pub mod model;
 pub mod plugin;
 pub mod print;
 pub mod semantics;
+pub mod syntax;
 pub(crate) mod version;
 
 // Copy of non pub functions from scarb + extension.

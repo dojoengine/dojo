@@ -16,7 +16,7 @@ mod others {
 
 
     fn dojo_init(
-        world: IWorldDispatcher,
+        world: @IWorldDispatcher,
         actions_address: ContractAddress,
         actions_class: ClassHash,
         value: u8
