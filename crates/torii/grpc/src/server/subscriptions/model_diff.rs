@@ -86,14 +86,11 @@ impl StateDiffManager {
         self.subscribers
             .write()
             .await
-            .insert(id, ModelDiffSubscriber { storage_addresses, sender });
+            .insert(id, ModelDiffSubscriber { storage_addresses, sender: sender.clone() });
 
-        // unlock issue with firefox/safari
-        // send empty model update to unlock browsers ...
-        let subscribers = self.subscribers.write().await;
-        let _ = subscribers.get(&id).unwrap().sender.send(Ok(SubscribeModelsResponse {
-            model_update: None
-        })).await;
+        // NOTE: unlock issue with firefox/safari
+        // initially send empty stream message to call
+        let _ = sender.send(Ok(SubscribeModelsResponse { model_update: None })).await;
 
         Ok(receiver)
     }

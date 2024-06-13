@@ -45,18 +45,12 @@ impl EventMessageManager {
 
         self.subscribers.write().await.insert(
             id,
-            EventMessagesSubscriber { hashed_keys: hashed_keys.iter().cloned().collect(), sender },
+            EventMessagesSubscriber { hashed_keys: hashed_keys.iter().cloned().collect(), sender: sender.clone() },
         );
 
-        // unlock issue with firefox/safari
-        // send empty model update to unlock browsers ...
-        let subscribers = self.subscribers.write().await;
-        let _ = subscribers
-            .get(&id)
-            .unwrap()
-            .sender
-            .send(Ok(SubscribeEntityResponse { entity: None }))
-            .await;
+        // NOTE: unlock issue with firefox/safari
+        // initially send empty stream message to call
+        let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
 
         Ok(receiver)
     }
