@@ -2,12 +2,16 @@ use anyhow::{Context, Result};
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
+use dojo_world::manifest::MANIFESTS_DIR;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
 use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
+
+use crate::commands::clean::CleanArgs;
 
 const BYTECODE_SIZE_LABEL: &str = "Bytecode size [in felts]\n(Sierra, Casm)";
 const CONTRACT_CLASS_SIZE_LABEL: &str = "Contract Class size [in bytes]\n(Sierra, Casm)";
@@ -39,6 +43,18 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+
+        let profile_name =
+            ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
+
+        // Manifest path is always a file, we can unwrap safely to get the
+        // parent folder.
+        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+
+        let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
+        CleanArgs::clean_manifests(&profile_dir)?;
+
         let features_opts =
             FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
@@ -110,9 +126,12 @@ impl BuildArgs {
         };
         trace!(pluginManager=?bindgen, "Generating bindings.");
 
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config).unwrap();
+        let dojo_metadata = dojo_metadata_from_workspace(&ws);
+
         tokio::runtime::Runtime::new()
             .unwrap()
-            .block_on(bindgen.generate())
+            .block_on(bindgen.generate(dojo_metadata.skip_migration))
             .expect("Error generating bindings");
 
         Ok(())

@@ -37,6 +37,19 @@ name = "dojo_examples::actions::actions"
 
 [[contracts]]
 kind = "DojoContract"
+address = "0x75961b2027c52948ecebfd347aa427436ea308d41997fa9b3c98380f7011d53"
+class_hash = "0x5c32bc974f96f82ded691bb95bf26b2783f874fffb50fe84a331acb75ecf5b2"
+original_class_hash = "0x5c32bc974f96f82ded691bb95bf26b2783f874fffb50fe84a331acb75ecf5b2"
+base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
+abi = "manifests/dev/abis/deployments/contracts/dojo_examples_mock_token_mock_token.json"
+reads = []
+writes = []
+computed = []
+init_calldata = []
+name = "dojo_examples::mock_token::mock_token"
+
+[[contracts]]
+kind = "DojoContract"
 address = "0x3f51cd82daaf5907d2fd082ae3f45ae2ef96ab61677f46abc16e0a54d3392d1"
 class_hash = "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a"
 original_class_hash = "0x3ee016157303a7ce35a9fecdb5b8519159df620c5780527d61443636aaa3c3a"
@@ -95,6 +108,23 @@ key = false
 name = "salt"
 type = "felt252"
 key = true
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x6a21c56878ba470ac7a51f336ca6a59781de38e1810d2d20866ab2b52138a6d"
+original_class_hash = "0x6a21c56878ba470ac7a51f336ca6a59781de38e1810d2d20866ab2b52138a6d"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_mock_token.json"
+name = "dojo_examples::models::mock_token"
+
+[[models.members]]
+name = "account"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "amount"
+type = "u128"
+key = false
 
 [[models]]
 kind = "DojoModel"

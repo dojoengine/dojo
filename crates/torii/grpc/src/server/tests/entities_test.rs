@@ -1,12 +1,14 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use dojo_test_utils::compiler::build_test_config;
+use camino::Utf8PathBuf;
+use dojo_test_utils::compiler::{self, build_test_config};
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_world::contracts::WorldContractReader;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
@@ -34,10 +36,20 @@ async fn test_entities_queries() {
         SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-    let base_path = "../../../examples/spawn-and-move";
-    let target_path = format!("{}/target/dev", base_path);
 
-    let mut migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+    let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move");
+    let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
+
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+
+    let ws = ops::read_workspace(config.manifest_path(), &config)
+        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+
+    let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
+
+    let mut migration =
+        prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
     migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     dbg!(&migration);

@@ -95,8 +95,11 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
     let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
 
     let project_metadata = ws.current_package().unwrap().manifest.metadata.dojo();
-    let mut dojo_metadata =
-        DojoMetadata { env: project_metadata.env.clone(), ..Default::default() };
+    let mut dojo_metadata = DojoMetadata {
+        env: project_metadata.env.clone(),
+        skip_migration: project_metadata.skip_migration.clone(),
+        ..Default::default()
+    };
 
     let world_artifact = build_artifact_from_name(&sources_dir, &abis_dir, WORLD_CONTRACT_NAME);
 
@@ -147,6 +150,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
 pub struct ProjectMetadata {
     pub world: Option<ProjectWorldMetadata>,
     pub env: Option<Environment>,
+    pub skip_migration: Option<Vec<String>>,
 }
 
 /// Metadata for a user defined resource (models, contracts).
@@ -162,6 +166,7 @@ pub struct DojoMetadata {
     pub world: WorldMetadata,
     pub env: Option<Environment>,
     pub resources_artifacts: HashMap<String, ResourceMetadata>,
+    pub skip_migration: Option<Vec<String>>,
 }
 
 #[derive(Debug)]

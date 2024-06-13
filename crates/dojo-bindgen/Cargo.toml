@@ -22,3 +22,7 @@ thiserror.workspace = true
 
 cainome.workspace = true
 dojo-world = { path = "../dojo-world", features = [ "manifest" ] }
+
+[dev-dependencies]
+dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
+scarb = { workspace = true }

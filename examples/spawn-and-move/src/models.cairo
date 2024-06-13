@@ -42,6 +42,14 @@ struct Moves {
     last_direction: Direction
 }
 
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
+struct MockToken {
+    #[key]
+    account: ContractAddress,
+    amount: u128,
+}
+
 #[derive(Copy, Drop, Serde, IntrospectPacked)]
 struct Vec2 {
     x: u32,

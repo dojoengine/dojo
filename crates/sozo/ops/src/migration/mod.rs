@@ -58,6 +58,7 @@ pub async fn migrate<P, S>(
     name: &str,
     dry_run: bool,
     txn_config: TxnConfig,
+    skip_manifests: Option<Vec<String>>,
 ) -> Result<()>
 where
     P: Provider + Sync + Send + 'static,
@@ -77,15 +78,15 @@ where
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
-        utils::load_world_manifests(&profile_dir, &account, world_address, &ui).await.map_err(
-            |e| {
+        utils::load_world_manifests(&profile_dir, &account, world_address, &ui, skip_manifests)
+            .await
+            .map_err(|e| {
                 ui.error(e.to_string());
                 anyhow!(
                     "\n Use `sozo clean` to clean your project.\nThen, rebuild your project with \
                      `sozo build`.",
                 )
-            },
-        )?;
+            })?;
 
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");

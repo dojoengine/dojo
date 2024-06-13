@@ -4,6 +4,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_world::contracts::world::WorldContractReader;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use katana_runner::KatanaRunner;
@@ -61,12 +62,16 @@ async fn test_load_from_remote() {
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
     let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let dojo_metadata = dojo_metadata_from_workspace(&ws);
 
     let manifest_path = config.manifest_path();
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let mut migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
+    let mut migration =
+        prepare_migration(base_dir.into(), target_dir.into(), dojo_metadata.skip_migration)
+            .unwrap();
     migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
@@ -112,7 +117,7 @@ async fn test_load_from_remote() {
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 6);
+    assert_eq!(models.len(), 7);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
         "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Position'",
@@ -152,7 +157,7 @@ async fn test_load_from_remote() {
 
     // print all entities
     let entities = sqlx::query("SELECT * FROM entities").fetch_all(&pool).await.unwrap();
-    assert_eq!(entities.len(), 1);
+    assert_eq!(entities.len(), 2);
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(

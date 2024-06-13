@@ -3,6 +3,7 @@ mod utils;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
 use scarb::ops;
@@ -20,11 +21,13 @@ async fn reregister_models() {
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+    let dojo_metadata = dojo_metadata_from_workspace(&ws);
 
-    let base = config.manifest_path().parent().unwrap();
-    let target_dir = format!("{}/target/dev", base);
+    let target_path =
+        ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
 
-    let migration = prepare_migration(base.into(), target_dir.into()).unwrap();
+    let migration =
+        prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 

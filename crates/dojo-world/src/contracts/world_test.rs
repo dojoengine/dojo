@@ -8,6 +8,7 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
 use super::{WorldContract, WorldContractReader};
 use crate::manifest::{BaseManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
+use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
 use crate::migration::{Declarable, Deployable, TxnConfig};
@@ -28,8 +29,16 @@ async fn test_world_contract_reader() {
 
     let provider = account.provider();
 
-    let world_address =
-        deploy_world(&runner, &manifest_dir.to_path_buf(), &target_dir.to_path_buf()).await;
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+
+    let world_address = deploy_world(
+        &runner,
+        &manifest_dir.to_path_buf(),
+        &target_dir.to_path_buf(),
+        dojo_metadata.skip_migration,
+    )
+    .await;
 
     let _world = WorldContractReader::new(world_address, provider);
 }
@@ -38,6 +47,7 @@ pub async fn deploy_world(
     sequencer: &KatanaRunner,
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
+    skip_migration: Option<Vec<String>>,
 ) -> FieldElement {
     // Dev profile is used by default for testing:
     let profile_name = "dev";
@@ -46,6 +56,10 @@ pub async fn deploy_world(
         &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
+
+    if let Some(skip_manifests) = skip_migration {
+        manifest.remove_items(skip_manifests);
+    }
 
     let overlay_manifest = OverlayManifest::load_from_path(
         &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
