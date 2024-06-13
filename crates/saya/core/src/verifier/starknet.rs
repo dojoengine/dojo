@@ -9,13 +9,13 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
 
-use crate::data_availability::StarknetAccountInput;
 use crate::dojo_os::get_starknet_account;
+use crate::StarknetAccountData;
 
 pub async fn starknet_verify(
     fact_registry_address: FieldElement,
     serialized_proof: Vec<FieldElement>,
-    starknet_config: StarknetAccountInput,
+    starknet_config: StarknetAccountData,
 ) -> anyhow::Result<(String, FieldElement)> {
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let account = get_starknet_account(starknet_config)?;

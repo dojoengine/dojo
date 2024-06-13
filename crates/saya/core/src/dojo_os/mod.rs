@@ -7,48 +7,48 @@
 // pub mod input;
 // pub mod transaction;
 
-use once_cell::sync::OnceCell;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, Context};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use itertools::chain;
+use once_cell::sync::OnceCell;
 use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{FieldElement, TransactionExecutionStatus, TransactionStatus};
+use starknet::core::types::{
+    BlockId, BlockTag, FieldElement, TransactionExecutionStatus, TransactionStatus,
+};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
-use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 
-use crate::data_availability::StarknetAccountInput;
-pub static STARKNET_ACCOUNT: OnceCell<
-    Arc<Mutex<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>>,
-> = OnceCell::new();
+use crate::StarknetAccountData;
+
+type AccountType = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
+
+pub static STARKNET_ACCOUNT: OnceCell<Arc<Mutex<AccountType>>> = OnceCell::new();
 
 pub fn get_starknet_account(
-    config: StarknetAccountInput,
-) -> anyhow::Result<Arc<Mutex<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>>> {
+    config: StarknetAccountData,
+) -> anyhow::Result<Arc<Mutex<AccountType>>> {
     Ok(STARKNET_ACCOUNT
         .get_or_init(|| {
             let provider = JsonRpcClient::new(HttpTransport::new(config.starknet_url));
-            let signer = FieldElement::from_hex_be(&config.signer_key).expect("invalid signer hex");
-            let signer = LocalWallet::from(SigningKey::from_secret_scalar(signer));
+            let signer = LocalWallet::from(SigningKey::from_secret_scalar(config.signer_key));
 
-            let address =
-                FieldElement::from_hex_be(&config.signer_address).expect("invalid signer address");
-            let chain_id = FieldElement::from_hex_be(&config.chain_id).expect("invalid chain id");
-
-            let account = SingleOwnerAccount::new(
+            let mut account = SingleOwnerAccount::new(
                 provider,
                 signer,
-                address,
-                chain_id,
+                config.signer_address,
+                config.chain_id,
                 ExecutionEncoding::New,
             );
+            account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
             Arc::new(Mutex::new(account))
         })
         .clone())
@@ -60,7 +60,7 @@ pub async fn starknet_apply_diffs(
     program_output: Vec<FieldElement>,
     program_hash: FieldElement,
     nonce: FieldElement,
-    starknet_account: StarknetAccountInput,
+    starknet_account: StarknetAccountData,
 ) -> anyhow::Result<String> {
     let calldata = chain![
         vec![FieldElement::from(new_state.len() as u64 / 2)].into_iter(),
@@ -68,7 +68,8 @@ pub async fn starknet_apply_diffs(
         program_output.into_iter(),
         vec![program_hash],
     ]
-    .collect::<Vec<FieldElement>>();
+    .collect();
+
     let account = get_starknet_account(starknet_account)?;
     let account = account.lock().await;
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };

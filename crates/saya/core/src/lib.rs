@@ -2,12 +2,12 @@
 
 use std::ops::RangeInclusive;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
-use data_availability::StarknetAccountInput;
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use starknet_crypto::poseidon_hash_many;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use tokio::time::sleep;
 use tracing::{error, info, trace};
 use url::Url;
 
@@ -54,10 +55,19 @@ pub struct SayaConfig {
     pub data_availability: Option<DataAvailabilityConfig>,
     pub world_address: FieldElement,
     pub fact_registry_address: FieldElement,
-    pub starknet_account: StarknetAccountInput,
+    pub starknet_account: StarknetAccountData,
 }
 
-fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StarknetAccountData {
+    #[serde(deserialize_with = "url_deserializer")]
+    pub starknet_url: Url,
+    pub chain_id: FieldElement,
+    pub signer_address: FieldElement,
+    pub signer_key: FieldElement,
+}
+
+pub fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -352,7 +362,7 @@ impl Saya {
         info!(target: LOG_TARGET, expected_fact, "Expected fact.");
 
         sleep(Duration::from_millis(5000)).await;
-        trace!(target: LOG_TARGET, block_number, "Applying diffs.");
+        trace!(target: LOG_TARGET, last_block, "Applying diffs.");
         let transaction_hash = dojo_os::starknet_apply_diffs(
             self.config.world_address,
             world_da,

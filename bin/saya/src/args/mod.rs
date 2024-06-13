@@ -5,9 +5,10 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use data_availability::StarknetAccountCliInput;
+use katana_primitives::FieldElement;
 use saya_core::data_availability::celestia::CelestiaConfig;
-use saya_core::data_availability::{DataAvailabilityConfig, StarknetAccountInput};
-use saya_core::{ProverAccessKey, SayaConfig};
+use saya_core::data_availability::DataAvailabilityConfig;
+use saya_core::{ProverAccessKey, SayaConfig, StarknetAccountData};
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
@@ -74,6 +75,7 @@ pub struct SayaArgs {
     #[command(flatten)]
     #[command(next_help_heading = "Choose the proof pipeline configuration")]
     pub proof: ProofOptions,
+
     #[command(flatten)]
     #[command(next_help_heading = "Starknet account configuration")]
     pub starknet_account: StarknetAccountCliInput,
@@ -141,6 +143,14 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
             })?;
 
+            let starknet_account = StarknetAccountData {
+                starknet_url: args.starknet_account.starknet_url,
+                chain_id: FieldElement::from_hex_be(&args.starknet_account.chain_id).unwrap(),
+                signer_address: FieldElement::from_hex_be(&args.starknet_account.signer_address)
+                    .unwrap(),
+                signer_key: FieldElement::from_hex_be(&args.starknet_account.signer_key).unwrap(),
+            };
+
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
                 url: args.url,
@@ -151,12 +161,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
-                starknet_account: StarknetAccountInput {
-                    starknet_url: args.starknet_account.starknet_url,
-                    chain_id: args.starknet_account.chain_id,
-                    signer_address: args.starknet_account.signer_address,
-                    signer_key: args.starknet_account.signer_key,
-                },
+                starknet_account,
             })
         }
     }
@@ -199,9 +204,11 @@ mod tests {
             },
             starknet_account: StarknetAccountCliInput {
                 starknet_url: Url::parse("http://localhost:5030").unwrap(),
-                chain_id: "0x".to_string(),
-                signer_address: "0x".to_string(),
-                signer_key: "0x".to_string(),
+                chain_id: "0x534e5f5345504f4c4941".to_string(),
+                signer_address:
+                    "0xdcad8876b3f01514366027a1beb6d3d2b9a62a2523cf709dadae544e5671f177".to_string(),
+                signer_key: "0x9023aa26e3bbb5632f70823b812cf483543684439bb41e18c21f89b272daa159"
+                    .to_string(),
             },
         };
 
@@ -223,5 +230,20 @@ mod tests {
         } else {
             panic!("Expected Celestia config");
         }
+
+        let expected = StarknetAccountData {
+            starknet_url: Url::parse("http://localhost:5030").unwrap(),
+            chain_id: FieldElement::from_hex_be("0x534e5f5345504f4c4941").unwrap(),
+            signer_address: FieldElement::from_hex_be(
+                "0x3aa0a12c62a46a200b1a1211e8cd09b520164104e76d79648ca459cf05db94",
+            )
+            .unwrap(),
+            signer_key: FieldElement::from_hex_be(
+                "0x6b41bfa82e791a8b4e6b3ee058cb25b89714e4a23bd9a1ad6e6ba0bbc0b145b",
+            )
+            .unwrap(),
+        };
+
+        assert_eq!(config.starknet_account, expected);
     }
 }

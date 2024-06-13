@@ -10,7 +10,7 @@
 use ::starknet::core::types::FieldElement;
 use serde::{Deserialize, Serialize};
 
-use crate::data_availability::StarknetAccountInput;
+use crate::StarknetAccountData;
 
 mod starknet;
 
@@ -25,7 +25,7 @@ pub enum VerifierIdentifier {
 pub async fn verify(
     verifier: VerifierIdentifier,
     serialized_proof: Vec<FieldElement>,
-    account: StarknetAccountInput,
+    account: StarknetAccountData,
 ) -> anyhow::Result<(String, FieldElement)> {
     match verifier {
         VerifierIdentifier::HerodotusStarknetSepolia(fact_registry_address) => {

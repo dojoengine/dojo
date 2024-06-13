@@ -45,19 +45,22 @@ pub struct CelestiaOptions {
     pub celestia_namespace: Option<String>,
 }
 #[derive(Debug, Args, Clone)]
-pub struct StarknetAccountCliInput{
+pub struct StarknetAccountCliInput {
     #[arg(long)]
     #[arg(env)]
     #[arg(help = "The url of the starknet node.")]
     pub starknet_url: Url,
+
     #[arg(long)]
     #[arg(env)]
     #[arg(help = "The chain id of the starknet node.")]
-    pub chain_id:String,
+    pub chain_id: String,
+
     #[arg(long)]
     #[arg(env)]
     #[arg(help = "The address of the starknet account.")]
     pub signer_address: String,
+
     #[arg(long)]
     #[arg(env)]
     #[arg(help = "The private key of the starknet account.")]
