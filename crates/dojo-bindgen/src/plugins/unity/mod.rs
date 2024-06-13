@@ -366,7 +366,10 @@ public class {} : ModelInstance {{
 
                     vec![(
                         if is_inner_array {
-                            format!("{arg_name}.SelectMany({arg_name}Item => new dojo.FieldElement[] {{ }}.Concat({inners}))")
+                            format!(
+                                "{arg_name}.SelectMany({arg_name}Item => new dojo.FieldElement[] \
+                                 {{ }}.Concat({inners}))"
+                            )
                         } else {
                             format!(
                                 "{arg_name}.SelectMany({arg_name}Item => new [] {{ {inners} }})"
@@ -380,7 +383,7 @@ public class {} : ModelInstance {{
                     .inners
                     .iter()
                     .enumerate()
-                    .map(|(idx, token)| {
+                    .flat_map(|(idx, token)| {
                         handle_arg_recursive(
                             &format!("{}.Item{}", arg_name, idx + 1),
                             token,
@@ -388,7 +391,6 @@ public class {} : ModelInstance {{
                             enum_variant.clone(),
                         )
                     })
-                    .flatten()
                     .collect(),
                 _ => match mapped_type.as_str() {
                     "FieldElement" => vec![(format!("{}.Inner", arg_name), false, enum_variant)],
@@ -409,7 +411,7 @@ public class {} : ModelInstance {{
         let calldata = system
             .inputs
             .iter()
-            .map(|(name, token)| {
+            .flat_map(|(name, token)| {
                 let tokens = handle_arg_recursive(name, token, handled_tokens, None);
 
                 tokens
@@ -432,7 +434,6 @@ public class {} : ModelInstance {{
                     })
                     .collect::<Vec<String>>()
             })
-            .flatten()
             .collect::<Vec<String>>()
             .join("\n\t\t");
 

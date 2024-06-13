@@ -1,10 +1,10 @@
-use dojo_examples::models::{Direction, Position, Vec2};
+use dojo_examples::models::{Direction, Position, Vec2, PlayerItem};
 
 #[dojo::interface]
 trait IActions {
     fn spawn();
     fn move(direction: Direction);
-    fn set_player_config(name: ByteArray);
+    fn set_player_config(name: ByteArray, option: Option<(u32, Vec2)>, items: Array<PlayerItem>, items_items: Array<Array<PlayerItem>>);
 }
 
 #[dojo::interface]
@@ -86,7 +86,7 @@ mod actions {
             emit!(world, (Moved { player, direction }));
         }
 
-        fn set_player_config(world: IWorldDispatcher, name: ByteArray) {
+        fn set_player_config(world: IWorldDispatcher, name: ByteArray, option: Option<(u32, Vec2)>, items: Array<PlayerItem>, items_items: Array<Array<PlayerItem>>) {
             let player = get_caller_address();
 
             let items = array![
