@@ -314,12 +314,7 @@ impl DojoContract {
         param_list: ast::ParamList,
         fn_diagnostic_item: ids::SyntaxStablePtrId,
     ) -> (String, bool) {
-        self_param::check_self_parameter(
-            db,
-            &param_list,
-            fn_diagnostic_item,
-            &mut self.diagnostics,
-        );
+        self_param::check_parameter(db, &param_list, fn_diagnostic_item, &mut self.diagnostics);
 
         let world_injection = world_param::parse_world_injection(
             db,

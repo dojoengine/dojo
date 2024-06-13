@@ -18,7 +18,7 @@ pub enum WorldParamInjectionKind {
 
 /// Checks if the given parameter is the `world` parameter.
 ///
-/// The `world` must be named `world`, and be placed first in the argument list, without type.
+/// The `world` must be named `world`, and be placed first in the argument list.
 pub fn is_world_param(param_name: &str, param_type: &str) -> bool {
     param_name == WORLD_PARAM_NAME
         && (param_type == WORLD_PARAM_TYPE || param_type == WORLD_PARAM_TYPE_SNAPSHOT)
@@ -27,11 +27,11 @@ pub fn is_world_param(param_name: &str, param_type: &str) -> bool {
 /// Extracts the state mutability of a function from the `world` parameter.
 ///
 /// Checks if the function has only one `world` parameter (or None).
-/// The `world` must be named `world`, and be placed first in the argument list, without type.
+/// The `world` must be named `world`, and be placed first in the argument list.
 ///
-/// `fn ext(ref world)` -> external.
-/// `fn view(world)` -> view.
-/// `fn noworld()` -> view.
+/// `fn func1(ref world)` // would be external.
+/// `fn func2(world)` // would be view.
+/// `fn func3()` // would be view.
 ///
 /// Returns
 ///  * The [`WorldParamInjectionKind`] determined from the function's params list.

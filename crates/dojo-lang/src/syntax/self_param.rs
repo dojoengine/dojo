@@ -7,7 +7,8 @@ use crate::syntax::utils as syntax_utils;
 
 const SELF_PARAM_NAME: &str = "self";
 
-/// Checks if the given function is not using `self` param.
+/// Checks if the given function parameter is using `self` instead of `world` param.
+/// Adds diagnostic if that case.
 ///
 /// # Arguments
 ///
@@ -15,7 +16,7 @@ const SELF_PARAM_NAME: &str = "self";
 /// - `param_list` - The parameter list of the function.
 /// - `fn_diagnostic_item` - The diagnostic item of the function.
 /// - `diagnostics` - The diagnostics vector.
-pub fn check_self_parameter(
+pub fn check_parameter(
     db: &dyn SyntaxGroup,
     param_list: &ast::ParamList,
     fn_diagnostic_item: ids::SyntaxStablePtrId,

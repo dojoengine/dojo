@@ -93,7 +93,7 @@ impl DojoInterface {
             .map(|e| e.as_syntax_node().get_text(db))
             .collect::<Vec<_>>();
 
-        self_param::check_self_parameter(db, &param_list, diagnostic_item, &mut self.diagnostics);
+        self_param::check_parameter(db, &param_list, diagnostic_item, &mut self.diagnostics);
 
         let world_injection = world_param::parse_world_injection(
             db,
