@@ -145,10 +145,25 @@ impl TryFrom<SayaArgs> for SayaConfig {
             let chain_id_bytes = parse_chain_id(&args.starknet_account.chain_id);
             let starknet_account = StarknetAccountData {
                 starknet_url: args.starknet_account.starknet_url,
-                chain_id: FieldElement::from_bytes_be(&chain_id_bytes).unwrap(),
+                chain_id: FieldElement::from_bytes_be(&chain_id_bytes?).map_err(|e| {
+                    Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
+                })?,
                 signer_address: FieldElement::from_hex_be(&args.starknet_account.signer_address)
-                    .unwrap(),
-                signer_key: FieldElement::from_hex_be(&args.starknet_account.signer_key).unwrap(),
+                    .map_err(|e| {
+                        Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            e.to_string(),
+                        ))
+                    })?,
+
+                signer_key: FieldElement::from_hex_be(&args.starknet_account.signer_key).map_err(
+                    |e| {
+                        Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            e.to_string(),
+                        ))
+                    },
+                )?,
             };
 
             Ok(SayaConfig {

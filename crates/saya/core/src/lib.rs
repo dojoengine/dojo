@@ -8,6 +8,7 @@ use anyhow::Context;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
+use error::Error;
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
@@ -74,15 +75,14 @@ where
     let s = String::deserialize(deserializer)?;
     Url::parse(&s).map_err(serde::de::Error::custom)
 }
-pub fn parse_chain_id(chain_id: &str) -> [u8; 32] {
+pub fn parse_chain_id(chain_id: &str) -> Result<[u8; 32], Error> {
     let chain_id = chain_id.as_bytes();
-
     if chain_id.len() >= 32 {
-        unsafe { *(chain_id[..32].as_ptr() as *const [u8; 32]) }
+        Err(Error::InvalidChainId)
     } else {
         let mut actual_seed = [0u8; 32];
         chain_id.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
-        actual_seed
+        Ok(actual_seed)
     }
 }
 /// Saya.
