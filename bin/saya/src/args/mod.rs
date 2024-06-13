@@ -8,7 +8,7 @@ use data_availability::StarknetAccountCliInput;
 use katana_primitives::FieldElement;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
-use saya_core::{ProverAccessKey, SayaConfig, StarknetAccountData};
+use saya_core::{parse_chain_id, ProverAccessKey, SayaConfig, StarknetAccountData};
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
@@ -142,10 +142,10 @@ impl TryFrom<SayaArgs> for SayaConfig {
             let prover_key = ProverAccessKey::from_hex_string(&args.private_key).map_err(|e| {
                 Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
             })?;
-
+            let chain_id_bytes = parse_chain_id(&args.starknet_account.chain_id);
             let starknet_account = StarknetAccountData {
                 starknet_url: args.starknet_account.starknet_url,
-                chain_id: FieldElement::from_hex_be(&args.starknet_account.chain_id).unwrap(),
+                chain_id: FieldElement::from_bytes_be(&chain_id_bytes).unwrap(),
                 signer_address: FieldElement::from_hex_be(&args.starknet_account.signer_address)
                     .unwrap(),
                 signer_key: FieldElement::from_hex_be(&args.starknet_account.signer_key).unwrap(),

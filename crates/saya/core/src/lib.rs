@@ -74,7 +74,17 @@ where
     let s = String::deserialize(deserializer)?;
     Url::parse(&s).map_err(serde::de::Error::custom)
 }
+pub fn parse_chain_id(chain_id: &str) -> [u8; 32] {
+    let chain_id = chain_id.as_bytes();
 
+    if chain_id.len() >= 32 {
+        unsafe { *(chain_id[..32].as_ptr() as *const [u8; 32]) }
+    } else {
+        let mut actual_seed = [0u8; 32];
+        chain_id.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
+        actual_seed
+    }
+}
 /// Saya.
 pub struct Saya {
     /// The main Saya configuration.
