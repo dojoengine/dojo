@@ -20,7 +20,6 @@ use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
-use serde_json::Number;
 use starknet::core::types::{BlockId, BlockTag, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -690,90 +689,6 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     info!(target: LOG_TARGET, path = %path.display(), "Generated new certificate.");
 
     Ok(cert)
-}
-
-// Deprecated. These should be potentially removed. As Ty -> TypedData is now done
-// on the SDKs side
-pub fn parse_ty_to_object(ty: &Ty) -> Result<IndexMap<String, PrimitiveType>, Error> {
-    match ty {
-        Ty::Struct(struct_ty) => {
-            let mut object = IndexMap::new();
-            for member in &struct_ty.children {
-                let mut member_object = IndexMap::new();
-                member_object.insert("key".to_string(), PrimitiveType::Bool(member.key));
-                member_object.insert(
-                    "type".to_string(),
-                    PrimitiveType::String(ty_to_string_type(&member.ty)),
-                );
-                member_object.insert("value".to_string(), parse_ty_to_primitive(&member.ty)?);
-                object.insert(member.name.clone(), PrimitiveType::Object(member_object));
-            }
-            Ok(object)
-        }
-        _ => Err(Error::InvalidMessageError("Expected Struct type".to_string())),
-    }
-}
-
-pub fn ty_to_string_type(ty: &Ty) -> String {
-    match ty {
-        Ty::Primitive(primitive) => match primitive {
-            Primitive::U8(_) => "u8".to_string(),
-            Primitive::U16(_) => "u16".to_string(),
-            Primitive::U32(_) => "u32".to_string(),
-            Primitive::USize(_) => "usize".to_string(),
-            Primitive::U64(_) => "u64".to_string(),
-            Primitive::U128(_) => "u128".to_string(),
-            Primitive::U256(_) => "u256".to_string(),
-            Primitive::Felt252(_) => "felt252".to_string(),
-            Primitive::ClassHash(_) => "class_hash".to_string(),
-            Primitive::ContractAddress(_) => "contract_address".to_string(),
-            Primitive::Bool(_) => "bool".to_string(),
-        },
-        Ty::Struct(_) => "struct".to_string(),
-        Ty::Tuple(_) => "tuple".to_string(),
-        Ty::Array(_) => "array".to_string(),
-        Ty::ByteArray(_) => "bytearray".to_string(),
-        Ty::Enum(_) => "enum".to_string(),
-    }
-}
-
-pub fn parse_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
-    match ty {
-        Ty::Primitive(primitive) => match primitive {
-            Primitive::U8(value) => {
-                Ok(PrimitiveType::Number(Number::from(value.map(|v| v as u64).unwrap_or(0u64))))
-            }
-            Primitive::U16(value) => {
-                Ok(PrimitiveType::Number(Number::from(value.map(|v| v as u64).unwrap_or(0u64))))
-            }
-            Primitive::U32(value) => {
-                Ok(PrimitiveType::Number(Number::from(value.map(|v| v as u64).unwrap_or(0u64))))
-            }
-            Primitive::USize(value) => {
-                Ok(PrimitiveType::Number(Number::from(value.map(|v| v as u64).unwrap_or(0u64))))
-            }
-            Primitive::U64(value) => {
-                Ok(PrimitiveType::Number(Number::from(value.map(|v| v).unwrap_or(0u64))))
-            }
-            Primitive::U128(value) => Ok(PrimitiveType::String(
-                value.map(|v| v.to_string()).unwrap_or_else(|| "0".to_string()),
-            )),
-            Primitive::U256(value) => Ok(PrimitiveType::String(
-                value.map(|v| format!("{:#x}", v)).unwrap_or_else(|| "0".to_string()),
-            )),
-            Primitive::Felt252(value) => Ok(PrimitiveType::String(
-                value.map(|v| format!("{:#x}", v)).unwrap_or_else(|| "0".to_string()),
-            )),
-            Primitive::ClassHash(value) => Ok(PrimitiveType::String(
-                value.map(|v| format!("{:#x}", v)).unwrap_or_else(|| "0".to_string()),
-            )),
-            Primitive::ContractAddress(value) => Ok(PrimitiveType::String(
-                value.map(|v| format!("{:#x}", v)).unwrap_or_else(|| "0".to_string()),
-            )),
-            Primitive::Bool(value) => Ok(PrimitiveType::Bool(value.unwrap_or(false))),
-        },
-        _ => Err(Error::InvalidMessageError("Expected Primitive type".to_string())),
-    }
 }
 
 #[cfg(test)]

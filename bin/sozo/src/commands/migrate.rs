@@ -201,8 +201,8 @@ fn is_compatible_version(provided_version: &str, expected_version: &str) -> Resu
         .map_err(|e| anyhow!("Failed to parse expected version '{}': {}", expected_version, e))?;
 
     // Specific backward compatibility rule: 0.6 is compatible with 0.7.
-    if (provided_ver.major == 0 && provided_ver.minor == 6)
-        && (expected_ver.major == 0 && expected_ver.minor == 7)
+    if (provided_ver.major == 0 && provided_ver.minor == 7)
+        && (expected_ver.major == 0 && expected_ver.minor == 6)
     {
         return Ok(true);
     }
@@ -235,7 +235,9 @@ mod tests {
 
     #[test]
     fn test_is_compatible_version_specific_backward_compatibility() {
-        assert!(is_compatible_version("0.6.0", "0.7.1").unwrap());
+        let node_version = "0.7.1";
+        let katana_version = "0.6.0";
+        assert!(is_compatible_version(node_version, katana_version).unwrap());
     }
 
     #[test]

@@ -71,10 +71,10 @@ key = false
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0x6ec8bf0a073e509e5b442ee5d4bee75aa85b87671a110dff2b9e6a58cc2aaa5"
-original_class_hash = "0x6ec8bf0a073e509e5b442ee5d4bee75aa85b87671a110dff2b9e6a58cc2aaa5"
-abi = "manifests/dev/abis/deployments/models/dojo_examples_models_emote_message.json"
-name = "dojo_examples::models::emote_message"
+class_hash = "0x33bdb1a470ea0ee7d77faa3c75151934b3b129c0bad7333ec6c2dad1b98ec5"
+original_class_hash = "0x33bdb1a470ea0ee7d77faa3c75151934b3b129c0bad7333ec6c2dad1b98ec5"
+abi = "manifests/dev/abis/deployments/models/dojo_examples_models_message.json"
+name = "dojo_examples::models::message"
 
 [[models.members]]
 name = "identity"
@@ -82,9 +82,19 @@ type = "ContractAddress"
 key = true
 
 [[models.members]]
-name = "emote"
-type = "Emote"
+name = "channel"
+type = "felt252"
+key = true
+
+[[models.members]]
+name = "message"
+type = "ByteArray"
 key = false
+
+[[models.members]]
+name = "salt"
+type = "felt252"
+key = true
 
 [[models]]
 kind = "DojoModel"
