@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718321404186,
+  "lastUpdate": 1718323472402,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9445,6 +9445,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17517424,
             "range": "± 168969",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0b8b0e5c50888233bfb47763845e0ff2bc1d3f22",
+          "message": "feat: ability to skip migration of certain contracts/models (#2026)\n\n* initial commit\r\n\r\n* Revert \"initial commit\"\r\n\r\nThis reverts commit 2975876f484f03a62ea584ea2061bdc16360d287.\r\n\r\n* implement skip_migration logic in DojoMetadata so it is profile specific\r\n\r\n* do a clean build and migrate\r\n\r\n* fix tests\r\n\r\n* fix lints\r\n\r\n* fix more tests\r\n\r\n* fix more lints\r\n\r\n* update dev to use skip_migration\r\n\r\n* abstract out skipping logic\r\n\r\n* clean old manifest times during build to remove unused manifets\r\n\r\n* update example\r\n\r\n* fix tests\r\n\r\n* add test for remove_items\r\n\r\n* fix: use world dispatcher snapshot\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-13T17:52:40-06:00",
+          "tree_id": "0b3fc89357134b36dfb18365f9cdbbe2d3f6d9e4",
+          "url": "https://github.com/dojoengine/dojo/commit/0b8b0e5c50888233bfb47763845e0ff2bc1d3f22"
+        },
+        "date": 1718323471179,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16716626,
+            "range": "± 227818",
             "unit": "ns/iter"
           }
         ]
