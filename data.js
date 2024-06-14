@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718331188908,
+  "lastUpdate": 1718333138603,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9535,6 +9535,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17059903,
             "range": "± 147407",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "34b13caa785c1149558d28f1a9d9fbd700c4aa2d",
+          "message": "ci: try arm64 ubuntu runner",
+          "timestamp": "2024-06-13T20:32:48-06:00",
+          "tree_id": "58f80fb1598ee1ca17c9c039f958fb11f981f4c0",
+          "url": "https://github.com/dojoengine/dojo/commit/34b13caa785c1149558d28f1a9d9fbd700c4aa2d"
+        },
+        "date": 1718333137425,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16869862,
+            "range": "± 515541",
             "unit": "ns/iter"
           }
         ]
