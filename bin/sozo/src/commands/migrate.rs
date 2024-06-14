@@ -58,7 +58,12 @@ impl MigrateArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let dojo_metadata = dojo_metadata_from_workspace(&ws);
+
+        let dojo_metadata = if let Some(metadata) = dojo_metadata_from_workspace(&ws) {
+            metadata
+        } else {
+            return Err(anyhow!("No current package with dojo metadata found, migrate is not yet support for workspaces."));
+        };
 
         // This variant is tested before the match on `self.command` to avoid
         // having the need to spin up a Katana to generate the files.
