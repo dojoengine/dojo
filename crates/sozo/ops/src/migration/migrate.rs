@@ -15,13 +15,13 @@ use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    Declarable, Deployable, MigrationError, RegisterOutput, SozoAccount, TxnConfig, Upgradable,
+    Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
 };
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use futures::future;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
-use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
+use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
     BlockId, BlockTag, FunctionCall, InvokeTransactionResult, StarknetError,
 };
@@ -29,7 +29,6 @@ use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
 };
 use starknet::providers::{Provider, ProviderError};
-use starknet::signers::Signer;
 use starknet_crypto::FieldElement;
 use tokio::fs;
 
@@ -64,11 +63,8 @@ pub fn prepare_migration(
     Ok(migration)
 }
 
-pub async fn apply_diff<
-    A, // P, S
->(
+pub async fn apply_diff<A>(
     ws: &Workspace<'_>,
-    // account: &SingleOwnerAccount<P, S>,
     account: A,
     txn_config: TxnConfig,
     strategy: &mut MigrationStrategy,
@@ -76,9 +72,7 @@ pub async fn apply_diff<
 where
     A: ConnectedAccount + Sync + Send,
     <A as ConnectedAccount>::Provider: Send,
-    A::SignError: 'static, // where
-                           // P: Provider + Sync + Send + 'static,
-                           // S: Signer + Sync + Send + 'static,
+    A::SignError: 'static,
 {
     let ui = ws.config().ui();
 
@@ -122,22 +116,16 @@ where
     Ok(migration_output)
 }
 
-pub async fn execute_strategy<
-    A, // ,
-       // P, S
->(
+pub async fn execute_strategy<A>(
     ws: &Workspace<'_>,
     strategy: &MigrationStrategy,
-    // migrator: &SingleOwnerAccount<P, S>,
     migrator: A,
     txn_config: TxnConfig,
 ) -> Result<MigrationOutput>
 where
     A: ConnectedAccount + Sync + Send,
     A::Provider: Send,
-    A::SignError: 'static, // where
-                           //     P: Provider + Sync + Send + 'static,
-                           //     S: Signer + Sync + Send + 'static,
+    A::SignError: 'static,
 {
     let ui = ws.config().ui();
     let mut world_tx_hash: Option<FieldElement> = None;
@@ -305,11 +293,8 @@ fn create_resource_metadata(
 /// * `ws` - the workspace
 /// * `migrator` - the account used to migrate
 /// * `migration_output` - the output after having applied the migration plan.
-pub async fn upload_metadata<
-    A, // P, S
->(
+pub async fn upload_metadata<A>(
     ws: &Workspace<'_>,
-    // migrator: &SingleOwnerAccount<P, S>,
     migrator: A,
     migration_output: MigrationOutput,
     txn_config: TxnConfig,
@@ -317,8 +302,6 @@ pub async fn upload_metadata<
 where
     A: ConnectedAccount + Sync + Send,
     <A as ConnectedAccount>::Provider: Send,
-    // P: Provider + Sync + Send + 'static,
-    // S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
 
@@ -405,12 +388,9 @@ where
     Ok(())
 }
 
-async fn register_dojo_models<
-    A, // ,	P, S
->(
+async fn register_dojo_models<A>(
     models: &[ClassMigration],
     world_address: FieldElement,
-    // migrator: &SingleOwnerAccount<P, S>,
     migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -418,8 +398,6 @@ async fn register_dojo_models<
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
-    // P: Provider + Sync + Send + 'static,
-    // S: Signer + Sync + Send + 'static,
 {
     if models.is_empty() {
         return Ok(RegisterOutput {
@@ -485,12 +463,9 @@ where
     Ok(RegisterOutput { transaction_hash, declare_output, registered_model_names })
 }
 
-async fn register_dojo_contracts<
-    A, // P, S
->(
+async fn register_dojo_contracts<A>(
     contracts: &Vec<ContractMigration>,
     world_address: FieldElement,
-    // migrator: &SingleOwnerAccount<P, S>,
     migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -498,8 +473,6 @@ async fn register_dojo_contracts<
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
-    // P: Provider + Sync + Send + 'static,
-    // S: Signer + Sync + Send + 'static,
 {
     if contracts.is_empty() {
         return Ok(vec![]);
@@ -578,13 +551,10 @@ where
     Ok(deploy_output)
 }
 
-async fn deploy_contract<
-    A, // P, S
->(
+async fn deploy_contract<A>(
     contract: &ContractMigration,
     contract_id: &str,
     constructor_calldata: Vec<FieldElement>,
-    // migrator: &SingleOwnerAccount<P, S>,
     migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -592,8 +562,6 @@ async fn deploy_contract<
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
-    // P: Provider + Sync + Send + 'static,
-    // S: Signer + Sync + Send + 'static,
 {
     match contract
         .deploy(contract.diff.local_class_hash, constructor_calldata, migrator, txn_config)
@@ -625,14 +593,11 @@ where
     }
 }
 
-async fn upgrade_contract<
-    A, // P, S
->(
+async fn upgrade_contract<A>(
     contract: &ContractMigration,
     contract_id: &str,
     original_class_hash: FieldElement,
     original_base_class_hash: FieldElement,
-    // migrator: &SingleOwnerAccount<P, S>,
     migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -640,8 +605,6 @@ async fn upgrade_contract<
 where
     A: ConnectedAccount + Send + Sync,
     <A as ConnectedAccount>::Provider: Send,
-    // P: Provider + Sync + Send + 'static,
-    // S: Signer + Sync + Send + 'static,
 {
     match contract
         .upgrade_world(

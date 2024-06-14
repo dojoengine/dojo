@@ -5,9 +5,8 @@ use dojo_world::manifest::{
     OVERLAYS_DIR,
 };
 use scarb_ui::Ui;
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::providers::Provider;
-use starknet::signers::Signer;
+use starknet::accounts::ConnectedAccount;
+
 use starknet_crypto::FieldElement;
 
 use super::ui::MigrationUi;

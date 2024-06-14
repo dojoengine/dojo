@@ -12,10 +12,8 @@ use dojo_world::manifest::{
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
+use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::Provider;
-use starknet::signers::Signer;
 
 mod auto_auth;
 mod migrate;
