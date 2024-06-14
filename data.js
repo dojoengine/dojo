@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718329009007,
+  "lastUpdate": 1718331188908,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9505,6 +9505,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16571404,
             "range": "± 48388",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "485711337b982ed9cd4c36e7a516c340febec48d",
+          "message": "fix: ensure pkg-config is also installed (#2056)",
+          "timestamp": "2024-06-13T20:01:32-06:00",
+          "tree_id": "c4a46120a3feebb274f8c4ef429e6aacf70279ab",
+          "url": "https://github.com/dojoengine/dojo/commit/485711337b982ed9cd4c36e7a516c340febec48d"
+        },
+        "date": 1718331188012,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17059903,
+            "range": "± 147407",
             "unit": "ns/iter"
           }
         ]
