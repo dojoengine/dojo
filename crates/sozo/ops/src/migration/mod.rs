@@ -50,19 +50,24 @@ pub struct ContractMigrationOutput {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn migrate<P, S>(
+pub async fn migrate<
+    A, // P, S
+>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
     rpc_url: String,
-    account: SingleOwnerAccount<P, S>,
+    // account: SingleOwnerAccount<P, S>,
+    account: A,
     name: &str,
     dry_run: bool,
     txn_config: TxnConfig,
     skip_manifests: Option<Vec<String>>,
 ) -> Result<()>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    A::Provider: Send,
+    A::SignError: 'static, // P: Provider + Sync + Send + 'static,
+                           // S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
 

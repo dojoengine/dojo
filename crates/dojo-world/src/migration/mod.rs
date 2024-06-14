@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -25,6 +25,13 @@ pub mod class;
 pub mod contract;
 pub mod strategy;
 pub mod world;
+
+/// Combine all the account traits so we don't have to write them all out.
+pub trait SozoAccount: ConnectedAccount + Account
+where
+    Self::Provider: Send,
+{
+}
 
 pub type DeclareOutput = DeclareTransactionResult;
 
@@ -127,14 +134,20 @@ impl TxnConfig {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Declarable {
-    async fn declare<P, S>(
+    async fn declare<
+        A, // , P, S
+    >(
         &self,
-        account: &SingleOwnerAccount<P, S>,
+        // account: &SingleOwnerAccount<P, S>,
+        account: A,
         txn_config: &TxnConfig,
-    ) -> Result<DeclareOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
+    ) -> Result<DeclareOutput, MigrationError<<A as Account>::SignError>>
+    // ) -> Result<DeclareOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
-        P: Provider + Sync + Send,
-        S: Signer + Sync + Send,
+        A: ConnectedAccount + Send + Sync,
+        <A as ConnectedAccount>::Provider: Send,
+        // P: Provider + Sync + Send,
+        // S: Signer + Sync + Send,
     {
         let (flattened_class, casm_class_hash) =
             prepare_contract_declaration_params(self.artifact_path())?;
@@ -168,20 +181,26 @@ pub trait Declarable {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
-    async fn deploy_dojo_contract<P, S>(
+    async fn deploy_dojo_contract<
+        A, // , P, S
+    >(
         &self,
         world_address: FieldElement,
         class_hash: FieldElement,
         base_class_hash: FieldElement,
-        account: &SingleOwnerAccount<P, S>,
+        // account: &SingleOwnerAccount<P, S>,
+        account: A,
         txn_config: &TxnConfig,
         calldata: &[String],
-    ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
+        // ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
+    ) -> Result<DeployOutput, MigrationError<<A as Account>::SignError>>
     where
-        P: Provider + Sync + Send,
-        S: Signer + Sync + Send,
+        A: ConnectedAccount + Send + Sync,
+        <A as ConnectedAccount>::Provider: Send,
+        // P: Provider + Sync + Send,
+        // S: Signer + Sync + Send,
     {
-        let declare = match self.declare(account, txn_config).await {
+        let declare = match self.declare(&account, txn_config).await {
             Ok(res) => Some(res),
             Err(MigrationError::ClassAlreadyDeclared) => None,
             Err(e) => return Err(e),
@@ -247,18 +266,23 @@ pub trait Deployable: Declarable + Sync {
         })
     }
 
-    async fn deploy<P, S>(
+    async fn deploy<
+        A, // P, S
+    >(
         &self,
         class_hash: FieldElement,
         constructor_calldata: Vec<FieldElement>,
-        account: &SingleOwnerAccount<P, S>,
+        // account: &SingleOwnerAccount<P, S>,
+        account: A,
         txn_config: &TxnConfig,
-    ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
+    ) -> Result<DeployOutput, MigrationError<<A as Account>::SignError>>
     where
-        P: Provider + Sync + Send,
-        S: Signer + Sync + Send,
+        A: ConnectedAccount + Send + Sync,
+        <A as ConnectedAccount>::Provider: Send,
+        // P: Provider + Sync + Send,
+        // S: Signer + Sync + Send,
     {
-        let declare = match self.declare(account, txn_config).await {
+        let declare = match self.declare(&account, txn_config).await {
             Ok(res) => Some(res),
             Err(MigrationError::ClassAlreadyDeclared) => None,
             Err(e) => return Err(e),
@@ -322,19 +346,24 @@ pub trait Deployable: Declarable + Sync {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Upgradable: Deployable + Declarable + Sync {
-    async fn upgrade_world<P, S>(
+    async fn upgrade_world<
+        A, // P, S
+    >(
         &self,
         class_hash: FieldElement,
         original_class_hash: FieldElement,
         original_base_class_hash: FieldElement,
-        account: &SingleOwnerAccount<P, S>,
+        // account: &SingleOwnerAccount<P, S>,
+        account: A,
         txn_config: &TxnConfig,
-    ) -> Result<UpgradeOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
+    ) -> Result<UpgradeOutput, MigrationError<<A as Account>::SignError>>
     where
-        P: Provider + Sync + Send,
-        S: Signer + Sync + Send,
+        A: ConnectedAccount + Send + Sync,
+        <A as ConnectedAccount>::Provider: Send,
+        // P: Provider + Sync + Send,
+        // S: Signer + Sync + Send,
     {
-        let declare = match self.declare(account, txn_config).await {
+        let declare = match self.declare(&account, txn_config).await {
             Ok(res) => Some(res),
             Err(MigrationError::ClassAlreadyDeclared) => None,
             Err(e) => return Err(e),

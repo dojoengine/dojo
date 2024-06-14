@@ -15,7 +15,7 @@ use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
+    Declarable, Deployable, MigrationError, RegisterOutput, SozoAccount, TxnConfig, Upgradable,
 };
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use futures::future;
@@ -64,15 +64,21 @@ pub fn prepare_migration(
     Ok(migration)
 }
 
-pub async fn apply_diff<P, S>(
+pub async fn apply_diff<
+    A, // P, S
+>(
     ws: &Workspace<'_>,
-    account: &SingleOwnerAccount<P, S>,
+    // account: &SingleOwnerAccount<P, S>,
+    account: A,
     txn_config: TxnConfig,
     strategy: &mut MigrationStrategy,
 ) -> Result<MigrationOutput>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    <A as ConnectedAccount>::Provider: Send,
+    A::SignError: 'static, // where
+                           // P: Provider + Sync + Send + 'static,
+                           // S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
 
@@ -116,15 +122,22 @@ where
     Ok(migration_output)
 }
 
-pub async fn execute_strategy<P, S>(
+pub async fn execute_strategy<
+    A, // ,
+       // P, S
+>(
     ws: &Workspace<'_>,
     strategy: &MigrationStrategy,
-    migrator: &SingleOwnerAccount<P, S>,
+    // migrator: &SingleOwnerAccount<P, S>,
+    migrator: A,
     txn_config: TxnConfig,
 ) -> Result<MigrationOutput>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    A::Provider: Send,
+    A::SignError: 'static, // where
+                           //     P: Provider + Sync + Send + 'static,
+                           //     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
     let mut world_tx_hash: Option<FieldElement> = None;
@@ -134,7 +147,7 @@ where
         Some(base) => {
             ui.print_header("# Base Contract");
 
-            match base.declare(migrator, &txn_config).await {
+            match base.declare(&migrator, &txn_config).await {
                 Ok(res) => {
                     ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
                 }
@@ -165,7 +178,7 @@ where
                     "world",
                     world.diff.original_class_hash,
                     strategy.base.as_ref().unwrap().diff.original_class_hash,
-                    migrator,
+                    &migrator,
                     &ui,
                     &txn_config,
                 )
@@ -182,7 +195,7 @@ where
             } else {
                 let calldata = vec![strategy.base.as_ref().unwrap().diff.local_class_hash];
                 let deploy_result =
-                    deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
+                    deploy_contract(world, "world", calldata.clone(), &migrator, &ui, &txn_config)
                         .await
                         .map_err(|e| {
                             ui.verbose(format!("{e:?}"));
@@ -215,7 +228,7 @@ where
 
     // Once Torii supports indexing arrays, we should declare and register the
     // ResourceMetadata model.
-    match register_dojo_models(&strategy.models, world_address, migrator, &ui, &txn_config).await {
+    match register_dojo_models(&strategy.models, world_address, &migrator, &ui, &txn_config).await {
         Ok(output) => {
             migration_output.models = output.registered_model_names;
         }
@@ -292,15 +305,20 @@ fn create_resource_metadata(
 /// * `ws` - the workspace
 /// * `migrator` - the account used to migrate
 /// * `migration_output` - the output after having applied the migration plan.
-pub async fn upload_metadata<P, S>(
+pub async fn upload_metadata<
+    A, // P, S
+>(
     ws: &Workspace<'_>,
-    migrator: &SingleOwnerAccount<P, S>,
+    // migrator: &SingleOwnerAccount<P, S>,
+    migrator: A,
     migration_output: MigrationOutput,
     txn_config: TxnConfig,
 ) -> Result<()>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    <A as ConnectedAccount>::Provider: Send,
+    // P: Provider + Sync + Send + 'static,
+    // S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
 
@@ -364,7 +382,7 @@ where
     ui.print("> All IPFS artifacts have been successfully uploaded.".to_string());
 
     // update the resource registry
-    let world = WorldContract::new(migration_output.world_address, migrator);
+    let world = WorldContract::new(migration_output.world_address, &migrator);
 
     let calls = resources.iter().map(|r| world.set_metadata_getcall(r)).collect::<Vec<_>>();
 
@@ -387,16 +405,21 @@ where
     Ok(())
 }
 
-async fn register_dojo_models<P, S>(
+async fn register_dojo_models<
+    A, // ,	P, S
+>(
     models: &[ClassMigration],
     world_address: FieldElement,
-    migrator: &SingleOwnerAccount<P, S>,
+    // migrator: &SingleOwnerAccount<P, S>,
+    migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
 ) -> Result<RegisterOutput>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+    // P: Provider + Sync + Send + 'static,
+    // S: Signer + Sync + Send + 'static,
 {
     if models.is_empty() {
         return Ok(RegisterOutput {
@@ -414,7 +437,7 @@ where
     for c in models.iter() {
         ui.print(italic_message(&c.diff.name).to_string());
 
-        let res = c.declare(migrator, txn_config).await;
+        let res = c.declare(&migrator, txn_config).await;
         match res {
             Ok(output) => {
                 ui.print_hidden_sub(format!("Declare transaction: {:#x}", output.transaction_hash));
@@ -439,7 +462,7 @@ where
         ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));
     }
 
-    let world = WorldContract::new(world_address, migrator);
+    let world = WorldContract::new(world_address, &migrator);
 
     let calls = models
         .iter()
@@ -462,16 +485,21 @@ where
     Ok(RegisterOutput { transaction_hash, declare_output, registered_model_names })
 }
 
-async fn register_dojo_contracts<P, S>(
+async fn register_dojo_contracts<
+    A, // P, S
+>(
     contracts: &Vec<ContractMigration>,
     world_address: FieldElement,
-    migrator: &SingleOwnerAccount<P, S>,
+    // migrator: &SingleOwnerAccount<P, S>,
+    migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
 ) -> Result<Vec<Option<ContractMigrationOutput>>>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+    // P: Provider + Sync + Send + 'static,
+    // S: Signer + Sync + Send + 'static,
 {
     if contracts.is_empty() {
         return Ok(vec![]);
@@ -489,7 +517,7 @@ where
                 world_address,
                 contract.diff.local_class_hash,
                 contract.diff.base_class_hash,
-                migrator,
+                &migrator,
                 txn_config,
                 &contract.diff.init_calldata,
             )
@@ -550,17 +578,22 @@ where
     Ok(deploy_output)
 }
 
-async fn deploy_contract<P, S>(
+async fn deploy_contract<
+    A, // P, S
+>(
     contract: &ContractMigration,
     contract_id: &str,
     constructor_calldata: Vec<FieldElement>,
-    migrator: &SingleOwnerAccount<P, S>,
+    // migrator: &SingleOwnerAccount<P, S>,
+    migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
 ) -> Result<ContractDeploymentOutput>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+    // P: Provider + Sync + Send + 'static,
+    // S: Signer + Sync + Send + 'static,
 {
     match contract
         .deploy(contract.diff.local_class_hash, constructor_calldata, migrator, txn_config)
@@ -592,18 +625,23 @@ where
     }
 }
 
-async fn upgrade_contract<P, S>(
+async fn upgrade_contract<
+    A, // P, S
+>(
     contract: &ContractMigration,
     contract_id: &str,
     original_class_hash: FieldElement,
     original_base_class_hash: FieldElement,
-    migrator: &SingleOwnerAccount<P, S>,
+    // migrator: &SingleOwnerAccount<P, S>,
+    migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
 ) -> Result<ContractUpgradeOutput>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+    // P: Provider + Sync + Send + 'static,
+    // S: Signer + Sync + Send + 'static,
 {
     match contract
         .upgrade_world(
@@ -649,12 +687,12 @@ pub fn handle_artifact_error(ui: &Ui, artifact_path: &Path, error: anyhow::Error
 }
 
 pub async fn get_contract_operation_name<P>(
-    provider: &P,
+    provider: P,
     contract: &ContractMigration,
     world_address: Option<FieldElement>,
 ) -> String
 where
-    P: Provider + Sync + Send + 'static,
+    P: Provider + Sync + Send,
 {
     if let Some(world_address) = world_address {
         if let Ok(base_class_hash) = provider
@@ -691,11 +729,11 @@ where
 
 pub async fn print_strategy<P>(
     ui: &Ui,
-    provider: &P,
+    provider: P,
     strategy: &MigrationStrategy,
     world_address: FieldElement,
 ) where
-    P: Provider + Sync + Send + 'static,
+    P: Provider + Sync + Send,
 {
     ui.print("\n📋 Migration Strategy\n");
 
@@ -730,7 +768,7 @@ pub async fn print_strategy<P>(
     if !&strategy.contracts.is_empty() {
         ui.print_header(format!("# Contracts ({})", &strategy.contracts.len()));
         for c in &strategy.contracts {
-            let op_name = get_contract_operation_name(provider, c, strategy.world_address).await;
+            let op_name = get_contract_operation_name(&provider, c, strategy.world_address).await;
 
             ui.print(op_name);
             ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));

@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use futures::FutureExt;
 use starknet::accounts::{
-    AccountDeployment, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
-    Declaration, Execution,
+    Account, AccountDeployment, AccountError, AccountFactory, AccountFactoryError,
+    ConnectedAccount, Declaration, Execution,
 };
 use starknet::core::types::{
     DeclareTransactionResult, DeployAccountTransactionResult, ExecutionResult, FieldElement,
@@ -349,9 +349,10 @@ pub trait TransactionExt<T> {
     async fn send_with_cfg(self, txn_config: &TxnConfig) -> Result<Self::R, Self::U>;
 }
 
-impl<T> TransactionExt<T> for Execution<'_, T>
+impl<'a, T> TransactionExt<T> for Execution<'a, T>
 where
     T: ConnectedAccount + Sync,
+    <T as Account>::SignError: 'a,
 {
     type R = InvokeTransactionResult;
     type U = AccountError<T::SignError>;
