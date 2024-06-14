@@ -936,7 +936,7 @@ impl Sql {
                 create_table_query.push_str(&format!(", idx_{i}", i = i));
             }
             create_table_query.push_str(&format!(
-                ") REFERENCES {parent_table_id} (id",
+                ") REFERENCES [{parent_table_id}] (id",
                 parent_table_id = parent_table_id
             ));
             for i in 0..parent_array_idx {
