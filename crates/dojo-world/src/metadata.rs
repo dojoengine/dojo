@@ -94,7 +94,12 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
     let sources_dir = target_dir.join(profile.as_str()).join(SOURCES_DIR);
     let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
 
-    let project_metadata = ws.current_package().unwrap().manifest.metadata.dojo();
+    let project_metadata = if let Some(current_package) = ws.root_package() {
+        current_package.manifest.metadata.dojo()
+    } else {
+        ProjectMetadata::default()
+    };
+
     let mut dojo_metadata = DojoMetadata {
         env: project_metadata.env.clone(),
         skip_migration: project_metadata.skip_migration.clone(),
