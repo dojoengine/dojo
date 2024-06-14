@@ -10,10 +10,7 @@ use super::ui::MigrationUi;
 use super::MigrationOutput;
 use crate::auth::{grant_writer, ModelContract};
 
-pub async fn auto_authorize<
-    // 'a,
-    A,
->(
+pub async fn auto_authorize<A>(
     ws: &Workspace<'_>,
     world: &WorldContract<A>,
     txn_config: &TxnConfig,
