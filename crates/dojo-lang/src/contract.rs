@@ -4,6 +4,7 @@ use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
@@ -314,7 +315,7 @@ impl DojoContract {
         param_list: ast::ParamList,
         fn_diagnostic_item: ids::SyntaxStablePtrId,
     ) -> (String, bool) {
-        self_param::check_parameter(db, &param_list, fn_diagnostic_item, &mut self.diagnostics);
+        let is_self_used = self_param::check_parameter(db, &param_list);
 
         let world_injection = world_param::parse_world_injection(
             db,
@@ -322,6 +323,14 @@ impl DojoContract {
             fn_diagnostic_item,
             &mut self.diagnostics,
         );
+
+        if is_self_used && world_injection != WorldParamInjectionKind::None {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: fn_diagnostic_item,
+                message: "You cannot use `self` and `world` parameters together.".to_string(),
+                severity: Severity::Error,
+            });
+        }
 
         let mut params = param_list
             .elements(db)
@@ -340,7 +349,12 @@ impl DojoContract {
             .collect::<Vec<_>>();
 
         match world_injection {
-            WorldParamInjectionKind::None | WorldParamInjectionKind::View => {
+            WorldParamInjectionKind::None => {
+                if !is_self_used {
+                    params.insert(0, "self: @ContractState".to_string());
+                }
+            }
+            WorldParamInjectionKind::View => {
                 params.insert(0, "self: @ContractState".to_string());
             }
             WorldParamInjectionKind::External => {
