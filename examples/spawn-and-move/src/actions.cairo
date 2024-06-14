@@ -107,9 +107,7 @@ mod actions {
                 world,
                 (
                     Moves { player, remaining: 99, last_direction: Direction::None },
-                    Position {
-                        player, vec: Vec2 { x: 10, y: 10 }
-                    },
+                    Position { player, vec: Vec2 { x: 10, y: 10 } },
                 )
             );
         }
