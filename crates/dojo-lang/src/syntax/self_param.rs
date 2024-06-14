@@ -1,5 +1,5 @@
-use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::ast;
+use cairo_lang_syntax::node::db::SyntaxGroup;
 
 use crate::syntax::utils as syntax_utils;
 
@@ -18,10 +18,7 @@ pub const SELF_PARAM_NAME: &str = "self";
 /// # Returns
 ///
 /// - `true` if the function first parameter is `self`.
-pub fn check_parameter(
-    db: &dyn SyntaxGroup,
-    param_list: &ast::ParamList,
-) -> bool {
+pub fn check_parameter(db: &dyn SyntaxGroup, param_list: &ast::ParamList) -> bool {
     if param_list.elements(db).is_empty() {
         return false;
     }
