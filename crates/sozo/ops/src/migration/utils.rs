@@ -6,7 +6,6 @@ use dojo_world::manifest::{
 };
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
-
 use starknet_crypto::FieldElement;
 
 use super::ui::MigrationUi;
@@ -14,11 +13,8 @@ use super::ui::MigrationUi;
 /// Loads:
 ///     - `BaseManifest` from filesystem
 ///     - `DeployedManifest` from onchain dataa if `world_address` is `Some`
-pub(super) async fn load_world_manifests<
-    A, // P, S
->(
+pub(super) async fn load_world_manifests<A>(
     profile_dir: &Utf8PathBuf,
-    // account: &SingleOwnerAccount<P, S>,
     account: A,
     world_address: Option<FieldElement>,
     ui: &Ui,
@@ -27,8 +23,6 @@ pub(super) async fn load_world_manifests<
 where
     A: ConnectedAccount + Sync + Send,
     <A as ConnectedAccount>::Provider: Send,
-    // P: Provider + Sync + Send,
-    // S: Signer + Sync + Send,
 {
     ui.print_step(1, "🌎", "Building World state...");
 
