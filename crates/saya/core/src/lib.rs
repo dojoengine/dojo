@@ -8,7 +8,6 @@ use anyhow::Context;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
-use error::Error;
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
@@ -20,6 +19,7 @@ pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
+use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::poseidon_hash_many;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -48,8 +48,8 @@ pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
     #[serde(deserialize_with = "url_deserializer")]
-    pub url: Url,
-    pub private_key: ProverAccessKey,
+    pub prover_url: Url,
+    pub prover_key: ProverAccessKey,
     pub store_proofs: bool,
     pub start_block: u64,
     pub batch_size: usize,
@@ -63,6 +63,7 @@ pub struct SayaConfig {
 pub struct StarknetAccountData {
     #[serde(deserialize_with = "url_deserializer")]
     pub starknet_url: Url,
+    #[serde(deserialize_with = "felt_string_deserializer")]
     pub chain_id: FieldElement,
     pub signer_address: FieldElement,
     pub signer_key: FieldElement,
@@ -75,16 +76,15 @@ where
     let s = String::deserialize(deserializer)?;
     Url::parse(&s).map_err(serde::de::Error::custom)
 }
-pub fn parse_chain_id(chain_id: &str) -> Result<[u8; 32], Error> {
-    let chain_id = chain_id.as_bytes();
-    if chain_id.len() >= 32 {
-        Err(Error::InvalidChainId)
-    } else {
-        let mut actual_seed = [0u8; 32];
-        chain_id.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
-        Ok(actual_seed)
-    }
+
+pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<FieldElement, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    cairo_short_string_to_felt(&s).map_err(serde::de::Error::custom)
 }
+
 /// Saya.
 pub struct Saya {
     /// The main Saya configuration.
@@ -141,8 +141,8 @@ impl Saya {
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
         let prover_identifier = ProverIdentifier::Http(Arc::new(HttpProverParams {
-            prover_url: self.config.url.clone(),
-            prover_key: self.config.private_key.clone(),
+            prover_url: self.config.prover_url.clone(),
+            prover_key: self.config.prover_key.clone(),
         }));
 
         // The structure responsible for proving.

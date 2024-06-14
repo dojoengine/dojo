@@ -11823,6 +11823,7 @@ dependencies = [
  "katana-rpc-api",
  "saya-core",
  "serde_json",
+ "starknet",
  "starknet-crypto 0.6.2",
  "tokio",
  "tracing",

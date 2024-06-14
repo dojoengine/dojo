@@ -4,11 +4,11 @@ use std::io::BufReader;
 use std::path::PathBuf;
 
 use clap::Parser;
-use data_availability::StarknetAccountCliInput;
-use katana_primitives::FieldElement;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
-use saya_core::{parse_chain_id, ProverAccessKey, SayaConfig, StarknetAccountData};
+use saya_core::{ProverAccessKey, SayaConfig, StarknetAccountData};
+use starknet::core::utils::cairo_short_string_to_felt;
+use starknet_account::StarknetAccountOptions;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
@@ -18,6 +18,7 @@ use crate::args::proof::ProofOptions;
 
 mod data_availability;
 mod proof;
+mod starknet_account;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -29,18 +30,6 @@ pub struct SayaArgs {
     #[arg(help = "The Katana RPC URL to fetch data from.")]
     #[arg(default_value = "http://localhost:5050")]
     pub rpc_url: Url,
-
-    /// Specify the Prover URL.
-    #[arg(long)]
-    #[arg(value_name = "PROVER URL")]
-    #[arg(help = "The Prover URL for remote proving.")]
-    pub url: Url,
-
-    /// Specify the Prover Key.
-    #[arg(long)]
-    #[arg(value_name = "PROVER KEY")]
-    #[arg(help = "An authorized prover key for remote proving.")]
-    pub private_key: String,
 
     #[arg(long)]
     #[arg(value_name = "STORE PROOFS")]
@@ -78,7 +67,7 @@ pub struct SayaArgs {
 
     #[command(flatten)]
     #[command(next_help_heading = "Starknet account configuration")]
-    pub starknet_account: StarknetAccountCliInput,
+    pub starknet_account: StarknetAccountOptions,
 }
 
 impl SayaArgs {
@@ -139,37 +128,22 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 None => None,
             };
 
-            let prover_key = ProverAccessKey::from_hex_string(&args.private_key).map_err(|e| {
-                Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
-            })?;
-            let chain_id_bytes = parse_chain_id(&args.starknet_account.chain_id);
             let starknet_account = StarknetAccountData {
                 starknet_url: args.starknet_account.starknet_url,
-                chain_id: FieldElement::from_bytes_be(&chain_id_bytes?).map_err(|e| {
-                    Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
-                })?,
-                signer_address: FieldElement::from_hex_be(&args.starknet_account.signer_address)
-                    .map_err(|e| {
-                        Box::new(std::io::Error::new(
-                            std::io::ErrorKind::InvalidInput,
-                            e.to_string(),
-                        ))
-                    })?,
-
-                signer_key: FieldElement::from_hex_be(&args.starknet_account.signer_key).map_err(
-                    |e| {
-                        Box::new(std::io::Error::new(
-                            std::io::ErrorKind::InvalidInput,
-                            e.to_string(),
-                        ))
-                    },
-                )?,
+                chain_id: cairo_short_string_to_felt(&args.starknet_account.chain_id)?,
+                signer_address: args.starknet_account.signer_address,
+                signer_key: args.starknet_account.signer_key,
             };
+
+            let prover_key =
+                ProverAccessKey::from_hex_string(&args.proof.private_key).map_err(|e| {
+                    Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
+                })?;
 
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
-                url: args.url,
-                private_key: prover_key,
+                prover_url: args.proof.prover_url,
+                prover_key,
                 store_proofs: args.store_proofs,
                 start_block: args.start_block,
                 batch_size: args.batch_size,
@@ -184,6 +158,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
 
 #[cfg(test)]
 mod tests {
+    use katana_primitives::FieldElement;
+
     use super::*;
     use crate::args::data_availability::CelestiaOptions;
 
@@ -198,9 +174,6 @@ mod tests {
         let args = SayaArgs {
             config_file: Some(config_file_path.clone()),
             rpc_url: Url::parse("http://localhost:5050").unwrap(),
-            url: Url::parse("http://localhost:5050").unwrap(),
-            private_key: "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
-                .into(),
             store_proofs: true,
             json_log: false,
             start_block: 0,
@@ -216,24 +189,24 @@ mod tests {
             proof: ProofOptions {
                 world_address: Default::default(),
                 fact_registry_address: Default::default(),
+                prover_url: Url::parse("http://localhost:5050").unwrap(),
+                private_key: Default::default(),
             },
-            starknet_account: StarknetAccountCliInput {
+            starknet_account: StarknetAccountOptions {
                 starknet_url: Url::parse("http://localhost:5030").unwrap(),
-                chain_id: "0x534e5f5345504f4c4941".to_string(),
-                signer_address:
-                    "0xdcad8876b3f01514366027a1beb6d3d2b9a62a2523cf709dadae544e5671f177".to_string(),
-                signer_key: "0x9023aa26e3bbb5632f70823b812cf483543684439bb41e18c21f89b272daa159"
-                    .to_string(),
+                chain_id: "SN_SEPOLIA".to_string(),
+                signer_address: Default::default(),
+                signer_key: Default::default(),
             },
         };
 
         let config: SayaConfig = args.try_into().unwrap();
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
-        assert_eq!(config.url.as_str(), "http://localhost:1234/");
+        assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
         assert_eq!(config.batch_size, 4);
         assert_eq!(
-            config.private_key.signing_key_as_hex_string(),
+            config.prover_key.signing_key_as_hex_string(),
             "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
         );
         assert!(!config.store_proofs);
