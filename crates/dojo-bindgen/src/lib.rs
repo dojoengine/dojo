@@ -274,7 +274,10 @@ mod tests {
         );
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-        let dojo_metadata = dojo_metadata_from_workspace(&ws);
+        let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
+            "No current package with dojo metadata found, migrate is not yet support for \
+             workspaces.",
+        );
 
         let data =
             gather_dojo_data(&manifest_path, "dojo_example", "dev", dojo_metadata.skip_migration)

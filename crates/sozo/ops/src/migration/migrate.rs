@@ -308,7 +308,14 @@ where
     ui.print_step(7, "🌐", "Uploading metadata...");
     ui.print(" ");
 
-    let dojo_metadata = dojo_metadata_from_workspace(ws);
+    let dojo_metadata = if let Some(metadata) = dojo_metadata_from_workspace(ws) {
+        metadata
+    } else {
+        return Err(anyhow!(
+            "No current package with dojo metadata found, migrate is not yet support for \
+             workspaces."
+        ));
+    };
     let mut ipfs = vec![];
     let mut resources = vec![];
 

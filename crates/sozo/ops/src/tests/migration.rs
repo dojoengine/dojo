@@ -164,7 +164,9 @@ async fn migrate_with_metadata() {
         .unwrap_or_else(|_| panic!("Unable to initialize the IPFS Client"))
         .with_credentials(IPFS_USERNAME, IPFS_PASSWORD);
 
-    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+    let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
+        "No current package with dojo metadata found, migrate is not yet support for workspaces.",
+    );
 
     // check world metadata
     let resource = world_reader.metadata(&FieldElement::ZERO).call().await.unwrap();

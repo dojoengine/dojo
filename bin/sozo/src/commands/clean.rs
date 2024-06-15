@@ -85,7 +85,10 @@ mod tests {
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
 
-        let dojo_metadata = dojo_metadata_from_workspace(&ws);
+        let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
+            "No current package with dojo metadata found, migrate is not yet support for \
+             workspaces.",
+        );
 
         // Plan the migration to generate some manifests other than base.
         config.tokio_handle().block_on(async {

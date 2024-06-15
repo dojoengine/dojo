@@ -26,7 +26,9 @@ async fn test_model() {
     let target_dir = manifest_dir.join("target").join("dev");
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+    let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
+        "No current package with dojo metadata found, migrate is not yet support for workspaces.",
+    );
 
     let world_address =
         deploy_world(&runner, &manifest_dir.into(), &target_dir, dojo_metadata.skip_migration)

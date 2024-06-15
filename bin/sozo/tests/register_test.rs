@@ -21,7 +21,9 @@ async fn reregister_models() {
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+    let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
+        "No current package with dojo metadata found, migrate is not yet support for workspaces.",
+    );
 
     let target_path =
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
