@@ -29,7 +29,8 @@ async fn reregister_models() {
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
 
     let migration =
-        prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
+        prepare_migration(source_project_dir.clone(), target_path, dojo_metadata.skip_migration)
+            .unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
@@ -57,6 +58,8 @@ async fn reregister_models() {
         rpc_url,
         "--private-key",
         private_key,
+        "--manifest-path",
+        config.manifest_path().as_ref(),
     ];
 
     let assert = get_snapbox().args(args_vec.iter()).assert().success();
