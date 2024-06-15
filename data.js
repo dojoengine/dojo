@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718403216428,
+  "lastUpdate": 1718482016823,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9625,6 +9625,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16785276,
             "range": "± 140259",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "25e857365c8f61c21bb714e4c9e9e44e433658e5",
+          "message": "fix(torii): fix table name using reserved sql keywords (#2062)",
+          "timestamp": "2024-06-15T13:55:32-06:00",
+          "tree_id": "0f17823d323e0a1eb15cd2f44e634cd2448bff5c",
+          "url": "https://github.com/dojoengine/dojo/commit/25e857365c8f61c21bb714e4c9e9e44e433658e5"
+        },
+        "date": 1718482016220,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17018207,
+            "range": "± 229491",
             "unit": "ns/iter"
           }
         ]
