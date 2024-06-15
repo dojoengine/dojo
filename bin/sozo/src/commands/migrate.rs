@@ -90,7 +90,7 @@ impl MigrateArgs {
         let MigrateArgs { name, world, starknet, account, .. } = self;
 
         let name = name.unwrap_or_else(|| {
-            ws.root_package().expect("Root package to be present").id.name.to_string()
+            ws.current_package().expect("Root package to be present").id.name.to_string()
         });
 
         let (world_address, account, rpc_url) = config.tokio_handle().block_on(async {

@@ -76,7 +76,7 @@ impl DevArgs {
             RecursiveMode::Recursive,
         )?;
 
-        let name = self.name.unwrap_or_else(|| ws.root_package().unwrap().id.name.to_string());
+        let name = self.name.unwrap_or_else(|| ws.current_package().unwrap().id.name.to_string());
 
         let mut previous_manifest: Option<DeploymentManifest> = Option::None;
         let result = build(&mut context);
