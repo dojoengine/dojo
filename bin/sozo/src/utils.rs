@@ -32,8 +32,7 @@ pub fn load_metadata_from_config(config: &Config) -> Result<Option<Environment>,
             metadata
         } else {
             return Err(anyhow!(
-                "No current package with dojo metadata found, migrate is not yet support for \
-                 workspaces."
+                "No current package with dojo metadata found, workspaces are not suppored yet."
             ));
         };
 

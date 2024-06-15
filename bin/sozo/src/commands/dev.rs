@@ -54,7 +54,7 @@ impl DevArgs {
             metadata
         } else {
             return Err(anyhow!(
-                "No current package with dojo metadata found, migrate is not yet support for \
+                "No current package with dojo metadata found, dev is not yet support for \
                  workspaces."
             ));
         };

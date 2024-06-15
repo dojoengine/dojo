@@ -121,9 +121,8 @@ async fn get_full_dojo_metadata_from_workspace() {
     let sources_dir = target_dir.join(profile.as_str()).join(SOURCES_DIR);
     let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
 
-    let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
-        "No current package with dojo metadata found, migrate is not yet support for workspaces.",
-    );
+    let dojo_metadata =
+        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
     // env
     assert!(dojo_metadata.env.is_some());

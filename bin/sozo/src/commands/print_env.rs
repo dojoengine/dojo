@@ -30,7 +30,7 @@ impl PrintEnvArgs {
             metadata
         } else {
             return Err(anyhow!(
-                "No current package with dojo metadata found, migrate is not yet support for \
+                "No current package with dojo metadata found, print-env is not yet support for \
                  workspaces."
             ));
         };

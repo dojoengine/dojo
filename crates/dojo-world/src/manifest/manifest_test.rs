@@ -384,9 +384,8 @@ fn fetch_remote_manifest() {
         compiler::copy_build_project_temp(source_project, dojo_core_path, true);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
-        "No current package with dojo metadata found, migrate is not yet support for workspaces.",
-    );
+    let dojo_metadata =
+        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
     let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
 
