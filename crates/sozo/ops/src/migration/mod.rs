@@ -12,10 +12,8 @@ use dojo_world::manifest::{
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
+use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::Provider;
-use starknet::signers::Signer;
 
 mod auto_auth;
 mod migrate;
@@ -50,19 +48,20 @@ pub struct ContractMigrationOutput {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn migrate<P, S>(
+pub async fn migrate<A>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
     rpc_url: String,
-    account: SingleOwnerAccount<P, S>,
+    account: A,
     name: &str,
     dry_run: bool,
     txn_config: TxnConfig,
     skip_manifests: Option<Vec<String>>,
 ) -> Result<()>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    A::Provider: Send,
+    A::SignError: 'static,
 {
     let ui = ws.config().ui();
 

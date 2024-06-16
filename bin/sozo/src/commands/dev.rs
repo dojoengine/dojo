@@ -19,10 +19,8 @@ use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttr
 use scarb::core::{Config, Workspace};
 use scarb::ops::{FeaturesOpts, FeaturesSelector};
 use sozo_ops::migration;
-use starknet::accounts::SingleOwnerAccount;
+use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::Provider;
-use starknet::signers::Signer;
 use tracing::{error, trace};
 
 use super::migrate::setup_env;
@@ -225,17 +223,18 @@ fn build(context: &mut DevContext<'_>) -> Result<()> {
 }
 
 // TODO: fix me
-async fn migrate<P, S>(
+async fn migrate<A>(
     mut world_address: Option<FieldElement>,
-    account: &SingleOwnerAccount<P, S>,
+    account: A,
     name: &str,
     ws: &Workspace<'_>,
     previous_manifest: Option<DeploymentManifest>,
     skip_migration: Option<Vec<String>>,
 ) -> Result<(DeploymentManifest, Option<FieldElement>)>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    A::Provider: Send,
+    A::SignError: 'static,
 {
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());

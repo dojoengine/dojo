@@ -10,15 +10,16 @@ use super::ui::MigrationUi;
 use super::MigrationOutput;
 use crate::auth::{grant_writer, ModelContract};
 
-pub async fn auto_authorize<'a, A>(
+pub async fn auto_authorize<A>(
     ws: &Workspace<'_>,
-    world: &'a WorldContract<A>,
+    world: &WorldContract<A>,
     txn_config: &TxnConfig,
     local_manifest: &BaseManifest,
     migration_output: &MigrationOutput,
 ) -> Result<()>
 where
-    A: ConnectedAccount + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    A::SignError: 'static,
 {
     let ui = ws.config().ui();
 
