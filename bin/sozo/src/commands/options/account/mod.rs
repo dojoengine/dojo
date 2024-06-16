@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
@@ -11,6 +11,8 @@ use tracing::trace;
 
 use super::signer::SignerOptions;
 use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
+
+mod r#type;
 
 // INVARIANT:
 // - For commandline: we can either specify `private_key` or `keystore_path` along with
@@ -23,6 +25,13 @@ pub struct AccountOptions {
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
     #[arg(global = true)]
     pub account_address: Option<FieldElement>,
+
+    #[arg(global = true)]
+    #[arg(long = "slot.controller")]
+    #[arg(help_heading = "Controller options")]
+    #[arg(help = "Use Slot's Controller account")]
+    #[cfg(feature = "controller")]
+    pub controller: bool,
 
     #[command(flatten)]
     #[command(next_help_heading = "Signer options")]
@@ -41,18 +50,18 @@ impl AccountOptions {
         env_metadata: Option<&Environment>,
     ) -> Result<SingleOwnerAccount<P, LocalWallet>>
     where
-        P: Provider + Send + Sync,
+        P: Provider,
+        P: Send + Sync,
     {
-        trace!(account_options=?self, "Creating account.");
         let account_address = self.account_address(env_metadata)?;
         trace!(?account_address, "Account address determined.");
 
         let signer = self.signer.signer(env_metadata, false)?;
         trace!(?signer, "Signer obtained.");
 
-        let chain_id =
-            provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
+        let chain_id = provider.chain_id().await?;
         trace!(?chain_id);
+
         let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
         trace!(?encoding, "Creating SingleOwnerAccount.");
         let mut account =
@@ -61,7 +70,6 @@ impl AccountOptions {
         // The default is `Latest` in starknet-rs, which does not reflect
         // the nonce changes in the pending block.
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
         Ok(account)
     }
 
