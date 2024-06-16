@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718482016823,
+  "lastUpdate": 1718533831521,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9655,6 +9655,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17018207,
             "range": "± 229491",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3c661bd55afe132a8e7e6806869f7fd7558850d9",
+          "message": "refactor(sozo): dont use explicit account type (#2061)\n\n* use account with trait\r\n\r\n* remove comments\r\n\r\n* fmt\r\n\r\n* remove comments\r\n\r\n* update dev as well\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-06-16T15:48:59+05:30",
+          "tree_id": "f3abd2f7b61a318f3d44e9a5b08e9ae34132f37b",
+          "url": "https://github.com/dojoengine/dojo/commit/3c661bd55afe132a8e7e6806869f7fd7558850d9"
+        },
+        "date": 1718533830353,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17298801,
+            "range": "± 401611",
             "unit": "ns/iter"
           }
         ]
