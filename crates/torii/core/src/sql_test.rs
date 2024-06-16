@@ -63,7 +63,8 @@ async fn test_load_from_remote() {
 
     let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+    let dojo_metadata =
+        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
     let manifest_path = config.manifest_path();
     let base_dir = manifest_path.parent().unwrap();
