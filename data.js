@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718533831521,
+  "lastUpdate": 1718533853540,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9685,6 +9685,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17298801,
             "range": "± 401611",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "88848efd9a3ecd7b85413d52cfe354c070ccc12a",
+          "message": "fix(sozo): allow sozo build in workspace and proper error for other cases (#2059)\n\n* fix: use default value instead of unwrap\r\n\r\n* wip: unlocking build in workspace + prepare workspace support\r\n\r\n* update implementations\r\n\r\n* fix tests\r\n\r\n* use current_package instead of root_package\r\n\r\n* update comments\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-06-16T15:49:22+05:30",
+          "tree_id": "b5693a5af5d413d57843fbb9a045233da021bc90",
+          "url": "https://github.com/dojoengine/dojo/commit/88848efd9a3ecd7b85413d52cfe354c070ccc12a"
+        },
+        "date": 1718533852342,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16603047,
+            "range": "± 201946",
             "unit": "ns/iter"
           }
         ]
