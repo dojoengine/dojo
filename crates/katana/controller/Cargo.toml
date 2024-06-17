@@ -9,7 +9,7 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-account-sdk = { git = "https://github.com/cartridge-gg/controller", rev = "53a3457" }
+account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "d8b6f76" }
 alloy-primitives.workspace = true
 anyhow.workspace = true
 base64 = "0.22.1"

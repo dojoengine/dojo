@@ -13,18 +13,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "account-sdk"
+name = "account_sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/controller?rev=53a3457#53a3457402b319319f93f833f1dcf151aef6a1cb"
+source = "git+https://github.com/cartridge-gg/controller?rev=d8b6f76#d8b6f767b558725debdeb667222876a180e7ccb9"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.21.7",
- "cainome 0.2.3 (git+https://github.com/piniom/cainome?rev=beb1f1f5)",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f)",
  "cairo-lang-starknet 2.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "coset",
  "ecdsa",
  "futures",
+ "indexmap 2.2.6",
  "js-sys",
  "lazy_static",
  "p256",
@@ -1809,13 +1810,13 @@ checksum = "ade8366b8bd5ba243f0a58f036cc0ca8a2f069cff1a2351ef1cac6b083e16fc0"
 [[package]]
 name = "cainome"
 version = "0.2.3"
-source = "git+https://github.com/piniom/cainome?rev=beb1f1f5#beb1f1f57e0296b390d8afe549bb5870f41b02e9"
+source = "git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f#a84dfe0f54116116f5a3c79642cd4111b1d4a5ac"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/piniom/cainome?rev=beb1f1f5)",
- "cainome-parser 0.1.0 (git+https://github.com/piniom/cainome?rev=beb1f1f5)",
- "cainome-rs 0.1.0 (git+https://github.com/piniom/cainome?rev=beb1f1f5)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f)",
  "camino",
  "clap",
  "clap_complete",
@@ -1856,8 +1857,9 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/piniom/cainome?rev=beb1f1f5#beb1f1f57e0296b390d8afe549bb5870f41b02e9"
+source = "git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f#a84dfe0f54116116f5a3c79642cd4111b1d4a5ac"
 dependencies = [
+ "serde",
  "starknet",
  "thiserror",
 ]
@@ -1875,7 +1877,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/piniom/cainome?rev=beb1f1f5#beb1f1f57e0296b390d8afe549bb5870f41b02e9"
+source = "git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f#a84dfe0f54116116f5a3c79642cd4111b1d4a5ac"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
@@ -1901,11 +1903,11 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/piniom/cainome?rev=beb1f1f5#beb1f1f57e0296b390d8afe549bb5870f41b02e9"
+source = "git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f#a84dfe0f54116116f5a3c79642cd4111b1d4a5ac"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/piniom/cainome?rev=beb1f1f5)",
- "cainome-parser 0.1.0 (git+https://github.com/piniom/cainome?rev=beb1f1f5)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=a84dfe0f)",
  "camino",
  "prettyplease 0.2.20",
  "proc-macro2",
@@ -8353,7 +8355,7 @@ dependencies = [
 name = "katana-slot-controller"
 version = "0.7.0"
 dependencies = [
- "account-sdk",
+ "account_sdk",
  "alloy-primitives",
  "anyhow",
  "base64 0.22.1",
@@ -15321,7 +15323,7 @@ dependencies = [
 [[package]]
 name = "wasm-webauthn"
 version = "0.1.0"
-source = "git+https://github.com/broody/wasm-webauthn?rev=972693fdeaa5dbcf7eee181c1e4aad5dfdb73a82#972693fdeaa5dbcf7eee181c1e4aad5dfdb73a82"
+source = "git+https://github.com/cartridge-gg/wasm-webauthn?rev=972693f#972693fdeaa5dbcf7eee181c1e4aad5dfdb73a82"
 dependencies = [
  "ciborium",
  "coset",

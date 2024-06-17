@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::{collections::HashMap, str::FromStr};
 
-use account_sdk::abigen::cartridge_account::Signer;
+use account_sdk::abigen::controller::Signer;
 use account_sdk::signers::webauthn::{DeviceSigner, WebauthnAccountSigner};
 use account_sdk::signers::SignerTrait;
 use alloy_primitives::U256;
