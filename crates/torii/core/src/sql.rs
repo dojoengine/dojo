@@ -712,6 +712,24 @@ impl Sql {
                     self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty);
                 }
             }
+            Ty::Array(array) => {
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+                for member in array.iter() {
+                    let mut path_clone = path.clone();
+                    path_clone.push("data".to_string());
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
+                }
+            }
+            Ty::Tuple(t) => {
+                for (idx, member) in t.iter().enumerate() {
+                    let mut path_clone = path.clone();
+                    path_clone.push(format!("_{}", idx));
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
+                }
+            }
             _ => {}
         }
     }
