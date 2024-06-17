@@ -90,8 +90,9 @@ jobs:
         with:
           name: katana-binary
       - run: |
-          chmod +x bins/katana
-          bins/katana &
+          ls -R
+          chmod +x ./katana
+          ./katana &
           KATANA_PID=$!
           sleep 2
           if ! kill -0 $KATANA_PID; then
