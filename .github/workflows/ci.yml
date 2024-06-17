@@ -36,10 +36,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: |
           ls .
+          echo 1
           ls ./target/release
+          echo 2
           pwd
-          chmod +x ./target/release/katana
-          KATANA_RUNNER_BIN=$(pwd)/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
+          echo 3
+          chmod +x ~/target/release/katana
+          KATANA_RUNNER_BIN=~/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
           # cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
