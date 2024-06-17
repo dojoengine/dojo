@@ -16,7 +16,8 @@ members = [
     "crates/dojo-test-utils",
     "crates/dojo-types",
     "crates/dojo-world",
-    "crates/dojo-world/abigen",
+    "crates/dojo-world/abigen", 
+    "crates/katana/controller",
     "crates/katana/core",
     "crates/katana/executor",
     "crates/katana/primitives",
@@ -86,6 +87,7 @@ katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
+katana-slot-controller = { path = "crates/katana/controller" }
 katana-tasks = { path = "crates/katana/tasks" }
 
 # torii

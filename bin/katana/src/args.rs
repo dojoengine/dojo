@@ -104,6 +104,11 @@ pub struct KatanaArgs {
     #[command(next_help_heading = "Starknet options")]
     pub starknet: StarknetOptions,
 
+    #[cfg(feature = "slot")]
+    #[command(flatten)]
+    #[command(next_help_heading = "Slot options")]
+    pub slot: SlotOptions,
+
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
@@ -201,6 +206,13 @@ pub struct EnvironmentOptions {
     pub l1_strk_gas_price: u128,
 }
 
+#[cfg(feature = "slot")]
+#[derive(Debug, Args, Clone)]
+pub struct SlotOptions {
+    #[arg(long = "slot.controller")]
+    pub controller: bool,
+}
+
 impl KatanaArgs {
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
         const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forking::backend=trace,server=debug,\
@@ -264,6 +276,12 @@ impl KatanaArgs {
                     sequencer_address: *DEFAULT_SEQUENCER_ADDRESS,
                     ..Default::default()
                 };
+
+                #[cfg(feature = "slot")]
+                if self.slot.controller {
+                    katana_slot_controller::add_controller_account(&mut genesis)
+                        .expect("inject controller account");
+                }
 
                 genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
                 genesis
