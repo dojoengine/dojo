@@ -34,7 +34,10 @@ pub fn prepare_migration(
     let mut world = WorldDiff::compute(manifest, None);
     world.update_order().unwrap();
 
-    prepare_for_migration(None, felt!("0x12345"), &target_dir, world)
+    let mut strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world).unwrap();
+    strat.resolve_variable(strat.world_address().unwrap()).unwrap();
+
+    Ok(strat)
 }
 
 pub fn prepare_migration_with_world_and_seed(
