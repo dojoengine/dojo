@@ -99,7 +99,9 @@ mod actions {
     // Hence, the use of `self` to access the contract state.
     #[generate_trait]
     impl InternalImpl of InternalUtils {
-        fn set_default_position(self: @ContractState, player: ContractAddress, world: IWorldDispatcher) {
+        fn set_default_position(
+            self: @ContractState, player: ContractAddress, world: IWorldDispatcher
+        ) {
             // The world is always accessible from `self` inside a `dojo::contract`.
             // let world = self.world();
 
