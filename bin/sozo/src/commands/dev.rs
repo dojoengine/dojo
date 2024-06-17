@@ -16,7 +16,7 @@ use dojo_world::migration::TxnConfig;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
-use scarb::core::{Config, Workspace};
+use scarb::core::{Config, TargetKind, Workspace};
 use scarb::ops::{FeaturesOpts, FeaturesSelector};
 use sozo_ops::migration;
 use starknet::accounts::ConnectedAccount;
@@ -195,6 +195,7 @@ struct DevContext<'a> {
 fn load_context(config: &Config) -> Result<DevContext<'_>> {
     let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
+
     let resolve = scarb::ops::resolve_workspace(&ws)?;
 
     let features_opts =
@@ -202,7 +203,10 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
 
     let compilation_units = scarb::ops::generate_compilation_units(&resolve, &features_opts, &ws)?
         .into_iter()
-        .filter(|cu| packages.contains(&cu.main_package_id()))
+        .filter(|cu| {
+            packages.contains(&cu.main_package_id())
+                && cu.main_component().target_kind() != TargetKind::TEST
+        })
         .collect::<Vec<_>>();
 
     // we have only 1 unit in projects
