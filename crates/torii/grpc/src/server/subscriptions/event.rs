@@ -78,27 +78,33 @@ impl Service {
             pool,
             subs_manager,
             model_cache,
-            simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()),
+            simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()),
         }
     }
 
-    async fn publish_updates(
-        subs: Arc<EventsManager>,
-        cache: Arc<ModelCache>,
-        pool: Pool<Sqlite>,
-        event: &Event,
-    ) -> Result<(), Error> {
+    async fn publish_updates(subs: Arc<EventsManager>, event: &Event) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
-        let keys = event.keys.split(FELT_DELIMITER);
+        let keys = event
+            .keys
+            .split(FELT_DELIMITER)
+            .map(|k| FieldElement::from_str(k).map(|k| k.to_bytes_be().to_vec()))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| ParseError::from(e))?;
+        let data = event
+            .data
+            .split(FELT_DELIMITER)
+            .map(|d| FieldElement::from_str(d).map(|d| d.to_bytes_be().to_vec()))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| ParseError::from(e))?;
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
             // publish all updates if ids is empty or only ids that are subscribed to
-            if sub.clause.keys.is_empty() || sub.hashed_keys.contains(&hashed) {
+            if sub.clause.keys.is_empty() || sub.clause.keys.starts_with(&keys) {
                 let resp = proto::world::SubscribeEventsResponse {
                     event: Some(proto::types::Event {
-                        keys: event.keys,
-                        data: (),
-                        transaction_hash: (),
+                        keys: keys.clone(),
+                        data: data.clone(),
+                        transaction_hash: event.transaction_hash.as_bytes().to_vec(),
                     }),
                 };
 
@@ -125,10 +131,8 @@ impl Future for Service {
 
         while let Poll::Ready(Some(event)) = pin.simple_broker.poll_next_unpin(cx) {
             let subs = Arc::clone(&pin.subs_manager);
-            let cache = Arc::clone(&pin.model_cache);
-            let pool = pin.pool.clone();
             tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(subs, cache, pool, &event).await {
+                if let Err(e) = Service::publish_updates(subs, &event).await {
                     error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
                 }
             });
