@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718633027998,
+  "lastUpdate": 1718664914869,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9745,6 +9745,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17197586,
             "range": "± 228769",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "71e9451f856067cba19f7ff1b5da2fafa4c49677",
+          "message": "fix(ci): ensure katana runs in debian:bookworm-slim (#2073)\n\n* Ensure katana runs in debian:bookworm-slim\r\n\r\n* chore: switch to cartridge fork and adjust CI to 4 core to build Katana\r\n\r\n* chore: add old prover-sdk version to check CI fail\r\n\r\n* fix katana bin permissions\r\n\r\n* chore: add ensure-docker as requirement for big jobs\r\n\r\n* chore: point to http-prover using rustls-tls\r\n\r\n* dbg\r\n\r\n* wip\r\n\r\n* chore: bump to artifacts v4\r\n\r\n* fix: typo\r\n\r\n* wip\r\n\r\n* fix: don't use path explicitely\r\n\r\n* wip\r\n\r\n* fix: fix artifacts managment\r\n\r\n* add ls\r\n\r\n* fix: use other path with checkout\r\n\r\n* fix: remove prints\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-17T16:43:50-06:00",
+          "tree_id": "94f2fb2d8eb42b1a9484eada71fe3cdb2efd4bab",
+          "url": "https://github.com/dojoengine/dojo/commit/71e9451f856067cba19f7ff1b5da2fafa4c49677"
+        },
+        "date": 1718664914176,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16417487,
+            "range": "± 240069",
             "unit": "ns/iter"
           }
         ]
