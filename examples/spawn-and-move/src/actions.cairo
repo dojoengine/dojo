@@ -64,7 +64,7 @@ mod actions {
         // ContractState is defined by system decorator expansion
         fn spawn(ref world: IWorldDispatcher) {
             let player = get_caller_address();
-            self.set_default_position(player);
+            self.set_default_position(player, world);
         }
 
         fn move(ref world: IWorldDispatcher, direction: Direction) {
@@ -99,9 +99,9 @@ mod actions {
     // Hence, the use of `self` to access the contract state.
     #[generate_trait]
     impl InternalImpl of InternalUtils {
-        fn set_default_position(self: @ContractState, player: ContractAddress) {
+        fn set_default_position(self: @ContractState, player: ContractAddress, world: IWorldDispatcher) {
             // The world is always accessible from `self` inside a `dojo::contract`.
-            let world = self.world();
+            // let world = self.world();
 
             set!(
                 world,

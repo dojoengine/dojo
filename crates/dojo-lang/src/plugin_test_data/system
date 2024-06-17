@@ -155,6 +155,13 @@ mod MyFaultyContract {
             'land'
         }
     }
+
+    #[generate_trait]
+    impl InternalImplBad of InternalUtils<ContractState> {
+        fn bad_func_using_generate(world: @IWorldDispatcher) -> felt252 {
+            'land'
+        }
+    }
 }
 
 #[dojo::contract]
@@ -403,8 +410,13 @@ error: World parameter must be the first parameter.
         fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252 {
         ^*****************************************************************************^
 
+error: You cannot use `world` and `#[generate_trait]` together. Use `self` instead.
+ --> test_src/lib.cairo:155:9
+        fn bad_func_using_generate(world: @IWorldDispatcher) -> felt252 {
+        ^***************************************************************^
+
 error: World parameter must be a snapshot if `ref` is not used.
- --> test_src/lib.cairo:207:5
+ --> test_src/lib.cairo:214:5
     fn dojo_init(
     ^***********^
 
@@ -444,17 +456,17 @@ error: Unsupported attribute.
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
@@ -718,6 +730,11 @@ error: Unsupported attribute.
     #[abi(embed_v0)]
     ^**************^
 
+error: Generated trait must have generic args matching the impl's generic params.
+ --> test_src/lib.cairo:154:29
+    impl InternalImplBad of InternalUtils<ContractState> {
+                            ^**************************^
+
 error: Unsupported attribute.
  --> test_src/lib.cairo:114:1
 #[dojo::contract]
@@ -739,127 +756,127 @@ error: Unsupported attribute.
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:161:5
+ --> test_src/lib.cairo:168:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:154:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:205:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:222:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
@@ -1280,6 +1297,14 @@ let world = self.world_dispatcher.read();
         }
     }
 
+    #[generate_trait]
+    impl InternalImplBad of InternalUtils<ContractState> {
+        fn bad_func_using_generate(self: @ContractState) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+    }
+
                     #[starknet::interface]
                     trait IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState);
@@ -1304,6 +1329,9 @@ let world = self.world_dispatcher.read();
                 #[substorage(v0)]
                 upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
+    trait InternalUtils{
+        fn bad_func_using_generate(self: @ContractState) -> felt252;
+    }
 impl EventDrop of core::traits::Drop::<Event>;
             
                 }
