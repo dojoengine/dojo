@@ -22,7 +22,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: katana-binary
-          path: ./katana
+          path: katana
 
   test:
     needs: ensure-docker
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: katana-binary
-          path: ./katana
+          path: katana
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: |
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: katana-binary
-          path: ./katana
+          path: katana
       - run: |
           chmod +x ./katana
           ./katana &
