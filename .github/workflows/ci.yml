@@ -17,8 +17,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: |
-        cargo build -r --bin katana
-        cp ./target/release/katana ./katana
+          cargo build -r --bin katana
+          cp ./target/release/katana ./katana
       - uses: actions/upload-artifact@v4
         with:
           name: katana-binary
