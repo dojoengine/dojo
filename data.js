@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718533853540,
+  "lastUpdate": 1718633027998,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9715,6 +9715,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16603047,
             "range": "± 201946",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "70ad72826df84cef73368cb38abda3d4715548dd",
+          "message": "fix(migrate): when `init_calldata` depends on contract that was already deployed (#2058)\n\n* fix(migrate): when `init_calldata` depends on contract that was already deployed\r\n\r\n* add tests",
+          "timestamp": "2024-06-17T07:51:40-06:00",
+          "tree_id": "e4f527177796f5f60a8011e48da3c723561fa2d7",
+          "url": "https://github.com/dojoengine/dojo/commit/70ad72826df84cef73368cb38abda3d4715548dd"
+        },
+        "date": 1718633026458,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17197586,
+            "range": "± 228769",
             "unit": "ns/iter"
           }
         ]
