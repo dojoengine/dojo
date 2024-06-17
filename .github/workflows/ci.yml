@@ -38,7 +38,6 @@ jobs:
           name: katana-binary
           path: /tmp/bins
       - run: |
-          ls -R /tmp/
           chmod +x /tmp/bins/katana
           KATANA_RUNNER_BIN=/tmp/bins/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
