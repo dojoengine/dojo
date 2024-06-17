@@ -26,8 +26,8 @@ use crate::proto::world::SubscribeEventsResponse;
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event";
 
 pub struct EventsSubscriber {
-    /// Event clause that the subscriber is interested in
-    clause: proto::types::EventKeysClause,
+    /// Event keys that the subscriber is interested in
+    keys: Vec<FieldElement>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeEventsResponse, tonic::Status>>,
 }
@@ -40,7 +40,7 @@ pub struct EventsManager {
 impl EventsManager {
     pub async fn add_subscriber(
         &self,
-        clause: proto::types::EventKeysClause,
+        keys: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
@@ -50,7 +50,7 @@ impl EventsManager {
         // initial subscribe call
         let _ = sender.send(Ok(SubscribeEventsResponse { event: None })).await;
 
-        self.subscribers.write().await.insert(id, EventsSubscriber { clause, sender });
+        self.subscribers.write().await.insert(id, EventsSubscriber { keys, sender });
 
         Ok(receiver)
     }
@@ -62,22 +62,16 @@ impl EventsManager {
 
 #[must_use = "Service does nothing unless polled"]
 pub struct Service {
-    pool: Pool<Sqlite>,
     subs_manager: Arc<EventsManager>,
-    model_cache: Arc<ModelCache>,
     simple_broker: Pin<Box<dyn Stream<Item = Event> + Send>>,
 }
 
 impl Service {
     pub fn new(
-        pool: Pool<Sqlite>,
         subs_manager: Arc<EventsManager>,
-        model_cache: Arc<ModelCache>,
     ) -> Self {
         Self {
-            pool,
             subs_manager,
-            model_cache,
             simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()),
         }
     }
@@ -87,23 +81,23 @@ impl Service {
         let keys = event
             .keys
             .split(FELT_DELIMITER)
-            .map(|k| FieldElement::from_str(k).map(|k| k.to_bytes_be().to_vec()))
+            .map(FieldElement::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| ParseError::from(e))?;
         let data = event
             .data
             .split(FELT_DELIMITER)
-            .map(|d| FieldElement::from_str(d).map(|d| d.to_bytes_be().to_vec()))
+            .map(FieldElement::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| ParseError::from(e))?;
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
             // publish all updates if ids is empty or only ids that are subscribed to
-            if sub.clause.keys.is_empty() || sub.clause.keys.starts_with(&keys) {
+            if sub.keys.is_empty() || keys.starts_with(&sub.keys) {
                 let resp = proto::world::SubscribeEventsResponse {
                     event: Some(proto::types::Event {
-                        keys: keys.clone(),
-                        data: data.clone(),
+                        keys: keys.iter().map(|k| k.to_bytes_be().to_vec()).collect(),
+                        data: data.iter().map(|d| d.to_bytes_be().to_vec()).collect(),
                         transaction_hash: event.transaction_hash.as_bytes().to_vec(),
                     }),
                 };

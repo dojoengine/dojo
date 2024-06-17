@@ -24,6 +24,7 @@ use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
+use subscriptions::event::EventsManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
@@ -38,7 +39,9 @@ use self::subscriptions::event_message::EventMessageManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
 use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
-use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
+use crate::proto::world::{
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
+};
 use crate::proto::{self};
 use crate::types::ComparisonOperator;
 
@@ -57,6 +60,7 @@ pub struct DojoWorld {
     model_cache: Arc<ModelCache>,
     entity_manager: Arc<EntityManager>,
     event_message_manager: Arc<EventMessageManager>,
+    events_manager: Arc<EventsManager>,
     state_diff_manager: Arc<StateDiffManager>,
 }
 
@@ -70,6 +74,7 @@ impl DojoWorld {
         let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let entity_manager = Arc::new(EntityManager::default());
         let event_message_manager = Arc::new(EventMessageManager::default());
+        let events_manager = Arc::new(EventsManager::default());
         let state_diff_manager = Arc::new(StateDiffManager::default());
 
         tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
@@ -91,12 +96,15 @@ impl DojoWorld {
             Arc::clone(&model_cache),
         ));
 
+        tokio::task::spawn(subscriptions::event::Service::new(Arc::clone(&events_manager)));
+
         Self {
             pool,
             world_address,
             model_cache,
             entity_manager,
             event_message_manager,
+            events_manager,
             state_diff_manager,
         }
     }
@@ -736,6 +744,24 @@ impl DojoWorld {
         Ok(RetrieveEventsResponse { events })
     }
 
+    async fn subscribe_events(
+        &self,
+        clause: proto::types::EventKeysClause,
+    ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
+        self.events_manager
+            .add_subscriber(
+                clause
+                    .keys
+                    .iter()
+                    .map(|key| {
+                        FieldElement::from_byte_slice_be(key)
+                            .map_err(ParseError::FromByteSliceError)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+            )
+            .await
+    }
+
     fn map_row_to_entity(
         row: &SqliteRow,
         arrays_rows: &HashMap<String, Vec<SqliteRow>>,
@@ -778,12 +804,15 @@ type SubscribeModelsResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeModelsResponse, Status>> + Send>>;
 type SubscribeEntitiesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEntityResponse, Status>> + Send>>;
+type SubscribeEventsResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeEventsResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
     type SubscribeModelsStream = SubscribeModelsResponseStream;
     type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
     type SubscribeEventMessagesStream = SubscribeEntitiesResponseStream;
+    type SubscribeEventsStream = SubscribeEventsResponseStream;
 
     async fn world_metadata(
         &self,
@@ -894,6 +923,18 @@ impl proto::world::world_server::World for DojoWorld {
             self.retrieve_events(query).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(events))
+    }
+
+    async fn subscribe_events(
+        &self,
+        _request: Request<proto::world::SubscribeEventsRequest>,
+    ) -> ServiceResult<Self::SubscribeEventsStream> {
+        let rx = self
+            .subscribe_events(Default::default())
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEventsStream))
     }
 }
 
