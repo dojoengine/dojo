@@ -11,15 +11,30 @@ env:
   RUST_VERSION: 1.76.0
 
 jobs:
+  build:
+    runs-on: ubuntu-latest-32-cores
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -r --bin katana
+      - uses: actions/upload-artifact@v2
+        with:
+          name: katana-binary
+          path: target/release/katana
+
   test:
+    needs: build
     runs-on: ubuntu-latest-32-cores
     container:
       image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: katana-binary
+          path: target/release/
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: |
-          cargo build -r --bin katana
           KATANA_RUNNER_BIN=$(pwd)/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
@@ -52,6 +67,28 @@ jobs:
         with:
           repo-token: ${{ secrets.github_token }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
+  
+  # This job is used to ensure the built katana image doesn't depend on any
+  # libraries that don't exist in the base docker image we use for distribution
+  ensure-docker:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm-slim
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: katana-binary
+          path: target/release/
+      - run: |
+          ./target/release/katana &
+          KATANA_PID=$!
+          sleep 2
+          if ! kill -0 $KATANA_PID; then
+            echo "Katana exited with an error"
+            exit 1
+          fi
+          kill $KATANA_PID
 
   cairofmt:
     runs-on: ubuntu-latest
