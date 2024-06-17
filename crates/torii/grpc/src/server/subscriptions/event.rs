@@ -67,13 +67,8 @@ pub struct Service {
 }
 
 impl Service {
-    pub fn new(
-        subs_manager: Arc<EventsManager>,
-    ) -> Self {
-        Self {
-            subs_manager,
-            simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()),
-        }
+    pub fn new(subs_manager: Arc<EventsManager>) -> Self {
+        Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()) }
     }
 
     async fn publish_updates(subs: Arc<EventsManager>, event: &Event) -> Result<(), Error> {
