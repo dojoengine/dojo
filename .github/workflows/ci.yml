@@ -18,11 +18,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo build -r --bin katana
-          cp ./target/release/katana ./katana
+          mkdir -p bins
+          cp ./target/release/katana bins/
       - uses: actions/upload-artifact@v4
         with:
           name: katana-binary
-          path: katana
+          path: bins
 
   test:
     needs: ensure-docker
@@ -33,18 +34,17 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: katana-binary
-          path: katana
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: |
           ls .
           echo 1
-          ls ./katana
+          ls bins
           echo 2
           pwd
           echo 3
-          chmod +x ./katana
-          KATANA_RUNNER_BIN=$(pwd)/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
+          chmod +x bins/katana
+          KATANA_RUNNER_BIN=$(pwd)/bins/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
           # cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
@@ -89,10 +89,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: katana-binary
-          path: katana
       - run: |
-          chmod +x ./katana
-          ./katana &
+          chmod +x bins/katana
+          bins/katana &
           KATANA_PID=$!
           sleep 2
           if ! kill -0 $KATANA_PID; then
