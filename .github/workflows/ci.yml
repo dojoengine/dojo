@@ -16,11 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build -r --bin katana
-      - uses: actions/upload-artifact@v2
+      - run: |
+        cargo build -r --bin katana
+        cp ./target/release/katana ./katana
+      - uses: actions/upload-artifact@v4
         with:
           name: katana-binary
-          path: target/release/katana
+          path: ./katana
 
   test:
     needs: ensure-docker
@@ -28,21 +30,21 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: katana-binary
-          path: target/release/
+          path: ./katana
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: |
           ls .
           echo 1
-          ls ./target/release
+          ls ./katana
           echo 2
           pwd
           echo 3
-          chmod +x ~/target/release/katana
-          KATANA_RUNNER_BIN=~/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
+          chmod +x ./katana
+          KATANA_RUNNER_BIN=$(pwd)/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
           # cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
@@ -84,13 +86,13 @@ jobs:
     container:
       image: debian:bookworm-slim
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: katana-binary
-          path: target/release/
+          path: ./katana
       - run: |
-          chmod +x ./target/release/katana
-          ./target/release/katana &
+          chmod +x ./katana
+          ./katana &
           KATANA_PID=$!
           sleep 2
           if ! kill -0 $KATANA_PID; then
