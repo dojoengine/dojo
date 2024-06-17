@@ -23,7 +23,7 @@ jobs:
           path: target/release/katana
 
   test:
-    needs: build
+    needs: ensure-docker
     runs-on: ubuntu-latest-32-cores
     container:
       image: ghcr.io/dojoengine/dojo-dev:v0.7.0
@@ -36,6 +36,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: |
           chmod +x ./target/release/katana
+          ls .
+          ls ./target/release
+          pwd
           KATANA_RUNNER_BIN=$(pwd)/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
@@ -56,6 +59,7 @@ jobs:
       - run: cargo build -r --target wasm32-unknown-unknown -p torii-client
 
   ensure-windows:
+    needs: ensure-docker
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
