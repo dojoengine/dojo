@@ -60,7 +60,9 @@ impl AccountOptions {
         P: Provider,
         P: Send + Sync,
     {
-        controller::create_controller(rpc_url, provider, config).await
+        controller::create_controller(rpc_url, provider, config)
+            .await
+            .context("Failed to create a Controller account")
     }
 
     pub async fn account<P>(

@@ -1,12 +1,9 @@
-use std::path::Path;
-use std::str::FromStr;
-
 use account_sdk::account::session::hash::{AllowedMethod, Session};
 use account_sdk::account::session::SessionAccount;
 use account_sdk::deploy_contract::UDC_ADDRESS;
 use account_sdk::signers::HashSigner;
 use anyhow::Result;
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use dojo_world::manifest::DeploymentManifest;
 use scarb::core::Config;
 use slot::session::Policy;
@@ -23,6 +20,7 @@ pub type ControllerSessionAccount<P> = SessionAccount<P, SigningKey, SigningKey>
 /// Create a new Catridge Controller account based on session key.
 #[tracing::instrument(name = "create_controller", skip(rpc_url, provider, config))]
 pub async fn create_controller<P>(
+    // Ideally we can get the url from the provider so we dont have to pass an extra url param here
     rpc_url: Url,
     provider: P,
     config: &Config,
@@ -34,33 +32,26 @@ where
     let chain_id = provider.chain_id().await?;
     let credentials = slot::credential::Credentials::load()?;
 
-    let username = credentials.account.clone().unwrap().id;
-    let contract_address =
-        FieldElement::from_str(&credentials.account.unwrap().contract_address.unwrap())?;
+    let username = credentials.account.id;
+    let contract_address = credentials.account.contract_address;
 
+    // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id) {
+        // TODO(kariy): perform policies diff check, if needed update
         Ok(Some(session)) => {
             info!(expires_at = %session.expires_at, policies = session.policies.len(), "Found existing session.");
-            // TODO(kariy): perform policies diff check, if needed update
             session
         }
-        // TODO(kariy): should handle non authenticated error
+
+        // Return error if user not logged in on slot yet
+        Err(e @ slot::Error::Unauthorized) => {
+            return Err(e.into());
+        }
+
+        // Create a new session if not found or other error
         Ok(None) | Err(_) => {
             info!(%username, chain = format!("{chain_id:#}"), "Creating new session key.");
-
-            // Project root dir
-            let root_dir = config.root();
-
-            let mut manifest_path = root_dir.to_path_buf();
-            manifest_path.extend(["manifests", config.profile().as_str(), "manifest.toml"]);
-
-            info!(path = manifest_path.as_str(), "Extracing policies from project manifest.");
-
-            let manifest = DeploymentManifest::load_from_path(&manifest_path)?;
-            let policies = collect_policies(root_dir, manifest, contract_address);
-
-            info!(policies_count = policies.len(), "Extracted policies from project.");
-
+            let policies = collect_policies_from_project(contract_address, config)?;
             let session = slot::session::create(rpc_url, &policies).await?;
             slot::session::store(chain_id, &session)?;
             session
@@ -97,26 +88,46 @@ where
     Ok(session_account)
 }
 
+fn collect_policies_from_project(
+    user_address: FieldElement,
+    config: &Config,
+) -> Result<Vec<Policy>> {
+    let root_dir = config.root();
+    let manifest = get_project_deployment_manifest(root_dir, config.profile().as_str())?;
+    let policies = collect_policies(user_address, root_dir, manifest)?;
+    info!(policies_count = policies.len(), "Extracted policies from project.");
+    Ok(policies)
+}
+
+fn get_project_deployment_manifest(
+    root_dir: &Utf8Path,
+    profile: &str,
+) -> Result<DeploymentManifest> {
+    let mut manifest_path = root_dir.to_path_buf();
+    manifest_path.extend(["manifests", profile, "manifest.toml"]);
+    Ok(DeploymentManifest::load_from_path(&manifest_path)?)
+}
+
 /// Collect all the contracts' methods in the current project and convert them into policies.
 fn collect_policies(
-    root_dir: impl AsRef<Path>,
-    manifest: DeploymentManifest,
     user_address: FieldElement,
-) -> Vec<Policy> {
+    base_path: &Utf8Path,
+    manifest: DeploymentManifest,
+) -> Result<Vec<Policy>> {
     let mut policies: Vec<Policy> = Vec::new();
-    let root_dir: Utf8PathBuf = root_dir.as_ref().to_path_buf().try_into().unwrap();
+    let base_path: Utf8PathBuf = base_path.to_path_buf();
 
     // get methods from all project contracts
     for contract in manifest.contracts {
-        let abis = contract.inner.abi.unwrap().load_abi_string(&root_dir).unwrap();
+        let abis = contract.inner.abi.unwrap().load_abi_string(&base_path)?;
         let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis).unwrap();
         let contract_address = contract.inner.address.unwrap();
         policies_from_abis(&mut policies, &contract.name, contract_address, &abis);
     }
 
     // get method from world contract
-    let abis = manifest.world.inner.abi.unwrap().load_abi_string(&root_dir).unwrap();
-    let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis).unwrap();
+    let abis = manifest.world.inner.abi.unwrap().load_abi_string(&base_path)?;
+    let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
     let contract_address = manifest.world.inner.address.unwrap();
     policies_from_abis(&mut policies, &manifest.world.name, contract_address, &abis);
 
@@ -130,7 +141,7 @@ fn collect_policies(
     policies.push(Policy { target: *UDC_ADDRESS, method });
     info!("Adding UDC deployment policy");
 
-    policies
+    Ok(policies)
 }
 
 /// Recursively extract methods and convert them into policies from the all the
