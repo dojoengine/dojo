@@ -67,6 +67,7 @@ where
     // Copied from `account-wasm` <https://github.com/cartridge-gg/controller/blob/0dd4dd6cbc5fcd3b9a1fd8d63dc127f6312b733f/packages/account-wasm/src/lib.rs#L78-L88>
     let guardian = SigningKey::from_secret_scalar(short_string!("CARTRIDGE_GUARDIAN"));
     let signer = SigningKey::from_secret_scalar(session_details.credentials.private_key);
+    // TODO(kariy): make `expires_at` a `u64` type in the session struct
     let expires_at = session_details.expires_at.parse::<u64>()?;
     let session = Session::new(methods, expires_at, &signer.signer())?;
 
