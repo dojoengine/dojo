@@ -760,8 +760,11 @@ impl Sql {
                     .join(", ");
 
                 create_table_query.push_str(&format!(
-                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
+                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) ",
                 ));
+
+                // if we're an array, we could have multiple enum options
+                create_table_query.push_str(if array_idx > 0 { ", " } else { "NOT NULL, " });
 
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
