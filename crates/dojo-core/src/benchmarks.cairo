@@ -10,15 +10,14 @@ use dojo::database;
 use dojo::database::storage;
 use dojo::model::Model;
 use dojo::world_test::Foo;
-use dojo::test_utils::end;
-
+use dojo::test_utils::GasCounterImpl;
+use dojo::database::introspect::{Introspect, Layout};
 
 #[test]
 #[available_gas(1000000000)]
 fn bench_reference_offset() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    end(gas, 'bench empty');
+    let gas = GasCounterImpl::start();
+    gas.end("bench empty");
 }
 
 #[test]
@@ -26,15 +25,13 @@ fn bench_reference_offset() {
 fn bench_storage_single() {
     let keys = array!['database_test', '42'].span();
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     storage::set(0, keys, 420);
-    end(gas, 'storage set');
+    gas.end("storage set");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let res = storage::get(0, keys);
-    end(gas, 'storage get');
+    gas.end("storage get");
 
     assert(res == 420, 'values differ');
 }
@@ -46,15 +43,13 @@ fn bench_storage_many() {
     let values = array![1, 2].span();
     let layout = array![251, 251].span();
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     storage::set_many(0, keys, values, 0, layout).unwrap();
-    end(gas, 'storage set mny');
+    gas.end("storage set_many");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let res = storage::get_many(0, keys, layout).unwrap();
-    end(gas, 'storage get mny');
+    gas.end("storage get_many");
 
     assert(res.len() == 2, 'wrong number of values');
     assert(*res.at(0) == *values.at(0), 'value not set');
@@ -64,22 +59,19 @@ fn bench_storage_many() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_native_storage() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let keys = array![0x1337].span();
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     let address = starknet::storage_address_from_base(base);
-    end(gas, 'native prep');
+    gas.end("native prep");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     starknet::storage_write_syscall(0, address, 42).unwrap_syscall();
-    end(gas, 'native write');
+    gas.end("native write");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let value = starknet::storage_read_syscall(0, address).unwrap_syscall();
-    end(gas, 'native read');
+    gas.end("native read");
 
     assert(value == 42, 'read invalid');
 }
@@ -87,22 +79,19 @@ fn bench_native_storage() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_native_storage_offset() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let keys = array![0x1337].span();
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     let address = starknet::storage_address_from_base_and_offset(base, 42);
-    end(gas, 'native prep of');
+    gas.end("native prep of");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     starknet::storage_write_syscall(0, address, 42).unwrap_syscall();
-    end(gas, 'native writ of');
+    gas.end("native writ of");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let value = starknet::storage_read_syscall(0, address).unwrap_syscall();
-    end(gas, 'native read of');
+    gas.end("native read of");
 
     assert(value == 42, 'read invalid');
 }
@@ -129,15 +118,13 @@ fn bench_database_array() {
         i += 1;
     };
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     database::set('table', 'key', values.span(), 0, layout.span());
-    end(gas, 'db set arr');
+    gas.end("db set arr");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let res = database::get('table', 'key', layout.span());
-    end(gas, 'db get arr');
+    gas.end("db get arr");
 
     let mut i = 0;
     loop {
@@ -155,23 +142,20 @@ fn bench_database_array() {
 fn bench_simple_struct() {
     let caller = starknet::contract_address_const::<0x42>();
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let mut foo = Foo { caller, a: 0x123456789abcdef, b: 0x123456789abcdef, };
-    end(gas, 'foo init');
+    gas.end("foo init");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let mut serialized = ArrayTrait::new();
     serde::Serde::serialize(@foo.a, ref serialized);
     serde::Serde::serialize(@foo.b, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
-    end(gas, 'foo serialize');
+    gas.end("foo serialize");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let values: Span<felt252> = foo.values();
-    end(gas, 'foo values');
+    gas.end("foo values");
 
     assert(serialized.len() == 2, 'serialized wrong length');
     assert(values.len() == 2, 'value wrong length');
@@ -179,7 +163,7 @@ fn bench_simple_struct() {
     assert(serialized.at(1) == values.at(1), 'serialized differ at 1');
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, IntrospectPacked)]
 #[dojo::model]
 struct PositionWithQuaterions {
     #[key]
@@ -195,11 +179,9 @@ struct PositionWithQuaterions {
 
 // TODO: this test should be adapted to benchmark the new layout system
 #[test]
-#[ignore]
 #[available_gas(1000000000)]
-fn test_struct_with_many_fields() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+fn test_struct_with_many_fields_fixed() {
+    let gas = GasCounterImpl::start();
 
     let mut pos = PositionWithQuaterions {
         id: 0x123456789abcdef,
@@ -211,10 +193,9 @@ fn test_struct_with_many_fields() {
         c: 0x123456789abcdef,
         d: 0x123456789abcdef,
     };
-    end(gas, 'pos init');
+    gas.end("pos init");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let mut serialized = ArrayTrait::new();
     serde::Serde::serialize(@pos.x, ref serialized);
     serde::Serde::serialize(@pos.y, ref serialized);
@@ -224,12 +205,11 @@ fn test_struct_with_many_fields() {
     serde::Serde::serialize(@pos.c, ref serialized);
     serde::Serde::serialize(@pos.d, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
-    end(gas, 'pos serialize');
+    gas.end("pos serialize");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let values: Span<felt252> = pos.values();
-    end(gas, 'pos values');
+    gas.end("pos values");
 
     assert(serialized.len() == values.len(), 'serialized not equal');
     let mut idx = 0;
@@ -241,26 +221,27 @@ fn test_struct_with_many_fields() {
         idx += 1;
     };
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let layout = match dojo::model::Model::<PositionWithQuaterions>::layout() {
+        Layout::Fixed(layout) => layout,
+        _ => panic!("expected fixed layout"),
+    };
 
-    //database::set('positions', '42', pos.values(), 0, pos.instance_layout());
-    end(gas, 'pos db set');
+    let gas = GasCounterImpl::start();
+    database::set('positions', '42', pos.values(), 0, layout);
+    gas.end("pos db set");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    //database::get('positions', '42', pos.instance_layout());
-    end(gas, 'pos db get');
+    let gas = GasCounterImpl::start();
+    database::get('positions', '42', layout);
+    gas.end("pos db get");
 }
 
-
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 struct Sword {
     swordsmith: ContractAddress,
     damage: u32,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 #[dojo::model]
 struct Case {
     #[key]
@@ -269,35 +250,33 @@ struct Case {
     material: felt252,
 }
 
-
 // TODO: this test should be adapted to benchmark the new layout system
 #[test]
 #[ignore]
 #[available_gas(1000000000)]
-fn bench_nested_struct() {
+fn bench_nested_struct_packed() {
     let caller = starknet::contract_address_const::<0x42>();
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
 
+    let gas = GasCounterImpl::start();
     let mut case = Case {
         owner: caller, sword: Sword { swordsmith: caller, damage: 0x12345678, }, material: 'wooden',
     };
-    end(gas, 'case init');
+    gas.end("case init");
+
+    // ????
     let _gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let mut serialized = ArrayTrait::new();
     serde::Serde::serialize(@case.sword, ref serialized);
     serde::Serde::serialize(@case.material, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
-    end(gas, 'case serialize');
+    gas.end("case serialize");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let values: Span<felt252> = case.values();
-    end(gas, 'case values');
+    gas.end("case values");
 
     assert(serialized.len() == values.len(), 'serialized not equal');
     let mut idx = 0;
@@ -309,19 +288,21 @@ fn bench_nested_struct() {
         idx += 1;
     };
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let layout = match dojo::model::Model::<Case>::layout() {
+        Layout::Fixed(layout) => layout,
+        _ => panic!("expected fixed layout"),
+    };
 
-    //database::set('cases', '42', values, case.instance_layout());
-    end(gas, 'case db set');
+    let gas = GasCounterImpl::start();
+    database::set('cases', '42', values, 0, layout);
+    gas.end("case db set");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    //database::get('cases', '42', case.instance_layout());
-    end(gas, 'case db get');
+    let gas = GasCounterImpl::start();
+    database::get('cases', '42', layout);
+    gas.end("case db get");
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 #[dojo::model]
 struct Character {
     #[key]
@@ -333,7 +314,7 @@ struct Character {
     gold: u32,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 struct Abilities {
     strength: u8,
     dexterity: u8,
@@ -343,7 +324,7 @@ struct Abilities {
     charisma: u8,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 struct Stats {
     kills: u128,
     deaths: u16,
@@ -356,7 +337,7 @@ struct Stats {
     romances: u16,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 enum Weapon {
     DualWield: (Sword, Sword),
     Fists: (Sword, Sword), // Introspect requires same arms
@@ -366,9 +347,8 @@ enum Weapon {
 #[test]
 #[ignore]
 #[available_gas(1000000000)]
-fn bench_complex_struct() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+fn bench_complex_struct_packed() {
+    let gas = GasCounterImpl::start();
 
     let char = Character {
         caller: starknet::contract_address_const::<0x42>(),
@@ -404,10 +384,9 @@ fn bench_complex_struct() {
         ),
         gold: 0x12345678,
     };
-    end(gas, 'chars init');
+    gas.end("chars init");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let mut serialized = ArrayTrait::new();
     serde::Serde::serialize(@char.heigth, ref serialized);
     serde::Serde::serialize(@char.abilities, ref serialized);
@@ -415,12 +394,11 @@ fn bench_complex_struct() {
     serde::Serde::serialize(@char.weapon, ref serialized);
     serde::Serde::serialize(@char.gold, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
-    end(gas, 'chars serialize');
+    gas.end("chars serialize");
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let gas = GasCounterImpl::start();
     let values: Span<felt252> = char.values();
-    end(gas, 'chars values');
+    gas.end("chars values");
 
     assert(serialized.len() == values.len(), 'serialized not equal');
 
@@ -433,13 +411,16 @@ fn bench_complex_struct() {
         idx += 1;
     };
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    //database::set('chars', '42', char.values(), char.instance_layout());
-    end(gas, 'chars db set');
+    let layout = match dojo::model::Model::<Character>::layout() {
+        Layout::Fixed(layout) => layout,
+        _ => panic!("expected fixed layout"),
+    };
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    //database::get('chars', '42', char.instance_layout());
-    end(gas, 'chars db get');
+    let gas = GasCounterImpl::start();
+    database::set('chars', '42', char.values(), 0, layout);
+    gas.end("chars db set");
+
+    let gas = GasCounterImpl::start();
+    database::get('chars', '42', layout);
+    gas.end("chars db get");
 }

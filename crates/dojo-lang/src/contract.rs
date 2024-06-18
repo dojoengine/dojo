@@ -375,7 +375,7 @@ impl DojoContract {
         param_list: ast::ParamList,
         fn_diagnostic_item: ids::SyntaxStablePtrId,
     ) -> (String, bool) {
-        self_param::check_parameter(db, &param_list, fn_diagnostic_item, &mut self.diagnostics);
+        let is_self_used = self_param::check_parameter(db, &param_list);
 
         let world_injection = world_param::parse_world_injection(
             db,
@@ -383,6 +383,14 @@ impl DojoContract {
             fn_diagnostic_item,
             &mut self.diagnostics,
         );
+
+        if is_self_used && world_injection != WorldParamInjectionKind::None {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: fn_diagnostic_item,
+                message: "You cannot use `self` and `world` parameters together.".to_string(),
+                severity: Severity::Error,
+            });
+        }
 
         let mut params = param_list
             .elements(db)
@@ -401,7 +409,12 @@ impl DojoContract {
             .collect::<Vec<_>>();
 
         match world_injection {
-            WorldParamInjectionKind::None | WorldParamInjectionKind::View => {
+            WorldParamInjectionKind::None => {
+                if !is_self_used {
+                    params.insert(0, "self: @ContractState".to_string());
+                }
+            }
+            WorldParamInjectionKind::View => {
                 params.insert(0, "self: @ContractState".to_string());
             }
             WorldParamInjectionKind::External => {
@@ -433,10 +446,13 @@ impl DojoContract {
     ///  * removing `world` if present as first parameter (self excluded),
     ///  * adding `let world = self.world_dispatcher.read();` statement at the beginning of the
     ///    function to restore the removed `world` parameter.
+    ///  * if `has_generate_trait` is true, the implementation containing the function has the
+    ///    #[generate_trait] attribute.
     pub fn rewrite_function(
         &mut self,
         db: &dyn SyntaxGroup,
         fn_ast: ast::FunctionWithBody,
+        has_generate_trait: bool,
     ) -> Vec<RewriteNode> {
         let mut rewritten_fn = RewriteNode::from_ast(&fn_ast);
 
@@ -445,6 +461,16 @@ impl DojoContract {
             fn_ast.declaration(db).signature(db).parameters(db),
             fn_ast.stable_ptr().untyped(),
         );
+
+        if has_generate_trait && was_world_injected {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: fn_ast.stable_ptr().untyped(),
+                message: "You cannot use `world` and `#[generate_trait]` together. Use `self` \
+                          instead."
+                    .to_string(),
+                severity: Severity::Error,
+            });
+        }
 
         // We always rewrite the params as the self parameter is added based on the
         // world mutability.
@@ -470,6 +496,9 @@ impl DojoContract {
 
     /// Rewrites all the functions of a Impl block.
     fn rewrite_impl(&mut self, db: &dyn SyntaxGroup, impl_ast: ast::ItemImpl) -> Vec<RewriteNode> {
+        let generate_attrs = impl_ast.attributes(db).query_attr(db, "generate_trait");
+        let has_generate_trait = !generate_attrs.is_empty();
+
         if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
             let body_nodes: Vec<_> = body
                 .items(db)
@@ -477,7 +506,7 @@ impl DojoContract {
                 .iter()
                 .flat_map(|el| {
                     if let ast::ImplItem::Function(fn_ast) = el {
-                        return self.rewrite_function(db, fn_ast.clone());
+                        return self.rewrite_function(db, fn_ast.clone(), has_generate_trait);
                     }
                     vec![RewriteNode::Copied(el.as_syntax_node())]
                 })

@@ -15,12 +15,18 @@ use super::MigrationType;
 use crate::utils::split_full_world_element_name;
 
 #[derive(Debug, Clone)]
+pub enum MigrationMetadata {
+    Contract(ContractDiff),
+}
+
+#[derive(Debug, Clone)]
 pub struct MigrationStrategy {
     pub world_address: Option<FieldElement>,
     pub world: Option<ContractMigration>,
     pub base: Option<ClassMigration>,
     pub contracts: Vec<ContractMigration>,
     pub models: Vec<ClassMigration>,
+    pub metadata: HashMap<String, MigrationMetadata>,
 }
 
 #[derive(Debug)]
@@ -112,6 +118,7 @@ pub fn prepare_for_migration(
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
 ) -> Result<MigrationStrategy> {
+    let mut metadata = HashMap::new();
     let entries = fs::read_dir(target_dir).with_context(|| {
         format!(
             "Failed trying to read target directory ({target_dir})\nNOTE: build files are profile \
@@ -140,8 +147,12 @@ pub fn prepare_for_migration(
     // else we need to evaluate which contracts need to be migrated.
     let mut world = evaluate_contract_to_migrate(&diff.world, &artifact_paths, false)?;
     let base = evaluate_class_to_migrate(&diff.base, &artifact_paths, world.is_some())?;
-    let contracts =
-        evaluate_contracts_to_migrate(&diff.contracts, &artifact_paths, world.is_some())?;
+    let contracts = evaluate_contracts_to_migrate(
+        &diff.contracts,
+        &artifact_paths,
+        &mut metadata,
+        world.is_some(),
+    )?;
     let models = evaluate_models_to_migrate(&diff.models, &artifact_paths, world.is_some())?;
 
     // If world needs to be migrated, then we expect the `seed` to be provided.
@@ -169,7 +180,7 @@ pub fn prepare_for_migration(
         world.contract_address = generated_world_address;
     }
 
-    Ok(MigrationStrategy { world_address, world, base, contracts, models })
+    Ok(MigrationStrategy { world_address, world, base, contracts, models, metadata })
 }
 
 fn evaluate_models_to_migrate(
@@ -209,11 +220,13 @@ fn evaluate_class_to_migrate(
 fn evaluate_contracts_to_migrate(
     contracts: &[ContractDiff],
     artifact_paths: &HashMap<String, PathBuf>,
+    metadata: &mut HashMap<String, MigrationMetadata>,
     world_contract_will_migrate: bool,
 ) -> Result<Vec<ContractMigration>> {
     let mut comps_to_migrate = vec![];
 
     for c in contracts {
+        metadata.insert(c.name.clone(), MigrationMetadata::Contract(c.clone()));
         match c.remote_class_hash {
             Some(remote) if remote == c.local_class_hash && !world_contract_will_migrate => {
                 continue;

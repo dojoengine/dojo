@@ -107,12 +107,19 @@ trait INominalTrait {
     fn do_params_no_world(p1: felt252, p2: u8) -> felt252;
     fn do_params_and_world(world: @IWorldDispatcher, p2: u8) -> felt252;
     fn do_params_and_world_ref(ref world: IWorldDispatcher, p2: u8) -> felt252;
+
+    fn do_with_self(self: @ContractState) -> felt252;
+    fn do_with_ref_self(ref self: ContractState) -> felt252;
 }
 
 #[dojo::interface]
 trait IFaultyTrait {
-    fn do_with_self(self: @ContractState) -> felt252;
-    fn do_with_ref_self(ref self: ContractState) -> felt252;
+    fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252;
+    fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;
+    fn do_with_self_and_world_inv(world: @IWorldDispatcher, self: @ContractState) -> felt252;
+    fn do_with_ref_self_and_world_inv(
+        ref world: IWorldDispatcher, ref self: ContractState
+    ) -> felt252;
     fn do_with_several_world_dispatchers(
         world: @IWorldDispatcher, vec: Vec2, ref another_world: IWorldDispatcher
     ) -> felt252;
@@ -124,11 +131,23 @@ trait IFaultyTrait {
 mod MyFaultyContract {
     #[abi(embed_v0)]
     impl TestFaultyImpl of IFaultyTrait<ContractState> {
-        fn do_with_self(ref self: ContractState) -> felt252 {
+        fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252 {
             'land'
         }
 
-        fn do_with_ref_self(ref self: ContractState) -> felt252 {
+        fn do_with_ref_self_and_world(
+            ref self: ContractState, ref world: IWorldDispatcher
+        ) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self_and_world_inv(world: @IWorldDispatcher, self: @ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_ref_self_and_world_inv(
+            ref world: IWorldDispatcher, ref self: ContractState
+        ) -> felt252 {
             'land'
         }
 
@@ -143,6 +162,13 @@ mod MyFaultyContract {
         }
 
         fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+    }
+
+    #[generate_trait]
+    impl InternalImplBad of InternalUtils<ContractState> {
+        fn bad_func_using_generate(world: @IWorldDispatcher) -> felt252 {
             'land'
         }
     }
@@ -178,6 +204,14 @@ mod MyNominalContract {
         }
 
         fn do_params_and_world_ref(ref world: IWorldDispatcher, p2: u8) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self(self: @ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_ref_self(ref self: ContractState) -> felt252 {
             'land'
         }
     }

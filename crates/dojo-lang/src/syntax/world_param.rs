@@ -48,6 +48,14 @@ pub fn parse_world_injection(
         let (name, modifiers, param_type) = syntax_utils::get_parameter_info(db, param.clone());
 
         if !is_world_param(&name, &param_type) {
+            if name.eq(super::self_param::SELF_PARAM_NAME) && has_world_injected {
+                diagnostics.push(PluginDiagnostic {
+                    stable_ptr: fn_diagnostic_item,
+                    message: "You cannot use `self` and `world` parameters together.".to_string(),
+                    severity: Severity::Error,
+                });
+            }
+
             return;
         }
 

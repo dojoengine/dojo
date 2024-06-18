@@ -136,8 +136,6 @@ impl BuiltinDojoPlugin {
     ) -> PluginResult {
         PluginResult {
             code: None,
-            // All diagnostics are for now error. Severity may be moved as argument
-            // if warnings are required in this file.
             diagnostics: vec![PluginDiagnostic { stable_ptr, message, severity: Severity::Error }],
             remove_original_item: false,
         }
