@@ -64,17 +64,7 @@ mod actions {
         // ContractState is defined by system decorator expansion
         fn spawn(ref world: IWorldDispatcher) {
             let player = get_caller_address();
-            let position = get!(world, player, (Position));
-
-            set!(
-                world,
-                (
-                    Moves { player, remaining: 99, last_direction: Direction::None(()) },
-                    Position {
-                        player, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 }
-                    },
-                )
-            );
+            self.set_default_position(player, world);
         }
 
         fn move(ref world: IWorldDispatcher, direction: Direction) {
@@ -102,6 +92,26 @@ mod actions {
         fn get_player_position(world: @IWorldDispatcher) -> Position {
             let player = get_caller_address();
             get!(world, player, (Position))
+        }
+    }
+
+    // The `generate_trait` attribute is not compatible with `world` parameter expansion.
+    // Hence, the use of `self` to access the contract state.
+    #[generate_trait]
+    impl InternalImpl of InternalUtils {
+        fn set_default_position(
+            self: @ContractState, player: ContractAddress, world: IWorldDispatcher
+        ) {
+            // The world is always accessible from `self` inside a `dojo::contract`.
+            // let world = self.world();
+
+            set!(
+                world,
+                (
+                    Moves { player, remaining: 99, last_direction: Direction::None },
+                    Position { player, vec: Vec2 { x: 10, y: 10 } },
+                )
+            );
         }
     }
 }
