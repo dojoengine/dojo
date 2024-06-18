@@ -120,7 +120,7 @@ fn collect_policies(
     // get methods from all project contracts
     for contract in manifest.contracts {
         let abis = contract.inner.abi.unwrap().load_abi_string(&base_path)?;
-        let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis).unwrap();
+        let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
         let contract_address = contract.inner.address.unwrap();
         policies_from_abis(&mut policies, &contract.name, contract_address, &abis);
     }
