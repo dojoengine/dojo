@@ -579,7 +579,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
@@ -696,16 +700,27 @@ impl Sql {
                 self.query_queue
                     .push_front(statement, vec![Argument::String(entity_id.to_string())]);
                 for member in s.children.iter() {
-                    if let Ty::Struct(_) = &member.ty {
-                        let mut path_clone = path.clone();
-                        path_clone.push(member.name.clone());
-                        self.build_delete_entity_queries_recursive(
-                            path_clone, entity_id, &member.ty,
-                        );
-                    }
+                    let mut path_clone = path.clone();
+                    path_clone.push(member.name.clone());
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &member.ty);
                 }
             }
             Ty::Enum(e) => {
+                if !e.options.iter().all(|o| {
+                    if let Ty::Tuple(t) = &o.ty {
+                        t.is_empty()
+                    } else {
+                        false
+                    }
+                }) {
+                    return;
+                }
+
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
@@ -717,6 +732,7 @@ impl Sql {
                 let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
                 self.query_queue
                     .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
                 for member in array.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push("data".to_string());
@@ -724,6 +740,11 @@ impl Sql {
                 }
             }
             Ty::Tuple(t) => {
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
                 for (idx, member) in t.iter().enumerate() {
                     let mut path_clone = path.clone();
                     path_clone.push(format!("_{}", idx));
