@@ -1,6 +1,8 @@
 use array::{ArrayTrait, SpanTrait};
 use starknet::{ClassHash, ContractAddress, Felt252TryIntoContractAddress, Felt252TryIntoClassHash};
-use dojo::packing::{shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size};
+use dojo::packing::{
+    shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const
+};
 use integer::U256BitAnd;
 use option::OptionTrait;
 use debug::PrintTrait;
@@ -13,6 +15,17 @@ fn test_bit_fpow() {
     assert(
         fpow(
             2, 250
+        ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
+        ''
+    )
+}
+
+
+#[test]
+fn test_bit_pow2_const() {
+    assert(
+        pow2_const(
+            250
         ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
         ''
     )
@@ -266,7 +279,7 @@ fn test_pack_unpack_u256_single() {
     let mut unpacked_span = unpacked.span();
 
     let mut packed = array::ArrayTrait::new();
-    pack(ref packed, ref unpacked_span, ref layout_span);
+    pack(ref packed, ref unpacked_span, 0, ref layout_span);
 
     let mut layout = ArrayTrait::new();
     layout.append(128);
@@ -312,7 +325,7 @@ fn test_pack_unpack_felt252_single() {
     let mut unpacked_span = unpacked.span();
 
     let mut packed = array::ArrayTrait::new();
-    pack(ref packed, ref unpacked_span, ref layout_span);
+    pack(ref packed, ref unpacked_span, 0, ref layout_span);
 
     let mut layout = ArrayTrait::new();
     layout.append(251);
@@ -324,6 +337,23 @@ fn test_pack_unpack_felt252_single() {
     let mut unpacked_span = unpacked.span();
     let output = serde::Serde::<felt252>::deserialize(ref unpacked_span).unwrap();
     assert(input == output, 'invalid output');
+}
+
+#[test]
+fn test_pack_with_offset() {
+    let mut packed = array![];
+    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = array![16, 128, 128, 8].span();
+
+    pack(ref packed, ref unpacked, 5, ref layout);
+
+    assert!(packed.len() == 2, "bad packed length");
+
+    println!("first item: {}", *packed.at(0));
+    println!("second item: {}", *packed.at(1));
+
+    assert!(*packed.at(0) == 0x70006, "bad packed first item");
+    assert!(*packed.at(1) == 0x0900000000000000000000000000000008, "bad packed second item");
 }
 
 #[test]
@@ -365,5 +395,25 @@ fn test_pack_max_bits_value() {
     let mut unpacked_span = unpacked.span();
 
     let mut packed = array![];
-    pack(ref packed, ref unpacked_span, ref layout_span);
+    pack(ref packed, ref unpacked_span, 0, ref layout_span);
+}
+
+#[test]
+#[should_panic(expected: ('mismatched input lens',))]
+fn test_pack_with_offset_exceeds_length() {
+    let mut packed = array![];
+    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = array![16, 128, 128, 8].span();
+
+    pack(ref packed, ref unpacked, 6, ref layout);
+}
+
+#[test]
+#[should_panic(expected: ('mismatched input lens',))]
+fn test_pack_with_offset_layout_too_long() {
+    let mut packed = array![];
+    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = array![16, 128, 128, 8, 251].span();
+
+    pack(ref packed, ref unpacked, 5, ref layout);
 }

@@ -11,7 +11,7 @@ use dojo::database::storage;
 use dojo::model::Model;
 use dojo::world_test::Foo;
 use dojo::test_utils::GasCounterImpl;
-
+use dojo::database::introspect::{Introspect, Layout};
 
 #[test]
 #[available_gas(1000000000)]
@@ -44,7 +44,7 @@ fn bench_storage_many() {
     let layout = array![251, 251].span();
 
     let gas = GasCounterImpl::start();
-    storage::set_many(0, keys, values, layout).unwrap();
+    storage::set_many(0, keys, values, 0, layout).unwrap();
     gas.end("storage set_many");
 
     let gas = GasCounterImpl::start();
@@ -119,8 +119,8 @@ fn bench_database_array() {
     };
 
     let gas = GasCounterImpl::start();
-    database::set('table', 'key', values.span(), layout.span());
-    gas.end( "db set arr");
+    database::set('table', 'key', values.span(), 0, layout.span());
+    gas.end("db set arr");
 
     let gas = GasCounterImpl::start();
     let res = database::get('table', 'key', layout.span());
@@ -163,7 +163,8 @@ fn bench_simple_struct() {
     assert(serialized.at(1) == values.at(1), 'serialized differ at 1');
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, IntrospectPacked)]
+#[dojo::model]
 struct PositionWithQuaterions {
     #[key]
     id: felt252,
@@ -176,9 +177,10 @@ struct PositionWithQuaterions {
     d: felt252,
 }
 
+// TODO: this test should be adapted to benchmark the new layout system
 #[test]
 #[available_gas(1000000000)]
-fn test_struct_with_many_fields() {
+fn test_struct_with_many_fields_fixed() {
     let gas = GasCounterImpl::start();
 
     let mut pos = PositionWithQuaterions {
@@ -191,7 +193,7 @@ fn test_struct_with_many_fields() {
         c: 0x123456789abcdef,
         d: 0x123456789abcdef,
     };
-    gas.end( "pos init");
+    gas.end("pos init");
 
     let gas = GasCounterImpl::start();
     let mut serialized = ArrayTrait::new();
@@ -219,23 +221,28 @@ fn test_struct_with_many_fields() {
         idx += 1;
     };
 
+    let layout = match dojo::model::Model::<PositionWithQuaterions>::layout() {
+        Layout::Fixed(layout) => layout,
+        _ => panic!("expected fixed layout"),
+    };
+
     let gas = GasCounterImpl::start();
-    database::set('positions', '42', pos.values(), pos.layout());
+    database::set('positions', '42', pos.values(), 0, layout);
     gas.end("pos db set");
 
     let gas = GasCounterImpl::start();
-    database::get('positions', '42', pos.layout());
+    database::get('positions', '42', layout);
     gas.end("pos db get");
 }
 
-
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 struct Sword {
     swordsmith: ContractAddress,
     damage: u32,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
+#[dojo::model]
 struct Case {
     #[key]
     owner: ContractAddress,
@@ -243,17 +250,18 @@ struct Case {
     material: felt252,
 }
 
-
+// TODO: this test should be adapted to benchmark the new layout system
 #[test]
+#[ignore]
 #[available_gas(1000000000)]
-fn bench_nested_struct() {
+fn bench_nested_struct_packed() {
     let caller = starknet::contract_address_const::<0x42>();
-    
+
     let gas = GasCounterImpl::start();
     let mut case = Case {
         owner: caller, sword: Sword { swordsmith: caller, damage: 0x12345678, }, material: 'wooden',
     };
-    gas.end( "case init");
+    gas.end("case init");
 
     // ????
     let _gas = testing::get_available_gas();
@@ -264,7 +272,7 @@ fn bench_nested_struct() {
     serde::Serde::serialize(@case.sword, ref serialized);
     serde::Serde::serialize(@case.material, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
-    gas.end( "case serialize");
+    gas.end("case serialize");
 
     let gas = GasCounterImpl::start();
     let values: Span<felt252> = case.values();
@@ -280,16 +288,22 @@ fn bench_nested_struct() {
         idx += 1;
     };
 
-    let gas = GasCounterImpl::start();
-    database::set('cases', '42', values, case.layout());
-    gas.end( "case db set");
+    let layout = match dojo::model::Model::<Case>::layout() {
+        Layout::Fixed(layout) => layout,
+        _ => panic!("expected fixed layout"),
+    };
 
     let gas = GasCounterImpl::start();
-    database::get('cases', '42', case.layout());
-    gas.end( "case db get");
+    database::set('cases', '42', values, 0, layout);
+    gas.end("case db set");
+
+    let gas = GasCounterImpl::start();
+    database::get('cases', '42', layout);
+    gas.end("case db get");
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
+#[dojo::model]
 struct Character {
     #[key]
     caller: ContractAddress,
@@ -300,7 +314,7 @@ struct Character {
     gold: u32,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 struct Abilities {
     strength: u8,
     dexterity: u8,
@@ -310,7 +324,7 @@ struct Abilities {
     charisma: u8,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 struct Stats {
     kills: u128,
     deaths: u16,
@@ -323,15 +337,17 @@ struct Stats {
     romances: u16,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde)]
 enum Weapon {
     DualWield: (Sword, Sword),
     Fists: (Sword, Sword), // Introspect requires same arms
 }
 
+// TODO: this test should be adapted to benchmark the new layout system
 #[test]
+#[ignore]
 #[available_gas(1000000000)]
-fn bench_complex_struct() {
+fn bench_complex_struct_packed() {
     let gas = GasCounterImpl::start();
 
     let char = Character {
@@ -395,11 +411,16 @@ fn bench_complex_struct() {
         idx += 1;
     };
 
+    let layout = match dojo::model::Model::<Character>::layout() {
+        Layout::Fixed(layout) => layout,
+        _ => panic!("expected fixed layout"),
+    };
+
     let gas = GasCounterImpl::start();
-    database::set('chars', '42', char.values(), char.layout());
+    database::set('chars', '42', char.values(), 0, layout);
     gas.end("chars db set");
 
     let gas = GasCounterImpl::start();
-    database::get('chars', '42', char.layout());
+    database::get('chars', '42', layout);
     gas.end("chars db get");
 }

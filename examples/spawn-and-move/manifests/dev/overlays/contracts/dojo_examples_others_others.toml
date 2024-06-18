@@ -1,0 +1,4 @@
+name = "dojo_examples::others::others"
+reads = []
+writes = []
+init_calldata = ["$contract_address:dojo_examples::actions::actions", "$class_hash:dojo_examples::actions::actions", "10"]

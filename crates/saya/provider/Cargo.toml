@@ -11,18 +11,18 @@ katana-db.workspace = true
 katana-executor.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
+katana-rpc-api = { workspace = true, features = [ "client" ] }
 katana-rpc-types.workspace = true
-katana-rpc-api = { workspace = true, features = ["client"] }
 
-anyhow.workspace = true
-auto_impl = "1.1.0"
-async-trait.workspace = true
-convert_case.workspace = true
 alloy-primitives.workspace = true
+anyhow.workspace = true
+async-trait.workspace = true
+auto_impl.workspace = true
+convert_case.workspace = true
 flate2.workspace = true
 futures.workspace = true
-jsonrpsee = { workspace = true, features = ["client"] }
-lazy_static = "1.4.0"
+jsonrpsee = { workspace = true, features = [ "client" ] }
+lazy_static.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true

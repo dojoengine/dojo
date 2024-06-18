@@ -20,7 +20,7 @@ use parking_lot::RwLock;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use self::backend::{ForkedBackend, ForkedBackendError, SharedStateProvider};
+use self::backend::{Backend, BackendError, SharedStateProvider};
 use self::state::ForkedStateDb;
 use super::in_memory::cache::{CacheDb, CacheStateDb};
 use super::in_memory::state::HistoricalStates;
@@ -49,8 +49,8 @@ impl ForkedProvider {
     pub fn new(
         provider: Arc<JsonRpcClient<HttpTransport>>,
         block_id: BlockHashOrNumber,
-    ) -> Result<Self, ForkedBackendError> {
-        let backend = ForkedBackend::new_with_backend_thread(provider, block_id)?;
+    ) -> Result<Self, BackendError> {
+        let backend = Backend::new(provider, block_id)?;
         let shared_provider = SharedStateProvider::new_with_backend(backend);
 
         let storage = RwLock::new(CacheDb::new(()));
@@ -332,7 +332,7 @@ impl TransactionTraceProvider for ForkedProvider {
         Ok(exec)
     }
 
-    fn transactions_executions_by_block(
+    fn transaction_executions_by_block(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
@@ -341,26 +341,34 @@ impl TransactionTraceProvider for ForkedProvider {
             BlockHashOrNumber::Hash(hash) => self.storage.read().block_numbers.get(&hash).cloned(),
         };
 
-        let Some(StoredBlockBodyIndices { tx_offset, tx_count }) =
+        let Some(index) =
             block_num.and_then(|num| self.storage.read().block_body_indices.get(&num).cloned())
         else {
             return Ok(None);
         };
 
-        let offset = tx_offset as usize;
-        let count = tx_count as usize;
+        let traces = self.transaction_executions_in_range(index.into())?;
+        Ok(Some(traces))
+    }
 
-        let execs = self
+    fn transaction_executions_in_range(
+        &self,
+        range: Range<TxNumber>,
+    ) -> ProviderResult<Vec<TxExecInfo>> {
+        let start = range.start as usize;
+        let total = range.end as usize - start;
+
+        let traces = self
             .storage
             .read()
             .transactions_executions
             .iter()
-            .skip(offset)
-            .take(count)
+            .skip(start)
+            .take(total)
             .cloned()
             .collect();
 
-        Ok(Some(execs))
+        Ok(traces)
     }
 }
 

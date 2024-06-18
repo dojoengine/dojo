@@ -1,6 +1,6 @@
 use alloy_primitives::B256;
 use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::{DataAvailabilityMode, MsgToL1, ResourceBounds};
+use starknet::core::types::{DataAvailabilityMode, EthAddress, MsgToL1, MsgToL2, ResourceBounds};
 use starknet_crypto::poseidon_hash_many;
 
 use crate::FieldElement;
@@ -261,16 +261,29 @@ pub fn compute_l1_handler_tx_hash(
     ])
 }
 
-/// Computes the hash of a L1 message.
+/// Computes the hash of a L2 to L1 message.
 ///
 /// The hash that is used to consume the message in L1.
-pub fn compute_l1_message_hash(
+pub fn compute_l2_to_l1_message_hash(
     from_address: FieldElement,
     to_address: FieldElement,
     payload: &[FieldElement],
 ) -> B256 {
     let msg = MsgToL1 { from_address, to_address, payload: payload.to_vec() };
+    B256::from_slice(msg.hash().as_bytes())
+}
 
+// TODO: standardize the usage of eth types. prefer to use alloy (for its convenience) instead of
+// starknet-rs's types.
+/// Computes the hash of a L1 to L2 message.
+pub fn compute_l1_to_l2_message_hash(
+    from_address: EthAddress,
+    to_address: FieldElement,
+    selector: FieldElement,
+    payload: &[FieldElement],
+    nonce: u64,
+) -> B256 {
+    let msg = MsgToL2 { from_address, to_address, selector, payload: payload.to_vec(), nonce };
     B256::from_slice(msg.hash().as_bytes())
 }
 
@@ -311,44 +324,32 @@ fn encode_da_mode(
 #[cfg(test)]
 mod tests {
     use starknet::core::chain_id;
+    use starknet::macros::felt;
 
     use super::*;
 
     #[test]
-    fn test_compute_deploy_account_v1_transaction_hash() {
-        let contract_address = FieldElement::from_hex_be(
-            "0x0617e350ebed9897037bdef9a09af65049b85ed2e4c9604b640f34bffa152149",
-        )
-        .unwrap();
+    fn test_compute_deploy_account_v1_tx_hash() {
+        // Starknet mainnet tx hash: https://voyager.online/tx/0x3d013d17c20a5db05d5c2e06c948a4e0bf5ea5b851b15137316533ec4788b6b
+        let expected_hash =
+            felt!("0x3d013d17c20a5db05d5c2e06c948a4e0bf5ea5b851b15137316533ec4788b6b");
+
+        let contract_address =
+            felt!("0x0617e350ebed9897037bdef9a09af65049b85ed2e4c9604b640f34bffa152149");
         let constructor_calldata = vec![
-            FieldElement::from_hex_be(
-                "0x33434ad846cdd5f23eb73ff09fe6fddd568284a0fb7d1be20ee482f044dabe2",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0x79dc0da7c54b95f10aa182ad0a46400db63156920adb65eca2654c0945a463",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be("0x2").unwrap(),
-            FieldElement::from_hex_be(
-                "0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be("0x0").unwrap(),
+            felt!("0x33434ad846cdd5f23eb73ff09fe6fddd568284a0fb7d1be20ee482f044dabe2"),
+            felt!("0x79dc0da7c54b95f10aa182ad0a46400db63156920adb65eca2654c0945a463"),
+            felt!("0x2"),
+            felt!("0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096"),
+            felt!("0x0"),
         ];
-        let class_hash = FieldElement::from_hex_be(
-            "0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
-        )
-        .unwrap();
-        let salt = FieldElement::from_hex_be(
-            "0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096",
-        )
-        .unwrap();
-        let max_fee = FieldElement::from_hex_be("0x38d7ea4c68000").unwrap();
+        let class_hash = felt!("0x25ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
+        let salt = felt!("0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096");
+        let max_fee = felt!("0x38d7ea4c68000");
         let chain_id = chain_id::MAINNET;
         let nonce = FieldElement::ZERO;
 
-        let hash = compute_deploy_account_v1_tx_hash(
+        let actual_hash = compute_deploy_account_v1_tx_hash(
             contract_address,
             &constructor_calldata,
             class_hash,
@@ -359,12 +360,6 @@ mod tests {
             false,
         );
 
-        assert_eq!(
-            hash,
-            FieldElement::from_hex_be(
-                "0x3d013d17c20a5db05d5c2e06c948a4e0bf5ea5b851b15137316533ec4788b6b"
-            )
-            .unwrap()
-        );
+        assert_eq!(actual_hash, expected_hash);
     }
 }

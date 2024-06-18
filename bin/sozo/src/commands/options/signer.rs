@@ -5,6 +5,7 @@ use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::core::types::FieldElement;
 use starknet::signers::{LocalWallet, SigningKey};
+use tracing::trace;
 
 use super::{DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
@@ -20,46 +21,41 @@ pub struct SignerOptions {
     #[arg(conflicts_with = "keystore_path")]
     #[arg(help_heading = "Signer options - RAW")]
     #[arg(help = "The raw private key associated with the account contract.")]
+    #[arg(global = true)]
     pub private_key: Option<String>,
 
     #[arg(long = "keystore", env = DOJO_KEYSTORE_PATH_ENV_VAR)]
     #[arg(value_name = "PATH")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "Use the keystore in the given folder or file.")]
+    #[arg(global = true)]
     pub keystore_path: Option<String>,
 
     #[arg(long = "password", env = DOJO_KEYSTORE_PASSWORD_ENV_VAR)]
     #[arg(value_name = "PASSWORD")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "The keystore password. Used with --keystore.")]
+    #[arg(global = true)]
     pub keystore_password: Option<String>,
 }
 
 impl SignerOptions {
     pub fn signer(&self, env_metadata: Option<&Environment>, no_wait: bool) -> Result<LocalWallet> {
-        if let Some(private_key) =
-            self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
-        {
+        if let Some(private_key) = self.private_key(env_metadata) {
+            trace!(private_key, "Signing using private key.");
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-                FieldElement::from_str(private_key)?,
+                FieldElement::from_str(&private_key)?,
             )));
         }
 
-        if let Some(path) = &self
-            .keystore_path
-            .as_deref()
-            .or_else(|| env_metadata.and_then(|env| env.keystore_path()))
-        {
+        if let Some(path) = self.keystore_path(env_metadata) {
             let password = {
-                if let Some(password) = self
-                    .keystore_password
-                    .as_deref()
-                    .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
-                {
+                if let Some(password) = self.keystore_password(env_metadata) {
                     password.to_owned()
                 } else if no_wait {
                     return Err(anyhow!("Could not find password. Please specify the password."));
                 } else {
+                    trace!("Prompting user for keystore password.");
                     rpassword::prompt_password("Enter password: ")?
                 }
             };
@@ -71,6 +67,30 @@ impl SignerOptions {
             "Could not find private key. Please specify the private key or path to the keystore \
              file."
         ))
+    }
+
+    pub fn private_key(&self, env_metadata: Option<&Environment>) -> Option<String> {
+        if let Some(s) = &self.private_key {
+            Some(s.to_owned())
+        } else {
+            env_metadata.and_then(|env| env.private_key().map(|s| s.to_string()))
+        }
+    }
+
+    pub fn keystore_path(&self, env_metadata: Option<&Environment>) -> Option<String> {
+        if let Some(s) = &self.keystore_path {
+            Some(s.to_owned())
+        } else {
+            env_metadata.and_then(|env| env.keystore_path().map(|s| s.to_string()))
+        }
+    }
+
+    pub fn keystore_password(&self, env_metadata: Option<&Environment>) -> Option<String> {
+        if let Some(s) = &self.keystore_password {
+            Some(s.to_owned())
+        } else {
+            env_metadata.and_then(|env| env.keystore_password().map(|s| s.to_string()))
+        }
     }
 }
 

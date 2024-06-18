@@ -818,7 +818,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             let mut simulated = Vec::with_capacity(results.len());
             for (i, ResultAndStates { result, .. }) in results.into_iter().enumerate() {
                 match result {
-                    ExecutionResult::Success { trace, fee, receipt } => {
+                    ExecutionResult::Success { trace, receipt } => {
                         let fee_transfer_invocation =
                             trace.fee_transfer_call_info.map(|f| FunctionInvocation::from(f).0);
                         let validate_invocation =
@@ -875,6 +875,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                             }
                         };
 
+                        let fee = receipt.fee();
                         simulated.push(SimulatedTransaction {
                             transaction_trace,
                             fee_estimation: FeeEstimate {

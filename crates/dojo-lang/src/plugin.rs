@@ -9,9 +9,8 @@ use cairo_lang_defs::plugin::{
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::plugin::PluginSuite;
 use cairo_lang_starknet::plugin::aux_data::StarkNetEventAuxData;
-use cairo_lang_syntax::attribute::structured::{
-    AttributeArg, AttributeArgVariant, AttributeStructurize,
-};
+use cairo_lang_syntax::attribute::structured::{AttributeArgVariant, AttributeStructurize};
+use cairo_lang_syntax::node::ast::Attribute;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
@@ -27,7 +26,6 @@ use url::Url;
 
 use crate::contract::DojoContract;
 use crate::event::handle_event_struct;
-use crate::inline_macros::array_cap::ArrayCapMacro;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
@@ -39,8 +37,11 @@ use crate::print::{handle_print_enum, handle_print_struct};
 
 pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
+pub const DOJO_MODEL_ATTR: &str = "dojo::model";
 pub const DOJO_EVENT_ATTR: &str = "dojo::event";
-const DOJO_PLUGIN_EXPAND_VAR_ENV: &str = "DOJO_PLUGIN_EXPAND";
+
+pub const DOJO_INTROSPECT_ATTR: &str = "Introspect";
+pub const DOJO_PACKED_ATTR: &str = "IntrospectPacked";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
@@ -139,7 +140,7 @@ impl BuiltinDojoPlugin {
         }
         if attrs.len() != 1 {
             return self.result_with_diagnostic(
-                attrs[0].attr(db).stable_ptr().untyped(),
+                attrs[0].attr(db).stable_ptr().0,
                 format!("Expected one computed macro per function, got {:?}.", attrs.len()),
             );
         }
@@ -147,7 +148,7 @@ impl BuiltinDojoPlugin {
         let args = attr.args;
         if args.len() > 1 {
             return self.result_with_diagnostic(
-                attr.args_stable_ptr.untyped(),
+                attr.args_stable_ptr.0,
                 "Expected one arg for computed macro.\nUsage: #[computed(Position)]".into(),
             );
         }
@@ -170,13 +171,13 @@ impl BuiltinDojoPlugin {
                     .get_text(db);
                 if model_type != model_name {
                     return self.result_with_diagnostic(
-                        model_type_path.stable_ptr().untyped(),
+                        model_type_path.stable_ptr().0,
                         "Computed functions second parameter should be the model.".into(),
                     );
                 }
             } else {
                 return self.result_with_diagnostic(
-                    params.stable_ptr().untyped(),
+                    params.stable_ptr().0,
                     format!(
                         "Computed function parameter node of unsupported type {:?}.",
                         model_type_node.as_syntax_node().get_text(db)
@@ -185,7 +186,7 @@ impl BuiltinDojoPlugin {
             }
             if param_els.len() != 2 {
                 return self.result_with_diagnostic(
-                    params.stable_ptr().untyped(),
+                    params.stable_ptr().0,
                     "Computed function should take 2 parameters, contract state and model.".into(),
                 );
             }
@@ -243,10 +244,76 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<DeleteMacro>()
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
-        .add_inline_macro_plugin::<ArrayCapMacro>()
         .add_inline_macro_plugin::<EmitMacro>();
 
     suite
+}
+
+fn get_derive_attr_names(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    attrs: Vec<Attribute>,
+) -> Vec<String> {
+    attrs
+        .iter()
+        .filter_map(|attr| {
+            let args = attr.clone().structurize(db).args;
+            if args.is_empty() {
+                diagnostics.push(PluginDiagnostic {
+                    stable_ptr: attr.stable_ptr().0,
+                    message: "Expected args.".into(),
+                    severity: Severity::Error,
+                });
+                None
+            } else {
+                Some(args.into_iter().filter_map(|a| {
+                    if let AttributeArgVariant::Unnamed(ast::Expr::Path(path)) = a.variant {
+                        if let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] {
+                            Some(segment.ident(db).text(db).to_string())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }))
+            }
+        })
+        .flatten()
+        .collect::<Vec<_>>()
+}
+
+fn check_for_derive_attr_conflicts(
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    diagnostic_item: SyntaxStablePtrId,
+    attr_names: &[String],
+) {
+    if attr_names.contains(&DOJO_INTROSPECT_ATTR.to_string())
+        && attr_names.contains(&DOJO_PACKED_ATTR.to_string())
+    {
+        diagnostics.push(PluginDiagnostic {
+            stable_ptr: diagnostic_item,
+            message: format!(
+                "{} and {} attributes cannot be used at a same time.",
+                DOJO_INTROSPECT_ATTR, DOJO_PACKED_ATTR
+            ),
+            severity: Severity::Error,
+        });
+    }
+}
+
+fn get_additional_derive_attrs_for_model(derive_attr_names: &[String]) -> Vec<String> {
+    let mut additional_attrs = vec![];
+
+    // if not already present, add Introspect to derive attributes because it
+    // is mandatory for a model
+    if !derive_attr_names.contains(&DOJO_INTROSPECT_ATTR.to_string())
+        && !derive_attr_names.contains(&DOJO_PACKED_ATTR.to_string())
+    {
+        additional_attrs.push(DOJO_INTROSPECT_ATTR.to_string());
+    }
+
+    additional_attrs
 }
 
 impl MacroPlugin for BuiltinDojoPlugin {
@@ -258,9 +325,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
         item_ast: ast::ModuleItem,
         _metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
-        let do_expand: bool =
-            std::env::var(DOJO_PLUGIN_EXPAND_VAR_ENV).map_or(false, |v| v == "true" || v == "1");
-
         match item_ast {
             ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::ModuleItem::Trait(trait_ast) => self.handle_trait(db, trait_ast),
@@ -269,56 +333,39 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 let mut rewrite_nodes = vec![];
                 let mut diagnostics = vec![];
 
+                let derive_attr_names = get_derive_attr_names(
+                    db,
+                    &mut diagnostics,
+                    enum_ast.attributes(db).query_attr(db, "derive"),
+                );
+
+                check_for_derive_attr_conflicts(
+                    &mut diagnostics,
+                    enum_ast.name(db).stable_ptr().0,
+                    &derive_attr_names,
+                );
+
                 // Iterate over all the derive attributes of the struct
-                for attr in enum_ast.attributes(db).query_attr(db, "derive") {
-                    let attr = attr.structurize(db);
-
-                    // Check if the derive attribute has arguments
-                    if attr.args.is_empty() {
-                        diagnostics.push(PluginDiagnostic {
-                            stable_ptr: attr.args_stable_ptr.untyped(),
-                            message: "Expected args.".into(),
-                            severity: Severity::Error,
-                        });
-                        continue;
-                    }
-
-                    // Iterate over all the arguments of the derive attribute
-                    for arg in attr.args {
-                        // Check if the argument is a path then set it to arg
-                        let AttributeArg {
-                            variant:
-                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
-                            ..
-                        } = arg
-                        else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: arg.arg_stable_ptr.untyped(),
-                                message: "Expected path.".into(),
-                                severity: Severity::Error,
-                            });
-                            continue;
-                        };
-
-                        // Check if the path has a single segment
-                        let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
-                            continue;
-                        };
-
-                        // Get the text of the segment and check if it is "Model"
-                        let derived = segment.ident(db).text(db);
-
-                        match derived.as_str() {
-                            "Introspect" => {
-                                rewrite_nodes.push(handle_introspect_enum(
-                                    db,
-                                    &mut diagnostics,
-                                    enum_ast.clone(),
-                                ));
-                            }
-                            "Print" => rewrite_nodes.push(handle_print_enum(db, enum_ast.clone())),
-                            _ => continue,
+                for attr in derive_attr_names {
+                    match attr.as_str() {
+                        DOJO_INTROSPECT_ATTR => {
+                            rewrite_nodes.push(handle_introspect_enum(
+                                db,
+                                &mut diagnostics,
+                                enum_ast.clone(),
+                                false,
+                            ));
                         }
+                        DOJO_PACKED_ATTR => {
+                            rewrite_nodes.push(handle_introspect_enum(
+                                db,
+                                &mut diagnostics,
+                                enum_ast.clone(),
+                                true,
+                            ));
+                        }
+                        "Print" => rewrite_nodes.push(handle_print_enum(db, enum_ast.clone())),
+                        _ => continue,
                     }
                 }
 
@@ -327,21 +374,19 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 }
 
                 let name = enum_ast.name(db).text(db);
-                let mut builder = PatchBuilder::new(db);
+                let mut builder = PatchBuilder::new(db, &enum_ast);
                 for node in rewrite_nodes {
                     builder.add_modified(node);
                 }
 
-                if do_expand {
-                    println!("{}", builder.code);
-                }
+                let (code, code_mappings) = builder.build();
 
                 PluginResult {
                     code: Some(PluginGeneratedFile {
                         name,
-                        content: builder.code,
+                        content: code,
                         aux_data: Some(DynGeneratedFileAuxData::new(aux_data)),
-                        code_mappings: builder.code_mappings,
+                        code_mappings,
                     }),
                     diagnostics,
                     remove_original_item: false,
@@ -352,70 +397,55 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 let mut rewrite_nodes = vec![];
                 let mut diagnostics = vec![];
 
+                let mut addtional_derive_attr_names = vec![];
+                let derive_attr_names = get_derive_attr_names(
+                    db,
+                    &mut diagnostics,
+                    struct_ast.attributes(db).query_attr(db, "derive"),
+                );
+
+                let model_attrs = struct_ast.attributes(db).query_attr(db, DOJO_MODEL_ATTR);
+
+                check_for_derive_attr_conflicts(
+                    &mut diagnostics,
+                    struct_ast.name(db).stable_ptr().0,
+                    &derive_attr_names,
+                );
+
+                if !model_attrs.is_empty() {
+                    addtional_derive_attr_names =
+                        get_additional_derive_attrs_for_model(&derive_attr_names);
+                }
+
                 // Iterate over all the derive attributes of the struct
-                for attr in struct_ast.attributes(db).query_attr(db, "derive") {
-                    let attr = attr.structurize(db);
-
-                    // Check if the derive attribute has arguments
-                    if attr.args.is_empty() {
-                        diagnostics.push(PluginDiagnostic {
-                            stable_ptr: attr.args_stable_ptr.untyped(),
-                            message: "Expected args.".into(),
-                            severity: Severity::Error,
-                        });
-                        continue;
-                    }
-
-                    // Iterate over all the arguments of the derive attribute
-                    for arg in attr.args {
-                        // Check if the argument is a path then set it to arg
-                        let AttributeArg {
-                            variant:
-                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
-                            ..
-                        } = arg
-                        else {
-                            diagnostics.push(PluginDiagnostic {
-                                stable_ptr: arg.arg_stable_ptr.untyped(),
-                                message: "Expected path.".into(),
-                                severity: Severity::Error,
-                            });
-                            continue;
-                        };
-
-                        // Check if the path has a single segment
-                        let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
-                            continue;
-                        };
-
-                        // Get the text of the segment and check if it is "Model"
-                        let derived = segment.ident(db).text(db);
-
-                        match derived.as_str() {
-                            "Model" => {
-                                let (model_rewrite_nodes, model_diagnostics) =
-                                    handle_model_struct(db, &mut aux_data, struct_ast.clone());
-                                rewrite_nodes.push(model_rewrite_nodes);
-                                diagnostics.extend(model_diagnostics);
-                            }
-                            "Print" => {
-                                rewrite_nodes.push(handle_print_struct(db, struct_ast.clone()));
-                            }
-                            "Introspect" => {
-                                rewrite_nodes.push(handle_introspect_struct(
-                                    db,
-                                    &mut diagnostics,
-                                    struct_ast.clone(),
-                                ));
-                            }
-                            _ => continue,
+                for attr in derive_attr_names.iter().chain(addtional_derive_attr_names.iter()) {
+                    match attr.as_str() {
+                        "Print" => {
+                            rewrite_nodes.push(handle_print_struct(db, struct_ast.clone()));
                         }
+                        DOJO_INTROSPECT_ATTR => {
+                            rewrite_nodes.push(handle_introspect_struct(
+                                db,
+                                &mut diagnostics,
+                                struct_ast.clone(),
+                                false,
+                            ));
+                        }
+                        DOJO_PACKED_ATTR => {
+                            rewrite_nodes.push(handle_introspect_struct(
+                                db,
+                                &mut diagnostics,
+                                struct_ast.clone(),
+                                true,
+                            ));
+                        }
+                        _ => continue,
                     }
                 }
 
-                let attributes = struct_ast.attributes(db).query_attr(db, DOJO_EVENT_ATTR);
+                let event_attrs = struct_ast.attributes(db).query_attr(db, DOJO_EVENT_ATTR);
 
-                match attributes.len().cmp(&1) {
+                match event_attrs.len().cmp(&1) {
                     Ordering::Equal => {
                         let (event_rewrite_nodes, event_diagnostics) =
                             handle_event_struct(db, &mut aux_data, struct_ast.clone());
@@ -426,7 +456,25 @@ impl MacroPlugin for BuiltinDojoPlugin {
                         diagnostics.push(PluginDiagnostic {
                             message: "A Dojo event must have zero or one dojo::event attribute."
                                 .into(),
-                            stable_ptr: struct_ast.stable_ptr().untyped(),
+                            stable_ptr: struct_ast.stable_ptr().0,
+                            severity: Severity::Error,
+                        });
+                    }
+                    _ => {}
+                }
+
+                match model_attrs.len().cmp(&1) {
+                    Ordering::Equal => {
+                        let (model_rewrite_nodes, model_diagnostics) =
+                            handle_model_struct(db, &mut aux_data, struct_ast.clone());
+                        rewrite_nodes.push(model_rewrite_nodes);
+                        diagnostics.extend(model_diagnostics);
+                    }
+                    Ordering::Greater => {
+                        diagnostics.push(PluginDiagnostic {
+                            message: "A Dojo model must have zero or one dojo::model attribute."
+                                .into(),
+                            stable_ptr: struct_ast.stable_ptr().0,
                             severity: Severity::Error,
                         });
                     }
@@ -438,21 +486,19 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 }
 
                 let name = struct_ast.name(db).text(db);
-                let mut builder = PatchBuilder::new(db);
+                let mut builder = PatchBuilder::new(db, &struct_ast);
                 for node in rewrite_nodes {
                     builder.add_modified(node);
                 }
 
-                if do_expand {
-                    println!("{}", builder.code);
-                }
+                let (code, code_mappings) = builder.build();
 
                 PluginResult {
                     code: Some(PluginGeneratedFile {
                         name,
-                        content: builder.code,
+                        content: code,
                         aux_data: Some(DynGeneratedFileAuxData::new(aux_data)),
-                        code_mappings: builder.code_mappings,
+                        code_mappings,
                     }),
                     diagnostics,
                     remove_original_item: false,
@@ -465,13 +511,12 @@ impl MacroPlugin for BuiltinDojoPlugin {
 
     fn declared_attributes(&self) -> Vec<String> {
         vec![
-            "dojo::contract".to_string(),
-            "dojo::event".to_string(),
+            DOJO_INTERFACE_ATTR.to_string(),
+            DOJO_CONTRACT_ATTR.to_string(),
+            DOJO_EVENT_ATTR.to_string(),
+            DOJO_MODEL_ATTR.to_string(),
             "key".to_string(),
             "computed".to_string(),
-            // Not adding capacity for now, this will automatically
-            // makes Scarb emitting a diagnostic saying this attribute is not supported.
-            // "capacity".to_string(),
         ]
     }
 }

@@ -7,18 +7,35 @@ use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
-use cairo_lang_test_runner::{CompiledTestRunner, TestCompiler, TestRunConfig};
+use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler, TestRunConfig};
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
-use scarb::compiler::CompilationUnit;
+use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::Config;
-use scarb::ops;
+use scarb::ops::{self, FeaturesOpts, FeaturesSelector};
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
+
+#[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
+pub enum ProfilerMode {
+    None,
+    Cairo,
+    Sierra,
+}
+
+impl From<ProfilerMode> for RunProfilerConfig {
+    fn from(mode: ProfilerMode) -> Self {
+        match mode {
+            ProfilerMode::None => RunProfilerConfig::None,
+            ProfilerMode::Cairo => RunProfilerConfig::Cairo,
+            ProfilerMode::Sierra => RunProfilerConfig::Sierra,
+        }
+    }
+}
 
 /// Execute all unit tests of a local package.
 #[derive(Debug, Args)]
@@ -32,9 +49,15 @@ pub struct TestArgs {
     /// Should we run only the ignored tests.
     #[arg(long, default_value_t = false)]
     ignored: bool,
-    /// Should we run the profiler.
+    /// Should we run the profiler and with what mode.
+    #[arg(long, default_value = "none")]
+    profiler_mode: ProfilerMode,
+    /// Should we run the tests with gas enabled.
+    #[arg(long, default_value_t = true)]
+    gas_enabled: bool,
+    /// Should we print the resource usage.
     #[arg(long, default_value_t = false)]
-    run_profiler: bool,
+    print_resource_usage: bool,
 }
 
 impl TestArgs {
@@ -47,13 +70,27 @@ impl TestArgs {
         let resolve = ops::resolve_workspace(&ws)?;
         // TODO: Compute all compilation units and remove duplicates, could be unnecessary in future
         // version of Scarb.
-        let mut compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
-        compilation_units.sort_by_key(|unit| unit.main_package_id);
-        compilation_units.dedup_by_key(|unit| unit.main_package_id);
+
+        let features_opts =
+            FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+
+        let mut compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws)?;
+        compilation_units.sort_by_key(|unit| unit.main_package_id());
+        compilation_units.dedup_by_key(|unit| unit.main_package_id());
 
         for unit in compilation_units {
-            let props: Props = unit.target().props()?;
+            let unit = if let CompilationUnit::Cairo(unit) = unit {
+                unit
+            } else {
+                continue;
+            };
+
+            let props: Props = unit.main_component().target_props()?;
             let db = build_root_database(&unit)?;
+
+            if DiagnosticsReporter::stderr().allow_warnings().check(&db) {
+                bail!("failed to compile");
+            }
 
             let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
             let test_crate_ids = main_crate_ids.clone();
@@ -67,20 +104,22 @@ impl TestArgs {
                 main_crate_ids.extend(collect_external_crate_ids(&db, external_contracts));
             }
 
-            if DiagnosticsReporter::stderr().allow_warnings().check(&db) {
-                bail!("failed to compile");
-            }
-
             let config = TestRunConfig {
                 filter: self.filter.clone(),
                 ignored: self.ignored,
                 include_ignored: self.include_ignored,
-                run_profiler: self.run_profiler,
+                run_profiler: self.profiler_mode.clone().into(),
+                gas_enabled: self.gas_enabled,
+                print_resource_usage: self.print_resource_usage,
             };
 
-            let compiler = TestCompiler { db, main_crate_ids, test_crate_ids, starknet: true };
+            let compiler =
+                TestCompiler { db: db.snapshot(), main_crate_ids, test_crate_ids, starknet: true };
+
             let runner = CompiledTestRunner { compiled: compiler.build()?, config };
-            runner.run()?;
+
+            // Database is required here for the profiler to work.
+            runner.run(Some(&db))?;
 
             println!();
         }
@@ -89,10 +128,10 @@ impl TestArgs {
     }
 }
 
-pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
+pub(crate) fn build_root_database(unit: &CairoCompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
-    b.with_cfg(CfgSet::from_iter([Cfg::name("test")]));
+    b.with_cfg(CfgSet::from_iter([Cfg::name("test"), Cfg::kv("target", "test")]));
 
     b.with_plugin_suite(test_plugin_suite());
     b.with_plugin_suite(dojo_plugin_suite());
@@ -101,16 +140,19 @@ pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase
     b.build()
 }
 
-fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
+fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
     let crate_roots = unit
         .components
         .iter()
         .filter(|model| !model.package.id.is_core())
-        .map(|model| (model.cairo_package_name(), model.target.source_root().into()))
+        // NOTE: We're taking the first target of each compilation unit, which should always be the
+        //       main package source root due to the order maintained by scarb.
+        .map(|model| (model.cairo_package_name(), model.targets[0].source_root().into()))
         .collect();
 
     let corelib =
-        unit.core_package_component().map(|c| Directory::Real(c.target.source_root().into()));
+        unit.core_package_component().map(|c| Directory::Real(c.targets[0].source_root().into()));
+
     let crates_config = crates_config_for_compilation_unit(unit);
 
     let content = ProjectConfigContent { crate_roots, crates_config };

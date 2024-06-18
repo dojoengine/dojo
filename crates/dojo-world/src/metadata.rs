@@ -85,7 +85,7 @@ pub fn project_to_world_metadata(project_metadata: Option<ProjectWorldMetadata>)
 ///
 /// # Returns
 /// A [`DojoMetadata`] object containing all Dojo metadata.
-pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
+pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> {
     let profile = ws.config().profile();
 
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
@@ -94,9 +94,19 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
     let sources_dir = target_dir.join(profile.as_str()).join(SOURCES_DIR);
     let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
 
-    let project_metadata = ws.current_package().unwrap().manifest.metadata.dojo();
-    let mut dojo_metadata =
-        DojoMetadata { env: project_metadata.env.clone(), ..Default::default() };
+    let project_metadata = if let Ok(current_package) = ws.current_package() {
+        current_package.manifest.metadata.dojo()
+    } else {
+        // On workspaces, dojo metadata are not accessible because if no current package is defined
+        // (being the only package or using --package).
+        return None;
+    };
+
+    let mut dojo_metadata = DojoMetadata {
+        env: project_metadata.env.clone(),
+        skip_migration: project_metadata.skip_migration.clone(),
+        ..Default::default()
+    };
 
     let world_artifact = build_artifact_from_name(&sources_dir, &abis_dir, WORLD_CONTRACT_NAME);
 
@@ -109,23 +119,37 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
         if let Ok(manifest) = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)) {
             for model in manifest.models {
                 let name = model.name.to_string();
-                dojo_metadata.artifacts.insert(
+                dojo_metadata.resources_artifacts.insert(
                     name.clone(),
-                    build_artifact_from_name(&sources_dir, &abis_dir.join("models"), &name),
+                    ResourceMetadata {
+                        name: name.clone(),
+                        artifacts: build_artifact_from_name(
+                            &sources_dir,
+                            &abis_dir.join("models"),
+                            &name,
+                        ),
+                    },
                 );
             }
 
             for contract in manifest.contracts {
                 let name = contract.name.to_string();
-                dojo_metadata.artifacts.insert(
+                dojo_metadata.resources_artifacts.insert(
                     name.clone(),
-                    build_artifact_from_name(&sources_dir, &abis_dir.join("contracts"), &name),
+                    ResourceMetadata {
+                        name: name.clone(),
+                        artifacts: build_artifact_from_name(
+                            &sources_dir,
+                            &abis_dir.join("contracts"),
+                            &name,
+                        ),
+                    },
                 );
             }
         }
     }
 
-    dojo_metadata
+    Some(dojo_metadata)
 }
 
 /// Metadata coming from project configuration (Scarb.toml)
@@ -133,6 +157,14 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
 pub struct ProjectMetadata {
     pub world: Option<ProjectWorldMetadata>,
     pub env: Option<Environment>,
+    pub skip_migration: Option<Vec<String>>,
+}
+
+/// Metadata for a user defined resource (models, contracts).
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct ResourceMetadata {
+    pub name: String,
+    pub artifacts: ArtifactMetadata,
 }
 
 /// Metadata collected from the project configuration and the Dojo workspace
@@ -140,7 +172,8 @@ pub struct ProjectMetadata {
 pub struct DojoMetadata {
     pub world: WorldMetadata,
     pub env: Option<Environment>,
-    pub artifacts: HashMap<String, ArtifactMetadata>,
+    pub resources_artifacts: HashMap<String, ResourceMetadata>,
+    pub skip_migration: Option<Vec<String>>,
 }
 
 #[derive(Debug)]
@@ -332,6 +365,34 @@ impl ArtifactMetadata {
             let reader = Cursor::new(source_data);
             let response = client.add(reader).await?;
             meta.source = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
+        };
+
+        let serialized = json!(meta).to_string();
+        let reader = Cursor::new(serialized);
+        let response = client.add(reader).await?;
+
+        Ok(response.hash)
+    }
+}
+
+impl ResourceMetadata {
+    pub async fn upload(&self) -> Result<String> {
+        let mut meta = self.clone();
+        let client =
+            IpfsClient::from_str(IPFS_CLIENT_URL)?.with_credentials(IPFS_USERNAME, IPFS_PASSWORD);
+
+        if let Some(Uri::File(abi)) = &self.artifacts.abi {
+            let abi_data = std::fs::read(abi)?;
+            let reader = Cursor::new(abi_data);
+            let response = client.add(reader).await?;
+            meta.artifacts.abi = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
+        };
+
+        if let Some(Uri::File(source)) = &self.artifacts.source {
+            let source_data = std::fs::read(source)?;
+            let reader = Cursor::new(source_data);
+            let response = client.add(reader).await?;
+            meta.artifacts.source = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
         };
 
         let serialized = json!(meta).to_string();

@@ -17,6 +17,9 @@ RUN curl -s https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gp
 RUN echo "deb http://apt.llvm.org/${VARIANT}/ llvm-toolchain-${VARIANT}-17 main" | tee /etc/apt/sources.list.d/llvm.list && apt-get update
 RUN apt-get -y install -t llvm-toolchain-${VARIANT}-17 llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
 
+RUN curl -L https://foundry.paradigm.xyz/ | bash && . /root/.bashrc && foundryup
+ENV PATH="${PATH}:/root/.foundry/bin"
+
 # To build Katana with 'native' feature, we need to set the following environment variables
 ENV MLIR_SYS_170_PREFIX=/usr/lib/llvm-17
 ENV LLVM_SYS_170_PREFIX=/usr/lib/llvm-17
@@ -61,10 +64,20 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
     fi
 
 ARG DOJO_VERSION=stable
+ARG BUILD_TYPE=default
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
-RUN dojoup -v $DOJO_VERSION
+RUN if [ "$BUILD_TYPE" = "release" ]; then \
+    echo "Installing Dojo version $DOJO_VERSION"; \
+    dojoup -v $DOJO_VERSION; \
+    elif [ "$BUILD_TYPE" = "push" ]; then \
+    echo "Installing Dojo at commit $DOJO_VERSION"; \
+    dojoup -c $DOJO_VERSION; \
+    else \
+    echo "Installing latest stable version of Dojo"; \
+    dojoup; \
+    fi
 
 RUN chown -R root:root /usr/local/cargo
 RUN chmod -R 700 /usr/local/cargo

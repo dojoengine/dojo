@@ -7,7 +7,7 @@ erDiagram
 
 Headers {
     KEY BlockNumber
-    VALUE Header 
+    VALUE Header
 }
 
 BlockHashes {
@@ -38,6 +38,11 @@ TxNumbers {
 TxHashes {
     KEY TxNumber
     VALUE TxHash
+}
+
+TxTraces {
+    KEY TxNumber
+    VALUE TxExecInfo
 }
 
 Transactions {
@@ -97,25 +102,24 @@ ContractInfoChangeSet {
     VALUE ContractInfoChangeList
 }
 
-NonceChanges {
+NonceChangeHistory {
     KEY BlockNumber
     DUP_KEY ContractAddress
     VALUE ContractNonceChange
 }
 
-ContractClassChanges {
+ClassChangeHistory {
     KEY BlockNumber
     DUP_KEY ContractAddress
     VALUE ContractClassChange
 }
 
 StorageChangeSet {
-    KEY ContractAddress
-    DUP_KEY StorageKey
-    VALUE StorageEntryChangeList
+    KEY ContractStorageKey
+    VALUE BlockList
 }
 
-StorageChanges {
+StorageChangeHistory {
     KEY BlockNumber
     DUP_KEY ContractStorageKey
     VALUE ContractStorageEntry
@@ -133,6 +137,7 @@ TxHashes ||--|| TxNumbers : "tx id"
 TxNumbers ||--|| Transactions : "has"
 TxBlocks ||--|{ Transactions : "tx block"
 Transactions ||--|| Receipts : "each tx must have a receipt"
+Transactions ||--|| TxTraces : "each tx must have a trace"
 
 CompiledClassHashes ||--|| CompiledContractClasses : "has"
 CompiledClassHashes ||--|| SierraClasses : "has"
@@ -143,11 +148,10 @@ ContractInfo ||--|| CompiledClassHashes : "has"
 
 ContractInfo }|--|{ ContractInfoChangeSet : "has"
 ContractStorage }|--|{ StorageChangeSet : "has"
-ContractInfoChangeSet }|--|{ NonceChanges : "has"
-ContractInfoChangeSet }|--|{ ContractClassChanges : "has"
+ContractInfoChangeSet }|--|{ NonceChangeHistory : "has"
+ContractInfoChangeSet }|--|{ ClassChangeHistory : "has"
 CompiledClassHashes ||--|| ClassDeclarationBlock : "has"
 ClassDeclarationBlock ||--|| ClassDeclarations : "has"
 BlockNumbers ||--|| ClassDeclarations : ""
-StorageChangeSet }|--|{ StorageChanges : "has"
-
+StorageChangeSet }|--|{ StorageChangeHistory : "has"
 ```

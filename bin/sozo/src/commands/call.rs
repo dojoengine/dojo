@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
 use starknet::core::types::FieldElement;
+use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
@@ -35,8 +36,10 @@ pub struct CallArgs {
 
 impl CallArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = utils::load_metadata_from_config(config)?;
+        trace!(args = ?self);
 
+        let env_metadata = utils::load_metadata_from_config(config)?;
+        trace!(?env_metadata, "Loaded metadata from config.");
         config.tokio_handle().block_on(async {
             let world_reader =
                 utils::world_reader_from_env_metadata(self.world, self.starknet, &env_metadata)

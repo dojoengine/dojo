@@ -7,7 +7,7 @@ abigen!(
     r#"[
   {
     "type": "function",
-    "name": "name",
+    "name": "selector",
     "inputs": [],
     "outputs": [
       {
@@ -17,12 +17,26 @@ abigen!(
     "state_mutability": "view"
   },
   {
+    "type": "enum",
+    "name": "core::option::Option::<core::integer::u32>",
+    "variants": [
+      {
+        "name": "Some",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "None",
+        "type": "()"
+      }
+    ]
+  },
+  {
     "type": "function",
     "name": "unpacked_size",
     "inputs": [],
     "outputs": [
       {
-        "type": "core::integer::u32"
+        "type": "core::option::Option::<core::integer::u32>"
       }
     ],
     "state_mutability": "view"
@@ -33,7 +47,7 @@ abigen!(
     "inputs": [],
     "outputs": [
       {
-        "type": "core::integer::u32"
+        "type": "core::option::Option::<core::integer::u32>"
       }
     ],
     "state_mutability": "view"
@@ -49,12 +63,76 @@ abigen!(
     ]
   },
   {
+    "type": "struct",
+    "name": "dojo::database::introspect::FieldLayout",
+    "members": [
+      {
+        "name": "selector",
+        "type": "core::felt252"
+      },
+      {
+        "name": "layout",
+        "type": "dojo::database::introspect::Layout"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::FieldLayout>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::FieldLayout>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::Layout>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::Layout>"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "dojo::database::introspect::Layout",
+    "variants": [
+      {
+        "name": "Fixed",
+        "type": "core::array::Span::<core::integer::u8>"
+      },
+      {
+        "name": "Struct",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      },
+      {
+        "name": "Tuple",
+        "type": "core::array::Span::<dojo::database::introspect::Layout>"
+      },
+      {
+        "name": "Array",
+        "type": "core::array::Span::<dojo::database::introspect::Layout>"
+      },
+      {
+        "name": "ByteArray",
+        "type": "()"
+      },
+      {
+        "name": "Enum",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      }
+    ]
+  },
+  {
     "type": "function",
     "name": "layout",
     "inputs": [],
     "outputs": [
       {
-        "type": "core::array::Span::<core::integer::u8>"
+        "type": "dojo::database::introspect::Layout"
       }
     ],
     "state_mutability": "view"
@@ -71,11 +149,29 @@ abigen!(
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+    "name": "dojo::database::introspect::Member",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::felt252"
+      },
+      {
+        "name": "attrs",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "ty",
+        "type": "dojo::database::introspect::Ty"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::Member>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+        "type": "@core::array::Array::<dojo::database::introspect::Member>"
       }
     ]
   },
@@ -93,17 +189,17 @@ abigen!(
       },
       {
         "name": "children",
-        "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+        "type": "core::array::Span::<dojo::database::introspect::Member>"
       }
     ]
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+    "name": "core::array::Span::<(core::felt252, dojo::database::introspect::Ty)>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+        "type": "@core::array::Array::<(core::felt252, dojo::database::introspect::Ty)>"
       }
     ]
   },
@@ -121,7 +217,17 @@ abigen!(
       },
       {
         "name": "children",
-        "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+        "type": "core::array::Span::<(core::felt252, dojo::database::introspect::Ty)>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::Ty>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::Ty>"
       }
     ]
   },
@@ -143,11 +249,15 @@ abigen!(
       },
       {
         "name": "Tuple",
-        "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+        "type": "core::array::Span::<dojo::database::introspect::Ty>"
       },
       {
         "name": "Array",
-        "type": "core::integer::u32"
+        "type": "core::array::Span::<dojo::database::introspect::Ty>"
+      },
+      {
+        "name": "ByteArray",
+        "type": "()"
       }
     ]
   },
@@ -164,6 +274,24 @@ abigen!(
   },
   {
     "type": "struct",
+    "name": "core::byte_array::ByteArray",
+    "members": [
+      {
+        "name": "data",
+        "type": "core::array::Array::<core::bytes_31::bytes31>"
+      },
+      {
+        "name": "pending_word",
+        "type": "core::felt252"
+      },
+      {
+        "name": "pending_word_len",
+        "type": "core::integer::u32"
+      }
+    ]
+  },
+  {
+    "type": "struct",
     "name": "dojo::resource_metadata::ResourceMetadata",
     "members": [
       {
@@ -172,7 +300,7 @@ abigen!(
       },
       {
         "name": "metadata_uri",
-        "type": "core::array::Span::<core::felt252>"
+        "type": "core::byte_array::ByteArray"
       }
     ]
   },
@@ -194,5 +322,8 @@ abigen!(
     "kind": "enum",
     "variants": []
   }
-]"#
+]"#,
+type_aliases {
+dojo::config::component::Config::Event as DojoConfigEvent;
+}
 );

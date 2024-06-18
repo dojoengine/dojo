@@ -12,8 +12,8 @@ use crate::schema::{self, EnumOption, Ty};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
-    #[error("Invalid schema")]
-    InvalidSchema,
+    #[error("Invalid schema: {0}")]
+    InvalidSchema(String),
     #[error("Error when parsing felt: {0}")]
     ValueOutOfRange(#[from] ValueOutOfRangeError),
     #[error("Error when parsing felt: {0}")]
@@ -22,6 +22,16 @@ pub enum ParseError {
     ParseCairoShortStringError(#[from] ParseCairoShortStringError),
     #[error(transparent)]
     CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
+}
+
+impl ParseError {
+    pub fn invalid_schema_with_msg(msg: &str) -> Self {
+        Self::InvalidSchema(msg.to_string())
+    }
+
+    pub fn invalid_schema() -> Self {
+        Self::InvalidSchema(String::from(""))
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -85,13 +95,25 @@ pub fn unpack(
 
 /// Parse a raw schema of a model into a Cairo type, [Ty]
 pub fn parse_ty(data: &[FieldElement]) -> Result<Ty, ParseError> {
+    if data.is_empty() {
+        return Err(ParseError::invalid_schema_with_msg(
+            "The function parse_ty expects at least one felt to know the member type variant, \
+             empty input found.",
+        ));
+    }
+
     let member_type: u8 = data[0].try_into()?;
     match member_type {
         0 => parse_simple(&data[1..]),
         1 => parse_struct(&data[1..]),
         2 => parse_enum(&data[1..]),
         3 => parse_tuple(&data[1..]),
-        _ => Err(ParseError::InvalidSchema),
+        4 => parse_array(&data[1..]),
+        5 => parse_byte_array(),
+        _ => Err(ParseError::invalid_schema_with_msg(&format!(
+            "Unsupported member type variant `{}`.",
+            member_type
+        ))),
     }
 }
 
@@ -99,13 +121,27 @@ fn parse_simple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     let ty = parse_cairo_short_string(&data[0])?;
     let primitive = match Primitive::from_str(&ty) {
         Ok(primitive) => primitive,
-        Err(_) => return Err(ParseError::InvalidSchema),
+        Err(_) => {
+            return Err(ParseError::invalid_schema_with_msg(&format!(
+                "Unsupported simple type primitive `{}`.",
+                ty
+            )));
+        }
     };
 
     Ok(Ty::Primitive(primitive))
 }
 
 fn parse_struct(data: &[FieldElement]) -> Result<Ty, ParseError> {
+    // A struct has at least 3 elements: name, attrs len, and children len.
+    if data.len() < 3 {
+        return Err(ParseError::invalid_schema_with_msg(&format!(
+            "The function parse_struct expects at least three felts: name, attrs len, and \
+             children len. Input of size {} found.",
+            data.len()
+        )));
+    }
+
     let name = parse_cairo_short_string(&data[0])?;
 
     let attrs_len: u32 = data[1].try_into()?;
@@ -132,6 +168,14 @@ fn parse_struct(data: &[FieldElement]) -> Result<Ty, ParseError> {
 }
 
 fn parse_member(data: &[FieldElement]) -> Result<schema::Member, ParseError> {
+    if data.len() < 3 {
+        return Err(ParseError::invalid_schema_with_msg(&format!(
+            "The function parse_member expects at least three felts: name, attributes len, and \
+             ty. Input of size {} found.",
+            data.len()
+        )));
+    }
+
     let name = parse_cairo_short_string(&data[0])?;
 
     let attributes_len: u32 = data[1].try_into()?;
@@ -146,6 +190,14 @@ fn parse_member(data: &[FieldElement]) -> Result<schema::Member, ParseError> {
 }
 
 fn parse_enum(data: &[FieldElement]) -> Result<Ty, ParseError> {
+    if data.len() < 3 {
+        return Err(ParseError::invalid_schema_with_msg(&format!(
+            "The function parse_enum expects at least three felts: name, attributes len, and \
+             values len. Input of size {} found.",
+            data.len()
+        )));
+    }
+
     let name = parse_cairo_short_string(&data[0])?;
 
     let attrs_len: u32 = data[1].try_into()?;
@@ -176,6 +228,7 @@ fn parse_enum(data: &[FieldElement]) -> Result<Ty, ParseError> {
 
 fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     if data.is_empty() {
+        // The unit type is defined as an empty tuple.
         return Ok(Ty::Tuple(vec![]));
     }
 
@@ -197,15 +250,74 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     Ok(Ty::Tuple(children))
 }
 
+fn parse_array(data: &[FieldElement]) -> Result<Ty, ParseError> {
+    if data.is_empty() || data.len() != 2 {
+        return Err(ParseError::invalid_schema_with_msg(
+            "The function parse_array expects exactly one felt to know the item type, empty input \
+             found.",
+        ));
+    }
+
+    // Arrays always have the same type for all elements.
+    // In the introspect, the array type is given by the first (and unique) element in `Ty`.
+    let mut v = data.to_vec();
+    let _ = v.remove(0);
+
+    let item_ty = parse_ty(v.as_slice())?;
+    Ok(Ty::Array(vec![item_ty]))
+}
+
+fn parse_byte_array() -> Result<Ty, ParseError> {
+    Ok(Ty::ByteArray("".to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use starknet::core::types::FieldElement;
+    use starknet::core::utils::cairo_short_string_to_felt;
 
-    use crate::packing::ParseError;
+    use super::*;
 
     #[test]
     fn parse_simple_with_invalid_value() {
         let data = [FieldElement::default()];
-        assert!(matches!(super::parse_simple(&data), Err(ParseError::InvalidSchema)));
+        assert!(parse_simple(&data).is_err());
+    }
+
+    #[test]
+    fn parse_simple_with_valid_value() {
+        let data = [cairo_short_string_to_felt("u8").unwrap()];
+        assert_eq!(parse_simple(&data).unwrap(), Ty::Primitive(Primitive::U8(None)));
+    }
+
+    #[test]
+    fn parse_struct_with_invalid_value() {
+        // No attr len and no children.
+        let data = [cairo_short_string_to_felt("bad_struct").unwrap()];
+        assert!(parse_struct(&data).is_err());
+
+        // Only with attr len.
+        let data = [cairo_short_string_to_felt("bad_struct").unwrap(), FieldElement::default()];
+        assert!(parse_struct(&data).is_err());
+    }
+
+    #[test]
+    fn parse_struct_empty() {
+        let data = [
+            cairo_short_string_to_felt("empty_struct").unwrap(),
+            FieldElement::default(),
+            FieldElement::default(),
+        ];
+
+        assert_eq!(
+            parse_struct(&data).unwrap(),
+            Ty::Struct(schema::Struct { name: "empty_struct".to_string(), children: vec![] })
+        );
+    }
+
+    #[test]
+    fn parse_array_with_invalid_value() {
+        let data = [FieldElement::default()];
+        assert!(parse_array(&data).is_err());
     }
 }

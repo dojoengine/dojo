@@ -5,8 +5,7 @@ use anyhow::{anyhow, Result};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::MANIFESTS_DIR;
-use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods};
+use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods, MANIFESTS_DIR};
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -60,8 +59,9 @@ pub async fn parse(
 
     if let Some(events_map) = events_map {
         parse_and_print_events(res, events_map)?;
+    } else {
+        println!("{}", serde_json::to_string_pretty(&res)?);
     }
-
     Ok(())
 }
 
@@ -107,7 +107,7 @@ fn extract_events(
         }
     }
 
-    for model in &manifest.contracts {
+    for model in &manifest.models {
         if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
             let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
@@ -248,8 +248,7 @@ fn process_inners(
 mod tests {
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
-    use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-    use dojo_world::manifest::BaseManifest;
+    use dojo_world::manifest::{BaseManifest, BASE_DIR};
     use starknet::core::types::EmittedEvent;
 
     use super::*;
@@ -266,7 +265,7 @@ mod tests {
         let result = extract_events(&manifest, &manifest_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 11);
+        assert_eq!(result.len(), 15);
     }
 
     #[test]
@@ -413,6 +412,7 @@ mod tests {
                         inner: Box::new(Token::CoreBasic(CoreBasic {
                             type_path: "core::felt252".to_string(),
                         })),
+                        is_legacy: false,
                     }),
                 },
             ],
@@ -550,6 +550,7 @@ mod tests {
                         inner: Box::new(Token::CoreBasic(CoreBasic {
                             type_path: "core::felt252".to_string(),
                         })),
+                        is_legacy: false,
                     }),
                 },
             ],

@@ -5,7 +5,9 @@ use scarb::compiler::Profile;
 use scarb_ui::Verbosity;
 use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
+use tracing::Subscriber;
 use tracing_log::AsTrace;
+use tracing_subscriber::{fmt, EnvFilter};
 
 use crate::commands::Commands;
 use crate::utils::generate_version;
@@ -31,7 +33,7 @@ pub struct SozoArgs {
 
     #[arg(long)]
     #[arg(env = "SOZO_OFFLINE")]
-    #[arg(hide_short_help = true)]
+    #[arg(hide_short_help = true, global = true)]
     #[arg(help = "Run without accessing the network.")]
     pub offline: bool,
 
@@ -50,21 +52,33 @@ impl SozoArgs {
             Verbosity::Quiet
         }
     }
+
+    pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
+        const DEFAULT_LOG_FILTER: &str = "info,hyper=off,scarb=off";
+
+        let builder = fmt::Subscriber::builder().with_env_filter(
+            EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
+        );
+
+        let subscriber: Box<dyn Subscriber + Send + Sync> = Box::new(builder.finish());
+
+        Ok(tracing::subscriber::set_global_default(subscriber)?)
+    }
 }
 
 /// Profile specifier.
 #[derive(Parser, Clone, Debug)]
 #[group(multiple = false)]
 pub struct ProfileSpec {
-    #[arg(short = 'P', long)]
+    #[arg(short = 'P', long, global = true)]
     #[arg(help = "Specify profile to use by name.")]
     pub profile: Option<SmolStr>,
 
-    #[arg(long, hide_short_help = true)]
+    #[arg(long, hide_short_help = true, global = true)]
     #[arg(help = "Use release profile.")]
     pub release: bool,
 
-    #[arg(long, hide_short_help = true)]
+    #[arg(long, hide_short_help = true, global = true)]
     #[arg(help = "Use dev profile.")]
     pub dev: bool,
 }

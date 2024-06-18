@@ -3,7 +3,7 @@ mod fixtures;
 use std::collections::HashMap;
 
 use fixtures::{state_provider, valid_blocks};
-use katana_executor::{ExecutionOutput, ExecutorFactory};
+use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::ExecutableBlock;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::constant::{
@@ -52,6 +52,15 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
 
     let transactions = executor.transactions();
     assert_eq!(transactions.len(), 2, "2 transactions were executed");
+
+    // ensure that all transactions succeeded, if not panic with the error message and tx index
+    let has_failed = transactions.iter().enumerate().find_map(|(i, (_, res))| {
+        if let ExecutionResult::Failed { error } = res { Some((i, error)) } else { None }
+    });
+
+    if let Some((pos, error)) = has_failed {
+        panic!("transaction at index {pos} failed: {error}");
+    }
 
     // asserts that the states are updated correctly after executing the 1st block
 
@@ -259,7 +268,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_txs: Vec<TxWithHash> = transactions
         .iter()
         .map(|(tx, res)| {
-            if let Some(fee) = res.fee() {
+            if let Some(fee) = res.receipt().map(|r| r.fee()) {
                 actual_total_gas += fee.gas_consumed;
             }
             if let Some(rec) = res.receipt() {

@@ -1,22 +1,41 @@
 {
-	// Use IntelliSense to learn about possible attributes.
-	// Hover to view descriptions of existing attributes.
-	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"type": "lldb",
-			"request": "launch",
-			"name": "Debug unit tests in 'dojo-world'",
-			"cargo": {
-				"args": ["test", "--no-run", "--package=dojo-world", "--lib"],
-				"filter": {
-					"name": "dojo-world",
-					"kind": "lib"
-				}
-			},
-			"args": ["migration::compile_moves"],
-			"cwd": "${workspaceFolder}/crates/dojo-world"
-		}
-	]
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Dojo Core test",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/sozo",
+      "args": ["--manifest-path", "crates/dojo-core/Scarb.toml", "test"]
+    },
+    {
+      "name": "Sozo Migrate",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/sozo",
+      "args": [
+        "--manifest-path",
+        "examples/spawn-and-move/Scarb.toml",
+        "migrate",
+        "apply"
+      ]
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in 'dojo-world'",
+      "cargo": {
+        "args": ["test", "--no-run", "--package=dojo-world", "--lib"],
+        "filter": {
+          "name": "dojo-world",
+          "kind": "lib"
+        }
+      },
+      "args": ["migration::compile_moves"],
+      "cwd": "${workspaceFolder}/crates/dojo-world"
+    }
+  ]
 }

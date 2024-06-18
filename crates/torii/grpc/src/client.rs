@@ -3,7 +3,7 @@ use std::num::ParseIntError;
 
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
-use starknet::core::types::{FromByteSliceError, FromStrError, StateUpdate};
+use starknet::core::types::{FromStrError, StateDiff, StateUpdate};
 use starknet_crypto::FieldElement;
 
 use crate::proto::world::{
@@ -11,27 +11,22 @@ use crate::proto::world::{
     SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeModelsRequest,
     SubscribeModelsResponse,
 };
-use crate::types::schema::Entity;
+use crate::types::schema::{self, Entity, SchemaError};
 use crate::types::{KeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
     Grpc(tonic::Status),
-    #[error("Missing expected data")]
-    MissingExpectedData,
-    #[error("Unsupported type")]
-    UnsupportedType,
     #[error(transparent)]
     ParseStr(FromStrError),
     #[error(transparent)]
-    SliceError(FromByteSliceError),
-    #[error(transparent)]
     ParseInt(ParseIntError),
-
     #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
     Transport(tonic::transport::Error),
+    #[error(transparent)]
+    Schema(#[from] schema::SchemaError),
 }
 
 /// A lightweight wrapper around the grpc client.
@@ -71,7 +66,9 @@ impl WorldClient {
             .world_metadata(MetadataRequest {})
             .await
             .map_err(Error::Grpc)
-            .and_then(|res| res.into_inner().metadata.ok_or(Error::MissingExpectedData))
+            .and_then(|res| {
+                res.into_inner().metadata.ok_or(Error::Schema(SchemaError::MissingExpectedData))
+            })
             .and_then(|metadata| metadata.try_into().map_err(Error::ParseStr))
     }
 
@@ -108,9 +105,9 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
-            let entity = res.entity.expect("entity must exist");
-            entity.try_into().expect("must able to serialize")
+        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
+            Some(entity) => entity.try_into().expect("must able to serialize"),
+            None => Entity { hashed_keys: FieldElement::ZERO, models: vec![] },
         }))))
     }
 
@@ -147,9 +144,11 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(ModelDiffsStreaming(stream.map_ok(Box::new(|res| {
-            let update = res.model_update.expect("qed; state update must exist");
-            TryInto::<StateUpdate>::try_into(update).expect("must able to serialize")
+        Ok(ModelDiffsStreaming(stream.map_ok(Box::new(|res| match res.model_update {
+            Some(update) => {
+                TryInto::<StateUpdate>::try_into(update).expect("must able to serialize")
+            }
+            None => empty_state_update(),
         }))))
     }
 }
@@ -185,5 +184,21 @@ impl Stream for EntityUpdateStreaming {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         self.0.poll_next_unpin(cx)
+    }
+}
+
+fn empty_state_update() -> StateUpdate {
+    StateUpdate {
+        block_hash: FieldElement::ZERO,
+        new_root: FieldElement::ZERO,
+        old_root: FieldElement::ZERO,
+        state_diff: StateDiff {
+            declared_classes: vec![],
+            deployed_contracts: vec![],
+            deprecated_declared_classes: vec![],
+            nonces: vec![],
+            replaced_classes: vec![],
+            storage_diffs: vec![],
+        },
     }
 }

@@ -4,11 +4,11 @@ use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
+use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::ast::{ExprPath, ExprStructCtorCall, FunctionWithBody, ItemModule};
 use cairo_lang_syntax::node::kind::SyntaxKind;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 
 use super::unsupported_arg_diagnostic;
 use super::utils::{parent_of_kind, SystemRWOpRecord, SYSTEM_WRITES};
@@ -29,7 +29,7 @@ impl InlineMacroExprPlugin for DeleteMacro {
         let ast::WrappedArgList::ParenthesizedArgList(arg_list) = syntax.arguments(db) else {
             return unsupported_bracket_diagnostic(db, syntax);
         };
-        let mut builder = PatchBuilder::new(db);
+        let mut builder = PatchBuilder::new(db, syntax);
         builder.add_str("{");
 
         let args = arg_list.arguments(db).elements(db);
@@ -146,20 +146,24 @@ impl InlineMacroExprPlugin for DeleteMacro {
             builder.add_str(&format!(
                 "
                 let __delete_macro_value__ = {};
-                {}.delete_entity(dojo::model::Model::name(@__delete_macro_value__),
-                 dojo::model::Model::keys(@__delete_macro_value__),
-                 dojo::model::Model::layout(@__delete_macro_value__));",
+                {}.delete_entity(
+                    dojo::model::Model::instance_selector(@__delete_macro_value__),
+                    dojo::model::Model::keys(@__delete_macro_value__),
+                    dojo::model::Model::instance_layout(@__delete_macro_value__)
+                );",
                 entity,
                 world.as_syntax_node().get_text(db),
             ));
         }
         builder.add_str("}");
 
+        let (code, code_mappings) = builder.build();
+
         InlinePluginResult {
             code: Some(PluginGeneratedFile {
                 name: "delete_inline_macro".into(),
-                content: builder.code,
-                code_mappings: builder.code_mappings,
+                content: code,
+                code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],

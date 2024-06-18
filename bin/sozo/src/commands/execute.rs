@@ -2,8 +2,9 @@ use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
 use sozo_ops::execute;
-use starknet::core::types::FieldElement;
+use tracing::trace;
 
+use super::calldata_decoder;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
@@ -21,10 +22,14 @@ pub struct ExecuteArgs {
     pub entrypoint: String,
 
     #[arg(short, long)]
-    #[arg(value_delimiter = ',')]
     #[arg(help = "The calldata to be passed to the system. Comma separated values e.g., \
-                  0x12345,0x69420.")]
-    pub calldata: Vec<FieldElement>,
+                  0x12345,128,u256:9999999999. Sozo supports some prefixes that you can use to \
+                  automatically parse some types. The supported prefixes are:
+                  - u256: A 256-bit unsigned integer.
+                  - sstr: A cairo short string.
+                  - str: A cairo string (ByteArray).
+                  - no prefix: A cairo felt or any type that fit into one felt.")]
+    pub calldata: Option<String>,
 
     #[command(flatten)]
     pub starknet: StarknetOptions,
@@ -41,6 +46,7 @@ pub struct ExecuteArgs {
 
 impl ExecuteArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        trace!(args = ?self);
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         config.tokio_handle().block_on(async {
@@ -54,8 +60,28 @@ impl ExecuteArgs {
             .unwrap();
             let tx_config = self.transaction.into();
 
-            execute::execute(self.contract, self.entrypoint, self.calldata, &world, &tx_config)
-                .await
+            trace!(
+                contract=?self.contract,
+                entrypoint=self.entrypoint,
+                calldata=?self.calldata,
+                "Executing Execute command."
+            );
+
+            let calldata = if let Some(cd) = self.calldata {
+                calldata_decoder::decode_calldata(&cd)?
+            } else {
+                vec![]
+            };
+
+            execute::execute(
+                &config.ui(),
+                self.contract,
+                self.entrypoint,
+                calldata,
+                &world,
+                &tx_config,
+            )
+            .await
         })
     }
 }

@@ -1,49 +1,71 @@
-use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use std::time::Duration;
+
+use anyhow::Context;
+use dojo_world::migration::TxnConfig;
+use dojo_world::utils::TransactionExt;
+use starknet::accounts::{Account, Call, ConnectedAccount};
+use starknet::core::types::{FieldElement, TransactionExecutionStatus, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
-use starknet::signers::{LocalWallet, SigningKey};
-use url::Url;
+use starknet::providers::Provider;
+use tokio::time::sleep;
 
-// will need to be read from the environment for chains other than sepoia
-const STARKNET_URL: &str = "https://free-rpc.nethermind.io/sepolia-juno/v0_6";
-const CHAIN_ID: &str = "0x00000000000000000000000000000000000000000000534e5f5345504f4c4941";
-const SIGNER_ADDRESS: &str = "0x76372bcb1d993b9ab059e542a93004962fb70d743b0f10e611df9ffe13c6d64";
-const SIGNER_KEY: &str = "0x710d3218ae70bf7ec580c620ec81e601a6258ceec2494c4261f916f42667000";
+use crate::dojo_os::STARKNET_ACCOUNT;
 
-lazy_static::lazy_static!(
-    static ref STARKNET_ACCOUNT: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> = {
-        let provider = JsonRpcClient::new(HttpTransport::new(
-            Url::parse(STARKNET_URL).unwrap(),
-        ));
-
-        let signer = FieldElement::from_hex_be(SIGNER_KEY).expect("invalid signer hex");
-        let signer = LocalWallet::from(SigningKey::from_secret_scalar(signer));
-
-        let address = FieldElement::from_hex_be(SIGNER_ADDRESS).expect("invalid signer address");
-        let chain_id = FieldElement::from_hex_be(CHAIN_ID).expect("invalid chain id");
-
-        let mut account = SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::Legacy);
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
-        account
-    };
-
-);
-
-pub async fn starknet_verify(serialized_proof: Vec<FieldElement>) -> anyhow::Result<String> {
+pub async fn starknet_verify(
+    fact_registry_address: FieldElement,
+    serialized_proof: Vec<FieldElement>,
+) -> anyhow::Result<(String, FieldElement)> {
+    let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
+    let nonce = STARKNET_ACCOUNT.get_nonce().await?;
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
-            to: FieldElement::from_hex_be(
-                "0x1b9c4e973ca9af0456eb6ae4c4576c5134905d8a560e0dfa1b977359e2c40ec",
-            )
-            .expect("invalid verifier address"),
+            to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
             calldata: serialized_proof,
         }])
-        .max_fee(starknet::macros::felt!("1000000000000000")) // sometimes failing without this line 
-        .send()
-        .await?;
+        .nonce(nonce)
+        .send_with_cfg(&txn_config)
+        .await
+        .context("Failed to send `verify_and_register_fact` transaction.")?;
 
-    Ok(format!("{:#x}", tx.transaction_hash))
+    let start_fetching = std::time::Instant::now();
+    let wait_for = Duration::from_secs(60);
+    let execution_status = loop {
+        if start_fetching.elapsed() > wait_for {
+            anyhow::bail!("Transaction not mined in {} seconds.", wait_for.as_secs());
+        }
+
+        let status =
+            match STARKNET_ACCOUNT.provider().get_transaction_status(tx.transaction_hash).await {
+                Ok(status) => status,
+                Err(_e) => {
+                    sleep(Duration::from_secs(1)).await;
+                    continue;
+                }
+            };
+
+        break match status {
+            TransactionStatus::Received => {
+                println!("Transaction received.");
+                sleep(Duration::from_secs(1)).await;
+                continue;
+            }
+            TransactionStatus::Rejected => {
+                anyhow::bail!("Transaction {:#x} rejected.", tx.transaction_hash);
+            }
+            TransactionStatus::AcceptedOnL2(execution_status) => execution_status,
+            TransactionStatus::AcceptedOnL1(execution_status) => execution_status,
+        };
+    };
+
+    match execution_status {
+        TransactionExecutionStatus::Succeeded => {
+            println!("Transaction accepted on L2.");
+        }
+        TransactionExecutionStatus::Reverted => {
+            anyhow::bail!("Transaction failed with.");
+        }
+    }
+
+    Ok((format!("{:#x}", tx.transaction_hash), nonce))
 }

@@ -11,20 +11,22 @@ use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_formatter::format_string;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_starknet::abi;
+use cairo_lang_starknet::compile::compile_prepared_db;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
-use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
+use cairo_lang_starknet_classes::abi;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_utils::UpcastMut;
 use camino::{Utf8Path, Utf8PathBuf};
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
     AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
-    BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+    ABIS_DIR, BASE_CONTRACT_NAME, BASE_DIR, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
+    WORLD_CONTRACT_NAME,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
-use scarb::compiler::{CompilationUnit, Compiler};
+use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
 use scarb::core::{PackageName, TargetKind, Workspace};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -38,15 +40,6 @@ use crate::plugin::{ComputedValuesAuxData, DojoAuxData};
 use crate::semantics::utils::find_module_rw;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
-
-pub const MANIFESTS_DIR: &str = "manifests";
-pub const BASE_DIR: &str = "base";
-pub const OVERLAYS_DIR: &str = "overlays";
-pub const DEPLOYMENTS_DIR: &str = "deployments";
-pub const ABIS_DIR: &str = "abis";
-
-pub const CONTRACTS_DIR: &str = "contracts";
-pub const MODELS_DIR: &str = "models";
 
 pub const SOURCES_DIR: &str = "src";
 
@@ -85,11 +78,11 @@ impl Compiler for DojoCompiler {
 
     fn compile(
         &self,
-        unit: CompilationUnit,
+        unit: CairoCompilationUnit,
         db: &mut RootDatabase,
         ws: &Workspace<'_>,
     ) -> Result<()> {
-        let props: Props = unit.target().props()?;
+        let props: Props = unit.main_component().target_props()?;
         let target_dir = unit.target_dir(ws);
         let sources_dir = target_dir.child(Utf8Path::new(SOURCES_DIR));
 

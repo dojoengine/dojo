@@ -3,6 +3,7 @@ use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use tracing::trace;
 use url::Url;
 
 use super::STARKNET_RPC_URL_ENV_VAR;
@@ -13,6 +14,7 @@ pub struct StarknetOptions {
     #[arg(long, env = STARKNET_RPC_URL_ENV_VAR)]
     #[arg(value_name = "URL")]
     #[arg(help = "The Starknet RPC endpoint.")]
+    #[arg(global = true)]
     pub rpc_url: Option<Url>,
 }
 
@@ -21,18 +23,24 @@ impl StarknetOptions {
         &self,
         env_metadata: Option<&Environment>,
     ) -> Result<JsonRpcClient<HttpTransport>> {
-        Ok(JsonRpcClient::new(HttpTransport::new(self.url(env_metadata)?)))
+        let url = self.url(env_metadata)?;
+        trace!(?url, "Creating JsonRpcClient with given RPC URL.");
+        Ok(JsonRpcClient::new(HttpTransport::new(url)))
     }
 
     // We dont check the env var because that would be handled by `clap`.
     // This function is made public because [`JsonRpcClient`] does not expose
     // the raw rpc url.
     pub fn url(&self, env_metadata: Option<&Environment>) -> Result<Url> {
+        trace!("Retrieving RPC URL for StarknetOptions.");
         if let Some(url) = self.rpc_url.as_ref() {
+            trace!(?url, "Using RPC URL from command line.");
             Ok(url.clone())
         } else if let Some(url) = env_metadata.and_then(|env| env.rpc_url()) {
+            trace!(url, "Using RPC URL from environment metadata.");
             Ok(Url::parse(url)?)
         } else {
+            trace!("Using default RPC URL: http://localhost:5050.");
             Ok(Url::parse("http://localhost:5050").unwrap())
         }
     }

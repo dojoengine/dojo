@@ -11,17 +11,38 @@ env:
   RUST_VERSION: 1.76.0
 
 jobs:
-  test:
-    runs-on: ubuntu-latest-16-cores
-    container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+  build:
+    runs-on: ubuntu-latest-4-cores
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: |
-          cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 10
+          cargo build -r --bin katana
+          mkdir -p bins
+          cp ./target/release/katana bins/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: katana-binary
+          path: bins
+
+  test:
+    needs: ensure-docker
+    runs-on: ubuntu-latest-32-cores
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: katana-binary
+          path: /tmp/bins
+      - run: |
+          chmod +x /tmp/bins/katana
+          KATANA_RUNNER_BIN=/tmp/bins/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
-          cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
+          # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
+          # cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
           cargo llvm-cov report --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v4
         with:
@@ -31,13 +52,14 @@ jobs:
   ensure-wasm:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -r --target wasm32-unknown-unknown -p torii-client
 
   ensure-windows:
+    needs: ensure-docker
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -50,23 +72,44 @@ jobs:
         with:
           repo-token: ${{ secrets.github_token }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
+  
+  # This job is used to ensure the built katana image doesn't depend on any
+  # libraries that don't exist in the base docker image we use for distribution
+  ensure-docker:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm-slim
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: katana-binary
+      - run: |
+          chmod +x ./katana
+          ./katana &
+          KATANA_PID=$!
+          sleep 2
+          if ! kill -0 $KATANA_PID; then
+            echo "Katana exited with an error"
+            exit 1
+          fi
+          kill $KATANA_PID
 
-  # cairofmt:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions-rs/toolchain@v1
-  #       with:
-  #         profile: minimal
-  #         toolchain: nightly-2022-11-03
-  #     - uses: Swatinem/rust-cache@v2
-  #     - run: cargo install cairo-lang-formatter
-  #     - run: scripts/cairo_fmt.sh --check
+  cairofmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.6.3"
+      - run: |
+          scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
+          scarb --manifest-path crates/dojo-core/Scarb.toml fmt --check
 
   dojo-core-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -75,7 +118,7 @@ jobs:
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -84,7 +127,7 @@ jobs:
   dojo-world-bindings-check:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -93,7 +136,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -102,7 +145,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -111,7 +154,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:3153a80
+      image: ghcr.io/dojoengine/dojo-dev:v0.7.0
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2

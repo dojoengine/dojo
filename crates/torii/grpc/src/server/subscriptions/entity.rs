@@ -20,6 +20,7 @@ use torii_core::types::Entity;
 use tracing::{error, trace};
 
 use crate::proto;
+use crate::proto::world::SubscribeEntityResponse;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
 
@@ -42,6 +43,11 @@ impl EntityManager {
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
+
+        // NOTE: unlock issue with firefox/safari
+        // initially send empty stream message to return from
+        // initial subscribe call
+        let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
 
         self.subscribers.write().await.insert(
             id,
@@ -102,17 +108,31 @@ impl Service {
                 let model_ids: Vec<&str> = model_ids.split(',').collect();
                 let schemas = cache.schemas(model_ids).await?;
 
-                let entity_query = format!("{} WHERE entities.id = ?", build_sql_query(&schemas)?);
+                let (entity_query, arrays_queries) = build_sql_query(
+                    &schemas,
+                    "entities",
+                    "entity_id",
+                    Some("entities.id = ?"),
+                    Some("entities.id = ?"),
+                )?;
+
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
+                let mut arrays_rows = HashMap::new();
+                for (name, query) in arrays_queries {
+                    let row = sqlx::query(&query).bind(hashed_keys).fetch_all(&pool).await?;
+                    arrays_rows.insert(name, row);
+                }
 
                 let models = schemas
-                    .iter()
-                    .map(|s| {
-                        let mut struct_ty =
-                            s.as_struct().expect("schema should be struct").to_owned();
-                        map_row_to_ty(&s.name(), &mut struct_ty, &row)?;
+                    .into_iter()
+                    .map(|mut s| {
+                        map_row_to_ty("", &s.name(), &mut s, &row, &arrays_rows)?;
 
-                        Ok(struct_ty.try_into().unwrap())
+                        Ok(s.as_struct()
+                            .expect("schema should be a struct")
+                            .to_owned()
+                            .try_into()
+                            .unwrap())
                     })
                     .collect::<Result<Vec<_>, Error>>()?;
 

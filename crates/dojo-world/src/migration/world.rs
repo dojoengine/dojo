@@ -1,7 +1,11 @@
 use std::fmt::Display;
+use std::mem;
+use std::str::FromStr;
 
+use anyhow::{bail, Result};
 use convert_case::{Case, Casing};
 use starknet_crypto::FieldElement;
+use topological_sort::TopologicalSort;
 
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
@@ -30,9 +34,9 @@ impl WorldDiff {
             .iter()
             .map(|model| ClassDiff {
                 name: model.name.to_string(),
-                local: *model.inner.class_hash(),
-                original: *model.inner.original_class_hash(),
-                remote: remote.as_ref().and_then(|m| {
+                local_class_hash: *model.inner.class_hash(),
+                original_class_hash: *model.inner.original_class_hash(),
+                remote_class_hash: remote.as_ref().and_then(|m| {
                     // Remote models are detected from events, where only the struct
                     // name (pascal case) is emitted.
                     // Local models uses the fully qualified name of the model,
@@ -74,15 +78,16 @@ impl WorldDiff {
                             .find(|r| r.inner.class_hash() == contract.inner.class_hash())
                             .map(|r| *r.inner.class_hash())
                     }),
+                    init_calldata: contract.inner.init_calldata.clone(),
                 }
             })
             .collect::<Vec<_>>();
 
         let base = ClassDiff {
             name: BASE_CONTRACT_NAME.into(),
-            local: *local.base.inner.class_hash(),
-            original: *local.base.inner.original_class_hash(),
-            remote: remote.as_ref().map(|m| *m.base.inner.class_hash()),
+            local_class_hash: *local.base.inner.class_hash(),
+            original_class_hash: *local.base.inner.original_class_hash(),
+            remote_class_hash: remote.as_ref().map(|m| *m.base.inner.class_hash()),
         };
 
         let world = ContractDiff {
@@ -91,6 +96,7 @@ impl WorldDiff {
             original_class_hash: *local.world.inner.original_class_hash(),
             base_class_hash: *local.base.inner.class_hash(),
             remote_class_hash: remote.map(|m| *m.world.inner.class_hash()),
+            init_calldata: vec![],
         };
 
         WorldDiff { world, base, contracts, models }
@@ -106,6 +112,63 @@ impl WorldDiff {
         count += self.models.iter().filter(|s| !s.is_same()).count();
         count += self.contracts.iter().filter(|s| !s.is_same()).count();
         count
+    }
+
+    pub fn update_order(&mut self) -> Result<()> {
+        let mut ts = TopologicalSort::<&str>::new();
+
+        // make the dependency graph by reading the constructor_calldata
+        for contract in self.contracts.iter() {
+            let curr_name: &str = &contract.name;
+            ts.insert(curr_name);
+
+            for field in &contract.init_calldata {
+                if let Some(dependency) = field.strip_prefix("$contract_address:") {
+                    ts.add_dependency(dependency, curr_name);
+                } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
+                    ts.add_dependency(dependency, curr_name);
+                } else {
+                    // verify its a field element
+                    match FieldElement::from_str(field) {
+                        Ok(_) => continue,
+                        Err(e) => bail!(format!(
+                            "Expected init_calldata element to be a special variable (i.e. \
+                             starting with $contract_address or $class_hash) or be a \
+                             FieldElement. Failed with error: {e:?}"
+                        )),
+                    }
+                }
+            }
+        }
+
+        let mut calculated_order = vec![];
+
+        while !ts.is_empty() {
+            let mut values = ts.pop_all();
+            // if `ts` is not empty and `pop_all` returns an empty vector it means there is a cyclic
+            // dependency see: https://docs.rs/topological-sort/latest/topological_sort/struct.TopologicalSort.html#method.pop_all
+            if values.is_empty() {
+                bail!("Cyclic dependency detected in `init_calldata`");
+            }
+
+            values.sort();
+            calculated_order.extend(values);
+        }
+
+        let mut new_contracts = vec![];
+
+        for c_name in calculated_order {
+            let contract = match self.contracts.iter().find(|c| c.name == c_name) {
+                Some(c) => c,
+                None => bail!("Unidentified contract found in `init_calldata`"),
+            };
+
+            new_contracts.push(contract.clone());
+        }
+
+        mem::swap(&mut self.contracts, &mut new_contracts);
+
+        Ok(())
     }
 }
 

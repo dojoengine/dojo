@@ -20,8 +20,8 @@ katana-tasks.workspace = true
 anyhow.workspace = true
 flate2.workspace = true
 futures.workspace = true
-hex = { version = "0.4.3", default-features = false }
-hyper = "0.14.20"
+hex = { workspace = true }
+hyper.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
 metrics.workspace = true
 serde.workspace = true
@@ -31,14 +31,16 @@ starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-tower = { version = "0.4.13", features = [ "full" ] }
-tower-http = { version = "0.4.1", features = [ "full" ] }
+tower = { workspace = true, features = [ "full" ] }
+tower-http = { workspace = true, features = [ "full" ] }
 tracing.workspace = true
 
 [dev-dependencies]
-assert_matches = "1.5.0"
+assert_matches.workspace = true
+cairo-lang-starknet-classes.workspace = true
 cairo-lang-starknet.workspace = true
 dojo-test-utils.workspace = true
+dojo-world.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-rpc-api = { workspace = true, features = [ "client" ] }
 url.workspace = true

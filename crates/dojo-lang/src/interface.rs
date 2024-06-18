@@ -2,8 +2,11 @@ use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{PluginDiagnostic, PluginGeneratedFile, PluginResult};
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
+
+use crate::syntax::self_param;
+use crate::syntax::world_param::{self, WorldParamInjectionKind};
 
 pub struct DojoInterface {
     diagnostics: Vec<PluginDiagnostic>,
@@ -13,7 +16,7 @@ impl DojoInterface {
     pub fn from_trait(db: &dyn SyntaxGroup, trait_ast: ast::ItemTrait) -> PluginResult {
         let name = trait_ast.name(db).text(db);
         let mut system = DojoInterface { diagnostics: vec![] };
-        let mut builder = PatchBuilder::new(db);
+        let mut builder = PatchBuilder::new(db, &trait_ast);
 
         if let ast::MaybeTraitBody::Some(body) = trait_ast.body(db) {
             let body_nodes: Vec<_> = body
@@ -63,21 +66,21 @@ impl DojoInterface {
             ));
         }
 
+        let (code, code_mappings) = builder.build();
+
         PluginResult {
             code: Some(PluginGeneratedFile {
                 name: name.clone(),
-                content: builder.code,
+                content: code,
                 aux_data: None,
-                code_mappings: builder.code_mappings,
+                code_mappings,
             }),
             diagnostics: system.diagnostics,
             remove_original_item: true,
         }
     }
 
-    /// Rewrites parameter list  by adding `self` parameter if missing.
-    ///
-    /// Reports an error in case of `ref self` as systems are supposed to be 100% stateless.
+    /// Rewrites parameter list by adding `self` parameter based on the `world` parameter.
     pub fn rewrite_parameters(
         &mut self,
         db: &dyn SyntaxGroup,
@@ -90,49 +93,28 @@ impl DojoInterface {
             .map(|e| e.as_syntax_node().get_text(db))
             .collect::<Vec<_>>();
 
-        let mut need_to_add_self = true;
-        if !params.is_empty() {
-            let first_param = param_list.elements(db)[0].clone();
-            let param_name = first_param.name(db).text(db).to_string();
+        self_param::check_parameter(db, &param_list, diagnostic_item, &mut self.diagnostics);
 
-            if param_name.eq(&"self".to_string()) {
-                let param_modifiers = first_param
-                    .modifiers(db)
-                    .elements(db)
-                    .iter()
-                    .map(|e| e.as_syntax_node().get_text(db).trim().to_string())
-                    .collect::<Vec<_>>();
+        let world_injection = world_param::parse_world_injection(
+            db,
+            param_list,
+            diagnostic_item,
+            &mut self.diagnostics,
+        );
 
-                let param_type = first_param
-                    .type_clause(db)
-                    .ty(db)
-                    .as_syntax_node()
-                    .get_text(db)
-                    .trim()
-                    .to_string();
-
-                if param_modifiers.contains(&"ref".to_string())
-                    && param_type.eq(&"TContractState".to_string())
-                {
-                    self.diagnostics.push(PluginDiagnostic {
-                        stable_ptr: diagnostic_item,
-                        message: "Functions of dojo::interface cannot have `ref self` parameter."
-                            .to_string(),
-                        severity: Severity::Error,
-                    });
-
-                    need_to_add_self = false;
-                }
-
-                if param_type.eq(&"@TContractState".to_string()) {
-                    need_to_add_self = false;
-                }
+        match world_injection {
+            WorldParamInjectionKind::None => {
+                params.insert(0, "self: @TContractState".to_string());
+            }
+            WorldParamInjectionKind::View => {
+                params.remove(0);
+                params.insert(0, "self: @TContractState".to_string());
+            }
+            WorldParamInjectionKind::External => {
+                params.remove(0);
+                params.insert(0, "ref self: TContractState".to_string());
             }
         };
-
-        if need_to_add_self {
-            params.insert(0, "self: @TContractState".to_string());
-        }
 
         params.join(", ")
     }
@@ -149,11 +131,13 @@ impl DojoInterface {
             .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
             .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS);
 
-        rewritten_params.set_str(self.rewrite_parameters(
+        let params_str = self.rewrite_parameters(
             db,
             fn_ast.declaration(db).signature(db).parameters(db),
             fn_ast.stable_ptr().untyped(),
-        ));
+        );
+
+        rewritten_params.set_str(params_str);
         vec![rewritten_fn]
     }
 }

@@ -8,29 +8,25 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileContentQuery};
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_lang::scarb_internal::build_scarb_root_database;
-use dojo_world::manifest::{BaseManifest, DeploymentManifest};
+use dojo_world::manifest::{BaseManifest, DeploymentManifest, BASE_DIR, MANIFESTS_DIR};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
-use scarb::compiler::CompilationUnit;
+use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::{Config, Workspace};
-use sozo_ops::migration::{self, prepare_migration};
-use starknet::accounts::SingleOwnerAccount;
+use scarb::ops::{FeaturesOpts, FeaturesSelector};
+use sozo_ops::migration;
+use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::Provider;
-use starknet::signers::Signer;
-use tracing::error;
+use tracing::{error, trace};
 
 use super::migrate::setup_env;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::dev";
 
 #[derive(Debug, Args)]
 pub struct DevArgs {
@@ -49,18 +45,27 @@ pub struct DevArgs {
     #[command(flatten)]
     pub account: AccountOptions,
 }
-
 impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = if config.manifest_path().exists() {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-
-            dojo_metadata_from_workspace(&ws).env().cloned()
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let dojo_metadata = if let Some(metadata) = dojo_metadata_from_workspace(&ws) {
+            metadata
         } else {
+            return Err(anyhow!(
+                "No current package with dojo metadata found, dev is not yet support for \
+                 workspaces."
+            ));
+        };
+
+        let env_metadata = if config.manifest_path().exists() {
+            dojo_metadata.env().cloned()
+        } else {
+            trace!("Manifest path does not exist.");
             None
         };
 
         let mut context = load_context(config)?;
+
         let (tx, rx) = channel();
         let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
 
@@ -68,11 +73,13 @@ impl DevArgs {
             config.manifest_path().parent().unwrap().as_std_path(),
             RecursiveMode::Recursive,
         )?;
-        let name = self.name.clone();
+
+        let name = self.name.unwrap_or_else(|| ws.current_package().unwrap().id.name.to_string());
+
         let mut previous_manifest: Option<DeploymentManifest> = Option::None;
         let result = build(&mut context);
 
-        let Some((mut world_address, account, _, _)) = context
+        let Some((mut world_address, account, _)) = context
             .ws
             .config()
             .tokio_handle()
@@ -81,20 +88,21 @@ impl DevArgs {
                 self.account,
                 self.starknet,
                 self.world,
-                name.as_ref(),
+                &name,
                 env_metadata.as_ref(),
             ))
             .ok()
         else {
-            return Err(anyhow!("Failed to setup environment"));
+            return Err(anyhow!("Failed to setup environment."));
         };
 
         match context.ws.config().tokio_handle().block_on(migrate(
             world_address,
             &account,
-            name.clone(),
+            &name,
             &context.ws,
             previous_manifest.clone(),
+            dojo_metadata.skip_migration.clone(),
         )) {
             Ok((manifest, address)) => {
                 previous_manifest = Some(manifest);
@@ -102,7 +110,6 @@ impl DevArgs {
             }
             Err(error) => {
                 error!(
-                    target: LOG_TARGET,
                     error = ?error,
                     address = ?world_address,
                     "Migrating world."
@@ -118,7 +125,7 @@ impl DevArgs {
                     .unwrap_or(DevAction::None),
                 Ok(Err(_)) => DevAction::None,
                 Err(error) => {
-                    error!(target: LOG_TARGET, error = ?error, "Receiving dev action.");
+                    error!(error = ?error, "Receiving dev action.");
                     break;
                 }
             };
@@ -127,9 +134,10 @@ impl DevArgs {
                 match context.ws.config().tokio_handle().block_on(migrate(
                     world_address,
                     &account,
-                    name.clone(),
+                    &name,
                     &context.ws,
                     previous_manifest.clone(),
+                    dojo_metadata.skip_migration.clone(),
                 )) {
                     Ok((manifest, address)) => {
                         previous_manifest = Some(manifest);
@@ -137,7 +145,6 @@ impl DevArgs {
                     }
                     Err(error) => {
                         error!(
-                            target: LOG_TARGET,
                             error = ?error,
                             address = ?world_address,
                             "Migrating world.",
@@ -150,7 +157,7 @@ impl DevArgs {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 enum DevAction {
     None,
     Reload,
@@ -174,12 +181,14 @@ fn handle_event(event: &DebouncedEvent) -> DevAction {
         }
         _ => DevAction::None,
     };
+
+    trace!(?action, "Determined action.");
     action
 }
 
 struct DevContext<'a> {
     pub db: RootDatabase,
-    pub unit: CompilationUnit,
+    pub unit: CairoCompilationUnit,
     pub ws: Workspace<'a>,
 }
 
@@ -187,16 +196,24 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
     let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
     let resolve = scarb::ops::resolve_workspace(&ws)?;
-    let compilation_units = scarb::ops::generate_compilation_units(&resolve, &ws)?
+
+    let features_opts =
+        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+
+    let compilation_units = scarb::ops::generate_compilation_units(&resolve, &features_opts, &ws)?
         .into_iter()
-        .filter(|cu| packages.contains(&cu.main_package_id))
+        .filter(|cu| packages.contains(&cu.main_package_id()))
         .collect::<Vec<_>>();
 
     // we have only 1 unit in projects
     // TODO: double check if we always have one with the new version and the order if many.
-    let unit = compilation_units.first().unwrap();
-    let db = build_scarb_root_database(unit).unwrap();
-    Ok(DevContext { db, unit: unit.clone(), ws })
+    trace!(unit_count = compilation_units.len(), "Gathering compilation units.");
+    if let CompilationUnit::Cairo(unit) = compilation_units.first().unwrap() {
+        let db = build_scarb_root_database(unit).unwrap();
+        Ok(DevContext { db, unit: unit.clone(), ws })
+    } else {
+        Err(anyhow!("Cairo Compilation Unit is expected at this point."))
+    }
 }
 
 fn build(context: &mut DevContext<'_>) -> Result<()> {
@@ -212,16 +229,19 @@ fn build(context: &mut DevContext<'_>) -> Result<()> {
     Ok(())
 }
 
-async fn migrate<P, S>(
+// TODO: fix me
+async fn migrate<A>(
     mut world_address: Option<FieldElement>,
-    account: &SingleOwnerAccount<P, S>,
-    name: Option<String>,
+    account: A,
+    name: &str,
     ws: &Workspace<'_>,
     previous_manifest: Option<DeploymentManifest>,
+    skip_migration: Option<Vec<String>>,
 ) -> Result<(DeploymentManifest, Option<FieldElement>)>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    A::Provider: Send,
+    A::SignError: 'static,
 {
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
@@ -233,8 +253,12 @@ where
         return Err(anyhow!("Build project using `sozo build` first"));
     }
 
-    let new_manifest =
+    let mut new_manifest =
         BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
+
+    if let Some(skip_manifests) = skip_migration {
+        new_manifest.remove_items(skip_manifests);
+    }
 
     let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
     let total_diffs = diff.count_diffs();
@@ -245,7 +269,7 @@ where
     }
 
     let ui = ws.config().ui();
-    let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let mut strategy = migration::prepare_migration(&target_dir, diff, name, world_address, &ui)?;
 
     match migration::apply_diff(ws, account, TxnConfig::default(), &mut strategy).await {
         Ok(migration_output) => {
@@ -265,6 +289,7 @@ where
 }
 
 fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAction {
+    trace!(event=?event, "Processing event.");
     let action = handle_event(event);
     match &action {
         DevAction::None => {}
@@ -273,6 +298,8 @@ fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAct
             handle_reload_action(context);
         }
     }
+
+    trace!(action=?action, "Processed action.");
     action
 }
 
@@ -289,8 +316,10 @@ fn handle_build_action(path: &Path, context: &mut DevContext<'_>) {
 }
 
 fn handle_reload_action(context: &mut DevContext<'_>) {
+    trace!("Reloading context.");
     let config = context.ws.config();
     config.ui().print("Reloading project");
     let new_context = load_context(config).expect("Failed to load context");
     let _ = mem::replace(context, new_context);
+    trace!("Context reloaded.");
 }
