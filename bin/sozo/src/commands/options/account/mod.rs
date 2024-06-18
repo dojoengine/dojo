@@ -3,13 +3,16 @@ use std::str::FromStr;
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
+use scarb::core::Config;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
 use tracing::trace;
+use url::Url;
 
 use super::signer::SignerOptions;
+use super::starknet::StarknetOptions;
 use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 
 mod r#type;
@@ -45,7 +48,44 @@ pub struct AccountOptions {
 }
 
 impl AccountOptions {
+    /// Create a new Catridge Controller account based on session key.
+    #[cfg(feature = "controller")]
+    pub async fn controller<P>(
+        &self,
+        rpc_url: Url,
+        provider: P,
+        config: &Config,
+    ) -> Result<ControllerSessionAccount<P>>
+    where
+        P: Provider,
+        P: Send + Sync,
+    {
+        controller::create_controller(rpc_url, provider, config).await
+    }
+
     pub async fn account<P>(
+        &self,
+        provider: P,
+        starknet: &StarknetOptions,
+        env_metadata: Option<&Environment>,
+        config: &Config,
+    ) -> Result<SozoAccount<P>>
+    where
+        P: Provider,
+        P: Send + Sync,
+    {
+        #[cfg(feature = "controller")]
+        if self.controller {
+            let url = starknet.url(env_metadata)?;
+            let account = self.controller(url, provider, config).await?;
+            return Ok(SozoAccount::from(account));
+        }
+
+        let account = self.std_account(provider, env_metadata).await?;
+        Ok(SozoAccount::from(account))
+    }
+
+    pub async fn std_account<P>(
         &self,
         provider: P,
         env_metadata: Option<&Environment>,
@@ -177,7 +217,7 @@ mod tests {
 
         // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
         // checking it by encoding a dummy call and checking which method it used to encode the call
-        let account = cmd.account.account(runner.provider(), None).await.unwrap();
+        let account = cmd.account.std_account(runner.provider(), None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
         // 0x0 is the data offset.
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
@@ -197,7 +237,7 @@ mod tests {
 
         // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
         // checking it by encoding a dummy call and checking which method it used to encode the call
-        let account = cmd.account.account(runner.provider(), None).await.unwrap();
+        let account = cmd.account.std_account(runner.provider(), None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
         // 0x2 is the Calldata len.
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x2").unwrap());

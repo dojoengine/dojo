@@ -64,8 +64,7 @@ pub async fn world_from_env_metadata(
 ) -> Result<WorldContract<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>, Error> {
     let world_address = world.address(env_metadata.as_ref())?;
     let provider = starknet.provider(env_metadata.as_ref())?;
-
-    let account = account.account(provider, env_metadata.as_ref()).await?;
+    let account = account.account(provider, &starknet, env_metadata.as_ref(), config).await?;
     Ok(WorldContract::new(world_address, account))
 }
 
