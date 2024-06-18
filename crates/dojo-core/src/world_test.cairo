@@ -822,7 +822,6 @@ fn bench_execute_complex() {
     assert(data.heigth == 1337, 'data not stored');
 }
 
-
 #[starknet::interface]
 trait IWorldUpgrade<TContractState> {
     fn hello(self: @TContractState) -> felt252;

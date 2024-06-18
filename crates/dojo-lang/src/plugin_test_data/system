@@ -355,3 +355,1320 @@ mod ctxnamed {
 }
 
 //! > expected_diagnostics
+error: The contract namespace 'MyNamespace' can only contain lower case characters (a-z) and underscore (_)
+ --> test_src/lib.cairo:1:1
+#[dojo::contract(namespace: 'MyNamespace')]
+^*****************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:52:1
+#[starknet::component]
+^********************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:58:1
+#[starknet::component]
+^********************^
+
+error: Anything other than functions is not supported in a dojo::interface
+ --> test_src/lib.cairo:90:5
+    const ONE: u8;
+    ^************^
+
+error: In a dojo contract or interface, you should use `world: @IWorldDispatcher` instead of `self: @ContractState`.
+ --> test_src/lib.cairo:108:5
+    fn do_with_self(self: @ContractState) -> felt252;
+    ^***********************************************^
+
+error: In a dojo contract or interface, you should use `ref world: IWorldDispatcher` instead of `ref self: ContractState`.
+ --> test_src/lib.cairo:109:5
+    fn do_with_ref_self(ref self: ContractState) -> felt252;
+    ^******************************************************^
+
+error: World parameter must be the first parameter.
+ --> test_src/lib.cairo:114:5
+    fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252;
+    ^****************************************************************************^
+
+error: In a dojo contract or interface, you should use `ref world: IWorldDispatcher` instead of `ref self: ContractState`.
+ --> test_src/lib.cairo:121:9
+        fn do_with_self(ref self: ContractState) -> felt252 {
+        ^***************************************************^
+
+error: In a dojo contract or interface, you should use `ref world: IWorldDispatcher` instead of `ref self: ContractState`.
+ --> test_src/lib.cairo:125:9
+        fn do_with_ref_self(ref self: ContractState) -> felt252 {
+        ^*******************************************************^
+
+error: World parameter must be the first parameter.
+ --> test_src/lib.cairo:139:9
+        fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252 {
+        ^*****************************************************************************^
+
+error: World parameter must be a snapshot if `ref` is not used.
+ --> test_src/lib.cairo:190:5
+    fn dojo_init(
+    ^***********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:92:5
+    #[my_attr]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:54:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:60:5
+    #[storage]
+    ^********^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:11:1
+#[dojo::contract(namespace: 'my_namespace')]
+^******************************************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:21:1
+#[dojo::contract(namespace: "my_namespace")]
+^******************************************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:28:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:38:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:66:5
+    component!(path: testcomponent1, storage: testcomponent1_storage, event: testcomponent1_event);
+    ^*********************************************************************************************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:67:5
+    component!(path: testcomponent2, storage: testcomponent2_storage, event: testcomponent2_event);
+    ^*********************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:64:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:119:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:117:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:152:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:145:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:188:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:205:1
+#[dojo::contract]
+^***************^
+
+//! > expanded_cairo_code
+#[dojo::contract(namespace: 'MyNamespace')]
+mod bad_namespace_format {
+    use traits::Into;
+    use dojo::world::Context;
+
+    fn execute(ctx: Context, name: felt252) {
+        return ();
+    }
+}
+
+#[starknet::component]
+mod testcomponent1 {
+    #[storage]
+    struct Storage {}
+}
+
+#[starknet::component]
+mod testcomponent2 {
+    #[storage]
+    struct Storage {}
+}
+
+                #[starknet::contract]
+                mod spawn {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'spawn'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "my_namespace"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            1685136890688416384941629523783652800960468745356230625531475538826800548713
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                        use traits::Into;
+    use dojo::world::Context;
+
+    fn execute(ctx: Context, name: felt252) {
+        return ();
+    }
+
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
+
+                #[starknet::contract]
+                mod proxy {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'proxy'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "my_namespace"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            1685136890688416384941629523783652800960468745356230625531475538826800548713
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                        fn execute(value: felt252) -> felt252 {
+        value
+    }
+
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
+
+                #[starknet::contract]
+                mod ctxnamed {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'ctxnamed'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                        use traits::Into;
+    use dojo::world::Context;
+
+    fn execute(ctx2: Context, name: felt252) {
+        return ();
+    }
+
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
+
+                #[starknet::contract]
+                mod withevent {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'withevent'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                    
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+                        TestEvent: TestEvent
+            }
+            
+    #[derive(Drop, starknet::Event)]
+    struct TestEvent {
+        address: ContractAddress,
+    }
+
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+impl TestEventDrop of core::traits::Drop::<TestEvent>;
+            
+                }
+
+                #[starknet::contract]
+                mod withcomponent {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'withcomponent'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+                        #[substorage(v0)]
+        testcomponent1_storage: testcomponent1::Storage,
+        #[substorage(v0)]
+        testcomponent2_storage: testcomponent2::Storage
+            }
+            
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+                        #[flat]
+        testcomponent1_event: testcomponent1::Event,
+        testcomponent2_event: testcomponent2::Event
+            }
+            
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        }
+                    }
+impl EventDrop of core::traits::Drop::<Event>;
+                
+                }
+
+                #[starknet::interface]
+                trait IEmptyTrait<TContractState> {}
+
+                #[starknet::interface]
+                trait IFaultyTrait<TContractState> {
+                    
+    #[my_attr]
+    fn do_with_attrs(self: @TContractState, p1: u8) -> u16;
+
+                }
+
+                #[starknet::interface]
+                trait INominalTrait<TContractState> {
+                        fn do_no_param(self: @TContractState) -> felt252;
+    fn do_no_param_but_world(self: @TContractState) -> felt252;
+    fn do_no_param_but_world_ref(ref self: TContractState) -> felt252;
+    fn do_params_no_world(self: @TContractState, p1: felt252, p2: u8) -> felt252;
+    fn do_params_and_world(self: @TContractState, p2: u8) -> felt252;
+    fn do_params_and_world_ref(ref self: TContractState, p2: u8) -> felt252;
+
+                }
+
+                #[starknet::interface]
+                trait IFaultyTrait<TContractState> {
+                        fn do_with_self(self: @TContractState, self: @ContractState) -> felt252;
+    fn do_with_ref_self(self: @TContractState, ref self: ContractState) -> felt252;
+    fn do_with_several_world_dispatchers(
+self: @TContractState, vec: Vec2, ref another_world: IWorldDispatcher
+    ) -> felt252;
+    fn do_with_world_not_named_world(self: @TContractState, another_world: @IWorldDispatcher) -> felt252;
+    fn do_with_world_not_first(self: @TContractState, vec: Vec2, ref world: IWorldDispatcher) -> felt252;
+
+                }
+
+                #[starknet::contract]
+                mod MyFaultyContract {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'MyFaultyContract'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                        #[abi(embed_v0)]
+    impl TestFaultyImpl of IFaultyTrait<ContractState> {
+        fn do_with_self(self: @ContractState, ref self: ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_ref_self(self: @ContractState, ref self: ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_several_world_dispatchers(
+self: @ContractState, vec: Vec2, ref another_world: IWorldDispatcher
+        ) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_with_world_not_named_world(self: @ContractState, another_world: @IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+        fn do_with_world_not_first(self: @ContractState, vec: Vec2) -> felt252 {
+            'land'
+        }
+    }
+
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
+
+                #[starknet::contract]
+                mod MyNominalContract {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'MyNominalContract'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                        #[derive(Drop)]
+    struct Action {
+        damage: u8
+    }
+
+    #[abi(embed_v0)]
+    impl TestNominalImpl of INominalTrait<ContractState> {
+        fn do_no_param(self: @ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_no_param_but_world(self: @ContractState) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_no_param_but_world_ref(ref self: ContractState) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_params_no_world(self: @ContractState, p1: felt252, p2: u8) -> felt252 {
+            'land'
+        }
+
+        fn do_params_and_world(self: @ContractState, p2: u8) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_params_and_world_ref(ref self: ContractState, p2: u8) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+    }
+
+    #[generate_trait]
+    impl ImplInternalNoContractState of InternalNoContractState {
+        fn func1(world: IWorldDispatcher) -> felt252 {
+            let _w = world;
+            42
+        }
+    }
+
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl ActionDrop of core::traits::Drop::<Action>;
+    trait InternalNoContractState {
+        fn func1(world: IWorldDispatcher) -> felt252;
+    }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
+
+                #[starknet::contract]
+                mod init_test {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'init_test'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                    
+                #[starknet::interface]
+                trait IDojoInit<ContractState> {
+                    fn dojo_init(self: @ContractState,         actions_address: ContractAddress,         actions_class: ClassHash,         value: u8
+);
+                }
+
+                #[abi(embed_v0)]
+                impl IDojoInitImpl of IDojoInit<ContractState> {
+                    fn dojo_init(self: @ContractState,         actions_address: ContractAddress,         actions_class: ClassHash,         value: u8
+) {
+                        let world = self.world_dispatcher.read();
+                        assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        {
+        emit!(
+            world,
+            ContractInitialized {
+                contract_address: actions_address, contract_class: actions_class, value
+            }
+        );
+    }
+
+                    }
+                }
+            
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
+
+                #[starknet::contract]
+                mod no_init_test {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+                    use dojo::world::INamespace;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'no_init_test'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl NamespaceImpl of INamespace<ContractState> {
+                        fn namespace(self: @ContractState) -> ByteArray {
+                            "dojo_plugin"
+                        }
+
+                        fn namespace_selector(self: @ContractState) -> felt252 {
+                            3437408695301308226171664635441698996501144546809569617702850025816833723775
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                    
+                    #[starknet::interface]
+                    trait IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState);
+                    }
+
+                    #[abi(embed_v0)]
+                    impl IDojoInitImpl of IDojoInit<ContractState> {
+                        fn dojo_init(self: @ContractState) {
+                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
+                        }
+                    }
+                
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
