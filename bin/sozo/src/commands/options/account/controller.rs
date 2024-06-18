@@ -64,6 +64,7 @@ where
         .map(|p| AllowedMethod::new(p.target, &p.method))
         .collect::<Result<Vec<AllowedMethod>, _>>()?;
 
+    // Copied from `account-wasm` <https://github.com/cartridge-gg/controller/blob/0dd4dd6cbc5fcd3b9a1fd8d63dc127f6312b733f/packages/account-wasm/src/lib.rs#L78-L88>
     let guardian = SigningKey::from_secret_scalar(short_string!("CARTRIDGE_GUARDIAN"));
     let signer = SigningKey::from_secret_scalar(session_details.credentials.private_key);
     let expires_at = session_details.expires_at.parse::<u64>()?;
@@ -88,6 +89,11 @@ where
     Ok(session_account)
 }
 
+/// Policies are the building block of a session key. It's what defines what methods are allowed for
+/// an external signer to execute using the session key.
+///
+/// This function collect all the contracts' methods in the current project according to the
+/// project's deployment manifest (manifest.toml) and convert them into policies.
 fn collect_policies_from_project(
     user_address: FieldElement,
     config: &Config,
@@ -108,7 +114,6 @@ fn get_project_deployment_manifest(
     Ok(DeploymentManifest::load_from_path(&manifest_path)?)
 }
 
-/// Collect all the contracts' methods in the current project and convert them into policies.
 fn collect_policies(
     user_address: FieldElement,
     base_path: &Utf8Path,
