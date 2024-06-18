@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use starknet::accounts::single_owner::SignError;
-use starknet::accounts::{Account, Call, ConnectedAccount, Declaration, Execution};
-use starknet::accounts::{ExecutionEncoder, LegacyDeclaration, RawDeclaration};
-use starknet::accounts::{RawExecution, RawLegacyDeclaration, SingleOwnerAccount};
+use starknet::accounts::{
+    Account, Call, ConnectedAccount, Declaration, Execution, ExecutionEncoder, LegacyDeclaration,
+    RawDeclaration, RawExecution, RawLegacyDeclaration, SingleOwnerAccount,
+};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{FieldElement, FlattenedSierraClass};
 use starknet::providers::Provider;
