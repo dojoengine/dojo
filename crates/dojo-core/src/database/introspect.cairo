@@ -60,7 +60,6 @@ trait Introspect<T> {
     fn ty() -> Ty;
 }
 
-
 impl Introspect_felt252 of Introspect<felt252> {
     fn size() -> Option<usize> {
         Option::Some(1)
@@ -72,7 +71,6 @@ impl Introspect_felt252 of Introspect<felt252> {
         Ty::Primitive('felt252')
     }
 }
-
 
 impl Introspect_bool of Introspect<bool> {
     fn size() -> Option<usize> {
@@ -181,7 +179,6 @@ impl Introspect_classhash of Introspect<starknet::ClassHash> {
         Ty::Primitive('starknet::ClassHash')
     }
 }
-
 
 impl Introspect_bytearray of Introspect<ByteArray> {
     fn size() -> Option<usize> {
