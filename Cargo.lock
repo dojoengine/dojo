@@ -12812,6 +12812,7 @@ dependencies = [
 [[package]]
 name = "slot"
 version = "0.7.5"
+source = "git+https://github.com/cartridge-gg/slot?rev=3e4ee7f#3e4ee7f98cf2cef18884766f6fdbdbded039cee2"
 dependencies = [
  "anyhow",
  "axum",
