@@ -3,13 +3,15 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileContentQuery};
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
 use dojo_lang::scarb_internal::build_scarb_root_database;
-use dojo_world::manifest::{BaseManifest, DeploymentManifest, BASE_DIR, MANIFESTS_DIR};
+use dojo_world::manifest::{
+    BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
+};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
@@ -79,22 +81,18 @@ impl DevArgs {
         let mut previous_manifest: Option<DeploymentManifest> = Option::None;
         let result = build(&mut context);
 
-        let Some((mut world_address, account, _)) = context
-            .ws
-            .config()
-            .tokio_handle()
-            .block_on(setup_env(
+        let (mut world_address, account, _) =
+            match context.ws.config().tokio_handle().block_on(setup_env(
                 &context.ws,
                 self.account,
                 self.starknet,
                 self.world,
                 &name,
                 env_metadata.as_ref(),
-            ))
-            .ok()
-        else {
-            return Err(anyhow!("Failed to setup environment."));
-        };
+            )) {
+                Ok(e) => e,
+                Err(error) => return Err(error).with_context(|| "Failed to setup environment."),
+            };
 
         match context.ws.config().tokio_handle().block_on(migrate(
             world_address,
@@ -257,14 +255,28 @@ where
         return Err(anyhow!("Build project using `sozo build` first"));
     }
 
-    let mut new_manifest =
-        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
+    let profile_name =
+        ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
+    let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(&profile_name);
+
+    let mut new_manifest = BaseManifest::load_from_path(&profile_dir.join(BASE_DIR))?;
+
+    let overlay_path = profile_dir.join(OVERLAYS_DIR);
+    if overlay_path.exists() {
+        let overlay_manifest = OverlayManifest::load_from_path(&profile_dir.join(OVERLAYS_DIR))
+            .map_err(|e| anyhow!("Fail to load overlay manifest file: {e}."))?;
+
+        // merge user defined changes to base manifest
+        new_manifest.merge(overlay_manifest);
+    }
 
     if let Some(skip_manifests) = skip_migration {
         new_manifest.remove_items(skip_manifests);
     }
 
-    let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
+    let mut diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
+    diff.update_order();
+
     let total_diffs = diff.count_diffs();
     let config = ws.config();
     config.ui().print(format!("Total diffs found: {total_diffs}"));
@@ -274,6 +286,7 @@ where
 
     let ui = ws.config().ui();
     let mut strategy = migration::prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    strategy.resolve_variable(strategy.world_address().unwrap());
 
     match migration::apply_diff(ws, account, TxnConfig::default(), &mut strategy).await {
         Ok(migration_output) => {
