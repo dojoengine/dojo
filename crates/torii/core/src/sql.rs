@@ -702,7 +702,7 @@ impl Sql {
                 }
             }
             Ty::Enum(e) => {
-                if !e
+                if e
                     .options
                     .iter()
                     .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
@@ -716,6 +716,12 @@ impl Sql {
                     .push_front(statement, vec![Argument::String(entity_id.to_string())]);
 
                 for child in e.options.iter() {
+                    if let Ty::Tuple(t) = &child.ty {
+                        if t.is_empty() {
+                            continue;
+                        }
+                    }
+
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
                     self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty);
