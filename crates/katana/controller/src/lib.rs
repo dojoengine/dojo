@@ -1,13 +1,16 @@
+use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
-use std::{collections::HashMap, str::FromStr};
 
-use account_sdk::abigen::controller::Signer;
+use account_sdk::abigen::controller::{Signer, SignerType};
 use account_sdk::signers::webauthn::{DeviceSigner, WebauthnAccountSigner};
 use account_sdk::signers::SignerTrait;
+use account_sdk::wasm_webauthn::CredentialID;
 use alloy_primitives::U256;
-use anyhow::{Context, Result};
+use anyhow::Result;
+use coset::CoseKey;
 use katana_primitives::class::{ClassHash, CompiledClass, SierraCompiledClass};
-use katana_primitives::contract::ContractAddress;
+use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::{GenesisAllocation, GenesisContractAlloc};
 use katana_primitives::genesis::{Genesis, GenesisClass};
 use katana_primitives::utils::class::{parse_compiled_class_v1, parse_sierra_class};
@@ -19,7 +22,7 @@ use starknet::core::utils::get_storage_var_address;
 mod webauthn;
 
 const CONTROLLER_SIERRA_ARTIFACT: &str =
-    include_str!("controller_CartridgeAccount.contract_class.json");
+    include_str!("../../contracts/compiled/controller_CartridgeAccount.contract_class.json");
 
 const WEBAUTHN_RP_ID: &str = "cartridge.gg";
 const WEBAUTHN_ORIGIN: &str = "https://x.cartridge.gg";
@@ -58,30 +61,14 @@ pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
     let class_hash = add_controller_class(genesis)?;
 
     let credential_id = webauthn::credential::from_base64(&cred.id)?;
-    let pub_key = webauthn::cose_key::from_base64(&cred.public_key)?;
-    let signer = DeviceSigner::new(
-        WEBAUTHN_RP_ID.to_string(),
-        WEBAUTHN_ORIGIN.to_string(),
-        credential_id,
-        pub_key,
-    );
-
-    let signer = Signer::Webauthn(signer.signer_pub_data());
-    // webauthn signer type as seen in the cairo contract <https://github.com/cartridge-gg/controller-internal/blob/394b60b1df92d7b173b3215051d67b85c342dbea/crates/webauthn/auth/src/signer.cairo#L181>
-    let r#type = FieldElement::from(4u8);
-    let guid = signer.guid();
+    let public_key = webauthn::cose_key::from_base64(&cred.public_key)?;
 
     let (address, contract) = {
-        // the storage variable name for webauthn signer
-        const NON_STARK_OWNER_VAR_NAME: &str = "_owner_non_stark";
-        let storage = get_storage_var_address(NON_STARK_OWNER_VAR_NAME, &[r#type]).unwrap();
-        let storages = HashMap::from([(storage, guid)]);
-
         let account = GenesisContractAlloc {
             nonce: None,
-            storage: Some(storages),
             class_hash: Some(class_hash),
             balance: Some(U256::from(0xfffffffffffffffu128)),
+            storage: Some(get_contract_storage(credential_id, public_key, SignerType::Webauthn)?),
         };
 
         (ContractAddress::from(address), GenesisAllocation::Contract(account))
@@ -92,51 +79,43 @@ pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
 }
 
 pub mod json {
-    use super::*;
     use anyhow::Result;
-    use katana_primitives::genesis::json::{ClassNameOrHash, GenesisClassJson};
-    use katana_primitives::genesis::json::{GenesisContractJson, GenesisJson};
+    use katana_primitives::genesis::json::{
+        ClassNameOrHash, GenesisClassJson, GenesisContractJson, GenesisJson,
+    };
     use serde_json::Value;
+
+    use super::*;
 
     const CONTROLLER_CLASS_NAME: &str = "controller";
 
     // TODO(kariy): should accept the whole account struct instead of individual fields
     // build the genesis json file
-    pub fn add_controller_account_json(
-        genesis: &mut GenesisJson,
-        address: &str,
-        credential_id: &str,
-        pub_key: &str,
-    ) -> Result<()> {
+    pub fn add_controller_account_json(genesis: &mut GenesisJson) -> Result<()> {
+        // bouncer that checks if there is an authenticated slot user
+        let user = Credentials::load()?;
+
+        let MeMe { credentials, contract_address, .. } = user.account.unwrap();
+
+        let address = FieldElement::from_str(&contract_address.unwrap())?;
+        let creds = credentials.webauthn.unwrap();
+        let cred = creds.first().unwrap();
+
+        let credential_id = webauthn::credential::from_base64(&cred.id)?;
+        let public_key = webauthn::cose_key::from_base64(&cred.public_key)?;
+
         add_controller_class_json(genesis)?;
 
-        let credential_id = webauthn::credential::from_base64(credential_id)?;
-        let pub_key = webauthn::cose_key::from_base64(pub_key)?;
-        let signer = DeviceSigner::new(
-            WEBAUTHN_RP_ID.to_string(),
-            WEBAUTHN_ORIGIN.to_string(),
-            credential_id,
-            pub_key,
-        );
-
-        let signer = Signer::Webauthn(signer.signer_pub_data());
-        // webauthn signer type as seen in the cairo contract <https://github.com/cartridge-gg/controller-internal/blob/394b60b1df92d7b173b3215051d67b85c342dbea/crates/webauthn/auth/src/signer.cairo#L181>
-        let r#type = FieldElement::from(4u8);
-        let guid = signer.guid();
-
         let (address, contract) = {
-            let address = FieldElement::from_str(address)?;
-
-            // the storage variable name for webauthn signer
-            const NON_STARK_OWNER_VAR_NAME: &str = "_owner_non_stark";
-            let storage = get_storage_var_address(NON_STARK_OWNER_VAR_NAME, &[r#type]).unwrap();
-            let storages = HashMap::from([(storage, guid)]);
-
             let account = GenesisContractJson {
                 nonce: None,
                 balance: None,
-                storage: Some(storages),
                 class: Some(ClassNameOrHash::Name(CONTROLLER_CLASS_NAME.to_string())),
+                storage: Some(get_contract_storage(
+                    credential_id,
+                    public_key,
+                    SignerType::Webauthn,
+                )?),
             };
 
             (ContractAddress::from(address), account)
@@ -149,8 +128,7 @@ pub mod json {
 
     fn add_controller_class_json(genesis: &mut GenesisJson) -> Result<()> {
         // parse the controller class json file
-        let json = include_str!("controller_CartridgeAccount.contract_class.json");
-        let json = serde_json::from_str::<Value>(json).context("Failed to parse class artifact")?;
+        let json = serde_json::from_str::<Value>(CONTROLLER_SIERRA_ARTIFACT)?;
 
         let class = GenesisClassJson {
             class_hash: None,
@@ -164,9 +142,39 @@ pub mod json {
     }
 }
 
+fn get_contract_storage(
+    credential_id: CredentialID,
+    public_key: CoseKey,
+    signer_type: SignerType,
+) -> Result<HashMap<StorageKey, StorageValue>> {
+    let type_value: u16 = match signer_type {
+        SignerType::Starknet => 0,
+        SignerType::Secp256k1 => 1,
+        SignerType::Webauthn => 4,
+        SignerType::Unimplemented => 999,
+    };
+
+    let signer = DeviceSigner::new(
+        WEBAUTHN_RP_ID.to_string(),
+        WEBAUTHN_ORIGIN.to_string(),
+        credential_id,
+        public_key,
+    );
+
+    let signer = Signer::Webauthn(signer.signer_pub_data());
+    let guid = signer.guid();
+
+    // the storage variable name for webauthn signer
+    const NON_STARK_OWNER_VAR_NAME: &str = "_owner_non_stark";
+    let type_value = FieldElement::from(type_value);
+    let storage = get_storage_var_address(NON_STARK_OWNER_VAR_NAME, &[type_value])?;
+
+    Ok(HashMap::from([(storage, guid)]))
+}
+
 fn read_compiled_class_artifact(artifact: &str) -> Result<SierraCompiledClass> {
     let value = serde_json::from_str(artifact)?;
-    Ok(parse_compiled_class_v1(value)?)
+    parse_compiled_class_v1(value)
 }
 
 #[cfg(test)]

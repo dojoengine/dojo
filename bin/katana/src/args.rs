@@ -209,6 +209,7 @@ pub struct EnvironmentOptions {
 #[cfg(feature = "slot")]
 #[derive(Debug, Args, Clone)]
 pub struct SlotOptions {
+    #[arg(hide = true)]
     #[arg(long = "slot.controller")]
     pub controller: bool,
 }
