@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718682418988,
+  "lastUpdate": 1718685352007,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9835,6 +9835,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16679394,
             "range": "± 200046",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c4a1feadf1d5c5ecf9593b50c1a2ca2856ae2313",
+          "message": "fix: allow the use of self and world in an exclusive manner (#2063)\n\n* fix: allow the use of self and world in an exclusive manner\r\n\r\n* fix: fmt\r\n\r\n* fix: cairo fmt\r\n\r\n* fix: ensure a warning is emitted with generate trait and world\r\n\r\n* fix: cairo fmt",
+          "timestamp": "2024-06-17T22:24:07-06:00",
+          "tree_id": "411bfbf60d94a166bf4e05cb425e94bce3873e23",
+          "url": "https://github.com/dojoengine/dojo/commit/c4a1feadf1d5c5ecf9593b50c1a2ca2856ae2313"
+        },
+        "date": 1718685350743,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16605211,
+            "range": "± 1118951",
             "unit": "ns/iter"
           }
         ]
