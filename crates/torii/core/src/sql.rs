@@ -702,8 +702,7 @@ impl Sql {
                 }
             }
             Ty::Enum(e) => {
-                if e
-                    .options
+                if e.options
                     .iter()
                     .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
                 {
