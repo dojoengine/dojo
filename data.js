@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718685352007,
+  "lastUpdate": 1718721435282,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9865,6 +9865,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16605211,
             "range": "± 1118951",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7c5dd43cbb0dae159410754878f94d576747418f",
+          "message": "Update devcontainer image: v0.7.1 (#2077)\n\nCo-authored-by: glihm <glihm@users.noreply.github.com>",
+          "timestamp": "2024-06-18T08:25:32-06:00",
+          "tree_id": "7a0caa5e1efb4106684fcf8c56bd520a18b7bd05",
+          "url": "https://github.com/dojoengine/dojo/commit/7c5dd43cbb0dae159410754878f94d576747418f"
+        },
+        "date": 1718721433899,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16308819,
+            "range": "± 157395",
             "unit": "ns/iter"
           }
         ]
