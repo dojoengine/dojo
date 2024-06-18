@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718664914869,
+  "lastUpdate": 1718682276295,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9775,6 +9775,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16417487,
             "range": "± 240069",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8347ac8c8639b20c592098aa0bcc4e518d9123f1",
+          "message": "[dojo-core]: update gas logs (#1877)\n\ndojo-core: update gas logs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-17T21:33:09-06:00",
+          "tree_id": "e5542854c038bc9e506ee959d33fa4e53d6ee19d",
+          "url": "https://github.com/dojoengine/dojo/commit/8347ac8c8639b20c592098aa0bcc4e518d9123f1"
+        },
+        "date": 1718682275645,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16379589,
+            "range": "± 168576",
             "unit": "ns/iter"
           }
         ]
