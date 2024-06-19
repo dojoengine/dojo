@@ -168,6 +168,15 @@ impl Client {
         Ok(stream)
     }
 
+    pub async fn on_starknet_event(
+        &self,
+        keys: Vec<FieldElement>,
+    ) -> Result<EntityUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.on_event(keys).await?;
+        Ok(stream)
+    }
+
     /// Returns the value of a model.
     ///
     /// This function will only return `None`, if `model` doesn't exist. If there is no model with
