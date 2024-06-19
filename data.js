@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718776623194,
+  "lastUpdate": 1718830105709,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9955,6 +9955,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16338864,
             "range": "± 127031",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4db8ae0c89ebbb750f75c0425e78e378363a37e0",
+          "message": "fix(katana-rpc): only include successful transactions in pending block (#2082)\n\nOnly include successful transactions in pending block",
+          "timestamp": "2024-06-19T14:36:39-06:00",
+          "tree_id": "518b3eaa45b911553a2df42a056ca023da5a3c3b",
+          "url": "https://github.com/dojoengine/dojo/commit/4db8ae0c89ebbb750f75c0425e78e378363a37e0"
+        },
+        "date": 1718830104946,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16712418,
+            "range": "± 196824",
             "unit": "ns/iter"
           }
         ]
