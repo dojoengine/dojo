@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718751459932,
+  "lastUpdate": 1718776623194,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9925,6 +9925,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16605528,
             "range": "± 193137",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc44c36cb9174645ef5a498f9e54f922370409e1",
+          "message": "refactor(torii): delete entity in all tables & array references for entity delete! (#2072)",
+          "timestamp": "2024-06-18T23:45:44-06:00",
+          "tree_id": "b72b7a9bf9d6e95c7f4c71a05321b7ea361fb342",
+          "url": "https://github.com/dojoengine/dojo/commit/fc44c36cb9174645ef5a498f9e54f922370409e1"
+        },
+        "date": 1718776622299,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16338864,
+            "range": "± 127031",
             "unit": "ns/iter"
           }
         ]
