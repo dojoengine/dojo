@@ -177,7 +177,7 @@ impl<P: Provider + Sync> Engine<P> {
                             // We failed to fetch the transaction, which is because
                             // the transaction might not have passed the validation stage.
                             // So we can safely ignore this transaction and not process it, as it
-                            // rejected. 
+                            // rejected.
                             warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Ignored failed pending transaction.");
                         }
                         _ => {
