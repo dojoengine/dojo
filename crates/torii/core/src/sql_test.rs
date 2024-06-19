@@ -224,7 +224,7 @@ async fn test_load_from_remote_del() {
     assert!(migration.world_address().unwrap() == world_address);
 
     // spawn
-    let tx = account
+    account
         .execute(vec![Call {
             to: migration_output
                 .contracts
@@ -239,6 +239,8 @@ async fn test_load_from_remote_del() {
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     // Set player config.
     account
@@ -258,6 +260,8 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
     account
         .execute(vec![Call {
             to: migration_output
@@ -273,6 +277,8 @@ async fn test_load_from_remote_del() {
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let mut db = Sql::new(pool.clone(), world_address).await.unwrap();
     let _ = bootstrap_engine(world, db.clone(), &provider).await;
