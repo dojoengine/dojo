@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718830105709,
+  "lastUpdate": 1718830146155,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -9985,6 +9985,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16712418,
             "range": "± 196824",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "30e98034acb96545e859c22067b68eb8e281d0e8",
+          "message": "refactor(torii-core): ignore invalid txs that are included in the pending block (#2081)\n\n* refactor(torii-core): ignore invalid txs that are included in the pending block txs\r\n\r\n* fmt",
+          "timestamp": "2024-06-19T14:37:30-06:00",
+          "tree_id": "4835a28c149da95f0a73693af6aae83f5f981920",
+          "url": "https://github.com/dojoengine/dojo/commit/30e98034acb96545e859c22067b68eb8e281d0e8"
+        },
+        "date": 1718830145252,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16593159,
+            "range": "± 253499",
             "unit": "ns/iter"
           }
         ]
