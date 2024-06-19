@@ -8353,7 +8353,7 @@ dependencies = [
 
 [[package]]
 name = "katana-slot-controller"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "account_sdk",
  "alloy-primitives",
