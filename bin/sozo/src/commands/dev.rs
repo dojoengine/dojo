@@ -275,7 +275,7 @@ where
     }
 
     let mut diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
-    diff.update_order();
+    diff.update_order()?;
 
     let total_diffs = diff.count_diffs();
     let config = ws.config();
@@ -286,7 +286,7 @@ where
 
     let ui = ws.config().ui();
     let mut strategy = migration::prepare_migration(&target_dir, diff, name, world_address, &ui)?;
-    strategy.resolve_variable(strategy.world_address().unwrap());
+    strategy.resolve_variable(strategy.world_address()?)?;
 
     match migration::apply_diff(ws, account, TxnConfig::default(), &mut strategy).await {
         Ok(migration_output) => {
