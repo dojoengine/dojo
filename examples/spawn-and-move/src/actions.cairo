@@ -6,6 +6,7 @@ trait IActions {
     fn move(ref world: IWorldDispatcher, direction: Direction);
     fn set_player_config(ref world: IWorldDispatcher, name: ByteArray);
     fn get_player_position(world: @IWorldDispatcher) -> Position;
+    fn reset_player_config(ref world: IWorldDispatcher);
 }
 
 #[dojo::interface]
@@ -87,6 +88,27 @@ mod actions {
             let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1), };
 
             set!(world, (config));
+        }
+
+        fn reset_player_config(ref world: IWorldDispatcher) {
+            let player = get_caller_address();
+
+            let (position, moves, config) = get!(world, player, (Position, Moves, PlayerConfig));
+
+            delete!(world, (position, moves, config));
+
+            let (position, moves, config) = get!(world, player, (Position, Moves, PlayerConfig));
+
+            assert(moves.remaining == 0, 'bad remaining');
+            assert(moves.last_direction == Direction::None, 'bad last direction');
+
+            assert(position.vec.x == 0, 'bad x');
+            assert(position.vec.y == 0, 'bad y');
+
+            assert(config.items.len() == 0, 'bad items');
+            assert(config.favorite_item == Option::Some(0), 'bad favorite item');
+            let empty_string: ByteArray = "";
+            assert(config.name == empty_string, 'bad name');
         }
 
         fn get_player_position(world: @IWorldDispatcher) -> Position {

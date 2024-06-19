@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 
-#[derive(Serde, Copy, Drop, Introspect)]
+#[derive(Serde, Copy, Drop, Introspect, PartialEq)]
 enum Direction {
     None,
     Left,
