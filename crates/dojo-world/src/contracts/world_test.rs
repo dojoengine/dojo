@@ -30,7 +30,8 @@ async fn test_world_contract_reader() {
     let provider = account.provider();
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let dojo_metadata = dojo_metadata_from_workspace(&ws);
+    let dojo_metadata =
+        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
     let world_address = deploy_world(
         &runner,

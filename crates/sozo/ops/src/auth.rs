@@ -7,7 +7,7 @@ use dojo_world::contracts::{cairo_utils, WorldContractReader};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
-use starknet::accounts::ConnectedAccount;
+use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet_crypto::FieldElement;
@@ -88,14 +88,15 @@ impl FromStr for OwnerResource {
     }
 }
 
-pub async fn grant_writer<A>(
-    ui: &Ui,
+pub async fn grant_writer<'a, A>(
+    ui: &'a Ui,
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
     txn_config: TxnConfig,
 ) -> Result<()>
 where
-    A: ConnectedAccount + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    <A as Account>::SignError: 'static,
 {
     let mut calls = Vec::new();
 

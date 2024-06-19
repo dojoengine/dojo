@@ -184,7 +184,7 @@ pub async fn model_data_recursive_query(
 
     let rows = sqlx::query(&query).fetch_all(conn.as_mut()).await?;
     if rows.is_empty() {
-        return Ok(Value::Null);
+        return Ok(Value::List(vec![]));
     }
 
     let value_mapping: Value;
@@ -242,9 +242,9 @@ pub async fn model_data_recursive_query(
                         .iter()
                         .map(|v| match v {
                             Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
-                            _ => unreachable!(
+                            ty => unreachable!(
                                 "Expected Value::Object for list \"data\" field, got {:?}",
-                                v
+                                ty
                             ),
                         })
                         .collect(),

@@ -364,20 +364,28 @@ public class {} : ModelInstance {{
                         .collect::<Vec<String>>()
                         .join(", ");
 
-                    vec![(
-                        if is_inner_array {
-                            format!(
-                                "{arg_name}.SelectMany({arg_name}Item => new dojo.FieldElement[] \
-                                 {{ }}.Concat({inners}))"
-                            )
-                        } else {
-                            format!(
-                                "{arg_name}.SelectMany({arg_name}Item => new [] {{ {inners} }})"
-                            )
-                        },
-                        true,
-                        enum_variant.clone(),
-                    )]
+                    vec![
+                        (
+                            format!("new FieldElement({arg_name}.Length).Inner",),
+                            false,
+                            enum_variant.clone(),
+                        ),
+                        (
+                            if is_inner_array {
+                                format!(
+                                    "{arg_name}.SelectMany({arg_name}Item => new \
+                                     dojo.FieldElement[] {{ }}.Concat({inners}))"
+                                )
+                            } else {
+                                format!(
+                                    "{arg_name}.SelectMany({arg_name}Item => new [] {{ {inners} \
+                                     }})"
+                                )
+                            },
+                            true,
+                            enum_variant.clone(),
+                        ),
+                    ]
                 }
                 Token::Tuple(tuple) => tuple
                     .inners
