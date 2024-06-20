@@ -12,7 +12,7 @@ use starknet::core::types::FieldElement;
 use starknet::macros::short_string;
 use starknet::providers::Provider;
 use starknet::signers::SigningKey;
-use tracing::{info, trace};
+use tracing::trace;
 use url::Url;
 
 pub type ControllerSessionAccount<P> = SessionAccount<P, SigningKey, SigningKey>;
@@ -39,7 +39,7 @@ where
     let session_details = match slot::session::get(chain_id) {
         // TODO(kariy): perform policies diff check, if needed update
         Ok(Some(session)) => {
-            info!(expires_at = %session.expires_at, policies = session.policies.len(), "Found existing session.");
+            trace!(expires_at = %session.expires_at, policies = session.policies.len(), "Found existing session.");
             session
         }
 
@@ -50,7 +50,7 @@ where
 
         // Create a new session if not found or other error
         Ok(None) | Err(_) => {
-            info!(%username, chain = format!("{chain_id:#}"), "Creating new session key.");
+            trace!(%username, chain = format!("{chain_id:#}"), "Creating new session key.");
             let policies = collect_policies_from_project(contract_address, config)?;
             let session = slot::session::create(rpc_url, &policies).await?;
             slot::session::store(chain_id, &session)?;
@@ -102,7 +102,7 @@ fn collect_policies_from_project(
     let root_dir = config.root();
     let manifest = get_project_deployment_manifest(root_dir, config.profile().as_str())?;
     let policies = collect_policies(user_address, root_dir, manifest)?;
-    info!(policies_count = policies.len(), "Extracted policies from project.");
+    trace!(policies_count = policies.len(), "Extracted policies from project.");
     Ok(policies)
 }
 
@@ -140,12 +140,12 @@ fn collect_policies(
     // for sending declare tx
     let method = "__declare_transaction__".to_string();
     policies.push(Policy { target: user_address, method });
-    info!("Adding declare transaction policy");
+    trace!("Adding declare transaction policy");
 
     // for deploying using udc
     let method = "deployContract".to_string();
     policies.push(Policy { target: *UDC_ADDRESS, method });
-    info!("Adding UDC deployment policy");
+    trace!("Adding UDC deployment policy");
 
     Ok(policies)
 }
@@ -163,7 +163,7 @@ fn policies_from_abis(
             AbiEntry::Function(f) => {
                 let method = f.name.to_string();
                 let policy = Policy { target: contract_address, method };
-                info!(name = contract_name, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
+                trace!(name = contract_name, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
                 policies.push(policy);
             }
 
