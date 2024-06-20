@@ -185,7 +185,6 @@ impl WorldClient {
     }
 }
 
-
 type ModelDiffMappedStream = MapOk<
     tonic::Streaming<SubscribeModelsResponse>,
     Box<dyn Fn(SubscribeModelsResponse) -> StateUpdate + Send>,
@@ -219,7 +218,6 @@ impl Stream for EntityUpdateStreaming {
         self.0.poll_next_unpin(cx)
     }
 }
-
 
 type EventMappedStream = MapOk<
     tonic::Streaming<SubscribeEventsResponse>,

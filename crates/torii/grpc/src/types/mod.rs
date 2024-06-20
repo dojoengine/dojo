@@ -288,16 +288,6 @@ pub struct Event {
     pub transaction_hash: FieldElement,
 }
 
-impl From<Event> for proto::types::Event {
-    fn from(value: Event) -> Self {
-        Self {
-            keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect(),
-            data: value.data.iter().map(|d| d.to_bytes_be().into()).collect(),
-            transaction_hash: value.transaction_hash.to_bytes_be().into(),
-        }
-    }
-}
-
 impl TryFrom<proto::types::Event> for Event {
     type Error = FromByteSliceError;
 

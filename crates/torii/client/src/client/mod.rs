@@ -153,7 +153,11 @@ impl Client {
     pub async fn starknet_events(&self, query: EventQuery) -> Result<Vec<Event>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEventsResponse { events } = grpc_client.retrieve_events(query).await?;
-        Ok(events.into_iter().map(TryInto::try_into).collect::<Result<Vec<Event>, _>>().map_err(SchemaError::SliceError)?)
+        Ok(events
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<Event>, _>>()
+            .map_err(SchemaError::SliceError)?)
     }
 
     /// A direct stream to grpc subscribe entities
