@@ -8035,7 +8035,6 @@ dependencies = [
  "katana-core",
  "katana-executor",
  "katana-primitives",
- "katana-provider",
  "rstest 0.18.2",
  "serde",
  "serde_json",
