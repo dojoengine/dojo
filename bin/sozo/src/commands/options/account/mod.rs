@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
@@ -53,13 +53,14 @@ impl AccountOptions {
         P: Provider,
         P: Send + Sync,
     {
+        trace!(account_options=?self, "Creating account.");
         let account_address = self.account_address(env_metadata)?;
         trace!(?account_address, "Account address determined.");
 
         let signer = self.signer.signer(env_metadata, false)?;
         trace!(?signer, "Signer obtained.");
 
-        let chain_id = provider.chain_id().await?;
+        let chain_id = provider.chain_id().await.context("Failed to retrieve network chain id.")?;
         trace!(?chain_id);
 
         let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
