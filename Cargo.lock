@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "account_sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/controller?rev=d8b6f76#d8b6f767b558725debdeb667222876a180e7ccb9"
+source = "git+https://github.com/cartridge-gg/controller?rev=04d0e3a#04d0e3a9a7783bfe83945c21b311ea2cf7c894d1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12795,8 +12795,8 @@ dependencies = [
 
 [[package]]
 name = "slot"
-version = "0.7.5"
-source = "git+https://github.com/cartridge-gg/slot?rev=d87a0bc#d87a0bc918711b7c4da7c56b71535dc38cbf1bdb"
+version = "0.8.0"
+source = "git+https://github.com/cartridge-gg/slot?rev=1d0c9f7#1d0c9f79122202bb448279f68c97092413e72cd3"
 dependencies = [
  "anyhow",
  "axum",
