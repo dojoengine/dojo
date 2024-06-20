@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use account_sdk::abigen::controller::{Signer, SignerType};
@@ -16,7 +15,6 @@ use katana_primitives::genesis::{Genesis, GenesisClass};
 use katana_primitives::utils::class::{parse_compiled_class_v1, parse_sierra_class};
 use katana_primitives::FieldElement;
 use slot::credential::Credentials;
-use slot::graphql::auth::me::MeMe;
 use starknet::core::utils::get_storage_var_address;
 
 mod webauthn;
@@ -51,12 +49,7 @@ fn add_controller_class(genesis: &mut Genesis) -> Result<ClassHash> {
 pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
     // bouncer that checks if there is an authenticated slot user
     let user = Credentials::load()?;
-
-    let MeMe { credentials, contract_address, .. } = user.account.unwrap();
-
-    let address = FieldElement::from_str(&contract_address.unwrap())?;
-    let creds = credentials.webauthn.unwrap();
-    let cred = creds.first().unwrap();
+    let cred = user.account.credentials.webauthn.first().unwrap();
 
     let class_hash = add_controller_class(genesis)?;
 
@@ -71,7 +64,7 @@ pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
             storage: Some(get_contract_storage(credential_id, public_key, SignerType::Webauthn)?),
         };
 
-        (ContractAddress::from(address), GenesisAllocation::Contract(account))
+        (ContractAddress::from(user.account.contract_address), GenesisAllocation::Contract(account))
     };
 
     genesis.extend_allocations([(address, contract)]);
@@ -94,12 +87,7 @@ pub mod json {
     pub fn add_controller_account_json(genesis: &mut GenesisJson) -> Result<()> {
         // bouncer that checks if there is an authenticated slot user
         let user = Credentials::load()?;
-
-        let MeMe { credentials, contract_address, .. } = user.account.unwrap();
-
-        let address = FieldElement::from_str(&contract_address.unwrap())?;
-        let creds = credentials.webauthn.unwrap();
-        let cred = creds.first().unwrap();
+        let cred = user.account.credentials.webauthn.first().unwrap();
 
         let credential_id = webauthn::credential::from_base64(&cred.id)?;
         let public_key = webauthn::cose_key::from_base64(&cred.public_key)?;
@@ -118,7 +106,7 @@ pub mod json {
                 )?),
             };
 
-            (ContractAddress::from(address), account)
+            (ContractAddress::from(user.account.contract_address), account)
         };
 
         genesis.contracts.insert(address, contract);
