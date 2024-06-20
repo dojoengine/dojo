@@ -14,6 +14,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use alloy_primitives::U256;
+use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
 use common::parse::parse_socket_address;
@@ -258,7 +259,7 @@ impl KatanaArgs {
         }
     }
 
-    pub fn starknet_config(&self) -> StarknetConfig {
+    pub fn starknet_config(&self) -> Result<StarknetConfig> {
         let genesis = match self.starknet.genesis.clone() {
             Some(genesis) => genesis,
             None => {
@@ -280,8 +281,7 @@ impl KatanaArgs {
 
                 #[cfg(feature = "slot")]
                 if self.slot.controller {
-                    katana_slot_controller::add_controller_account(&mut genesis)
-                        .expect("inject controller account");
+                    katana_slot_controller::add_controller_account(&mut genesis)?;
                 }
 
                 genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
@@ -289,7 +289,7 @@ impl KatanaArgs {
             }
         };
 
-        StarknetConfig {
+        Ok(StarknetConfig {
             disable_fee: self.starknet.disable_fee,
             disable_validate: self.starknet.disable_validate,
             fork_rpc_url: self.rpc_url.clone(),
@@ -301,7 +301,7 @@ impl KatanaArgs {
             },
             db_dir: self.db_dir.clone(),
             genesis,
-        }
+        })
     }
 }
 
@@ -312,7 +312,7 @@ mod test {
     #[test]
     fn test_starknet_config_default() {
         let args = KatanaArgs::parse_from(["katana"]);
-        let config = args.starknet_config();
+        let config = args.starknet_config().unwrap();
 
         assert!(!config.disable_fee);
         assert!(!config.disable_validate);
@@ -346,7 +346,7 @@ mod test {
             "--strk-gas-price",
             "20",
         ]);
-        let config = args.starknet_config();
+        let config = args.starknet_config().unwrap();
 
         assert!(config.disable_fee);
         assert!(config.disable_validate);
