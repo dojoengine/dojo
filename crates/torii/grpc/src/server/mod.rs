@@ -828,12 +828,12 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         _request: Request<MetadataRequest>,
     ) -> Result<Response<MetadataResponse>, Status> {
-        let metadata = self.metadata().await.map_err(|e| match e {
+        let metadata = Some(self.metadata().await.map_err(|e| match e {
             Error::Sql(sqlx::Error::RowNotFound) => Status::not_found("World not found"),
             e => Status::internal(e.to_string()),
-        })?;
+        })?);
 
-        Ok(Response::new(MetadataResponse { metadata: Some(metadata) }))
+        Ok(Response::new(MetadataResponse { metadata }))
     }
 
     async fn subscribe_models(
