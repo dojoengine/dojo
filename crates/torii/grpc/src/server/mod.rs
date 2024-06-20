@@ -315,7 +315,7 @@ impl DojoWorld {
                     return Ok("%".to_string());
                 }
                 Ok(FieldElement::from_byte_slice_be(bytes)
-                    .map(|felt| format!("{:#x}", felt))
+                    .map(|felt| format!("{felt:#x}"))
                     .map_err(ParseError::FromByteSliceError)?)
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -400,7 +400,10 @@ impl DojoWorld {
                 if bytes.is_empty() {
                     return Ok("%".to_string());
                 }
-                Ok(str::from_utf8(bytes).unwrap().to_string())
+
+                Ok(FieldElement::from_byte_slice_be(bytes)
+                    .map(|felt| format!("{felt:#x}"))
+                    .map_err(ParseError::FromByteSliceError)?)
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
@@ -787,14 +790,21 @@ impl DojoWorld {
     }
 }
 
-fn process_event_field(data: &str) -> Vec<Vec<u8>> {
-    data.trim_end_matches('/').split('/').map(|s| s.to_owned().into_bytes()).collect()
+fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
+    Ok(data
+        .trim_end_matches('/')
+        .split('/')
+        .map(|d| {
+            FieldElement::from_str(d).map_err(ParseError::FromStr).map(|f| f.to_bytes_be().to_vec())
+        })
+        .collect::<Result<Vec<_>, _>>()?)
 }
 
 fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Event, Error> {
-    let keys = process_event_field(&row.0);
-    let data = process_event_field(&row.1);
-    let transaction_hash = row.2.to_owned().into_bytes();
+    let keys = process_event_field(&row.0)?;
+    let data = process_event_field(&row.1)?;
+    let transaction_hash =
+        FieldElement::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
 
     Ok(proto::types::Event { keys, data, transaction_hash })
 }

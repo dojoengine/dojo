@@ -72,12 +72,14 @@ impl Service {
         let mut closed_stream = Vec::new();
         let keys = event
             .keys
+            .trim_end_matches(FELT_DELIMITER)
             .split(FELT_DELIMITER)
             .map(FieldElement::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| ParseError::from(e))?;
         let data = event
             .data
+            .trim_end_matches(FELT_DELIMITER)
             .split(FELT_DELIMITER)
             .map(FieldElement::from_str)
             .collect::<Result<Vec<_>, _>>()
@@ -90,7 +92,10 @@ impl Service {
                     event: Some(proto::types::Event {
                         keys: keys.iter().map(|k| k.to_bytes_be().to_vec()).collect(),
                         data: data.iter().map(|d| d.to_bytes_be().to_vec()).collect(),
-                        transaction_hash: event.transaction_hash.as_bytes().to_vec(),
+                        transaction_hash: FieldElement::from_str(&event.transaction_hash)
+                            .map_err(ParseError::from)?
+                            .to_bytes_be()
+                            .to_vec(),
                     }),
                 };
 

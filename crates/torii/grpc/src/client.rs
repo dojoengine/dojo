@@ -5,15 +5,16 @@ use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{FromStrError, StateDiff, StateUpdate};
 use starknet_crypto::FieldElement;
-use torii_core::types::Event;
 
+use crate::proto::types::EventKeysClause;
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsRequest,
-    SubscribeEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
+    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use crate::types::schema::{self, Entity, SchemaError};
-use crate::types::{KeysClause, Query};
+use crate::types::{Event, EventQuery, KeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -93,6 +94,14 @@ impl WorldClient {
             .map(|res| res.into_inner())
     }
 
+    pub async fn retrieve_events(
+        &mut self,
+        query: EventQuery,
+    ) -> Result<RetrieveEventsResponse, Error> {
+        let request = RetrieveEventsRequest { query: Some(query.into()) };
+        self.inner.retrieve_events(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
+    }
+
     /// Subscribe to entities updates of a World.
     pub async fn subscribe_entities(
         &mut self,
@@ -125,9 +134,9 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
-            Some(entity) => entity.try_into().expect("must able to serialize"),
-            None => Entity { hashed_keys: FieldElement::ZERO, models: vec![] },
+        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
+            let entity = res.entity.expect("entity must exist");
+            entity.try_into().expect("must able to serialize")
         }))))
     }
 
@@ -136,7 +145,9 @@ impl WorldClient {
         &mut self,
         keys: Option<Vec<FieldElement>>,
     ) -> Result<EventUpdateStreaming, Error> {
-        let keys = keys.map(|keys| keys.iter().map(|key| key.to_bytes_be().to_vec()).collect());
+        let keys = keys.map(|keys| EventKeysClause {
+            keys: keys.iter().map(|key| key.to_bytes_be().to_vec()).collect(),
+        });
 
         let stream = self
             .inner
@@ -145,8 +156,9 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(EventUpdateStreaming(stream.map_ok(Box::new(|res| {
-            res.map(|event| event.try_into().expect("must able to serialize"))
+        Ok(EventUpdateStreaming(stream.map_ok(Box::new(|res| match res.event {
+            Some(event) => event.try_into().expect("must able to serialize"),
+            None => Event { keys: vec![], data: vec![], transaction_hash: FieldElement::ZERO },
         }))))
     }
 
@@ -164,17 +176,19 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(ModelDiffsStreaming(stream.map_ok(Box::new(|res| {
-            res.model_update.map(|update| {
+        Ok(ModelDiffsStreaming(stream.map_ok(Box::new(|res| match res.model_update {
+            Some(update) => {
                 TryInto::<StateUpdate>::try_into(update).expect("must able to serialize")
-            })
+            }
+            None => empty_state_update(),
         }))))
     }
 }
 
+
 type ModelDiffMappedStream = MapOk<
     tonic::Streaming<SubscribeModelsResponse>,
-    Box<dyn Fn(SubscribeModelsResponse) -> Option<StateUpdate> + Send>,
+    Box<dyn Fn(SubscribeModelsResponse) -> StateUpdate + Send>,
 >;
 
 pub struct ModelDiffsStreaming(ModelDiffMappedStream);
@@ -191,7 +205,7 @@ impl Stream for ModelDiffsStreaming {
 
 type EntityMappedStream = MapOk<
     tonic::Streaming<SubscribeEntityResponse>,
-    Box<dyn Fn(SubscribeEntityResponse) -> Option<Entity> + Send>,
+    Box<dyn Fn(SubscribeEntityResponse) -> Entity + Send>,
 >;
 
 pub struct EntityUpdateStreaming(EntityMappedStream);
@@ -206,9 +220,10 @@ impl Stream for EntityUpdateStreaming {
     }
 }
 
+
 type EventMappedStream = MapOk<
     tonic::Streaming<SubscribeEventsResponse>,
-    Box<dyn Fn(SubscribeEventsResponse) -> Option<Entity> + Send>,
+    Box<dyn Fn(SubscribeEventsResponse) -> Event + Send>,
 >;
 
 pub struct EventUpdateStreaming(EventMappedStream);
