@@ -76,14 +76,14 @@ impl Service {
             .split(FELT_DELIMITER)
             .map(FieldElement::from_str)
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| ParseError::from(e))?;
+            .map_err(ParseError::from)?;
         let data = event
             .data
             .trim_end_matches(FELT_DELIMITER)
             .split(FELT_DELIMITER)
             .map(FieldElement::from_str)
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| ParseError::from(e))?;
+            .map_err(ParseError::from)?;
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
             // publish all updates if ids is empty or only ids that are subscribed to
