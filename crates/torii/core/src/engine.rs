@@ -404,9 +404,12 @@ impl<P: Provider + Sync> Engine<P> {
 
     async fn process_block(&mut self, block_number: u64, block_timestamp: u64) -> Result<()> {
         for processor in &self.processors.block {
-            processor
+            if let Err(e) = processor
                 .process(&mut self.db, self.provider.as_ref(), block_number, block_timestamp)
-                .await?;
+                .await
+            {
+                error!(target: LOG_TARGET, block_number, error = %e, "Processing block.");
+            }
         }
         Ok(())
     }
@@ -420,7 +423,7 @@ impl<P: Provider + Sync> Engine<P> {
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
-            processor
+            if let Err(e) = processor
                 .process(
                     &mut self.db,
                     self.provider.as_ref(),
@@ -430,7 +433,10 @@ impl<P: Provider + Sync> Engine<P> {
                     transaction_hash,
                     transaction,
                 )
-                .await?
+                .await
+            {
+                error!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), error = %e, "Processing transaction.");
+            }
         }
 
         Ok(())
@@ -457,7 +463,7 @@ impl<P: Provider + Sync> Engine<P> {
                 || get_selector_from_name(&processor.event_key())? == event.keys[0])
                 && processor.validate(event)
             {
-                processor
+                if let Err(e) = processor
                     .process(
                         &self.world,
                         &mut self.db,
@@ -467,7 +473,10 @@ impl<P: Provider + Sync> Engine<P> {
                         event_id,
                         event,
                     )
-                    .await?;
+                    .await
+                {
+                    error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
+                }
             } else {
                 let unprocessed_event = UnprocessedEvent {
                     keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),
