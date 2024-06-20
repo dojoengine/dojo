@@ -31,6 +31,7 @@ pub struct AccountOptions {
     #[arg(help_heading = "Controller options")]
     #[arg(help = "Use Slot's Controller account")]
     #[cfg(feature = "controller")]
+    #[arg(conflicts_with = "signer")]
     pub controller: bool,
 
     #[command(flatten)]
