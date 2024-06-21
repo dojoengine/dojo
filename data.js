@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718884643810,
+  "lastUpdate": 1719000297241,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10075,6 +10075,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16271145,
             "range": "± 229592",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "45fa7dc12ef292ef9e59a043e6be0a4248a19a12",
+          "message": "feat(torii-grpc): add events subscription (#2065)",
+          "timestamp": "2024-06-21T13:53:18-06:00",
+          "tree_id": "af7b9a65e325c74c8330f350b3e4de57d1f09d2f",
+          "url": "https://github.com/dojoengine/dojo/commit/45fa7dc12ef292ef9e59a043e6be0a4248a19a12"
+        },
+        "date": 1719000296461,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16452157,
+            "range": "± 149652",
             "unit": "ns/iter"
           }
         ]
