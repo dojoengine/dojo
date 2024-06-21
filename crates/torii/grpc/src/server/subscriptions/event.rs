@@ -86,22 +86,44 @@ impl Service {
             .map_err(ParseError::from)?;
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            // publish all updates if ids is empty or only ids that are subscribed to
-            if sub.keys.is_empty() || keys.starts_with(&sub.keys) {
-                let resp = proto::world::SubscribeEventsResponse {
-                    event: Some(proto::types::Event {
-                        keys: keys.iter().map(|k| k.to_bytes_be().to_vec()).collect(),
-                        data: data.iter().map(|d| d.to_bytes_be().to_vec()).collect(),
-                        transaction_hash: FieldElement::from_str(&event.transaction_hash)
-                            .map_err(ParseError::from)?
-                            .to_bytes_be()
-                            .to_vec(),
-                    }),
-                };
+            // if the key pattern doesnt match our subscribers key pattern, skip
+            // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
+            if !keys.iter().enumerate().all(|(idx, key)| {
+                // this is going to be None if our key pattern overflows the subscriber key pattern
+                // in this case we might want to list all events with the same
+                // key selector so we can match them all
+                let sub_key = sub.keys.get(idx);
 
-                if sub.sender.send(Ok(resp)).await.is_err() {
-                    closed_stream.push(*idx);
+                // if we have a key in the subscriber, it must match the key in the event
+                // unless its empty, which is a wildcard
+                // if we
+                match sub_key {
+                    Some(sub_key) => {
+                        if sub_key == &FieldElement::ZERO {
+                            true
+                        } else {
+                            key == sub_key
+                        }
+                    }
+                    None => true,
                 }
+            }) {
+                continue;
+            }
+
+            let resp = proto::world::SubscribeEventsResponse {
+                event: Some(proto::types::Event {
+                    keys: keys.iter().map(|k| k.to_bytes_be().to_vec()).collect(),
+                    data: data.iter().map(|d| d.to_bytes_be().to_vec()).collect(),
+                    transaction_hash: FieldElement::from_str(&event.transaction_hash)
+                        .map_err(ParseError::from)?
+                        .to_bytes_be()
+                        .to_vec(),
+                }),
+            };
+
+            if sub.sender.send(Ok(resp)).await.is_err() {
+                closed_stream.push(*idx);
             }
         }
 

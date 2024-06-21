@@ -99,6 +99,12 @@ impl Service {
             .map_err(ParseError::FromStr)?;
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
+            // Check if the subscriber is interested in this entity
+            // If we have a clause of hashed keys, then check that the id of the entity
+            // is in the list of hashed keys.
+
+            // If we have a clause of keys, then check that the key pattern of the entity
+            // matches the key pattern of the subscriber.
             if let Some(proto::types::EntityKeysClause { clause_type: Some(clause) }) = &sub.keys {
                 match clause {
                     proto::types::entity_keys_clause::ClauseType::HashedKeys(hashed_keys) => {
@@ -121,7 +127,11 @@ impl Service {
                             .collect::<Result<Vec<_>, _>>()
                             .map_err(ParseError::FromByteSliceError)?;
 
+                        // if the key pattern doesnt match our subscribers key pattern, skip
+                        // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
                         if !keys.iter().enumerate().all(|(idx, key)| {
+                            // this is going to be None if our key pattern overflows the subscriber
+                            // key pattern in this case we should skip
                             let sub_key = sub_keys.get(idx);
 
                             match sub_key {
@@ -132,7 +142,7 @@ impl Service {
                                         key == sub_key
                                     }
                                 }
-                                None => true,
+                                None => false,
                             }
                         }) {
                             continue;
