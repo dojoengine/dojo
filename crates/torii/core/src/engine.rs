@@ -404,12 +404,9 @@ impl<P: Provider + Sync> Engine<P> {
 
     async fn process_block(&mut self, block_number: u64, block_timestamp: u64) -> Result<()> {
         for processor in &self.processors.block {
-            if let Err(e) = processor
+            processor
                 .process(&mut self.db, self.provider.as_ref(), block_number, block_timestamp)
-                .await
-            {
-                error!(target: LOG_TARGET, block_number, error = %e, "Processing block.");
-            }
+                .await?
         }
         Ok(())
     }
@@ -423,7 +420,7 @@ impl<P: Provider + Sync> Engine<P> {
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
-            if let Err(e) = processor
+            processor
                 .process(
                     &mut self.db,
                     self.provider.as_ref(),
@@ -433,10 +430,7 @@ impl<P: Provider + Sync> Engine<P> {
                     transaction_hash,
                     transaction,
                 )
-                .await
-            {
-                error!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction_hash), error = %e, "Processing transaction.");
-            }
+                .await?;
         }
 
         Ok(())
