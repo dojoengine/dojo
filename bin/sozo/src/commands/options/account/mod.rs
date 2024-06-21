@@ -74,8 +74,7 @@ impl AccountOptions {
         P: Provider,
         P: Send + Sync,
     {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        controller::create_controller(rpc_url, provider, world_address_or_name, config, ws)
+        controller::create_controller(rpc_url, provider, world_address_or_name, config)
             .await
             .context("Failed to create a Controller account")
     }

@@ -4,8 +4,9 @@ use account_sdk::deploy_contract::UDC_ADDRESS;
 use account_sdk::signers::HashSigner;
 use anyhow::{Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
-use dojo_world::manifest::BaseManifest;
-use scarb::core::{Config, Workspace};
+use dojo_world::manifest::{BaseManifest, DojoContract, Manifest};
+use dojo_world::migration::strategy::generate_salt;
+use scarb::core::Config;
 use slot::session::Policy;
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::FieldElement;
@@ -22,7 +23,10 @@ use super::WorldAddressOrName;
 pub type ControllerSessionAccount<P> = SessionAccount<P, SigningKey, SigningKey>;
 
 /// Create a new Catridge Controller account based on session key.
-#[tracing::instrument(name = "create_controller", skip(rpc_url, provider, config))]
+#[tracing::instrument(
+    name = "create_controller",
+    skip(rpc_url, provider, world_addr_or_name, config)
+)]
 pub async fn create_controller<P>(
     // Use to either specify the world address or compute the world address from the world name
     // Ideally we can get the url from the provider so we dont have to pass an extra url param here
@@ -30,7 +34,6 @@ pub async fn create_controller<P>(
     provider: P,
     world_addr_or_name: WorldAddressOrName,
     config: &Config,
-    ws: Workspace<'_>,
 ) -> Result<ControllerSessionAccount<P>>
 where
     P: Provider,
@@ -89,7 +92,7 @@ where
     );
 
     trace!(
-        chain = format!("{chain_id:#}"),
+        chain = format!("{chain_id:#x}"),
         address = format!("{contract_address:#x}"),
         "Created Controller session account"
     );
@@ -133,13 +136,13 @@ fn collect_policies_from_base_manifest(
     let base_path: Utf8PathBuf = base_path.to_path_buf();
 
     // compute the world address here if it's a name
-    let world_address = get_world_address(world_address, &manifest)?;
+    let world_address = get_dojo_world_address(world_address, &manifest)?;
 
     // get methods from all project contracts
     for contract in manifest.contracts {
+        let contract_address = get_dojo_contract_address(world_address, &contract);
         let abis = contract.inner.abi.unwrap().load_abi_string(&base_path)?;
         let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
-        let contract_address = contract.inner.address.unwrap();
         policies_from_abis(&mut policies, &contract.name, contract_address, &abis);
     }
 
@@ -187,7 +190,19 @@ fn policies_from_abis(
     }
 }
 
-fn get_world_address(
+fn get_dojo_contract_address(
+    world_address: FieldElement,
+    manifest: &Manifest<DojoContract>,
+) -> FieldElement {
+    if let Some(address) = manifest.inner.address {
+        address
+    } else {
+        let salt = generate_salt(&manifest.name);
+        get_contract_address(salt, manifest.inner.base_class_hash, &[], world_address)
+    }
+}
+
+fn get_dojo_world_address(
     world_address: WorldAddressOrName,
     manifest: &BaseManifest,
 ) -> Result<FieldElement> {
