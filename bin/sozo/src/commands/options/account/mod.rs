@@ -17,6 +17,19 @@ use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 
 mod r#type;
 
+#[cfg(feature = "controller")]
+use controller::ControllerSessionAccount;
+pub use r#type::*;
+
+/// Helper type for identifying how the world address will be provided.
+/// If it's a name, it will be used as the seed for computing the address.
+/// Else if it's an address, it will be used directly.
+#[derive(Debug)]
+pub enum WorldAddressOrName {
+    Address(FieldElement),
+    Name(String),
+}
+
 // INVARIANT:
 // - For commandline: we can either specify `private_key` or `keystore_path` along with
 //   `keystore_password`. This is enforced by Clap.
@@ -54,13 +67,15 @@ impl AccountOptions {
         &self,
         rpc_url: Url,
         provider: P,
+        world_address_or_name: WorldAddressOrName,
         config: &Config,
     ) -> Result<ControllerSessionAccount<P>>
     where
         P: Provider,
         P: Send + Sync,
     {
-        controller::create_controller(rpc_url, provider, config)
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        controller::create_controller(rpc_url, provider, world_address_or_name, config, ws)
             .await
             .context("Failed to create a Controller account")
     }
@@ -68,6 +83,7 @@ impl AccountOptions {
     pub async fn account<P>(
         &self,
         provider: P,
+        world_address_or_name: WorldAddressOrName,
         starknet: &StarknetOptions,
         env_metadata: Option<&Environment>,
         config: &Config,
@@ -79,7 +95,7 @@ impl AccountOptions {
         #[cfg(feature = "controller")]
         if self.controller {
             let url = starknet.url(env_metadata)?;
-            let account = self.controller(url, provider, config).await?;
+            let account = self.controller(url, provider, world_address_or_name, config).await?;
             return Ok(SozoAccount::from(account));
         }
 

@@ -2,28 +2,35 @@ use account_sdk::account::session::hash::{AllowedMethod, Session};
 use account_sdk::account::session::SessionAccount;
 use account_sdk::deploy_contract::UDC_ADDRESS;
 use account_sdk::signers::HashSigner;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
-use dojo_world::manifest::DeploymentManifest;
-use scarb::core::Config;
+use dojo_world::manifest::BaseManifest;
+use scarb::core::{Config, Workspace};
 use slot::session::Policy;
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::FieldElement;
+use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::short_string;
 use starknet::providers::Provider;
 use starknet::signers::SigningKey;
+use starknet_crypto::poseidon_hash_single;
 use tracing::trace;
 use url::Url;
+
+use super::WorldAddressOrName;
 
 pub type ControllerSessionAccount<P> = SessionAccount<P, SigningKey, SigningKey>;
 
 /// Create a new Catridge Controller account based on session key.
 #[tracing::instrument(name = "create_controller", skip(rpc_url, provider, config))]
 pub async fn create_controller<P>(
+    // Use to either specify the world address or compute the world address from the world name
     // Ideally we can get the url from the provider so we dont have to pass an extra url param here
     rpc_url: Url,
     provider: P,
+    world_addr_or_name: WorldAddressOrName,
     config: &Config,
+    ws: Workspace<'_>,
 ) -> Result<ControllerSessionAccount<P>>
 where
     P: Provider,
@@ -51,7 +58,7 @@ where
         // Create a new session if not found or other error
         Ok(None) | Err(_) => {
             trace!(%username, chain = format!("{chain_id:#}"), "Creating new session key.");
-            let policies = collect_policies_from_project(contract_address, config)?;
+            let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             let session = slot::session::create(rpc_url, &policies).await?;
             slot::session::store(chain_id, &session)?;
             session
@@ -95,33 +102,38 @@ where
 ///
 /// This function collect all the contracts' methods in the current project according to the
 /// project's deployment manifest (manifest.toml) and convert them into policies.
-fn collect_policies_from_project(
+fn collect_policies(
+    world_addr_or_name: WorldAddressOrName,
     user_address: FieldElement,
     config: &Config,
 ) -> Result<Vec<Policy>> {
     let root_dir = config.root();
-    let manifest = get_project_deployment_manifest(root_dir, config.profile().as_str())?;
-    let policies = collect_policies(user_address, root_dir, manifest)?;
+    // let manifest = get_project_deployment_manifest(root_dir, config.profile().as_str())?;
+    let manifest = get_project_base_manifest(root_dir, config.profile().as_str())?;
+    // let policies = collect_policies(user_address, root_dir, manifest)?;
+    let policies =
+        collect_policies_from_base_manifest(world_addr_or_name, user_address, root_dir, manifest)?;
     trace!(policies_count = policies.len(), "Extracted policies from project.");
     Ok(policies)
 }
 
-fn get_project_deployment_manifest(
-    root_dir: &Utf8Path,
-    profile: &str,
-) -> Result<DeploymentManifest> {
+fn get_project_base_manifest(root_dir: &Utf8Path, profile: &str) -> Result<BaseManifest> {
     let mut manifest_path = root_dir.to_path_buf();
-    manifest_path.extend(["manifests", profile, "manifest.toml"]);
-    Ok(DeploymentManifest::load_from_path(&manifest_path)?)
+    manifest_path.extend(["manifests", profile, "base"]);
+    Ok(BaseManifest::load_from_path(&manifest_path)?)
 }
 
-fn collect_policies(
+fn collect_policies_from_base_manifest(
+    world_address: WorldAddressOrName,
     user_address: FieldElement,
     base_path: &Utf8Path,
-    manifest: DeploymentManifest,
+    manifest: BaseManifest,
 ) -> Result<Vec<Policy>> {
     let mut policies: Vec<Policy> = Vec::new();
     let base_path: Utf8PathBuf = base_path.to_path_buf();
+
+    // compute the world address here if it's a name
+    let world_address = get_world_address(world_address, &manifest)?;
 
     // get methods from all project contracts
     for contract in manifest.contracts {
@@ -134,8 +146,7 @@ fn collect_policies(
     // get method from world contract
     let abis = manifest.world.inner.abi.unwrap().load_abi_string(&base_path)?;
     let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
-    let contract_address = manifest.world.inner.address.unwrap();
-    policies_from_abis(&mut policies, &manifest.world.name, contract_address, &abis);
+    policies_from_abis(&mut policies, &manifest.world.name, world_address, &abis);
 
     // for sending declare tx
     let method = "__declare_transaction__".to_string();
@@ -172,6 +183,26 @@ fn policies_from_abis(
             }
 
             _ => {}
+        }
+    }
+}
+
+fn get_world_address(
+    world_address: WorldAddressOrName,
+    manifest: &BaseManifest,
+) -> Result<FieldElement> {
+    match world_address {
+        WorldAddressOrName::Address(addr) => Ok(addr),
+        WorldAddressOrName::Name(name) => {
+            let seed = cairo_short_string_to_felt(&name).context("Failed to parse World name.")?;
+            let salt = poseidon_hash_single(seed);
+            let address = get_contract_address(
+                salt,
+                manifest.world.inner.original_class_hash,
+                &[manifest.base.inner.original_class_hash],
+                FieldElement::ZERO,
+            );
+            Ok(address)
         }
     }
 }

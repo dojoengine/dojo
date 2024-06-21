@@ -13,6 +13,8 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use tracing::trace;
 
+use crate::commands::options::account::WorldAddressOrName;
+
 use super::options::account::{AccountOptions, SozoAccount};
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
@@ -169,7 +171,14 @@ pub async fn setup_env<'a>(
             .with_context(|| "Cannot parse chain_id as string")?;
         trace!(chain_id);
 
-        let account = account.account(provider, &starknet, env, ws.config()).await?;
+        let account = {
+            // This is mainly for controller account for creating policies.
+            let world_address_or_name = world_address
+                .map(WorldAddressOrName::Address)
+                .unwrap_or(WorldAddressOrName::Name(name.to_string()));
+
+            account.account(provider, world_address_or_name, &starknet, env, ws.config()).await?
+        };
 
         let address = account.address();
 
