@@ -18,7 +18,7 @@ const CONTRACT_CLASS_SIZE_LABEL: &str = "Contract Class size [in bytes]\n(Sierra
 
 const CONTRACT_NAME_LABEL: &str = "Contract";
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Default)]
 pub struct BuildArgs {
     // Should we deprecate typescript bindings codegen?
     // Disabled due to lack of support in dojo.js

@@ -55,6 +55,22 @@ pub enum MigrateCommand {
 }
 
 impl MigrateArgs {
+    /// Creates a new `MigrateArgs` with the `Apply` command.
+    pub fn new_apply(
+        name: Option<String>,
+        world: WorldOptions,
+        starknet: StarknetOptions,
+        account: AccountOptions,
+    ) -> Self {
+        Self {
+            command: MigrateCommand::Apply { transaction: TransactionOptions::init_wait() },
+            name,
+            world,
+            starknet,
+            account,
+        }
+    }
+
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;

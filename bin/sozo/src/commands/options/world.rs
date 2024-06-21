@@ -8,7 +8,7 @@ use tracing::trace;
 
 use super::DOJO_WORLD_ADDRESS_ENV_VAR;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "World options")]
 pub struct WorldOptions {
     #[arg(help = "The address of the World contract.")]
