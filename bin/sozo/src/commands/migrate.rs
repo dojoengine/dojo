@@ -13,12 +13,11 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use tracing::trace;
 
-use crate::commands::options::account::WorldAddressOrName;
-
 use super::options::account::{AccountOptions, SozoAccount};
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
+use crate::commands::options::account::WorldAddressOrName;
 
 #[derive(Debug, Args)]
 pub struct MigrateArgs {
