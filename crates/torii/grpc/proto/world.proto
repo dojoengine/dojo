@@ -56,7 +56,7 @@ message SubscribeEntitiesRequest {
 }
 
 message SubscribeEventMessagesRequest {
-    types.EntityKeysClause hashed_keys = 1;
+    types.EntityKeysClause clause = 1;
 }
 
 message SubscribeEntityResponse {

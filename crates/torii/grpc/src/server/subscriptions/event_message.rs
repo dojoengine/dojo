@@ -24,8 +24,8 @@ use crate::proto::world::SubscribeEntityResponse;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
 pub struct EventMessagesSubscriber {
-    /// Entity ids that the subscriber is interested in
-    hashed_keys: HashSet<FieldElement>,
+    /// Entity keys that the subscriber is interested in
+    keys: Vec<FieldElement>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
@@ -38,7 +38,7 @@ pub struct EventMessageManager {
 impl EventMessageManager {
     pub async fn add_subscriber(
         &self,
-        hashed_keys: Vec<FieldElement>,
+        keys: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
@@ -50,7 +50,7 @@ impl EventMessageManager {
 
         self.subscribers.write().await.insert(
             id,
-            EventMessagesSubscriber { hashed_keys: hashed_keys.iter().cloned().collect(), sender },
+            EventMessagesSubscriber { keys, sender },
         );
 
         Ok(receiver)

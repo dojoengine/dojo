@@ -165,8 +165,8 @@ impl DojoWorld {
             ENTITIES_MODEL_RELATION_TABLE,
             ENTITIES_ENTITY_RELATION_COLUMN,
             None,
-            limit,
-            offset,
+            Some(limit),
+            Some(offset),
         )
         .await
     }
@@ -181,8 +181,8 @@ impl DojoWorld {
             EVENT_MESSAGES_MODEL_RELATION_TABLE,
             EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
             None,
-            limit,
-            offset,
+            Some(limit),
+            Some(offset),
         )
         .await
     }
@@ -244,7 +244,7 @@ impl DojoWorld {
         }
 
         // query to filter with limit and offset
-        let query = format!(
+        let mut query = format!(
             r#"
             SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
@@ -252,9 +252,16 @@ impl DojoWorld {
             {filter_ids}
             GROUP BY {table}.id
             ORDER BY {table}.event_id DESC
-            LIMIT ? OFFSET ?
          "#
         );
+
+        if limit.is_some() {
+            query += " LIMIT ?"
+        }
+
+        if offset.is_some() {
+            query += " OFFSET ?"
+        }
 
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
@@ -356,14 +363,24 @@ impl DojoWorld {
         let model_ids = models_str.split(',').collect::<Vec<&str>>();
         let schemas = self.model_cache.schemas(model_ids).await?;
 
+        let mut where_clause = format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC");
+
+        if limit.is_some() {
+            where_clause += " LIMIT ?";
+        }
+        if offset.is_some() {
+            where_clause += " OFFSET ?";
+        }
+
         // query to filter with limit and offset
         let (entities_query, arrays_queries) = build_sql_query(
             &schemas,
             table,
             entity_relation_column,
-            Some(&format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")),
-            Some(&format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")),
+            Some(&where_clause),
+            Some(&format!("{table}.keys LIKE ?")),
         )?;
+
         let db_entities = sqlx::query(&entities_query)
             .bind(&keys_pattern)
             .bind(limit)
@@ -372,12 +389,7 @@ impl DojoWorld {
             .await?;
         let mut arrays_rows = HashMap::new();
         for (name, query) in arrays_queries {
-            let rows = sqlx::query(&query)
-                .bind(&keys_pattern)
-                .bind(limit)
-                .bind(offset)
-                .fetch_all(&self.pool)
-                .await?;
+            let rows = sqlx::query(&query).bind(&keys_pattern).fetch_all(&self.pool).await?;
             arrays_rows.insert(name, rows);
         }
 
@@ -393,8 +405,8 @@ impl DojoWorld {
     pub(crate) async fn events_by_keys(
         &self,
         keys_clause: proto::types::KeysClause,
-        limit: u32,
-        offset: u32,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<Vec<proto::types::Event>, Error> {
         let keys = keys_clause
             .keys
@@ -436,8 +448,8 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         member_clause: proto::types::MemberClause,
-        _limit: u32,
-        _offset: u32,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
@@ -484,12 +496,16 @@ impl DojoWorld {
             &schemas,
             table,
             entity_relation_column,
-            Some(&format!("{table_name}.{column_name} {comparison_operator} ?")),
+            Some(&format!("{table_name}.{column_name} {comparison_operator} ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")),
             None,
         )?;
 
-        let db_entities =
-            sqlx::query(&entity_query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
+        let db_entities = sqlx::query(&entity_query)
+            .bind(comparison_value.clone())
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
         let mut arrays_rows = HashMap::new();
         for (name, query) in arrays_queries {
             let rows =
@@ -512,8 +528,8 @@ impl DojoWorld {
         _model_relation_table: &str,
         _entity_relation_column: &str,
         _composite: proto::types::CompositeClause,
-        _limit: u32,
-        _offset: u32,
+        _limit: Option<u32>,
+        _offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: Implement
         Err(QueryError::UnsupportedQuery.into())
@@ -579,9 +595,9 @@ impl DojoWorld {
 
     async fn subscribe_entities(
         &self,
-        hashed_keys: Vec<FieldElement>,
+        keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(hashed_keys).await
+        self.entity_manager.add_subscriber(keys).await
     }
 
     async fn retrieve_entities(
@@ -605,8 +621,8 @@ impl DojoWorld {
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             Some(hashed_keys),
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -620,8 +636,8 @@ impl DojoWorld {
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             keys,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -631,8 +647,8 @@ impl DojoWorld {
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             member,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -642,8 +658,8 @@ impl DojoWorld {
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             composite,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -656,9 +672,9 @@ impl DojoWorld {
 
     async fn subscribe_event_messages(
         &self,
-        hashed_keys: Vec<FieldElement>,
+        keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.event_message_manager.add_subscriber(hashed_keys).await
+        self.event_message_manager.add_subscriber(keys).await
     }
 
     async fn retrieve_event_messages(
@@ -682,8 +698,8 @@ impl DojoWorld {
                             EVENT_MESSAGES_MODEL_RELATION_TABLE,
                             EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             Some(hashed_keys),
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -697,8 +713,8 @@ impl DojoWorld {
                             EVENT_MESSAGES_MODEL_RELATION_TABLE,
                             EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             keys,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -708,8 +724,8 @@ impl DojoWorld {
                             EVENT_MESSAGES_MODEL_RELATION_TABLE,
                             EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             member,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -719,8 +735,8 @@ impl DojoWorld {
                             EVENT_MESSAGES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             composite,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -737,7 +753,7 @@ impl DojoWorld {
     ) -> Result<proto::world::RetrieveEventsResponse, Error> {
         let events = match query.keys {
             None => self.events_all(query.limit, query.offset).await?,
-            Some(keys) => self.events_by_keys(keys, query.limit, query.offset).await?,
+            Some(keys) => self.events_by_keys(keys, Some(query.limit), Some(query.offset)).await?,
         };
         Ok(RetrieveEventsResponse { events })
     }
@@ -848,15 +864,8 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { clause } = request.into_inner();
-        let hashed_keys = clause
-            .iter()
-            .map(|id| {
-                FieldElement::from_byte_slice_be(id)
-                    .map_err(|e| Status::invalid_argument(e.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
         let rx = self
-            .subscribe_entities(hashed_keys)
+            .subscribe_entities(clause)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -882,16 +891,9 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { hashed_keys } = request.into_inner();
-        let hashed_keys = hashed_keys
-            .iter()
-            .map(|id| {
-                FieldElement::from_byte_slice_be(id)
-                    .map_err(|e| Status::invalid_argument(e.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let SubscribeEntitiesRequest { clause } = request.into_inner();
         let rx = self
-            .subscribe_event_messages(hashed_keys)
+            .subscribe_event_messages(clause)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 

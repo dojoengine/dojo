@@ -31,7 +31,6 @@ pub enum Clause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct KeysClause {
-    pub model: String,
     pub keys: Vec<FieldElement>,
 }
 
