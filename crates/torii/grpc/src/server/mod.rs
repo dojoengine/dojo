@@ -207,8 +207,8 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         hashed_keys: Option<proto::types::HashedKeysClause>,
-        limit: u32,
-        offset: u32,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
@@ -308,8 +308,8 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         keys_clause: proto::types::KeysClause,
-        limit: u32,
-        offset: u32,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys = keys_clause
             .keys
@@ -325,17 +325,15 @@ impl DojoWorld {
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
 
+        // total count of rows that matches keys_pattern without limit and offset
         let count_query = format!(
             r#"
             SELECT count(*)
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            WHERE {model_relation_table}.model_id = '{:#x}' and {table}.keys LIKE ?
-        "#,
-            get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
+            WHERE {table}.keys LIKE ?
+        "#
         );
-
-        // total count of rows that matches keys_pattern without limit and offset
         let total_count =
             sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
@@ -350,10 +348,7 @@ impl DojoWorld {
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {table}.keys LIKE ?
             GROUP BY {table}.id
-            HAVING INSTR(model_ids, '{:#x}') > 0
-            LIMIT 1
-        "#,
-            get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
+        "#
         );
         let (models_str,): (String,) =
             sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
@@ -397,7 +392,7 @@ impl DojoWorld {
 
     pub(crate) async fn events_by_keys(
         &self,
-        keys_clause: proto::types::EventKeysClause,
+        keys_clause: proto::types::KeysClause,
         limit: u32,
         offset: u32,
     ) -> Result<Vec<proto::types::Event>, Error> {
@@ -560,7 +555,7 @@ impl DojoWorld {
 
     async fn subscribe_models(
         &self,
-        models_keys: Vec<proto::types::KeysClause>,
+        models_keys: Vec<proto::types::ModelKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
         let mut subs = Vec::with_capacity(models_keys.len());
         for keys in models_keys {
@@ -618,10 +613,6 @@ impl DojoWorld {
                     ClauseType::Keys(keys) => {
                         if keys.keys.is_empty() {
                             return Err(QueryError::MissingParam("keys".into()).into());
-                        }
-
-                        if keys.model.is_empty() {
-                            return Err(QueryError::MissingParam("model".into()).into());
                         }
 
                         self.query_by_keys(
@@ -699,10 +690,6 @@ impl DojoWorld {
                     ClauseType::Keys(keys) => {
                         if keys.keys.is_empty() {
                             return Err(QueryError::MissingParam("keys".into()).into());
-                        }
-
-                        if keys.model.is_empty() {
-                            return Err(QueryError::MissingParam("model".into()).into());
                         }
 
                         self.query_by_keys(
@@ -860,8 +847,8 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { hashed_keys } = request.into_inner();
-        let hashed_keys = hashed_keys
+        let SubscribeEntitiesRequest { clause } = request.into_inner();
+        let hashed_keys = clause
             .iter()
             .map(|id| {
                 FieldElement::from_byte_slice_be(id)

@@ -32,7 +32,7 @@ pub struct ModelMetadata {
 
 pub struct ModelDiffRequest {
     pub model: ModelMetadata,
-    pub keys: proto::types::KeysClause,
+    pub keys: proto::types::ModelKeysClause,
 }
 
 impl ModelDiffRequest {}

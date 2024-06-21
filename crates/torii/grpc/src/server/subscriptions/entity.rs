@@ -26,7 +26,7 @@ pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity"
 
 pub struct EntitiesSubscriber {
     /// Entity ids that the subscriber is interested in
-    hashed_keys: HashSet<FieldElement>,
+    keys: Option<proto::types::EntityKeysClause>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
@@ -39,7 +39,7 @@ pub struct EntityManager {
 impl EntityManager {
     pub async fn add_subscriber(
         &self,
-        hashed_keys: Vec<FieldElement>,
+        keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
@@ -49,10 +49,7 @@ impl EntityManager {
         // initial subscribe call
         let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
 
-        self.subscribers.write().await.insert(
-            id,
-            EntitiesSubscriber { hashed_keys: hashed_keys.iter().cloned().collect(), sender },
-        );
+        self.subscribers.write().await.insert(id, EntitiesSubscriber { keys, sender });
 
         Ok(receiver)
     }
