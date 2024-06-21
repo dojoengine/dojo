@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -17,7 +17,7 @@ use torii_core::error::{Error, ParseError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
-use torii_core::types::{Entity, EventMessage};
+use torii_core::types::EventMessage;
 use tracing::{error, trace};
 
 use crate::proto;

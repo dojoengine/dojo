@@ -26,9 +26,9 @@ use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
+use crate::proto::types::KeysClause;
 use crate::server::DojoWorld;
 use crate::types::schema::Entity;
-use crate::types::KeysClause;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_entities_queries() {
@@ -116,9 +116,12 @@ async fn test_entities_queries() {
             "entities",
             "entity_model",
             "entity_id",
-            KeysClause { model: "Moves".to_string(), keys: vec![account.address()] }.into(),
-            1,
-            0,
+            KeysClause {
+                keys: vec![account.address()].iter().map(|k| k.to_bytes_be().to_vec()).collect(),
+            }
+            .into(),
+            Some(1),
+            None,
         )
         .await
         .unwrap()
