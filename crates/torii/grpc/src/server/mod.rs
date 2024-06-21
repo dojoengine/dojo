@@ -24,7 +24,7 @@ use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
-use subscriptions::event::EventsManager;
+use subscriptions::event::EventManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
@@ -60,7 +60,7 @@ pub struct DojoWorld {
     model_cache: Arc<ModelCache>,
     entity_manager: Arc<EntityManager>,
     event_message_manager: Arc<EventMessageManager>,
-    events_manager: Arc<EventsManager>,
+    event_manager: Arc<EventManager>,
     state_diff_manager: Arc<StateDiffManager>,
 }
 
@@ -74,7 +74,7 @@ impl DojoWorld {
         let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let entity_manager = Arc::new(EntityManager::default());
         let event_message_manager = Arc::new(EventMessageManager::default());
-        let events_manager = Arc::new(EventsManager::default());
+        let event_manager = Arc::new(EventManager::default());
         let state_diff_manager = Arc::new(StateDiffManager::default());
 
         tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
@@ -96,7 +96,7 @@ impl DojoWorld {
             Arc::clone(&model_cache),
         ));
 
-        tokio::task::spawn(subscriptions::event::Service::new(Arc::clone(&events_manager)));
+        tokio::task::spawn(subscriptions::event::Service::new(Arc::clone(&event_manager)));
 
         Self {
             pool,
@@ -104,7 +104,7 @@ impl DojoWorld {
             model_cache,
             entity_manager,
             event_message_manager,
-            events_manager,
+            event_manager,
             state_diff_manager,
         }
     }
@@ -751,7 +751,7 @@ impl DojoWorld {
         &self,
         clause: proto::types::EventKeysClause,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
-        self.events_manager
+        self.event_manager
             .add_subscriber(
                 clause
                     .keys
@@ -937,12 +937,11 @@ impl proto::world::world_server::World for DojoWorld {
 
     async fn subscribe_events(
         &self,
-        _request: Request<proto::world::SubscribeEventsRequest>,
+        request: Request<proto::world::SubscribeEventsRequest>,
     ) -> ServiceResult<Self::SubscribeEventsStream> {
-        let rx = self
-            .subscribe_events(Default::default())
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let keys = request.into_inner().keys.unwrap_or_default();
+
+        let rx = self.subscribe_events(keys).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEventsStream))
     }

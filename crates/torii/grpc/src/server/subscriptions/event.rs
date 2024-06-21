@@ -22,7 +22,7 @@ use crate::proto::world::SubscribeEventsResponse;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event";
 
-pub struct EventsSubscriber {
+pub struct EventSubscriber {
     /// Event keys that the subscriber is interested in
     keys: Vec<FieldElement>,
     /// The channel to send the response back to the subscriber.
@@ -30,11 +30,11 @@ pub struct EventsSubscriber {
 }
 
 #[derive(Default)]
-pub struct EventsManager {
-    subscribers: RwLock<HashMap<usize, EventsSubscriber>>,
+pub struct EventManager {
+    subscribers: RwLock<HashMap<usize, EventSubscriber>>,
 }
 
-impl EventsManager {
+impl EventManager {
     pub async fn add_subscriber(
         &self,
         keys: Vec<FieldElement>,
@@ -47,7 +47,7 @@ impl EventsManager {
         // initial subscribe call
         let _ = sender.send(Ok(SubscribeEventsResponse { event: None })).await;
 
-        self.subscribers.write().await.insert(id, EventsSubscriber { keys, sender });
+        self.subscribers.write().await.insert(id, EventSubscriber { keys, sender });
 
         Ok(receiver)
     }
@@ -59,16 +59,16 @@ impl EventsManager {
 
 #[must_use = "Service does nothing unless polled"]
 pub struct Service {
-    subs_manager: Arc<EventsManager>,
+    subs_manager: Arc<EventManager>,
     simple_broker: Pin<Box<dyn Stream<Item = Event> + Send>>,
 }
 
 impl Service {
-    pub fn new(subs_manager: Arc<EventsManager>) -> Self {
+    pub fn new(subs_manager: Arc<EventManager>) -> Self {
         Self { subs_manager, simple_broker: Box::pin(SimpleBroker::<Event>::subscribe()) }
     }
 
-    async fn publish_updates(subs: Arc<EventsManager>, event: &Event) -> Result<(), Error> {
+    async fn publish_updates(subs: Arc<EventManager>, event: &Event) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let keys = event
             .keys
@@ -106,7 +106,7 @@ impl Service {
         }
 
         for id in closed_stream {
-            trace!(target = LOG_TARGET, id = %id, "Closing entity stream.");
+            trace!(target = LOG_TARGET, id = %id, "Closing events stream.");
             subs.remove_subscriber(id).await
         }
 
@@ -124,7 +124,7 @@ impl Future for Service {
             let subs = Arc::clone(&pin.subs_manager);
             tokio::spawn(async move {
                 if let Err(e) = Service::publish_updates(subs, &event).await {
-                    error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
+                    error!(target = LOG_TARGET, error = %e, "Publishing events update.");
                 }
             });
         }
