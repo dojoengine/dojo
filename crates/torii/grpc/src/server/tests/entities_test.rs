@@ -116,10 +116,7 @@ async fn test_entities_queries() {
             "entities",
             "entity_model",
             "entity_id",
-            KeysClause {
-                keys: vec![account.address()].iter().map(|k| k.to_bytes_be().to_vec()).collect(),
-            }
-            .into(),
+            KeysClause { keys: vec![account.address().to_bytes_be().to_vec()] },
             Some(1),
             None,
         )
