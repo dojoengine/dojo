@@ -6,13 +6,15 @@ use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{FromStrError, StateDiff, StateUpdate};
 use starknet_crypto::FieldElement;
 
+use crate::proto::types::EventKeysClause;
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeModelsRequest,
-    SubscribeModelsResponse,
+    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use crate::types::schema::{self, Entity, SchemaError};
-use crate::types::{KeysClause, Query};
+use crate::types::{Event, EventQuery, KeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -92,6 +94,14 @@ impl WorldClient {
             .map(|res| res.into_inner())
     }
 
+    pub async fn retrieve_events(
+        &mut self,
+        query: EventQuery,
+    ) -> Result<RetrieveEventsResponse, Error> {
+        let request = RetrieveEventsRequest { query: Some(query.into()) };
+        self.inner.retrieve_events(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
+    }
+
     /// Subscribe to entities updates of a World.
     pub async fn subscribe_entities(
         &mut self,
@@ -127,6 +137,28 @@ impl WorldClient {
         Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
             let entity = res.entity.expect("entity must exist");
             entity.try_into().expect("must able to serialize")
+        }))))
+    }
+
+    /// Subscribe to the events of a World.
+    pub async fn subscribe_events(
+        &mut self,
+        keys: Option<Vec<FieldElement>>,
+    ) -> Result<EventUpdateStreaming, Error> {
+        let keys = keys.map(|keys| EventKeysClause {
+            keys: keys.iter().map(|key| key.to_bytes_be().to_vec()).collect(),
+        });
+
+        let stream = self
+            .inner
+            .subscribe_events(SubscribeEventsRequest { keys })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?;
+
+        Ok(EventUpdateStreaming(stream.map_ok(Box::new(|res| match res.event {
+            Some(event) => event.try_into().expect("must able to serialize"),
+            None => Event { keys: vec![], data: vec![], transaction_hash: FieldElement::ZERO },
         }))))
     }
 
@@ -179,6 +211,23 @@ pub struct EntityUpdateStreaming(EntityMappedStream);
 
 impl Stream for EntityUpdateStreaming {
     type Item = <EntityMappedStream as Stream>::Item;
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.0.poll_next_unpin(cx)
+    }
+}
+
+type EventMappedStream = MapOk<
+    tonic::Streaming<SubscribeEventsResponse>,
+    Box<dyn Fn(SubscribeEventsResponse) -> Event + Send>,
+>;
+
+pub struct EventUpdateStreaming(EventMappedStream);
+
+impl Stream for EventUpdateStreaming {
+    type Item = <EventMappedStream as Stream>::Item;
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
