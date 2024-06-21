@@ -53,9 +53,19 @@ impl DevArgs {
         // Always build the project before starting the dev loop to make sure that the project is
         // in a valid state. Devs may not use `build` anymore when using `dev`.
         BuildArgs::default().run(config)?;
+        info!("Initial build completed.");
+
+        let _ = MigrateArgs::new_apply(
+            self.name.clone(),
+            self.world.clone(),
+            self.starknet.clone(),
+            self.account.clone(),
+        )
+        .run(config);
+
         info!(
             directory = watched_directory.to_string(),
-            "Initial build completed, watching for changes."
+            "Initial migration completed. Waiting for changes."
         );
 
         let mut e_handler = EventHandler::default();
