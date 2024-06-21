@@ -1,5 +1,3 @@
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
@@ -105,11 +103,7 @@ impl DevArgs {
 }
 
 #[derive(Debug, Default)]
-struct EventHandler {
-    /// Keep a scanned path hashmap to avoid rebuilding the project unnecessarily
-    /// at the first time events are triggered on each of the scanned files.
-    first_event_paths: HashMap<String, bool>,
-}
+struct EventHandler;
 
 impl EventHandler {
     /// Processes a debounced event and return true if a rebuild is needed.
@@ -131,15 +125,6 @@ impl EventHandler {
         let mut is_rebuild_needed = false;
 
         for path in &paths {
-            let str_path = path.to_string_lossy().to_string();
-            // All files that were scanned are always triggered a first time.
-            // We ignore this first time to not rebuild for all of them, as they are
-            // triggered individually.
-            if let Entry::Vacant(e) = self.first_event_paths.entry(str_path) {
-                e.insert(true);
-                continue;
-            }
-
             if let Some(filename) = path.file_name() {
                 if filename == "Scarb.toml" {
                     info!("Rebuild to include Scarb.toml changes.");
