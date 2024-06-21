@@ -38,8 +38,6 @@ pub struct SignerOptions {
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "The keystore password. Used with --keystore.")]
     #[arg(global = true)]
-    // TODO: figure out why this requires doesn't take effect
-    #[arg(requires = "keystore_path")]
     pub keystore_password: Option<String>,
 }
 
