@@ -496,7 +496,10 @@ impl DojoWorld {
             &schemas,
             table,
             entity_relation_column,
-            Some(&format!("{table_name}.{column_name} {comparison_operator} ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?")),
+            Some(&format!(
+                "{table_name}.{column_name} {comparison_operator} ? ORDER BY {table}.event_id \
+                 DESC LIMIT ? OFFSET ?"
+            )),
             None,
         )?;
 
@@ -864,10 +867,8 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { clause } = request.into_inner();
-        let rx = self
-            .subscribe_entities(clause)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let rx =
+            self.subscribe_entities(clause).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }
