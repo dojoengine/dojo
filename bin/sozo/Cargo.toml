@@ -29,6 +29,7 @@ dojo-bindgen.workspace = true
 dojo-lang.workspace = true
 dojo-types.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
+derive_more.workspace = true
 futures.workspace = true
 hex = "0.4.3"
 hex-literal = "0.4.1"
