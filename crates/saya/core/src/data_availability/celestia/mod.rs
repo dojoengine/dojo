@@ -82,8 +82,6 @@ impl DataAvailabilityClient for CelestiaClient {
             state_diff_proof.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
         let proof_blob = Blob::new(self.namespace, proof_bytes)?;
 
-        // TODO: we may want to use `blob_get` to ensure the state diff has been published
-        // correctly.
         self.client
             .blob_submit(&[blob, proof_blob], GasPrice::default())
             .await
