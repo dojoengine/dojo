@@ -22,7 +22,6 @@ use tracing::{error, trace};
 
 use crate::proto;
 use crate::proto::world::SubscribeEntityResponse;
-use crate::server::{DojoWorld, ENTITIES_ENTITY_RELATION_COLUMN, ENTITIES_MODEL_RELATION_TABLE, ENTITIES_TABLE};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
 
@@ -63,25 +62,34 @@ impl EntityManager {
 
 #[must_use = "Service does nothing unless polled"]
 pub struct Service {
-    world: Arc<DojoWorld>,
+    pool: Pool<Sqlite>,
+    subs_manager: Arc<EntityManager>,
+    model_cache: Arc<ModelCache>,
     simple_broker: Pin<Box<dyn Stream<Item = Entity> + Send>>,
 }
 
 impl Service {
     pub fn new(
-        world: Arc<DojoWorld>,
+        pool: Pool<Sqlite>,
+        subs_manager: Arc<EntityManager>,
+        model_cache: Arc<ModelCache>,
     ) -> Self {
         Self {
-            world,
+            pool,
+            subs_manager,
+            model_cache,
             simple_broker: Box::pin(SimpleBroker::<Entity>::subscribe()),
         }
     }
 
     async fn publish_updates(
-        world: &DojoWorld,
+        subs: Arc<EntityManager>,
+        cache: Arc<ModelCache>,
+        pool: Pool<Sqlite>,
         entity: &Entity,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
+        let hashed = FieldElement::from_str(&entity.id).map_err(ParseError::FromStr)?;
         let keys = entity
             .keys
             .trim_end_matches(FELT_DELIMITER)
@@ -90,13 +98,76 @@ impl Service {
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;
 
-        for (idx, sub) in world.entity_manager.subscribers.read().await.iter() {
-            let entities = match sub.keys {
-                Some(proto::types::EntityKeysClause{clause_type: Some(proto::types::entity_keys_clause::ClauseType::HashedKeys(clause))}) => world.query_by_hashed_keys(ENTITIES_TABLE, ENTITIES_MODEL_RELATION_TABLE, ENTITIES_ENTITY_RELATION_COLUMN, Some(clause), None, None).await?,
-                Some(proto::types::EntityKeysClause{clause_type: Some(proto::types::entity_keys_clause::ClauseType::Keys(clause))}) => world.query_by_keys(ENTITIES_TABLE, ENTITIES_MODEL_RELATION_TABLE, ENTITIES_ENTITY_RELATION_COLUMN, clause, None, None).await?,
-                Some(proto::types::EntityKeysClause{clause_type: None}) => world.query_by_hashed_keys(ENTITIES_TABLE, ENTITIES_MODEL_RELATION_TABLE, ENTITIES_ENTITY_RELATION_COLUMN, None, None, None).await?,
-                None => world.query_by_hashed_keys(ENTITIES_TABLE, ENTITIES_MODEL_RELATION_TABLE, ENTITIES_ENTITY_RELATION_COLUMN, None, None, None).await?,
-            };
+        for (idx, sub) in subs.subscribers.read().await.iter() {
+            if let Some(proto::types::EntityKeysClause { clause_type: Some(clause) }) = &sub.keys {
+                match clause {
+                    proto::types::entity_keys_clause::ClauseType::HashedKeys(hashed_keys) => {
+                        let hashed_keys = hashed_keys.hashed_keys.iter().map(|bytes| {
+                            FieldElement::from_byte_slice_be(bytes)
+                        }).collect::<Result<Vec<_>, _>>().map_err(ParseError::FromByteSliceError)?;
+
+                        if !hashed_keys.contains(&hashed) {
+                            continue;
+                        }
+                    }
+                    proto::types::entity_keys_clause::ClauseType::Keys(clause) => {
+                        let sub_keys = clause.keys.iter().map(|bytes| {
+                            FieldElement::from_byte_slice_be(bytes)
+                        }).collect::<Result<Vec<_>, _>>().map_err(ParseError::FromByteSliceError)?;
+
+                        if !keys.iter().enumerate().all(|(idx, key)| {
+                            let sub_key = sub_keys.get(idx);
+
+                            match sub_key {
+                                Some(sub_key) => key == sub_key,
+                                None => true,
+                            }
+                        }) {
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            let models_query = r#"
+                    SELECT group_concat(entity_model.model_id) as model_ids
+                    FROM entities
+                    JOIN entity_model ON entities.id = entity_model.entity_id
+                    WHERE entities.id = ?
+                    GROUP BY entities.id
+                "#;
+            let (model_ids,): (String,) =
+                sqlx::query_as(models_query).bind(&entity.id).fetch_one(&pool).await?;
+            let model_ids: Vec<&str> = model_ids.split(',').collect();
+            let schemas = cache.schemas(model_ids).await?;
+
+            let (entity_query, arrays_queries) = build_sql_query(
+                &schemas,
+                "entities",
+                "entity_id",
+                Some("entities.id = ?"),
+                Some("entities.id = ?"),
+            )?;
+
+            let row = sqlx::query(&entity_query).bind(&entity.id).fetch_one(&pool).await?;
+            let mut arrays_rows = HashMap::new();
+            for (name, query) in arrays_queries {
+                let row = sqlx::query(&query).bind(&entity.id).fetch_all(&pool).await?;
+                arrays_rows.insert(name, row);
+            }
+
+            let models = schemas
+                .into_iter()
+                .map(|mut s| {
+                    map_row_to_ty("", &s.name(), &mut s, &row, &arrays_rows)?;
+
+                    Ok(s.as_struct()
+                        .expect("schema should be a struct")
+                        .to_owned()
+                        .try_into()
+                        .unwrap())
+                })
+                .collect::<Result<Vec<_>, Error>>()?;
 
             let resp = proto::world::SubscribeEntityResponse {
                 entity: Some(proto::types::Entity {
@@ -126,8 +197,11 @@ impl Future for Service {
         let pin = self.get_mut();
 
         while let Poll::Ready(Some(entity)) = pin.simple_broker.poll_next_unpin(cx) {
+            let subs = Arc::clone(&pin.subs_manager);
+            let cache = Arc::clone(&pin.model_cache);
+            let pool = pin.pool.clone();
             tokio::spawn(async move {
-                if let Err(e) = Service::publish_updates(&self.world, &entity).await {
+                if let Err(e) = Service::publish_updates(subs, cache, pool, &entity).await {
                     error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
                 }
             });

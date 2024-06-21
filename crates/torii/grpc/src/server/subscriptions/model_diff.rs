@@ -21,7 +21,7 @@ use tracing::{debug, error, trace};
 use super::error::SubscriptionError;
 use crate::proto;
 use crate::proto::world::SubscribeModelsResponse;
-use crate::types::KeysClause;
+use crate::types::ModelKeysClause;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::model_diff";
 
@@ -62,7 +62,7 @@ impl StateDiffManager {
         let storage_addresses = reqs
             .into_iter()
             .map(|req| {
-                let keys: KeysClause =
+                let keys: ModelKeysClause =
                     req.keys.try_into().map_err(ParseError::FromByteSliceError)?;
 
                 let base = poseidon_hash_many(&[

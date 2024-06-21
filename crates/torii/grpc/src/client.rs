@@ -14,7 +14,7 @@ use crate::proto::world::{
     SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use crate::types::schema::{self, Entity, SchemaError};
-use crate::types::{Event, EventQuery, KeysClause, Query};
+use crate::types::{EntityKeysClause, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -105,12 +105,12 @@ impl WorldClient {
     /// Subscribe to entities updates of a World.
     pub async fn subscribe_entities(
         &mut self,
-        hashed_keys: Vec<FieldElement>,
+        clause: Option<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
-        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+        let clause = clause.map(|c| c.into());
         let stream = self
             .inner
-            .subscribe_entities(SubscribeEntitiesRequest { hashed_keys })
+            .subscribe_entities(SubscribeEntitiesRequest { clause })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -124,12 +124,12 @@ impl WorldClient {
     /// Subscribe to event messages of a World.
     pub async fn subscribe_event_messages(
         &mut self,
-        hashed_keys: Vec<FieldElement>,
+        clause: Option<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
-        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+        let clause = clause.map(|c| c.into());
         let stream = self
             .inner
-            .subscribe_event_messages(SubscribeEntitiesRequest { hashed_keys })
+            .subscribe_event_messages(SubscribeEntitiesRequest { clause })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -165,7 +165,7 @@ impl WorldClient {
     /// Subscribe to the model diff for a set of models of a World.
     pub async fn subscribe_model_diffs(
         &mut self,
-        models_keys: Vec<KeysClause>,
+        models_keys: Vec<ModelKeysClause>,
     ) -> Result<ModelDiffsStreaming, Error> {
         let stream = self
             .inner
