@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::mpsc::channel;
 use std::time::Duration;
@@ -45,7 +46,7 @@ impl DevArgs {
 
         let mut watcher = PollWatcher::new(tx, watcher_config)?;
 
-        let watched_directory = config.manifest_path().parent().unwrap().join(&"src");
+        let watched_directory = config.manifest_path().parent().unwrap().join("src");
 
         watcher.watch(watched_directory.as_std_path(), RecursiveMode::Recursive).unwrap();
 
@@ -77,7 +78,7 @@ impl DevArgs {
             if is_rebuild_needed {
                 // Ignore the fails of those commands as the `run` function
                 // already logs the error.
-                let _ = BuildArgs::default().run(&config);
+                let _ = BuildArgs::default().run(config);
 
                 let _ = MigrateArgs::new_apply(
                     self.name.clone(),
@@ -124,8 +125,8 @@ impl EventHandler {
             // All files that were scanned are always triggered a first time.
             // We ignore this first time to not rebuild for all of them, as they are
             // triggered individually.
-            if !self.first_event_paths.contains_key(&str_path) {
-                self.first_event_paths.insert(str_path, true);
+            if let Entry::Vacant(e) = self.first_event_paths.entry(str_path) {
+                e.insert(true);
                 continue;
             }
 
