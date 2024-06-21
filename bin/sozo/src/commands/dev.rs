@@ -41,9 +41,7 @@ impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let (tx, rx) = channel();
 
-        let watcher_config = notify::Config::default()
-            .with_poll_interval(Duration::from_secs(1))
-            .with_compare_contents(true);
+        let watcher_config = notify::Config::default().with_poll_interval(Duration::from_secs(1));
 
         let mut watcher = PollWatcher::new(tx, watcher_config)?;
 
