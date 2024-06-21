@@ -13,6 +13,7 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use clap::Parser;
 use common::parse::{parse_socket_address, parse_url};
@@ -111,8 +112,12 @@ struct Args {
     events_chunk_size: u64,
 
     /// Enable indexing pending blocks
-    #[arg(long)]
+    #[arg(long, default_value_t = true)]
     index_pending: bool,
+
+    /// Polling interval in ms
+    #[arg(long, default_value = "500")]
+    polling_interval: u64,
 }
 
 #[tokio::main]
@@ -184,7 +189,7 @@ async fn main() -> anyhow::Result<()> {
             start_block: args.start_block,
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,
-            ..Default::default()
+            polling_interval: Duration::from_millis(args.polling_interval),
         },
         shutdown_tx.clone(),
         Some(block_tx),
