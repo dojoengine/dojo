@@ -94,6 +94,11 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
             if !nested_members.iter().any(|&nested_member| {
                 nested_member.model_id == member.model_id
                     && nested_member.id.ends_with(&member.name)
+                    && nested_member
+                        .id
+                        .split('$')
+                        .collect::<Vec<_>>()
+                        .starts_with(&member.id.split('$').collect::<Vec<_>>())
             }) =>
         {
             TypeData::Simple(TypeRef::named("Enum"))

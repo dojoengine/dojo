@@ -25,6 +25,9 @@ service World {
 
     // Retrieve events
     rpc RetrieveEvents (RetrieveEventsRequest) returns (RetrieveEventsResponse);
+
+    // Subscribe to events
+    rpc SubscribeEvents (SubscribeEventsRequest) returns (stream SubscribeEventsResponse);
 }
 
 
@@ -77,4 +80,12 @@ message RetrieveEventsRequest {
 
 message RetrieveEventsResponse {
     repeated types.Event events = 1;
+}
+
+message SubscribeEventsRequest {
+    types.EventKeysClause keys = 1;
+}
+
+message SubscribeEventsResponse {
+    types.Event event = 1;
 }

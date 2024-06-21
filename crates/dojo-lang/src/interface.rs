@@ -93,7 +93,7 @@ impl DojoInterface {
             .map(|e| e.as_syntax_node().get_text(db))
             .collect::<Vec<_>>();
 
-        self_param::check_parameter(db, &param_list, diagnostic_item, &mut self.diagnostics);
+        let is_self_used = self_param::check_parameter(db, &param_list);
 
         let world_injection = world_param::parse_world_injection(
             db,
@@ -102,9 +102,19 @@ impl DojoInterface {
             &mut self.diagnostics,
         );
 
+        if is_self_used && world_injection != WorldParamInjectionKind::None {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: diagnostic_item,
+                message: "You cannot use `self` and `world` parameters together.".to_string(),
+                severity: Severity::Error,
+            });
+        }
+
         match world_injection {
             WorldParamInjectionKind::None => {
-                params.insert(0, "self: @TContractState".to_string());
+                if !is_self_used {
+                    params.insert(0, "self: @TContractState".to_string());
+                }
             }
             WorldParamInjectionKind::View => {
                 params.remove(0);

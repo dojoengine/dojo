@@ -1338,7 +1338,7 @@ dependencies = [
 
 [[package]]
 name = "benches"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -3765,7 +3765,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/neotheprogramist/http-prover?rev=05aa9dbb7fdd5618693cead978d4ab0eebbf8f80#05aa9dbb7fdd5618693cead978d4ab0eebbf8f80"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=7d00b05#7d00b05fec6bdf533d4110656c635a086d5872b7"
 dependencies = [
  "ed25519-dalek",
  "prefix-hex",
@@ -3776,7 +3776,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "reqwest 0.12.4",
@@ -4577,7 +4577,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "cainome",
@@ -4595,15 +4595,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-core"
-version = "0.7.0"
+version = "0.7.2"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "0.7.0"
+version = "0.7.2"
 
 [[package]]
 name = "dojo-lang"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
@@ -4654,7 +4654,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "cairo-lang-language-server",
  "clap",
@@ -4663,7 +4663,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-metrics"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "hyper 0.14.28",
@@ -4681,7 +4681,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4715,7 +4715,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "cainome",
  "crypto-bigint",
@@ -4731,7 +4731,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4770,7 +4770,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "cairo-lang-starknet 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-starknet-classes 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
@@ -6501,25 +6501,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "h2"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa82e28a107a8cc405f0839610bdc9b15f1e25ec7d696aa5cf173edbcb1486ab"
-dependencies = [
- "atomic-waker",
- "bytes",
- "fnv",
- "futures-core",
- "futures-sink",
- "http 1.1.0",
- "indexmap 2.2.6",
- "slab",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
 name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6843,7 +6824,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2 0.3.26",
+ "h2",
  "http 0.2.12",
  "http-body 0.4.6",
  "httparse",
@@ -6866,7 +6847,6 @@ dependencies = [
  "bytes",
  "futures-channel",
  "futures-util",
- "h2 0.4.5",
  "http 1.1.0",
  "http-body 1.0.0",
  "httparse",
@@ -6973,22 +6953,6 @@ dependencies = [
  "native-tls",
  "tokio",
  "tokio-native-tls",
-]
-
-[[package]]
-name = "hyper-tls"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0"
-dependencies = [
- "bytes",
- "http-body-util",
- "hyper 1.3.1",
- "hyper-util",
- "native-tls",
- "tokio",
- "tokio-native-tls",
- "tower-service",
 ]
 
 [[package]]
@@ -7859,7 +7823,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -7867,7 +7831,7 @@ dependencies = [
  "cfg-if",
  "clap",
  "clap_complete",
- "common 0.7.0",
+ "common 0.7.2",
  "console",
  "dojo-metrics",
  "katana-core",
@@ -7886,7 +7850,7 @@ dependencies = [
 
 [[package]]
 name = "katana-cairo"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "cairo-lang-casm 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
  "cairo-lang-runner 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
@@ -7899,7 +7863,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -7907,7 +7871,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7917,7 +7881,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -7965,7 +7929,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "cairo-lang-starknet 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
@@ -7987,7 +7951,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8014,7 +7978,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8039,7 +8003,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8065,7 +8029,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -8103,7 +8067,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -8114,7 +8078,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8135,7 +8099,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -8147,7 +8111,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8166,7 +8130,7 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "futures",
  "rayon",
@@ -10753,7 +10717,7 @@ dependencies = [
 [[package]]
 name = "prover-sdk"
 version = "0.1.0"
-source = "git+https://github.com/neotheprogramist/http-prover?rev=05aa9dbb7fdd5618693cead978d4ab0eebbf8f80#05aa9dbb7fdd5618693cead978d4ab0eebbf8f80"
+source = "git+https://github.com/cartridge-gg/http-prover?rev=7d00b05#7d00b05fec6bdf533d4110656c635a086d5872b7"
 dependencies = [
  "bytes",
  "common 0.1.0",
@@ -11129,12 +11093,12 @@ dependencies = [
  "encoding_rs",
  "futures-core",
  "futures-util",
- "h2 0.3.26",
+ "h2",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.28",
  "hyper-rustls 0.24.2",
- "hyper-tls 0.5.0",
+ "hyper-tls",
  "ipnet",
  "js-sys",
  "log",
@@ -11175,23 +11139,19 @@ dependencies = [
  "bytes",
  "cookie",
  "cookie_store",
- "encoding_rs",
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2 0.4.5",
  "http 1.1.0",
  "http-body 1.0.0",
  "http-body-util",
  "hyper 1.3.1",
  "hyper-rustls 0.26.0",
- "hyper-tls 0.6.0",
  "hyper-util",
  "ipnet",
  "js-sys",
  "log",
  "mime",
- "native-tls",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
@@ -11202,9 +11162,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sync_wrapper",
- "system-configuration",
  "tokio",
- "tokio-native-tls",
  "tokio-rustls 0.25.0",
  "tower-service",
  "url",
@@ -11545,7 +11503,7 @@ checksum = "f86854cf50259291520509879a5c294c3c9a4c334e9ff65071c51e42ef1e2343"
 
 [[package]]
 name = "runner-macro"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "quote",
  "syn 2.0.64",
@@ -11813,7 +11771,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "cairo-proof-parser",
@@ -11834,7 +11792,7 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -11876,7 +11834,7 @@ dependencies = [
 
 [[package]]
 name = "saya-provider"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -12048,7 +12006,7 @@ dependencies = [
 
 [[package]]
 name = "scheduler"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "clap",
  "clap_complete",
@@ -12684,7 +12642,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -12707,6 +12665,7 @@ dependencies = [
  "clap-verbosity-flag",
  "clap_complete",
  "console",
+ "derive_more",
  "dojo-bindgen",
  "dojo-lang",
  "dojo-test-utils",
@@ -12743,7 +12702,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -12799,7 +12758,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "starknet",
@@ -13963,7 +13922,7 @@ dependencies = [
  "axum",
  "base64 0.21.7",
  "bytes",
- "h2 0.3.26",
+ "h2",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.28",
@@ -14070,7 +14029,7 @@ checksum = "ea68304e134ecd095ac6c3574494fc62b909f416c4fca77e440530221e549d3d"
 
 [[package]]
 name = "torii"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -14078,7 +14037,7 @@ dependencies = [
  "camino",
  "chrono",
  "clap",
- "common 0.7.0",
+ "common 0.7.2",
  "ctrlc",
  "dojo-metrics",
  "dojo-types",
@@ -14115,7 +14074,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "camino",
@@ -14143,7 +14102,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -14182,7 +14141,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -14223,7 +14182,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "bytes",
  "camino",
@@ -14267,7 +14226,7 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -14303,7 +14262,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -14626,7 +14585,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "0.7.0"
+version = "0.7.2"
 
 [[package]]
 name = "ucd-trie"

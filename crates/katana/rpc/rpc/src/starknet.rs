@@ -228,10 +228,16 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         sequencer_address: block_env.sequencer_address,
                     };
 
+                    // TODO(kariy): create a method that can perform this filtering for us instead
+                    // of doing it manually.
+
+                    // A block should only include successful transactions, we filter out the failed
+                    // ones (didn't pass validation stage).
                     let transactions = executor
                         .read()
                         .transactions()
                         .iter()
+                        .filter(|(_, receipt)| receipt.is_success())
                         .map(|(tx, _)| tx.hash)
                         .collect::<Vec<_>>();
 
@@ -307,10 +313,16 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         sequencer_address: block_env.sequencer_address,
                     };
 
+                    // TODO(kariy): create a method that can perform this filtering for us instead
+                    // of doing it manually.
+
+                    // A block should only include successful transactions, we filter out the failed
+                    // ones (didn't pass validation stage).
                     let transactions = executor
                         .read()
                         .transactions()
                         .iter()
+                        .filter(|(_, receipt)| receipt.is_success())
                         .map(|(tx, _)| tx.clone())
                         .collect::<Vec<_>>();
 
