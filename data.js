@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719000297241,
+  "lastUpdate": 1719006142809,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10105,6 +10105,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16452157,
             "range": "± 149652",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4ff3bb91c0a206514025f1254120b0370bdc9328",
+          "message": "refactor(sozo): use a wrapper type as the concrete account type (#2068)\n\n* refactor(sozo): use a wrapper type as the concrete account type\r\n\r\ncommit-id:4fed8a11\r\n\r\n* fmt\r\n\r\n* add deleted stuff\r\n\r\n* don't allow --slot.controller along with other signer\r\n\r\n* remove path requirement when giving keystore_path\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-06-22T05:30:47+08:00",
+          "tree_id": "d8e0d30eaf84990890c9e5805ab3117787d8da42",
+          "url": "https://github.com/dojoengine/dojo/commit/4ff3bb91c0a206514025f1254120b0370bdc9328"
+        },
+        "date": 1719006142198,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16403773,
+            "range": "± 204077",
             "unit": "ns/iter"
           }
         ]
