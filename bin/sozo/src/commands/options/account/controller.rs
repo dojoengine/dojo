@@ -28,10 +28,10 @@ pub type ControllerSessionAccount<P> = SessionAccount<P, SigningKey, SigningKey>
     skip(rpc_url, provider, world_addr_or_name, config)
 )]
 pub async fn create_controller<P>(
-    // Use to either specify the world address or compute the world address from the world name
     // Ideally we can get the url from the provider so we dont have to pass an extra url param here
     rpc_url: Url,
     provider: P,
+    // Use to either specify the world address or compute the world address from the world name
     world_addr_or_name: WorldAddressOrName,
     config: &Config,
 ) -> Result<ControllerSessionAccount<P>>
@@ -111,9 +111,7 @@ fn collect_policies(
     config: &Config,
 ) -> Result<Vec<Policy>> {
     let root_dir = config.root();
-    // let manifest = get_project_deployment_manifest(root_dir, config.profile().as_str())?;
     let manifest = get_project_base_manifest(root_dir, config.profile().as_str())?;
-    // let policies = collect_policies(user_address, root_dir, manifest)?;
     let policies =
         collect_policies_from_base_manifest(world_addr_or_name, user_address, root_dir, manifest)?;
     trace!(policies_count = policies.len(), "Extracted policies from project.");
