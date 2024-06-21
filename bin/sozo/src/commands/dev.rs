@@ -66,7 +66,7 @@ impl DevArgs {
             "Initial migration completed. Waiting for changes."
         );
 
-        let mut e_handler = EventHandler::default();
+        let mut e_handler = EventHandler;
 
         loop {
             let is_rebuild_needed = match rx.recv() {
