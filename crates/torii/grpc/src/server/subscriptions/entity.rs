@@ -102,24 +102,36 @@ impl Service {
             if let Some(proto::types::EntityKeysClause { clause_type: Some(clause) }) = &sub.keys {
                 match clause {
                     proto::types::entity_keys_clause::ClauseType::HashedKeys(hashed_keys) => {
-                        let hashed_keys = hashed_keys.hashed_keys.iter().map(|bytes| {
-                            FieldElement::from_byte_slice_be(bytes)
-                        }).collect::<Result<Vec<_>, _>>().map_err(ParseError::FromByteSliceError)?;
+                        let hashed_keys = hashed_keys
+                            .hashed_keys
+                            .iter()
+                            .map(|bytes| FieldElement::from_byte_slice_be(bytes))
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(ParseError::FromByteSliceError)?;
 
                         if !hashed_keys.contains(&hashed) {
                             continue;
                         }
                     }
                     proto::types::entity_keys_clause::ClauseType::Keys(clause) => {
-                        let sub_keys = clause.keys.iter().map(|bytes| {
-                            FieldElement::from_byte_slice_be(bytes)
-                        }).collect::<Result<Vec<_>, _>>().map_err(ParseError::FromByteSliceError)?;
+                        let sub_keys = clause
+                            .keys
+                            .iter()
+                            .map(|bytes| FieldElement::from_byte_slice_be(bytes))
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(ParseError::FromByteSliceError)?;
 
                         if !keys.iter().enumerate().all(|(idx, key)| {
                             let sub_key = sub_keys.get(idx);
 
                             match sub_key {
-                                Some(sub_key) => key == sub_key,
+                                Some(sub_key) => {
+                                    if sub_key == &FieldElement::ZERO {
+                                        true
+                                    } else {
+                                        key == sub_key
+                                    }
+                                }
                                 None => true,
                             }
                         }) {

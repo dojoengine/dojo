@@ -124,7 +124,13 @@ impl Service {
                             let sub_key = sub_keys.get(idx);
 
                             match sub_key {
-                                Some(sub_key) => key == sub_key,
+                                Some(sub_key) => {
+                                    if sub_key == &FieldElement::ZERO {
+                                        true
+                                    } else {
+                                        key == sub_key
+                                    }
+                                }
                                 None => true,
                             }
                         }) {
