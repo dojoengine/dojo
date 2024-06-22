@@ -218,7 +218,7 @@ alloy-sol-types = { version = "0.7.2", default-features = false }
 criterion = "0.5.1"
 
 # Controller integration
-account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "04d0e3a" }
+account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "e8276cfffe48b5d09f0598026d13635374204b72" }
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "1d0c9f7" }
 
 [patch.crates-io]
