@@ -109,6 +109,7 @@ jobs:
           scarb --manifest-path crates/dojo-core/Scarb.toml fmt --check
 
   dojo-core-test:
+    needs: build
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/dojoengine/dojo-dev:v0.7.2
@@ -122,6 +123,7 @@ jobs:
       - run: /tmp/bins/sozo --manifest-path crates/dojo-core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
+    needs: build
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/dojoengine/dojo-dev:v0.7.2
