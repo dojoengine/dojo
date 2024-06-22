@@ -63,7 +63,7 @@ where
             // subset of the existing policies.
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
 
-            if policies == session.policies {
+            if policies != session.policies {
                 trace!(
                     new_policies = policies.len(),
                     existing_policies = session.policies.len(),
