@@ -8,6 +8,7 @@ use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use scarb::core::{ManifestMetadata, Workspace};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use url::Url;
 
 use crate::manifest::{BaseManifest, WORLD_CONTRACT_NAME};
@@ -372,6 +373,26 @@ impl ArtifactMetadata {
         let response = client.add(reader).await?;
 
         Ok(response.hash)
+    }
+    pub fn calculate_ipfs_hash(&self) -> std::io::Result<String> {
+        let mut hasher = Sha256::new();
+
+        if let Some(Uri::File(abi)) = &self.abi {
+            let abi_data = std::fs::read(abi)?;
+            hasher.update(&abi_data);
+        };
+
+        if let Some(Uri::File(source)) = &self.source {
+            let source_data = std::fs::read(source)?;
+            hasher.update(&source_data);
+        };
+
+        let meta = self.clone();
+        let serialized = json!(meta).to_string();
+        hasher.update(serialized);
+
+        let result = hasher.finalize();
+        Ok(format!("{:x}", result))
     }
 }
 

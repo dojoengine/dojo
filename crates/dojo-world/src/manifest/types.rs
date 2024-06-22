@@ -136,6 +136,7 @@ pub struct WorldContract {
     pub block_number: Option<u64>,
     pub seed: String,
     pub metadata: Option<WorldMetadata>,
+    pub metadata_ipfs_hash: Option<String>,
 }
 
 #[serde_as]
