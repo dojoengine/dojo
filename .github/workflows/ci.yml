@@ -18,11 +18,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo build -r --bin katana
+          cargo build -r --bin sozo
           mkdir -p bins
           cp ./target/release/katana bins/
+          cp ./target/release/sozo bins/
       - uses: actions/upload-artifact@v4
         with:
-          name: katana-binary
+          name: dojo-bins
           path: bins
 
   test:
@@ -35,7 +37,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: actions/download-artifact@v4
         with:
-          name: katana-binary
+          name: dojo-bins
           path: /tmp/bins
       - run: |
           chmod +x /tmp/bins/katana
@@ -83,7 +85,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: katana-binary
+          name: dojo-bins
       - run: |
           chmod +x ./katana
           ./katana &
@@ -111,18 +113,26 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:v0.7.2
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
+      - run: /tmp/bins/sozo --manifest-path crates/dojo-core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/dojoengine/dojo-dev:v0.7.2
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin sozo -- --manifest-path examples/spawn-and-move/Scarb.toml test
+      - run: /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml test
 
   dojo-world-bindings-check:
     runs-on: ubuntu-latest
