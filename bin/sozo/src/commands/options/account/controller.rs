@@ -164,6 +164,7 @@ fn collect_policies_from_base_manifest(
     policies_from_abis(&mut policies, &manifest.world.name, world_address, &abis);
 
     // special policy for sending declare tx
+    // corresponds to [account_sdk::account::DECLARATION_SELECTOR]
     let method = "__declare_transaction__".to_string();
     policies.push(Policy { target: user_address, method });
     trace!("Adding declare transaction policy");
