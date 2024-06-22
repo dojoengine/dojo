@@ -15,6 +15,8 @@ use super::signer::SignerOptions;
 use super::starknet::StarknetOptions;
 use super::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 
+#[cfg(feature = "controller")]
+pub mod controller;
 mod r#type;
 
 #[cfg(feature = "controller")]
@@ -47,7 +49,6 @@ pub struct AccountOptions {
     #[arg(help_heading = "Controller options")]
     #[arg(help = "Use Slot's Controller account")]
     #[cfg(feature = "controller")]
-    #[arg(conflicts_with = "signer")]
     pub controller: bool,
 
     #[command(flatten)]
@@ -111,14 +112,13 @@ impl AccountOptions {
         P: Provider,
         P: Send + Sync,
     {
-        trace!(account_options=?self, "Creating account.");
         let account_address = self.account_address(env_metadata)?;
         trace!(?account_address, "Account address determined.");
 
         let signer = self.signer.signer(env_metadata, false)?;
         trace!(?signer, "Signer obtained.");
 
-        let chain_id = provider.chain_id().await.context("Failed to retrieve network chain id.")?;
+        let chain_id = provider.chain_id().await?;
         trace!(?chain_id);
 
         let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };

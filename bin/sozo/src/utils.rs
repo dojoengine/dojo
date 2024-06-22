@@ -7,10 +7,8 @@ use dojo_world::contracts::WorldContractReader;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use scarb::core::{Config, TomlManifest};
 use semver::Version;
-use starknet::accounts::SingleOwnerAccount;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet::signers::LocalWallet;
 
 use crate::commands::options::account::{AccountOptions, SozoAccount, WorldAddressOrName};
 use crate::commands::options::starknet::StarknetOptions;
