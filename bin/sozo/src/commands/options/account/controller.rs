@@ -45,22 +45,42 @@ where
     let username = credentials.account.id;
     let contract_address = credentials.account.contract_address;
 
+    trace!(
+        %username,
+        chain = format!("{chain_id:#x}"),
+        address = format!("{contract_address:#x}"),
+        "Creating Controller session account"
+    );
+
     // Check if the session exists, if not create a new one
-    let session_details = match slot::session::get(chain_id) {
-        // TODO(kariy): perform policies diff check, if needed update
-        Ok(Some(session)) => {
+    let session_details = match slot::session::get(chain_id)? {
+        Some(session) => {
             trace!(expires_at = %session.expires_at, policies = session.policies.len(), "Found existing session.");
-            session
+
+            // Perform policies diff check. For security reasons, we will always create a new
+            // session here if the current policies are different from the existing
+            // session. TODO(kariy): maybe don't need to update if current policies is a
+            // subset of the existing policies.
+            let policies = collect_policies(world_addr_or_name, contract_address, config)?;
+
+            if policies == session.policies {
+                trace!(
+                    new_policies = policies.len(),
+                    existing_policies = session.policies.len(),
+                    "Policies have changed. Creating new session."
+                );
+
+                let session = slot::session::create(rpc_url, &policies).await?;
+                slot::session::store(chain_id, &session)?;
+                session
+            } else {
+                session
+            }
         }
 
-        // Return error if user not logged in on slot yet
-        Err(e @ slot::Error::Unauthorized) => {
-            return Err(e.into());
-        }
-
-        // Create a new session if not found or other error
-        Ok(None) | Err(_) => {
-            trace!(%username, chain = format!("{chain_id:#}"), "Creating new session key.");
+        // Create a new session if not found
+        None => {
+            trace!(%username, chain = format!("{chain_id:#}"), "Creating new session.");
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
             let session = slot::session::create(rpc_url, &policies).await?;
             slot::session::store(chain_id, &session)?;
@@ -91,12 +111,6 @@ where
         session,
     );
 
-    trace!(
-        chain = format!("{chain_id:#x}"),
-        address = format!("{contract_address:#x}"),
-        "Created Controller session account"
-    );
-
     Ok(session_account)
 }
 
@@ -104,7 +118,7 @@ where
 /// an external signer to execute using the session key.
 ///
 /// This function collect all the contracts' methods in the current project according to the
-/// project's deployment manifest (manifest.toml) and convert them into policies.
+/// project's base manifest ( `/manifests/<profile>/base` ) and convert them into policies.
 fn collect_policies(
     world_addr_or_name: WorldAddressOrName,
     user_address: FieldElement,
@@ -149,7 +163,7 @@ fn collect_policies_from_base_manifest(
     let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
     policies_from_abis(&mut policies, &manifest.world.name, world_address, &abis);
 
-    // for sending declare tx
+    // special policy for sending declare tx
     let method = "__declare_transaction__".to_string();
     policies.push(Policy { target: user_address, method });
     trace!("Adding declare transaction policy");
