@@ -17,10 +17,10 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
-use torii_grpc::proto::world::RetrieveEntitiesResponse;
-use torii_grpc::types::schema::Entity;
-use torii_grpc::types::{KeysClause, Query};
+use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, ModelDiffsStreaming};
+use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
+use torii_grpc::types::schema::{Entity, SchemaError};
+use torii_grpc::types::{Event, EventQuery, KeysClause, Query};
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
 
@@ -148,6 +148,18 @@ impl Client {
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
+    /// Retrieve raw starknet events matching the keys provided.
+    /// If the keys are empty, it will return all events.
+    pub async fn starknet_events(&self, query: EventQuery) -> Result<Vec<Event>, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let RetrieveEventsResponse { events } = grpc_client.retrieve_events(query).await?;
+        Ok(events
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<Event>, _>>()
+            .map_err(SchemaError::SliceError)?)
+    }
+
     /// A direct stream to grpc subscribe entities
     pub async fn on_entity_updated(
         &self,
@@ -165,6 +177,15 @@ impl Client {
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_event_messages(ids).await?;
+        Ok(stream)
+    }
+
+    pub async fn on_starknet_event(
+        &self,
+        keys: Option<Vec<FieldElement>>,
+    ) -> Result<EventUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_events(keys).await?;
         Ok(stream)
     }
 

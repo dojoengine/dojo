@@ -280,3 +280,53 @@ impl TryFrom<proto::types::ModelUpdate> for StateUpdate {
         })
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Event {
+    pub keys: Vec<FieldElement>,
+    pub data: Vec<FieldElement>,
+    pub transaction_hash: FieldElement,
+}
+
+impl TryFrom<proto::types::Event> for Event {
+    type Error = FromByteSliceError;
+
+    fn try_from(value: proto::types::Event) -> Result<Self, Self::Error> {
+        let keys = value
+            .keys
+            .into_iter()
+            .map(|k| FieldElement::from_byte_slice_be(&k))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let data = value
+            .data
+            .into_iter()
+            .map(|d| FieldElement::from_byte_slice_be(&d))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self {
+            keys,
+            data,
+            transaction_hash: FieldElement::from_byte_slice_be(&value.transaction_hash)?,
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct EventQuery {
+    pub keys: Vec<FieldElement>,
+    pub limit: u32,
+    pub offset: u32,
+}
+
+impl From<EventQuery> for proto::types::EventQuery {
+    fn from(value: EventQuery) -> Self {
+        Self {
+            keys: Some(proto::types::EventKeysClause {
+                keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect(),
+            }),
+            limit: value.limit,
+            offset: value.offset,
+        }
+    }
+}

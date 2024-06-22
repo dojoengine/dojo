@@ -60,7 +60,8 @@ impl RegisterArgs {
 
         config.tokio_handle().block_on(async {
             let world =
-                utils::world_from_env_metadata(world, account, starknet, &env_metadata).await?;
+                utils::world_from_env_metadata(world, account, starknet, &env_metadata, config)
+                    .await?;
             let provider = world.account.provider();
             let mut world_reader = WorldContractReader::new(world_address, &provider);
             world_reader.set_block(BlockId::Tag(BlockTag::Pending));

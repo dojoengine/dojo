@@ -97,6 +97,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(args: SayaArgs) -> Result<Self, Self::Error> {
+        let skip_publishing_proof = args.data_availability.celestia.skip_publishing_proof;
+
         if let Some(config_file) = args.config_file {
             let file = File::open(config_file).map_err(|_| "Failed to open config file")?;
             let reader = BufReader::new(file);
@@ -147,6 +149,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
+                skip_publishing_proof,
             })
         }
     }
@@ -181,6 +184,7 @@ mod tests {
                     celestia_node_url: None,
                     celestia_node_auth_token: None,
                     celestia_namespace: None,
+                    skip_publishing_proof: true,
                 },
             },
             proof: ProofOptions {
@@ -199,6 +203,7 @@ mod tests {
             "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
         );
         assert!(!config.store_proofs);
+        assert!(config.skip_publishing_proof);
         assert_eq!(config.start_block, 0);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");

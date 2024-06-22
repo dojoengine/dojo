@@ -1,29 +1,15 @@
-use std::mem;
-use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
-use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileContentQuery};
-use cairo_lang_filesystem::ids::FileId;
+use anyhow::Result;
 use clap::Args;
-use dojo_lang::scarb_internal::build_scarb_root_database;
-use dojo_world::manifest::{BaseManifest, DeploymentManifest, BASE_DIR, MANIFESTS_DIR};
-use dojo_world::metadata::dojo_metadata_from_workspace;
-use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::TxnConfig;
-use notify_debouncer_mini::notify::RecursiveMode;
-use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
-use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
-use scarb::core::{Config, Workspace};
-use scarb::ops::{FeaturesOpts, FeaturesSelector};
-use sozo_ops::migration;
-use starknet::accounts::ConnectedAccount;
-use starknet::core::types::FieldElement;
-use tracing::{error, trace};
+use notify::event::Event;
+use notify::{EventKind, PollWatcher, RecursiveMode, Watcher};
+use scarb::core::Config;
+use tracing::{error, info, trace};
 
-use super::migrate::setup_env;
+use super::build::BuildArgs;
+use super::migrate::MigrateArgs;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
@@ -45,281 +31,114 @@ pub struct DevArgs {
     #[command(flatten)]
     pub account: AccountOptions,
 }
+
 impl DevArgs {
+    /// Watches the `src` directory that is found at the same level of the `Scarb.toml` manifest
+    /// of the project into the provided [`Config`].
+    ///
+    /// When a change is detected, it rebuilds the project and applies the migrations.
     pub fn run(self, config: &Config) -> Result<()> {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let dojo_metadata = if let Some(metadata) = dojo_metadata_from_workspace(&ws) {
-            metadata
-        } else {
-            return Err(anyhow!(
-                "No current package with dojo metadata found, dev is not yet support for \
-                 workspaces."
-            ));
-        };
-
-        let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata.env().cloned()
-        } else {
-            trace!("Manifest path does not exist.");
-            None
-        };
-
-        let mut context = load_context(config)?;
-
         let (tx, rx) = channel();
-        let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
 
-        debouncer.watcher().watch(
-            config.manifest_path().parent().unwrap().as_std_path(),
-            RecursiveMode::Recursive,
-        )?;
+        let watcher_config = notify::Config::default().with_poll_interval(Duration::from_secs(1));
 
-        let name = self.name.unwrap_or_else(|| ws.current_package().unwrap().id.name.to_string());
+        let mut watcher = PollWatcher::new(tx, watcher_config)?;
 
-        let mut previous_manifest: Option<DeploymentManifest> = Option::None;
-        let result = build(&mut context);
+        let watched_directory = config.manifest_path().parent().unwrap().join("src");
 
-        let Some((mut world_address, account, _)) = context
-            .ws
-            .config()
-            .tokio_handle()
-            .block_on(setup_env(
-                &context.ws,
-                self.account,
-                self.starknet,
-                self.world,
-                &name,
-                env_metadata.as_ref(),
-            ))
-            .ok()
-        else {
-            return Err(anyhow!("Failed to setup environment."));
-        };
+        watcher.watch(watched_directory.as_std_path(), RecursiveMode::Recursive).unwrap();
 
-        match context.ws.config().tokio_handle().block_on(migrate(
-            world_address,
-            &account,
-            &name,
-            &context.ws,
-            previous_manifest.clone(),
-            dojo_metadata.skip_migration.clone(),
-        )) {
-            Ok((manifest, address)) => {
-                previous_manifest = Some(manifest);
-                world_address = address;
-            }
-            Err(error) => {
-                error!(
-                    error = ?error,
-                    address = ?world_address,
-                    "Migrating world."
-                );
-            }
-        }
+        // Always build the project before starting the dev loop to make sure that the project is
+        // in a valid state. Devs may not use `build` anymore when using `dev`.
+        BuildArgs::default().run(config)?;
+        info!("Initial build completed.");
+
+        let _ = MigrateArgs::new_apply(
+            self.name.clone(),
+            self.world.clone(),
+            self.starknet.clone(),
+            self.account.clone(),
+        )
+        .run(config);
+
+        info!(
+            directory = watched_directory.to_string(),
+            "Initial migration completed. Waiting for changes."
+        );
+
+        let mut e_handler = EventHandler;
+
         loop {
-            let action = match rx.recv() {
-                Ok(Ok(events)) => events
-                    .iter()
-                    .map(|event| process_event(event, &mut context))
-                    .last()
-                    .unwrap_or(DevAction::None),
-                Ok(Err(_)) => DevAction::None,
+            let is_rebuild_needed = match rx.recv() {
+                Ok(maybe_event) => match maybe_event {
+                    Ok(event) => e_handler.process_event(event),
+                    Err(error) => {
+                        error!(?error, "Processing event.");
+                        break;
+                    }
+                },
                 Err(error) => {
-                    error!(error = ?error, "Receiving dev action.");
+                    error!(?error, "Receiving event.");
                     break;
                 }
             };
 
-            if action != DevAction::None && build(&mut context).is_ok() {
-                match context.ws.config().tokio_handle().block_on(migrate(
-                    world_address,
-                    &account,
-                    &name,
-                    &context.ws,
-                    previous_manifest.clone(),
-                    dojo_metadata.skip_migration.clone(),
-                )) {
-                    Ok((manifest, address)) => {
-                        previous_manifest = Some(manifest);
-                        world_address = address;
-                    }
-                    Err(error) => {
-                        error!(
-                            error = ?error,
-                            address = ?world_address,
-                            "Migrating world.",
-                        );
-                    }
-                }
+            if is_rebuild_needed {
+                // Ignore the fails of those commands as the `run` function
+                // already logs the error.
+                let _ = BuildArgs::default().run(config);
+
+                let _ = MigrateArgs::new_apply(
+                    self.name.clone(),
+                    self.world.clone(),
+                    self.starknet.clone(),
+                    self.account.clone(),
+                )
+                .run(config);
             }
         }
-        result
+
+        Ok(())
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-enum DevAction {
-    None,
-    Reload,
-    Build(PathBuf),
-}
+#[derive(Debug, Default)]
+struct EventHandler;
 
-fn handle_event(event: &DebouncedEvent) -> DevAction {
-    let action = match event.kind {
-        DebouncedEventKind::Any => {
-            let p = event.path.clone();
-            if let Some(filename) = p.file_name() {
+impl EventHandler {
+    /// Processes a debounced event and return true if a rebuild is needed.
+    /// Only considers Cairo file and the Scarb.toml manifest.
+    fn process_event(&mut self, event: Event) -> bool {
+        trace!(?event, "Processing event.");
+
+        let paths = match event.kind {
+            EventKind::Modify(_) => event.paths,
+            EventKind::Remove(_) => event.paths,
+            EventKind::Create(_) => event.paths,
+            _ => vec![],
+        };
+
+        if paths.is_empty() {
+            return false;
+        }
+
+        let mut is_rebuild_needed = false;
+
+        for path in &paths {
+            if let Some(filename) = path.file_name() {
                 if filename == "Scarb.toml" {
-                    return DevAction::Reload;
-                } else if let Some(extension) = p.extension() {
+                    info!("Rebuild to include Scarb.toml changes.");
+                    is_rebuild_needed = true;
+                } else if let Some(extension) = path.extension() {
                     if extension == "cairo" {
-                        return DevAction::Build(p.clone());
+                        let file = path.to_string_lossy().to_string();
+                        info!(file, "Rebuild from Cairo file change.");
+                        is_rebuild_needed = true;
                     }
                 }
             }
-            DevAction::None
         }
-        _ => DevAction::None,
-    };
 
-    trace!(?action, "Determined action.");
-    action
-}
-
-struct DevContext<'a> {
-    pub db: RootDatabase,
-    pub unit: CairoCompilationUnit,
-    pub ws: Workspace<'a>,
-}
-
-fn load_context(config: &Config) -> Result<DevContext<'_>> {
-    let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-    let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
-    let resolve = scarb::ops::resolve_workspace(&ws)?;
-
-    let features_opts =
-        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
-
-    let compilation_units = scarb::ops::generate_compilation_units(&resolve, &features_opts, &ws)?
-        .into_iter()
-        .filter(|cu| packages.contains(&cu.main_package_id()))
-        .collect::<Vec<_>>();
-
-    // we have only 1 unit in projects
-    // TODO: double check if we always have one with the new version and the order if many.
-    trace!(unit_count = compilation_units.len(), "Gathering compilation units.");
-    if let CompilationUnit::Cairo(unit) = compilation_units.first().unwrap() {
-        let db = build_scarb_root_database(unit).unwrap();
-        Ok(DevContext { db, unit: unit.clone(), ws })
-    } else {
-        Err(anyhow!("Cairo Compilation Unit is expected at this point."))
+        is_rebuild_needed
     }
-}
-
-fn build(context: &mut DevContext<'_>) -> Result<()> {
-    let ws = &context.ws;
-    let unit = &context.unit;
-    let package_name = unit.main_package_id.name.clone();
-    ws.config().compilers().compile(unit.clone(), &mut (context.db), ws).map_err(|err| {
-        ws.config().ui().anyhow(&err);
-
-        anyhow!("could not compile `{package_name}` due to previous error")
-    })?;
-    ws.config().ui().print("📦 Rebuild done");
-    Ok(())
-}
-
-// TODO: fix me
-async fn migrate<A>(
-    mut world_address: Option<FieldElement>,
-    account: A,
-    name: &str,
-    ws: &Workspace<'_>,
-    previous_manifest: Option<DeploymentManifest>,
-    skip_migration: Option<Vec<String>>,
-) -> Result<(DeploymentManifest, Option<FieldElement>)>
-where
-    A: ConnectedAccount + Sync + Send,
-    A::Provider: Send,
-    A::SignError: 'static,
-{
-    let target_dir = ws.target_dir().path_existent().unwrap();
-    let target_dir = target_dir.join(ws.config().profile().as_str());
-
-    // `parent` returns `None` only when its root path, so its safe to unwrap
-    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-
-    if !manifest_dir.join(MANIFESTS_DIR).exists() {
-        return Err(anyhow!("Build project using `sozo build` first"));
-    }
-
-    let mut new_manifest =
-        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
-
-    if let Some(skip_manifests) = skip_migration {
-        new_manifest.remove_items(skip_manifests);
-    }
-
-    let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
-    let total_diffs = diff.count_diffs();
-    let config = ws.config();
-    config.ui().print(format!("Total diffs found: {total_diffs}"));
-    if total_diffs == 0 {
-        return Ok((new_manifest.into(), world_address));
-    }
-
-    let ui = ws.config().ui();
-    let mut strategy = migration::prepare_migration(&target_dir, diff, name, world_address, &ui)?;
-
-    match migration::apply_diff(ws, account, TxnConfig::default(), &mut strategy).await {
-        Ok(migration_output) => {
-            config.ui().print(format!(
-                "🎉 World at address {} updated!",
-                format_args!("{:#x}", migration_output.world_address)
-            ));
-            world_address = Some(migration_output.world_address);
-        }
-        Err(err) => {
-            config.ui().error(err.to_string());
-            return Err(err);
-        }
-    }
-
-    Ok((new_manifest.into(), world_address))
-}
-
-fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAction {
-    trace!(event=?event, "Processing event.");
-    let action = handle_event(event);
-    match &action {
-        DevAction::None => {}
-        DevAction::Build(path) => handle_build_action(path, context),
-        DevAction::Reload => {
-            handle_reload_action(context);
-        }
-    }
-
-    trace!(action=?action, "Processed action.");
-    action
-}
-
-fn handle_build_action(path: &Path, context: &mut DevContext<'_>) {
-    context
-        .ws
-        .config()
-        .ui()
-        .print(format!("📦 Need to rebuild {}", path.to_str().unwrap_or_default(),));
-    let db = &mut context.db;
-    let file = FileId::new(db, path.to_path_buf());
-    PrivRawFileContentQuery.in_db_mut(db.as_files_group_mut()).invalidate(&file);
-    db.override_file_content(file, None);
-}
-
-fn handle_reload_action(context: &mut DevContext<'_>) {
-    trace!("Reloading context.");
-    let config = context.ws.config();
-    config.ui().print("Reloading project");
-    let new_context = load_context(config).expect("Failed to load context");
-    let _ = mem::replace(context, new_context);
-    trace!("Context reloaded.");
 }

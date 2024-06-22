@@ -4,7 +4,7 @@ use dojo_world::migration::{TxnAction, TxnConfig};
 use starknet::core::types::FieldElement;
 use tracing::trace;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Default)]
 #[command(next_help_heading = "Transaction options")]
 pub struct TransactionOptions {
     #[arg(long, value_name = "MULTIPLIER")]
@@ -40,6 +40,10 @@ pub struct TransactionOptions {
 }
 
 impl TransactionOptions {
+    pub fn init_wait() -> Self {
+        TransactionOptions { wait: true, ..Default::default() }
+    }
+
     pub fn to_txn_action(&self, simulate: bool, estimate_only: bool) -> Result<TxnAction> {
         match (estimate_only, simulate) {
             (true, true) => {

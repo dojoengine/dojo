@@ -8,7 +8,7 @@ use url::Url;
 
 use super::STARKNET_RPC_URL_ENV_VAR;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Starknet options")]
 pub struct StarknetOptions {
     #[arg(long, env = STARKNET_RPC_URL_ENV_VAR)]

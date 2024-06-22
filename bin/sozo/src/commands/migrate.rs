@@ -6,18 +6,18 @@ use dojo_world::migration::TxnConfig;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration;
-use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
+use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, FieldElement, StarknetError};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
-use starknet::signers::LocalWallet;
 use tracing::trace;
 
-use super::options::account::AccountOptions;
+use super::options::account::{AccountOptions, SozoAccount};
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
+use crate::commands::options::account::WorldAddressOrName;
 
 #[derive(Debug, Args)]
 pub struct MigrateArgs {
@@ -55,6 +55,22 @@ pub enum MigrateCommand {
 }
 
 impl MigrateArgs {
+    /// Creates a new `MigrateArgs` with the `Apply` command.
+    pub fn new_apply(
+        name: Option<String>,
+        world: WorldOptions,
+        starknet: StarknetOptions,
+        account: AccountOptions,
+    ) -> Self {
+        Self {
+            command: MigrateCommand::Apply { transaction: TransactionOptions::init_wait() },
+            name,
+            world,
+            starknet,
+            account,
+        }
+    }
+
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
@@ -140,11 +156,7 @@ pub async fn setup_env<'a>(
     world: WorldOptions,
     name: &str,
     env: Option<&'a Environment>,
-) -> Result<(
-    Option<FieldElement>,
-    SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    String,
-)> {
+) -> Result<(Option<FieldElement>, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
     trace!("Setting up environment.");
     let ui = ws.config().ui();
 
@@ -174,8 +186,14 @@ pub async fn setup_env<'a>(
             .with_context(|| "Cannot parse chain_id as string")?;
         trace!(chain_id);
 
-        let mut account = account.account(provider, env).await?;
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+        let account = {
+            // This is mainly for controller account for creating policies.
+            let world_address_or_name = world_address
+                .map(WorldAddressOrName::Address)
+                .unwrap_or(WorldAddressOrName::Name(name.to_string()));
+
+            account.account(provider, world_address_or_name, &starknet, env, ws.config()).await?
+        };
 
         let address = account.address();
 
