@@ -55,9 +55,10 @@ impl ExecuteArgs {
                 self.account,
                 self.starknet,
                 &env_metadata,
+                config,
             )
-            .await
-            .unwrap();
+            .await?;
+
             let tx_config = self.transaction.into();
 
             trace!(
