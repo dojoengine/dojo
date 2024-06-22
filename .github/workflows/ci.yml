@@ -119,7 +119,6 @@ jobs:
           name: dojo-bins
           path: /tmp/bins
       - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
       - run: |
           chmod +x /tmp/bins/sozo
           /tmp/bins/sozo --manifest-path crates/dojo-core/Scarb.toml test
@@ -135,7 +134,6 @@ jobs:
           name: dojo-bins
           path: /tmp/bins
       - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
       - run: |
           chmod +x /tmp/bins/sozo
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml test
@@ -178,17 +176,17 @@ jobs:
           scripts/docs.sh
 
   test-hurl:
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/download-artifact@v4
         with:
-          toolchain: ${{ env.RUST_VERSION }}
-      - uses: Swatinem/rust-cache@v2
+          name: dojo-bins
+          path: /tmp/bins
+      - uses: actions/checkout@v3
       - run: |
           curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/3.0.0/hurl_3.0.0_amd64.deb
           sudo apt update && sudo apt install ./hurl_3.0.0_amd64.deb
-      - run: |
-          cargo build --bin katana
-          nohup target/debug/katana --accounts 2 --disable-fee &
+          chmod +x /tmp/bins/katana
+          nohup /tmp/bins/katana --accounts 2 --disable-fee &
       - run: hurl --test examples/rpc/**/*.hurl
