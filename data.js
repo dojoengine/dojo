@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719006142809,
+  "lastUpdate": 1719022250352,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10135,6 +10135,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16403773,
             "range": "± 204077",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "128649481+neotheprogramist@users.noreply.github.com",
+            "name": "Neo",
+            "username": "neotheprogramist"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0d3c0b0d5a36e36e003ce8ef066054d54a3c4041",
+          "message": "[saya] Publish proof to Celestia (#2053)\n\n* updated celestia and publishing proof\r\n\r\n* specifying whether to include proof blob\r\n\r\n* fix: cleanup\r\n\r\n---------\r\n\r\nCo-authored-by: Mateusz Zając <matzayonc@gmail.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-21T19:59:15-06:00",
+          "tree_id": "fbd293e3bbee3f4f58b9fae39db2746d489f69ca",
+          "url": "https://github.com/dojoengine/dojo/commit/0d3c0b0d5a36e36e003ce8ef066054d54a3c4041"
+        },
+        "date": 1719022249590,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16482174,
+            "range": "± 178785",
             "unit": "ns/iter"
           }
         ]
