@@ -19,7 +19,7 @@ mod r#type;
 //   `keystore_password`. This is enforced by Clap.
 // - For `Scarb.toml`: if both private_key and keystore are specified in `Scarb.toml` private_key
 //   will take priority
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Account options")]
 pub struct AccountOptions {
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]

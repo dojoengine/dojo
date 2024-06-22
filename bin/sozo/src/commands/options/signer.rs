@@ -9,7 +9,7 @@ use tracing::trace;
 
 use super::{DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Signer options")]
 // INVARIANT:
 // - For commandline: we can either specify `private_key` or `keystore_path` along with
