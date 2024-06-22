@@ -108,7 +108,7 @@ where
 
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
-    strategy.resolve_variable(world_address, &default_namespace)?;
+    strategy.resolve_variable(world_address)?;
 
     if dry_run {
         print_strategy(&ui, account.provider(), &strategy, world_address).await;

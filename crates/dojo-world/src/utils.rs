@@ -429,6 +429,8 @@ where
 /// compiled elements during the compilation.
 /// An artifact name is built by concatenating the fully qualified module name
 /// and the element name in snake case, separated by '::'.
+///
+/// TODO: we don't want to depend on module name, but namespace instead.
 pub fn get_artifact_name(module_name: &str, element_name: &str) -> String {
     format!("{module_name}::{element_name}").to_case(Case::Snake)
 }

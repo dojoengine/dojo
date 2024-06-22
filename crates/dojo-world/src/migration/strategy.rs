@@ -12,7 +12,6 @@ use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
-use crate::utils::split_full_world_element_name;
 
 #[derive(Debug, Clone)]
 pub enum MigrationMetadata {
@@ -67,41 +66,30 @@ impl MigrationStrategy {
         MigrationItemsInfo { new, update }
     }
 
-    pub fn resolve_variable(
-        &mut self,
-        world_address: FieldElement,
-        default_namespace: &str,
-    ) -> Result<()> {
-        let contracts_clone = self.contracts.clone();
-
-        let find_contract_from_dependency = |dependency: &str| -> Result<ContractMigration> {
-            let (dep_namespace, dep_name) =
-                split_full_world_element_name(dependency, default_namespace)?;
-            match contracts_clone
-                .iter()
-                .find(|c| c.diff.name == dep_name && c.diff.namespace == dep_namespace)
-            {
-                Some(c) => Ok(c.clone()),
-                None => Err(anyhow!("Unable to find the contract: {dependency}")),
-            }
-        };
-
+    pub fn resolve_variable(&mut self, world_address: FieldElement) -> Result<()> {
         for contract in self.contracts.iter_mut() {
             for field in contract.diff.init_calldata.iter_mut() {
                 if let Some(dependency) = field.strip_prefix("$contract_address:") {
-                    let dependency_contract = find_contract_from_dependency(dependency)?;
+                    let dependency_contract = self.metadata.get(dependency).unwrap();
 
-                    let contract_address = get_contract_address(
-                        generate_salt(&dependency_contract.diff.name),
-                        dependency_contract.diff.base_class_hash,
-                        &[],
-                        world_address,
-                    );
-                    *field = contract_address.to_string();
+                    match dependency_contract {
+                        MigrationMetadata::Contract(c) => {
+                            let contract_address = get_contract_address(
+                                generate_salt(&c.name),
+                                c.base_class_hash,
+                                &[],
+                                world_address,
+                            );
+                            *field = contract_address.to_string();
+                        }
+                    }
                 } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
-                    let dependency_contract = find_contract_from_dependency(dependency)?;
-
-                    *field = dependency_contract.diff.local_class_hash.to_string();
+                    let dependency_contract = self.metadata.get(dependency).unwrap();
+                    match dependency_contract {
+                        MigrationMetadata::Contract(c) => {
+                            *field = c.local_class_hash.to_string();
+                        }
+                    }
                 }
             }
         }
@@ -226,7 +214,8 @@ fn evaluate_contracts_to_migrate(
     let mut comps_to_migrate = vec![];
 
     for c in contracts {
-        metadata.insert(c.name.clone(), MigrationMetadata::Contract(c.clone()));
+        let resource_identifier = crate::utils::get_full_world_element_name(&c.namespace, &c.name);
+        metadata.insert(resource_identifier, MigrationMetadata::Contract(c.clone()));
         match c.remote_class_hash {
             Some(remote) if remote == c.local_class_hash && !world_contract_will_migrate => {
                 continue;
