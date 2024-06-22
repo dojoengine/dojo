@@ -120,7 +120,9 @@ jobs:
           path: /tmp/bins
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: /tmp/bins/sozo --manifest-path crates/dojo-core/Scarb.toml test
+      - run: |
+          chmod +x /tmp/bins/sozo
+          /tmp/bins/sozo --manifest-path crates/dojo-core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
     needs: build
@@ -134,7 +136,9 @@ jobs:
           path: /tmp/bins
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml test
+      - run: |
+          chmod +x /tmp/bins/sozo
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml test
 
   dojo-world-bindings-check:
     runs-on: ubuntu-latest
