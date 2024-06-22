@@ -8,7 +8,7 @@ use dojo_world::manifest::{BaseManifest, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
 use slot::session::Policy;
-use starknet::core::types::contract::AbiEntry;
+use starknet::core::types::contract::{AbiEntry, StateMutability};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::short_string;
@@ -187,10 +187,12 @@ fn policies_from_abis(
     for entry in entries {
         match entry {
             AbiEntry::Function(f) => {
-                let method = f.name.to_string();
-                let policy = Policy { target: contract_address, method };
-                trace!(name = contract_name, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
-                policies.push(policy);
+                // we only create policies for non-view functions
+                if let StateMutability::External = f.state_mutability {
+                    let policy = Policy { target: contract_address, method: f.name.to_string() };
+                    trace!(name = contract_name, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
+                    policies.push(policy);
+                }
             }
 
             AbiEntry::Interface(i) => {
