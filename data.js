@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719022250352,
+  "lastUpdate": 1719022364320,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10165,6 +10165,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16482174,
             "range": "± 178785",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ab3306530fa3fffc005523c37582c3f49beea9f0",
+          "message": "fix(sozo): dev subcommand (#2080)\n\n* fix: filter out test targets\r\n\r\n* fix manifests path\r\n\r\n* return error instead of unwrap\r\n\r\n* fix: propose newer implementation to take manifests in account\r\n\r\n* fix: remove the content compare for better performances\r\n\r\n* fix: clippy\r\n\r\n* update dojo_plugin version\r\n\r\n* migrate during initial run\r\n\r\n* remove manual skipping\r\n\r\n* fix lints\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-21T19:56:22-06:00",
+          "tree_id": "6ba6c610851c3b4a30210e7beacb8bb46296ba19",
+          "url": "https://github.com/dojoengine/dojo/commit/ab3306530fa3fffc005523c37582c3f49beea9f0"
+        },
+        "date": 1719022363714,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16682986,
+            "range": "± 80042",
             "unit": "ns/iter"
           }
         ]
