@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719022364320,
+  "lastUpdate": 1719024120665,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10195,6 +10195,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16682986,
             "range": "± 80042",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8a5902b0074537f96384ea0829d54543adeb2367",
+          "message": "feat(sozo): add Cartridge's Controller-based account  (#2069)",
+          "timestamp": "2024-06-22T10:30:09+08:00",
+          "tree_id": "a94f1540300735524b362045af8395d04781794d",
+          "url": "https://github.com/dojoengine/dojo/commit/8a5902b0074537f96384ea0829d54543adeb2367"
+        },
+        "date": 1719024119398,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16783203,
+            "range": "± 234145",
             "unit": "ns/iter"
           }
         ]
