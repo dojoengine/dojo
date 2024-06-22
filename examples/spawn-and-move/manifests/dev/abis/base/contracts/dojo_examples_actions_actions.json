@@ -182,7 +182,7 @@
         "name": "spawn",
         "inputs": [],
         "outputs": [],
-        "state_mutability": "view"
+        "state_mutability": "external"
       },
       {
         "type": "function",
@@ -194,7 +194,7 @@
           }
         ],
         "outputs": [],
-        "state_mutability": "view"
+        "state_mutability": "external"
       },
       {
         "type": "function",
@@ -206,7 +206,25 @@
           }
         ],
         "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_player_position",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "dojo_examples::models::Position"
+          }
+        ],
         "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "reset_player_config",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
       }
     ]
   },

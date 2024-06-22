@@ -20,6 +20,7 @@ use tracing::{debug, error, trace};
 
 use super::error::SubscriptionError;
 use crate::proto;
+use crate::proto::world::SubscribeModelsResponse;
 use crate::types::KeysClause;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::model_diff";
@@ -81,6 +82,11 @@ impl StateDiffManager {
             .into_iter()
             .flatten()
             .collect::<HashSet<FieldElement>>();
+
+        // NOTE: unlock issue with firefox/safari
+        // initially send empty stream message to return from
+        // initial subscribe call
+        let _ = sender.send(Ok(SubscribeModelsResponse { model_update: None })).await;
 
         self.subscribers
             .write()

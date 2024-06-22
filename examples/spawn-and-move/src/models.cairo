@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 
-#[derive(Serde, Copy, Drop, Introspect)]
+#[derive(Serde, Copy, Drop, Introspect, PartialEq)]
 enum Direction {
     None,
     Left,
@@ -40,6 +40,14 @@ struct Moves {
     player: ContractAddress,
     remaining: u8,
     last_direction: Direction
+}
+
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
+struct MockToken {
+    #[key]
+    account: ContractAddress,
+    amount: u128,
 }
 
 #[derive(Copy, Drop, Serde, IntrospectPacked)]

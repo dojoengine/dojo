@@ -6,6 +6,7 @@ use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
 use serde_json::json;
+use smol_str::SmolStr;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{EmittedEvent, FieldElement};
@@ -21,6 +22,7 @@ use crate::manifest::{
     parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, OverlayClass,
     OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
 };
+use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]
@@ -381,16 +383,30 @@ fn fetch_remote_manifest() {
     let (temp_project_dir, config, _) =
         compiler::copy_build_project_temp(source_project, dojo_core_path, true);
 
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let dojo_metadata =
+        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
+
     let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
 
-    let world_address = config
-        .tokio_handle()
-        .block_on(async { deploy_world(&runner, &temp_project_dir, &artifacts_path).await });
+    let world_address = config.tokio_handle().block_on(async {
+        deploy_world(
+            &runner,
+            &temp_project_dir,
+            &artifacts_path,
+            dojo_metadata.skip_migration.clone(),
+        )
+        .await
+    });
 
     let mut local_manifest = BaseManifest::load_from_path(
         &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
+
+    if let Some(skip_manifests) = dojo_metadata.skip_migration {
+        local_manifest.remove_items(skip_manifests);
+    }
 
     let overlay_manifest = OverlayManifest::load_from_path(
         &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
@@ -403,11 +419,11 @@ fn fetch_remote_manifest() {
         DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
     });
 
-    assert_eq!(local_manifest.models.len(), 6);
-    assert_eq!(local_manifest.contracts.len(), 2);
+    assert_eq!(local_manifest.models.len(), 7);
+    assert_eq!(local_manifest.contracts.len(), 3);
 
-    assert_eq!(remote_manifest.models.len(), 6);
-    assert_eq!(remote_manifest.contracts.len(), 2);
+    assert_eq!(remote_manifest.models.len(), 7);
+    assert_eq!(remote_manifest.contracts.len(), 3);
 
     // compute diff from local and remote manifest
 
@@ -640,4 +656,38 @@ fn overlay_merge_for_base_work_as_expected() {
 
     current.merge(other);
     assert_eq!(current, expected);
+}
+
+#[test]
+fn base_manifest_remove_items_work_as_expected() {
+    let contracts = ["c1", "c2", "c3"];
+    let models = ["m1", "m2", "m3"];
+
+    let world = Manifest { name: "world".into(), inner: Default::default() };
+    let base = Manifest { name: "base".into(), inner: Default::default() };
+
+    let contracts = contracts
+        .iter()
+        .map(|c| Manifest { name: SmolStr::from(*c), inner: Default::default() })
+        .collect();
+    let models = models
+        .iter()
+        .map(|c| Manifest { name: SmolStr::from(*c), inner: Default::default() })
+        .collect();
+
+    let mut base = BaseManifest { contracts, models, world, base };
+
+    base.remove_items(vec!["c1".to_string(), "c3".to_string(), "m2".to_string()]);
+
+    assert_eq!(base.contracts.len(), 1);
+    assert_eq!(
+        base.contracts.iter().map(|c| c.name.clone().into()).collect::<Vec<String>>(),
+        vec!["c2"]
+    );
+
+    assert_eq!(base.models.len(), 2);
+    assert_eq!(
+        base.models.iter().map(|c| c.name.clone().into()).collect::<Vec<String>>(),
+        vec!["m1", "m3"]
+    );
 }

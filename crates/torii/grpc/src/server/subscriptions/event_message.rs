@@ -20,6 +20,7 @@ use torii_core::types::EventMessage;
 use tracing::{error, trace};
 
 use crate::proto;
+use crate::proto::world::SubscribeEntityResponse;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
 pub struct EventMessagesSubscriber {
@@ -41,6 +42,11 @@ impl EventMessageManager {
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
+
+        // NOTE: unlock issue with firefox/safari
+        // initially send empty stream message to return from
+        // initial subscribe call
+        let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
 
         self.subscribers.write().await.insert(
             id,

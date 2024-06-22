@@ -241,6 +241,7 @@ pub fn compute_invoke_v3_tx_hash(
 /// Computes the hash of a L1 handler transaction
 /// from the fields involved in the computation,
 /// as felts values.
+/// https://docs.starknet.io/architecture-and-concepts/network-architecture/messaging-mechanism/#hashing_l1-l2.
 pub fn compute_l1_handler_tx_hash(
     version: FieldElement,
     contract_address: FieldElement,
@@ -255,7 +256,6 @@ pub fn compute_l1_handler_tx_hash(
         contract_address,
         entry_point_selector,
         compute_hash_on_elements(calldata),
-        FieldElement::ZERO, // No fee on L2 for L1 handler tx
         chain_id,
         nonce,
     ])

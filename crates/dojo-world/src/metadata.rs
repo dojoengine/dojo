@@ -85,7 +85,7 @@ pub fn project_to_world_metadata(project_metadata: Option<ProjectWorldMetadata>)
 ///
 /// # Returns
 /// A [`DojoMetadata`] object containing all Dojo metadata.
-pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
+pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> {
     let profile = ws.config().profile();
 
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
@@ -94,9 +94,19 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
     let sources_dir = target_dir.join(profile.as_str()).join(SOURCES_DIR);
     let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
 
-    let project_metadata = ws.current_package().unwrap().manifest.metadata.dojo();
-    let mut dojo_metadata =
-        DojoMetadata { env: project_metadata.env.clone(), ..Default::default() };
+    let project_metadata = if let Ok(current_package) = ws.current_package() {
+        current_package.manifest.metadata.dojo()
+    } else {
+        // On workspaces, dojo metadata are not accessible because if no current package is defined
+        // (being the only package or using --package).
+        return None;
+    };
+
+    let mut dojo_metadata = DojoMetadata {
+        env: project_metadata.env.clone(),
+        skip_migration: project_metadata.skip_migration.clone(),
+        ..Default::default()
+    };
 
     let world_artifact = build_artifact_from_name(&sources_dir, &abis_dir, WORLD_CONTRACT_NAME);
 
@@ -139,7 +149,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
         }
     }
 
-    dojo_metadata
+    Some(dojo_metadata)
 }
 
 /// Metadata coming from project configuration (Scarb.toml)
@@ -147,6 +157,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> DojoMetadata {
 pub struct ProjectMetadata {
     pub world: Option<ProjectWorldMetadata>,
     pub env: Option<Environment>,
+    pub skip_migration: Option<Vec<String>>,
 }
 
 /// Metadata for a user defined resource (models, contracts).
@@ -162,6 +173,7 @@ pub struct DojoMetadata {
     pub world: WorldMetadata,
     pub env: Option<Environment>,
     pub resources_artifacts: HashMap<String, ResourceMetadata>,
+    pub skip_migration: Option<Vec<String>>,
 }
 
 #[derive(Debug)]

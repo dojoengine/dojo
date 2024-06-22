@@ -25,6 +25,7 @@ hex = { workspace = true }
 hyper.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
 metrics.workspace = true
+rand.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
@@ -51,7 +52,7 @@ alloy = { git = "https://github.com/alloy-rs/alloy", features = [
     "contract",
     "network",
     "providers",
+    "signer-local",
     "provider-http",
-    "signer-wallet",
     "node-bindings"
 ] }

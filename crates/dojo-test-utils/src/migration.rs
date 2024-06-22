@@ -10,6 +10,7 @@ use starknet::macros::felt;
 pub fn prepare_migration(
     manifest_dir: Utf8PathBuf,
     target_dir: Utf8PathBuf,
+    skip_migration: Option<Vec<String>>,
 ) -> Result<MigrationStrategy> {
     // In testing, profile name is always dev.
     let profile_name = "dev";
@@ -18,6 +19,10 @@ pub fn prepare_migration(
         &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
+
+    if let Some(skip_manifests) = skip_migration {
+        manifest.remove_items(skip_manifests);
+    }
 
     let overlay_manifest = OverlayManifest::load_from_path(
         &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
@@ -29,7 +34,10 @@ pub fn prepare_migration(
     let mut world = WorldDiff::compute(manifest, None);
     world.update_order().unwrap();
 
-    prepare_for_migration(None, felt!("0x12345"), &target_dir, world)
+    let mut strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world).unwrap();
+    strat.resolve_variable(strat.world_address().unwrap()).unwrap();
+
+    Ok(strat)
 }
 
 pub fn prepare_migration_with_world_and_seed(

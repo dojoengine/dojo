@@ -2,11 +2,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use alloy::network::EthereumSigner;
-use alloy::node_bindings::Anvil;
 use alloy::primitives::{Uint, U256};
 use alloy::providers::{ProviderBuilder, WalletProvider};
-use alloy::signers::wallet::LocalWallet;
 use alloy::sol;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
@@ -15,6 +12,7 @@ use katana_primitives::utils::transaction::{
     compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
 };
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use rand::Rng;
 use serde_json::json;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::contract::ContractFactory;
@@ -26,7 +24,6 @@ use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
 use starknet::providers::Provider;
 use tempfile::tempdir;
-use url::Url;
 
 mod common;
 
@@ -48,26 +45,26 @@ abigen!(CairoMessagingContract, "crates/katana/rpc/rpc/tests/test_data/cairo_l1_
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_messaging() {
-    // Prepare Anvil + Messaging Contracts
-    let anvil_runner = Anvil::default().spawn();
+    // TODO: If there's a way to get the endpoint of anvil from the `l1_provider`, we could
+    // remove that and use default anvil to let the OS assign the port.
+    let port: u16 = rand::thread_rng().gen_range(35000..65000);
 
     let l1_provider = {
-        let wallet: LocalWallet = anvil_runner.keys()[0].clone().into();
         ProviderBuilder::new()
             .with_recommended_fillers()
-            .signer(EthereumSigner::from(wallet))
-            .on_http(Url::from_str(&anvil_runner.endpoint()).unwrap())
+            .on_anvil_with_wallet_and_config(|anvil| anvil.port(port))
     };
 
     // Deploy the core messaging contract on L1
     let core_contract = StarknetContract::deploy(&l1_provider).await.unwrap();
+
     // Deploy test contract on L1 used to send/receive messages to/from L2
     let l1_test_contract = Contract1::deploy(&l1_provider, *core_contract.address()).await.unwrap();
 
     // Prepare Katana + Messaging Contract
     let messaging_config = json!({
         "chain": "ethereum",
-        "rpc_url": anvil_runner.endpoint(),
+        "rpc_url": format!("http://localhost:{}", port),
         "contract_address": core_contract.address().to_string(),
         "sender_address": l1_provider.default_signer_address(),
         "private_key": "",
@@ -172,7 +169,7 @@ async fn test_messaging() {
         assert!(receipt.status(), "failed to send L1 -> L2 message");
 
         // Wait for the tx to be mined on L2 (Katana)
-        tokio::time::sleep(Duration::from_secs(1)).await;
+        tokio::time::sleep(Duration::from_secs(5)).await;
 
         // In an l1_handler transaction, the first element of the calldata is always the Ethereum
         // address of the sender (msg.sender).
@@ -185,7 +182,7 @@ async fn test_messaging() {
             recipient,
             selector,
             &l1_tx_calldata,
-            katana_account.provider().chain_id().await.unwrap(),
+            katana_runner.provider().chain_id().await.unwrap(),
             nonce.to::<u64>().into(),
         );
 
