@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "account_sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/controller?rev=04d0e3a#04d0e3a9a7783bfe83945c21b311ea2cf7c894d1"
+source = "git+https://github.com/cartridge-gg/controller?rev=e8276cfffe48b5d09f0598026d13635374204b72#e8276cfffe48b5d09f0598026d13635374204b72"
 dependencies = [
  "anyhow",
  "async-trait",
