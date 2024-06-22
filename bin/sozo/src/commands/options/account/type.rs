@@ -11,10 +11,17 @@ use starknet::core::types::{FieldElement, FlattenedSierraClass};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
 
+#[cfg(feature = "controller")]
+use super::controller::ControllerSessionAccount;
+
 #[derive(Debug, thiserror::Error)]
 pub enum SozoAccountSignError {
     #[error(transparent)]
     Standard(#[from] SignError<starknet::signers::local_wallet::SignError>),
+
+    #[cfg(feature = "controller")]
+    #[error(transparent)]
+    Controller(#[from] account_sdk::signers::SignError),
 }
 
 /// To unify the account types, we define a wrapper type that implements the
@@ -30,6 +37,9 @@ where
     P: Provider,
 {
     Standard(SingleOwnerAccount<P, LocalWallet>),
+
+    #[cfg(feature = "controller")]
+    Controller(ControllerSessionAccount<P>),
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -44,12 +54,16 @@ where
     fn address(&self) -> FieldElement {
         match self {
             Self::Standard(account) => account.address(),
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => account.address(),
         }
     }
 
     fn chain_id(&self) -> FieldElement {
         match self {
             Self::Standard(account) => account.chain_id(),
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => account.chain_id(),
         }
     }
 
@@ -79,6 +93,8 @@ where
     ) -> Result<Vec<FieldElement>, Self::SignError> {
         let result = match self {
             Self::Standard(account) => account.sign_execution(execution, query_only).await?,
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => account.sign_execution(execution, query_only).await?,
         };
         Ok(result)
     }
@@ -90,6 +106,8 @@ where
     ) -> Result<Vec<FieldElement>, Self::SignError> {
         let result = match self {
             Self::Standard(account) => account.sign_declaration(declaration, query_only).await?,
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => account.sign_declaration(declaration, query_only).await?,
         };
         Ok(result)
     }
@@ -101,6 +119,11 @@ where
     ) -> Result<Vec<FieldElement>, Self::SignError> {
         match self {
             Self::Standard(account) => {
+                let result = account.sign_legacy_declaration(declaration, query_only).await?;
+                Ok(result)
+            }
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => {
                 let result = account.sign_legacy_declaration(declaration, query_only).await?;
                 Ok(result)
             }
@@ -116,6 +139,8 @@ where
     fn encode_calls(&self, calls: &[Call]) -> Vec<FieldElement> {
         match self {
             Self::Standard(account) => account.encode_calls(calls),
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => account.encode_calls(calls),
         }
     }
 }
@@ -130,6 +155,8 @@ where
     fn provider(&self) -> &Self::Provider {
         match self {
             Self::Standard(account) => account.provider(),
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => account.provider(),
         }
     }
 }
