@@ -28,6 +28,12 @@ const CONTROLLER_SIERRA_ARTIFACT: &str =
 const WEBAUTHN_RP_ID: &str = "cartridge.gg";
 const WEBAUTHN_ORIGIN: &str = "https://x.cartridge.gg";
 
+pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
+    // bouncer that checks if there is an authenticated slot user
+    let credentials = Credentials::load()?;
+    add_controller_account_inner(genesis, credentials.account)
+}
+
 fn add_controller_class(genesis: &mut Genesis) -> Result<ClassHash> {
     let sierra = parse_sierra_class(CONTROLLER_SIERRA_ARTIFACT)?;
     let casm = read_compiled_class_artifact(CONTROLLER_SIERRA_ARTIFACT)?;
@@ -55,17 +61,13 @@ fn add_controller_class(genesis: &mut Genesis) -> Result<ClassHash> {
     Ok(class_hash)
 }
 
-// TODO(kariy): should accept the whole account struct instead of individual fields
-// build the genesis file
-pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
-    // bouncer that checks if there is an authenticated slot user
-    let user = Credentials::load()?;
-    let cred = user.account.credentials.webauthn.first().unwrap();
+fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Account) -> Result<()> {
+    let cred = user.credentials.webauthn.first().unwrap();
 
     trace!(
         target: LOG_TARGET,
-        username = user.account.id,
-        address = format!("{:#x}", user.account.contract_address),
+        username = user.id,
+        address = format!("{:#x}", user.contract_address),
         "Adding Cartridge Controller account to genesis."
     );
 
@@ -82,15 +84,15 @@ pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
             storage: Some(get_contract_storage(credential_id, public_key, SignerType::Webauthn)?),
         };
 
-        (ContractAddress::from(user.account.contract_address), GenesisAllocation::Contract(account))
+        (ContractAddress::from(user.contract_address), GenesisAllocation::Contract(account))
     };
 
     genesis.extend_allocations([(address, contract)]);
 
     trace!(
         target: LOG_TARGET,
-        username = user.account.id,
-        address = format!("{:#x}", user.account.contract_address),
+        username = user.id,
+        address = format!("{:#x}", user.contract_address),
         "Cartridge Controller account added to genesis."
     );
 
@@ -193,18 +195,45 @@ fn read_compiled_class_artifact(artifact: &str) -> Result<SierraCompiledClass> {
 
 #[cfg(test)]
 mod tests {
+    use slot::account::WebAuthnCredential;
     use starknet::macros::felt;
 
     use super::*;
 
+    // Test data for Controller with WebAuthn Signer.
+    //
+    // Username: johnsmith
+    // Controller address: 0x0260ab0352da372054ed9dc586f024f6a259b9ea64a8e09b16147201220f88d2
+    // <https://sepolia.starkscan.co/contract/0x0260ab0352da372054ed9dc586f024f6a259b9ea64a8e09b16147201220f88d2#overview>
+
+    const STORAGE_KEY: FieldElement =
+        felt!("0x058c7ee1e9bb09b0d728314f36629772ef7a3c6773a823064d5a7e5651bcb890");
+    const STORAGE_VALUE: FieldElement =
+        felt!("0x5d7709b0a485e64a549ada9bd14d30419364127dfd351e01f38871c82500cd7");
+
+    const WEBAUTHN_CREDENTIAL_ID: &str = "ja0NkHny-dlfPnClYECdmce0xTCuGT0xFjeuStaVqCI";
+    const WEBAUTHN_PUBLIC_KEY: &str = "pQECAyYgASFYIBLHWNmpxCtO47cfOXw9nFCGftMq57xhvQC98aY_zQchIlggIgGHmWwQe1_FGi9GYqcYYpoPC9mkkf0f1rVD5UoGPEA";
+
     #[test]
     fn test_add_controller_account() {
         let mut genesis = Genesis::default();
-        let controller_class_hash = add_controller_class(&mut Genesis::default()).unwrap();
-        add_controller_account(&mut genesis).unwrap();
 
-        let user = Credentials::load().unwrap();
-        let address = ContractAddress::from(user.account.contract_address);
+        let account = slot::account::Account {
+            id: "johnsmith".to_string(),
+            name: None,
+            contract_address: felt!("1337"),
+            credentials: slot::account::AccountCredentials {
+                webauthn: vec![WebAuthnCredential {
+                    id: WEBAUTHN_CREDENTIAL_ID.to_string(),
+                    public_key: WEBAUTHN_PUBLIC_KEY.to_string(),
+                }],
+            },
+        };
+
+        let controller_class_hash = add_controller_class(&mut Genesis::default()).unwrap();
+        add_controller_account_inner(&mut genesis, account.clone()).unwrap();
+
+        let address = ContractAddress::from(account.contract_address);
         let allocation = genesis.allocations.get(&address).unwrap();
 
         assert!(genesis.allocations.contains_key(&address));
@@ -214,28 +243,14 @@ mod tests {
 
     #[test]
     fn test_get_contract_storage() {
-        // Test data for Controller with WebAuthn Signer.
-        //
-        // Username: johnsmith
-        // Controller address: 0x0260ab0352da372054ed9dc586f024f6a259b9ea64a8e09b16147201220f88d2
-        // <https://sepolia.starkscan.co/contract/0x0260ab0352da372054ed9dc586f024f6a259b9ea64a8e09b16147201220f88d2#overview>
-
-        let expected_storage_key =
-            felt!("0x058c7ee1e9bb09b0d728314f36629772ef7a3c6773a823064d5a7e5651bcb890");
-        let expected_storage_value =
-            felt!("0x5d7709b0a485e64a549ada9bd14d30419364127dfd351e01f38871c82500cd7");
-
-        let webauthn_credential_id = "ja0NkHny-dlfPnClYECdmce0xTCuGT0xFjeuStaVqCI";
-        let webauthn_public_key = "pQECAyYgASFYIBLHWNmpxCtO47cfOXw9nFCGftMq57xhvQC98aY_zQchIlggIgGHmWwQe1_FGi9GYqcYYpoPC9mkkf0f1rVD5UoGPEA";
-
-        let credential_id = webauthn::credential::from_base64(webauthn_credential_id).unwrap();
-        let public_key = webauthn::cose_key::from_base64(webauthn_public_key).unwrap();
+        let credential_id = webauthn::credential::from_base64(WEBAUTHN_CREDENTIAL_ID).unwrap();
+        let public_key = webauthn::cose_key::from_base64(WEBAUTHN_PUBLIC_KEY).unwrap();
 
         let storage =
             get_contract_storage(credential_id.clone(), public_key.clone(), SignerType::Webauthn)
                 .unwrap();
 
         assert_eq!(storage.len(), 1);
-        assert_eq!(storage.get(&expected_storage_key), Some(&expected_storage_value));
+        assert_eq!(storage.get(&STORAGE_KEY), Some(&STORAGE_VALUE));
     }
 }
