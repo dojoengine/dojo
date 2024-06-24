@@ -273,7 +273,7 @@ mod tests {
         let fee = 30000_u128;
 
         let expected_tx_hash =
-            felt!("0x03a544e249ad0055f04f2b9bb1628c882df99b54e972fbc848016f929ce1e2d3");
+            felt!("0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b");
 
         let event = LogMessageToL2::LogMessageToL2Event::new(
             (
