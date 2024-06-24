@@ -402,21 +402,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alloy-signer-wallet"
-version = "0.1.0"
-source = "git+https://github.com/alloy-rs/alloy?rev=4655f8e4372ecc0b056e83abbc60c3912902ee64#4655f8e4372ecc0b056e83abbc60c3912902ee64"
-dependencies = [
- "alloy-consensus",
- "alloy-network",
- "alloy-primitives",
- "alloy-signer",
- "async-trait",
- "k256",
- "rand",
- "thiserror",
-]
-
-[[package]]
 name = "alloy-sol-macro"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8111,7 +8096,6 @@ dependencies = [
  "alloy-provider",
  "alloy-rpc-types",
  "alloy-signer",
- "alloy-signer-wallet",
  "alloy-sol-types",
  "alloy-transport",
  "anyhow",
@@ -8210,7 +8194,6 @@ dependencies = [
  "katana-cairo",
  "lazy_static",
  "rand",
- "rayon",
  "serde",
  "serde_json",
  "serde_with 2.3.3",
@@ -8338,7 +8321,6 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "chrono",
- "home",
  "katana-core",
  "katana-primitives",
  "lazy_static",
@@ -9768,16 +9750,6 @@ dependencies = [
  "mio",
  "walkdir",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "notify-debouncer-mini"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e55ee272914f4563a2f8b8553eb6811f3c0caea81c756346bad15b7e3ef969f0"
-dependencies = [
- "crossbeam-channel",
- "notify",
 ]
 
 [[package]]
@@ -12009,10 +11981,8 @@ dependencies = [
  "anyhow",
  "cairo-proof-parser",
  "clap",
- "clap_complete",
  "console",
  "katana-primitives",
- "katana-rpc",
  "katana-rpc-api",
  "saya-core",
  "serde_json",
@@ -12242,7 +12212,6 @@ name = "scheduler"
 version = "0.7.2"
 dependencies = [
  "clap",
- "clap_complete",
  "katana-primitives",
  "saya-core",
  "serde",
@@ -12957,7 +12926,6 @@ dependencies = [
  "katana-rpc-api",
  "katana-runner",
  "notify",
- "notify-debouncer-mini",
  "num-bigint",
  "num-integer",
  "prettytable-rs",
@@ -12999,16 +12967,12 @@ dependencies = [
  "cairo-lang-starknet 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-starknet-classes 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-test-plugin",
- "cairo-lang-test-runner",
  "cairo-lang-utils 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "camino",
  "clap",
- "clap-verbosity-flag",
- "clap_complete",
  "colored",
  "colored_json",
  "console",
- "dojo-bindgen",
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
@@ -13016,8 +12980,6 @@ dependencies = [
  "futures",
  "ipfs-api-backend-hyper",
  "katana-runner",
- "notify",
- "notify-debouncer-mini",
  "rpassword",
  "scarb",
  "scarb-ui",
@@ -13026,14 +12988,12 @@ dependencies = [
  "serde_json",
  "serde_with 2.3.3",
  "smol_str",
- "snapbox",
  "starknet",
  "starknet-crypto 0.6.2",
  "thiserror",
  "tokio",
  "toml 0.8.13",
  "tracing",
- "tracing-log 0.1.4",
  "url",
 ]
 
@@ -14408,7 +14368,6 @@ dependencies = [
  "serde",
  "serde_json",
  "slab",
- "sozo",
  "sozo-ops",
  "sqlx",
  "starknet",
@@ -14443,7 +14402,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
- "sozo",
  "sozo-ops",
  "sqlx",
  "starknet",
@@ -14545,41 +14503,20 @@ dependencies = [
 name = "torii-server"
 version = "0.7.2"
 dependencies = [
- "anyhow",
- "async-trait",
  "base64 0.21.7",
- "camino",
- "chrono",
- "clap",
- "ctrlc",
- "dojo-metrics",
- "dojo-types",
- "dojo-world",
- "either",
- "futures",
  "http 0.2.12",
  "http-body 0.4.6",
  "hyper 0.14.28",
  "hyper-reverse-proxy",
  "indexmap 2.2.6",
  "lazy_static",
- "scarb",
  "serde",
  "serde_json",
- "sqlx",
- "starknet",
- "starknet-crypto 0.6.2",
  "tokio",
- "tokio-stream",
  "tokio-util",
- "torii-core",
- "torii-graphql",
- "torii-grpc",
  "tower",
  "tower-http",
  "tracing",
- "tracing-subscriber",
- "url",
 ]
 
 [[package]]
