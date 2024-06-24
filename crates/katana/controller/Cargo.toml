@@ -16,3 +16,4 @@ katana-primitives.workspace = true
 serde_json.workspace = true
 slot.workspace = true
 starknet.workspace = true
+tracing.workspace = true

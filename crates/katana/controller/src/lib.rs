@@ -8,7 +8,8 @@ use account_sdk::wasm_webauthn::CredentialID;
 use alloy_primitives::U256;
 use anyhow::Result;
 use coset::CoseKey;
-use katana_primitives::class::{ClassHash, CompiledClass, SierraCompiledClass};
+use katana_primitives::class::SierraCompiledClass;
+use katana_primitives::class::{ClassHash, CompiledClass};
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::{GenesisAllocation, GenesisContractAlloc};
 use katana_primitives::genesis::{Genesis, GenesisClass};
@@ -16,8 +17,11 @@ use katana_primitives::utils::class::{parse_compiled_class_v1, parse_sierra_clas
 use katana_primitives::FieldElement;
 use slot::credential::Credentials;
 use starknet::core::utils::get_storage_var_address;
+use tracing::trace;
 
 mod webauthn;
+
+const LOG_TARGET: &str = "katana::controller";
 
 const CONTROLLER_SIERRA_ARTIFACT: &str =
     include_str!("../../contracts/compiled/controller_CartridgeAccount.contract_class.json");
@@ -27,15 +31,23 @@ const WEBAUTHN_ORIGIN: &str = "https://x.cartridge.gg";
 
 fn add_controller_class(genesis: &mut Genesis) -> Result<ClassHash> {
     let sierra = parse_sierra_class(CONTROLLER_SIERRA_ARTIFACT)?;
-    let class_hash = sierra.class_hash()?;
-    let sierra = sierra.flatten()?;
     let casm = read_compiled_class_artifact(CONTROLLER_SIERRA_ARTIFACT)?;
+
+    let class_hash = sierra.class_hash()?;
+    let flattened_sierra = sierra.flatten()?;
     let casm_hash = FieldElement::from_bytes_be(&casm.casm.compiled_class_hash().to_be_bytes())?;
+
+    trace!(
+        target: LOG_TARGET,
+        class_hash = format!("{class_hash:#x}"),
+        casm_hash = format!("{casm_hash:#x}"),
+        "Adding Cartridge Controller account class to genesis."
+    );
 
     genesis.classes.insert(
         class_hash,
         GenesisClass {
-            sierra: Some(Arc::new(sierra)),
+            sierra: Some(Arc::new(flattened_sierra)),
             compiled_class_hash: casm_hash,
             casm: Arc::new(CompiledClass::Class(casm)),
         },
@@ -50,6 +62,13 @@ pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
     // bouncer that checks if there is an authenticated slot user
     let user = Credentials::load()?;
     let cred = user.account.credentials.webauthn.first().unwrap();
+
+    trace!(
+        target: LOG_TARGET,
+        username = user.account.id,
+        address = format!("{:#x}", user.account.contract_address),
+        "Adding Cartridge Controller account to genesis."
+    );
 
     let class_hash = add_controller_class(genesis)?;
 
@@ -68,6 +87,14 @@ pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
     };
 
     genesis.extend_allocations([(address, contract)]);
+
+    trace!(
+        target: LOG_TARGET,
+        username = user.account.id,
+        address = format!("{:#x}", user.account.contract_address),
+        "Cartridge Controller account added to genesis."
+    );
+
     Ok(())
 }
 

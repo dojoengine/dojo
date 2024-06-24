@@ -8364,6 +8364,7 @@ dependencies = [
  "serde_json",
  "slot",
  "starknet",
+ "tracing",
 ]
 
 [[package]]
