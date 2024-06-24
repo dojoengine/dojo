@@ -7,6 +7,7 @@
   "world_address": "0x332b8ff41b1b026991fa9b7f0ec352909f8bc33416b65a80527edc988a9b082",
   "fact_registry_address": "0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb",
   "start_block": 0,
+  "skip_publishing_proof": true,
   "data_availability": {
     "Celestia": {
       "node_url": "http://localhost:26657",
