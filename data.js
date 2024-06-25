@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719024120665,
+  "lastUpdate": 1719276029091,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10225,6 +10225,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16783203,
             "range": "± 234145",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "79463be853eb309893dde946262359efbbecebde",
+          "message": "feat(katana): injects controller account in genesis config (#2089)",
+          "timestamp": "2024-06-25T08:28:41+08:00",
+          "tree_id": "22e6f50a9b93a1cdf7056aa0ceeee68b7768b0b5",
+          "url": "https://github.com/dojoengine/dojo/commit/79463be853eb309893dde946262359efbbecebde"
+        },
+        "date": 1719276027865,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16480240,
+            "range": "± 119011",
             "unit": "ns/iter"
           }
         ]
