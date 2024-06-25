@@ -137,7 +137,10 @@ lazy_static! {
     // Default account contract
     pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../../contracts/compiled/oz_account_080.json")).unwrap();
     pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/oz_account_080.json"));
+}
 
+#[cfg(feature = "controller")]
+lazy_static! {
     // Cartridge Controller account
     pub static ref CONTROLLER_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../../contracts/compiled/controller_CartridgeAccount.contract_class.json")).unwrap();
     pub static ref CONTROLLER_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/oz_account_080.json"));

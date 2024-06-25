@@ -25,7 +25,7 @@ use starknet::core::types::FromByteArrayError;
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
 };
-#[cfg(feature = "controller")]
+#[cfg(feature = "slot")]
 use super::constant::{
     CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH, CONTROLLER_ACCOUNT_CONTRACT,
     CONTROLLER_ACCOUNT_CONTRACT_CASM,
@@ -325,7 +325,7 @@ impl TryFrom<GenesisJson> for Genesis {
         let mut class_names: HashMap<String, FieldElement> = HashMap::new();
         let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
 
-        #[cfg(feature = "controller")]
+        #[cfg(feature = "slot")]
         // Katana on Slot uses custom genesis config, and due to some limitations that we've
         // encountered when declaring the controller account contract in the genesis
         // config, we've decided to include the controller account contract in the genesis
@@ -917,6 +917,15 @@ mod tests {
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
+            #[cfg(feature = "slot")]
+            (
+                CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                    compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap())),
+                },
+            ),
         ]);
 
         let expected_fee_token = FeeTokenConfig {
@@ -1137,7 +1146,7 @@ mod tests {
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
-            #[cfg(feature = "controller")]
+            #[cfg(feature = "slot")]
             (
                 CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                 GenesisClass {

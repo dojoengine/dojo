@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
-#[cfg(feature = "controller")]
+#[cfg(feature = "slot")]
 use constant::{
     CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH, CONTROLLER_ACCOUNT_CONTRACT,
     CONTROLLER_ACCOUNT_CONTRACT_CASM,
@@ -287,7 +287,7 @@ impl Default for Genesis {
                     compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                 },
             ),
-            #[cfg(feature = "controller")]
+            #[cfg(feature = "slot")]
             (
                 CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                 GenesisClass {
@@ -351,7 +351,7 @@ mod tests {
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
-            #[cfg(feature = "controller")]
+            #[cfg(feature = "slot")]
             (
                 CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                 GenesisClass {
@@ -495,7 +495,7 @@ mod tests {
         assert_eq!(actual_block.header.version, expected_block.header.version);
         assert_eq!(actual_block.body, expected_block.body);
 
-        if cfg!(feature = "controller") {
+        if cfg!(feature = "slot") {
             assert!(
                 actual_state_updates.declared_compiled_classes.len() == 4,
                 "should be 4 casm classes: udc, erc20, oz account, controller account"
@@ -589,7 +589,7 @@ mod tests {
             "The default oz account contract sierra class should be declared"
         );
 
-        #[cfg(feature = "controller")]
+        #[cfg(feature = "slot")]
         {
             assert_eq!(
                 actual_state_updates

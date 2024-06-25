@@ -31,8 +31,9 @@ starknet_api.workspace = true
 similar-asserts.workspace = true
 
 [features]
-default = [ "controller", "serde" ]
+default = [ "serde" ]
 
 controller = [  ]
 rpc = [  ]
 serde = [ "alloy-primitives/serde" ]
+slot = [ "controller" ]
