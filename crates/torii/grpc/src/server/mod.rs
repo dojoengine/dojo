@@ -330,7 +330,10 @@ impl DojoWorld {
                     .map_err(ParseError::FromByteSliceError)?)
             })
             .collect::<Result<Vec<_>, Error>>()?;
-        let keys_pattern = keys.join("/") + "/%";
+        let mut keys_pattern = keys.join("/");
+        if keys_clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
+            keys_pattern += "/%";
+        }
 
         // total count of rows that matches keys_pattern without limit and offset
         let count_query = format!(
@@ -421,7 +424,10 @@ impl DojoWorld {
                     .map_err(ParseError::FromByteSliceError)?)
             })
             .collect::<Result<Vec<_>, Error>>()?;
-        let keys_pattern = keys.join("/") + "/%";
+        let mut keys_pattern = keys.join("/");
+        if keys_clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
+            keys_pattern += "/%";
+        }
 
         let events_query = r#"
             SELECT keys, data, transaction_hash
