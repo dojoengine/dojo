@@ -25,6 +25,11 @@ use starknet::core::types::FromByteArrayError;
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
 };
+#[cfg(feature = "controller")]
+use super::constant::{
+    CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH, CONTROLLER_ACCOUNT_CONTRACT,
+    CONTROLLER_ACCOUNT_CONTRACT_CASM,
+};
 use super::constant::{
     DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
     DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
@@ -320,6 +325,20 @@ impl TryFrom<GenesisJson> for Genesis {
         let mut class_names: HashMap<String, FieldElement> = HashMap::new();
         let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
 
+        #[cfg(feature = "controller")]
+        // Katana on Slot uses custom genesis config, and due to some limitations that we've
+        // encountered when declaring the controller account contract in the genesis
+        // config, we've decided to include the controller account contract in the genesis
+        // config by default.
+        classes.insert(
+            CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+            GenesisClass {
+                casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten()?)),
+            },
+        );
+
         for entry in value.classes {
             let GenesisClassJson { class, class_hash, name } = entry;
 
@@ -513,9 +532,7 @@ impl TryFrom<GenesisJson> for Genesis {
                         // insert default account class to the classes map
                         e.insert(GenesisClass {
                             casm: Arc::new(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()),
-                            sierra: Some(Arc::new(
-                                DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap(),
-                            )),
+                            sierra: Some(Arc::new(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten()?)),
                             compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                         });
                     }

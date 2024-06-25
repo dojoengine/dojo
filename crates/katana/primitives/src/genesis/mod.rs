@@ -7,6 +7,11 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
+#[cfg(feature = "controller")]
+use constant::{
+    CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH, CONTROLLER_ACCOUNT_CONTRACT,
+    CONTROLLER_ACCOUNT_CONTRACT_CASM,
+};
 use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -280,6 +285,15 @@ impl Default for Genesis {
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                     casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
                     compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
+                },
+            ),
+            #[cfg(feature = "controller")]
+            (
+                CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
+                    compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
         ]);
