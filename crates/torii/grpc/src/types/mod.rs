@@ -196,7 +196,7 @@ impl TryFrom<proto::types::KeysClause> for KeysClause {
         let keys = value
             .keys
             .iter()
-            .map(|k| FieldElement::from_byte_slice_be(&k))
+            .map(|k| FieldElement::from_byte_slice_be(k))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Self { keys, pattern_matching: value.pattern_matching().into() })
