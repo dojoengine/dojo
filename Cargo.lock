@@ -8061,6 +8061,7 @@ dependencies = [
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
+ "katana-slot-controller",
  "serde_json",
  "shellexpand",
  "starknet_api",
@@ -8348,6 +8349,22 @@ dependencies = [
  "starknet",
  "tokio",
  "url",
+]
+
+[[package]]
+name = "katana-slot-controller"
+version = "0.7.2"
+dependencies = [
+ "account_sdk",
+ "alloy-primitives",
+ "anyhow",
+ "base64 0.22.1",
+ "coset",
+ "katana-primitives",
+ "serde_json",
+ "slot",
+ "starknet",
+ "tracing",
 ]
 
 [[package]]
@@ -11219,9 +11236,9 @@ dependencies = [
 
 [[package]]
 name = "redb"
-version = "2.1.1"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6dd20d3cdeb9c7d2366a0b16b93b35b75aec15309fbeb7ce477138c9f68c8c0"
+checksum = "ed7508e692a49b6b2290b56540384ccae9b1fb4d77065640b165835b56ffe3bb"
 dependencies = [
  "libc",
 ]
