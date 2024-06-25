@@ -241,6 +241,15 @@ pub fn compute_invoke_v3_tx_hash(
 /// Computes the hash of a L1 handler transaction
 /// from the fields involved in the computation,
 /// as felts values.
+///
+/// The [Starknet docs] seem to be different than how it's implemented by Starknet node client
+/// implementations - [Juno], [Pathfinder], and [Deoxys]. So, we follow those implementations
+/// instead.
+///
+/// [Juno]: https://github.com/NethermindEth/juno/blob/d9e64106a3a6d81d217d3c8baf28749f4f0bdd71/core/transaction.go#L561-L569
+/// [Pathfinder]: https://github.com/eqlabs/pathfinder/blob/677fd40fbae7b5b659bf169e56f055c59cbb3f52/crates/common/src/transaction.rs#L556
+/// [Deoxys]: https://github.com/KasarLabs/deoxys/blob/82c49acdaa1167bc8dc67a3f6ad3d6856c6c7e89/crates/primitives/transactions/src/compute_hash.rs#L142-L151
+/// [Starknet docs]: https://docs.starknet.io/architecture-and-concepts/network-architecture/messaging-mechanism/#hashing_l1-l2
 pub fn compute_l1_handler_tx_hash(
     version: FieldElement,
     contract_address: FieldElement,

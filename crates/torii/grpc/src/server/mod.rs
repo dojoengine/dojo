@@ -24,6 +24,7 @@ use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
+use subscriptions::event::EventManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
@@ -38,7 +39,9 @@ use self::subscriptions::event_message::EventMessageManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
 use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
-use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
+use crate::proto::world::{
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
+};
 use crate::proto::{self};
 use crate::types::ComparisonOperator;
 
@@ -57,6 +60,7 @@ pub struct DojoWorld {
     model_cache: Arc<ModelCache>,
     entity_manager: Arc<EntityManager>,
     event_message_manager: Arc<EventMessageManager>,
+    event_manager: Arc<EventManager>,
     state_diff_manager: Arc<StateDiffManager>,
 }
 
@@ -70,6 +74,7 @@ impl DojoWorld {
         let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let entity_manager = Arc::new(EntityManager::default());
         let event_message_manager = Arc::new(EventMessageManager::default());
+        let event_manager = Arc::new(EventManager::default());
         let state_diff_manager = Arc::new(StateDiffManager::default());
 
         tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
@@ -91,12 +96,15 @@ impl DojoWorld {
             Arc::clone(&model_cache),
         ));
 
+        tokio::task::spawn(subscriptions::event::Service::new(Arc::clone(&event_manager)));
+
         Self {
             pool,
             world_address,
             model_cache,
             entity_manager,
             event_message_manager,
+            event_manager,
             state_diff_manager,
         }
     }
@@ -307,7 +315,7 @@ impl DojoWorld {
                     return Ok("%".to_string());
                 }
                 Ok(FieldElement::from_byte_slice_be(bytes)
-                    .map(|felt| format!("{:#x}", felt))
+                    .map(|felt| format!("{felt:#x}"))
                     .map_err(ParseError::FromByteSliceError)?)
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -392,7 +400,10 @@ impl DojoWorld {
                 if bytes.is_empty() {
                     return Ok("%".to_string());
                 }
-                Ok(str::from_utf8(bytes).unwrap().to_string())
+
+                Ok(FieldElement::from_byte_slice_be(bytes)
+                    .map(|felt| format!("{felt:#x}"))
+                    .map_err(ParseError::FromByteSliceError)?)
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
@@ -736,6 +747,24 @@ impl DojoWorld {
         Ok(RetrieveEventsResponse { events })
     }
 
+    async fn subscribe_events(
+        &self,
+        clause: proto::types::EventKeysClause,
+    ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
+        self.event_manager
+            .add_subscriber(
+                clause
+                    .keys
+                    .iter()
+                    .map(|key| {
+                        FieldElement::from_byte_slice_be(key)
+                            .map_err(ParseError::FromByteSliceError)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+            )
+            .await
+    }
+
     fn map_row_to_entity(
         row: &SqliteRow,
         arrays_rows: &HashMap<String, Vec<SqliteRow>>,
@@ -761,14 +790,21 @@ impl DojoWorld {
     }
 }
 
-fn process_event_field(data: &str) -> Vec<Vec<u8>> {
-    data.trim_end_matches('/').split('/').map(|s| s.to_owned().into_bytes()).collect()
+fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
+    Ok(data
+        .trim_end_matches('/')
+        .split('/')
+        .map(|d| {
+            FieldElement::from_str(d).map_err(ParseError::FromStr).map(|f| f.to_bytes_be().to_vec())
+        })
+        .collect::<Result<Vec<_>, _>>()?)
 }
 
 fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Event, Error> {
-    let keys = process_event_field(&row.0);
-    let data = process_event_field(&row.1);
-    let transaction_hash = row.2.to_owned().into_bytes();
+    let keys = process_event_field(&row.0)?;
+    let data = process_event_field(&row.1)?;
+    let transaction_hash =
+        FieldElement::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
 
     Ok(proto::types::Event { keys, data, transaction_hash })
 }
@@ -778,23 +814,26 @@ type SubscribeModelsResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeModelsResponse, Status>> + Send>>;
 type SubscribeEntitiesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEntityResponse, Status>> + Send>>;
+type SubscribeEventsResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeEventsResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
     type SubscribeModelsStream = SubscribeModelsResponseStream;
     type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
     type SubscribeEventMessagesStream = SubscribeEntitiesResponseStream;
+    type SubscribeEventsStream = SubscribeEventsResponseStream;
 
     async fn world_metadata(
         &self,
         _request: Request<MetadataRequest>,
     ) -> Result<Response<MetadataResponse>, Status> {
-        let metadata = self.metadata().await.map_err(|e| match e {
+        let metadata = Some(self.metadata().await.map_err(|e| match e {
             Error::Sql(sqlx::Error::RowNotFound) => Status::not_found("World not found"),
             e => Status::internal(e.to_string()),
-        })?;
+        })?);
 
-        Ok(Response::new(MetadataResponse { metadata: Some(metadata) }))
+        Ok(Response::new(MetadataResponse { metadata }))
     }
 
     async fn subscribe_models(
@@ -894,6 +933,17 @@ impl proto::world::world_server::World for DojoWorld {
             self.retrieve_events(query).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(events))
+    }
+
+    async fn subscribe_events(
+        &self,
+        request: Request<proto::world::SubscribeEventsRequest>,
+    ) -> ServiceResult<Self::SubscribeEventsStream> {
+        let keys = request.into_inner().keys.unwrap_or_default();
+
+        let rx = self.subscribe_events(keys).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEventsStream))
     }
 }
 
