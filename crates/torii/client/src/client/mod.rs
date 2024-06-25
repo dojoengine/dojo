@@ -17,10 +17,10 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
-use torii_grpc::proto::world::RetrieveEntitiesResponse;
-use torii_grpc::types::schema::Entity;
-use torii_grpc::types::{EntityKeysClause, ModelKeysClause, Query};
+use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, ModelDiffsStreaming};
+use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
+use torii_grpc::types::schema::{Entity, SchemaError};
+use torii_grpc::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
 
@@ -164,7 +164,7 @@ impl Client {
 
     pub async fn on_starknet_event(
         &self,
-        keys: Option<Vec<FieldElement>>,
+        keys: Option<KeysClause>,
     ) -> Result<EventUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_events(keys).await?;
