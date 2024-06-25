@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719327224752,
+  "lastUpdate": 1719338424400,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10315,6 +10315,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16799805,
             "range": "± 247853",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "fabrobles92@gmail.com",
+            "name": "fab",
+            "username": "fabrobles92"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e87118db9bf5d9f4086d09e397637a1ad4eef703",
+          "message": "test(katana): messaging e2e test (#1925)\n\n* -Runner creation\r\n-L1 -> L2 Messaging\r\n\r\n* L2 -> L1 messaging\r\n\r\n* clippy and fmt\r\n\r\n* style\r\n\r\n* apply kari's cool formatting\r\n\r\n* fmt\r\n\r\n* Applying more change from Code review\r\n\r\n* tests\r\n\r\n* Delete debug from Sol! and not used B256\r\n\r\n* Merge remote-tracking branch 'origin/main' into katana/Messaging-Intregation-Testing\r\n\r\n* Cleaning cargo.lock\r\n\r\n* Add new option to Katnna  Runner Config\r\n\r\n* consume message and check msg fee\r\n\r\n* clippy and fmt\r\n\r\n* - Use alloy Anvil Binding Object to spawn an instance\r\n- Delete Manual created Anvil Runner object\r\n- Delete unnecesary libraries from Cargo.toml\r\n\r\n* Add step to install anvil in Dockerfile\r\n\r\n* Remove profile local from Anvil installation command\r\n\r\n* Delete step to install anvil\r\n\r\n* Point CI to devcontainer that has Anvil installed\r\n\r\n* Update Alloy\r\n\r\n* fix: fix test with pre-computed tx hash\r\n\r\n* ci: increment cores for clippy\r\n\r\n* ci: pre-build latest sozo to re-use in jobs\r\n\r\n* ci: fix missing dependency\r\n\r\n* ci: fix missing x permission\r\n\r\n* ci: remove unused cached to save time\r\n\r\n* restore lockfile\r\n\r\n* revert l1 handler tx hash computation changes\r\n\r\n* revert some changes\r\n\r\n* revert test case\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-25T11:48:32-06:00",
+          "tree_id": "b9e65fa97a359bbe2cfe445f34115eee03adfc89",
+          "url": "https://github.com/dojoengine/dojo/commit/e87118db9bf5d9f4086d09e397637a1ad4eef703"
+        },
+        "date": 1719338423744,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16745961,
+            "range": "± 270419",
             "unit": "ns/iter"
           }
         ]
