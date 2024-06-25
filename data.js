@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719320946338,
+  "lastUpdate": 1719327224752,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10285,6 +10285,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16696031,
             "range": "± 238229",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f6d721246c3fb9a7598fe1cb6591998f3d7094d5",
+          "message": "chore(torii-libp2p): use rev (#2104)",
+          "timestamp": "2024-06-25T10:42:00-04:00",
+          "tree_id": "f72d90b6acfaea159b3b86eebe6b321f2724525f",
+          "url": "https://github.com/dojoengine/dojo/commit/f6d721246c3fb9a7598fe1cb6591998f3d7094d5"
+        },
+        "date": 1719327224088,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16799805,
+            "range": "± 247853",
             "unit": "ns/iter"
           }
         ]
