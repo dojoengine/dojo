@@ -142,7 +142,7 @@ impl WorldClient {
     /// Subscribe to the events of a World.
     pub async fn subscribe_events(
         &mut self,
-        keys: Option<KeysClause>
+        keys: Option<KeysClause>,
     ) -> Result<EventUpdateStreaming, Error> {
         let keys = keys.map(|c| c.into());
 
