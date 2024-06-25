@@ -89,6 +89,12 @@ impl Service {
         for (idx, sub) in subs.subscribers.read().await.iter() {
             // if the key pattern doesnt match our subscribers key pattern, skip
             // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
+            if sub.keys.pattern_matching == PatternMatching::FixedLen
+                && keys.len() != sub.keys.keys.len()
+            {
+                continue;
+            }
+
             if !keys.iter().enumerate().all(|(idx, key)| {
                 // this is going to be None if our key pattern overflows the subscriber key pattern
                 // in this case we might want to list all events with the same
@@ -97,7 +103,6 @@ impl Service {
 
                 // if we have a key in the subscriber, it must match the key in the event
                 // unless its empty, which is a wildcard
-                // if we
                 match sub_key {
                     Some(sub_key) => {
                         if sub_key == &FieldElement::ZERO {
@@ -106,7 +111,10 @@ impl Service {
                             key == sub_key
                         }
                     }
-                    None => sub.keys.pattern_matching == PatternMatching::VariableLen,
+                    // we overflowed the subscriber key pattern
+                    // but we're in VariableLen pattern matching
+                    // so we should match all next keys
+                    None => true,
                 }
             }) {
                 continue;
