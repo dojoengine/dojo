@@ -430,7 +430,7 @@ impl<P: Provider + Sync> Engine<P> {
                     transaction_hash,
                     transaction,
                 )
-                .await?;
+                .await?
         }
 
         Ok(())
