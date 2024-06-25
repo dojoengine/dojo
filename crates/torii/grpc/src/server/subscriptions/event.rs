@@ -19,12 +19,13 @@ use tracing::{error, trace};
 
 use crate::proto;
 use crate::proto::world::SubscribeEventsResponse;
+use crate::types::{KeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event";
 
 pub struct EventSubscriber {
     /// Event keys that the subscriber is interested in
-    keys: Vec<FieldElement>,
+    keys: KeysClause,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeEventsResponse, tonic::Status>>,
 }
@@ -37,7 +38,7 @@ pub struct EventManager {
 impl EventManager {
     pub async fn add_subscriber(
         &self,
-        keys: Vec<FieldElement>,
+        keys: KeysClause,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
@@ -92,7 +93,7 @@ impl Service {
                 // this is going to be None if our key pattern overflows the subscriber key pattern
                 // in this case we might want to list all events with the same
                 // key selector so we can match them all
-                let sub_key = sub.keys.get(idx);
+                let sub_key = sub.keys.keys.get(idx);
 
                 // if we have a key in the subscriber, it must match the key in the event
                 // unless its empty, which is a wildcard
@@ -105,7 +106,7 @@ impl Service {
                             key == sub_key
                         }
                     }
-                    None => true,
+                    None => sub.keys.pattern_matching == PatternMatching::VariableLen,
                 }
             }) {
                 continue;

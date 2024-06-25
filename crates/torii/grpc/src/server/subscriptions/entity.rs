@@ -22,12 +22,13 @@ use tracing::{error, trace};
 
 use crate::proto;
 use crate::proto::world::SubscribeEntityResponse;
+use crate::types::{EntityKeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
 
 pub struct EntitiesSubscriber {
     /// Entity ids that the subscriber is interested in
-    keys: Option<proto::types::EntityKeysClause>,
+    keys: Option<EntityKeysClause>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
@@ -40,7 +41,7 @@ pub struct EntityManager {
 impl EntityManager {
     pub async fn add_subscriber(
         &self,
-        keys: Option<proto::types::EntityKeysClause>,
+        keys: Option<EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
@@ -105,50 +106,36 @@ impl Service {
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-            if let Some(proto::types::EntityKeysClause { clause_type: Some(clause) }) = &sub.keys {
-                match clause {
-                    proto::types::entity_keys_clause::ClauseType::HashedKeys(hashed_keys) => {
-                        let hashed_keys = hashed_keys
-                            .hashed_keys
-                            .iter()
-                            .map(|bytes| FieldElement::from_byte_slice_be(bytes))
-                            .collect::<Result<Vec<_>, _>>()
-                            .map_err(ParseError::FromByteSliceError)?;
-
-                        if !hashed_keys.contains(&hashed) {
-                            continue;
-                        }
-                    }
-                    proto::types::entity_keys_clause::ClauseType::Keys(clause) => {
-                        let sub_keys = clause
-                            .keys
-                            .iter()
-                            .map(|bytes| FieldElement::from_byte_slice_be(bytes))
-                            .collect::<Result<Vec<_>, _>>()
-                            .map_err(ParseError::FromByteSliceError)?;
-
-                        // if the key pattern doesnt match our subscribers key pattern, skip
-                        // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
-                        if !keys.iter().enumerate().all(|(idx, key)| {
-                            // this is going to be None if our key pattern overflows the subscriber
-                            // key pattern in this case we should skip
-                            let sub_key = sub_keys.get(idx);
-
-                            match sub_key {
-                                Some(sub_key) => {
-                                    if sub_key == &FieldElement::ZERO {
-                                        true
-                                    } else {
-                                        key == sub_key
-                                    }
-                                }
-                                None => false,
-                            }
-                        }) {
-                            continue;
-                        }
+            match &sub.keys {
+                Some(EntityKeysClause::HashedKeys(hashed_keys)) => {
+                    if !hashed_keys.contains(&hashed) {
+                        continue;
                     }
                 }
+                Some(EntityKeysClause::Keys(clause)) => {
+                    // if the key pattern doesnt match our subscribers key pattern, skip
+                    // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
+                    if !keys.iter().enumerate().all(|(idx, key)| {
+                        // this is going to be None if our key pattern overflows the subscriber
+                        // key pattern in this case we should skip
+                        let sub_key = clause.keys.get(idx);
+
+                        match sub_key {
+                            Some(sub_key) => {
+                                if sub_key == &FieldElement::ZERO {
+                                    true
+                                } else {
+                                    key == sub_key
+                                }
+                            }
+                            None => clause.pattern_matching == PatternMatching::VariableLen,
+                        }
+                    }) {
+                        continue;
+                    }
+                }
+                // if None, then we are interested in all entities
+                None => {}
             }
 
             let models_query = r#"

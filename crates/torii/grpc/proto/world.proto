@@ -83,7 +83,7 @@ message RetrieveEventsResponse {
 }
 
 message SubscribeEventsRequest {
-    types.EventKeysClause keys = 1;
+    types.KeysClause keys = 1;
 }
 
 message SubscribeEventsResponse {

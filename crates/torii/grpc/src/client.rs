@@ -6,7 +6,6 @@ use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{FromStrError, StateDiff, StateUpdate};
 use starknet_crypto::FieldElement;
 
-use crate::proto::types::EventKeysClause;
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
@@ -14,7 +13,7 @@ use crate::proto::world::{
     SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use crate::types::schema::{self, Entity, SchemaError};
-use crate::types::{EntityKeysClause, ModelKeysClause, Query};
+use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -143,11 +142,9 @@ impl WorldClient {
     /// Subscribe to the events of a World.
     pub async fn subscribe_events(
         &mut self,
-        keys: Option<Vec<FieldElement>>,
+        keys: Option<KeysClause>
     ) -> Result<EventUpdateStreaming, Error> {
-        let keys = keys.map(|keys| EventKeysClause {
-            keys: keys.iter().map(|key| key.to_bytes_be().to_vec()).collect(),
-        });
+        let keys = keys.map(|c| c.into());
 
         let stream = self
             .inner

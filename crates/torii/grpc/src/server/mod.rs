@@ -600,7 +600,7 @@ impl DojoWorld {
         &self,
         keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(keys).await
+        self.entity_manager.add_subscriber(keys.map(|keys| keys.try_into().unwrap())).await
     }
 
     async fn retrieve_entities(
@@ -677,7 +677,7 @@ impl DojoWorld {
         &self,
         keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.event_message_manager.add_subscriber(keys).await
+        self.event_message_manager.add_subscriber(keys.map(|keys| keys.try_into().unwrap())).await
     }
 
     async fn retrieve_event_messages(
@@ -763,20 +763,9 @@ impl DojoWorld {
 
     async fn subscribe_events(
         &self,
-        clause: proto::types::EventKeysClause,
+        clause: proto::types::KeysClause,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
-        self.event_manager
-            .add_subscriber(
-                clause
-                    .keys
-                    .iter()
-                    .map(|key| {
-                        FieldElement::from_byte_slice_be(key)
-                            .map_err(ParseError::FromByteSliceError)
-                    })
-                    .collect::<Result<Vec<_>, _>>()?,
-            )
-            .await
+        self.event_manager.add_subscriber(clause.try_into().unwrap()).await
     }
 
     fn map_row_to_entity(
