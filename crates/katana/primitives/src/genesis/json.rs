@@ -679,34 +679,9 @@ fn class_artifact_at_path(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeMap, HashMap};
-    use std::fs::File;
-    use std::io::BufReader;
-    use std::path::PathBuf;
-    use std::str::FromStr;
-
-    use alloy_primitives::U256;
     use starknet::macros::felt;
 
-    use super::{from_base64, GenesisAccountJson, GenesisClassJson, GenesisJson};
-    use crate::block::GasPrices;
-    use crate::genesis::allocation::{
-        DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
-    };
-    use crate::genesis::constant::{
-        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
-        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
-        DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-        DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-        DEFAULT_OZ_ACCOUNT_CONTRACT, DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
-        DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
-        DEFAULT_UDC_ADDRESS,
-    };
-    use crate::genesis::json::{to_base64, ClassNameOrHash};
-    use crate::genesis::{
-        ContractAddress, FeeTokenConfig, Genesis, GenesisAllocation, GenesisClass,
-        UniversalDeployerConfig,
-    };
+    use super::*;
 
     #[test]
     fn deserialize_from_json() {
@@ -1160,6 +1135,15 @@ mod tests {
                     compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                     casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                },
+            ),
+            #[cfg(feature = "controller")]
+            (
+                CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                    compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap())),
                 },
             ),
         ]);
