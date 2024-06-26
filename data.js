@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719338424400,
+  "lastUpdate": 1719371869482,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10345,6 +10345,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16745961,
             "range": "± 270419",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "badeeba47ab2e3b5333079a639a71c67f4f1fc06",
+          "message": "fix(torii): ensure torii doesn't stop on model processor fail (#2093)\n\n* fix: ensure torii does not stop on fail process\r\n\r\n* fix: update lock files\r\n\r\n* fix: ensure block and transaction processors panic\r\n\r\n* fix: use same convention as in the processor block",
+          "timestamp": "2024-06-25T21:05:50-06:00",
+          "tree_id": "e463a57dbc8f9435dacacc99a6fb6aede15a30a6",
+          "url": "https://github.com/dojoengine/dojo/commit/badeeba47ab2e3b5333079a639a71c67f4f1fc06"
+        },
+        "date": 1719371868241,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16681272,
+            "range": "± 64718",
             "unit": "ns/iter"
           }
         ]
