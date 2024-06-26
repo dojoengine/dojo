@@ -13,7 +13,7 @@ use dojo_world::manifest::utils::{compute_bytearray_hash, compute_model_selector
 use dojo_world::manifest::Member;
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
-use crate::utils::is_namespace_valid;
+use crate::utils::is_name_valid;
 
 const DEFAULT_MODEL_VERSION: u8 = 1;
 
@@ -204,20 +204,21 @@ pub fn handle_model_struct(
         Option::None => package_id,
     };
 
-    if !is_namespace_valid(&model_namespace) {
-        return (
-            RewriteNode::empty(),
-            vec![PluginDiagnostic {
-                stable_ptr: struct_ast.name(db).stable_ptr().0,
-                message: format!(
-                    "The model namespace '{}' can only contain lower case characters (a-z) and \
-                     underscore (_)",
-                    &model_namespace
-                )
-                .to_string(),
-                severity: Severity::Error,
-            }],
-        );
+    for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
+        if !is_name_valid(value) {
+            return (
+                RewriteNode::empty(),
+                vec![PluginDiagnostic {
+                    stable_ptr: struct_ast.name(db).stable_ptr().0,
+                    message: format!(
+                        "The model {id} '{value}' can only contain characters (a-z/A-Z), numbers \
+                         (0-9) and underscore (_)"
+                    )
+                    .to_string(),
+                    severity: Severity::Error,
+                }],
+            );
+        }
     }
 
     let model_name_hash = compute_bytearray_hash(&model_name);

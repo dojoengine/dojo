@@ -7,6 +7,7 @@ mod database;
 mod database_test;
 mod interfaces;
 mod model;
+mod system;
 mod packing;
 #[cfg(test)]
 mod packing_test;

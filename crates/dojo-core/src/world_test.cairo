@@ -21,7 +21,7 @@ use dojo::config::component::Config::{
     DifferProgramHashUpdate, MergerProgramHashUpdate, FactsRegistryUpdate
 };
 use dojo::model::Model;
-use dojo::benchmarks::{Character, GasCounterImpl};
+use dojo::benchmarks::{Character, character, GasCounterImpl};
 
 #[derive(Introspect, Copy, Drop, Serde)]
 enum OneEnum {
@@ -801,7 +801,7 @@ fn bench_execute() {
 
 #[test]
 fn bench_execute_complex() {
-    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH, character::TEST_CLASS_HASH],);
     let bar_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };

@@ -16,7 +16,6 @@ trait Model<T> {
     fn instance_selector(self: @T) -> felt252;
 
     /// Returns the namespace of the model as it was written in the `dojo::model` attribute.
-    /// only lower case characters (a-z) and underscore (_) are allowed.
     fn namespace() -> ByteArray;
 
     /// Returns the model namespace selector built from its namespace.

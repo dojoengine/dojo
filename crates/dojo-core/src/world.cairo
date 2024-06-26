@@ -57,22 +57,6 @@ trait IWorldProvider<T> {
     fn world(self: @T) -> IWorldDispatcher;
 }
 
-#[starknet::interface]
-trait IDojoResourceProvider<T> {
-    fn dojo_resource(self: @T) -> felt252;
-}
-
-#[starknet::interface]
-trait INamespace<T> {
-    /// Returns the namespace of a contract.
-    /// only lower case characters (a-z) and underscore (_) are allowed.
-    fn namespace(self: @T) -> ByteArray;
-
-    /// Returns the namespace selector built from its name.
-    /// namespace_selector = hash(namespace_name)
-    fn namespace_selector(self: @T) -> felt252;
-}
-
 mod Errors {
     const METADATA_DESER: felt252 = 'metadata deser error';
     const NOT_OWNER: felt252 = 'not owner';
@@ -114,7 +98,7 @@ mod world {
     use dojo::database;
     use dojo::database::introspect::{Introspect, Layout, FieldLayout};
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
-    use super::{INamespaceDispatcher, INamespaceDispatcherImpl};
+    use dojo::system::{ISystemDispatcher, ISystemDispatcherTrait};
     use dojo::config::component::Config;
     use dojo::model::{Model, IModelDispatcher, IModelDispatcherImpl};
     use dojo::interfaces::{
@@ -665,9 +649,9 @@ mod world {
             upgradeable_dispatcher.upgrade(class_hash);
 
             // namespace checking
-            let namespace_dispatcher = INamespaceDispatcher { contract_address };
-            let namespace = namespace_dispatcher.namespace();
-            let namespace_selector = namespace_dispatcher.namespace_selector();
+            let dispatcher = ISystemDispatcher { contract_address };
+            let namespace = dispatcher.namespace();
+            let namespace_selector = dispatcher.namespace_selector();
             assert(
                 self._is_namespace_registered(namespace_selector), Errors::NAMESPACE_NOT_REGISTERED
             );
