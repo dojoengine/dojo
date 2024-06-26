@@ -119,6 +119,7 @@ async fn test_entities_queries() {
             KeysClause {
                 keys: vec![account.address().to_bytes_be().to_vec()],
                 pattern_matching: 0,
+                model: None,
             },
             Some(1),
             None,

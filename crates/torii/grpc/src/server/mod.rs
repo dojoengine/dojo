@@ -338,14 +338,24 @@ impl DojoWorld {
         keys_pattern += "/$";
 
         // total count of rows that matches keys_pattern without limit and offset
-        let count_query = format!(
+        let mut count_query = format!(
             r#"
             SELECT count(*)
             FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {table}.keys REGEXP ?
         "#
         );
+
+        if let Some(model) = &keys_clause.model {
+            count_query += &format!(
+                r#"
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {model_relation_table}.model_id = '{:#x}'
+            "#,
+                get_selector_from_name(&model).map_err(ParseError::NonAsciiName)?
+            );
+        }
+
         let total_count =
             sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
@@ -353,7 +363,7 @@ impl DojoWorld {
             return Ok((Vec::new(), 0));
         }
 
-        let models_query = format!(
+        let mut models_query = format!(
             r#"
             SELECT group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
@@ -362,6 +372,16 @@ impl DojoWorld {
             GROUP BY {table}.id
         "#
         );
+        if let Some(model) = &keys_clause.model {
+            models_query += &format!(
+                r#"
+                HAVING INSTR(model_ids, '{:#x}') > 0
+            "#,
+                get_selector_from_name(&model).map_err(ParseError::NonAsciiName)?
+            );
+        }
+
+
         let (models_str,): (String,) =
             sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
@@ -392,7 +412,7 @@ impl DojoWorld {
             .bind(offset)
             .fetch_all(&self.pool)
             .await?;
-        let mut arrays_rows = HashMap::new();
+        let mut arrays_rows: HashMap<String, Vec<SqliteRow>> = HashMap::new();
         for (name, query) in arrays_queries {
             let rows = sqlx::query(&query).bind(&keys_pattern).fetch_all(&self.pool).await?;
             arrays_rows.insert(name, rows);
