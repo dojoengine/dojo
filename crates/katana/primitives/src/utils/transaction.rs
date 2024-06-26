@@ -1,49 +1,26 @@
 use alloy_primitives::B256;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{DataAvailabilityMode, EthAddress, MsgToL1, MsgToL2, ResourceBounds};
+use starknet::macros::{felt, short_string};
 use starknet_crypto::poseidon_hash_many;
 
 use crate::FieldElement;
 
 /// 2^ 128
-const QUERY_VERSION_OFFSET: FieldElement = FieldElement::from_mont([
-    18446744073700081665,
-    17407,
-    18446744073709551584,
-    576460752142434320,
-]);
+const QUERY_VERSION_OFFSET: FieldElement =
+    FieldElement::from_raw([18446744073700081665, 17407, 18446744073709551584, 576460752142434320]);
 
 /// Cairo string for "invoke"
-const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
-    18443034532770911073,
-    18446744073709551615,
-    18446744073709551615,
-    513398556346534256,
-]);
+const PREFIX_INVOKE: FieldElement = short_string!("invoke");
 
 /// Cairo string for "declare"
-const PREFIX_DECLARE: FieldElement = FieldElement::from_mont([
-    17542456862011667323,
-    18446744073709551615,
-    18446744073709551615,
-    191557713328401194,
-]);
+const PREFIX_DECLARE: FieldElement = short_string!("declare");
 
 /// Cairo string for "deploy_account"
-const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
-    3350261884043292318,
-    18443211694809419988,
-    18446744073709551615,
-    461298303000467581,
-]);
+const PREFIX_DEPLOY_ACCOUNT: FieldElement = short_string!("deploy_account");
 
 /// Cairo string for "l1_handler"
-const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_mont([
-    1365666230910873368,
-    18446744073708665300,
-    18446744073709551615,
-    157895833347907735,
-]);
+const PREFIX_L1_HANDLER: FieldElement = short_string!("l1_handler");
 
 /// Compute the hash of a V1 DeployAccount transaction.
 #[allow(clippy::too_many_arguments)]

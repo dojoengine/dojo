@@ -1,6 +1,9 @@
+use std::any::type_name;
+
 use crypto_bigint::{Encoding, U256};
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{FieldElement, ValueOutOfRangeError};
+use starknet::core::types::Felt;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
@@ -30,11 +33,11 @@ pub enum Primitive {
     U256(Option<U256>),
     USize(Option<u32>),
     Bool(Option<bool>),
-    Felt252(Option<FieldElement>),
+    Felt252(Option<Felt>),
     #[strum(serialize = "ClassHash")]
-    ClassHash(Option<FieldElement>),
+    ClassHash(Option<Felt>),
     #[strum(serialize = "ContractAddress")]
-    ContractAddress(Option<FieldElement>),
+    ContractAddress(Option<Felt>),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -47,8 +50,8 @@ pub enum PrimitiveError {
     UnsupportedType,
     #[error("Set value type mismatch")]
     TypeMismatch,
-    #[error(transparent)]
-    ValueOutOfRange(#[from] ValueOutOfRangeError),
+    #[error("Felt value ({value:#x}) out of range for {r#type}")]
+    ValueOutOfRange { value: Felt, r#type: &'static str },
     #[error(transparent)]
     CairoSerde(#[from] cainome::cairo_serde::Error),
     #[error(transparent)]
@@ -101,9 +104,9 @@ impl Primitive {
     as_primitive!(as_u256, U256, U256);
     as_primitive!(as_bool, Bool, bool);
     as_primitive!(as_usize, USize, u32);
-    as_primitive!(as_felt252, Felt252, FieldElement);
-    as_primitive!(as_class_hash, ClassHash, FieldElement);
-    as_primitive!(as_contract_address, ContractAddress, FieldElement);
+    as_primitive!(as_felt252, Felt252, Felt);
+    as_primitive!(as_class_hash, ClassHash, Felt);
+    as_primitive!(as_contract_address, ContractAddress, Felt);
 
     set_primitive!(set_u8, U8, u8);
     set_primitive!(set_u16, U16, u16);
@@ -113,9 +116,9 @@ impl Primitive {
     set_primitive!(set_u256, U256, U256);
     set_primitive!(set_bool, Bool, bool);
     set_primitive!(set_usize, USize, u32);
-    set_primitive!(set_felt252, Felt252, FieldElement);
-    set_primitive!(set_class_hash, ClassHash, FieldElement);
-    set_primitive!(set_contract_address, ContractAddress, FieldElement);
+    set_primitive!(set_felt252, Felt252, Felt);
+    set_primitive!(set_class_hash, ClassHash, Felt);
+    set_primitive!(set_contract_address, ContractAddress, Felt);
 
     pub fn to_numeric(&self) -> usize {
         match self {
@@ -189,41 +192,65 @@ impl Primitive {
         }
     }
 
-    pub fn deserialize(&mut self, felts: &mut Vec<FieldElement>) -> Result<(), PrimitiveError> {
+    pub fn deserialize(&mut self, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
         if felts.is_empty() {
             return Err(PrimitiveError::MissingFieldElement);
         }
 
         match self {
             Primitive::U8(ref mut value) => {
-                *value = Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-                Ok(())
+                let felt = felts.remove(0);
+                *value = Some(felt.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<u8>(),
+                    value: felt,
+                })?);
             }
+
             Primitive::U16(ref mut value) => {
-                *value = Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-                Ok(())
+                let felt = felts.remove(0);
+                *value = Some(felt.to_u16().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<u16>(),
+                    value: felt,
+                })?);
             }
+
             Primitive::U32(ref mut value) => {
-                *value = Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-                Ok(())
+                let felt = felts.remove(0);
+                *value = Some(felt.to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<u32>(),
+                    value: felt,
+                })?);
             }
+
             Primitive::U64(ref mut value) => {
-                *value = Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-                Ok(())
+                let felt = felts.remove(0);
+                *value = Some(felt.to_u64().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<u64>(),
+                    value: felt,
+                })?);
             }
+
             Primitive::USize(ref mut value) => {
-                *value = Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-                Ok(())
+                let felt = felts.remove(0);
+                *value = Some(felt.to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<u32>(),
+                    value: felt,
+                })?);
             }
+
             Primitive::Bool(ref mut value) => {
                 let raw = felts.remove(0);
-                *value = Some(raw == FieldElement::ONE);
-                Ok(())
+                *value = Some(raw == Felt::ONE);
             }
+
             Primitive::U128(ref mut value) => {
-                *value = Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-                Ok(())
+                let felt = felts.remove(0);
+                *value = Some(felt.to_u128().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<u128>(),
+                    value: felt,
+                })?);
             }
+
             Primitive::U256(ref mut value) => {
                 if felts.len() < 2 {
                     return Err(PrimitiveError::NotEnoughFieldElements);
@@ -236,45 +263,46 @@ impl Primitive {
                 bytes[16..].copy_from_slice(&value0_bytes[16..]);
                 bytes[..16].copy_from_slice(&value1_bytes[16..]);
                 *value = Some(U256::from_be_bytes(bytes));
-                Ok(())
             }
+
             Primitive::ContractAddress(ref mut value) => {
                 *value = Some(felts.remove(0));
-                Ok(())
             }
+
             Primitive::ClassHash(ref mut value) => {
                 *value = Some(felts.remove(0));
-                Ok(())
             }
+
             Primitive::Felt252(ref mut value) => {
                 *value = Some(felts.remove(0));
-                Ok(())
             }
         }
+
+        Ok(())
     }
 
-    pub fn serialize(&self) -> Result<Vec<FieldElement>, PrimitiveError> {
+    pub fn serialize(&self) -> Result<Vec<Felt>, PrimitiveError> {
         match self {
             Primitive::U8(value) => value
-                .map(|v| Ok(vec![FieldElement::from(v)]))
+                .map(|v| Ok(vec![Felt::from(v)]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U16(value) => value
-                .map(|v| Ok(vec![FieldElement::from(v)]))
+                .map(|v| Ok(vec![Felt::from(v)]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U32(value) => value
-                .map(|v| Ok(vec![FieldElement::from(v)]))
+                .map(|v| Ok(vec![Felt::from(v)]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U64(value) => value
-                .map(|v| Ok(vec![FieldElement::from(v)]))
+                .map(|v| Ok(vec![Felt::from(v)]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::USize(value) => value
-                .map(|v| Ok(vec![FieldElement::from(v)]))
+                .map(|v| Ok(vec![Felt::from(v)]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::Bool(value) => value
-                .map(|v| Ok(vec![if v { FieldElement::ONE } else { FieldElement::ZERO }]))
+                .map(|v| Ok(vec![if v { Felt::ONE } else { Felt::ZERO }]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U128(value) => value
-                .map(|v| Ok(vec![FieldElement::from(v)]))
+                .map(|v| Ok(vec![Felt::from(v)]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U256(value) => value
                 .map(|v| {
@@ -285,8 +313,8 @@ impl Primitive {
                     let mut value1_array = [0u8; 32];
                     value0_array[16..].copy_from_slice(value0_slice);
                     value1_array[16..].copy_from_slice(value1_slice);
-                    let value0 = FieldElement::from_bytes_be(&value0_array).unwrap();
-                    let value1 = FieldElement::from_bytes_be(&value1_array).unwrap();
+                    let value0 = Felt::from_bytes_be(&value0_array);
+                    let value1 = Felt::from_bytes_be(&value1_array);
                     Ok(vec![value0, value1])
                 })
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
@@ -308,7 +336,7 @@ mod tests {
     use std::str::FromStr;
 
     use crypto_bigint::U256;
-    use starknet::core::types::FieldElement;
+    use starknet::core::types::Felt;
 
     use super::Primitive;
 
@@ -327,8 +355,8 @@ mod tests {
         assert_eq!(
             serialized,
             vec![
-                FieldElement::from_str("0xccccccccccccccccdddddddddddddddd").unwrap(),
-                FieldElement::from_str("0xaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb").unwrap()
+                Felt::from_str("0xccccccccccccccccdddddddddddddddd").unwrap(),
+                Felt::from_str("0xaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb").unwrap()
             ]
         );
         assert_eq!(deserialized, primitive)
@@ -361,13 +389,13 @@ mod tests {
         primitive.set_bool(Some(true)).unwrap();
         assert_eq!(primitive.as_bool(), Some(true));
         let mut primitive = Primitive::Felt252(None);
-        primitive.set_felt252(Some(FieldElement::from(1u128))).unwrap();
-        assert_eq!(primitive.as_felt252(), Some(FieldElement::from(1u128)));
+        primitive.set_felt252(Some(Felt::from(1u128))).unwrap();
+        assert_eq!(primitive.as_felt252(), Some(Felt::from(1u128)));
         let mut primitive = Primitive::ClassHash(None);
-        primitive.set_class_hash(Some(FieldElement::from(1u128))).unwrap();
-        assert_eq!(primitive.as_class_hash(), Some(FieldElement::from(1u128)));
+        primitive.set_class_hash(Some(Felt::from(1u128))).unwrap();
+        assert_eq!(primitive.as_class_hash(), Some(Felt::from(1u128)));
         let mut primitive = Primitive::ContractAddress(None);
-        primitive.set_contract_address(Some(FieldElement::from(1u128))).unwrap();
-        assert_eq!(primitive.as_contract_address(), Some(FieldElement::from(1u128)));
+        primitive.set_contract_address(Some(Felt::from(1u128))).unwrap();
+        assert_eq!(primitive.as_contract_address(), Some(Felt::from(1u128)));
     }
 }

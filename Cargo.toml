@@ -56,7 +56,8 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "ec18eea5", features = [ "abigen-rs" ] }
+# cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "ec18eea5", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", branch = "bump-starknet-rs", features = [ "abigen-rs" ] }
 common = { path = "crates/common" }
 
 # metrics
@@ -179,7 +180,7 @@ serde_with = "2.3"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
-starknet = "0.10.0"
+starknet = "0.11.0"
 starknet-crypto = "0.6.2"
 starknet_api = "0.11.0"
 strum = "0.25"
@@ -233,3 +234,13 @@ alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e437
 alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
 alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
 alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
+
+# Remove this patch once `starknet-rs` has been updated to use a version of `starknet-types-core` which includes the specified rev.
+# This specific rev is to implement `FromStr` for `Felt`
+starknet-types-core = { git = "https://github.com/starknet-io/types-rs", rev = "d3d77a5" }
+
+# Remove this patch once the following PR is merged: <https://github.com/xJonathanLEI/starknet-rs/pull/615>
+#
+# To enable std feature on `starknet-types-core`.
+# To re-export the entire `felt` module from `starknet-types-core`.
+starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }

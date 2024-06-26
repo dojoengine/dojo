@@ -17,4 +17,4 @@ pub mod conversion;
 pub mod state;
 pub mod utils;
 
-pub type FieldElement = starknet::core::types::FieldElement;
+pub type FieldElement = starknet::core::types::Felt;

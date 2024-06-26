@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 use super::{Declarable, MigrationType, StateDiff};
 
@@ -10,9 +10,9 @@ use super::{Declarable, MigrationType, StateDiff};
 #[derive(Debug, Default, Clone)]
 pub struct ClassDiff {
     pub name: String,
-    pub local_class_hash: FieldElement,
-    pub original_class_hash: FieldElement,
-    pub remote_class_hash: Option<FieldElement>,
+    pub local_class_hash: Felt,
+    pub original_class_hash: Felt,
+    pub remote_class_hash: Option<Felt>,
 }
 
 impl StateDiff for ClassDiff {
