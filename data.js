@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719416797826,
+  "lastUpdate": 1719425866164,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10405,6 +10405,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16810209,
             "range": "± 193068",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b04c0d789977ecce3503559540dc4bfd62dc45e8",
+          "message": "feat(torii-core): add entities deletions to susbcription broker (#2106)\n\n* feat(torii-core): add entities deletions to susbcription broker\r\n\r\n* fmt\r\n\r\n* chore: return empty entities when count 0",
+          "timestamp": "2024-06-26T14:05:38-04:00",
+          "tree_id": "e46e5fa939535d02f1d325a08fcd86ce497a4cc9",
+          "url": "https://github.com/dojoengine/dojo/commit/b04c0d789977ecce3503559540dc4bfd62dc45e8"
+        },
+        "date": 1719425865641,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16664101,
+            "range": "± 251961",
             "unit": "ns/iter"
           }
         ]
