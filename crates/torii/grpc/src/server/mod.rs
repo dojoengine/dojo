@@ -335,8 +335,6 @@ impl DojoWorld {
             keys_pattern += "%";
         }
 
-        println!("keys_pattern: {}", keys_pattern);
-
         // total count of rows that matches keys_pattern without limit and offset
         let count_query = format!(
             r#"
