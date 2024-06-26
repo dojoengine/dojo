@@ -27,8 +27,8 @@ use super::allocation::{
 };
 #[cfg(feature = "slot")]
 use super::constant::{
-    CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH, CONTROLLER_ACCOUNT_CONTRACT,
-    CONTROLLER_ACCOUNT_CONTRACT_CASM,
+    CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CASM,
+    CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
 };
 use super::constant::{
     DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
@@ -330,10 +330,10 @@ impl TryFrom<GenesisJson> for Genesis {
         // Adding this by default so that we can support mounting the genesis file from k8s
         // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
         classes.insert(
-            CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+            CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
             GenesisClass {
                 casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
-                compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                 sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten()?)),
             },
         );
@@ -918,10 +918,10 @@ mod tests {
             ),
             #[cfg(feature = "slot")]
             (
-                CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                 GenesisClass {
                     casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
-                    compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                     sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap())),
                 },
             ),
@@ -1147,10 +1147,10 @@ mod tests {
             ),
             #[cfg(feature = "slot")]
             (
-                CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                 GenesisClass {
                     casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
-                    compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                     sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap())),
                 },
             ),

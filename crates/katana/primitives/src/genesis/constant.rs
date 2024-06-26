@@ -122,7 +122,7 @@ pub const DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash =
         190499602541245794,
     ]);
 
-pub const CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = felt!("0xCC");
+pub const CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = felt!("0xCC");
 
 // Pre-compiled contract classes
 lazy_static! {

@@ -9,7 +9,7 @@ use anyhow::Result;
 use coset::CoseKey;
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::{GenesisAllocation, GenesisContractAlloc};
-use katana_primitives::genesis::constant::CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH;
+use katana_primitives::genesis::constant::CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::FieldElement;
 use slot::credential::Credentials;
@@ -46,7 +46,7 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
         let account = GenesisContractAlloc {
             nonce: None,
             balance: Some(U256::from(0xfffffffffffffffu128)),
-            class_hash: Some(CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+            class_hash: Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
             storage: Some(get_contract_storage(credential_id, public_key, SignerType::Webauthn)?),
         };
 
@@ -200,7 +200,7 @@ mod tests {
 
         assert!(genesis.allocations.contains_key(&address));
         assert_eq!(allocation.balance(), Some(U256::from(0xfffffffffffffffu128)));
-        assert_eq!(allocation.class_hash(), Some(CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH));
+        assert_eq!(allocation.class_hash(), Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH));
     }
 
     #[test]

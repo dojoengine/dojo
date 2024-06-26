@@ -9,8 +9,8 @@ use std::sync::Arc;
 use alloy_primitives::U256;
 #[cfg(feature = "slot")]
 use constant::{
-    CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH, CONTROLLER_ACCOUNT_CONTRACT,
-    CONTROLLER_ACCOUNT_CONTRACT_CASM,
+    CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CASM,
+    CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
 };
 use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -289,10 +289,10 @@ impl Default for Genesis {
             ),
             #[cfg(feature = "slot")]
             (
-                CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                 GenesisClass {
                     casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
-                    compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                     sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
@@ -353,10 +353,10 @@ mod tests {
             ),
             #[cfg(feature = "slot")]
             (
-                CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                 GenesisClass {
                     casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
-                    compiled_class_hash: CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
                     sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
@@ -595,15 +595,15 @@ mod tests {
                 actual_state_updates
                     .state_updates
                     .declared_classes
-                    .get(&CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
-                Some(&CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
                 "The controller account class should be declared"
             );
 
             assert_eq!(
                 actual_state_updates
                     .declared_compiled_classes
-                    .get(&CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
                 Some(&CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
                 "The controller account contract casm class should be declared"
             );
@@ -611,7 +611,7 @@ mod tests {
             assert_eq!(
                 actual_state_updates
                     .declared_sierra_classes
-                    .get(&CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
                 Some(&CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
                 "The controller account contract sierra class should be declared"
             );
