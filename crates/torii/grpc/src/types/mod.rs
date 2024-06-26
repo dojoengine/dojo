@@ -45,6 +45,7 @@ pub struct ModelKeysClause {
 pub struct KeysClause {
     pub keys: Vec<FieldElement>,
     pub pattern_matching: PatternMatching,
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -185,6 +186,7 @@ impl From<KeysClause> for proto::types::KeysClause {
         Self {
             keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect(),
             pattern_matching: value.pattern_matching as i32,
+            model: value.model,
         }
     }
 }
@@ -199,7 +201,7 @@ impl TryFrom<proto::types::KeysClause> for KeysClause {
             .map(|k| FieldElement::from_byte_slice_be(k))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Self { keys, pattern_matching: value.pattern_matching().into() })
+        Ok(Self { keys, pattern_matching: value.pattern_matching().into(), model: value.model })
     }
 }
 

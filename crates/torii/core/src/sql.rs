@@ -228,13 +228,15 @@ impl Sql {
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, event_id=EXCLUDED.event_id RETURNING \
                                *";
-        let event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
+        let mut event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
             .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
+
+        event_message_updated.updated_model = Some(entity.clone());
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(

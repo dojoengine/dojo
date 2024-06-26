@@ -113,6 +113,16 @@ impl Service {
                     }
                 }
                 Some(EntityKeysClause::Keys(clause)) => {
+                    // if we have a model clause, then we need to check that the entity
+                    // has an updated model and that the model name matches the clause
+                    if let Some(model) = &clause.model {
+                        if let Some(updated_model) = &entity.updated_model {
+                            if updated_model.name() != model.clone() {
+                                continue;
+                            }
+                        }
+                    }
+
                     // if the key pattern doesnt match our subscribers key pattern, skip
                     // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
                     if clause.pattern_matching == PatternMatching::FixedLen
@@ -145,6 +155,21 @@ impl Service {
                 }
                 // if None, then we are interested in all entities
                 None => {}
+            }
+
+            if entity.updated_model.is_none() {
+                let resp = proto::world::SubscribeEntityResponse {
+                    entity: Some(proto::types::Entity {
+                        hashed_keys: hashed.to_bytes_be().to_vec(),
+                        models: vec![],
+                    }),
+                };
+
+                if sub.sender.send(Ok(resp)).await.is_err() {
+                    closed_stream.push(*idx);
+                }
+
+                continue;
             }
 
             let models_query = r#"

@@ -114,6 +114,7 @@ message EntityKeysClause {
 message KeysClause {
     repeated bytes keys = 1;
     PatternMatching pattern_matching = 2;
+    optional string model = 3;
 }
 
 message HashedKeysClause {
