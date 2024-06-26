@@ -214,7 +214,8 @@ fn evaluate_contracts_to_migrate(
     let mut comps_to_migrate = vec![];
 
     for c in contracts {
-        let resource_identifier = crate::utils::get_full_world_element_name(&c.namespace, &c.name);
+        let resource_identifier =
+            crate::manifest::utils::get_full_world_element_name(&c.namespace, &c.name);
         metadata.insert(resource_identifier, MigrationMetadata::Contract(c.clone()));
         match c.remote_class_hash {
             Some(remote) if remote == c.local_class_hash && !world_contract_will_migrate => {

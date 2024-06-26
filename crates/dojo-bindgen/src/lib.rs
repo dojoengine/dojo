@@ -7,7 +7,7 @@ use cainome::parser::{AbiParser, TokenizedAbi};
 use camino::Utf8PathBuf;
 use dojo_world::manifest::BaseManifest;
 pub mod error;
-use dojo_world::utils::get_full_world_element_name;
+use dojo_world::manifest::utils::get_full_world_element_name;
 use error::BindgenResult;
 
 mod plugins;

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use dojo_world::contracts::{cairo_utils, WorldContract};
+use dojo_world::manifest::utils::get_full_world_element_name;
 use dojo_world::manifest::BaseManifest;
 use dojo_world::migration::TxnConfig;
-use dojo_world::utils::get_full_world_element_name;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;

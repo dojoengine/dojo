@@ -17,13 +17,13 @@ use super::{
     OverlayManifest,
 };
 use crate::contracts::world::test::deploy_world;
+use crate::manifest::utils::get_manifest_name;
 use crate::manifest::{
     parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, OverlayClass,
     OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
 };
 use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::world::WorldDiff;
-use crate::utils::get_manifest_name;
 
 #[tokio::test]
 async fn manifest_from_remote_throw_error_on_not_deployed() {

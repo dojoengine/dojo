@@ -15,7 +15,7 @@ use starknet::providers::{Provider, ProviderError};
 
 use super::abi::world::Layout;
 use crate::contracts::WorldContractReader;
-use crate::utils::compute_model_selector_from_names;
+use crate::manifest::utils::compute_model_selector_from_names;
 
 #[cfg(test)]
 #[path = "model_test.rs"]

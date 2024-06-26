@@ -9,10 +9,10 @@ use topological_sort::TopologicalSort;
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
+use crate::manifest::utils::split_full_world_element_name;
 use crate::manifest::{
     BaseManifest, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
 };
-use crate::utils::split_full_world_element_name;
 
 #[cfg(test)]
 #[path = "world_test.rs"]

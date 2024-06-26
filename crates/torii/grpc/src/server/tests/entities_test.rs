@@ -59,7 +59,7 @@ async fn test_entities_queries() {
         &default_namespace,
     )
     .unwrap();
-    migration.resolve_variable(migration.world_address().unwrap(), &default_namespace).unwrap();
+    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     dbg!(&migration);
 

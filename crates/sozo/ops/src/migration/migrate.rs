@@ -5,6 +5,7 @@ use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
 use dojo_world::contracts::abi::world;
 use dojo_world::contracts::{cairo_utils, WorldContract};
+use dojo_world::manifest::utils::{compute_model_selector_from_names, get_full_world_element_name};
 use dojo_world::manifest::{
     AbiFormat, BaseManifest, DeploymentManifest, DojoContract, DojoModel, Manifest,
     ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,
@@ -18,10 +19,7 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
     Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
 };
-use dojo_world::utils::{
-    compute_model_selector_from_names, get_full_world_element_name, TransactionExt,
-    TransactionWaiter,
-};
+use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use futures::future;
 use itertools::Itertools;
 use scarb::core::Workspace;

@@ -86,7 +86,7 @@ pub async fn deploy_world(
         world,
     )
     .unwrap();
-    strategy.resolve_variable(strategy.world_address().unwrap(), default_namespace).unwrap();
+    strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
 
     let base_class_hash =
         strategy.base.unwrap().declare(&account, &TxnConfig::default()).await.unwrap().class_hash;

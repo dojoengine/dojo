@@ -10,8 +10,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
 
+use crate::manifest::utils::get_full_world_element_name;
 use crate::manifest::{BaseManifest, WORLD_CONTRACT_NAME};
-use crate::utils::get_full_world_element_name;
 
 #[cfg(test)]
 #[path = "metadata_test.rs"]

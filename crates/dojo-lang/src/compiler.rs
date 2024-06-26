@@ -17,12 +17,14 @@ use cairo_lang_starknet_classes::abi;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_utils::UpcastMut;
 use camino::{Utf8Path, Utf8PathBuf};
+use dojo_world::manifest::utils::{
+    get_artifact_name, get_full_world_element_name, get_manifest_name,
+};
 use dojo_world::manifest::{
     AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
     ABIS_DIR, BASE_CONTRACT_NAME, BASE_DIR, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
     WORLD_CONTRACT_NAME,
 };
-use dojo_world::utils::{get_artifact_name, get_full_world_element_name, get_manifest_name};
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};

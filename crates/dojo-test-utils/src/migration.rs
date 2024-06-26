@@ -36,7 +36,7 @@ pub fn prepare_migration(
     world.update_order(default_namespace).unwrap();
 
     let mut strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world).unwrap();
-    strat.resolve_variable(strat.world_address().unwrap(), default_namespace).unwrap();
+    strat.resolve_variable(strat.world_address().unwrap()).unwrap();
 
     Ok(strat)
 }

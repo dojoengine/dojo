@@ -85,7 +85,7 @@ async fn test_load_from_remote() {
         &default_namespace,
     )
     .unwrap();
-    migration.resolve_variable(migration.world_address().unwrap(), &default_namespace).unwrap();
+    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
@@ -206,9 +206,16 @@ async fn test_load_from_remote_del() {
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let mut migration =
-        prepare_migration(base_dir.into(), target_dir.into(), dojo_metadata.skip_migration)
-            .unwrap();
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
+    let mut migration = prepare_migration(
+        base_dir.into(),
+        target_dir.into(),
+        dojo_metadata.skip_migration,
+        &default_namespace,
+    )
+    .unwrap();
+
     migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");

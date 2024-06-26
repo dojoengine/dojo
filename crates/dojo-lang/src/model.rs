@@ -9,8 +9,8 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
+use dojo_world::manifest::utils::{compute_bytearray_hash, compute_model_selector_from_hash};
 use dojo_world::manifest::Member;
-use dojo_world::utils::{compute_bytearray_hash, compute_model_selector_from_hash};
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
 use crate::utils::is_namespace_valid;

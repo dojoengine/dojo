@@ -86,6 +86,9 @@ impl EthereumMessaging {
             address: FilterSet::<Address>::from(self.messaging_contract_address),
             topics: [
                 Topic::from(
+                    //  LogMessageToL2 (index_topic_1 address fromAddress, index_topic_2 uint256
+                    // toAddress,  index_topic_3 uint256 selector, uint256[]
+                    // payload, uint256 nonce, uint256 fee)
                     "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b"
                         .parse::<U256>()
                         .unwrap(),
@@ -125,6 +128,7 @@ impl Messenger for EthereumMessaging {
         chain_id: ChainId,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
         let chain_latest_block: u64 = self.provider.get_block_number().await?;
+        trace!(target: LOG_TARGET, from_block, max_blocks, ?chain_id, latest_block = chain_latest_block, "Gathering messages ethereum.");
 
         // +1 as the from_block counts as 1 block fetched.
         let to_block = if from_block + max_blocks + 1 < chain_latest_block {
@@ -135,6 +139,7 @@ impl Messenger for EthereumMessaging {
 
         let mut l1_handler_txs = vec![];
 
+        trace!(target: LOG_TARGET, from_block, to_block, "Fetching logs from {from_block} to {to_block}.");
         self.fetch_logs(from_block, to_block).await?.into_iter().for_each(
             |(block_number, block_logs)| {
                 debug!(

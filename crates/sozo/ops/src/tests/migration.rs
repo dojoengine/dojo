@@ -181,8 +181,10 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     // adding correct calldata
     manifest.merge(overlay);
 
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
     let mut world = WorldDiff::compute(manifest, Some(remote_manifest));
-    world.update_order().expect("Failed to update order");
+    world.update_order(&default_namespace).expect("Failed to update order");
 
     let mut migration = prepare_for_migration(
         Some(world_address),
@@ -325,10 +327,8 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
-
     let mut migration = setup::setup_migration(&config).unwrap();
-    migration.resolve_variable(migration.world_address().unwrap(), &default_namespace).unwrap();
+    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =

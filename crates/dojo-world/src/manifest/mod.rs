@@ -22,13 +22,13 @@ use tracing::error;
 use crate::contracts::model::ModelError;
 use crate::contracts::world::WorldEvent;
 use crate::contracts::WorldContractReader;
-use crate::utils::{get_full_world_element_name, get_manifest_name};
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
 mod test;
 
 mod types;
+pub mod utils;
 
 pub use types::{
     AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, DeploymentManifest, DojoContract,
@@ -133,12 +133,12 @@ impl BaseManifest {
 
         for contract in self.contracts.iter_mut() {
             let full_name =
-                get_full_world_element_name(&contract.inner.namespace, &contract.inner.name);
+                utils::get_full_world_element_name(&contract.inner.namespace, &contract.inner.name);
             base_map.insert(full_name, contract);
         }
 
         for contract in overlay.contracts {
-            let full_name = get_full_world_element_name(&contract.namespace, &contract.name);
+            let full_name = utils::get_full_world_element_name(&contract.namespace, &contract.name);
             if let Some(manifest) = base_map.get_mut(&full_name) {
                 manifest.inner.merge(contract);
             } else {
@@ -439,7 +439,7 @@ where
             Err(err) => return Err(err.into()),
         };
 
-        contract.manifest_name = get_manifest_name(&contract.inner.namespace, name.as_str());
+        contract.manifest_name = utils::get_manifest_name(&contract.inner.namespace, name.as_str());
     }
 
     Ok((models, contracts))
@@ -579,7 +579,7 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
                 abi: None,
                 ..Default::default()
             },
-            manifest_name: get_manifest_name(&namespace, &name),
+            manifest_name: utils::get_manifest_name(&namespace, &name),
             artifact_name: Default::default(),
         })
         .collect()
