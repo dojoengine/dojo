@@ -406,7 +406,7 @@ impl<P: Provider + Sync> Engine<P> {
         for processor in &self.processors.block {
             processor
                 .process(&mut self.db, self.provider.as_ref(), block_number, block_timestamp)
-                .await?;
+                .await?
         }
         Ok(())
     }
@@ -457,7 +457,7 @@ impl<P: Provider + Sync> Engine<P> {
                 || get_selector_from_name(&processor.event_key())? == event.keys[0])
                 && processor.validate(event)
             {
-                processor
+                if let Err(e) = processor
                     .process(
                         &self.world,
                         &mut self.db,
@@ -467,7 +467,10 @@ impl<P: Provider + Sync> Engine<P> {
                         event_id,
                         event,
                     )
-                    .await?;
+                    .await
+                {
+                    error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
+                }
             } else {
                 let unprocessed_event = UnprocessedEvent {
                     keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),

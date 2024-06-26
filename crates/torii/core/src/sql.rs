@@ -304,8 +304,10 @@ impl Sql {
     }
 
     pub async fn model(&self, model: &str) -> Result<ModelSQLReader> {
-        let reader = ModelSQLReader::new(model, self.pool.clone()).await?;
-        Ok(reader)
+        match ModelSQLReader::new(model, self.pool.clone()).await {
+            Ok(reader) => Ok(reader),
+            Err(e) => Err(anyhow::anyhow!("Failed to get model from db for selector {model}: {e}")),
+        }
     }
 
     pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
