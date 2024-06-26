@@ -323,17 +323,19 @@ impl DojoWorld {
             .iter()
             .map(|bytes| {
                 if bytes.is_empty() {
-                    return Ok("0x%".to_string());
+                    return Ok("0x[0-9a-fA-F]+".to_string());
                 }
                 Ok(FieldElement::from_byte_slice_be(bytes)
                     .map(|felt| format!("{felt:#x}"))
                     .map_err(ParseError::FromByteSliceError)?)
             })
             .collect::<Result<Vec<_>, Error>>()?;
-        let mut keys_pattern = keys.join("/") + "/";
+        let mut keys_pattern = format!("^{}", keys.join("/"));
+
         if keys_clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
-            keys_pattern += "%";
+            keys_pattern += "(/0x[0-9a-fA-F]+)*";
         }
+        keys_pattern += "/$";
 
         // total count of rows that matches keys_pattern without limit and offset
         let count_query = format!(
@@ -341,7 +343,7 @@ impl DojoWorld {
             SELECT count(*)
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            WHERE {table}.keys LIKE ?
+            WHERE {table}.keys REGEXP ?
         "#
         );
         let total_count =
@@ -356,7 +358,7 @@ impl DojoWorld {
             SELECT group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            WHERE {table}.keys LIKE ?
+            WHERE {table}.keys REGEXP ?
             GROUP BY {table}.id
         "#
         );
@@ -366,7 +368,7 @@ impl DojoWorld {
         let model_ids = models_str.split(',').collect::<Vec<&str>>();
         let schemas = self.model_cache.schemas(model_ids).await?;
 
-        let mut where_clause = format!("{table}.keys LIKE ? ORDER BY {table}.event_id DESC");
+        let mut where_clause = format!("{table}.keys REGEXP ? ORDER BY {table}.event_id DESC");
 
         if limit.is_some() {
             where_clause += " LIMIT ?";
@@ -381,7 +383,7 @@ impl DojoWorld {
             table,
             entity_relation_column,
             Some(&where_clause),
-            Some(&format!("{table}.keys LIKE ?")),
+            Some(&format!("{table}.keys REGEXP ?")),
         )?;
 
         let db_entities = sqlx::query(&entities_query)
@@ -416,23 +418,24 @@ impl DojoWorld {
             .iter()
             .map(|bytes| {
                 if bytes.is_empty() {
-                    return Ok("0x%".to_string());
+                    return Ok("0x[0-9a-fA-F]+".to_string());
                 }
-
                 Ok(FieldElement::from_byte_slice_be(bytes)
                     .map(|felt| format!("{felt:#x}"))
                     .map_err(ParseError::FromByteSliceError)?)
             })
             .collect::<Result<Vec<_>, Error>>()?;
-        let mut keys_pattern = keys.join("/") + "/";
+        let mut keys_pattern = format!("^{}", keys.join("/"));
+
         if keys_clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
-            keys_pattern += "%";
+            keys_pattern += "(/0x[0-9a-fA-F]+)*";
         }
+        keys_pattern += "/$";
 
         let events_query = r#"
             SELECT keys, data, transaction_hash
             FROM events
-            WHERE keys LIKE ?
+            WHERE keys REGEXP ?
             ORDER BY id DESC
             LIMIT ? OFFSET ?
         "#
