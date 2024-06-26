@@ -326,10 +326,9 @@ impl TryFrom<GenesisJson> for Genesis {
         let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
 
         #[cfg(feature = "slot")]
-        // Katana on Slot uses custom genesis config, and due to some limitations that we've
-        // encountered when declaring the controller account contract in the genesis
-        // config, we've decided to include the controller account contract in the genesis
-        // config by default.
+        // Merely a band aid fix for now.
+        // Adding this by default so that we can support mounting the genesis file from k8s
+        // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
         classes.insert(
             CONRTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
             GenesisClass {
