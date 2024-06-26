@@ -342,7 +342,6 @@ impl DojoWorld {
             r#"
             SELECT count(*)
             FROM {table}
-            WHERE {table}.keys REGEXP ?
         "#
         );
 
@@ -350,9 +349,15 @@ impl DojoWorld {
             count_query += &format!(
                 r#"
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {model_relation_table}.model_id = '{:#x}'
+                WHERE {model_relation_table}.model_id = '{:#x}' AND {table}.keys REGEXP ?
             "#,
                 get_selector_from_name(&model).map_err(ParseError::NonAsciiName)?
+            );
+        } else {
+            count_query += &format!(
+                r#"
+                WHERE {table}.keys REGEXP ?
+            "#
             );
         }
 
