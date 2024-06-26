@@ -32,7 +32,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use starknet::core::types::contract::SierraClass;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
 use crate::inline_macros::utils::{SYSTEM_READS, SYSTEM_WRITES};
@@ -112,8 +112,7 @@ impl Compiler for DojoCompiler {
         };
 
         // (contract name, class hash)
-        let mut compiled_classes: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)> =
-            HashMap::new();
+        let mut compiled_classes: HashMap<SmolStr, (Felt, Option<abi::Contract>)> = HashMap::new();
 
         for (decl, class) in zip(contracts, classes) {
             let contract_full_path = decl.module_id().full_path(db.upcast_mut());
@@ -154,7 +153,7 @@ impl Compiler for DojoCompiler {
     }
 }
 
-fn compute_class_hash_of_contract_class(class: &ContractClass) -> Result<FieldElement> {
+fn compute_class_hash_of_contract_class(class: &ContractClass) -> Result<Felt> {
     let class_str = serde_json::to_string(&class)?;
     let sierra_class = serde_json::from_str::<SierraClass>(&class_str)
         .map_err(|e| anyhow!("error parsing Sierra class: {e}"))?;
@@ -228,7 +227,7 @@ fn update_manifest(
     db: &RootDatabase,
     ws: &Workspace<'_>,
     crate_ids: &[CrateId],
-    compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+    compiled_artifacts: HashMap<SmolStr, (Felt, Option<abi::Contract>)>,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
     let profile_name =
@@ -240,9 +239,9 @@ fn update_manifest(
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
-        artifacts: &'a HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+        artifacts: &'a HashMap<SmolStr, (Felt, Option<abi::Contract>)>,
         artifact_name: &str,
-    ) -> anyhow::Result<&'a (FieldElement, Option<abi::Contract>)> {
+    ) -> anyhow::Result<&'a (Felt, Option<abi::Contract>)> {
         artifacts.get(artifact_name).context(format!(
             "Contract `{artifact_name}` not found. Did you include `dojo` as a dependency?",
         ))
@@ -357,7 +356,7 @@ fn get_dojo_model_artifacts(
     db: &RootDatabase,
     aux_data: &DojoAuxData,
     module_id: ModuleId,
-    compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+    compiled_classes: &HashMap<SmolStr, (Felt, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, Option<abi::Contract>)>> {
     let mut models = HashMap::with_capacity(aux_data.models.len());
 
@@ -425,7 +424,7 @@ fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
     aux_data: &StarkNetContractAuxData,
-    compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+    compiled_classes: &HashMap<SmolStr, (Felt, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<SmolStr, (Manifest<DojoContract>, Option<abi::Contract>)>> {
     let contract_name = &aux_data.contract_name;
 

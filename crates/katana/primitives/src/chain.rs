@@ -1,5 +1,5 @@
 use crate::FieldElement;
-use starknet::{
+use katana_cairo::starknet::{
     core::{
         types::FromStrError,
         utils::{cairo_short_string_to_felt, CairoShortStringToFeltError},
@@ -155,8 +155,8 @@ impl From<ChainId> for FieldElement {
 mod tests {
     use std::convert::TryFrom;
 
-    use starknet::core::utils::cairo_short_string_to_felt;
-    use starknet::macros::felt;
+    use katana_cairo::starknet::core::utils::cairo_short_string_to_felt;
+    use katana_cairo::starknet::macros::felt;
 
     use super::ChainId;
     use crate::chain::NamedChainId;

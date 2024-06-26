@@ -181,7 +181,7 @@ similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
 starknet = "0.11.0"
-starknet-crypto = "0.6.2"
+starknet-crypto = "0.7.0"
 starknet_api = "0.11.0"
 strum = "0.25"
 strum_macros = "0.25"

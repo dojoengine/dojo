@@ -11,3 +11,5 @@ pub mod lang {
 }
 
 pub use cairo_vm;
+
+pub use starknet;

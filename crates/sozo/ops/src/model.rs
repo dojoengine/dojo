@@ -3,7 +3,7 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -137,11 +137,19 @@ fn format_layout_ref(type_name: &str) -> String {
 }
 
 fn format_selector(selector: String) -> String {
-    if selector.starts_with("0x") { format!("[{}]", selector) } else { selector }
+    if selector.starts_with("0x") {
+        format!("[{}]", selector)
+    } else {
+        selector
+    }
 }
 
 fn format_name(name: String) -> String {
-    if !name.is_empty() { format!(" {} ", name) } else { name }
+    if !name.is_empty() {
+        format!(" {} ", name)
+    } else {
+        name
+    }
 }
 
 fn format_field(selector: String, name: String, layout: String) -> String {
@@ -394,7 +402,11 @@ fn deep_print_layout(
 }
 
 fn _start_indent(level: usize, start_indent: bool) -> String {
-    if start_indent { INDENT.repeat(level) } else { "".to_string() }
+    if start_indent {
+        INDENT.repeat(level)
+    } else {
+        "".to_string()
+    }
 }
 
 fn format_primitive(

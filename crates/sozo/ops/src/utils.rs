@@ -4,9 +4,7 @@ use dojo_world::migration::strategy::generate_salt;
 use dojo_world::utils::{execution_status_from_maybe_pending_receipt, TransactionWaiter};
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{
-    BlockId, BlockTag, ExecutionResult, FieldElement, InvokeTransactionResult,
-};
+use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
 
 /// Retrieves a contract address from it's name

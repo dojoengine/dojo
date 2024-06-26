@@ -9,7 +9,6 @@ use dojo_world::utils::TransactionExt;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 
 use crate::utils::handle_transaction_result;
 
