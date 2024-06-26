@@ -42,5 +42,5 @@ blockifier = [ "katana-executor/blockifier" ]
 
 jemalloc = [ "dojo-metrics/jemalloc" ]
 messaging = [ "katana-core/messaging" ]
-slot = [ "dep:katana-slot-controller" ]
+slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
 starknet-messaging = [ "katana-core/starknet-messaging", "messaging" ]
