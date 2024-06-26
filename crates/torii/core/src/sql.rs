@@ -171,13 +171,15 @@ impl Sql {
                                ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                executed_at=EXCLUDED.executed_at, event_id=EXCLUDED.event_id \
                                RETURNING *";
-        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
+        let mut entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
             .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
+
+        entity_updated.updated_model = Some(entity.clone());
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(
@@ -253,8 +255,18 @@ impl Sql {
     pub async fn delete_entity(&mut self, keys: Vec<FieldElement>, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let path = vec![entity.name()];
+        // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
+
+        // delete entity
+        let entity_deleted =
+            sqlx::query_as::<_, EntityUpdated>("DELETE FROM entities WHERE id = ? RETURNING *")
+                .bind(entity_id)
+                .fetch_one(&self.pool)
+                .await?;
+
+        SimpleBroker::publish(entity_deleted);
         Ok(())
     }
 

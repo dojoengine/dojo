@@ -1,6 +1,7 @@
 use core::fmt;
 
 use chrono::{DateTime, Utc};
+use dojo_types::schema::Ty;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use starknet::core::types::FieldElement;
@@ -37,6 +38,9 @@ pub struct Entity {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    // if updated_model is None, then the entity has been deleted
+    #[sqlx(skip)]
+    pub updated_model: Option<Ty>,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
