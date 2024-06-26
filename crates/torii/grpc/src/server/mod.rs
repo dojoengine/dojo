@@ -239,6 +239,10 @@ impl DojoWorld {
         // total count of rows without limit and offset
         let total_count: u32 = sqlx::query_scalar(&count_query).fetch_one(&self.pool).await?;
 
+        if total_count == 0 {
+            return Ok((Vec::new(), 0));
+        }
+
         // query to filter with limit and offset
         let query = format!(
             r#"
@@ -334,6 +338,10 @@ impl DojoWorld {
         // total count of rows that matches keys_pattern without limit and offset
         let total_count =
             sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
+
+        if total_count == 0 {
+            return Ok((Vec::new(), 0));
+        }
 
         let models_query = format!(
             r#"
