@@ -323,7 +323,7 @@ impl DojoWorld {
             .iter()
             .map(|bytes| {
                 if bytes.is_empty() {
-                    return Ok("%".to_string());
+                    return Ok("0x%".to_string());
                 }
                 Ok(FieldElement::from_byte_slice_be(bytes)
                     .map(|felt| format!("{felt:#x}"))
@@ -416,7 +416,7 @@ impl DojoWorld {
             .iter()
             .map(|bytes| {
                 if bytes.is_empty() {
-                    return Ok("%".to_string());
+                    return Ok("0x%".to_string());
                 }
 
                 Ok(FieldElement::from_byte_slice_be(bytes)
