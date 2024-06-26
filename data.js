@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719371869482,
+  "lastUpdate": 1719416797826,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10375,6 +10375,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16681272,
             "range": "± 64718",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7da96db9702b916273f05854093ed061996a47dc",
+          "message": "feat(katana): always include Controller class by default (#2107)\n\n* define and declare controller account by default\r\n\r\n* update genesis test\r\n\r\n* separate slot and controller feature\r\n\r\n* update comment\r\n\r\n* fix typo",
+          "timestamp": "2024-06-26T23:34:49+08:00",
+          "tree_id": "b8569fcb70dcf042824a71f154407bdf9b984637",
+          "url": "https://github.com/dojoengine/dojo/commit/7da96db9702b916273f05854093ed061996a47dc"
+        },
+        "date": 1719416797100,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16810209,
+            "range": "± 193068",
             "unit": "ns/iter"
           }
         ]
