@@ -133,9 +133,9 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
-            let entity = res.entity.expect("entity must exist");
-            entity.try_into().expect("must able to serialize")
+        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
+            Some(entity) => entity.try_into().expect("must able to serialize"),
+            None => Entity { hashed_keys: FieldElement::ZERO, models: vec![] },
         }))))
     }
 
