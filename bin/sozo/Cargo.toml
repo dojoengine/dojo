@@ -6,6 +6,9 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+account_sdk = { workspace = true, optional = true }
+slot = { workspace = true, optional = true }
+
 anyhow.workspace = true
 async-trait.workspace = true
 bigdecimal = "0.4.1"
@@ -25,6 +28,7 @@ clap-verbosity-flag.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
+derive_more.workspace = true
 dojo-bindgen.workspace = true
 dojo-lang.workspace = true
 dojo-types.workspace = true
@@ -34,7 +38,6 @@ hex = "0.4.3"
 hex-literal = "0.4.1"
 katana-rpc-api.workspace = true
 notify = "6.0.1"
-notify-debouncer-mini = "0.3.0"
 num-bigint = "0.4.3"
 num-integer = "0.1.45"
 prettytable-rs = "0.10.0"
@@ -62,3 +65,7 @@ assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner.workspace = true
 snapbox = "0.4.6"
+
+[features]
+controller = [ "dep:account_sdk", "dep:slot" ]
+default = [ "controller" ]

@@ -5,7 +5,7 @@ use syn::{parse_macro_input, DeriveInput};
 #[proc_macro_attribute]
 #[rustfmt::skip]
 #[allow(unreachable_code)]
-pub fn main_codec(args: TokenStream, input: TokenStream) -> TokenStream {    
+pub fn main_codec(args: TokenStream, input: TokenStream) -> TokenStream {
     #[cfg(feature = "postcard")]
     return use_postcard(args, input);
 

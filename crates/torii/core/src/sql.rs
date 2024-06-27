@@ -171,13 +171,15 @@ impl Sql {
                                ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                executed_at=EXCLUDED.executed_at, event_id=EXCLUDED.event_id \
                                RETURNING *";
-        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
+        let mut entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
             .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
+
+        entity_updated.updated_model = Some(entity.clone());
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(
@@ -226,13 +228,15 @@ impl Sql {
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, event_id=EXCLUDED.event_id RETURNING \
                                *";
-        let event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
+        let mut event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
             .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
+
+        event_message_updated.updated_model = Some(entity.clone());
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(
@@ -253,8 +257,18 @@ impl Sql {
     pub async fn delete_entity(&mut self, keys: Vec<FieldElement>, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let path = vec![entity.name()];
+        // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
+
+        // delete entity
+        let entity_deleted =
+            sqlx::query_as::<_, EntityUpdated>("DELETE FROM entities WHERE id = ? RETURNING *")
+                .bind(entity_id)
+                .fetch_one(&self.pool)
+                .await?;
+
+        SimpleBroker::publish(entity_deleted);
         Ok(())
     }
 
@@ -304,8 +318,10 @@ impl Sql {
     }
 
     pub async fn model(&self, model: &str) -> Result<ModelSQLReader> {
-        let reader = ModelSQLReader::new(model, self.pool.clone()).await?;
-        Ok(reader)
+        match ModelSQLReader::new(model, self.pool.clone()).await {
+            Ok(reader) => Ok(reader),
+            Err(e) => Err(anyhow::anyhow!("Failed to get model from db for selector {model}: {e}")),
+        }
     }
 
     pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
@@ -696,20 +712,58 @@ impl Sql {
                 self.query_queue
                     .push_front(statement, vec![Argument::String(entity_id.to_string())]);
                 for member in s.children.iter() {
-                    if let Ty::Struct(_) = &member.ty {
-                        let mut path_clone = path.clone();
-                        path_clone.push(member.name.clone());
-                        self.build_delete_entity_queries_recursive(
-                            path_clone, entity_id, &member.ty,
-                        );
-                    }
+                    let mut path_clone = path.clone();
+                    path_clone.push(member.name.clone());
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &member.ty);
                 }
             }
             Ty::Enum(e) => {
+                if e.options
+                    .iter()
+                    .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
+                {
+                    return;
+                }
+
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
                 for child in e.options.iter() {
+                    if let Ty::Tuple(t) = &child.ty {
+                        if t.is_empty() {
+                            continue;
+                        }
+                    }
+
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
                     self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty);
+                }
+            }
+            Ty::Array(array) => {
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
+                for member in array.iter() {
+                    let mut path_clone = path.clone();
+                    path_clone.push("data".to_string());
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
+                }
+            }
+            Ty::Tuple(t) => {
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
+                for (idx, member) in t.iter().enumerate() {
+                    let mut path_clone = path.clone();
+                    path_clone.push(format!("_{}", idx));
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
                 }
             }
             _ => {}
@@ -760,8 +814,11 @@ impl Sql {
                     .join(", ");
 
                 create_table_query.push_str(&format!(
-                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
+                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) ",
                 ));
+
+                // if we're an array, we could have multiple enum options
+                create_table_query.push_str(if array_idx > 0 { ", " } else { "NOT NULL, " });
 
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
@@ -936,7 +993,7 @@ impl Sql {
                 create_table_query.push_str(&format!(", idx_{i}", i = i));
             }
             create_table_query.push_str(&format!(
-                ") REFERENCES {parent_table_id} (id",
+                ") REFERENCES [{parent_table_id}] (id",
                 parent_table_id = parent_table_id
             ));
             for i in 0..parent_array_idx {

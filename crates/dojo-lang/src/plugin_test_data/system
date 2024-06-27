@@ -85,81 +85,80 @@ trait IEmptyTrait;
 trait IFaultyTrait {
     const ONE: u8;
 
-    fn do_ref_self(ref self: TContractState);
-
     #[my_attr]
     fn do_with_attrs(p1: u8) -> u16;
 }
 
-#[starknet::interface]
-trait IAllowedRefSelf<T> {
-    fn spawn(ref self: T);
-}
-
-#[dojo::contract(allow_ref_self)]
-mod ContractAllowedRefSelf {
-    #[abi(embed_v0)]
-    impl AllowedImpl of IAllowedRefSelf<ContractState> {
-        fn spawn(ref self: ContractState) {}
-    }
-}
-
 #[dojo::interface]
 trait INominalTrait {
-    fn do_no_param();
-    fn do_no_param_but_self(self: @TContractState);
-    fn do_params(p1: dojo_examples::models::Direction, p2: u8);
-    fn do_params_and_self(self: @TContractState, p2: u8);
-    fn do_return_value(p1: u8) -> u16;
+    fn do_no_param() -> felt252;
+    fn do_no_param_but_world(world: @IWorldDispatcher) -> felt252;
+    fn do_no_param_but_world_ref(ref world: IWorldDispatcher) -> felt252;
+    fn do_params_no_world(p1: felt252, p2: u8) -> felt252;
+    fn do_params_and_world(world: @IWorldDispatcher, p2: u8) -> felt252;
+    fn do_params_and_world_ref(ref world: IWorldDispatcher, p2: u8) -> felt252;
+
+    fn do_with_self(self: @ContractState) -> felt252;
+    fn do_with_ref_self(ref self: ContractState) -> felt252;
 }
 
 #[dojo::interface]
-trait IWorldTrait {
-    fn do_with_ref_self(ref self: ContractState) -> felt252;
+trait IFaultyTrait {
+    fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252;
+    fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;
+    fn do_with_self_and_world_inv(world: @IWorldDispatcher, self: @ContractState) -> felt252;
+    fn do_with_ref_self_and_world_inv(
+        ref world: IWorldDispatcher, ref self: ContractState
+    ) -> felt252;
     fn do_with_several_world_dispatchers(
-        world: IWorldDispatcher, vec: Vec2, another_world: IWorldDispatcher
+        world: @IWorldDispatcher, vec: Vec2, ref another_world: IWorldDispatcher
     ) -> felt252;
-    fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252;
-    fn do_with_self_and_world_not_named_world(
-        self: @ContractState, another_world: IWorldDispatcher
-    );
-    fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252;
-    fn do_with_self_and_world_not_first(
-        self: @ContractState, vec: Vec2, world: IWorldDispatcher
-    ) -> felt252;
+    fn do_with_world_not_named_world(another_world: @IWorldDispatcher) -> felt252;
+    fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252;
 }
 
 #[dojo::contract]
 mod MyFaultyContract {
     #[abi(embed_v0)]
-    impl TestWorldImpl of IWorldTrait<ContractState> {
-        fn do_with_ref_self(ref self: ContractState) -> felt252 {
+    impl TestFaultyImpl of IFaultyTrait<ContractState> {
+        fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+        fn do_with_ref_self_and_world(
+            ref self: ContractState, ref world: IWorldDispatcher
+        ) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self_and_world_inv(world: @IWorldDispatcher, self: @ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_ref_self_and_world_inv(
+            ref world: IWorldDispatcher, ref self: ContractState
+        ) -> felt252 {
             'land'
         }
 
         fn do_with_several_world_dispatchers(
-            world: IWorldDispatcher, vec: Vec2, another_world: IWorldDispatcher
+            world: @IWorldDispatcher, vec: Vec2, ref another_world: IWorldDispatcher
         ) -> felt252 {
             'land'
         }
 
-        fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
+        fn do_with_world_not_named_world(another_world: @IWorldDispatcher) -> felt252 {
             'land'
         }
 
-        fn do_with_self_and_world_not_named_world(
-            self: @ContractState, another_world: IWorldDispatcher
-        ) -> felt252 {
+        fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252 {
             'land'
         }
+    }
 
-        fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
-            'land'
-        }
-
-        fn do_with_self_and_world_not_first(
-            self: @ContractState, vec: Vec2, world: IWorldDispatcher
-        ) -> felt252 {
+    #[generate_trait]
+    impl InternalImplBad of InternalUtils<ContractState> {
+        fn bad_func_using_generate(world: @IWorldDispatcher) -> felt252 {
             'land'
         }
     }
@@ -173,22 +172,36 @@ mod MyNominalContract {
     }
 
     #[abi(embed_v0)]
-    impl TestWorldImpl of IWorldTrait<ContractState> {
-        fn do(vec: Vec2) -> felt252 {
+    impl TestNominalImpl of INominalTrait<ContractState> {
+        fn do_no_param() -> felt252 {
             'land'
         }
 
-        fn do_with_self(self: @ContractState, vec: Vec2) -> felt252 {
+        fn do_no_param_but_world(world: @IWorldDispatcher) -> felt252 {
             'land'
         }
 
-        fn do_with_world_first(world: IWorldDispatcher, vec: Vec2) -> felt252 {
+        fn do_no_param_but_world_ref(ref world: IWorldDispatcher) -> felt252 {
             'land'
         }
 
-        fn do_with_self_and_world_first(
-            self: @ContractState, world: IWorldDispatcher, vec: Vec2
-        ) -> felt252 {
+        fn do_params_no_world(p1: felt252, p2: u8) -> felt252 {
+            'land'
+        }
+
+        fn do_params_and_world(world: @IWorldDispatcher, p2: u8) -> felt252 {
+            'land'
+        }
+
+        fn do_params_and_world_ref(ref world: IWorldDispatcher, p2: u8) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self(self: @ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_ref_self(ref self: ContractState) -> felt252 {
             'land'
         }
     }
@@ -347,40 +360,65 @@ error: Anything other than functions is not supported in a dojo::interface
     const ONE: u8;
     ^************^
 
-error: Functions of dojo::interface cannot have `ref self` parameter.
- --> test_src/lib.cairo:82:5
-    fn do_ref_self(ref self: TContractState);
-    ^***************************************^
+error: World parameter must be the first parameter.
+ --> test_src/lib.cairo:101:5
+    fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252;
+    ^***********************************************************************************^
 
-error: Functions of dojo::contract cannot have 'ref self' parameter.
- --> test_src/lib.cairo:130:9
-        fn do_with_ref_self(ref self: ContractState) -> felt252 {
-        ^*******************************************************^
+error: World parameter must be the first parameter.
+ --> test_src/lib.cairo:102:5
+    fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;
+    ^*********************************************************************************************^
 
-error: Only one parameter of type IWorldDispatcher is allowed.
- --> test_src/lib.cairo:134:9
-        fn do_with_several_world_dispatchers(
-        ^***********************************^
+error: You cannot use `self` and `world` parameters together.
+ --> test_src/lib.cairo:103:5
+    fn do_with_self_and_world_inv(world: @IWorldDispatcher, self: @ContractState) -> felt252;
+    ^***************************************************************************************^
 
-error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:140:42
-        fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
-                                         ^*****************************^
+error: You cannot use `self` and `world` parameters together.
+ --> test_src/lib.cairo:104:5
+    fn do_with_ref_self_and_world_inv(
+    ^********************************^
 
-error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:145:35
-            self: @ContractState, another_world: IWorldDispatcher
-                                  ^*****************************^
+error: World parameter must be the first parameter.
+ --> test_src/lib.cairo:111:5
+    fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252;
+    ^****************************************************************************^
 
-error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:150:47
-        fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
-                                              ^*********************^
+error: World parameter must be the first parameter.
+ --> test_src/lib.cairo:118:9
+        fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252 {
+        ^************************************************************************************^
 
-error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:155:46
-            self: @ContractState, vec: Vec2, world: IWorldDispatcher
-                                             ^*********************^
+error: World parameter must be the first parameter.
+ --> test_src/lib.cairo:122:9
+        fn do_with_ref_self_and_world(
+        ^****************************^
+
+error: You cannot use `self` and `world` parameters together.
+ --> test_src/lib.cairo:128:9
+        fn do_with_self_and_world_inv(world: @IWorldDispatcher, self: @ContractState) -> felt252 {
+        ^****************************************************************************************^
+
+error: You cannot use `self` and `world` parameters together.
+ --> test_src/lib.cairo:132:9
+        fn do_with_ref_self_and_world_inv(
+        ^********************************^
+
+error: World parameter must be the first parameter.
+ --> test_src/lib.cairo:148:9
+        fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252 {
+        ^*****************************************************************************^
+
+error: You cannot use `world` and `#[generate_trait]` together. Use `self` instead.
+ --> test_src/lib.cairo:155:9
+        fn bad_func_using_generate(world: @IWorldDispatcher) -> felt252 {
+        ^***************************************************************^
+
+error: World parameter must be a snapshot if `ref` is not used.
+ --> test_src/lib.cairo:214:5
+    fn dojo_init(
+    ^***********^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo:1:1
@@ -408,32 +446,27 @@ error: Unsupported attribute.
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:84:5
+ --> test_src/lib.cairo:82:5
     #[my_attr]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:126:1
+ --> test_src/lib.cairo:114:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:199:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:216:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
@@ -673,217 +706,177 @@ error: Unsupported attribute.
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
+ --> test_src/lib.cairo:114:1
+#[dojo::contract]
+^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
+ --> test_src/lib.cairo:114:1
+#[dojo::contract]
+^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
+ --> test_src/lib.cairo:114:1
+#[dojo::contract]
+^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
+ --> test_src/lib.cairo:114:1
+#[dojo::contract]
+^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:95:5
+ --> test_src/lib.cairo:116:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Generated trait must have generic args matching the impl's generic params.
+ --> test_src/lib.cairo:154:29
+    impl InternalImplBad of InternalUtils<ContractState> {
+                            ^**************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:114:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:114:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:114:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:114:1
+#[dojo::contract]
+^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo:161:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:161:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:161:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:161:1
+#[dojo::contract]
+^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:168:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:93:1
-#[dojo::contract(allow_ref_self)]
-^*******************************^
-
-error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:126:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:126:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:126:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:126:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:128:5
-    #[abi(embed_v0)]
-    ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:126:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:126:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:126:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:126:1
+ --> test_src/lib.cairo:161:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:169:5
-    #[abi(embed_v0)]
-    ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:162:1
+ --> test_src/lib.cairo:212:1
 #[dojo::contract]
 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:199:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:199:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:199:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:199:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:199:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:199:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:199:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:199:1
-#[dojo::contract]
-^***************^
-
-error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:216:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:216:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:216:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:216:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:216:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:216:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:216:1
-#[dojo::contract]
-^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:216:1
+ --> test_src/lib.cairo:229:1
 #[dojo::contract]
 ^***************^
 
@@ -899,11 +892,6 @@ mod testcomponent1 {
 mod testcomponent2 {
     #[storage]
     struct Storage {}
-}
-
-#[starknet::interface]
-trait IAllowedRefSelf<T> {
-    fn spawn(ref self: T);
 }
 
                 #[starknet::contract]
@@ -1210,95 +1198,38 @@ impl EventDrop of core::traits::Drop::<Event>;
                 #[starknet::interface]
                 trait IFaultyTrait<TContractState> {
                     
-    fn do_ref_self(ref self: TContractState);
-
     #[my_attr]
     fn do_with_attrs(self: @TContractState, p1: u8) -> u16;
 
                 }
 
-                #[starknet::contract]
-                mod ContractAllowedRefSelf {
-                    use dojo::world;
-                    use dojo::world::IWorldDispatcher;
-                    use dojo::world::IWorldDispatcherTrait;
-                    use dojo::world::IWorldProvider;
-                    use dojo::world::IDojoResourceProvider;
-
-                    #[abi(embed_v0)]
-                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
-                        fn dojo_resource(self: @ContractState) -> felt252 {
-                            'ContractAllowedRefSelf'
-                        }
-                    }
-
-                    #[abi(embed_v0)]
-                    impl WorldProviderImpl of IWorldProvider<ContractState> {
-                        fn world(self: @ContractState) -> IWorldDispatcher {
-                            self.world_dispatcher.read()
-                        }
-                    }
-
-                    #[abi(embed_v0)]
-                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
-
-                        #[abi(embed_v0)]
-    impl AllowedImpl of IAllowedRefSelf<ContractState> {
-        fn spawn(ref self: ContractState) {}
-    }
-
-                    #[starknet::interface]
-                    trait IDojoInit<ContractState> {
-                        fn dojo_init(self: @ContractState);
-                    }
-
-                    #[abi(embed_v0)]
-                    impl IDojoInitImpl of IDojoInit<ContractState> {
-                        fn dojo_init(self: @ContractState) {
-                            assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
-                        }
-                    }
-                
-            #[event]
-            #[derive(Drop, starknet::Event)]
-            enum Event {
-                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
-            }
-            
-            #[storage]
-            struct Storage {
-                world_dispatcher: IWorldDispatcher,
-                #[substorage(v0)]
-                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
-            }
-impl EventDrop of core::traits::Drop::<Event>;
-            
-                }
-
                 #[starknet::interface]
                 trait INominalTrait<TContractState> {
-                        fn do_no_param(self: @TContractState);
-    fn do_no_param_but_self(self: @TContractState);
-    fn do_params(self: @TContractState, p1: dojo_examples::models::Direction, p2: u8);
-    fn do_params_and_self(self: @TContractState, p2: u8);
-    fn do_return_value(self: @TContractState, p1: u8) -> u16;
+                        fn do_no_param(self: @TContractState) -> felt252;
+    fn do_no_param_but_world(self: @TContractState) -> felt252;
+    fn do_no_param_but_world_ref(ref self: TContractState) -> felt252;
+    fn do_params_no_world(self: @TContractState, p1: felt252, p2: u8) -> felt252;
+    fn do_params_and_world(self: @TContractState, p2: u8) -> felt252;
+    fn do_params_and_world_ref(ref self: TContractState, p2: u8) -> felt252;
+
+    fn do_with_self(self: @ContractState) -> felt252;
+    fn do_with_ref_self(ref self: ContractState) -> felt252;
 
                 }
 
                 #[starknet::interface]
-                trait IWorldTrait<TContractState> {
-                        fn do_with_ref_self(self: @TContractState, ref self: ContractState) -> felt252;
+                trait IFaultyTrait<TContractState> {
+                        fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252;
+    fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;
+    fn do_with_self_and_world_inv(self: @TContractState, self: @ContractState) -> felt252;
+    fn do_with_ref_self_and_world_inv(
+ref self: TContractState, ref self: ContractState
+    ) -> felt252;
     fn do_with_several_world_dispatchers(
-self: @TContractState,         world: IWorldDispatcher, vec: Vec2, another_world: IWorldDispatcher
+self: @TContractState, vec: Vec2, ref another_world: IWorldDispatcher
     ) -> felt252;
-    fn do_with_world_not_named_world(self: @TContractState, another_world: IWorldDispatcher) -> felt252;
-    fn do_with_self_and_world_not_named_world(
-self: @TContractState,         self: @ContractState, another_world: IWorldDispatcher
-    );
-    fn do_with_world_not_first(self: @TContractState, vec: Vec2, world: IWorldDispatcher) -> felt252;
-    fn do_with_self_and_world_not_first(
-self: @TContractState,         self: @ContractState, vec: Vec2, world: IWorldDispatcher
-    ) -> felt252;
+    fn do_with_world_not_named_world(self: @TContractState, another_world: @IWorldDispatcher) -> felt252;
+    fn do_with_world_not_first(self: @TContractState, vec: Vec2, ref world: IWorldDispatcher) -> felt252;
 
                 }
 
@@ -1328,34 +1259,48 @@ self: @TContractState,         self: @ContractState, vec: Vec2, world: IWorldDis
                     impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                         #[abi(embed_v0)]
-    impl TestWorldImpl of IWorldTrait<ContractState> {
-        fn do_with_ref_self(ref self: ContractState) -> felt252 {
+    impl TestFaultyImpl of IFaultyTrait<ContractState> {
+        fn do_with_self_and_world(self: @ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_ref_self_and_world(
+            ref self: ContractState        ) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self_and_world_inv(self: @ContractState, self: @ContractState) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_with_ref_self_and_world_inv(
+ref self: ContractState, ref self: ContractState
+        ) -> felt252 {
+let world = self.world_dispatcher.read();
             'land'
         }
 
         fn do_with_several_world_dispatchers(
-self: @ContractState,             world: IWorldDispatcher, vec: Vec2, another_world: IWorldDispatcher
+self: @ContractState, vec: Vec2, ref another_world: IWorldDispatcher
         ) -> felt252 {
+let world = self.world_dispatcher.read();
             'land'
         }
 
-        fn do_with_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+        fn do_with_world_not_named_world(self: @ContractState, another_world: @IWorldDispatcher) -> felt252 {
             'land'
         }
 
-        fn do_with_self_and_world_not_named_world(
-            self: @ContractState, another_world: IWorldDispatcher
-        ) -> felt252 {
+        fn do_with_world_not_first(self: @ContractState, vec: Vec2) -> felt252 {
             'land'
         }
+    }
 
-        fn do_with_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
-            'land'
-        }
-
-        fn do_with_self_and_world_not_first(
-            self: @ContractState, vec: Vec2, world: IWorldDispatcher
-        ) -> felt252 {
+    #[generate_trait]
+    impl InternalImplBad of InternalUtils<ContractState> {
+        fn bad_func_using_generate(self: @ContractState) -> felt252 {
+let world = self.world_dispatcher.read();
             'land'
         }
     }
@@ -1384,6 +1329,9 @@ self: @ContractState,             world: IWorldDispatcher, vec: Vec2, another_wo
                 #[substorage(v0)]
                 upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
+    trait InternalUtils{
+        fn bad_func_using_generate(self: @ContractState) -> felt252;
+    }
 impl EventDrop of core::traits::Drop::<Event>;
             
                 }
@@ -1419,24 +1367,40 @@ impl EventDrop of core::traits::Drop::<Event>;
     }
 
     #[abi(embed_v0)]
-    impl TestWorldImpl of IWorldTrait<ContractState> {
-        fn do(self: @ContractState, vec: Vec2) -> felt252 {
+    impl TestNominalImpl of INominalTrait<ContractState> {
+        fn do_no_param(self: @ContractState) -> felt252 {
             'land'
         }
 
-        fn do_with_self(self: @ContractState, vec: Vec2) -> felt252 {
-            'land'
-        }
-
-        fn do_with_world_first(self: @ContractState, vec: Vec2) -> felt252 {
+        fn do_no_param_but_world(self: @ContractState) -> felt252 {
 let world = self.world_dispatcher.read();
             'land'
         }
 
-        fn do_with_self_and_world_first(
-            self: @ContractState, vec: Vec2
-        ) -> felt252 {
+        fn do_no_param_but_world_ref(ref self: ContractState) -> felt252 {
 let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_params_no_world(self: @ContractState, p1: felt252, p2: u8) -> felt252 {
+            'land'
+        }
+
+        fn do_params_and_world(self: @ContractState, p2: u8) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_params_and_world_ref(ref self: ContractState, p2: u8) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_with_self(self: @ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_ref_self(ref self: ContractState) -> felt252 {
             'land'
         }
     }

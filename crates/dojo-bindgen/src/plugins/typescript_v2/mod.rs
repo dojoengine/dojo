@@ -237,7 +237,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     constructor(contractAddress: string, account?: Account) {{
         super(contractAddress, account);
     }}
-    
+
     {}
 }}
 ",
@@ -630,6 +630,8 @@ mod tests {
     use std::io::Read;
 
     use camino::Utf8PathBuf;
+    use dojo_test_utils::compiler;
+    use dojo_world::metadata::dojo_metadata_from_workspace;
 
     use super::*;
     use crate::gather_dojo_data;
@@ -646,12 +648,20 @@ mod tests {
         let expected_output_without_header =
             expected_output.lines().skip(1).collect::<Vec<&str>>().join("\n");
 
-        let data = gather_dojo_data(
-            &Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml"),
-            "dojo_examples",
-            "dev",
-        )
-        .unwrap();
+        let manifest_path = Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml");
+        let config = compiler::copy_tmp_config(
+            &Utf8PathBuf::from("../../examples/spawn-and-move"),
+            &Utf8PathBuf::from("../dojo-core"),
+        );
+
+        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+        let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
+            "No current package with dojo metadata found, bindgen is not yet support for \
+             workspaces.",
+        );
+        let data =
+            gather_dojo_data(&manifest_path, "dojo_examples", "dev", dojo_metadata.skip_migration)
+                .unwrap();
 
         let actual_output = TypeScriptV2Plugin::generate_code_content(&data);
         let actual_output_without_header =

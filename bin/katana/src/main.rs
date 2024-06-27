@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let server_config = args.server_config();
     let sequencer_config = args.sequencer_config();
-    let starknet_config = args.starknet_config();
+    let starknet_config = args.starknet_config()?;
 
     let cfg_env = CfgEnv {
         chain_id: starknet_config.env.chain_id,

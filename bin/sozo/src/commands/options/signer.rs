@@ -9,7 +9,7 @@ use tracing::trace;
 
 use super::{DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "Signer options")]
 // INVARIANT:
 // - For commandline: we can either specify `private_key` or `keystore_path` along with
@@ -22,6 +22,7 @@ pub struct SignerOptions {
     #[arg(help_heading = "Signer options - RAW")]
     #[arg(help = "The raw private key associated with the account contract.")]
     #[arg(global = true)]
+    #[arg(group = "signer")]
     pub private_key: Option<String>,
 
     #[arg(long = "keystore", env = DOJO_KEYSTORE_PATH_ENV_VAR)]
@@ -29,6 +30,7 @@ pub struct SignerOptions {
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "Use the keystore in the given folder or file.")]
     #[arg(global = true)]
+    #[arg(group = "signer")]
     pub keystore_path: Option<String>,
 
     #[arg(long = "password", env = DOJO_KEYSTORE_PASSWORD_ENV_VAR)]

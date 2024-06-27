@@ -165,6 +165,8 @@ If not (this includes Apple Silicon), some emulation will take place to run the 
 
 It's important that the `--start-block` of Saya is the first block produced by Katana as for now Katana is not fetching events from the forked network.
 
+Starknet sepolia network chain id is `0x00000000000000000000000000000000000000000000534e5f5345504f4c4941`.
+
 ```bash
 cargo run -r --bin saya -- \
     --rpc-url http://localhost:5050 \

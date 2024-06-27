@@ -68,36 +68,40 @@ fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
 }
 
 
-const GAS_OFFSET: felt252 = 0x1_000000_000000_000000_000000_000000; // 15 bajtów
+#[derive(Drop)]
+struct GasCounter {
+    start: u128,
+}
 
-/// Measures gas used after previous measurement and prints it
-///
-/// # Arguments
-///
-/// * `start` - gas before measurement
-/// * `name` - name of test, at most 15 bytes, will be padded with spaces
-fn end(start: u128, name: felt252) {
-    let gas_after = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let mut name: u256 = name.into();
+#[generate_trait]
+impl GasCounterImpl of GasCounterTrait {
+    fn start() -> GasCounter {
+        let start = testing::get_available_gas();
+        gas::withdraw_gas().unwrap();
+        GasCounter { start }
+    }
 
-    // overwriting zeros with spaces
-    let mut char = 0;
-    loop {
-        if char == 15 {
-            break;
-        }
-        // if given byte is zero
-        if shl(0xff, 8 * char) & name == 0 {
-            name = name | shl(0x20, 8 * char); // set space
-        }
-        char += 1;
-    };
+    fn end(self: GasCounter, name: ByteArray) {
+        let end = testing::get_available_gas();
+        let gas_used = self.start - end;
 
-    let name: felt252 = (name % GAS_OFFSET.into()).try_into().unwrap();
-    // Q?: What's this 1070 value that needed to be adjusted?
-    let used_gas = (start - gas_after - 1070).into() * GAS_OFFSET;
-    (used_gas + name).print();
+        println!("# GAS # {}: {}", Self::pad_start(name, 18), gas_used);
+        gas::withdraw_gas().unwrap();
+    }
+
+    fn pad_start(str: ByteArray, len: u32) -> ByteArray {
+        let mut missing: ByteArray = "";
+        let missing_len = if str.len() >= len {
+            0
+        } else {
+            len - str.len()
+        };
+
+        while missing.len() < missing_len {
+            missing.append(@".");
+        };
+        missing + str
+    }
 }
 
 // assert that `value` and `expected` have the same size and the same content

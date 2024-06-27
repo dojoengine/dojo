@@ -12,10 +12,8 @@ use dojo_world::manifest::{
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
+use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::Provider;
-use starknet::signers::Signer;
 
 mod auto_auth;
 mod migrate;
@@ -50,18 +48,20 @@ pub struct ContractMigrationOutput {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn migrate<P, S>(
+pub async fn migrate<A>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
     rpc_url: String,
-    account: SingleOwnerAccount<P, S>,
+    account: A,
     name: &str,
     dry_run: bool,
     txn_config: TxnConfig,
+    skip_manifests: Option<Vec<String>>,
 ) -> Result<()>
 where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
+    A: ConnectedAccount + Sync + Send,
+    A::Provider: Send,
+    A::SignError: 'static,
 {
     let ui = ws.config().ui();
 
@@ -77,15 +77,15 @@ where
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
-        utils::load_world_manifests(&profile_dir, &account, world_address, &ui).await.map_err(
-            |e| {
+        utils::load_world_manifests(&profile_dir, &account, world_address, &ui, skip_manifests)
+            .await
+            .map_err(|e| {
                 ui.error(e.to_string());
                 anyhow!(
                     "\n Use `sozo clean` to clean your project.\nThen, rebuild your project with \
                      `sozo build`.",
                 )
-            },
-        )?;
+            })?;
 
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");

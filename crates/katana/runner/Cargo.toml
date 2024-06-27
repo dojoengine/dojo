@@ -9,7 +9,6 @@ version.workspace = true
 anyhow.workspace = true
 assert_fs.workspace = true
 chrono.workspace = true
-home = "0.5.5"
 katana-core.workspace = true
 katana-primitives.workspace = true
 lazy_static.workspace = true

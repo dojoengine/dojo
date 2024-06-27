@@ -85,7 +85,7 @@ message Query {
 }
 
 message EventQuery {
-    EventKeysClause keys =1;
+    KeysClause keys = 1;
     uint32 limit = 2;
     uint32 offset = 3;
 }
@@ -99,17 +99,26 @@ message Clause {
     }
 }
 
-message HashedKeysClause {
-    repeated bytes hashed_keys = 1;
+message ModelKeysClause {
+    string model = 1;
+    repeated bytes keys = 2;
 }
 
-message EventKeysClause {
-    repeated bytes keys = 1;
+message EntityKeysClause {
+    oneof clause_type {
+        HashedKeysClause hashed_keys = 1;
+        KeysClause keys = 2;
+    }
 }
 
 message KeysClause {
-    string model = 1;
-    repeated bytes keys = 2;
+    repeated bytes keys = 1;
+    PatternMatching pattern_matching = 2;
+    repeated string models = 3;
+}
+
+message HashedKeysClause {
+    repeated bytes hashed_keys = 1;
 }
 
 message MemberClause {
@@ -123,6 +132,11 @@ message CompositeClause {
     string model = 1;
     LogicalOperator operator = 2;
     repeated Clause clauses = 3;
+}
+
+enum PatternMatching {
+    FixedLen = 0;
+    VariableLen = 1;
 }
 
 enum LogicalOperator {

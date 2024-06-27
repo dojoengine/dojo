@@ -47,7 +47,6 @@ alloy-network = { version = "0.1.0", default-features = false, optional = true }
 alloy-provider = { version = "0.1.0", default-features = false, optional = true, features = [ "reqwest" ] }
 alloy-rpc-types = { version = "0.1.0", default-features = false, optional = true }
 alloy-signer = { version = "0.1.0", default-features = false, optional = true }
-alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
 alloy-transport = { version = "0.1.0", default-features = false, optional = true }
 
 [dev-dependencies]
@@ -62,7 +61,6 @@ messaging = [
     "alloy-provider",
     "alloy-rpc-types",
     "alloy-signer",
-    "alloy-signer-wallet",
     "alloy-sol-types",
     "alloy-transport",
 ]

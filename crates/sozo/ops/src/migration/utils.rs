@@ -5,9 +5,7 @@ use dojo_world::manifest::{
     OVERLAYS_DIR,
 };
 use scarb_ui::Ui;
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::providers::Provider;
-use starknet::signers::Signer;
+use starknet::accounts::ConnectedAccount;
 use starknet_crypto::FieldElement;
 
 use super::ui::MigrationUi;
@@ -15,20 +13,25 @@ use super::ui::MigrationUi;
 /// Loads:
 ///     - `BaseManifest` from filesystem
 ///     - `DeployedManifest` from onchain dataa if `world_address` is `Some`
-pub(super) async fn load_world_manifests<P, S>(
+pub(super) async fn load_world_manifests<A>(
     profile_dir: &Utf8PathBuf,
-    account: &SingleOwnerAccount<P, S>,
+    account: A,
     world_address: Option<FieldElement>,
     ui: &Ui,
+    skip_migration: Option<Vec<String>>,
 ) -> Result<(BaseManifest, Option<DeploymentManifest>)>
 where
-    P: Provider + Sync + Send,
-    S: Signer + Sync + Send,
+    A: ConnectedAccount + Sync + Send,
+    <A as ConnectedAccount>::Provider: Send,
 {
     ui.print_step(1, "🌎", "Building World state...");
 
     let mut local_manifest = BaseManifest::load_from_path(&profile_dir.join(BASE_DIR))
         .map_err(|e| anyhow!("Fail to load local manifest file: {e}."))?;
+
+    if let Some(skip_manifests) = skip_migration {
+        local_manifest.remove_items(skip_manifests);
+    }
 
     let overlay_path = profile_dir.join(OVERLAYS_DIR);
     if overlay_path.exists() {

@@ -1,18 +1,16 @@
 use std::str::FromStr;
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use camino::Utf8PathBuf;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use scarb::core::{Config, TomlManifest};
 use semver::Version;
-use starknet::accounts::SingleOwnerAccount;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet::signers::LocalWallet;
 
-use crate::commands::options::account::AccountOptions;
+use crate::commands::options::account::{AccountOptions, SozoAccount, WorldAddressOrName};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
 
@@ -28,8 +26,15 @@ use crate::commands::options::world::WorldOptions;
 pub fn load_metadata_from_config(config: &Config) -> Result<Option<Environment>, Error> {
     let env_metadata = if config.manifest_path().exists() {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let dojo_metadata = if let Some(metadata) = dojo_metadata_from_workspace(&ws) {
+            metadata
+        } else {
+            return Err(anyhow!(
+                "No current package with dojo metadata found, workspaces are not suppored yet."
+            ));
+        };
 
-        dojo_metadata_from_workspace(&ws).env().cloned()
+        dojo_metadata.env().cloned()
     } else {
         None
     };
@@ -54,11 +59,22 @@ pub async fn world_from_env_metadata(
     account: AccountOptions,
     starknet: StarknetOptions,
     env_metadata: &Option<Environment>,
-) -> Result<WorldContract<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>, Error> {
-    let world_address = world.address(env_metadata.as_ref())?;
-    let provider = starknet.provider(env_metadata.as_ref())?;
+    config: &Config,
+) -> Result<WorldContract<SozoAccount<JsonRpcClient<HttpTransport>>>, Error> {
+    let env_metadata = env_metadata.as_ref();
 
-    let account = account.account(provider, env_metadata.as_ref()).await?;
+    let world_address = world.address(env_metadata)?;
+    let provider = starknet.provider(env_metadata)?;
+    let account = account
+        .account(
+            provider,
+            WorldAddressOrName::Address(world_address),
+            &starknet,
+            env_metadata,
+            config,
+        )
+        .await?;
+
     Ok(WorldContract::new(world_address, account))
 }
 

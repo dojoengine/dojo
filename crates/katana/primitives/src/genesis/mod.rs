@@ -7,6 +7,11 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
+#[cfg(feature = "slot")]
+use constant::{
+    CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CASM,
+    CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+};
 use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -282,6 +287,15 @@ impl Default for Genesis {
                     compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                 },
             ),
+            #[cfg(feature = "slot")]
+            (
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                },
+            ),
         ]);
 
         Self {
@@ -303,16 +317,8 @@ impl Default for Genesis {
 mod tests {
     use std::str::FromStr;
 
+    use allocation::GenesisAccount;
     use starknet::macros::felt;
-    use tests::allocation::GenesisAccount;
-    use tests::constant::{
-        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
-        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
-        DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-        DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-        DEFAULT_OZ_ACCOUNT_CONTRACT, DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
-        DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
-    };
 
     use super::*;
 
@@ -343,6 +349,15 @@ mod tests {
                     compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                     casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                },
+            ),
+            #[cfg(feature = "slot")]
+            (
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
         ]);
@@ -480,14 +495,27 @@ mod tests {
         assert_eq!(actual_block.header.version, expected_block.header.version);
         assert_eq!(actual_block.body, expected_block.body);
 
-        assert!(
-            actual_state_updates.declared_compiled_classes.len() == 3,
-            "should be 3 casm classes: udc, erc20, oz account"
-        );
-        assert!(
-            actual_state_updates.declared_sierra_classes.len() == 1,
-            "should be only 1 sierra class: oz account"
-        );
+        if cfg!(feature = "slot") {
+            assert!(
+                actual_state_updates.declared_compiled_classes.len() == 4,
+                "should be 4 casm classes: udc, erc20, oz account, controller account"
+            );
+
+            assert!(
+                actual_state_updates.declared_sierra_classes.len() == 2,
+                "should be 2 sierra classes: oz account, controller account"
+            );
+        } else {
+            assert!(
+                actual_state_updates.declared_compiled_classes.len() == 3,
+                "should be 3 casm classes: udc, erc20, oz account"
+            );
+
+            assert!(
+                actual_state_updates.declared_sierra_classes.len() == 1,
+                "should be only 1 sierra class: oz account"
+            );
+        }
 
         assert_eq!(
             actual_state_updates.state_updates.declared_classes.get(&fee_token.class_hash),
@@ -560,6 +588,34 @@ mod tests {
             Some(&DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
             "The default oz account contract sierra class should be declared"
         );
+
+        #[cfg(feature = "slot")]
+        {
+            assert_eq!(
+                actual_state_updates
+                    .state_updates
+                    .declared_classes
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                "The controller account class should be declared"
+            );
+
+            assert_eq!(
+                actual_state_updates
+                    .declared_compiled_classes
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                "The controller account contract casm class should be declared"
+            );
+
+            assert_eq!(
+                actual_state_updates
+                    .declared_sierra_classes
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
+                "The controller account contract sierra class should be declared"
+            );
+        }
 
         // check that all contract allocations exist in the state updates
 
