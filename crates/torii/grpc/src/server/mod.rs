@@ -19,7 +19,7 @@ use proto::world::{
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Execute, Pool, Row, Sqlite};
+use sqlx::{Pool, Row, Sqlite};
 use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
