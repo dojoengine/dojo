@@ -26,14 +26,16 @@ use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
+use crate::proto::types::KeysClause;
 use crate::server::DojoWorld;
 use crate::types::schema::Entity;
-use crate::types::KeysClause;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_entities_queries() {
-    let options =
-        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+    let options = SqliteConnectOptions::from_str("sqlite::memory:")
+        .unwrap()
+        .create_if_missing(true)
+        .with_regexp();
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
@@ -116,9 +118,13 @@ async fn test_entities_queries() {
             "entities",
             "entity_model",
             "entity_id",
-            KeysClause { model: "Moves".to_string(), keys: vec![account.address()] }.into(),
-            1,
-            0,
+            KeysClause {
+                keys: vec![account.address().to_bytes_be().to_vec()],
+                pattern_matching: 0,
+                models: vec![],
+            },
+            Some(1),
+            None,
         )
         .await
         .unwrap()

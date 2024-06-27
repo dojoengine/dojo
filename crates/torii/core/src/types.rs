@@ -52,6 +52,10 @@ pub struct EventMessage {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+
+    // this should never be None. as a EventMessage cannot be deleted
+    #[sqlx(skip)]
+    pub updated_model: Option<Ty>,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]

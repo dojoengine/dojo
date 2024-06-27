@@ -419,10 +419,10 @@ fn fetch_remote_manifest() {
         DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
     });
 
-    assert_eq!(local_manifest.models.len(), 7);
+    assert_eq!(local_manifest.models.len(), 8);
     assert_eq!(local_manifest.contracts.len(), 3);
 
-    assert_eq!(remote_manifest.models.len(), 7);
+    assert_eq!(remote_manifest.models.len(), 8);
     assert_eq!(remote_manifest.contracts.len(), 3);
 
     // compute diff from local and remote manifest
