@@ -267,7 +267,7 @@ impl DojoWorld {
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         let mut entities = Vec::with_capacity(db_entities.len());
-        for (entity_id, models_str) in db_entities {
+        for (entity_id, models_str) in &db_entities {
             let model_ids: Vec<&str> = models_str.split(',').collect();
             let schemas = self.model_cache.schemas(model_ids).await?;
 
@@ -279,10 +279,10 @@ impl DojoWorld {
                 Some(&format!("{table}.id = ?")),
             )?;
 
-            let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
+            let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
             let mut arrays_rows = HashMap::new();
             for (name, query) in arrays_queries {
-                let rows = sqlx::query(&query).bind(&entity_id).fetch_all(&self.pool).await?;
+                let rows = sqlx::query(&query).bind(entity_id).fetch_all(&self.pool).await?;
                 arrays_rows.insert(name, rows);
             }
 
@@ -333,7 +333,7 @@ impl DojoWorld {
                     JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
                     WHERE {model_relation_table}.model_id = '{:#x}' AND {table}.keys REGEXP ?
                 "#,
-                    get_selector_from_name(&model).map_err(ParseError::NonAsciiName)?
+                    get_selector_from_name(model).map_err(ParseError::NonAsciiName)?
                 )
             } else {
                 format!(
@@ -367,7 +367,7 @@ impl DojoWorld {
                 r#"
                 HAVING INSTR(model_ids, '{:#x}') > 0
             "#,
-                get_selector_from_name(&model).map_err(ParseError::NonAsciiName)?
+                get_selector_from_name(model).map_err(ParseError::NonAsciiName)?
             );
         }
 
@@ -398,10 +398,10 @@ impl DojoWorld {
                 Some(&format!("{table}.id = ?")),
             )?;
 
-            let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
+            let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
             let mut arrays_rows = HashMap::new();
             for (name, query) in arrays_queries {
-                let rows = sqlx::query(&query).bind(&entity_id).fetch_all(&self.pool).await?;
+                let rows = sqlx::query(&query).bind(entity_id).fetch_all(&self.pool).await?;
                 arrays_rows.insert(name, rows);
             }
 
