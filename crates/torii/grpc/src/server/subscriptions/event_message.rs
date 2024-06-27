@@ -121,7 +121,7 @@ impl Service {
                             }
                         }
                     }
-                    
+
                     // if the key pattern doesnt match our subscribers key pattern, skip
                     // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
                     if clause.pattern_matching == PatternMatching::FixedLen

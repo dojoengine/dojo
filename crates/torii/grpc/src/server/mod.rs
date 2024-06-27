@@ -286,24 +286,7 @@ impl DojoWorld {
                 arrays_rows.insert(name, rows);
             }
 
-            let models = schemas
-                .into_iter()
-                .map(|mut s| {
-                    map_row_to_ty("", &s.name(), &mut s, &row, &arrays_rows)?;
-
-                    Ok(s.as_struct()
-                        .expect("schema should be struct")
-                        .to_owned()
-                        .try_into()
-                        .unwrap())
-                })
-                .collect::<Result<Vec<_>, Error>>()?;
-
-            let hashed_keys = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
-            entities.push(proto::types::Entity {
-                hashed_keys: hashed_keys.to_bytes_be().to_vec(),
-                models,
-            })
+            entities.push(Self::map_row_to_entity(&row, &arrays_rows, &schemas)?);
         }
 
         Ok((entities, total_count))
@@ -338,28 +321,28 @@ impl DojoWorld {
         keys_pattern += "/$";
 
         // total count of rows that matches keys_pattern without limit and offset
-        let mut count_query = format!(
+        let count_query = format!(
             r#"
             SELECT count(*)
             FROM {table}
-        "#
+            {}
+        "#,
+            if let Some(model) = &keys_clause.model {
+                format!(
+                    r#"
+                    JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                    WHERE {model_relation_table}.model_id = '{:#x}' AND {table}.keys REGEXP ?
+                "#,
+                    get_selector_from_name(&model).map_err(ParseError::NonAsciiName)?
+                )
+            } else {
+                format!(
+                    r#"
+                    WHERE {table}.keys REGEXP ?
+                "#
+                )
+            }
         );
-
-        if let Some(model) = &keys_clause.model {
-            count_query += &format!(
-                r#"
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {model_relation_table}.model_id = '{:#x}' AND {table}.keys REGEXP ?
-            "#,
-                get_selector_from_name(&model).map_err(ParseError::NonAsciiName)?
-            );
-        } else {
-            count_query += &format!(
-                r#"
-                WHERE {table}.keys REGEXP ?
-            "#
-            );
-        }
 
         let total_count =
             sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
@@ -370,13 +353,15 @@ impl DojoWorld {
 
         let mut models_query = format!(
             r#"
-            SELECT group_concat({model_relation_table}.model_id) as model_ids
+            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {table}.keys REGEXP ?
             GROUP BY {table}.id
+            ORDER BY {table}.event_id DESC
         "#
         );
+
         if let Some(model) = &keys_clause.model {
             models_query += &format!(
                 r#"
@@ -386,50 +371,44 @@ impl DojoWorld {
             );
         }
 
-
-        let (models_str,): (String,) =
-            sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
-
-        let model_ids = models_str.split(',').collect::<Vec<&str>>();
-        let schemas = self.model_cache.schemas(model_ids).await?;
-
-        let mut where_clause = format!("{table}.keys REGEXP ? ORDER BY {table}.event_id DESC");
-
         if limit.is_some() {
-            where_clause += " LIMIT ?";
+            models_query += " LIMIT ?";
         }
         if offset.is_some() {
-            where_clause += " OFFSET ?";
+            models_query += " OFFSET ?";
         }
 
-        // query to filter with limit and offset
-        let (entities_query, arrays_queries) = build_sql_query(
-            &schemas,
-            table,
-            entity_relation_column,
-            Some(&where_clause),
-            Some(&format!("{table}.keys REGEXP ?")),
-        )?;
-
-        let db_entities = sqlx::query(&entities_query)
+        let db_entities: Vec<(String, String)> = sqlx::query_as(&models_query)
             .bind(&keys_pattern)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
             .await?;
-        let mut arrays_rows: HashMap<String, Vec<SqliteRow>> = HashMap::new();
-        for (name, query) in arrays_queries {
-            let rows = sqlx::query(&query).bind(&keys_pattern).fetch_all(&self.pool).await?;
-            arrays_rows.insert(name, rows);
+
+        let mut entities = Vec::with_capacity(db_entities.len());
+        for (entity_id, models_strs) in &db_entities {
+            let model_ids: Vec<&str> = models_strs.split(',').collect();
+            let schemas = self.model_cache.schemas(model_ids).await?;
+
+            let (entity_query, arrays_queries) = build_sql_query(
+                &schemas,
+                table,
+                entity_relation_column,
+                Some(&format!("{table}.id = ?")),
+                Some(&format!("{table}.id = ?")),
+            )?;
+
+            let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
+            let mut arrays_rows = HashMap::new();
+            for (name, query) in arrays_queries {
+                let rows = sqlx::query(&query).bind(&entity_id).fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, rows);
+            }
+
+            entities.push(Self::map_row_to_entity(&row, &arrays_rows, &schemas)?);
         }
 
-        Ok((
-            db_entities
-                .iter()
-                .map(|row| Self::map_row_to_entity(row, &arrays_rows, &schemas))
-                .collect::<Result<Vec<_>, Error>>()?,
-            total_count,
-        ))
+        Ok((entities, total_count))
     }
 
     pub(crate) async fn events_by_keys(
