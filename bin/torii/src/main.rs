@@ -116,7 +116,7 @@ struct Args {
     index_pending: bool,
 
     /// Polling interval in ms
-    #[arg(long, default_value = "500")]
+    #[arg(long, default_value = "1000")]
     polling_interval: u64,
 }
 
