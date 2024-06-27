@@ -231,5 +231,4 @@ alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372e
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
 alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
-alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
 alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }

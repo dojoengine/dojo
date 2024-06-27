@@ -19,22 +19,16 @@ cairo-lang-sierra.workspace = true
 cairo-lang-starknet-classes.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-test-plugin.workspace = true
-cairo-lang-test-runner.workspace = true
 cairo-lang-utils.workspace = true
 camino.workspace = true
-clap-verbosity-flag.workspace = true
 clap.workspace = true
-clap_complete.workspace = true
 colored = "2.0.0"
 colored_json = "3.2.0"
 console.workspace = true
-dojo-bindgen.workspace = true
 dojo-lang.workspace = true
 dojo-types.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 futures.workspace = true
-notify = "6.0.1"
-notify-debouncer-mini = "0.3.0"
 rpassword.workspace = true
 scarb-ui.workspace = true
 scarb.workspace = true
@@ -47,14 +41,12 @@ starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-tracing-log = "0.1.3"
+toml.workspace = true
 tracing.workspace = true
 url.workspace = true
-toml.workspace = true
 
 [dev-dependencies]
 assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ] }
 katana-runner.workspace = true
-snapbox = "0.4.6"
