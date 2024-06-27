@@ -14,7 +14,7 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError};
-use torii_core::model::{build_sql_query, map_row_to_ty};
+use torii_core::model::build_sql_query;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
 use torii_core::types::EventMessage;
@@ -22,6 +22,7 @@ use tracing::{error, trace};
 
 use crate::proto;
 use crate::proto::world::SubscribeEntityResponse;
+use crate::server::map_row_to_entity;
 use crate::types::{EntityKeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
@@ -114,11 +115,11 @@ impl Service {
                 Some(EntityKeysClause::Keys(clause)) => {
                     // if we have a model clause, then we need to check that the entity
                     // has an updated model and that the model name matches the clause
-                    if let Some(model) = &clause.model {
-                        if let Some(updated_model) = &entity.updated_model {
-                            if updated_model.name() != model.clone() {
-                                continue;
-                            }
+                    if let Some(updated_model) = &entity.updated_model {
+                        if !clause.models.is_empty()
+                            && !clause.models.contains(&updated_model.name())
+                        {
+                            continue;
                         }
                     }
 
@@ -184,23 +185,8 @@ impl Service {
                 arrays_rows.insert(name, rows);
             }
 
-            let models = schemas
-                .into_iter()
-                .map(|mut s| {
-                    map_row_to_ty("", &s.name(), &mut s, &row, &arrays_rows)?;
-                    Ok(s.as_struct()
-                        .expect("schema should be a struct")
-                        .to_owned()
-                        .try_into()
-                        .unwrap())
-                })
-                .collect::<Result<Vec<_>, Error>>()?;
-
             let resp = proto::world::SubscribeEntityResponse {
-                entity: Some(proto::types::Entity {
-                    hashed_keys: hashed.to_bytes_be().to_vec(),
-                    models,
-                }),
+                entity: Some(map_row_to_entity(&row, &arrays_rows, &schemas)?),
             };
 
             if sub.sender.send(Ok(resp)).await.is_err() {

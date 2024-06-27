@@ -286,7 +286,7 @@ impl DojoWorld {
                 arrays_rows.insert(name, rows);
             }
 
-            entities.push(Self::map_row_to_entity(&row, &arrays_rows, &schemas)?);
+            entities.push(map_row_to_entity(&row, &arrays_rows, &schemas)?);
         }
 
         Ok((entities, total_count))
@@ -327,19 +327,27 @@ impl DojoWorld {
             FROM {table}
             {}
         "#,
-            if let Some(model) = &keys_clause.model {
+            if !keys_clause.models.is_empty() {
+                let model_ids = keys_clause
+                    .models
+                    .iter()
+                    .map(|model| get_selector_from_name(model).map_err(ParseError::NonAsciiName))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let model_ids_str =
+                    model_ids.iter().map(|id| format!("'{:#x}'", id)).collect::<Vec<_>>().join(",");
                 format!(
                     r#"
-                    JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                    WHERE {model_relation_table}.model_id = '{:#x}' AND {table}.keys REGEXP ?
-                "#,
-                    get_selector_from_name(model).map_err(ParseError::NonAsciiName)?
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {model_relation_table}.model_id IN ({})
+                AND {table}.keys REGEXP ?
+            "#,
+                    model_ids_str
                 )
             } else {
                 format!(
                     r#"
-                    WHERE {table}.keys REGEXP ?
-                "#
+                WHERE {table}.keys REGEXP ?
+            "#
                 )
             }
         );
@@ -358,18 +366,28 @@ impl DojoWorld {
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {table}.keys REGEXP ?
             GROUP BY {table}.id
-            ORDER BY {table}.event_id DESC
         "#
         );
 
-        if let Some(model) = &keys_clause.model {
+        if !keys_clause.models.is_empty() {
+            // filter by models
             models_query += &format!(
-                r#"
-                HAVING INSTR(model_ids, '{:#x}') > 0
-            "#,
-                get_selector_from_name(model).map_err(ParseError::NonAsciiName)?
+                "HAVING {}",
+                keys_clause
+                    .models
+                    .iter()
+                    .map(|model| {
+                        let model_id =
+                            get_selector_from_name(model).map_err(ParseError::NonAsciiName)?;
+                        Ok(format!("INSTR(model_ids, '{:#x}') > 0", model_id))
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?
+                    .join(" OR ")
+                    .as_str()
             );
         }
+
+        models_query += &format!(" ORDER BY {table}.event_id DESC");
 
         if limit.is_some() {
             models_query += " LIMIT ?";
@@ -405,7 +423,7 @@ impl DojoWorld {
                 arrays_rows.insert(name, rows);
             }
 
-            entities.push(Self::map_row_to_entity(&row, &arrays_rows, &schemas)?);
+            entities.push(map_row_to_entity(&row, &arrays_rows, &schemas)?);
         }
 
         Ok((entities, total_count))
@@ -531,7 +549,7 @@ impl DojoWorld {
 
         let entities_collection = db_entities
             .iter()
-            .map(|row| Self::map_row_to_entity(row, &arrays_rows, &schemas))
+            .map(|row| map_row_to_entity(row, &arrays_rows, &schemas))
             .collect::<Result<Vec<_>, Error>>()?;
         // Since there is not limit and offset, total_count is same as number of entities
         let total_count = entities_collection.len() as u32;
@@ -780,30 +798,6 @@ impl DojoWorld {
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
         self.event_manager.add_subscriber(clause.try_into().unwrap()).await
     }
-
-    fn map_row_to_entity(
-        row: &SqliteRow,
-        arrays_rows: &HashMap<String, Vec<SqliteRow>>,
-        schemas: &[Ty],
-    ) -> Result<proto::types::Entity, Error> {
-        let hashed_keys =
-            FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
-        let models = schemas
-            .iter()
-            .map(|schema| {
-                let mut schema = schema.to_owned();
-                map_row_to_ty("", &schema.name(), &mut schema, row, arrays_rows)?;
-                Ok(schema
-                    .as_struct()
-                    .expect("schema should be struct")
-                    .to_owned()
-                    .try_into()
-                    .unwrap())
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-
-        Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
-    }
 }
 
 fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
@@ -823,6 +817,25 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
         FieldElement::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
 
     Ok(proto::types::Event { keys, data, transaction_hash })
+}
+
+fn map_row_to_entity(
+    row: &SqliteRow,
+    arrays_rows: &HashMap<String, Vec<SqliteRow>>,
+    schemas: &[Ty],
+) -> Result<proto::types::Entity, Error> {
+    let hashed_keys =
+        FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+    let models = schemas
+        .iter()
+        .map(|schema| {
+            let mut schema = schema.to_owned();
+            map_row_to_ty("", &schema.name(), &mut schema, row, arrays_rows)?;
+            Ok(schema.as_struct().expect("schema should be struct").to_owned().try_into().unwrap())
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
