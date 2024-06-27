@@ -14,6 +14,7 @@ serde.workspace = true
 # preserve order
 anyhow.workspace = true
 async-trait.workspace = true
+cainome.workspace = true
 chrono.workspace = true
 crypto-bigint.workspace = true
 dojo-types.workspace = true
@@ -26,22 +27,21 @@ starknet.workspace = true
 thiserror.workspace = true
 tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 tracing.workspace = true
-cainome.workspace = true
 
 [dev-dependencies]
 dojo-test-utils.workspace = true
 tempfile.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ] }
-libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ] }
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ], rev = "451bcb60bb472262f96071006b19e5d236b1dd54" }
+libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "451bcb60bb472262f96071006b19e5d236b1dd54" }
 sqlx.workspace = true
 tokio.workspace = true
 torii-core.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen" ] }
-libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p" }
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen" ], rev = "451bcb60bb472262f96071006b19e5d236b1dd54" }
+libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "451bcb60bb472262f96071006b19e5d236b1dd54" }
 tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.40"
 wasm-bindgen-test = "0.3.40"

@@ -31,5 +31,8 @@ similar-asserts.workspace = true
 
 [features]
 default = [ "serde" ]
+
+controller = [  ]
 rpc = [  ]
 serde = [ "alloy-primitives/serde" ]
+slot = [ "controller" ]
