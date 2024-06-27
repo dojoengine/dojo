@@ -2,7 +2,6 @@
 
 use std::ops::RangeInclusive;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Context;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
@@ -23,7 +22,6 @@ use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::poseidon_hash_many;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use tokio::time::sleep;
 use tracing::{error, info, trace};
 use url::Url;
 
