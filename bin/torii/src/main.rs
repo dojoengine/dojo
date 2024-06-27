@@ -15,7 +15,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use common::parse::{parse_socket_address, parse_url};
 use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_world::contracts::world::WorldContractReader;
@@ -112,7 +112,7 @@ struct Args {
     events_chunk_size: u64,
 
     /// Enable indexing pending blocks
-    #[arg(long, default_value_t = true)]
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
     index_pending: bool,
 
     /// Polling interval in ms
