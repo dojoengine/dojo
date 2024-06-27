@@ -86,28 +86,6 @@ impl ModelStorage {
         raw_keys: Vec<FieldElement>,
         raw_values: Vec<FieldElement>,
     ) -> Result<(), Error> {
-        let model_name =
-            parse_cairo_short_string(&model).map_err(ParseError::ParseCairoShortString)?;
-
-        let model_packed_size = self
-            .metadata
-            .read()
-            .model(&model_name)
-            .map(|model| model.packed_size)
-            .ok_or(Error::UnknownModel(model_name.clone()))?;
-
-        match raw_values.len().cmp(&(model_packed_size as usize)) {
-            Ordering::Greater | Ordering::Less => {
-                return Err(Error::InvalidModelValuesLen {
-                    model: model_name,
-                    actual_value_len: raw_values.len(),
-                    expected_value_len: model_packed_size as usize,
-                });
-            }
-
-            Ordering::Equal => {}
-        }
-
         let storage_addresses = self.get_model_storage_addresses(model, &raw_keys)?;
         self.set_storages_at(storage_addresses.into_iter().zip(raw_values).collect());
         self.index_model(model, raw_keys);
