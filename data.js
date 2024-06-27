@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719449173254,
+  "lastUpdate": 1719500769330,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10465,6 +10465,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16724128,
             "range": "± 153314",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ca42629540b9855a8201da49dc861a74691143bb",
+          "message": "feat(torii-grpc): support multiple entity models in queries & complex keys clause for subscriptions + queries (#2095)\n\n* feat: start working on keys entity subscription\r\n\r\n* refactor: implementing keys subscriptions and using existing queries\r\n\r\n* refactor: finish refactor on clauses\r\n\r\n* fix: if felt bytes 0 then wildcard\r\n\r\n* fmt\r\n\r\n* feat: update torii client and fix tets\r\n\r\n* fix: clippy\r\n\r\n* refactor: do not consider overflowing key patterns\r\n\r\n* feat: fully use new keysclause & add pattern matching\r\n\r\n* feat: support pattern matching in queries\r\n\r\n* fmt\r\n\r\n* refactor: new types in torii client\r\n\r\n* clippy\r\n\r\n* fix: ignroe non matching entity keys in fixedlen\r\n\r\n* add a model to test keys clause pattern matching\r\n\r\n* fix: fix tests\r\n\r\n* fix: lock version\r\n\r\n* chore: remove debug print\r\n\r\n* fix: match fixed len for queries\r\n\r\n* chore: use regex for key pattern matching\r\n\r\n* feat: add optional model clause to keysclause\r\n\r\n* feat: add model specf to query by keys\r\n\r\n* fix: queries\r\n\r\n* feat: wrap up queries\r\n\r\n* fmt & clippy\r\n\r\n* chore: enable regexp for tests\r\n\r\n* chore: update test for new model\r\n\r\n* refactor: use array of models for keysclause\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-27T08:54:11-06:00",
+          "tree_id": "188030d1f1b0777d2013961931e97103343bb521",
+          "url": "https://github.com/dojoengine/dojo/commit/ca42629540b9855a8201da49dc861a74691143bb"
+        },
+        "date": 1719500768507,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16787100,
+            "range": "± 203705",
             "unit": "ns/iter"
           }
         ]
