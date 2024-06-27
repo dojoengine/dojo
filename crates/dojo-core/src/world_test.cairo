@@ -801,7 +801,7 @@ fn bench_execute() {
 
 #[test]
 fn bench_execute_complex() {
-    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world("dojo", array![benchmarks::character::TEST_CLASS_HASH],);
     let bar_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
