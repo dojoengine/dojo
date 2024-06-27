@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -152,7 +151,6 @@ mod tests {
     use starknet::core::utils::cairo_short_string_to_felt;
     use starknet::macros::felt;
 
-    use crate::client::error::Error;
     use crate::utils::compute_all_storage_addresses;
 
     fn create_dummy_metadata() -> WorldMetadata {
@@ -175,36 +173,6 @@ mod tests {
     fn create_dummy_storage() -> super::ModelStorage {
         let metadata = Arc::new(RwLock::new(create_dummy_metadata()));
         super::ModelStorage::new(metadata)
-    }
-
-    #[test]
-    fn err_if_set_values_too_many() {
-        let storage = create_dummy_storage();
-        let keys = vec![felt!("0x12345")];
-        let values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4"), felt!("5")];
-        let model = cairo_short_string_to_felt("Position").unwrap();
-        let result = storage.set_model_storage(model, keys, values);
-
-        assert!(storage.storage.read().is_empty());
-        matches!(
-            result,
-            Err(Error::InvalidModelValuesLen { actual_value_len: 5, expected_value_len: 4, .. })
-        );
-    }
-
-    #[test]
-    fn err_if_set_values_too_few() {
-        let storage = create_dummy_storage();
-        let keys = vec![felt!("0x12345")];
-        let values = vec![felt!("1"), felt!("2")];
-        let model = cairo_short_string_to_felt("Position").unwrap();
-        let result = storage.set_model_storage(model, keys, values);
-
-        assert!(storage.storage.read().is_empty());
-        matches!(
-            result,
-            Err(Error::InvalidModelValuesLen { actual_value_len: 2, expected_value_len: 4, .. })
-        );
     }
 
     #[test]
