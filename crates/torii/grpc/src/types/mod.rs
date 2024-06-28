@@ -203,11 +203,7 @@ impl TryFrom<proto::types::KeysClause> for KeysClause {
             .keys
             .iter()
             .map(|k| {
-                if k.is_empty() {
-                    Ok(None)
-                } else {
-                    Ok(Some(FieldElement::from_byte_slice_be(k)?))
-                }
+                if k.is_empty() { Ok(None) } else { Ok(Some(FieldElement::from_byte_slice_be(k)?)) }
             })
             .collect::<Result<Vec<Option<FieldElement>>, _>>()?;
 
