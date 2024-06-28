@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719512003978,
+  "lastUpdate": 1719607782511,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10555,6 +10555,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16278821,
             "range": "± 156509",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "128649481+neotheprogramist@users.noreply.github.com",
+            "name": "Neo",
+            "username": "neotheprogramist"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1fcaa7a53dd846034bdf137a7603fc6143db857d",
+          "message": "feat(saya): load starknet account from CLI  (#2054)\n\n* init\r\n\r\n* parsing args earlier\r\n\r\n* chain id from string\r\n\r\n* improve error handling for input parsing\r\n\r\n* saya args cleanup\r\n\r\n* fix: clippy\r\n\r\n---------\r\n\r\nCo-authored-by: Mateusz Chudkowski <mateuszchudy03@gmail.com>\r\nCo-authored-by: Mateusz Zając <matzayonc@gmail.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-06-28T14:38:05-06:00",
+          "tree_id": "8b3faa67388d9719bc736f57602e7d45a3db17f7",
+          "url": "https://github.com/dojoengine/dojo/commit/1fcaa7a53dd846034bdf137a7603fc6143db857d"
+        },
+        "date": 1719607781886,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16440984,
+            "range": "± 189935",
             "unit": "ns/iter"
           }
         ]
