@@ -58,6 +58,7 @@ cargo run -r --bin sozo -- \
     --fee-estimate-multiplier 20 \
     --name <WORLD_NAME>
 ```
+
 Once the migration is done, please take note of the address of the world as it will be re-used in the commands below.
 
 1. Set world configs
@@ -133,6 +134,7 @@ cargo run -r --bin sozo -- model get Position <ACCOUNT_ADDRESS> \
     --rpc-url <SEPOLIA_ENDPOINT> \
     --world <WORLD_ADDRESS>
 ```
+
 ```json
 // Expected on Sepolia as we've executed the transaction on the Katana shard.
 {
@@ -163,8 +165,7 @@ If not (this includes Apple Silicon), some emulation will take place to run the 
 
 It's important that the `--start-block` of Saya is the first block produced by Katana as for now Katana is not fetching events from the forked network.
 
-**IMPORTANT NOTE:**
-For now, please add your account address and account private key in `saya/core/src/dojo_os/mod.rs` as those parameters are still not exposed currently. As you are using `cargo run`, it will rebuild with your account configuration before running `saya`.
+Starknet sepolia network chain id is `0x00000000000000000000000000000000000000000000534e5f5345504f4c4941`.
 
 ```bash
 cargo run -r --bin saya -- \
@@ -173,7 +174,11 @@ cargo run -r --bin saya -- \
     --world <WORLD_ADDRESS> \
     --url <PROVER_URL> \
     --private-key <PROVER_KEY> \
-    --start-block <FORKED_BLOCK_PLUS_1>
+    --start-block <FORKED_BLOCK_PLUS_1> \
+    --starknet-url <STARKNET_URL> \
+    --chain-id <STARKNET_CHAIN_ID> \
+    --signer-address <STARKNET_ACCOUNT_SIGNER> \
+    --signer-key <STARKNET_ACCOUNT_KEY> \
 ```
 
 After this command, Saya will pick up the blocks with transactions, generate the proof for the state transition, and send it to the base layer world contract.
