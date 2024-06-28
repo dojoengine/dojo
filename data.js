@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719612553855,
+  "lastUpdate": 1719612573230,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10675,6 +10675,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16416397,
             "range": "± 143032",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed0c67737996d24f3cd326fd360d7aec67a18c9c",
+          "message": "refactor(torii-grpc): use Option for felt as keys wildcard (#2119)\n\n* refactor: use Option for felt as wildcard\r\n\r\n* reduce code footprint\r\n\r\n* clippy😡\r\n\r\n* fmt🤬",
+          "timestamp": "2024-06-28T17:57:39-04:00",
+          "tree_id": "f515a16255efa2784502cafa62c69d0316e34988",
+          "url": "https://github.com/dojoengine/dojo/commit/ed0c67737996d24f3cd326fd360d7aec67a18c9c"
+        },
+        "date": 1719612572389,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16561493,
+            "range": "± 206663",
             "unit": "ns/iter"
           }
         ]
