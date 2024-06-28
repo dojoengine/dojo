@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719609290830,
+  "lastUpdate": 1719612553855,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10645,6 +10645,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16413291,
             "range": "± 253496",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6193f22ee774c22b0fe4dcd05bb0f786f2baae47",
+          "message": "refactor(torii-client): remove storage packed size check (#2116)\n\n* refactor: remove invalid model data length check\r\n\r\n* chroe",
+          "timestamp": "2024-06-28T17:57:29-04:00",
+          "tree_id": "155ae182038c4729a6baf74b6cf45304dab627a6",
+          "url": "https://github.com/dojoengine/dojo/commit/6193f22ee774c22b0fe4dcd05bb0f786f2baae47"
+        },
+        "date": 1719612553235,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16416397,
+            "range": "± 143032",
             "unit": "ns/iter"
           }
         ]
