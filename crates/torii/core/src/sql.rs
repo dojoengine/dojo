@@ -169,13 +169,14 @@ impl Sql {
         let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
                                ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, event_id=EXCLUDED.event_id \
-                               RETURNING *";
+                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+                               event_id=EXCLUDED.event_id RETURNING *";
         let mut entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
             .bind(utc_dt_string_from_timestamp(block_timestamp))
+            .fetch_one(&self.pool)
             .await?;
 
         entity_updated.updated_model = Some(entity.clone());
