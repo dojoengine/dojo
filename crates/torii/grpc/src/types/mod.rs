@@ -43,7 +43,7 @@ pub struct ModelKeysClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct KeysClause {
-    pub keys: Vec<FieldElement>,
+    pub keys: Vec<Option<FieldElement>>,
     pub pattern_matching: PatternMatching,
     pub models: Vec<String>,
 }
@@ -184,7 +184,11 @@ impl From<proto::types::PatternMatching> for PatternMatching {
 impl From<KeysClause> for proto::types::KeysClause {
     fn from(value: KeysClause) -> Self {
         Self {
-            keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect(),
+            keys: value
+                .keys
+                .iter()
+                .map(|k| k.map_or(Vec::new(), |k| k.to_bytes_be().into()))
+                .collect(),
             pattern_matching: value.pattern_matching as i32,
             models: value.models,
         }
@@ -198,8 +202,10 @@ impl TryFrom<proto::types::KeysClause> for KeysClause {
         let keys = value
             .keys
             .iter()
-            .map(|k| FieldElement::from_byte_slice_be(k))
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|k| {
+                if k.is_empty() { Ok(None) } else { Ok(Some(FieldElement::from_byte_slice_be(k)?)) }
+            })
+            .collect::<Result<Vec<Option<FieldElement>>, _>>()?;
 
         Ok(Self { keys, pattern_matching: value.pattern_matching().into(), models: value.models })
     }

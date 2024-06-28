@@ -137,17 +137,14 @@ impl Service {
                         let sub_key = clause.keys.get(idx);
 
                         match sub_key {
-                            Some(sub_key) => {
-                                if sub_key == &FieldElement::ZERO {
-                                    true
-                                } else {
-                                    key == sub_key
-                                }
-                            }
-                            // we overflowed the subscriber key pattern
+                            // the key in the subscriber must match the key of the entity
+                            // athis index
+                            Some(Some(sub_key)) => key == sub_key,
+                            // otherwise, if we have no key we should automatically match.
+                            // or.. we overflowed the subscriber key pattern
                             // but we're in VariableLen pattern matching
                             // so we should match all next keys
-                            None => true,
+                            _ => true,
                         }
                     }) {
                         continue;
