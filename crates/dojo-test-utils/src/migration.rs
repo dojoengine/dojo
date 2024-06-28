@@ -22,7 +22,7 @@ pub fn prepare_migration(
     .unwrap();
 
     if let Some(skip_manifests) = skip_migration {
-        manifest.remove_items(skip_manifests);
+        manifest.remove_tags(skip_manifests);
     }
 
     let overlay_manifest = OverlayManifest::load_from_path(

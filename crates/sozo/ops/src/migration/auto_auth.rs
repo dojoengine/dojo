@@ -1,6 +1,5 @@
 use anyhow::Result;
 use dojo_world::contracts::{cairo_utils, WorldContract};
-use dojo_world::manifest::utils::get_full_world_element_name;
 use dojo_world::manifest::BaseManifest;
 use dojo_world::migration::TxnConfig;
 use scarb::core::Workspace;
@@ -44,16 +43,12 @@ pub fn compute_models_contracts(
         // Find that contract from local_manifest based on its name.
         let contract = local_contracts
             .iter()
-            .find(|c| {
-                migrated_contract.namespace == c.inner.namespace
-                    && migrated_contract.name == c.inner.name
-            })
+            .find(|c| migrated_contract.tag == c.inner.tag)
             .expect("we know this contract exists");
 
         ui.print_sub(format!(
             "Authorizing {} for Models: {:?}",
-            get_full_world_element_name(&contract.inner.namespace, &contract.inner.name),
-            contract.inner.writes
+            contract.inner.tag, contract.inner.writes
         ));
 
         // Read all the models that its supposed to write and collect them in a Vec<ModelContract>

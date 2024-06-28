@@ -3,12 +3,12 @@ mod utils;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
+use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
-use sozo_ops::utils::get_default_namespace_from_ws;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
 use utils::snapbox::get_snapbox;
@@ -50,7 +50,7 @@ async fn reregister_models() {
     let rpc_url = &sequencer.url().to_string();
 
     let moves_model =
-        migration.models.iter().find(|m| m.diff.name == "dojo_examples::models::moves").unwrap();
+        migration.models.iter().find(|m| m.diff.tag == "dojo_examples:Moves").unwrap();
     let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local_class_hash);
     let args_vec = [
         "register",

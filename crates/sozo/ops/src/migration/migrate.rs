@@ -5,7 +5,9 @@ use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
 use dojo_world::contracts::abi::world;
 use dojo_world::contracts::{cairo_utils, WorldContract};
-use dojo_world::manifest::utils::{compute_model_selector_from_names, get_full_world_element_name};
+use dojo_world::manifest::utils::{
+    compute_model_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
+};
 use dojo_world::manifest::{
     AbiFormat, BaseManifest, DeploymentManifest, DojoContract, DojoModel, Manifest,
     ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,
@@ -219,9 +221,9 @@ where
 
     // register namespaces
     let mut namespaces =
-        strategy.models.iter().map(|m| m.diff.namespace.to_string()).collect::<Vec<_>>();
+        strategy.models.iter().map(|m| get_namespace_from_tag(&m.diff.tag)).collect::<Vec<_>>();
     namespaces.extend(
-        strategy.contracts.iter().map(|c| c.diff.namespace.to_string()).collect::<Vec<_>>(),
+        strategy.contracts.iter().map(|c| get_namespace_from_tag(&c.diff.tag)).collect::<Vec<_>>(),
     );
     namespaces = namespaces.into_iter().unique().collect::<Vec<_>>();
 
@@ -346,12 +348,11 @@ where
 
     // models
     if !migration_output.models.is_empty() {
-        for (namespace, model_name) in migration_output.models {
-            let full_name = get_full_world_element_name(&namespace, &model_name);
-            if let Some(m) = dojo_metadata.resources_artifacts.get(&full_name) {
+        for model_tag in migration_output.models {
+            if let Some(m) = dojo_metadata.resources_artifacts.get(&model_tag) {
                 ipfs.push(upload_on_ipfs_and_create_resource(
                     &ui,
-                    compute_model_selector_from_names(&namespace, &model_name),
+                    compute_model_selector_from_tag(&model_tag),
                     m.clone(),
                 ));
             }
@@ -363,8 +364,7 @@ where
 
     if !migrated_contracts.is_empty() {
         for contract in migrated_contracts {
-            let full_name = get_full_world_element_name(&contract.namespace, &contract.name);
-            if let Some(m) = dojo_metadata.resources_artifacts.get(&full_name) {
+            if let Some(m) = dojo_metadata.resources_artifacts.get(&contract.tag) {
                 ipfs.push(upload_on_ipfs_and_create_resource(
                     &ui,
                     contract.contract_address,
@@ -468,7 +468,7 @@ where
     let mut registered_models = vec![];
 
     for c in models.iter() {
-        ui.print(italic_message(&c.diff.name).to_string());
+        ui.print(italic_message(&c.diff.tag).to_string());
 
         let res = c.declare(&migrator, txn_config).await;
         match res {
@@ -488,7 +488,7 @@ where
             }
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
-                bail!("Failed to declare model {}: {e}", c.diff.name)
+                bail!("Failed to declare model {}: {e}", c.diff.tag)
             }
         }
 
@@ -500,7 +500,7 @@ where
     let calls = models
         .iter()
         .map(|c| {
-            registered_models.push((c.diff.namespace.clone(), c.diff.name.clone()));
+            registered_models.push(c.diff.tag.clone());
             world.register_model_getcall(&c.diff.local_class_hash.into())
         })
         .collect::<Vec<_>>();
@@ -538,8 +538,9 @@ where
     let mut deploy_output = vec![];
 
     for contract in contracts {
-        let name = &contract.diff.name;
-        ui.print(italic_message(name).to_string());
+        let tag = &contract.diff.tag;
+        ui.print(italic_message(tag).to_string());
+
         match contract
             .deploy_dojo_contract(
                 world_address,
@@ -581,8 +582,7 @@ where
                     ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
                 }
                 deploy_output.push(Some(ContractMigrationOutput {
-                    name: name.to_string(),
-                    namespace: contract.diff.namespace.to_string(),
+                    tag: tag.clone(),
                     contract_address: output.contract_address,
                     base_class_hash: output.base_class_hash,
                 }));
@@ -597,7 +597,7 @@ where
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
                 return Err(anyhow!(
-                    "Failed to migrate {name}: {e}. Please also verify init calldata is valid, if \
+                    "Failed to migrate {tag}: {e}. Please also verify init calldata is valid, if \
                      any."
                 ));
             }
@@ -633,7 +633,7 @@ where
 
             ui.print_hidden_sub(format!("Deploy transaction: {:#x}", val.transaction_hash));
 
-            val.name = Some(contract.diff.name.clone());
+            val.tag = Some(contract.diff.tag.clone());
             Ok(ContractDeploymentOutput::Output(val))
         }
         Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
@@ -733,17 +733,17 @@ where
                 .await
             {
                 Ok(current_class_hash) if current_class_hash != contract.diff.local_class_hash => {
-                    return format!("{}: Upgrade", contract.diff.name);
+                    return format!("{}: Upgrade", contract.diff.tag);
                 }
                 Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                    return format!("{}: Deploy", contract.diff.name);
+                    return format!("{}: Deploy", contract.diff.tag);
                 }
                 Ok(_) => return "Already Deployed".to_string(),
-                Err(_) => return format!("{}: Deploy", contract.diff.name),
+                Err(_) => return format!("{}: Deploy", contract.diff.tag),
             }
         }
     }
-    format!("deploy {}", contract.diff.name)
+    format!("deploy {}", contract.diff.tag)
 }
 
 pub async fn print_strategy<P>(
@@ -777,7 +777,7 @@ pub async fn print_strategy<P>(
     if !&strategy.models.is_empty() {
         ui.print_header(format!("# Models ({})", &strategy.models.len()));
         for m in &strategy.models {
-            ui.print(m.diff.name.to_string());
+            ui.print(m.diff.tag.to_string());
             ui.print_sub(format!("Class hash: {:#x}", m.diff.local_class_hash));
         }
     }
@@ -791,7 +791,7 @@ pub async fn print_strategy<P>(
 
             ui.print(op_name);
             ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));
-            let salt = generate_salt(&c.diff.name);
+            let salt = generate_salt(&get_name_from_tag(&c.diff.tag));
             let contract_address =
                 get_contract_address(salt, c.diff.base_class_hash, &[], world_address);
             ui.print_sub(format!("Contract address: {:#x}", contract_address));
@@ -815,10 +815,8 @@ pub async fn update_manifests_and_abis(
     let ui = ws.config().ui();
     ui.print_step(5, "✨", "Updating manifests...");
 
-    let deployed_path =
-        manifest_dir.join(MANIFESTS_DIR).join(profile_name).join("manifest").with_extension("toml");
-    let deployed_path_json =
-        manifest_dir.join(MANIFESTS_DIR).join(profile_name).join("manifest").with_extension("json");
+    let deployed_path = manifest_dir.join("manifest").with_extension("toml");
+    let deployed_path_json = manifest_dir.join("manifest").with_extension("json");
 
     let mut local_manifest: DeploymentManifest = local_manifest.into();
 
@@ -852,7 +850,7 @@ pub async fn update_manifests_and_abis(
                 let local = local_manifest
                     .contracts
                     .iter_mut()
-                    .find(|c| c.inner.namespace == output.namespace && c.inner.name == output.name)
+                    .find(|c| c.inner.tag == output.tag)
                     .expect("contract got migrated, means it should be present here");
 
                 local.inner.base_class_hash = output.base_class_hash;
@@ -862,7 +860,7 @@ pub async fn update_manifests_and_abis(
 
     local_manifest.contracts.iter_mut().for_each(|contract| {
         if contract.inner.base_class_hash != FieldElement::ZERO {
-            let salt = generate_salt(&contract.inner.name);
+            let salt = generate_salt(&get_name_from_tag(&contract.inner.tag));
             contract.inner.address = Some(get_contract_address(
                 salt,
                 contract.inner.base_class_hash,
@@ -888,11 +886,7 @@ async fn update_manifest_abis(
     manifest_dir: &Utf8PathBuf,
     profile_name: &str,
 ) {
-    fs::create_dir_all(
-        manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(ABIS_DIR).join(DEPLOYMENTS_DIR),
-    )
-    .await
-    .expect("Failed to create folder");
+    fs::create_dir_all(manifest_dir).await.expect("Failed to create folder");
 
     async fn inner_helper<T>(
         manifest_dir: &Utf8PathBuf,
@@ -901,37 +895,25 @@ async fn update_manifest_abis(
     ) where
         T: ManifestMethods,
     {
-        // for example:
-        // from: manifests/dev/abis/base/contract/dojo_world_world.json
-        // to: manifests/dev/abis/deployments/contract/dojo_world_world.json
-        //
-        // Unwraps in call to abi is safe because we always write abis for DojoContracts as relative
-        // path.
-        // In this relative path, we only what the root from
-        // ABI directory.
-
-        // manifests/dev/abis/base/contract/dojo_world_world.json
+        // manifests/dev/abis/base/contract/dojo-world.json -> abis/base/contract/dojo-world.json
         let base_relative_path = manifest.inner.abi().unwrap().to_path().unwrap();
-
-        // contract/dojo_world_world.json
-        let stripped_path = base_relative_path
-            .strip_prefix(
-                Utf8PathBuf::new()
-                    .join(MANIFESTS_DIR)
-                    .join(profile_name)
-                    .join(ABIS_DIR)
-                    .join(BASE_DIR),
-            )
+        let base_relative_path = base_relative_path
+            .strip_prefix(Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name))
             .unwrap();
 
-        let deployed_relative_path = Utf8PathBuf::new()
-            .join(MANIFESTS_DIR)
-            .join(profile_name)
-            .join(ABIS_DIR)
-            .join(DEPLOYMENTS_DIR)
-            .join(stripped_path);
+        // abis/base/dojo-world.json -> dojo-world.json
+        let stripped_path = base_relative_path
+            .strip_prefix(Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR))
+            .unwrap();
 
+        // abis/deployments/dojo-world.json
+        let deployed_relative_path =
+            Utf8PathBuf::new().join(ABIS_DIR).join(DEPLOYMENTS_DIR).join(stripped_path);
+
+        // <manifest_dir>/abis/base/dojo-world.json
         let full_base_path = manifest_dir.join(base_relative_path);
+
+        // <manifest_dir>/abis/deployments/dojo-world.json
         let full_deployed_path = manifest_dir.join(deployed_relative_path.clone());
 
         fs::create_dir_all(full_deployed_path.parent().unwrap())

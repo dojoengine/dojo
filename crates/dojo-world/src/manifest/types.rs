@@ -56,10 +56,6 @@ where
 
     // name of the manifest which is used as filename
     pub manifest_name: String,
-
-    // artifact name which is used to be able to match manifests
-    // with artifacts produced during the compilation.
-    pub artifact_name: String,
 }
 
 // Utility methods thats needs to be implemented by manifest types
@@ -81,8 +77,8 @@ impl<T> Manifest<T>
 where
     T: ManifestMethods,
 {
-    pub fn new(inner: T, manifest_name: String, artifact_name: String) -> Self {
-        Self { inner, manifest_name, artifact_name }
+    pub fn new(inner: T, manifest_name: String) -> Self {
+        Self { inner, manifest_name }
     }
 }
 
@@ -109,8 +105,7 @@ pub struct DojoContract {
     pub computed: Vec<ComputedValueEntrypoint>,
     #[serde(default)]
     pub init_calldata: Vec<String>,
-    pub name: String,
-    pub namespace: String,
+    pub tag: String,
 }
 
 /// Represents a declaration of a model.
@@ -125,8 +120,7 @@ pub struct DojoModel {
     #[serde_as(as = "UfeHex")]
     pub original_class_hash: FieldElement,
     pub abi: Option<AbiFormat>,
-    pub name: String,
-    pub namespace: String,
+    pub tag: String,
 }
 
 #[serde_as]
@@ -164,8 +158,7 @@ pub struct Class {
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoContract {
-    pub name: SmolStr,
-    pub namespace: String,
+    pub tag: String,
     pub original_class_hash: Option<FieldElement>,
     pub reads: Option<Vec<String>>,
     pub writes: Option<Vec<String>>,
@@ -176,8 +169,7 @@ pub struct OverlayDojoContract {
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoModel {
-    pub name: SmolStr,
-    pub namespace: String,
+    pub tag: String,
     pub original_class_hash: Option<FieldElement>,
 }
 
@@ -218,8 +210,7 @@ pub struct ComputedValueEntrypoint {
     // Name of entrypoint to get computed value
     pub entrypoint: SmolStr,
     // Component to compute for
-    pub namespace: Option<String>,
-    pub model: Option<String>,
+    pub tag: Option<String>,
 }
 
 impl From<dojo_types::schema::Member> for Member {

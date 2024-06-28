@@ -9,7 +9,7 @@ use topological_sort::TopologicalSort;
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::utils::split_full_world_element_name;
+use crate::manifest::utils::{ensure_namespace, get_tag_from_special_contract_name};
 use crate::manifest::{
     BaseManifest, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
 };
@@ -33,9 +33,7 @@ impl WorldDiff {
             .models
             .iter()
             .map(|model| ClassDiff {
-                artifact_name: model.artifact_name.to_string(),
-                name: model.inner.name.to_string(),
-                namespace: model.inner.namespace.clone(),
+                tag: model.inner.tag.to_string(),
                 local_class_hash: *model.inner.class_hash(),
                 original_class_hash: *model.inner.original_class_hash(),
                 remote_class_hash: remote.as_ref().and_then(|m| {
@@ -61,9 +59,7 @@ impl WorldDiff {
                 };
 
                 ContractDiff {
-                    artifact_name: contract.artifact_name.to_string(),
-                    name: contract.inner.name.to_string(),
-                    namespace: contract.inner.namespace.clone(),
+                    tag: contract.inner.tag.to_string(),
                     local_class_hash: *contract.inner.class_hash(),
                     original_class_hash: *contract.inner.original_class_hash(),
                     base_class_hash,
@@ -79,18 +75,14 @@ impl WorldDiff {
             .collect::<Vec<_>>();
 
         let base = ClassDiff {
-            artifact_name: local.base.artifact_name.clone(),
-            name: BASE_CONTRACT_NAME.into(),
-            namespace: "__DOJO__".to_string(),
+            tag: get_tag_from_special_contract_name(BASE_CONTRACT_NAME),
             local_class_hash: *local.base.inner.class_hash(),
             original_class_hash: *local.base.inner.original_class_hash(),
             remote_class_hash: remote.as_ref().map(|m| *m.base.inner.class_hash()),
         };
 
         let world = ContractDiff {
-            artifact_name: local.world.artifact_name.clone(),
-            name: WORLD_CONTRACT_NAME.into(),
-            namespace: "__DOJO__".to_string(),
+            tag: get_tag_from_special_contract_name(WORLD_CONTRACT_NAME),
             local_class_hash: *local.world.inner.class_hash(),
             original_class_hash: *local.world.inner.original_class_hash(),
             base_class_hash: *local.base.inner.class_hash(),
@@ -114,22 +106,23 @@ impl WorldDiff {
     }
 
     pub fn update_order(&mut self, default_namespace: &str) -> Result<()> {
-        let mut ts = TopologicalSort::<(String, String)>::new();
+        let mut ts = TopologicalSort::<String>::new();
 
         // make the dependency graph by reading the constructor_calldata
         for contract in self.contracts.iter() {
-            let cur_full_name = (contract.namespace.clone(), contract.name.clone());
-            ts.insert(cur_full_name.clone());
+            ts.insert(contract.tag.clone());
 
             for field in &contract.init_calldata {
                 if let Some(dependency) = field.strip_prefix("$contract_address:") {
-                    let full_dep_name =
-                        split_full_world_element_name(dependency, default_namespace)?;
-                    ts.add_dependency(full_dep_name, cur_full_name.clone());
+                    ts.add_dependency(
+                        ensure_namespace(dependency, default_namespace),
+                        contract.tag.clone(),
+                    );
                 } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
-                    let full_dep_name =
-                        split_full_world_element_name(dependency, default_namespace)?;
-                    ts.add_dependency(full_dep_name, cur_full_name.clone());
+                    ts.add_dependency(
+                        ensure_namespace(dependency, default_namespace),
+                        contract.tag.clone(),
+                    );
                 } else {
                     // verify its a field element
                     match FieldElement::from_str(field) {
@@ -160,12 +153,8 @@ impl WorldDiff {
 
         let mut new_contracts = vec![];
 
-        for (c_namespace, c_name) in calculated_order {
-            let contract = match self
-                .contracts
-                .iter()
-                .find(|c| c.namespace == c_namespace && c.name == c_name)
-            {
+        for tag in calculated_order {
+            let contract = match self.contracts.iter().find(|c| c.tag == tag) {
                 Some(c) => c,
                 None => bail!("Unidentified contract found in `init_calldata`"),
             };

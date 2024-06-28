@@ -36,7 +36,7 @@ pub struct DeployOutput {
     // base class hash at time of deployment
     pub base_class_hash: FieldElement,
     pub was_upgraded: bool,
-    pub name: Option<String>,
+    pub tag: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -51,7 +51,7 @@ pub struct UpgradeOutput {
 pub struct RegisterOutput {
     pub transaction_hash: FieldElement,
     pub declare_output: Vec<DeclareOutput>,
-    pub registered_models: Vec<(String, String)>,
+    pub registered_models: Vec<String>,
 }
 
 #[derive(Debug, Error)]
@@ -242,7 +242,7 @@ pub trait Deployable: Declarable + Sync {
             declare,
             base_class_hash,
             was_upgraded,
-            name: None,
+            tag: None,
         })
     }
 
@@ -311,7 +311,7 @@ pub trait Deployable: Declarable + Sync {
             declare,
             base_class_hash: FieldElement::default(),
             was_upgraded: false,
-            name: None,
+            tag: None,
         })
     }
 

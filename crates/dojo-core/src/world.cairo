@@ -98,7 +98,7 @@ mod world {
     use dojo::database;
     use dojo::database::introspect::{Introspect, Layout, FieldLayout};
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
-    use dojo::system::{ISystemDispatcher, ISystemDispatcherTrait};
+    use dojo::contract::{IContractDispatcher, IContractDispatcherTrait};
     use dojo::config::component::Config;
     use dojo::model::{Model, IModelDispatcher, IModelDispatcherImpl};
     use dojo::interfaces::{
@@ -164,6 +164,7 @@ mod world {
         class_hash: ClassHash,
         address: ContractAddress,
         namespace: ByteArray,
+        name: ByteArray
     }
 
     #[derive(Drop, starknet::Event)]
@@ -649,8 +650,9 @@ mod world {
             upgradeable_dispatcher.upgrade(class_hash);
 
             // namespace checking
-            let dispatcher = ISystemDispatcher { contract_address };
+            let dispatcher = IContractDispatcher { contract_address };
             let namespace = dispatcher.namespace();
+            let name = dispatcher.contract_name();
             let namespace_selector = dispatcher.namespace_selector();
             assert(
                 self._is_namespace_registered(namespace_selector), Errors::NAMESPACE_NOT_REGISTERED
@@ -674,7 +676,7 @@ mod world {
 
             EventEmitter::emit(
                 ref self,
-                ContractDeployed { salt, class_hash, address: contract_address, namespace }
+                ContractDeployed { salt, class_hash, address: contract_address, namespace, name }
             );
 
             contract_address

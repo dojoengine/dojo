@@ -75,6 +75,10 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
         dojo::utils::hash(@Self::namespace())
     }
 
+    fn tag() -> ByteArray {
+        "__DOJO__:ResourceMetadata"
+    }
+
     #[inline(always)]
     fn keys(self: @ResourceMetadata) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();

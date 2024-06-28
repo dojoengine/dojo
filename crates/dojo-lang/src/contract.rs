@@ -11,7 +11,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
-use dojo_world::manifest::utils::compute_bytearray_hash;
+use dojo_world::manifest::utils::{compute_bytearray_hash, get_tag};
 
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
@@ -70,6 +70,7 @@ impl DojoContract {
             }
         }
 
+        let contract_tag = get_tag(&contract_namespace, &name);
         let contract_name_selector = compute_bytearray_hash(&name);
         let contract_namespace_selector = compute_bytearray_hash(&contract_namespace);
 
@@ -151,14 +152,14 @@ impl DojoContract {
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-                    use dojo::system::ISystem;
+                    use dojo::contract::IContract;
 
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
                  upgradeable, event: UpgradeableEvent);
 
                     #[abi(embed_v0)]
-                    impl SystemImpl of ISystem<ContractState> {
-                        fn name(self: @ContractState) -> ByteArray {
+                    impl ContractImpl of IContract<ContractState> {
+                        fn contract_name(self: @ContractState) -> ByteArray {
                             \"$name$\"
                         }
                         fn selector(self: @ContractState) -> felt252 {
@@ -171,6 +172,10 @@ impl DojoContract {
 
                         fn namespace_selector(self: @ContractState) -> felt252 {
                             $contract_namespace_selector$
+                        }
+
+                        fn tag(self: @ContractState) -> ByteArray {
+                            \"$contract_tag$\"
                         }
                     }
 
@@ -203,6 +208,7 @@ impl DojoContract {
                         "contract_namespace_selector".to_string(),
                         RewriteNode::Text(contract_namespace_selector.to_string()),
                     ),
+                    ("contract_tag".to_string(), RewriteNode::Text(contract_tag)),
                 ]),
             ));
 

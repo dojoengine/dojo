@@ -4,6 +4,7 @@ use account_sdk::deploy_contract::UDC_ADDRESS;
 use account_sdk::signers::HashSigner;
 use anyhow::{Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use dojo_world::manifest::utils::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
@@ -155,7 +156,7 @@ fn collect_policies_from_base_manifest(
         let contract_address = get_dojo_contract_address(world_address, &contract);
         let abis = contract.inner.abi.unwrap().load_abi_string(&base_path)?;
         let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
-        policies_from_abis(&mut policies, &contract.inner.name, contract_address, &abis);
+        policies_from_abis(&mut policies, &contract.inner.tag, contract_address, &abis);
     }
 
     // get method from world contract
@@ -181,7 +182,7 @@ fn collect_policies_from_base_manifest(
 /// ABIs in the project.
 fn policies_from_abis(
     policies: &mut Vec<Policy>,
-    contract_name: &str,
+    contract_tag: &str,
     contract_address: FieldElement,
     entries: &[AbiEntry],
 ) {
@@ -191,13 +192,13 @@ fn policies_from_abis(
                 // we only create policies for non-view functions
                 if let StateMutability::External = f.state_mutability {
                     let policy = Policy { target: contract_address, method: f.name.to_string() };
-                    trace!(name = contract_name, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
+                    trace!(tag = contract_tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
                     policies.push(policy);
                 }
             }
 
             AbiEntry::Interface(i) => {
-                policies_from_abis(policies, contract_name, contract_address, &i.items)
+                policies_from_abis(policies, contract_tag, contract_address, &i.items)
             }
 
             _ => {}
@@ -212,7 +213,7 @@ fn get_dojo_contract_address(
     if let Some(address) = manifest.inner.address {
         address
     } else {
-        let salt = generate_salt(&manifest.inner.name);
+        let salt = generate_salt(&get_name_from_tag(&manifest.inner.tag));
         get_contract_address(salt, manifest.inner.base_class_hash, &[], world_address)
     }
 }

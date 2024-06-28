@@ -8,12 +8,12 @@ use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_world::contracts::WorldContractReader;
+use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
-use sozo_ops::utils::get_default_namespace_from_ws;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
 use starknet::core::types::{BlockId, BlockTag};

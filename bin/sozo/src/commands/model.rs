@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use scarb::core::Config;
 use sozo_ops::model;
-use sozo_ops::utils::get_default_namespace_from_ws;
 use starknet::core::types::FieldElement;
 use tracing::trace;
 

@@ -3,6 +3,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::world::WorldContract;
+use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use dojo_world::migration::strategy::MigrationStrategy;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
@@ -15,7 +16,6 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
 
 use crate::migration;
-use crate::utils::get_default_namespace_from_ws;
 
 /// Load the spawn-and-moves project configuration from a copy of the project
 /// into a temporary directory to avoid any race during multithreading testing.

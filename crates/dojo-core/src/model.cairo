@@ -22,6 +22,9 @@ trait Model<T> {
     /// namespace_selector = hash(namespace_name)
     fn namespace_selector() -> felt252;
 
+    // Returns the model tag
+    fn tag() -> ByteArray;
+
     fn keys(self: @T) -> Span<felt252>;
     fn values(self: @T) -> Span<felt252>;
     fn layout() -> dojo::database::introspect::Layout;
@@ -36,6 +39,7 @@ trait IModel<T> {
     fn version(self: @T) -> u8;
     fn namespace(self: @T) -> ByteArray;
     fn namespace_selector(self: @T) -> felt252;
+    fn tag(self: @T) -> ByteArray;
     fn unpacked_size(self: @T) -> Option<usize>;
     fn packed_size(self: @T) -> Option<usize>;
     fn layout(self: @T) -> dojo::database::introspect::Layout;

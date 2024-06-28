@@ -9,7 +9,9 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
-use dojo_world::manifest::utils::{compute_bytearray_hash, compute_model_selector_from_hash};
+use dojo_world::manifest::utils::{
+    compute_bytearray_hash, compute_model_selector_from_hash, get_tag,
+};
 use dojo_world::manifest::Member;
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
@@ -221,6 +223,7 @@ pub fn handle_model_struct(
         }
     }
 
+    let model_tag = get_tag(&model_namespace, &model_name);
     let model_name_hash = compute_bytearray_hash(&model_name);
     let model_namespace_hash = compute_bytearray_hash(&model_namespace);
 
@@ -368,6 +371,11 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        \"$model_tag$\"
+    }
+    
+    #[inline(always)]
     fn keys(self: @$type_name$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_keys$
@@ -443,6 +451,10 @@ mod $contract_name$ {
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<$type_name$>::namespace_selector()
         }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<$type_name$>::tag()
+        }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<$type_name$>::size()
@@ -481,6 +493,7 @@ mod $contract_name$ {
                     "model_namespace_hash".to_string(),
                     RewriteNode::Text(model_namespace_hash.to_string()),
                 ),
+                ("model_tag".to_string(), RewriteNode::Text(model_tag.clone())),
             ]),
         ),
         diagnostics,

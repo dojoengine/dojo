@@ -10,7 +10,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
 
-use crate::manifest::utils::get_full_world_element_name;
 use crate::manifest::{BaseManifest, WORLD_CONTRACT_NAME};
 
 #[cfg(test)]
@@ -118,8 +117,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
     if manifest_dir.join(BASE_DIR).exists() {
         if let Ok(manifest) = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)) {
             for model in manifest.models {
-                let full_name =
-                    get_full_world_element_name(&model.inner.namespace, &model.inner.name);
+                let full_name = model.inner.tag.clone();
                 dojo_metadata.resources_artifacts.insert(
                     full_name.clone(),
                     ResourceMetadata {
@@ -134,8 +132,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
             }
 
             for contract in manifest.contracts {
-                let full_name =
-                    get_full_world_element_name(&contract.inner.namespace, &contract.inner.name);
+                let full_name = contract.inner.tag.clone();
                 dojo_metadata.resources_artifacts.insert(
                     full_name.clone(),
                     ResourceMetadata {
