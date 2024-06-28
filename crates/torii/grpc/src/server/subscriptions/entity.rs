@@ -138,13 +138,9 @@ impl Service {
                         let sub_key = clause.keys.get(idx);
 
                         match sub_key {
-                            Some(sub_key) => {
-                                if sub_key == &FieldElement::ZERO {
-                                    true
-                                } else {
-                                    key == sub_key
-                                }
-                            }
+                            Some(Some(sub_key)) => key == sub_key,
+                            // if we have None, we should automatically match
+                            Some(None) => true,
                             // we overflowed the subscriber key pattern
                             // but we're in VariableLen pattern matching
                             // so we should match all next keys
