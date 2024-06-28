@@ -8,11 +8,6 @@ pub enum Error {
     SubscriptionUninitialized,
     #[error("Unknown model: {0}")]
     UnknownModel(String),
-    #[error(
-        "Invalid amount of values for model {model}. Expected {expected_value_len} values, got \
-         {actual_value_len}"
-    )]
-    InvalidModelValuesLen { model: String, expected_value_len: usize, actual_value_len: usize },
     #[error("Parsing error: {0}")]
     Parse(#[from] ParseError),
     #[error(transparent)]
