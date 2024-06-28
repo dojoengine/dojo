@@ -206,7 +206,7 @@ impl TryFrom<proto::types::KeysClause> for KeysClause {
                 if k.is_empty() {
                     Ok(None)
                 } else {
-                    Ok(Some(FieldElement::from_byte_slice_be(&k)?))
+                    Ok(Some(FieldElement::from_byte_slice_be(k)?))
                 }
             })
             .collect::<Result<Vec<Option<FieldElement>>, _>>()?;
