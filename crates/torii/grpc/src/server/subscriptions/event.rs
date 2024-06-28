@@ -104,13 +104,14 @@ impl Service {
                 // if we have a key in the subscriber, it must match the key in the event
                 // unless its empty, which is a wildcard
                 match sub_key {
+                    // the key in the subscriber must match the key of the entity
+                    // athis index
                     Some(Some(sub_key)) => key == sub_key,
-                    // if we have None, we should automatically match
-                    Some(None) => true,
-                    // we overflowed the subscriber key pattern
+                    // otherwise, if we have no key we should automatically match.
+                    // or.. we overflowed the subscriber key pattern
                     // but we're in VariableLen pattern matching
                     // so we should match all next keys
-                    None => true,
+                    _ => true,
                 }
             }) {
                 continue;
