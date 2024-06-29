@@ -96,18 +96,6 @@ impl Introspect_u8 of Introspect<u8> {
     }
 }
 
-impl Introspect_i8 of Introspect<i8> {
-    fn size() -> Option<usize> {
-        Option::Some(1)
-    }
-    fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
-    }
-    fn ty() -> Ty {
-        Ty::Primitive('i8')
-    }
-}
-
 impl Introspect_u16 of Introspect<u16> {
     fn size() -> Option<usize> {
         Option::Some(1)
@@ -117,18 +105,6 @@ impl Introspect_u16 of Introspect<u16> {
     }
     fn ty() -> Ty {
         Ty::Primitive('u16')
-    }
-}
-
-impl Introspect_i16 of Introspect<i16> {
-    fn size() -> Option<usize> {
-        Option::Some(1)
-    }
-    fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
-    }
-    fn ty() -> Ty {
-        Ty::Primitive('i16')
     }
 }
 
@@ -144,18 +120,6 @@ impl Introspect_u32 of Introspect<u32> {
     }
 }
 
-impl Introspect_i32 of Introspect<i32> {
-    fn size() -> Option<usize> {
-        Option::Some(1)
-    }
-    fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
-    }
-    fn ty() -> Ty {
-        Ty::Primitive('i32')
-    }
-}
-
 impl Introspect_u64 of Introspect<u64> {
     fn size() -> Option<usize> {
         Option::Some(1)
@@ -165,18 +129,6 @@ impl Introspect_u64 of Introspect<u64> {
     }
     fn ty() -> Ty {
         Ty::Primitive('u64')
-    }
-}
-
-impl Introspect_i64 of Introspect<i64> {
-    fn size() -> Option<usize> {
-        Option::Some(1)
-    }
-    fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
-    }
-    fn ty() -> Ty {
-        Ty::Primitive('i64')
     }
 }
 
@@ -192,18 +144,6 @@ impl Introspect_u128 of Introspect<u128> {
     }
 }
 
-impl Introspect_i128 of Introspect<i128> {
-    fn size() -> Option<usize> {
-        Option::Some(1)
-    }
-    fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
-    }
-    fn ty() -> Ty {
-        Ty::Primitive('i128')
-    }
-}
-
 impl Introspect_u256 of Introspect<u256> {
     fn size() -> Option<usize> {
         Option::Some(2)
@@ -213,6 +153,66 @@ impl Introspect_u256 of Introspect<u256> {
     }
     fn ty() -> Ty {
         Ty::Primitive('u256')
+    }
+}
+
+impl Introspect_i8 of Introspect<i8> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i8')
+    }
+}
+
+impl Introspect_i16 of Introspect<i16> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i16')
+    }
+}
+
+impl Introspect_i32 of Introspect<i32> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i32')
+    }
+}
+
+impl Introspect_i64 of Introspect<i64> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i64')
+    }
+}
+
+impl Introspect_i128 of Introspect<i128> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i128')
     }
 }
 
