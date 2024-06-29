@@ -379,10 +379,10 @@ fn get_dojo_model_artifacts(
                     (
                         Manifest::new(
                             DojoModel {
-                                class_hash,
-                                abi: None,
                                 members: model.members.clone(),
+                                class_hash,
                                 original_class_hash: class_hash,
+                                abi: None,
                             },
                             model_full_name.into(),
                         ),

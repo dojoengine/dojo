@@ -10,6 +10,8 @@ fn test_compiler_cairo_features() {
 
     let features_opts =
         FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
 
     let compile_info = scarb_internal::compile_workspace(
         &config,
@@ -18,6 +20,7 @@ fn test_compiler_cairo_features() {
             exclude_targets: vec![TargetKind::TEST],
             features: features_opts,
         },
+        packages,
     )
     .unwrap();
 

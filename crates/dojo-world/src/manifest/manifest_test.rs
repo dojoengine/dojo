@@ -420,10 +420,10 @@ fn fetch_remote_manifest() {
     });
 
     assert_eq!(local_manifest.models.len(), 8);
-    assert_eq!(local_manifest.contracts.len(), 3);
+    assert_eq!(local_manifest.contracts.len(), 4);
 
     assert_eq!(remote_manifest.models.len(), 8);
-    assert_eq!(remote_manifest.contracts.len(), 3);
+    assert_eq!(remote_manifest.contracts.len(), 4);
 
     // compute diff from local and remote manifest
 

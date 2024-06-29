@@ -22,8 +22,8 @@ name = "dojo::base::base"
 [[contracts]]
 kind = "DojoContract"
 address = "0x5c70a663d6b48d8e4c6aaa9572e3735a732ac3765700d470463e670587852af"
-class_hash = "0x6d905953360cf18e3393d128c6ced40b38fc83b033412c8541fd4aba59d2767"
-original_class_hash = "0x6d905953360cf18e3393d128c6ced40b38fc83b033412c8541fd4aba59d2767"
+class_hash = "0x2bb3b0c6088e818191017dbbd1520c996ed40f7ad52298eb91c1890bf908cec"
+original_class_hash = "0x2bb3b0c6088e818191017dbbd1520c996ed40f7ad52298eb91c1890bf908cec"
 base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
 abi = "manifests/release/abis/deployments/contracts/dojo_examples_actions_actions.json"
 reads = []
@@ -51,6 +51,19 @@ init_calldata = [
     "10",
 ]
 name = "dojo_examples::others::others"
+
+[[contracts]]
+kind = "DojoContract"
+address = "0x42ead6d46f0589bbdbd535bbc4b9dcba45de82b6d8d5b073fba970821280ed4"
+class_hash = "0x4470b89850f548c0dcc308b6965fc47960b565547462771cccdbb6792648580"
+original_class_hash = "0x4470b89850f548c0dcc308b6965fc47960b565547462771cccdbb6792648580"
+base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
+abi = "manifests/release/abis/deployments/contracts/dojo_examples_something_something.json"
+reads = []
+writes = []
+computed = []
+init_calldata = []
+name = "dojo_examples::something::something"
 
 [[models]]
 kind = "DojoModel"
@@ -160,6 +173,28 @@ key = true
 [[models.members]]
 name = "vec"
 type = "Vec2"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x6dc51a232ffcfaa02646636daf1b8acab8121fa69458258da8df1620aff07ab"
+original_class_hash = "0x6dc51a232ffcfaa02646636daf1b8acab8121fa69458258da8df1620aff07ab"
+abi = "manifests/release/abis/deployments/models/dojo_examples_models_server_profile.json"
+name = "dojo_examples::models::server_profile"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "server_id"
+type = "u32"
+key = true
+
+[[models.members]]
+name = "name"
+type = "ByteArray"
 key = false
 
 [[models]]

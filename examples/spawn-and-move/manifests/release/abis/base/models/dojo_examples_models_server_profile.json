@@ -319,52 +319,30 @@
   },
   {
     "type": "impl",
-    "name": "emote_messageImpl",
-    "interface_name": "dojo_examples::models::Iemote_message"
-  },
-  {
-    "type": "enum",
-    "name": "dojo_examples::models::Emote",
-    "variants": [
-      {
-        "name": "None",
-        "type": "()"
-      },
-      {
-        "name": "Happy",
-        "type": "()"
-      },
-      {
-        "name": "Sad",
-        "type": "()"
-      },
-      {
-        "name": "Angry",
-        "type": "()"
-      },
-      {
-        "name": "Love",
-        "type": "()"
-      }
-    ]
+    "name": "server_profileImpl",
+    "interface_name": "dojo_examples::models::Iserver_profile"
   },
   {
     "type": "struct",
-    "name": "dojo_examples::models::EmoteMessage",
+    "name": "dojo_examples::models::ServerProfile",
     "members": [
       {
-        "name": "identity",
+        "name": "player",
         "type": "core::starknet::contract_address::ContractAddress"
       },
       {
-        "name": "emote",
-        "type": "dojo_examples::models::Emote"
+        "name": "server_id",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "name",
+        "type": "core::byte_array::ByteArray"
       }
     ]
   },
   {
     "type": "interface",
-    "name": "dojo_examples::models::Iemote_message",
+    "name": "dojo_examples::models::Iserver_profile",
     "items": [
       {
         "type": "function",
@@ -372,7 +350,7 @@
         "inputs": [
           {
             "name": "model",
-            "type": "dojo_examples::models::EmoteMessage"
+            "type": "dojo_examples::models::ServerProfile"
           }
         ],
         "outputs": [],
@@ -382,7 +360,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::models::emote_message::Event",
+    "name": "dojo_examples::models::server_profile::Event",
     "kind": "enum",
     "variants": []
   }

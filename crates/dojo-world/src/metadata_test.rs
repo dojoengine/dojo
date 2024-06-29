@@ -235,6 +235,9 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
 
         let name = name.replace("_mock_token_", "::mock_token::");
         let name = name.replace("::mock_token_", "::mock_token::");
+
+        let name = name.replace("_something_", "::something::");
+        let name = name.replace("::something_", "::something::");
         artifacts.push(("models".to_string(), name));
     }
 
@@ -244,6 +247,7 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, Strin
         let name = name.replace("_actions_", "::actions::");
         let name = name.replace("_others_", "::others::");
         let name = name.replace("_mock_token_", "::mock_token::");
+        let name = name.replace("_something_", "::something::");
         artifacts.push(("contracts".to_string(), name));
     }
 

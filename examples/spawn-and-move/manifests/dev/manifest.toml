@@ -22,8 +22,8 @@ name = "dojo::base::base"
 [[contracts]]
 kind = "DojoContract"
 address = "0x5c70a663d6b48d8e4c6aaa9572e3735a732ac3765700d470463e670587852af"
-class_hash = "0x7d70dda5cb8dcb697ccc2c129254c554e8994f1b231527f7641a14706af016f"
-original_class_hash = "0x7d70dda5cb8dcb697ccc2c129254c554e8994f1b231527f7641a14706af016f"
+class_hash = "0x2bb3b0c6088e818191017dbbd1520c996ed40f7ad52298eb91c1890bf908cec"
+original_class_hash = "0x2bb3b0c6088e818191017dbbd1520c996ed40f7ad52298eb91c1890bf908cec"
 base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
 abi = "manifests/dev/abis/deployments/contracts/dojo_examples_actions_actions.json"
 reads = []
@@ -64,6 +64,19 @@ init_calldata = [
     "10",
 ]
 name = "dojo_examples::others::others"
+
+[[contracts]]
+kind = "DojoContract"
+address = "0x42ead6d46f0589bbdbd535bbc4b9dcba45de82b6d8d5b073fba970821280ed4"
+class_hash = "0x4470b89850f548c0dcc308b6965fc47960b565547462771cccdbb6792648580"
+original_class_hash = "0x4470b89850f548c0dcc308b6965fc47960b565547462771cccdbb6792648580"
+base_class_hash = "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46"
+abi = "manifests/dev/abis/deployments/contracts/dojo_examples_something_something.json"
+reads = []
+writes = []
+computed = []
+init_calldata = []
+name = "dojo_examples::something::something"
 
 [[models]]
 kind = "DojoModel"
