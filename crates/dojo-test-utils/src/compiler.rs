@@ -10,8 +10,7 @@ use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::{compile_workspace, CompileInfo};
 use scarb::compiler::{CompilationUnit, CompilerRepository, Profile};
 use scarb::core::{Config, TargetKind};
-use scarb::ops::{self, CompileOpts};
-use scarb::ops::{FeaturesOpts, FeaturesSelector};
+use scarb::ops::{self, CompileOpts, FeaturesOpts, FeaturesSelector};
 use scarb_ui::Verbosity;
 use toml::{Table, Value};
 

@@ -12,7 +12,7 @@ use tracing::trace;
 pub struct CleanArgs {
     #[arg(long)]
     #[arg(help = "Removes all the generated files, including scarb artifacts and ALL the \
-                          manifests files.")]
+                  manifests files.")]
     pub full: bool,
 
     #[arg(long)]
@@ -46,15 +46,14 @@ impl CleanArgs {
 
         let profile_names = if self.all_profiles {
             let mut profiles = ws.profile_names().expect("given method never returns an error");
-            // currently scarb can return duplicate profiles and since the vector is sorted we can remove duplicates
-            // by calling dedup
+            // currently scarb can return duplicate profiles and since the vector is sorted we can
+            // remove duplicates by calling dedup
             profiles.dedup();
             profiles
         } else {
-            vec![ws
-                .current_profile()
-                .expect("Scarb profile is expected at this point.")
-                .to_string()]
+            vec![
+                ws.current_profile().expect("Scarb profile is expected at this point.").to_string(),
+            ]
         };
 
         for profile_name in profile_names {
@@ -69,8 +68,8 @@ impl CleanArgs {
                 // copied from scarb::ops::clean since scarb cleans build file of all the profiles
                 // we only want to clean build files for specified profile
                 //
-                // cleaning build files for all profiles would create inconsistency with the manifest
-                // files in `manifests` directory
+                // cleaning build files for all profiles would create inconsistency with the
+                // manifest files in `manifests` directory
                 let ws = ops::read_workspace(config.manifest_path(), config)?;
                 let path = ws.target_dir().path_unchecked().join(&profile_name);
                 if path.exists() {
@@ -117,11 +116,11 @@ mod tests {
         let dev_profile_name = "dev";
         let release_profile_name = "release";
 
-        let target_dev_dir = temp_project_dir.join("target").join(&dev_profile_name);
-        let target_release_dir = temp_project_dir.join("target").join(&release_profile_name);
+        let target_dev_dir = temp_project_dir.join("target").join(dev_profile_name);
+        let target_release_dir = temp_project_dir.join("target").join(release_profile_name);
 
-        let dev_manifests_dir = temp_project_dir.join("manifests").join(&dev_profile_name);
-        let release_manifests_dir = temp_project_dir.join("manifests").join(&release_profile_name);
+        let dev_manifests_dir = temp_project_dir.join("manifests").join(dev_profile_name);
+        let release_manifests_dir = temp_project_dir.join("manifests").join(release_profile_name);
 
         let dev_manifests_base_dir = dev_manifests_dir.join("base");
         let dev_manifests_abis_base_dir = dev_manifests_dir.join("abis").join("base");
@@ -195,11 +194,11 @@ mod tests {
         let dev_profile_name = "dev";
         let release_profile_name = "release";
 
-        let target_dev_dir = temp_project_dir.join("target").join(&dev_profile_name);
-        let target_release_dir = temp_project_dir.join("target").join(&release_profile_name);
+        let target_dev_dir = temp_project_dir.join("target").join(dev_profile_name);
+        let target_release_dir = temp_project_dir.join("target").join(release_profile_name);
 
-        let dev_manifests_dir = temp_project_dir.join("manifests").join(&dev_profile_name);
-        let release_manifests_dir = temp_project_dir.join("manifests").join(&release_profile_name);
+        let dev_manifests_dir = temp_project_dir.join("manifests").join(dev_profile_name);
+        let release_manifests_dir = temp_project_dir.join("manifests").join(release_profile_name);
 
         let dev_manifests_base_dir = dev_manifests_dir.join("base");
         let dev_manifests_abis_base_dir = dev_manifests_dir.join("abis").join("base");
