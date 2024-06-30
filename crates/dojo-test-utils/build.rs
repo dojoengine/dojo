@@ -26,7 +26,7 @@ fn main() {
 
     fn compile(path: &str, profile: &Profile) {
         let target_path = Utf8PathBuf::from_path_buf(format!("{}/target", path).into()).unwrap();
-        if target_path.exists() {
+        if target_path.join(profile.to_string()).exists() {
             return;
         }
 
