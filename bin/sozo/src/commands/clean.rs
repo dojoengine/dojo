@@ -4,16 +4,16 @@ use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_world::manifest::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
-use scarb::{core::Config, ops};
+use scarb::core::Config;
+use scarb::ops;
 use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct CleanArgs {
     #[arg(long)]
-    #[arg(
-        help = "By default this command only clean base manifests and base abis, with this flag it will clean deployment files as well."
-    )]
-    pub both: bool,
+    #[arg(help = "Removes all the generated files, including scarb artifacts and ALL the \
+                          manifests files.")]
+    pub full: bool,
 
     #[arg(long)]
     #[arg(help = "Clean all profiles.")]
@@ -82,7 +82,7 @@ impl CleanArgs {
 
             Self::clean_manifests(&profile_dir)?;
 
-            if self.both && profile_dir.exists() {
+            if self.full && profile_dir.exists() {
                 trace!(?profile_dir, "Removing entire profile directory.");
                 fs::remove_dir_all(profile_dir)?;
             }
@@ -111,7 +111,7 @@ mod tests {
 
         let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
 
-        let clean_cmd = CleanArgs { both: false, all_profiles: false };
+        let clean_cmd = CleanArgs { full: false, all_profiles: false };
         clean_cmd.run(&config).unwrap();
 
         let dev_profile_name = "dev";
@@ -165,7 +165,7 @@ mod tests {
         assert!(dev_manifest_toml.exists(), "Expected 'manifest.toml' to exist");
         assert!(dev_manifest_json.exists(), "Expected 'manifest.json' to exist");
 
-        let clean_cmd = CleanArgs { both: true, all_profiles: false };
+        let clean_cmd = CleanArgs { full: true, all_profiles: false };
         clean_cmd.run(&config).unwrap();
 
         assert!(
@@ -189,7 +189,7 @@ mod tests {
 
         let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
 
-        let clean_cmd = CleanArgs { both: false, all_profiles: true };
+        let clean_cmd = CleanArgs { full: false, all_profiles: true };
         clean_cmd.run(&config).unwrap();
 
         let dev_profile_name = "dev";
@@ -239,7 +239,7 @@ mod tests {
         assert!(dev_manifest_toml.exists(), "Expected 'manifest.toml' to exist");
         assert!(dev_manifest_json.exists(), "Expected 'manifest.json' to exist");
 
-        let clean_cmd = CleanArgs { both: true, all_profiles: true };
+        let clean_cmd = CleanArgs { full: true, all_profiles: true };
         clean_cmd.run(&config).unwrap();
 
         assert!(
