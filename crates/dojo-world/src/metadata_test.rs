@@ -3,7 +3,7 @@ use std::fs;
 
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
-use scarb::ops;
+use scarb::{compiler::Profile, ops};
 use url::Url;
 
 use crate::metadata::{
@@ -110,7 +110,9 @@ website = "https://dojoengine.org"
 
 #[tokio::test]
 async fn get_full_dojo_metadata_from_workspace() {
-    let config = compiler::build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let config =
+        compiler::build_test_config("../../examples/spawn-and-move/Scarb.toml", Profile::DEV)
+            .unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
@@ -132,16 +134,16 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(env.rpc_url.unwrap().eq("http://localhost:5050/"));
 
     assert!(env.account_address.is_some());
-    assert!(
-        env.account_address
-            .unwrap()
-            .eq("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03")
-    );
+    assert!(env
+        .account_address
+        .unwrap()
+        .eq("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"));
 
     assert!(env.private_key.is_some());
-    assert!(
-        env.private_key.unwrap().eq("0x1800000000300000180000000000030000000000003006001800006600")
-    );
+    assert!(env
+        .private_key
+        .unwrap()
+        .eq("0x1800000000300000180000000000030000000000003006001800006600"));
 
     assert!(env.world_address.is_some());
     assert_eq!(

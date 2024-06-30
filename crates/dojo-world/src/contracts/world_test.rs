@@ -3,6 +3,7 @@ use std::time::Duration;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
@@ -19,6 +20,7 @@ async fn test_world_contract_reader() {
     let config = compiler::copy_tmp_config(
         &Utf8PathBuf::from("../../examples/spawn-and-move"),
         &Utf8PathBuf::from("../dojo-core"),
+        Profile::DEV,
     );
 
     let manifest_dir = config.manifest_path().parent().unwrap();
