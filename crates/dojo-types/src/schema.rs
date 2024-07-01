@@ -1,7 +1,10 @@
+use std::any::type_name;
+
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use itertools::Itertools;
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
 
 use crate::primitive::{Primitive, PrimitiveError};
@@ -16,7 +19,7 @@ pub struct Member {
 }
 
 impl Member {
-    pub fn serialize(&self) -> Result<Vec<FieldElement>, PrimitiveError> {
+    pub fn serialize(&self) -> Result<Vec<Felt>, PrimitiveError> {
         self.ty.serialize()
     }
 }
@@ -27,9 +30,9 @@ pub struct ModelMetadata {
     pub name: String,
     pub packed_size: u32,
     pub unpacked_size: u32,
-    pub class_hash: FieldElement,
-    pub contract_address: FieldElement,
-    pub layout: Vec<FieldElement>,
+    pub class_hash: Felt,
+    pub contract_address: Felt,
+    pub layout: Vec<Felt>,
 }
 
 /// Represents all possible types in Cairo
@@ -113,10 +116,10 @@ impl Ty {
         }
     }
 
-    pub fn serialize(&self) -> Result<Vec<FieldElement>, PrimitiveError> {
+    pub fn serialize(&self) -> Result<Vec<Felt>, PrimitiveError> {
         let mut felts = vec![];
 
-        fn serialize_inner(ty: &Ty, felts: &mut Vec<FieldElement>) -> Result<(), PrimitiveError> {
+        fn serialize_inner(ty: &Ty, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
             match ty {
                 Ty::Primitive(c) => {
                     felts.extend(c.serialize()?);
@@ -129,7 +132,7 @@ impl Ty {
                 Ty::Enum(e) => {
                     let option = e
                         .option
-                        .map(|v| Ok(vec![FieldElement::from(v)]))
+                        .map(|v| Ok(vec![Felt::from(v)]))
                         .unwrap_or(Err(PrimitiveError::MissingFieldElement))?;
                     felts.extend(option);
 
@@ -165,7 +168,7 @@ impl Ty {
         Ok(felts)
     }
 
-    pub fn deserialize(&mut self, felts: &mut Vec<FieldElement>) -> Result<(), PrimitiveError> {
+    pub fn deserialize(&mut self, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
         match self {
             Ty::Primitive(c) => {
                 c.deserialize(felts)?;
@@ -176,8 +179,11 @@ impl Ty {
                 }
             }
             Ty::Enum(e) => {
-                e.option =
-                    Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
+                let value = felts.remove(0);
+                e.option = Some(value.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<u8>(),
+                    value,
+                })?);
 
                 match &e.options[e.option.unwrap() as usize].ty {
                     // Skip deserializing the enum option if it has no type - unit type
@@ -193,8 +199,10 @@ impl Ty {
                 }
             }
             Ty::Array(items_ty) => {
-                let arr_len: u32 =
-                    felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?;
+                let value = felts.remove(0);
+                let arr_len: u32 = value.to_u32().ok_or_else(|| {
+                    PrimitiveError::ValueOutOfRange { r#type: type_name::<u32>(), value }
+                })?;
 
                 let item_ty = items_ty.pop().unwrap();
                 for _ in 0..arr_len {

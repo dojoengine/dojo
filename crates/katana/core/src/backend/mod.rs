@@ -11,6 +11,7 @@ use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
+use num_traits::ToPrimitive;
 use parking_lot::RwLock;
 use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
@@ -73,9 +74,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
             config.genesis.timestamp = block.timestamp;
             config.genesis.sequencer_address = block.sequencer_address.into();
             config.genesis.gas_prices.eth =
-                block.l1_gas_price.price_in_wei.try_into().expect("should fit in u128");
+                block.l1_gas_price.price_in_wei.to_u128().expect("should fit in u128");
             config.genesis.gas_prices.strk =
-                block.l1_gas_price.price_in_fri.try_into().expect("should fit in u128");
+                block.l1_gas_price.price_in_fri.to_u128().expect("should fit in u128");
 
             trace!(
                 target: LOG_TARGET,

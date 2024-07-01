@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
 use http::uri::Uri;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::cairo_short_string_to_felt;
 
-pub fn str_to_felt(string: &str) -> Result<FieldElement> {
+pub fn str_to_felt(string: &str) -> Result<Felt> {
     cairo_short_string_to_felt(string).map_err(|e| {
         anyhow!(format!("Failed to convert string `{}` to cairo short string: {}", string, e))
     })

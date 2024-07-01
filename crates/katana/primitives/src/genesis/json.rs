@@ -20,7 +20,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{ComputeClassHashError, JsonError};
-use starknet::core::types::FromByteArrayError;
 
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
@@ -211,9 +210,6 @@ pub enum GenesisJsonError {
     ComputeClassHash(#[from] ComputeClassHashError),
 
     #[error(transparent)]
-    ConversionError(#[from] FromByteArrayError),
-
-    #[error(transparent)]
     SierraCompilation(#[from] StarknetSierraCompilationError),
 
     #[error(transparent)]
@@ -363,7 +359,7 @@ impl TryFrom<GenesisJson> for Genesis {
 
                     (
                         class_hash,
-                        FieldElement::from_bytes_be(&compiled_hash)?,
+                        FieldElement::from_bytes_be(&compiled_hash),
                         Some(Arc::new(sierra.flatten()?)),
                         Arc::new(CompiledClass::Class(class)),
                     )
@@ -1219,12 +1215,10 @@ mod tests {
     fn genesis_from_json_with_unresolved_paths() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
         let json: GenesisJson = serde_json::from_reader(file).unwrap();
-        assert!(
-            Genesis::try_from(json)
-                .unwrap_err()
-                .to_string()
-                .contains("Unresolved class artifact path")
-        );
+        assert!(Genesis::try_from(json)
+            .unwrap_err()
+            .to_string()
+            .contains("Unresolved class artifact path"));
     }
 
     #[test]
@@ -1268,8 +1262,9 @@ mod tests {
             .expect("failed to load genesis file");
 
         let res = Genesis::try_from(json);
-        assert!(
-            res.unwrap_err().to_string().contains(&format!("Class name '{name}' already exists"))
-        )
+        assert!(res
+            .unwrap_err()
+            .to_string()
+            .contains(&format!("Class name '{name}' already exists")))
     }
 }

@@ -5,7 +5,7 @@ use clap::Args;
 use dojo_world::metadata::Environment;
 use scarb::core::Config;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
 use tracing::trace;
@@ -28,7 +28,7 @@ pub use r#type::*;
 /// Else if it's an address, it will be used directly.
 #[derive(Debug)]
 pub enum WorldAddressOrName {
-    Address(FieldElement),
+    Address(Felt),
     Name(String),
 }
 
@@ -42,7 +42,7 @@ pub enum WorldAddressOrName {
 pub struct AccountOptions {
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
     #[arg(global = true)]
-    pub account_address: Option<FieldElement>,
+    pub account_address: Option<Felt>,
 
     #[arg(global = true)]
     #[arg(long = "slot.controller")]
@@ -132,13 +132,13 @@ impl AccountOptions {
         Ok(account)
     }
 
-    pub fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
+    pub fn account_address(&self, env_metadata: Option<&Environment>) -> Result<Felt> {
         if let Some(address) = self.account_address {
             trace!(?address, "Account address found.");
             Ok(address)
         } else if let Some(address) = env_metadata.and_then(|env| env.account_address()) {
             trace!(address, "Account address found in environment metadata.");
-            Ok(FieldElement::from_str(address)?)
+            Ok(Felt::from_str(address)?)
         } else {
             Err(anyhow!(
                 "Could not find account address. Please specify it with --account-address or in \
@@ -152,7 +152,7 @@ impl AccountOptions {
 mod tests {
     use clap::Parser;
     use starknet::accounts::{Call, ExecutionEncoder};
-    use starknet_crypto::FieldElement;
+    use starknet_crypto::Felt;
 
     use super::{AccountOptions, DOJO_ACCOUNT_ADDRESS_ENV_VAR};
 
@@ -167,16 +167,13 @@ mod tests {
         std::env::set_var(DOJO_ACCOUNT_ADDRESS_ENV_VAR, "0x0");
 
         let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.account.account_address, Some(FieldElement::from_hex_be("0x0").unwrap()));
+        assert_eq!(cmd.account.account_address, Some(Felt::from_hex("0x0").unwrap()));
     }
 
     #[test]
     fn account_address_from_args() {
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0"]);
-        assert_eq!(
-            cmd.account.account_address(None).unwrap(),
-            FieldElement::from_hex_be("0x0").unwrap()
-        );
+        assert_eq!(cmd.account.account_address(None).unwrap(), Felt::from_hex("0x0").unwrap());
     }
 
     #[test]
@@ -189,7 +186,7 @@ mod tests {
         let cmd = Command::parse_from([""]);
         assert_eq!(
             cmd.account.account_address(Some(&env_metadata)).unwrap(),
-            FieldElement::from_hex_be("0x0").unwrap()
+            Felt::from_hex("0x0").unwrap()
         );
     }
 
@@ -203,7 +200,7 @@ mod tests {
         let cmd = Command::parse_from(["sozo", "--account-address", "0x1"]);
         assert_eq!(
             cmd.account.account_address(Some(&env_metadata)).unwrap(),
-            FieldElement::from_hex_be("0x1").unwrap()
+            Felt::from_hex("0x1").unwrap()
         );
     }
 
@@ -224,12 +221,9 @@ mod tests {
             "0x1",
         ]);
         let dummy_call = vec![Call {
-            to: FieldElement::from_hex_be("0x0").unwrap(),
-            selector: FieldElement::from_hex_be("0x1").unwrap(),
-            calldata: vec![
-                FieldElement::from_hex_be("0x2").unwrap(),
-                FieldElement::from_hex_be("0x3").unwrap(),
-            ],
+            to: Felt::from_hex("0x0").unwrap(),
+            selector: Felt::from_hex("0x1").unwrap(),
+            calldata: vec![Felt::from_hex("0x2").unwrap(), Felt::from_hex("0x3").unwrap()],
         }];
 
         // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
@@ -237,19 +231,16 @@ mod tests {
         let account = cmd.account.std_account(runner.provider(), None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
         // 0x0 is the data offset.
-        assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
+        assert!(*result.get(3).unwrap() == Felt::from_hex("0x0").unwrap());
     }
 
     #[katana_runner::katana_test(2, true)]
     async fn without_legacy_flag_works_as_expected() {
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", "0x1"]);
         let dummy_call = vec![Call {
-            to: FieldElement::from_hex_be("0x0").unwrap(),
-            selector: FieldElement::from_hex_be("0x1").unwrap(),
-            calldata: vec![
-                FieldElement::from_hex_be("0xf2").unwrap(),
-                FieldElement::from_hex_be("0xf3").unwrap(),
-            ],
+            to: Felt::from_hex("0x0").unwrap(),
+            selector: Felt::from_hex("0x1").unwrap(),
+            calldata: vec![Felt::from_hex("0xf2").unwrap(), Felt::from_hex("0xf3").unwrap()],
         }];
 
         // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
@@ -257,6 +248,6 @@ mod tests {
         let account = cmd.account.std_account(runner.provider(), None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
         // 0x2 is the Calldata len.
-        assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x2").unwrap());
+        assert!(*result.get(3).unwrap() == Felt::from_hex("0x2").unwrap());
     }
 }

@@ -17,7 +17,7 @@ use itertools::chain;
 use once_cell::sync::OnceCell;
 use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{
-    BlockId, BlockTag, FieldElement, TransactionExecutionStatus, TransactionStatus,
+    BlockId, BlockTag, Felt, TransactionExecutionStatus, TransactionStatus,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -55,15 +55,15 @@ pub fn get_starknet_account(
 }
 
 pub async fn starknet_apply_diffs(
-    world: FieldElement,
-    new_state: Vec<FieldElement>,
-    program_output: Vec<FieldElement>,
-    program_hash: FieldElement,
-    nonce: FieldElement,
+    world: Felt,
+    new_state: Vec<Felt>,
+    program_output: Vec<Felt>,
+    program_hash: Felt,
+    nonce: Felt,
     starknet_account: StarknetAccountData,
 ) -> anyhow::Result<String> {
     let calldata = chain![
-        vec![FieldElement::from(new_state.len() as u64 / 2)].into_iter(),
+        vec![Felt::from(new_state.len() as u64 / 2)].into_iter(),
         new_state.clone().into_iter(),
         program_output.into_iter(),
         vec![program_hash],
@@ -74,7 +74,7 @@ pub async fn starknet_apply_diffs(
     let account = account.lock().await;
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let tx = account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: world,
             selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
             calldata,

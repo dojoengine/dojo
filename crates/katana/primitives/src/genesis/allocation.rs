@@ -269,7 +269,7 @@ impl DevAllocationsGenerator {
                 private_key_bytes[0] %= 0x8;
                 seed = private_key_bytes;
 
-                let private_key = FieldElement::from_bytes_be(&private_key_bytes).unwrap();
+                let private_key = FieldElement::from_bytes_be(&private_key_bytes);
                 DevGenesisAccount::new_with_balance(private_key, self.class_hash, self.balance)
             })
             .collect()

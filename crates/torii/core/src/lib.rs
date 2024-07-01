@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use sqlx::FromRow;
 
-use crate::types::SQLFieldElement;
+use crate::types::SQLFelt;
 
 pub mod cache;
 pub mod engine;
@@ -18,11 +18,11 @@ pub mod utils;
 #[derive(FromRow, Deserialize)]
 pub struct World {
     #[sqlx(try_from = "String")]
-    world_address: SQLFieldElement,
+    world_address: SQLFelt,
     #[sqlx(try_from = "String")]
-    world_class_hash: SQLFieldElement,
+    world_class_hash: SQLFelt,
     #[sqlx(try_from = "String")]
-    executor_address: SQLFieldElement,
+    executor_address: SQLFelt,
     #[sqlx(try_from = "String")]
-    executor_class_hash: SQLFieldElement,
+    executor_class_hash: SQLFelt,
 }

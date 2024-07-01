@@ -1,7 +1,7 @@
 use katana_primitives::block::{Block, BlockHash, BlockNumber, FinalityStatus, PartialHeader};
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{BlockStatus, ResourcePrice};
+use starknet::core::types::{BlockStatus, L1DataAvailabilityMode, ResourcePrice};
 
 pub type BlockTxCount = u64;
 
@@ -33,6 +33,12 @@ impl BlockWithTxs {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
+
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            l1_data_gas_price: ResourcePrice {
+                price_in_fri: Default::default(),
+                price_in_wei: Default::default(),
+            },
         })
     }
 }
@@ -58,6 +64,12 @@ impl PendingBlockWithTxs {
             parent_hash: header.parent_hash,
             starknet_version: header.version.to_string(),
             sequencer_address: header.sequencer_address.into(),
+
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            l1_data_gas_price: ResourcePrice {
+                price_in_fri: Default::default(),
+                price_in_wei: Default::default(),
+            },
         })
     }
 }
@@ -98,6 +110,12 @@ impl BlockWithTxHashes {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
                 FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
             },
+
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            l1_data_gas_price: ResourcePrice {
+                price_in_fri: Default::default(),
+                price_in_wei: Default::default(),
+            },
         })
     }
 }
@@ -120,6 +138,12 @@ impl PendingBlockWithTxHashes {
             parent_hash: header.parent_hash,
             starknet_version: header.version.to_string(),
             sequencer_address: header.sequencer_address.into(),
+
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            l1_data_gas_price: ResourcePrice {
+                price_in_fri: Default::default(),
+                price_in_wei: Default::default(),
+            },
         })
     }
 }

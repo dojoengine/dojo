@@ -1,15 +1,16 @@
-use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus};
+use katana_primitives::block::FinalityStatus;
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{MessageToL1, Receipt, TxExecutionResources};
 use katana_primitives::transaction::TxHash;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
-    DeclareTransactionReceipt, DeployAccountTransactionReceipt, ExecutionResult, FeePayment,
-    Hash256, InvokeTransactionReceipt, L1HandlerTransactionReceipt,
-    PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
-    PendingInvokeTransactionReceipt, PendingL1HandlerTransactionReceipt, PendingTransactionReceipt,
-    TransactionFinalityStatus, TransactionReceipt,
+    ComputationResources, DataAvailabilityResources, DataResources, DeclareTransactionReceipt,
+    DeployAccountTransactionReceipt, ExecutionResult, FeePayment, Hash256,
+    InvokeTransactionReceipt, L1HandlerTransactionReceipt, TransactionFinalityStatus,
+    TransactionReceipt, TransactionReceiptWithBlockInfo,
 };
+
+pub use starknet::core::types::ReceiptBlock;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -18,8 +19,6 @@ pub struct TxReceipt(starknet::core::types::TransactionReceipt);
 impl TxReceipt {
     pub fn new(
         transaction_hash: TxHash,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
         finality_status: FinalityStatus,
         receipt: Receipt,
     ) -> Self {
@@ -36,8 +35,6 @@ impl TxReceipt {
 
                 TransactionReceipt::Invoke(InvokeTransactionReceipt {
                     events,
-                    block_hash,
-                    block_number,
                     messages_sent,
                     finality_status,
                     transaction_hash,
@@ -58,8 +55,6 @@ impl TxReceipt {
 
                 TransactionReceipt::Declare(DeclareTransactionReceipt {
                     events,
-                    block_hash,
-                    block_number,
                     messages_sent,
                     finality_status,
                     transaction_hash,
@@ -80,8 +75,6 @@ impl TxReceipt {
 
                 TransactionReceipt::L1Handler(L1HandlerTransactionReceipt {
                     events,
-                    block_hash,
-                    block_number,
                     messages_sent,
                     finality_status,
                     transaction_hash,
@@ -103,8 +96,6 @@ impl TxReceipt {
 
                 TransactionReceipt::DeployAccount(DeployAccountTransactionReceipt {
                     events,
-                    block_hash,
-                    block_number,
                     messages_sent,
                     finality_status,
                     transaction_hash,
@@ -126,104 +117,17 @@ impl TxReceipt {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct PendingTxReceipt(starknet::core::types::PendingTransactionReceipt);
+pub struct TxReceiptWithBlockInfo(starknet::core::types::TransactionReceiptWithBlockInfo);
 
-impl PendingTxReceipt {
-    pub fn new(transaction_hash: TxHash, receipt: Receipt) -> Self {
-        let receipt = match receipt {
-            Receipt::Invoke(rct) => {
-                let messages_sent =
-                    rct.messages_sent.into_iter().map(|e| MsgToL1::from(e).0).collect();
-                let events = rct.events.into_iter().map(|e| Event::from(e).0).collect();
-
-                PendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
-                    transaction_hash,
-                    events,
-                    messages_sent,
-                    actual_fee: to_rpc_fee(rct.fee),
-                    execution_resources: ExecutionResources::from(rct.execution_resources).0,
-                    execution_result: if let Some(reason) = rct.revert_error {
-                        ExecutionResult::Reverted { reason }
-                    } else {
-                        ExecutionResult::Succeeded
-                    },
-                })
-            }
-
-            Receipt::Declare(rct) => {
-                let messages_sent =
-                    rct.messages_sent.into_iter().map(|e| MsgToL1::from(e).0).collect();
-                let events = rct.events.into_iter().map(|e| Event::from(e).0).collect();
-
-                PendingTransactionReceipt::Declare(PendingDeclareTransactionReceipt {
-                    events,
-                    transaction_hash,
-                    messages_sent,
-                    actual_fee: to_rpc_fee(rct.fee),
-                    execution_resources: ExecutionResources::from(rct.execution_resources).0,
-                    execution_result: if let Some(reason) = rct.revert_error {
-                        ExecutionResult::Reverted { reason }
-                    } else {
-                        ExecutionResult::Succeeded
-                    },
-                })
-            }
-
-            Receipt::L1Handler(rct) => {
-                let messages_sent =
-                    rct.messages_sent.into_iter().map(|e| MsgToL1::from(e).0).collect();
-                let events = rct.events.into_iter().map(|e| Event::from(e).0).collect();
-
-                PendingTransactionReceipt::L1Handler(PendingL1HandlerTransactionReceipt {
-                    transaction_hash,
-                    events,
-                    messages_sent,
-                    actual_fee: to_rpc_fee(rct.fee),
-                    execution_resources: ExecutionResources::from(rct.execution_resources).0,
-                    message_hash: Hash256::from_bytes(rct.message_hash.0),
-                    execution_result: if let Some(reason) = rct.revert_error {
-                        ExecutionResult::Reverted { reason }
-                    } else {
-                        ExecutionResult::Succeeded
-                    },
-                })
-            }
-
-            Receipt::DeployAccount(rct) => {
-                let messages_sent =
-                    rct.messages_sent.into_iter().map(|e| MsgToL1::from(e).0).collect();
-                let events = rct.events.into_iter().map(|e| Event::from(e).0).collect();
-
-                PendingTransactionReceipt::DeployAccount(PendingDeployAccountTransactionReceipt {
-                    transaction_hash,
-                    events,
-                    messages_sent,
-                    actual_fee: to_rpc_fee(rct.fee),
-                    contract_address: rct.contract_address.into(),
-                    execution_resources: ExecutionResources::from(rct.execution_resources).0,
-                    execution_result: if let Some(reason) = rct.revert_error {
-                        ExecutionResult::Reverted { reason }
-                    } else {
-                        ExecutionResult::Succeeded
-                    },
-                })
-            }
-        };
-
-        Self(receipt)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum MaybePendingTxReceipt {
-    Receipt(TxReceipt),
-    Pending(PendingTxReceipt),
-}
-
-impl From<starknet::core::types::TransactionReceipt> for TxReceipt {
-    fn from(receipt: starknet::core::types::TransactionReceipt) -> Self {
-        Self(receipt)
+impl TxReceiptWithBlockInfo {
+    pub fn new(
+        block: ReceiptBlock,
+        transaction_hash: TxHash,
+        finality_status: FinalityStatus,
+        receipt: Receipt,
+    ) -> Self {
+        let receipt = TxReceipt::new(transaction_hash, finality_status, receipt).0;
+        Self(TransactionReceiptWithBlockInfo { receipt, block })
     }
 }
 
@@ -256,16 +160,21 @@ struct ExecutionResources(starknet::core::types::ExecutionResources);
 impl From<TxExecutionResources> for ExecutionResources {
     fn from(value: TxExecutionResources) -> Self {
         ExecutionResources(starknet::core::types::ExecutionResources {
-            steps: value.steps,
-            memory_holes: value.memory_holes,
-            ec_op_builtin_applications: value.ec_op_builtin,
-            ecdsa_builtin_applications: value.ecdsa_builtin,
-            keccak_builtin_applications: value.keccak_builtin,
-            bitwise_builtin_applications: value.bitwise_builtin,
-            pedersen_builtin_applications: value.pedersen_builtin,
-            poseidon_builtin_applications: value.poseidon_builtin,
-            range_check_builtin_applications: value.range_check_builtin,
-            segment_arena_builtin: value.segment_arena_builtin,
+            computation_resources: ComputationResources {
+                steps: value.steps,
+                memory_holes: value.memory_holes,
+                ec_op_builtin_applications: value.ec_op_builtin,
+                ecdsa_builtin_applications: value.ecdsa_builtin,
+                keccak_builtin_applications: value.keccak_builtin,
+                bitwise_builtin_applications: value.bitwise_builtin,
+                pedersen_builtin_applications: value.pedersen_builtin,
+                poseidon_builtin_applications: value.poseidon_builtin,
+                range_check_builtin_applications: value.range_check_builtin,
+                segment_arena_builtin: value.segment_arena_builtin,
+            },
+            data_resources: DataResources {
+                data_availability: DataAvailabilityResources { l1_data_gas: 0, l1_gas: 0 },
+            },
         })
     }
 }

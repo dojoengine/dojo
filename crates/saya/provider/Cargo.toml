@@ -23,6 +23,7 @@ flate2.workspace = true
 futures.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 lazy_static.workspace = true
+num-traits.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true

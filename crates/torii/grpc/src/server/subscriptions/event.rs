@@ -8,7 +8,7 @@ use std::task::{Context, Poll};
 use futures::Stream;
 use futures_util::StreamExt;
 use rand::Rng;
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use torii_core::error::{Error, ParseError};
@@ -75,14 +75,14 @@ impl Service {
             .keys
             .trim_end_matches(FELT_DELIMITER)
             .split(FELT_DELIMITER)
-            .map(FieldElement::from_str)
+            .map(Felt::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::from)?;
         let data = event
             .data
             .trim_end_matches(FELT_DELIMITER)
             .split(FELT_DELIMITER)
-            .map(FieldElement::from_str)
+            .map(Felt::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::from)?;
 
@@ -121,7 +121,7 @@ impl Service {
                 event: Some(proto::types::Event {
                     keys: keys.iter().map(|k| k.to_bytes_be().to_vec()).collect(),
                     data: data.iter().map(|d| d.to_bytes_be().to_vec()).collect(),
-                    transaction_hash: FieldElement::from_str(&event.transaction_hash)
+                    transaction_hash: Felt::from_str(&event.transaction_hash)
                         .map_err(ParseError::from)?
                         .to_bytes_be()
                         .to_vec(),

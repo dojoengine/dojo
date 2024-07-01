@@ -1,31 +1,31 @@
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 /// The event emitted when a World is spawned.
 #[derive(Clone, Debug)]
 pub struct WorldSpawned {
-    pub address: FieldElement,
-    pub caller: FieldElement,
+    pub address: Felt,
+    pub caller: Felt,
 }
 
 /// The event emitted when a model is registered to a World.
 #[derive(Clone, Debug)]
 pub struct ModelRegistered {
     pub name: String,
-    pub class_hash: FieldElement,
+    pub class_hash: Felt,
 }
 
 /// The event emmitted when a model value of an entity is set.
 #[derive(Clone, Debug)]
 pub struct StoreSetRecord {
-    pub table_id: FieldElement,
-    pub keys: Vec<FieldElement>,
+    pub table_id: Felt,
+    pub keys: Vec<Felt>,
     pub offset: u8,
-    pub value: Vec<FieldElement>,
+    pub value: Vec<Felt>,
 }
 
 /// The event emmitted when a model is deleted from an entity.
 #[derive(Clone, Debug)]
 pub struct StoreDelRecord {
-    pub table_id: FieldElement,
-    pub keys: Vec<FieldElement>,
+    pub table_id: Felt,
+    pub keys: Vec<Felt>,
 }

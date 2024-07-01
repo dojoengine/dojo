@@ -1,7 +1,7 @@
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 #[derive(Clone, Debug)]
 pub struct Query {
     pub address_domain: u32,
-    pub keys: Vec<FieldElement>,
+    pub keys: Vec<Felt>,
 }

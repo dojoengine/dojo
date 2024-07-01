@@ -4,8 +4,8 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use scarb::core::Config;
 use sozo_ops::account;
+use starknet::core::types::Felt;
 use starknet::signers::LocalWallet;
-use starknet_crypto::FieldElement;
 use tracing::trace;
 
 use super::options::signer::SignerOptions;
@@ -53,7 +53,7 @@ pub enum AccountCommand {
         estimate_only: bool,
 
         #[clap(long, help = "Provide transaction nonce manually")]
-        nonce: Option<FieldElement>,
+        nonce: Option<Felt>,
 
         #[clap(
             long,
@@ -82,7 +82,7 @@ pub enum AccountCommand {
         output: PathBuf,
 
         #[clap(help = "Contract address")]
-        address: FieldElement,
+        address: Felt,
     },
 }
 

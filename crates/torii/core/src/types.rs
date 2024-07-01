@@ -4,26 +4,26 @@ use chrono::{DateTime, Utc};
 use dojo_types::schema::Ty;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 #[derive(Serialize, Deserialize)]
-pub struct SQLFieldElement(pub FieldElement);
+pub struct SQLFelt(pub Felt);
 
-impl From<SQLFieldElement> for FieldElement {
-    fn from(field_element: SQLFieldElement) -> Self {
+impl From<SQLFelt> for Felt {
+    fn from(field_element: SQLFelt) -> Self {
         field_element.0
     }
 }
 
-impl TryFrom<String> for SQLFieldElement {
+impl TryFrom<String> for SQLFelt {
     type Error = anyhow::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        Ok(SQLFieldElement(FieldElement::from_hex_be(&value)?))
+        Ok(SQLFelt(Felt::from_hex(&value)?))
     }
 }
 
-impl fmt::LowerHex for SQLFieldElement {
+impl fmt::LowerHex for SQLFelt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }

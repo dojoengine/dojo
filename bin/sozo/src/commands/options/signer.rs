@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::signers::{LocalWallet, SigningKey};
 use tracing::trace;
 
@@ -46,7 +46,7 @@ impl SignerOptions {
         if let Some(private_key) = self.private_key(env_metadata) {
             trace!(private_key, "Signing using private key.");
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-                FieldElement::from_str(&private_key)?,
+                Felt::from_str(&private_key)?,
             )));
         }
 
@@ -102,7 +102,7 @@ mod tests {
 
     use clap::Parser;
     use starknet::signers::{LocalWallet, Signer, SigningKey};
-    use starknet_crypto::FieldElement;
+    use starknet_crypto::Felt;
 
     use super::{SignerOptions, DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
@@ -135,7 +135,7 @@ mod tests {
         let cmd = Command::parse_from(["sozo", "--private-key", private_key]);
         let result_wallet = cmd.signer.signer(None, true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            FieldElement::from_str(private_key).unwrap(),
+            Felt::from_str(private_key).unwrap(),
         ));
 
         let result_public_key = result_wallet.get_public_key().await.unwrap();
@@ -154,7 +154,7 @@ mod tests {
         let cmd = Command::parse_from(["sozo"]);
         let result_wallet = cmd.signer.signer(Some(&env_metadata), true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            FieldElement::from_str(private_key).unwrap(),
+            Felt::from_str(private_key).unwrap(),
         ));
 
         let result_public_key = result_wallet.get_public_key().await.unwrap();
@@ -177,7 +177,7 @@ mod tests {
         ]);
         let result_wallet = cmd.signer.signer(None, true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            FieldElement::from_str(private_key).unwrap(),
+            Felt::from_str(private_key).unwrap(),
         ));
 
         let result_public_key = result_wallet.get_public_key().await.unwrap();
@@ -199,7 +199,7 @@ mod tests {
         let cmd = Command::parse_from(["sozo", "--password", keystore_password]);
         let result_wallet = cmd.signer.signer(Some(&env_metadata), true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            FieldElement::from_str(private_key).unwrap(),
+            Felt::from_str(private_key).unwrap(),
         ));
 
         let result_public_key = result_wallet.get_public_key().await.unwrap();
@@ -221,7 +221,7 @@ mod tests {
         let cmd = Command::parse_from(["sozo", "--keystore", keystore_path]);
         let result_wallet = cmd.signer.signer(Some(&env_metadata), true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-            FieldElement::from_str(private_key).unwrap(),
+            Felt::from_str(private_key).unwrap(),
         ));
 
         let result_public_key = result_wallet.get_public_key().await.unwrap();

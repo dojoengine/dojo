@@ -8,16 +8,16 @@ use katana_primitives::transaction::{L1HandlerTx, TxHash};
 use katana_rpc_types::trace::TxExecutionInfo;
 use serde::ser::{SerializeSeq, Serializer};
 use serde::{Deserialize, Deserializer, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by the prover.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
 pub struct ProgramInput {
-    pub prev_state_root: FieldElement,
+    pub prev_state_root: Felt,
     pub block_number: u64,
-    pub block_hash: FieldElement,
-    pub config_hash: FieldElement,
+    pub block_hash: Felt,
+    pub config_hash: Felt,
     #[serde(serialize_with = "MessageToStarknet::serialize_message_to_starknet")]
     #[serde(deserialize_with = "MessageToStarknet::deserialize_message_to_starknet")]
     pub message_to_starknet_segment: Vec<MessageToStarknet>,
@@ -27,13 +27,10 @@ pub struct ProgramInput {
     #[serde(flatten)]
     pub state_updates: StateUpdates,
     #[serde(serialize_with = "serialize_world_da")]
-    pub world_da: Option<Vec<FieldElement>>,
+    pub world_da: Option<Vec<Felt>>,
 }
 
-fn serialize_world_da<S>(
-    element: &Option<Vec<FieldElement>>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+fn serialize_world_da<S>(element: &Option<Vec<Felt>>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -117,7 +114,7 @@ impl ProgramInput {
     /// that represent the serialized DA. The length is not included as the array contains
     /// serialiazed struct with two members: key and value.
     /// TODO: migrate to cainome + simple rust vec for better devX in the future.
-    pub fn fill_da(&mut self, world: FieldElement) {
+    pub fn fill_da(&mut self, world: Felt) {
         let updates = self
             .state_updates
             .storage_updates
@@ -183,7 +180,7 @@ impl ProgramInput {
         })
     }
 
-    pub fn da_as_calldata(&self, world: FieldElement) -> Vec<FieldElement> {
+    pub fn da_as_calldata(&self, world: Felt) -> Vec<Felt> {
         let updates = self
             .state_updates
             .storage_updates
@@ -196,37 +193,37 @@ impl ProgramInput {
         updates
     }
 
-    fn serialize_to_prover_args(&self) -> Vec<FieldElement> {
+    fn serialize_to_prover_args(&self) -> Vec<Felt> {
         let mut out = vec![
             self.prev_state_root,
-            FieldElement::from(self.block_number),
+            Felt::from(self.block_number),
             self.block_hash,
             self.config_hash,
         ];
 
-        out.push(FieldElement::from(self.state_updates.nonce_updates.len()));
+        out.push(Felt::from(self.state_updates.nonce_updates.len()));
         for (k, v) in &self.state_updates.nonce_updates {
             out.push(**k);
             out.push(*v);
         }
 
-        out.push(FieldElement::from(self.state_updates.storage_updates.len()));
+        out.push(Felt::from(self.state_updates.storage_updates.len()));
         for (c, h) in &self.state_updates.storage_updates {
             out.push(**c);
-            out.push(FieldElement::from(h.len()));
+            out.push(Felt::from(h.len()));
             for (k, v) in h {
                 out.push(*k);
                 out.push(*v);
             }
         }
 
-        out.push(FieldElement::from(self.state_updates.contract_updates.len()));
+        out.push(Felt::from(self.state_updates.contract_updates.len()));
         for (k, v) in &self.state_updates.contract_updates {
             out.push(**k);
             out.push(*v);
         }
 
-        out.push(FieldElement::from(self.state_updates.declared_classes.len()));
+        out.push(Felt::from(self.state_updates.declared_classes.len()));
         for (k, v) in &self.state_updates.declared_classes {
             out.push(*k);
             out.push(*v);
@@ -237,7 +234,7 @@ impl ProgramInput {
             .iter()
             .flat_map(|m| m.serialize().unwrap())
             .collect::<Vec<_>>();
-        out.push(FieldElement::from(starknet_messages.len()));
+        out.push(Felt::from(starknet_messages.len()));
         out.extend(starknet_messages);
 
         let appchain_messages = self
@@ -246,13 +243,13 @@ impl ProgramInput {
             .flat_map(|m| m.serialize().unwrap())
             .collect::<Vec<_>>();
 
-        out.push(FieldElement::from(appchain_messages.len()));
+        out.push(Felt::from(appchain_messages.len()));
         out.extend(appchain_messages);
 
-        out.push(FieldElement::from(self.world_da.as_ref().unwrap().len() / 2));
+        out.push(Felt::from(self.world_da.as_ref().unwrap().len() / 2));
         out.extend(self.world_da.as_ref().unwrap().iter().cloned());
 
-        out.push(FieldElement::from(0u64)); // Proofs
+        out.push(Felt::from(0u64)); // Proofs
 
         out
     }
@@ -272,7 +269,7 @@ impl ProgramInput {
 pub struct MessageToStarknet {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
-    pub payload: Vec<FieldElement>,
+    pub payload: Vec<Felt>,
 }
 
 impl MessageToStarknet {
@@ -296,9 +293,9 @@ impl MessageToStarknet {
         seq.end()
     }
 
-    pub fn serialize(&self) -> anyhow::Result<Vec<FieldElement>> {
+    pub fn serialize(&self) -> anyhow::Result<Vec<Felt>> {
         let mut result = vec![*self.from_address, *self.to_address];
-        result.push(FieldElement::from(self.payload.len()));
+        result.push(Felt::from(self.payload.len()));
         result.extend(self.payload.iter().cloned());
         Ok(result)
     }
@@ -325,11 +322,11 @@ impl MessageToStarknet {
                 let mut messages = Vec::new();
                 while let Some(from_address) = seq
                     .next_element::<String>()?
-                    .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                    .map(|num| Felt::from_str(&num.to_string()).unwrap())
                 {
                     let to_address = seq
                         .next_element::<String>()?
-                        .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        .map(|num| Felt::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
                     let payload_length_str = seq.next_element::<String>()?.unwrap_or_default();
                     let payload_length: usize = payload_length_str.parse().unwrap_or_default();
@@ -337,7 +334,7 @@ impl MessageToStarknet {
                     for _ in 0..payload_length {
                         if let Some(element) = seq
                             .next_element::<String>()?
-                            .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                            .map(|num| Felt::from_str(&num.to_string()).unwrap())
                         {
                             payload.push(element);
                         }
@@ -361,9 +358,9 @@ impl MessageToStarknet {
 pub struct MessageToAppchain {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
-    pub nonce: FieldElement,
-    pub selector: FieldElement,
-    pub payload: Vec<FieldElement>,
+    pub nonce: Felt,
+    pub selector: Felt,
+    pub payload: Vec<Felt>,
 }
 
 impl MessageToAppchain {
@@ -386,9 +383,9 @@ impl MessageToAppchain {
         seq.end()
     }
 
-    pub fn serialize(&self) -> anyhow::Result<Vec<FieldElement>> {
+    pub fn serialize(&self) -> anyhow::Result<Vec<Felt>> {
         let mut result = vec![*self.from_address, *self.to_address, self.nonce, self.selector];
-        result.push(FieldElement::from(self.payload.len()));
+        result.push(Felt::from(self.payload.len()));
         result.extend(self.payload.iter().cloned());
         Ok(result)
     }
@@ -415,19 +412,19 @@ impl MessageToAppchain {
                 let mut messages = Vec::new();
                 while let Some(from_address) = seq
                     .next_element::<String>()?
-                    .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                    .map(|num| Felt::from_str(&num.to_string()).unwrap())
                 {
                     let to_address = seq
                         .next_element::<String>()?
-                        .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        .map(|num| Felt::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
                     let nonce = seq
                         .next_element::<String>()?
-                        .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        .map(|num| Felt::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
                     let selector = seq
                         .next_element::<String>()?
-                        .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        .map(|num| Felt::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
                     let payload_length_str = seq.next_element::<String>()?.unwrap_or_default();
                     let payload_length: usize = payload_length_str.parse().unwrap_or_default();
@@ -435,7 +432,7 @@ impl MessageToAppchain {
                     for _ in 0..payload_length {
                         if let Some(element) = seq
                             .next_element::<String>()?
-                            .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                            .map(|num| Felt::from_str(&num.to_string()).unwrap())
                         {
                             payload.push(element);
                         }
@@ -461,11 +458,11 @@ fn test_deserialize_input() -> anyhow::Result<()> {
     use std::str::FromStr;
 
     let input = r#"{
-        "prev_state_root":"101", 
-        "block_number":102, 
-        "block_hash":"103", 
-        "config_hash":"104", 
-        "message_to_starknet_segment":["105","106","1","1"], 
+        "prev_state_root":"101",
+        "block_number":102,
+        "block_hash":"103",
+        "config_hash":"104",
+        "message_to_starknet_segment":["105","106","1","1"],
         "message_to_appchain_segment":["108","109","110","111","1","112"],
         "storage_updates":{
             "42": {
@@ -486,28 +483,28 @@ fn test_deserialize_input() -> anyhow::Result<()> {
     }"#;
 
     let mut expected = ProgramInput {
-        prev_state_root: FieldElement::from_str("101")?,
+        prev_state_root: Felt::from_str("101")?,
         block_number: 102,
-        block_hash: FieldElement::from_str("103")?,
-        config_hash: FieldElement::from_str("104")?,
+        block_hash: Felt::from_str("103")?,
+        config_hash: Felt::from_str("104")?,
         message_to_starknet_segment: vec![MessageToStarknet {
-            from_address: ContractAddress::from(FieldElement::from_str("105")?),
-            to_address: ContractAddress::from(FieldElement::from_str("106")?),
-            payload: vec![FieldElement::from_str("1")?],
+            from_address: ContractAddress::from(Felt::from_str("105")?),
+            to_address: ContractAddress::from(Felt::from_str("106")?),
+            payload: vec![Felt::from_str("1")?],
         }],
         message_to_appchain_segment: vec![MessageToAppchain {
-            from_address: ContractAddress::from(FieldElement::from_str("108")?),
-            to_address: ContractAddress::from(FieldElement::from_str("109")?),
-            nonce: FieldElement::from_str("110")?,
-            selector: FieldElement::from_str("111")?,
-            payload: vec![FieldElement::from_str("112")?],
+            from_address: ContractAddress::from(Felt::from_str("108")?),
+            to_address: ContractAddress::from(Felt::from_str("109")?),
+            nonce: Felt::from_str("110")?,
+            selector: Felt::from_str("111")?,
+            payload: vec![Felt::from_str("112")?],
         }],
         state_updates: StateUpdates {
             storage_updates: vec![(
-                ContractAddress::from(FieldElement::from_str("42")?),
+                ContractAddress::from(Felt::from_str("42")?),
                 vec![
-                    (FieldElement::from_str("2010")?, FieldElement::from_str("1200")?),
-                    (FieldElement::from_str("2012")?, FieldElement::from_str("1300")?),
+                    (Felt::from_str("2010")?, Felt::from_str("1200")?),
+                    (Felt::from_str("2012")?, Felt::from_str("1300")?),
                 ]
                 .into_iter()
                 .collect(),
@@ -516,43 +513,34 @@ fn test_deserialize_input() -> anyhow::Result<()> {
             .collect(),
 
             nonce_updates: vec![
-                (
-                    ContractAddress::from(FieldElement::from_str("1111")?),
-                    FieldElement::from_str("22222")?,
-                ),
-                (
-                    ContractAddress::from(FieldElement::from_str("1116")?),
-                    FieldElement::from_str("22223")?,
-                ),
+                (ContractAddress::from(Felt::from_str("1111")?), Felt::from_str("22222")?),
+                (ContractAddress::from(Felt::from_str("1116")?), Felt::from_str("22223")?),
             ]
             .into_iter()
             .collect(),
 
             contract_updates: vec![(
-                ContractAddress::from(FieldElement::from_str("3")?),
-                FieldElement::from_str("437267489")?,
+                ContractAddress::from(Felt::from_str("3")?),
+                Felt::from_str("437267489")?,
             )]
             .into_iter()
             .collect(),
 
-            declared_classes: vec![(
-                FieldElement::from_str("1234")?,
-                FieldElement::from_str("12345")?,
-            )]
-            .into_iter()
-            .collect(),
+            declared_classes: vec![(Felt::from_str("1234")?, Felt::from_str("12345")?)]
+                .into_iter()
+                .collect(),
         },
         world_da: None,
     };
     let mut deserialized = serde_json::from_str::<ProgramInput>(input)?;
     assert_eq!(expected, deserialized);
 
-    deserialized.fill_da(FieldElement::from_str("42")?);
+    deserialized.fill_da(Felt::from_str("42")?);
     expected.world_da = Some(vec![
-        FieldElement::from_str("2010")?,
-        FieldElement::from_str("1200")?,
-        FieldElement::from_str("2012")?,
-        FieldElement::from_str("1300")?,
+        Felt::from_str("2010")?,
+        Felt::from_str("1200")?,
+        Felt::from_str("2012")?,
+        Felt::from_str("1300")?,
     ]);
 
     Ok(())
@@ -563,28 +551,28 @@ fn test_serialize_input() -> anyhow::Result<()> {
     use std::str::FromStr;
 
     let input = ProgramInput {
-        prev_state_root: FieldElement::from_str("101")?,
+        prev_state_root: Felt::from_str("101")?,
         block_number: 102,
-        block_hash: FieldElement::from_str("103")?,
-        config_hash: FieldElement::from_str("104")?,
+        block_hash: Felt::from_str("103")?,
+        config_hash: Felt::from_str("104")?,
         message_to_starknet_segment: vec![MessageToStarknet {
-            from_address: ContractAddress::from(FieldElement::from_str("105")?),
-            to_address: ContractAddress::from(FieldElement::from_str("106")?),
-            payload: vec![FieldElement::from_str("1")?],
+            from_address: ContractAddress::from(Felt::from_str("105")?),
+            to_address: ContractAddress::from(Felt::from_str("106")?),
+            payload: vec![Felt::from_str("1")?],
         }],
         message_to_appchain_segment: vec![MessageToAppchain {
-            from_address: ContractAddress::from(FieldElement::from_str("108")?),
-            to_address: ContractAddress::from(FieldElement::from_str("109")?),
-            nonce: FieldElement::from_str("110")?,
-            selector: FieldElement::from_str("111")?,
-            payload: vec![FieldElement::from_str("112")?],
+            from_address: ContractAddress::from(Felt::from_str("108")?),
+            to_address: ContractAddress::from(Felt::from_str("109")?),
+            nonce: Felt::from_str("110")?,
+            selector: Felt::from_str("111")?,
+            payload: vec![Felt::from_str("112")?],
         }],
         state_updates: StateUpdates {
             storage_updates: vec![(
-                ContractAddress::from(FieldElement::from_str("42")?),
+                ContractAddress::from(Felt::from_str("42")?),
                 vec![
-                    (FieldElement::from_str("2010")?, FieldElement::from_str("1200")?),
-                    (FieldElement::from_str("2012")?, FieldElement::from_str("1300")?),
+                    (Felt::from_str("2010")?, Felt::from_str("1200")?),
+                    (Felt::from_str("2012")?, Felt::from_str("1300")?),
                 ]
                 .into_iter()
                 .collect(),
@@ -593,37 +581,28 @@ fn test_serialize_input() -> anyhow::Result<()> {
             .collect(),
 
             nonce_updates: vec![
-                (
-                    ContractAddress::from(FieldElement::from_str("1111")?),
-                    FieldElement::from_str("22222")?,
-                ),
-                (
-                    ContractAddress::from(FieldElement::from_str("1116")?),
-                    FieldElement::from_str("22223")?,
-                ),
+                (ContractAddress::from(Felt::from_str("1111")?), Felt::from_str("22222")?),
+                (ContractAddress::from(Felt::from_str("1116")?), Felt::from_str("22223")?),
             ]
             .into_iter()
             .collect(),
 
             contract_updates: vec![(
-                ContractAddress::from(FieldElement::from_str("3")?),
-                FieldElement::from_str("437267489")?,
+                ContractAddress::from(Felt::from_str("3")?),
+                Felt::from_str("437267489")?,
             )]
             .into_iter()
             .collect(),
 
-            declared_classes: vec![(
-                FieldElement::from_str("1234")?,
-                FieldElement::from_str("12345")?,
-            )]
-            .into_iter()
-            .collect(),
+            declared_classes: vec![(Felt::from_str("1234")?, Felt::from_str("12345")?)]
+                .into_iter()
+                .collect(),
         },
         world_da: Some(vec![
-            FieldElement::from_str("2010")?,
-            FieldElement::from_str("1200")?,
-            FieldElement::from_str("2012")?,
-            FieldElement::from_str("1300")?,
+            Felt::from_str("2010")?,
+            Felt::from_str("1200")?,
+            Felt::from_str("2012")?,
+            Felt::from_str("1300")?,
         ]),
     };
 
@@ -637,7 +616,7 @@ fn test_serialize_input() -> anyhow::Result<()> {
 #[test]
 fn test_serialize_to_prover_args() -> anyhow::Result<()> {
     let input = r#"{
-        "prev_state_root":"101", 
+        "prev_state_root":"101",
         "block_number":102,
         "block_hash":"103",
         "config_hash":"104",
@@ -655,11 +634,11 @@ fn test_serialize_to_prover_args() -> anyhow::Result<()> {
         "declared_classes":{
             "88888": "99999"
         },
-        "message_to_starknet_segment":["123","456","123","128"], 
+        "message_to_starknet_segment":["123","456","123","128"],
         "message_to_appchain_segment":["108","109","110","111","1","112"]
     }"#;
     let mut input = serde_json::from_str::<ProgramInput>(input)?;
-    input.fill_da(FieldElement::from_str("333")?);
+    input.fill_da(Felt::from_str("333")?);
 
     println!("{:?}", input);
 
@@ -670,7 +649,7 @@ fn test_serialize_to_prover_args() -> anyhow::Result<()> {
         4, 123, 456, 1, 128, 6, 108, 109, 110, 111, 1, 112, 1, 4444, 555, 0u64,
     ]
     .into_iter()
-    .map(FieldElement::from)
+    .map(Felt::from)
     .collect::<Vec<_>>();
 
     assert_eq!(serialized, expected);

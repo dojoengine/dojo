@@ -13,6 +13,7 @@ dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 futures-util.workspace = true
 futures.workspace = true
 libp2p-gossipsub = "0.46.1"
+num-traits.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
 serde_json.workspace = true

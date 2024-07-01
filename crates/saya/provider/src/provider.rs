@@ -1,7 +1,7 @@
 use katana_primitives::block::{BlockNumber, SealedBlock};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_rpc_types::trace::TxExecutionInfo;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 use crate::ProviderResult;
 
@@ -28,7 +28,7 @@ pub trait Provider {
     async fn fetch_state_updates(
         &self,
         block_number: BlockNumber,
-    ) -> ProviderResult<(StateUpdatesWithDeclaredClasses, Vec<FieldElement>)>;
+    ) -> ProviderResult<(StateUpdatesWithDeclaredClasses, Vec<Felt>)>;
 
     /// Fetches the transactions executions info for a given block.
     /// This method returns the all the executions info for each

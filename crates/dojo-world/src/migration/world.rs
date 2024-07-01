@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use anyhow::{bail, Result};
 use convert_case::{Case, Casing};
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use topological_sort::TopologicalSort;
 
 use super::class::ClassDiff;
@@ -60,7 +60,7 @@ impl WorldDiff {
             .map(|contract| {
                 let base_class_hash = {
                     let class_hash = contract.inner.base_class_hash;
-                    if class_hash != FieldElement::ZERO {
+                    if class_hash != Felt::ZERO {
                         class_hash
                     } else {
                         *local.base.inner.class_hash()
@@ -129,7 +129,7 @@ impl WorldDiff {
                     ts.add_dependency(dependency, curr_name);
                 } else {
                     // verify its a field element
-                    match FieldElement::from_str(field) {
+                    match Felt::from_str(field) {
                         Ok(_) => continue,
                         Err(e) => bail!(format!(
                             "Expected init_calldata element to be a special variable (i.e. \

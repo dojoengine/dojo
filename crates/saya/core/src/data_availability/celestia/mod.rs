@@ -7,7 +7,7 @@ use celestia_types::blob::GasPrice;
 use celestia_types::nmt::Namespace;
 use celestia_types::Blob;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use url::Url;
 
 use crate::data_availability::error::{DataAvailabilityResult, Error};
@@ -54,10 +54,7 @@ impl DataAvailabilityClient for CelestiaClient {
         self.mode
     }
 
-    async fn publish_state_diff_felts(
-        &self,
-        state_diff: &[FieldElement],
-    ) -> DataAvailabilityResult<u64> {
+    async fn publish_state_diff_felts(&self, state_diff: &[Felt]) -> DataAvailabilityResult<u64> {
         let bytes: Vec<u8> = state_diff.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
 
         let blob = Blob::new(self.namespace, bytes)?;
@@ -72,8 +69,8 @@ impl DataAvailabilityClient for CelestiaClient {
 
     async fn publish_state_diff_and_proof_felts(
         &self,
-        state_diff: &[FieldElement],
-        state_diff_proof: &[FieldElement],
+        state_diff: &[Felt],
+        state_diff_proof: &[Felt],
     ) -> DataAvailabilityResult<u64> {
         let bytes: Vec<u8> = state_diff.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
         let blob = Blob::new(self.namespace, bytes)?;

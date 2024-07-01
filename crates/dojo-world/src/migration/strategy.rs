@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
 
@@ -20,7 +20,7 @@ pub enum MigrationMetadata {
 
 #[derive(Debug, Clone)]
 pub struct MigrationStrategy {
-    pub world_address: Option<FieldElement>,
+    pub world_address: Option<Felt>,
     pub world: Option<ContractMigration>,
     pub base: Option<ClassMigration>,
     pub contracts: Vec<ContractMigration>,
@@ -35,7 +35,7 @@ pub struct MigrationItemsInfo {
 }
 
 impl MigrationStrategy {
-    pub fn world_address(&self) -> Result<FieldElement> {
+    pub fn world_address(&self) -> Result<Felt> {
         match &self.world {
             Some(c) => Ok(c.contract_address),
             None => self.world_address.ok_or(anyhow!("World address not found")),
@@ -66,7 +66,7 @@ impl MigrationStrategy {
         MigrationItemsInfo { new, update }
     }
 
-    pub fn resolve_variable(&mut self, world_address: FieldElement) -> Result<()> {
+    pub fn resolve_variable(&mut self, world_address: Felt) -> Result<()> {
         for contract in self.contracts.iter_mut() {
             for field in contract.diff.init_calldata.iter_mut() {
                 if let Some(dependency) = field.strip_prefix("$contract_address:") {
@@ -101,8 +101,8 @@ impl MigrationStrategy {
 /// construct migration strategy
 /// evaluate which contracts/classes need to be declared/deployed
 pub fn prepare_for_migration(
-    world_address: Option<FieldElement>,
-    seed: FieldElement,
+    world_address: Option<Felt>,
+    seed: Felt,
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
 ) -> Result<MigrationStrategy> {
@@ -152,7 +152,7 @@ pub fn prepare_for_migration(
             salt,
             diff.world.original_class_hash,
             &[base.as_ref().unwrap().diff.original_class_hash],
-            FieldElement::ZERO,
+            Felt::ZERO,
         );
 
         if let Some(world_address) = world_address {
@@ -264,7 +264,7 @@ fn find_artifact_path<'a>(
         .with_context(|| anyhow!("missing contract artifact for `{}` contract", contract_name))
 }
 
-pub fn generate_salt(value: &str) -> FieldElement {
+pub fn generate_salt(value: &str) -> Felt {
     poseidon_hash_many(
         &value
             .chars()

@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use sqlx::{Executor, Pool, Sqlite};
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 
 #[derive(Debug, Clone)]
 pub enum Argument {
@@ -9,7 +9,7 @@ pub enum Argument {
     Int(i64),
     Bool(bool),
     String(String),
-    FieldElement(FieldElement),
+    FieldElement(Felt),
 }
 
 #[derive(Debug, Clone)]

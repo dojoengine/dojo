@@ -27,8 +27,7 @@ impl Compress for StorageEntry {
 impl Decompress for StorageEntry {
     fn decompress<B: AsRef<[u8]>>(bytes: B) -> Result<Self, crate::error::CodecError> {
         let bytes = bytes.as_ref();
-        let key = StorageKey::from_byte_slice_be(&bytes[0..32])
-            .map_err(|e| CodecError::Decompress(e.to_string()))?;
+        let key = StorageKey::from_bytes_be_slice(&bytes[0..32]);
         let value = StorageValue::decompress(&bytes[32..])?;
         Ok(Self { key, value })
     }

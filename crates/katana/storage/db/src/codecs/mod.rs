@@ -62,8 +62,7 @@ macro_rules! impl_encode_and_decode_for_felts {
 
             impl Decode for $ty {
                 fn decode<B: AsRef<[u8]>>(bytes: B) -> Result<Self, CodecError> {
-                    let felt = FieldElement::from_byte_slice_be(bytes.as_ref());
-                    Ok(felt.map_err(|e| CodecError::Decode(e.to_string()))?.into())
+                    Ok(FieldElement::from_bytes_be_slice(bytes.as_ref()).into())
                 }
             }
         )*

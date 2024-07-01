@@ -1,21 +1,23 @@
+use std::any::type_name;
 use std::str::FromStr;
 
 use crypto_bigint::U256;
-use starknet::core::types::{FieldElement, FromStrError, ValueOutOfRangeError};
+use num_traits::ToPrimitive;
+use starknet::core::types::{Felt, FromStrError};
 use starknet::core::utils::{
     cairo_short_string_to_felt, parse_cairo_short_string, CairoShortStringToFeltError,
     ParseCairoShortStringError,
 };
 
-use crate::primitive::Primitive;
+use crate::primitive::{Primitive, PrimitiveError};
 use crate::schema::{self, EnumOption, Ty};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
     #[error("Invalid schema: {0}")]
     InvalidSchema(String),
-    #[error("Error when parsing felt: {0}")]
-    ValueOutOfRange(#[from] ValueOutOfRangeError),
+    #[error("Value out of range")]
+    Primitive(#[from] PrimitiveError),
     #[error("Error when parsing felt: {0}")]
     FromStr(#[from] FromStrError),
     #[error(transparent)]
@@ -40,6 +42,8 @@ pub enum PackingError {
     Parse(#[from] ParseError),
     #[error("Error when unpacking entity")]
     UnpackingEntityError,
+    #[error(transparent)]
+    Primitive(#[from] PrimitiveError),
 }
 
 /// Unpacks a vector of packed values according to a given layout.
@@ -51,28 +55,29 @@ pub enum PackingError {
 ///
 /// # Returns
 ///
-/// * `Result<Vec<FieldElement>, PackingError>` - A Result containing a vector of unpacked
-///   FieldElement values if successful, or an error if unsuccessful.
-pub fn unpack(
-    mut packed: Vec<FieldElement>,
-    layout: Vec<FieldElement>,
-) -> Result<Vec<FieldElement>, PackingError> {
+/// * `Result<Vec<Felt>, PackingError>` - A Result containing a vector of unpacked Felt values if
+///   successful, or an error if unsuccessful.
+pub fn unpack(mut packed: Vec<Felt>, layout: Vec<Felt>) -> Result<Vec<Felt>, PackingError> {
     packed.reverse();
     let mut unpacked = vec![];
 
-    let mut unpacking: U256 =
-        packed.pop().ok_or(PackingError::UnpackingEntityError)?.as_ref().into();
+    let felt = packed.pop().ok_or(PackingError::UnpackingEntityError)?;
+    let mut unpacking = U256::from_be_slice(&felt.to_bytes_be());
     let mut offset = 0;
-
     // Iterate over the layout.
     for size in layout {
-        let size: u8 = size.try_into().map_err(ParseError::ValueOutOfRange)?;
+        let size: u8 = size.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u8>(),
+            value: size,
+        })?;
+
         let size: usize = size.into();
         let remaining_bits = 251 - offset;
 
         // If there are less remaining bits than the size, move to the next felt for unpacking.
         if remaining_bits < size {
-            unpacking = packed.pop().ok_or(PackingError::UnpackingEntityError)?.as_ref().into();
+            let felt = packed.pop().ok_or(PackingError::UnpackingEntityError)?;
+            unpacking = U256::from_be_slice(&felt.to_bytes_be());
             offset = 0;
         }
 
@@ -82,8 +87,7 @@ pub fn unpack(
         }
 
         let result = mask & (unpacking >> offset);
-        let result_fe =
-            FieldElement::from_hex_be(&result.to_string()).map_err(ParseError::FromStr)?;
+        let result_fe = Felt::from_hex(&result.to_string()).map_err(ParseError::FromStr)?;
         unpacked.push(result_fe);
 
         // Update unpacking to be the shifted value after extracting the result.
@@ -94,7 +98,7 @@ pub fn unpack(
 }
 
 /// Parse a raw schema of a model into a Cairo type, [Ty]
-pub fn parse_ty(data: &[FieldElement]) -> Result<Ty, ParseError> {
+pub fn parse_ty(data: &[Felt]) -> Result<Ty, ParseError> {
     if data.is_empty() {
         return Err(ParseError::invalid_schema_with_msg(
             "The function parse_ty expects at least one felt to know the member type variant, \
@@ -102,7 +106,11 @@ pub fn parse_ty(data: &[FieldElement]) -> Result<Ty, ParseError> {
         ));
     }
 
-    let member_type: u8 = data[0].try_into()?;
+    let member_type: u8 = data[0].to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+        r#type: type_name::<u8>(),
+        value: data[0],
+    })?;
+
     match member_type {
         0 => parse_simple(&data[1..]),
         1 => parse_struct(&data[1..]),
@@ -117,7 +125,7 @@ pub fn parse_ty(data: &[FieldElement]) -> Result<Ty, ParseError> {
     }
 }
 
-fn parse_simple(data: &[FieldElement]) -> Result<Ty, ParseError> {
+fn parse_simple(data: &[Felt]) -> Result<Ty, ParseError> {
     let ty = parse_cairo_short_string(&data[0])?;
     let primitive = match Primitive::from_str(&ty) {
         Ok(primitive) => primitive,
@@ -132,7 +140,7 @@ fn parse_simple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     Ok(Ty::Primitive(primitive))
 }
 
-fn parse_struct(data: &[FieldElement]) -> Result<Ty, ParseError> {
+fn parse_struct(data: &[Felt]) -> Result<Ty, ParseError> {
     // A struct has at least 3 elements: name, attrs len, and children len.
     if data.len() < 3 {
         return Err(ParseError::invalid_schema_with_msg(&format!(
@@ -144,12 +152,18 @@ fn parse_struct(data: &[FieldElement]) -> Result<Ty, ParseError> {
 
     let name = parse_cairo_short_string(&data[0])?;
 
-    let attrs_len: u32 = data[1].try_into()?;
+    let attrs_len: u32 = data[1].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+        r#type: type_name::<u32>(),
+        value: data[1],
+    })?;
     let attrs_slice_start = 2;
     let attrs_slice_end = attrs_slice_start + attrs_len as usize;
     let _attrs = &data[attrs_slice_start..attrs_slice_end];
 
-    let children_len: u32 = data[attrs_slice_end].try_into()?;
+    let children_len: u32 = data[attrs_slice_end].to_u32().ok_or_else(|| {
+        PrimitiveError::ValueOutOfRange { r#type: type_name::<u32>(), value: data[attrs_slice_end] }
+    })?;
+
     let children_len = children_len as usize;
 
     let mut children = vec![];
@@ -157,7 +171,10 @@ fn parse_struct(data: &[FieldElement]) -> Result<Ty, ParseError> {
 
     for i in 0..children_len {
         let start = i + offset;
-        let len: u32 = data[start].try_into()?;
+        let len: u32 = data[start].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u32>(),
+            value: data[start],
+        })?;
         let slice_start = start + 1;
         let slice_end = slice_start + len as usize;
         children.push(parse_member(&data[slice_start..slice_end])?);
@@ -167,7 +184,7 @@ fn parse_struct(data: &[FieldElement]) -> Result<Ty, ParseError> {
     Ok(Ty::Struct(schema::Struct { name, children }))
 }
 
-fn parse_member(data: &[FieldElement]) -> Result<schema::Member, ParseError> {
+fn parse_member(data: &[Felt]) -> Result<schema::Member, ParseError> {
     if data.len() < 3 {
         return Err(ParseError::invalid_schema_with_msg(&format!(
             "The function parse_member expects at least three felts: name, attributes len, and \
@@ -178,7 +195,10 @@ fn parse_member(data: &[FieldElement]) -> Result<schema::Member, ParseError> {
 
     let name = parse_cairo_short_string(&data[0])?;
 
-    let attributes_len: u32 = data[1].try_into()?;
+    let attributes_len: u32 = data[1].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+        r#type: type_name::<u32>(),
+        value: data[1],
+    })?;
     let slice_start = 2;
     let slice_end = slice_start + attributes_len as usize;
     let attributes = &data[slice_start..slice_end];
@@ -189,7 +209,7 @@ fn parse_member(data: &[FieldElement]) -> Result<schema::Member, ParseError> {
     Ok(schema::Member { name, ty, key })
 }
 
-fn parse_enum(data: &[FieldElement]) -> Result<Ty, ParseError> {
+fn parse_enum(data: &[Felt]) -> Result<Ty, ParseError> {
     if data.len() < 3 {
         return Err(ParseError::invalid_schema_with_msg(&format!(
             "The function parse_enum expects at least three felts: name, attributes len, and \
@@ -200,12 +220,17 @@ fn parse_enum(data: &[FieldElement]) -> Result<Ty, ParseError> {
 
     let name = parse_cairo_short_string(&data[0])?;
 
-    let attrs_len: u32 = data[1].try_into()?;
+    let attrs_len: u32 = data[1].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+        r#type: type_name::<u32>(),
+        value: data[1],
+    })?;
     let attrs_slice_start = 2;
     let attrs_slice_end = attrs_slice_start + attrs_len as usize;
     let _attrs = &data[attrs_slice_start..attrs_slice_end];
 
-    let values_len: u32 = data[attrs_slice_end].try_into()?;
+    let values_len: u32 = data[attrs_slice_end].to_u32().ok_or_else(|| {
+        PrimitiveError::ValueOutOfRange { r#type: type_name::<u32>(), value: data[attrs_slice_end] }
+    })?;
     let values_len = values_len as usize;
 
     let mut values = vec![];
@@ -215,7 +240,10 @@ fn parse_enum(data: &[FieldElement]) -> Result<Ty, ParseError> {
         let start = i + offset;
         let name = parse_cairo_short_string(&data[start])?;
         let slice_start = start + 2;
-        let len: u32 = data[start + 3].try_into()?;
+        let len: u32 = data[start + 3].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u32>(),
+            value: data[start + 3],
+        })?;
         let len = len + 1; // Account for Ty enum index
 
         let slice_end = slice_start + len as usize;
@@ -226,13 +254,16 @@ fn parse_enum(data: &[FieldElement]) -> Result<Ty, ParseError> {
     Ok(Ty::Enum(schema::Enum { name, option: None, options: values }))
 }
 
-fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
+fn parse_tuple(data: &[Felt]) -> Result<Ty, ParseError> {
     if data.is_empty() {
         // The unit type is defined as an empty tuple.
         return Ok(Ty::Tuple(vec![]));
     }
 
-    let children_len: u32 = data[0].try_into()?;
+    let children_len: u32 = data[0].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+        r#type: type_name::<u32>(),
+        value: data[0],
+    })?;
     let children_len = children_len as usize;
 
     let mut children = vec![];
@@ -240,7 +271,10 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
 
     for i in 0..children_len {
         let start = i + offset;
-        let len: u32 = data[start].try_into()?;
+        let len: u32 = data[start].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u32>(),
+            value: data[start],
+        })?;
         let slice_start = start + 1;
         let slice_end = slice_start + len as usize;
         children.push(parse_ty(&data[slice_start..slice_end])?);
@@ -250,7 +284,7 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     Ok(Ty::Tuple(children))
 }
 
-fn parse_array(data: &[FieldElement]) -> Result<Ty, ParseError> {
+fn parse_array(data: &[Felt]) -> Result<Ty, ParseError> {
     if data.is_empty() || data.len() != 2 {
         return Err(ParseError::invalid_schema_with_msg(
             "The function parse_array expects exactly one felt to know the item type, empty input \
@@ -273,14 +307,14 @@ fn parse_byte_array() -> Result<Ty, ParseError> {
 
 #[cfg(test)]
 mod tests {
-    use starknet::core::types::FieldElement;
+    use starknet::core::types::Felt;
     use starknet::core::utils::cairo_short_string_to_felt;
 
     use super::*;
 
     #[test]
     fn parse_simple_with_invalid_value() {
-        let data = [FieldElement::default()];
+        let data = [Felt::default()];
         assert!(parse_simple(&data).is_err());
     }
 
@@ -297,17 +331,14 @@ mod tests {
         assert!(parse_struct(&data).is_err());
 
         // Only with attr len.
-        let data = [cairo_short_string_to_felt("bad_struct").unwrap(), FieldElement::default()];
+        let data = [cairo_short_string_to_felt("bad_struct").unwrap(), Felt::default()];
         assert!(parse_struct(&data).is_err());
     }
 
     #[test]
     fn parse_struct_empty() {
-        let data = [
-            cairo_short_string_to_felt("empty_struct").unwrap(),
-            FieldElement::default(),
-            FieldElement::default(),
-        ];
+        let data =
+            [cairo_short_string_to_felt("empty_struct").unwrap(), Felt::default(), Felt::default()];
 
         assert_eq!(
             parse_struct(&data).unwrap(),
@@ -317,7 +348,7 @@ mod tests {
 
     #[test]
     fn parse_array_with_invalid_value() {
-        let data = [FieldElement::default()];
+        let data = [Felt::default()];
         assert!(parse_array(&data).is_err());
     }
 }

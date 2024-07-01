@@ -44,7 +44,7 @@ pub fn invoke_executable_tx(
         calldata: vec![felt!("0x1"), felt!("0x99"), felt!("0x0")],
     }];
 
-    let tx = account.execute(calls).nonce(nonce).max_fee(max_fee).prepared().unwrap();
+    let tx = account.execute_v1(calls).nonce(nonce).max_fee(max_fee).prepared().unwrap();
 
     let mut broadcasted_tx = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -54,14 +54,13 @@ pub fn invoke_executable_tx(
         .unwrap();
 
     if !signed {
-        match broadcasted_tx {
-            BroadcastedInvokeTransaction::V1(ref mut tx) => tx.signature = vec![],
-            BroadcastedInvokeTransaction::V3(ref mut tx) => tx.signature = vec![],
-        }
+        broadcasted_tx.signature = vec![]
     }
 
-    let tx = katana_rpc_types::transaction::BroadcastedInvokeTx(broadcasted_tx)
-        .into_tx_with_chain_id(chain_id);
+    let tx = katana_rpc_types::transaction::BroadcastedInvokeTx(BroadcastedInvokeTransaction::V1(
+        broadcasted_tx,
+    ))
+    .into_tx_with_chain_id(chain_id);
 
     ExecutableTxWithHash::new(tx.into())
 }

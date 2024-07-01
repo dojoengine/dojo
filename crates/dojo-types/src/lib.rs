@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use schema::ModelMetadata;
 use serde::Serialize;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 pub mod event;
 pub mod packing;
@@ -14,8 +14,8 @@ pub mod system;
 /// Represents the metadata of a World
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct WorldMetadata {
-    pub world_address: FieldElement,
-    pub world_class_hash: FieldElement,
+    pub world_address: Felt,
+    pub world_class_hash: Felt,
     pub models: HashMap<String, ModelMetadata>,
 }
 
