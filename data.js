@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719612573230,
+  "lastUpdate": 1719846793563,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10705,6 +10705,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16561493,
             "range": "± 206663",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8f5ee1d525cf22b7db7afc0d1e119e68257a20e5",
+          "message": "fix(torii-core): silently retry fetching pending txn until we have it (#2125)\n\n* fix(torii-core): silently retry fetching pending txn until we have it\r\n\r\n* fmt\r\n\r\n* chore: warn message",
+          "timestamp": "2024-07-01T11:01:16-04:00",
+          "tree_id": "a2488cbb6a205b9901c87c90cfeb96d7b848c59c",
+          "url": "https://github.com/dojoengine/dojo/commit/8f5ee1d525cf22b7db7afc0d1e119e68257a20e5"
+        },
+        "date": 1719846792729,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16530352,
+            "range": "± 342156",
             "unit": "ns/iter"
           }
         ]
