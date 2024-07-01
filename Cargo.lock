@@ -13202,7 +13202,7 @@ dependencies = [
 [[package]]
 name = "slot"
 version = "0.8.0"
-source = "git+https://github.com/cartridge-gg/slot?rev=1d0c9f7#1d0c9f79122202bb448279f68c97092413e72cd3"
+source = "git+https://github.com/cartridge-gg/slot?branch=bump-starknet#1e0d342e8d10ec6b8d8cc2382e137e5d81b67948"
 dependencies = [
  "anyhow",
  "axum",
@@ -13213,7 +13213,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet 0.10.0",
+ "starknet 0.11.0",
  "tempfile",
  "thiserror",
  "tokio",

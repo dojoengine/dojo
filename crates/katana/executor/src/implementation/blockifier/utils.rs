@@ -758,7 +758,7 @@ mod tests {
         let expected_contract_address = to_address(call.call.storage_address);
         let expected_caller_address = to_address(call.call.caller_address);
         let expected_code_address = call.call.code_address.map(to_address);
-        let expected_class_hash = call.call.class_hash.map(to_felt);
+        let expected_class_hash = call.call.class_hash.map(|c|to_felt(c.0));
         let expected_entry_point_selector = to_felt(call.call.entry_point_selector.0);
         let expected_calldata: Vec<FieldElement> =
             call.call.calldata.0.iter().map(|f| to_felt(*f)).collect();
