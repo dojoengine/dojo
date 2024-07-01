@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use account_sdk::abigen::controller::{Signer, SignerType};
 use account_sdk::signers::webauthn::{DeviceSigner, WebauthnAccountSigner};
@@ -8,11 +7,10 @@ use account_sdk::wasm_webauthn::CredentialID;
 use alloy_primitives::U256;
 use anyhow::Result;
 use coset::CoseKey;
-use katana_primitives::class::{ClassHash, CompiledClass, SierraCompiledClass};
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::{GenesisAllocation, GenesisContractAlloc};
-use katana_primitives::genesis::{Genesis, GenesisClass};
-use katana_primitives::utils::class::{parse_compiled_class_v1, parse_sierra_class};
+use katana_primitives::genesis::constant::CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH;
+use katana_primitives::genesis::Genesis;
 use katana_primitives::FieldElement;
 use slot::credential::Credentials;
 use starknet::core::utils::get_storage_var_address;
@@ -22,9 +20,6 @@ mod webauthn;
 
 const LOG_TARGET: &str = "katana::controller";
 
-const CONTROLLER_SIERRA_ARTIFACT: &str =
-    include_str!("../../contracts/compiled/controller_CartridgeAccount.contract_class.json");
-
 const WEBAUTHN_RP_ID: &str = "cartridge.gg";
 const WEBAUTHN_ORIGIN: &str = "https://x.cartridge.gg";
 
@@ -32,34 +27,6 @@ pub fn add_controller_account(genesis: &mut Genesis) -> Result<()> {
     // bouncer that checks if there is an authenticated slot user
     let credentials = Credentials::load()?;
     add_controller_account_inner(genesis, credentials.account)
-}
-
-fn add_controller_class(genesis: &mut Genesis) -> Result<ClassHash> {
-    let sierra = parse_sierra_class(CONTROLLER_SIERRA_ARTIFACT)?;
-    let casm = read_compiled_class_artifact(CONTROLLER_SIERRA_ARTIFACT)?;
-
-    let class_hash = sierra.class_hash()?;
-    let flattened_sierra = sierra.flatten()?;
-    let casm_hash =
-        FieldElement::from_bytes_be_slice(&casm.casm.compiled_class_hash().to_be_bytes());
-
-    trace!(
-        target: LOG_TARGET,
-        class_hash = format!("{class_hash:#x}"),
-        casm_hash = format!("{casm_hash:#x}"),
-        "Adding Cartridge Controller account class to genesis."
-    );
-
-    genesis.classes.insert(
-        class_hash,
-        GenesisClass {
-            sierra: Some(Arc::new(flattened_sierra)),
-            compiled_class_hash: casm_hash,
-            casm: Arc::new(CompiledClass::Class(casm)),
-        },
-    );
-
-    Ok(class_hash)
 }
 
 fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Account) -> Result<()> {
@@ -72,16 +39,14 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
         "Adding Cartridge Controller account to genesis."
     );
 
-    let class_hash = add_controller_class(genesis)?;
-
     let credential_id = webauthn::credential::from_base64(&cred.id)?;
     let public_key = webauthn::cose_key::from_base64(&cred.public_key)?;
 
     let (address, contract) = {
         let account = GenesisContractAlloc {
             nonce: None,
-            class_hash: Some(class_hash),
             balance: Some(U256::from(0xfffffffffffffffu128)),
+            class_hash: Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
             storage: Some(get_contract_storage(credential_id, public_key, SignerType::Webauthn)?),
         };
 
@@ -113,6 +78,8 @@ pub mod json {
 
     use super::*;
 
+    const CONTROLLER_SIERRA_ARTIFACT: &str =
+        include_str!("../../contracts/compiled/controller_CartridgeAccount.contract_class.json");
     const CONTROLLER_CLASS_NAME: &str = "controller";
 
     // TODO(kariy): should accept the whole account struct instead of individual fields
@@ -197,11 +164,6 @@ fn get_contract_storage(
     Ok(HashMap::from([(storage, guid)]))
 }
 
-fn read_compiled_class_artifact(artifact: &str) -> Result<SierraCompiledClass> {
-    let value = serde_json::from_str(artifact)?;
-    parse_compiled_class_v1(value)
-}
-
 #[cfg(test)]
 mod tests {
     use slot::account::WebAuthnCredential;
@@ -239,15 +201,14 @@ mod tests {
             },
         };
 
-        let controller_class_hash = add_controller_class(&mut Genesis::default()).unwrap();
         add_controller_account_inner(&mut genesis, account.clone()).unwrap();
 
         let address = ContractAddress::from(account.contract_address);
         let allocation = genesis.allocations.get(&address).unwrap();
 
         assert!(genesis.allocations.contains_key(&address));
-        assert_eq!(allocation.class_hash(), Some(controller_class_hash));
         assert_eq!(allocation.balance(), Some(U256::from(0xfffffffffffffffu128)));
+        assert_eq!(allocation.class_hash(), Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH));
     }
 
     #[test]

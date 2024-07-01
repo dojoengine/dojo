@@ -1,0 +1,20 @@
+kind = "DojoModel"
+class_hash = "0x6dc51a232ffcfaa02646636daf1b8acab8121fa69458258da8df1620aff07ab"
+original_class_hash = "0x6dc51a232ffcfaa02646636daf1b8acab8121fa69458258da8df1620aff07ab"
+abi = "manifests/dev/abis/base/models/dojo_examples_models_server_profile.json"
+name = "dojo_examples::models::server_profile"
+
+[[members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "server_id"
+type = "u32"
+key = true
+
+[[members]]
+name = "name"
+type = "ByteArray"
+key = false

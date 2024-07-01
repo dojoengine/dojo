@@ -225,6 +225,22 @@
         "inputs": [],
         "outputs": [],
         "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "set_player_server_profile",
+        "inputs": [
+          {
+            "name": "server_id",
+            "type": "core::integer::u32"
+          },
+          {
+            "name": "name",
+            "type": "core::byte_array::ByteArray"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
       }
     ]
   },

@@ -175,10 +175,11 @@ impl<P: Provider + Sync> Engine<P> {
                     match e.to_string().as_str() {
                         "TransactionHashNotFound" => {
                             // We failed to fetch the transaction, which is because
-                            // the transaction might not have passed the validation stage.
-                            // So we can safely ignore this transaction and not process it, as it
-                            // rejected.
-                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Ignored failed pending transaction.");
+                            // the transaction might not have been processed fast enough by the
+                            // provider. So we can fail silently and try
+                            // again in the next iteration.
+                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Retrieving pending transaction receipt.");
+                            return Ok(pending_block_tx);
                         }
                         _ => {
                             error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processing pending transaction.");

@@ -8,9 +8,8 @@ use futures_util::FutureExt;
 use num_traits::FromPrimitive;
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use starknet::core::types::Felt;
 use starknet::core::types::{
-    BlockId, ContractStorageDiffItem, MaybePendingStateUpdate, StateUpdate, StorageEntry,
+    BlockId, ContractStorageDiffItem, Felt, MaybePendingStateUpdate, StateUpdate, StorageEntry,
 };
 use starknet::macros::short_string;
 use starknet::providers::Provider;
@@ -23,7 +22,7 @@ use tracing::{debug, error, trace};
 use super::error::SubscriptionError;
 use crate::proto;
 use crate::proto::world::SubscribeModelsResponse;
-use crate::types::KeysClause;
+use crate::types::ModelKeysClause;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::model_diff";
 
@@ -34,7 +33,7 @@ pub struct ModelMetadata {
 
 pub struct ModelDiffRequest {
     pub model: ModelMetadata,
-    pub keys: proto::types::KeysClause,
+    pub keys: proto::types::ModelKeysClause,
 }
 
 impl ModelDiffRequest {}
@@ -64,7 +63,8 @@ impl StateDiffManager {
         let storage_addresses = reqs
             .into_iter()
             .map(|req| {
-                let keys: KeysClause = req.keys.into();
+                let keys: ModelKeysClause =
+                    req.keys.try_into().map_err(ParseError::FromByteSliceError)?;
 
                 let base = poseidon_hash_many(&[
                     short_string!("dojo_storage"),

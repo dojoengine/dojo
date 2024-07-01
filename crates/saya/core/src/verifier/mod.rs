@@ -10,6 +10,8 @@
 use ::starknet::core::types::Felt;
 use serde::{Deserialize, Serialize};
 
+use crate::StarknetAccountData;
+
 mod starknet;
 
 /// Supported verifiers.
@@ -22,11 +24,12 @@ pub enum VerifierIdentifier {
 
 pub async fn verify(
     verifier: VerifierIdentifier,
-    serialized_proof: Vec<Felt>,
-) -> anyhow::Result<(String, Felt)> {
+    serialized_proof: Vec<FieldElement>,
+    account: StarknetAccountData,
+) -> anyhow::Result<(String, FieldElement)> {
     match verifier {
         VerifierIdentifier::HerodotusStarknetSepolia(fact_registry_address) => {
-            starknet::starknet_verify(fact_registry_address, serialized_proof).await
+            starknet::starknet_verify(fact_registry_address, serialized_proof, account).await
         }
         VerifierIdentifier::StoneLocal => unimplemented!("Stone Verifier not yet supported"),
         VerifierIdentifier::StarkwareEthereum => {

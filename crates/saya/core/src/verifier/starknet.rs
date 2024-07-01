@@ -9,16 +9,21 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
 
-use crate::dojo_os::STARKNET_ACCOUNT;
+use crate::dojo_os::get_starknet_account;
+use crate::StarknetAccountData;
 
 pub async fn starknet_verify(
-    fact_registry_address: Felt,
-    serialized_proof: Vec<Felt>,
-) -> anyhow::Result<(String, Felt)> {
+    fact_registry_address: FieldElement,
+    serialized_proof: Vec<FieldElement>,
+    starknet_config: StarknetAccountData,
+) -> anyhow::Result<(String, FieldElement)> {
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
-    let nonce = STARKNET_ACCOUNT.get_nonce().await?;
-    let tx = STARKNET_ACCOUNT
-        .execute_v1(vec![Call {
+    let account = get_starknet_account(starknet_config)?;
+    let account = account.lock().await;
+
+    let nonce = account.get_nonce().await?;
+    let tx = account
+        .execute(vec![Call {
             to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
             calldata: serialized_proof,
@@ -35,14 +40,13 @@ pub async fn starknet_verify(
             anyhow::bail!("Transaction not mined in {} seconds.", wait_for.as_secs());
         }
 
-        let status =
-            match STARKNET_ACCOUNT.provider().get_transaction_status(tx.transaction_hash).await {
-                Ok(status) => status,
-                Err(_e) => {
-                    sleep(Duration::from_secs(1)).await;
-                    continue;
-                }
-            };
+        let status = match account.provider().get_transaction_status(tx.transaction_hash).await {
+            Ok(status) => status,
+            Err(_e) => {
+                sleep(Duration::from_secs(1)).await;
+                continue;
+            }
+        };
 
         break match status {
             TransactionStatus::Received => {
