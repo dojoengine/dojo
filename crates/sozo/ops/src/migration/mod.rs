@@ -13,7 +13,7 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 mod auto_auth;
 mod migrate;
@@ -29,8 +29,8 @@ use self::ui::MigrationUi;
 
 #[derive(Debug, Default, Clone)]
 pub struct MigrationOutput {
-    pub world_address: FieldElement,
-    pub world_tx_hash: Option<FieldElement>,
+    pub world_address: Felt,
+    pub world_tx_hash: Option<Felt>,
     pub world_block_number: Option<u64>,
     // Represents if full migration got completeled.
     // If false that means migration got partially completed.
@@ -43,14 +43,14 @@ pub struct MigrationOutput {
 #[derive(Debug, Default, Clone)]
 pub struct ContractMigrationOutput {
     pub name: String,
-    pub contract_address: FieldElement,
-    pub base_class_hash: FieldElement,
+    pub contract_address: Felt,
+    pub base_class_hash: Felt,
 }
 
 #[allow(clippy::too_many_arguments)]
 pub async fn migrate<A>(
     ws: &Workspace<'_>,
-    world_address: Option<FieldElement>,
+    world_address: Option<Felt>,
     rpc_url: String,
     account: A,
     name: &str,
@@ -173,7 +173,7 @@ where
 }
 
 enum ContractDeploymentOutput {
-    AlreadyDeployed(FieldElement),
+    AlreadyDeployed(Felt),
     Output(DeployOutput),
 }
 

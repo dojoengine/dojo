@@ -15,6 +15,7 @@ use std::collections::{HashMap, HashSet};
 use alloy_primitives::U256;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
+use num_traits::ToPrimitive;
 use starknet::core::types::{
     ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
     StateDiff, StateUpdate,
@@ -26,7 +27,6 @@ use crate::ProviderResult;
 const CLASS_INFO_FLAG_TRUE: &str = "100000000000000000000000000000000";
 
 /// Converts the [`StateUpdate`] RPC type into [`StateUpdate`] Katana primitive.
-///
 /// # Arguments
 ///
 /// * `state_update` - The RPC state update to convert.
@@ -229,13 +229,13 @@ fn compute_update_meta_info(
 
     if let Some(nonce) = new_nonce {
         // At the moment, v0.11 and forward are packing the nonce into 64 bits.
-        let nonce_u64: u64 = nonce.try_into().expect("Nonce too large for DA serialization");
+        let nonce_u64: u64 = nonce.to_u64().expect("Nonce too large for DA serialization");
         meta += U256::from((nonce_u64 as u128) << 64)
     }
 
     meta += U256::from(n_storage_updates);
 
-    FieldElement::from_hex_be(format!("0x{:064x}", meta).as_str()).unwrap()
+    FieldElement::from_hex(format!("0x{:064x}", meta).as_str()).unwrap()
 }
 
 #[cfg(test)]

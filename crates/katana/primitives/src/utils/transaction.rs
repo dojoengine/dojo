@@ -1,7 +1,7 @@
 use alloy_primitives::B256;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{DataAvailabilityMode, EthAddress, MsgToL1, MsgToL2, ResourceBounds};
-use starknet::macros::{felt, short_string};
+use starknet::macros::short_string;
 use starknet_crypto::poseidon_hash_many;
 
 use crate::FieldElement;
@@ -13,13 +13,10 @@ const QUERY_VERSION_OFFSET: FieldElement =
 /// Cairo string for "invoke"
 const PREFIX_INVOKE: FieldElement = short_string!("invoke");
 
-/// Cairo string for "declare"
 const PREFIX_DECLARE: FieldElement = short_string!("declare");
 
-/// Cairo string for "deploy_account"
 const PREFIX_DEPLOY_ACCOUNT: FieldElement = short_string!("deploy_account");
 
-/// Cairo string for "l1_handler"
 const PREFIX_L1_HANDLER: FieldElement = short_string!("l1_handler");
 
 /// Compute the hash of a V1 DeployAccount transaction.
@@ -38,7 +35,7 @@ pub fn compute_deploy_account_v1_tx_hash(
 
     compute_hash_on_elements(&[
         PREFIX_DEPLOY_ACCOUNT,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, // version
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&calldata_to_hash),
@@ -69,7 +66,7 @@ pub fn compute_deploy_account_v3_tx_hash(
 
     poseidon_hash_many(&[
         PREFIX_INVOKE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, // version
         contract_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
@@ -93,7 +90,7 @@ pub fn compute_declare_v1_tx_hash(
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, // version
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
@@ -115,7 +112,7 @@ pub fn compute_declare_v2_tx_hash(
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_DECLARE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::TWO } else { FieldElement::TWO }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::TWO } else { FieldElement::TWO }, // version
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&[class_hash]),
@@ -147,7 +144,7 @@ pub fn compute_declare_v3_tx_hash(
 
     poseidon_hash_many(&[
         PREFIX_INVOKE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, // version
         sender_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
@@ -171,7 +168,7 @@ pub fn compute_invoke_v1_tx_hash(
 ) -> FieldElement {
     compute_hash_on_elements(&[
         PREFIX_INVOKE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, // version
         sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(calldata),
@@ -204,7 +201,7 @@ pub fn compute_invoke_v3_tx_hash(
 
     poseidon_hash_many(&[
         PREFIX_INVOKE,
-        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, // version
         sender_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
@@ -283,7 +280,7 @@ fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> FieldElement {
     max_amount.copy_from_slice(&bound.max_amount.to_be_bytes());
     max_price.copy_from_slice(&bound.max_price_per_unit.to_be_bytes());
 
-    FieldElement::from_bytes_be(&buffer).expect("Packed resource should fit into felt")
+    FieldElement::from_bytes_be(&buffer)
 }
 
 fn hash_fee_fields(
@@ -309,6 +306,7 @@ fn encode_da_mode(
 
 #[cfg(test)]
 mod tests {
+    use num_traits::ToPrimitive;
     use starknet::core::chain_id;
     use starknet::macros::felt;
 
@@ -340,7 +338,7 @@ mod tests {
             &constructor_calldata,
             class_hash,
             salt,
-            max_fee.try_into().unwrap(),
+            max_fee.to_u128().unwrap(),
             chain_id,
             nonce,
             false,

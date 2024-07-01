@@ -5,7 +5,7 @@ use katana_primitives::transaction::{
     DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, L1HandlerTx, Tx, TxWithHash,
 };
 use starknet::core::types::{
-    DeclareTransaction, DeployAccountTransaction, FieldElement, InvokeTransaction, Transaction,
+    DeclareTransaction, DeployAccountTransaction, InvokeTransaction, Transaction,
 };
 
 use crate::ProviderResult;
@@ -62,7 +62,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                 transaction: Tx::L1Handler(L1HandlerTx {
                     nonce: tx.nonce.into(),
                     chain_id,
-                    version: FieldElement::ZERO,
+                    version: 0u8.into(),
                     calldata: tx.calldata.clone(),
                     contract_address: tx.contract_address.into(),
                     entry_point_selector: tx.entry_point_selector,

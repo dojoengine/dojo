@@ -16,7 +16,7 @@ use katana_primitives::version::Version;
 use katana_rpc_api::saya::SayaApiClient;
 use katana_rpc_types::trace::TxExecutionInfo;
 use starknet::core::types::{
-    ContractClass, FieldElement, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
+    ContractClass, Felt, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
 };
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider as StarknetProvider};
@@ -108,7 +108,7 @@ impl Provider for JsonRpcProvider {
     async fn fetch_state_updates(
         &self,
         block_number: BlockNumber,
-    ) -> ProviderResult<(StateUpdatesWithDeclaredClasses, Vec<FieldElement>)> {
+    ) -> ProviderResult<(StateUpdatesWithDeclaredClasses, Vec<Felt>)> {
         let rpc_state_update = match self
             .starknet_provider
             .get_state_update(BlockIdOrTag::Number(block_number))

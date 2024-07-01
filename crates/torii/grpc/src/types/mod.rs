@@ -6,9 +6,9 @@ use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
-    ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
+    ContractStorageDiffItem, Felt, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };
-use starknet_crypto::FieldElement;
+
 use strum_macros::{AsRefStr, EnumIter, FromRepr};
 
 use crate::proto::{self};
@@ -32,7 +32,7 @@ pub enum Clause {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct KeysClause {
     pub model: String,
-    pub keys: Vec<FieldElement>,
+    pub keys: Vec<Felt>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -117,15 +117,15 @@ impl TryFrom<proto::types::ModelMetadata> for dojo_types::schema::ModelMetadata 
     type Error = FromStrError;
     fn try_from(value: proto::types::ModelMetadata) -> Result<Self, Self::Error> {
         let schema: Ty = serde_json::from_slice(&value.schema).unwrap();
-        let layout: Vec<FieldElement> = value.layout.into_iter().map(FieldElement::from).collect();
+        let layout: Vec<Felt> = value.layout.into_iter().map(Felt::from).collect();
         Ok(Self {
             schema,
             layout,
             name: value.name,
             packed_size: value.packed_size,
             unpacked_size: value.unpacked_size,
-            class_hash: FieldElement::from_str(&value.class_hash)?,
-            contract_address: FieldElement::from_str(&value.contract_address)?,
+            class_hash: Felt::from_str(&value.class_hash)?,
+            contract_address: Felt::from_str(&value.contract_address)?,
         })
     }
 }
@@ -141,8 +141,8 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
 
         Ok(dojo_types::WorldMetadata {
             models,
-            world_address: FieldElement::from_str(&value.world_address)?,
-            world_class_hash: FieldElement::from_str(&value.world_class_hash)?,
+            world_address: Felt::from_str(&value.world_address)?,
+            world_class_hash: Felt::from_str(&value.world_class_hash)?,
         })
     }
 }
@@ -178,16 +178,9 @@ impl From<KeysClause> for proto::types::KeysClause {
     }
 }
 
-impl TryFrom<proto::types::KeysClause> for KeysClause {
-    type Error = FromByteSliceError;
-
-    fn try_from(value: proto::types::KeysClause) -> Result<Self, Self::Error> {
-        let keys = value
-            .keys
-            .into_iter()
-            .map(|k| FieldElement::from_byte_slice_be(&k))
-            .collect::<Result<Vec<_>, _>>()?;
-
+impl From<proto::types::KeysClause> for KeysClause {
+    fn from(value: proto::types::KeysClause) -> Self {
+        let keys = value.keys.into_iter().map(Felt::from_byte_slice_be).collect::<Vec<_>>();
         Ok(Self { model: value.model, keys })
     }
 }
@@ -230,10 +223,7 @@ impl From<Value> for proto::types::Value {
 impl TryFrom<proto::types::StorageEntry> for StorageEntry {
     type Error = FromStrError;
     fn try_from(value: proto::types::StorageEntry) -> Result<Self, Self::Error> {
-        Ok(Self {
-            key: FieldElement::from_str(&value.key)?,
-            value: FieldElement::from_str(&value.value)?,
-        })
+        Ok(Self { key: Felt::from_str(&value.key)?, value: Felt::from_str(&value.value)? })
     }
 }
 
@@ -241,7 +231,7 @@ impl TryFrom<proto::types::StorageDiff> for ContractStorageDiffItem {
     type Error = FromStrError;
     fn try_from(value: proto::types::StorageDiff) -> Result<Self, Self::Error> {
         Ok(Self {
-            address: FieldElement::from_str(&value.address)?,
+            address: Felt::from_str(&value.address)?,
             storage_entries: value
                 .storage_entries
                 .into_iter()
@@ -273,9 +263,9 @@ impl TryFrom<proto::types::ModelUpdate> for StateUpdate {
     type Error = FromStrError;
     fn try_from(value: proto::types::ModelUpdate) -> Result<Self, Self::Error> {
         Ok(Self {
-            new_root: FieldElement::ZERO,
-            old_root: FieldElement::ZERO,
-            block_hash: FieldElement::from_str(&value.block_hash)?,
+            new_root: Felt::ZERO,
+            old_root: Felt::ZERO,
+            block_hash: Felt::from_str(&value.block_hash)?,
             state_diff: value.model_diff.expect("must have").try_into()?,
         })
     }
@@ -283,38 +273,27 @@ impl TryFrom<proto::types::ModelUpdate> for StateUpdate {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Event {
-    pub keys: Vec<FieldElement>,
-    pub data: Vec<FieldElement>,
-    pub transaction_hash: FieldElement,
+    pub keys: Vec<Felt>,
+    pub data: Vec<Felt>,
+    pub transaction_hash: Felt,
 }
 
-impl TryFrom<proto::types::Event> for Event {
-    type Error = FromByteSliceError;
-
-    fn try_from(value: proto::types::Event) -> Result<Self, Self::Error> {
-        let keys = value
-            .keys
-            .into_iter()
-            .map(|k| FieldElement::from_byte_slice_be(&k))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let data = value
-            .data
-            .into_iter()
-            .map(|d| FieldElement::from_byte_slice_be(&d))
-            .collect::<Result<Vec<_>, _>>()?;
+impl From<proto::types::Event> for Event {
+    fn from(value: proto::types::Event) -> Self {
+        let keys = value.keys.into_iter().map(|k| Felt::from_byte_slice_be(&k)).collect::<Vec<_>>();
+        let data = value.data.into_iter().map(|d| Felt::from_byte_slice_be(&d)).collect::<Vec<_>>();
 
         Ok(Self {
             keys,
             data,
-            transaction_hash: FieldElement::from_byte_slice_be(&value.transaction_hash)?,
+            transaction_hash: Felt::from_byte_slice_be(&value.transaction_hash)?,
         })
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct EventQuery {
-    pub keys: Vec<FieldElement>,
+    pub keys: Vec<Felt>,
     pub limit: u32,
     pub offset: u32,
 }

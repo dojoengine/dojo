@@ -1,11 +1,6 @@
-use crate::FieldElement;
-use katana_cairo::starknet::{
-    core::{
-        types::FromStrError,
-        utils::{cairo_short_string_to_felt, CairoShortStringToFeltError},
-    },
-    macros::short_string,
-};
+use crate::{felt::FromStrError, FieldElement};
+use starknet::core::utils::{cairo_short_string_to_felt, CairoShortStringToFeltError};
+use starknet::macros::short_string;
 
 /// Known chain ids that has been assigned a name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
@@ -155,8 +150,8 @@ impl From<ChainId> for FieldElement {
 mod tests {
     use std::convert::TryFrom;
 
-    use katana_cairo::starknet::core::utils::cairo_short_string_to_felt;
-    use katana_cairo::starknet::macros::felt;
+    use starknet::core::utils::cairo_short_string_to_felt;
+    use starknet::macros::felt;
 
     use super::ChainId;
     use crate::chain::NamedChainId;

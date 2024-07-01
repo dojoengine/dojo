@@ -3,8 +3,10 @@ use std::time::Duration;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
-use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use katana_starknet::accounts::{Account, ConnectedAccount};
+use katana_starknet::core::types::{BlockId, BlockTag, FieldElement};
+use katana_starknet::providers::Provider;
+use starknet_crypto::Felt;
 
 use super::{WorldContract, WorldContractReader};
 use crate::manifest::{BaseManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
@@ -49,7 +51,7 @@ pub async fn deploy_world(
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
     skip_migration: Option<Vec<String>>,
-) -> FieldElement {
+) -> Felt {
     // Dev profile is used by default for testing:
     let profile_name = "dev";
 

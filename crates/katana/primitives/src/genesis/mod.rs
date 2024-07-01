@@ -199,7 +199,7 @@ impl Genesis {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
 
                 fee_token_storage.insert(low_bal_storage_var, low);
                 fee_token_storage.insert(high_bal_storage_var, high);
@@ -217,7 +217,8 @@ impl Genesis {
         fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
         fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into(), total_supply_high);
+        fee_token_storage
+            .insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE, total_supply_high);
 
         states
             .state_updates
@@ -434,7 +435,8 @@ mod tests {
         fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
         fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into(), total_supply_high);
+        fee_token_storage
+            .insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE, total_supply_high);
 
         for (address, alloc) in &allocations {
             if let Some(balance) = alloc.balance() {
@@ -446,7 +448,7 @@ mod tests {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
 
                 fee_token_storage.insert(low_bal_storage_var, low);
                 fee_token_storage.insert(high_bal_storage_var, high);
@@ -642,7 +644,7 @@ mod tests {
             Some(&total_supply_low)
         );
         assert_eq!(
-            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into())),
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE)),
             Some(&total_supply_high)
         );
 
@@ -664,7 +666,7 @@ mod tests {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
 
                 assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
                 assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
@@ -684,7 +686,7 @@ mod tests {
             "total supply must be calculated from allocations balances correctly"
         );
         assert_eq!(
-            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into())),
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE)),
             Some(&actual_total_supply_high),
             "total supply must be calculated from allocations balances correctly"
         );

@@ -11,12 +11,10 @@ use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use starknet_api::core::{ClassHash, CompiledClassHash, Nonce, PatriciaKey};
-use starknet_api::hash::StarkHash;
-use starknet_api::patricia_key;
+use starknet_api::core::{ClassHash, CompiledClassHash, Nonce};
 use starknet_api::state::StorageKey;
 
-use super::utils::{self};
+use super::utils::{self, to_felt, to_stark_felt};
 use super::CACHE_SIZE;
 use crate::StateProviderDb;
 
@@ -32,7 +30,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
     ) -> StateResult<starknet_api::core::ClassHash> {
         self.0
             .class_hash_of_contract(utils::to_address(contract_address))
-            .map(|v| ClassHash(v.unwrap_or_default().into()))
+            .map(|v| ClassHash(to_stark_felt(v.unwrap_or_default())))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
 
@@ -42,10 +40,10 @@ impl<'a> StateReader for StateProviderDb<'a> {
     ) -> StateResult<starknet_api::core::CompiledClassHash> {
         if let Some(hash) = self
             .0
-            .compiled_class_hash_of_class_hash(class_hash.0.into())
+            .compiled_class_hash_of_class_hash(to_felt(class_hash.0))
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
-            Ok(CompiledClassHash(hash.into()))
+            Ok(CompiledClassHash(to_stark_felt(hash)))
         } else {
             Err(StateError::UndeclaredClassHash(class_hash))
         }
@@ -57,7 +55,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
     ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
         if let Some(class) = self
             .0
-            .class(class_hash.0.into())
+            .class(to_felt(class_hash.0))
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
             let class =
@@ -75,7 +73,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
     ) -> StateResult<starknet_api::core::Nonce> {
         self.0
             .nonce(utils::to_address(contract_address))
-            .map(|n| Nonce(n.unwrap_or_default().into()))
+            .map(|n| Nonce(to_stark_felt(n.unwrap_or_default())))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
 
@@ -85,8 +83,8 @@ impl<'a> StateReader for StateProviderDb<'a> {
         key: starknet_api::state::StorageKey,
     ) -> StateResult<starknet_api::hash::StarkFelt> {
         self.0
-            .storage(utils::to_address(contract_address), (*key.0.key()).into())
-            .map(|v| v.unwrap_or_default().into())
+            .storage(utils::to_address(contract_address), to_felt(*key.0.key()))
+            .map(|v| to_stark_felt(v.unwrap_or_default()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
 }
@@ -142,10 +140,11 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<katana_primitives::class::CompiledClassHash>> {
-        let Ok(hash) = self.write().inner.get_compiled_class_hash(ClassHash(hash.into())) else {
+        let Ok(hash) = self.write().inner.get_compiled_class_hash(ClassHash(to_stark_felt(hash)))
+        else {
             return Ok(None);
         };
-        Ok(Some(hash.0.into()))
+        Ok(Some(to_felt(hash.0)))
     }
 
     fn sierra_class(
@@ -170,8 +169,12 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        let hash = hash.0.into();
-        if hash == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash)) }
+        let hash = to_felt(hash.0);
+        if hash == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash))
+        }
     }
 
     fn nonce(
@@ -184,7 +187,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         }
 
         match self.0.write().inner.get_nonce_at(utils::to_blk_address(address)) {
-            Ok(nonce) => Ok(Some(nonce.0.into())),
+            Ok(nonce) => Ok(Some(to_felt(nonce.0))),
             Err(e) => Err(ProviderError::Other(e.to_string())),
         }
     }
@@ -200,10 +203,14 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         }
 
         let address = utils::to_blk_address(address);
-        let key = StorageKey(patricia_key!(storage_key));
+        let key = StorageKey(
+            to_stark_felt(storage_key)
+                .try_into()
+                .expect("storage key is not a valid field element"),
+        );
 
         match self.write().inner.get_storage_at(address, key) {
-            Ok(value) => Ok(Some(value.into())),
+            Ok(value) => Ok(Some(to_felt(value))),
             Err(e) => Err(ProviderError::Other(e.to_string())),
         }
     }
@@ -312,13 +319,13 @@ mod tests {
             cached_state.get_storage_at(api_address, StorageKey(patricia_key!(storage_key)))?;
         let actual_compiled_hash = cached_state.get_compiled_class_hash(actual_class_hash)?;
         let actual_class = cached_state.get_compiled_contract_class(actual_class_hash)?;
-        let actual_legacy_class =
-            cached_state.get_compiled_contract_class(ClassHash(legacy_class_hash.into()))?;
+        let actual_legacy_class = cached_state
+            .get_compiled_contract_class(ClassHash(to_stark_felt(legacy_class_hash)))?;
 
-        assert_eq!(actual_nonce.0, felt!("0x7").into());
-        assert_eq!(actual_storage_value, felt!("0x2").into());
-        assert_eq!(actual_class_hash.0, felt!("0x123").into());
-        assert_eq!(actual_compiled_hash.0, felt!("0x456").into());
+        assert_eq!(actual_nonce.0, to_stark_felt(felt!("0x7")));
+        assert_eq!(actual_storage_value, to_stark_felt(felt!("0x2")));
+        assert_eq!(actual_class_hash.0, to_stark_felt(felt!("0x123")));
+        assert_eq!(actual_compiled_hash.0, to_stark_felt(felt!("0x456")));
         assert_eq!(
             actual_class,
             utils::to_class(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()).unwrap().contract_class()
@@ -379,7 +386,7 @@ mod tests {
 
             let address = utils::to_blk_address(new_address);
             let storage_key = StorageKey(patricia_key!(new_storage_key));
-            let storage_value = new_storage_value.into();
+            let storage_value = utils::to_stark_felt(new_storage_value);
             let class_hash = ClassHash(new_class_hash.into());
             let class =
                 utils::to_class(new_compiled_sierra_class.clone()).unwrap().contract_class();

@@ -15,15 +15,16 @@ use katana_rpc::{spawn, NodeHandle};
 use katana_rpc_api::ApiKind;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::Felt;
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
 pub struct TestAccount {
-    pub private_key: FieldElement,
-    pub account_address: FieldElement,
+    pub private_key: Felt,
+    pub account_address: Felt,
 }
 
 #[allow(unused)]
@@ -85,8 +86,8 @@ impl TestSequencer {
 
         let account = sequencer.backend.config.genesis.accounts().next().unwrap();
         let account = TestAccount {
-            private_key: account.1.private_key().unwrap(),
-            account_address: (*account.0).into(),
+            private_key: Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be()),
+            account_address: Felt::from_bytes_be(&account.0.to_bytes_be()),
         };
 
         TestSequencer { sequencer, account, handle, url }
@@ -101,7 +102,7 @@ impl TestSequencer {
             ExecutionEncoding::New,
         );
 
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+        account.set_block_id(starknet::core::types::BlockId::Tag(BlockTag::Pending));
 
         account
     }
@@ -117,8 +118,8 @@ impl TestSequencer {
         let accounts: Vec<_> = self.sequencer.backend.config.genesis.accounts().collect::<_>();
 
         let account = accounts[index];
-        let private_key = account.1.private_key().unwrap();
-        let address: FieldElement = (*(account.0)).into();
+        let private_key = Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be());
+        let address: Felt = Felt::from_bytes_be(&account.0.to_bytes_be());
 
         let mut account = SingleOwnerAccount::new(
             JsonRpcClient::new(HttpTransport::new(self.url.clone())),

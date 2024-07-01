@@ -16,6 +16,7 @@ cairo-lang-starknet.workspace = true
 camino.workspace = true
 convert_case.workspace = true
 futures.workspace = true
+katana-starknet = { package = "starknet", version = "=0.10.0" }
 num-traits = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true

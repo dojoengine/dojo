@@ -2,8 +2,7 @@ use crypto_bigint::{Encoding, U256};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FromByteSliceError;
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 
 use crate::proto::{self};
 
@@ -13,13 +12,11 @@ pub enum SchemaError {
     MissingExpectedData,
     #[error("Unsupported type")]
     UnsupportedType,
-    #[error(transparent)]
-    SliceError(#[from] FromByteSliceError),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Entity {
-    pub hashed_keys: FieldElement,
+    pub hashed_keys: Felt,
     pub models: Vec<Model>,
 }
 
@@ -33,7 +30,7 @@ impl TryFrom<proto::types::Entity> for Entity {
     type Error = SchemaError;
     fn try_from(entity: proto::types::Entity) -> Result<Self, Self::Error> {
         Ok(Self {
-            hashed_keys: FieldElement::from_byte_slice_be(&entity.hashed_keys)?,
+            hashed_keys: Felt::from_bytes_be_slice(&entity.hashed_keys),
             models: entity
                 .models
                 .into_iter()
@@ -230,10 +227,7 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                     | Some(proto::types::PrimitiveType::Felt252)
                     | Some(proto::types::PrimitiveType::ClassHash)
                     | Some(proto::types::PrimitiveType::ContractAddress) => {
-                        Primitive::Felt252(Some(
-                            FieldElement::from_byte_slice_be(bytes)
-                                .map_err(SchemaError::SliceError)?,
-                        ))
+                        Primitive::Felt252(Some(Felt::from_bytes_be_slice(bytes)))
                     }
                     Some(proto::types::PrimitiveType::U256) => {
                         Primitive::U256(Some(U256::from_be_slice(bytes)))

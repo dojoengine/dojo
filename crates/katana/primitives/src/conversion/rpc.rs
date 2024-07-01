@@ -47,7 +47,7 @@ pub fn legacy_inner_to_rpc_class(
                 .iter()
                 .map(|e| LegacyContractEntryPoint {
                     offset: e.offset.0 as u64,
-                    selector: FieldElement::from(e.selector.0),
+                    selector: FieldElement::from_bytes_be_slice(e.selector.0.bytes()),
                 })
                 .collect::<Vec<_>>())
         }
@@ -149,7 +149,7 @@ pub fn flattened_sierra_to_compiled_class(
     let sierra = SierraProgram { program, entry_points_by_type };
 
     let casm = CasmContractClass::from_contract_class(class, true, usize::MAX)?;
-    let compiled_hash = FieldElement::from_bytes_be(&casm.compiled_class_hash().to_be_bytes())?;
+    let compiled_hash = FieldElement::from_bytes_be(&casm.compiled_class_hash().to_be_bytes());
 
     let class = crate::class::CompiledClass::Class(SierraCompiledClass { casm, sierra });
     Ok((class_hash, compiled_hash, class))

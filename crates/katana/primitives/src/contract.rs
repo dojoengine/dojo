@@ -1,7 +1,7 @@
 use std::fmt;
 
 use derive_more::Deref;
-use katana_cairo::starknet::core::utils::normalize_address;
+use starknet::core::utils::normalize_address;
 
 use crate::class::ClassHash;
 use crate::FieldElement;

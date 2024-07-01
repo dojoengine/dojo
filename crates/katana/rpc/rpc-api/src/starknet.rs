@@ -8,7 +8,7 @@ use katana_rpc_types::block::{
 };
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
-use katana_rpc_types::receipt::MaybePendingTxReceipt;
+use katana_rpc_types::receipt::TxReceiptWithBlockInfo;
 use katana_rpc_types::state_update::StateUpdate;
 use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
@@ -79,7 +79,7 @@ pub trait StarknetApi {
     async fn transaction_receipt(
         &self,
         transaction_hash: TxHash,
-    ) -> RpcResult<MaybePendingTxReceipt>;
+    ) -> RpcResult<TxReceiptWithBlockInfo>;
 
     /// Get the contract class definition in the given block associated with the given hash.
     #[method(name = "getClass")]

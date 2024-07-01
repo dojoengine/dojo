@@ -17,4 +17,8 @@ pub mod conversion;
 pub mod state;
 pub mod utils;
 
-pub type FieldElement = katana_cairo::starknet::core::types::Felt;
+pub use felt::FieldElement;
+
+pub mod felt {
+    pub use starknet::core::types::{Felt as FieldElement, FromStrError};
+}

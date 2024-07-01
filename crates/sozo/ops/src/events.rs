@@ -6,7 +6,7 @@ use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Tok
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
 use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods, MANIFESTS_DIR};
-use starknet::core::types::{BlockId, EventFilter, FieldElement};
+use starknet::core::types::{BlockId, EventFilter, Felt};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -15,7 +15,7 @@ pub fn get_event_filter(
     from_block: Option<u64>,
     to_block: Option<u64>,
     events: Option<Vec<String>>,
-    world_address: Option<FieldElement>,
+    world_address: Option<Felt>,
 ) -> EventFilter {
     let from_block = from_block.map(BlockId::Number);
     let to_block = to_block.map(BlockId::Number);
@@ -143,11 +143,7 @@ fn parse_and_print_events(
     Ok(())
 }
 
-fn parse_core_basic(
-    cb: &CoreBasic,
-    value: &FieldElement,
-    include_felt_string: bool,
-) -> Result<String> {
+fn parse_core_basic(cb: &CoreBasic, value: &Felt, include_felt_string: bool) -> Result<String> {
     match cb.type_name().as_str() {
         "felt252" => {
             let hex = format!("{:#x}", value);
@@ -159,7 +155,7 @@ fn parse_core_basic(
             }
         }
         "bool" => {
-            if *value == FieldElement::ZERO {
+            if *value == Felt::ZERO {
                 Ok("false".to_string())
             } else {
                 Ok("true".to_string())
@@ -198,8 +194,8 @@ fn parse_event(
 
 fn process_inners(
     inners: &[CompositeInner],
-    data: &mut VecDeque<FieldElement>,
-    keys: &mut VecDeque<FieldElement>,
+    data: &mut VecDeque<Felt>,
+    keys: &mut VecDeque<Felt>,
 ) -> Result<String> {
     let mut ret = String::new();
 
@@ -362,21 +358,21 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("TestEvent".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x5465737431").unwrap(),
-                FieldElement::from(1u8), // bool true
-                FieldElement::from(1u8),
-                FieldElement::from(2u16),
-                FieldElement::from(3u32),
-                FieldElement::from(4u64),
-                FieldElement::from(5u128),
-                FieldElement::from(6usize),
-                FieldElement::from_hex_be("0x54657374").unwrap(),
-                FieldElement::from_hex_be("0x54657374").unwrap(),
+                Felt::from_hex_be("0x5465737431").unwrap(),
+                Felt::from(1u8), // bool true
+                Felt::from(1u8),
+                Felt::from(2u16),
+                Felt::from(3u32),
+                Felt::from(4u64),
+                Felt::from(5u128),
+                Felt::from(6usize),
+                Felt::from_hex_be("0x54657374").unwrap(),
+                Felt::from_hex_be("0x54657374").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").unwrap(),
-            block_hash: FieldElement::from_hex_be("0x456").ok(),
+            from_address: Felt::from_hex_be("0x123").unwrap(),
+            block_hash: Felt::from_hex_be("0x456").ok(),
             block_number: Some(1),
-            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
+            transaction_hash: Felt::from_hex_be("0x789").unwrap(),
         };
 
         let expected_output = "Event name: dojo::world::world::TestEvent\nfelt252: 0x5465737431 \
@@ -432,16 +428,16 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("StoreDelRecord".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x54657374").unwrap(),
-                FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x5465737431").unwrap(),
-                FieldElement::from_hex_be("0x5465737432").unwrap(),
-                FieldElement::from_hex_be("0x5465737433").unwrap(),
+                Felt::from_hex_be("0x54657374").unwrap(),
+                Felt::from(3u128),
+                Felt::from_hex_be("0x5465737431").unwrap(),
+                Felt::from_hex_be("0x5465737432").unwrap(),
+                Felt::from_hex_be("0x5465737433").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").unwrap(),
-            block_hash: FieldElement::from_hex_be("0x456").ok(),
+            from_address: Felt::from_hex_be("0x123").unwrap(),
+            block_hash: Felt::from_hex_be("0x456").ok(),
             block_number: Some(1),
-            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
+            transaction_hash: Felt::from_hex_be("0x789").unwrap(),
         };
 
         let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: 0x54657374 \
@@ -508,14 +504,14 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![
                 starknet_keccak("CustomEvent".as_bytes()),
-                FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x5465737431").unwrap(),
+                Felt::from(3u128),
+                Felt::from_hex_be("0x5465737431").unwrap(),
             ],
-            data: vec![FieldElement::from(1u128), FieldElement::from(2u128)],
-            from_address: FieldElement::from_hex_be("0x123").unwrap(),
-            block_hash: FieldElement::from_hex_be("0x456").ok(),
+            data: vec![Felt::from(1u128), Felt::from(2u128)],
+            from_address: Felt::from_hex_be("0x123").unwrap(),
+            block_hash: Felt::from_hex_be("0x456").ok(),
             block_number: Some(1),
-            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
+            transaction_hash: Felt::from_hex_be("0x789").unwrap(),
         };
 
         let expected_output = "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: \
@@ -570,16 +566,16 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("StoreDelRecord".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x0").unwrap(),
-                FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x0").unwrap(),
-                FieldElement::from_hex_be("0x1").unwrap(),
-                FieldElement::from_hex_be("0x2").unwrap(),
+                Felt::from_hex_be("0x0").unwrap(),
+                Felt::from(3u128),
+                Felt::from_hex_be("0x0").unwrap(),
+                Felt::from_hex_be("0x1").unwrap(),
+                Felt::from_hex_be("0x2").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").unwrap(),
-            block_hash: FieldElement::from_hex_be("0x456").ok(),
+            from_address: Felt::from_hex_be("0x123").unwrap(),
+            block_hash: Felt::from_hex_be("0x456").ok(),
             block_number: Some(1),
-            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
+            transaction_hash: Felt::from_hex_be("0x789").unwrap(),
         };
 
         let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: 0x0\nkeys: \

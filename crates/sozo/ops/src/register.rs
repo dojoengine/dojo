@@ -8,16 +8,17 @@ use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
+use starknet::core::types::Felt;
 use starknet::providers::Provider;
 
 use crate::utils::handle_transaction_result;
 
 pub async fn model_register<A, P>(
-    models: Vec<FieldElement>,
+    models: Vec<Felt>,
     world: &WorldContract<A>,
     txn_config: TxnConfig,
     world_reader: WorldContractReader<P>,
-    world_address: FieldElement,
+    world_address: Felt,
     config: &Config,
 ) -> Result<()>
 where
@@ -65,7 +66,7 @@ where
 
     let res = world
         .account
-        .execute(calls)
+        .execute_v1(calls)
         .send_with_cfg(&txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;

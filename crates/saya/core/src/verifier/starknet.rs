@@ -4,7 +4,7 @@ use anyhow::Context;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use starknet::accounts::{Account, Call, ConnectedAccount};
-use starknet::core::types::{FieldElement, TransactionExecutionStatus, TransactionStatus};
+use starknet::core::types::{Felt, TransactionExecutionStatus, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
@@ -12,13 +12,13 @@ use tokio::time::sleep;
 use crate::dojo_os::STARKNET_ACCOUNT;
 
 pub async fn starknet_verify(
-    fact_registry_address: FieldElement,
-    serialized_proof: Vec<FieldElement>,
-) -> anyhow::Result<(String, FieldElement)> {
+    fact_registry_address: Felt,
+    serialized_proof: Vec<Felt>,
+) -> anyhow::Result<(String, Felt)> {
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let nonce = STARKNET_ACCOUNT.get_nonce().await?;
     let tx = STARKNET_ACCOUNT
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
             calldata: serialized_proof,

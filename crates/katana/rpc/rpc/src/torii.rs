@@ -9,7 +9,7 @@ use katana_primitives::block::BlockHashOrNumber;
 use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_types::error::torii::ToriiApiError;
-use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
+use katana_rpc_types::receipt::{MaybePendingTxReceipt, TxReceiptWithBlockInfo};
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::TokioTaskSpawner;
@@ -114,10 +114,9 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                                 res.receipt().map(|rct| {
                                     (
                                         tx.clone(),
-                                        MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
-                                            tx.hash,
-                                            rct.clone(),
-                                        )),
+                                        MaybePendingTxReceipt::Pending(
+                                            TxReceiptWithBlockInfo::new(tx.hash, rct.clone()),
+                                        ),
                                     )
                                 })
                             })
@@ -152,10 +151,9 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                                 res.receipt().map(|rct| {
                                     (
                                         tx.clone(),
-                                        MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
-                                            tx.hash,
-                                            rct.clone(),
-                                        )),
+                                        MaybePendingTxReceipt::Pending(
+                                            TxReceiptWithBlockInfo::new(tx.hash, rct.clone()),
+                                        ),
                                     )
                                 })
                             })
@@ -201,7 +199,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         .map(|tx_outcome| {
                             (
                                 tx_outcome.tx.clone(),
-                                MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                MaybePendingTxReceipt::Pending(TxReceiptWithBlockInfo::new(
                                     tx_outcome.tx.hash,
                                     tx_outcome.receipt,
                                 )),

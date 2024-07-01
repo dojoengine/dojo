@@ -22,7 +22,8 @@ use katana_rpc_types::block::{
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
-use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
+use katana_rpc_types::receipt::ReceiptBlock;
+use katana_rpc_types::receipt::{MaybePendingTxReceipt, TxReceiptWithBlockInfo};
 use katana_rpc_types::state_update::StateUpdate;
 use katana_rpc_types::trace::FunctionInvocation;
 use katana_rpc_types::transaction::{
@@ -107,6 +108,8 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                     gas_consumed: fee.gas_consumed.into(),
                     overall_fee: fee.overall_fee.into(),
                     unit: fee.unit,
+                    data_gas_price: Default::default(),
+                    data_gas_consumed: Default::default(),
                 }),
 
                 Err(err) => {
@@ -404,8 +407,10 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         })
                         .ok_or(Error::from(StarknetApiError::TxnHashNotFound))?;
 
-                    Ok(MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                    Ok(MaybePendingTxReceipt::Pending(TxReceiptWithBlockInfo::new(
+                        ReceiptBlock::Pending,
                         transaction_hash,
+                        FinalityStatus::AcceptedOnL2,
                         pending_receipt,
                     )))
                 }
@@ -895,6 +900,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                                 gas_price: fee.gas_price.into(),
                                 overall_fee: fee.overall_fee.into(),
                                 gas_consumed: fee.gas_consumed.into(),
+                                data_gas_price: Default::default(),
+                                data_gas_consumed: Default::default(),
                             },
                         })
                     }

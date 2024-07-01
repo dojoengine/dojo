@@ -9,7 +9,7 @@ use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
 use katana_executor::ExecutorFactory;
 use katana_primitives::transaction::ExecutableTxWithHash;
-use starknet::core::types::FieldElement;
+use katana_primitives::FieldElement;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;

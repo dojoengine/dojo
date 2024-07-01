@@ -2,11 +2,13 @@ use core::panic;
 use std::io::Write;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use crate::utils;
+use anyhow::{Context, Result};
 use colored::Colorize;
 use colored_json::{ColorMode, Output};
 use dojo_world::migration::{TxnAction, TxnConfig};
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::accounts::{AccountFactory, AccountFactoryError, OpenZeppelinAccountFactory};
@@ -15,23 +17,18 @@ use starknet::core::types::{
     BlockId, BlockTag, FunctionCall, StarknetError, TransactionFinalityStatus,
 };
 use starknet::core::utils::get_contract_address;
-use starknet::macros::selector;
+use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::{LocalWallet, Signer, SigningKey};
-use starknet_crypto::FieldElement;
+use starknet_crypto::Felt;
 
 /// The canonical hash of a contract class. This is the class hash value of a contract instance.
-pub type ClassHash = FieldElement;
+pub type ClassHash = Felt;
 
 /// The class hash of DEFAULT_OZ_ACCOUNT_CONTRACT.
-/// Corresponds to 0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c
-pub const DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = FieldElement::from_mont([
-    8460675502047588988,
-    17729791148444280953,
-    7171298771336181387,
-    292243705759714441,
-]);
+pub const DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash =
+    felt!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c");
 
 #[derive(Serialize, Deserialize)]
 pub struct AccountConfig {
@@ -41,7 +38,7 @@ pub struct AccountConfig {
 }
 
 impl AccountConfig {
-    pub fn deploy_account_address(&self) -> Result<FieldElement> {
+    pub fn deploy_account_address(&self) -> Result<Felt> {
         let undeployed_status = match &self.deployment {
             DeploymentStatus::Undeployed(value) => value,
             DeploymentStatus::Deployed(_) => {
@@ -54,7 +51,7 @@ impl AccountConfig {
                 undeployed_status.salt,
                 undeployed_status.class_hash,
                 &[oz.public_key],
-                FieldElement::ZERO,
+                Felt::ZERO,
             )),
         }
     }
@@ -71,7 +68,7 @@ pub enum AccountVariant {
 pub struct OzAccountConfig {
     pub version: u64,
     #[serde_as(as = "UfeHex")]
-    pub public_key: FieldElement,
+    pub public_key: Felt,
     #[serde(default = "true_as_default")]
     pub legacy: bool,
 }
@@ -84,7 +81,7 @@ pub enum DeploymentStatus {
 }
 
 impl DeploymentStatus {
-    pub fn to_deployed(&mut self, address: FieldElement) {
+    pub fn to_deployed(&mut self, address: Felt) {
         match self {
             DeploymentStatus::Undeployed(status) => {
                 *self = DeploymentStatus::Deployed(DeployedStatus {
@@ -103,27 +100,27 @@ impl DeploymentStatus {
 #[derive(Serialize, Deserialize)]
 pub struct UndeployedStatus {
     #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
+    pub class_hash: Felt,
     #[serde_as(as = "UfeHex")]
-    pub salt: FieldElement,
+    pub salt: Felt,
 }
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
 pub struct DeployedStatus {
     #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
+    pub class_hash: Felt,
     #[serde_as(as = "UfeHex")]
-    pub address: FieldElement,
+    pub address: Felt,
 }
 
 enum MaxFeeType {
-    Manual { max_fee: FieldElement },
-    Estimated { estimate: FieldElement, estimate_with_buffer: FieldElement },
+    Manual { max_fee: Felt },
+    Estimated { estimate: Felt, estimate_with_buffer: Felt },
 }
 
 impl MaxFeeType {
-    pub fn max_fee(&self) -> FieldElement {
+    pub fn max_fee(&self) -> Felt {
         match self {
             Self::Manual { max_fee } => *max_fee,
             Self::Estimated { estimate_with_buffer, .. } => *estimate_with_buffer,
@@ -133,7 +130,7 @@ impl MaxFeeType {
 
 #[derive(Debug)]
 pub enum FeeSetting {
-    Manual(FieldElement),
+    Manual(Felt),
     EstimateOnly,
     None,
 }
@@ -191,7 +188,7 @@ pub async fn deploy(
     provider: JsonRpcClient<HttpTransport>,
     signer: LocalWallet,
     txn_action: TxnAction,
-    nonce: Option<FieldElement>,
+    nonce: Option<Felt>,
     poll_interval: u64,
     file: PathBuf,
     no_confirmation: bool,
@@ -268,10 +265,10 @@ pub async fn deploy(
 
                 let fee_estimate_multiplier = fee_estimate_multiplier.unwrap_or(1.1);
 
-                let estimated_fee_with_buffer = (((TryInto::<u64>::try_into(estimated_fee)? as f64)
-                    * fee_estimate_multiplier)
-                    as u64)
-                    .into();
+                let estimated_fee_with_buffer =
+                    (((estimated_fee.to_u64().context("Invalid u64")? as f64)
+                        * fee_estimate_multiplier) as u64)
+                        .into();
 
                 MaxFeeType::Estimated {
                     estimate: estimated_fee,
@@ -308,7 +305,9 @@ pub async fn deploy(
                 })?
                 .overall_fee;
 
-            println!("{} ETH", format!("{}", estimated_fee.to_big_decimal(18)).bright_yellow());
+            let decimal = utils::felt_to_bigdecimal(estimated_fee, 18);
+            println!("{} ETH", format!("{decimal}").bright_yellow());
+
             Ok(())
         }
         TxnAction::Simulate => {
@@ -322,9 +321,9 @@ pub async fn deploy(
 async fn do_account_deploy(
     max_fee: MaxFeeType,
     txn_config: TxnConfig,
-    target_deployment_address: FieldElement,
+    target_deployment_address: Felt,
     no_confirmation: bool,
-    account_deployment: starknet::accounts::AccountDeployment<
+    account_deployment: starknet::accounts::AccountDeploymentV1<
         '_,
         OpenZeppelinAccountFactory<LocalWallet, &JsonRpcClient<HttpTransport>>,
     >,
@@ -337,16 +336,17 @@ async fn do_account_deploy(
             eprintln!(
                 "You've manually specified the account deployment fee to be {}. Therefore, fund \
                  at least:\n    {}",
-                format!("{} ETH", max_fee.to_big_decimal(18)).bright_yellow(),
-                format!("{} ETH", max_fee.to_big_decimal(18)).bright_yellow(),
+                format!("{} ETH", utils::felt_to_bigdecimal(max_fee, 18)).bright_yellow(),
+                format!("{} ETH", utils::felt_to_bigdecimal(max_fee, 18)).bright_yellow(),
             );
         }
         MaxFeeType::Estimated { estimate, estimate_with_buffer } => {
             eprintln!(
                 "The estimated account deployment fee is {}. However, to avoid failure, fund at \
                  least:\n    {}",
-                format!("{} ETH", estimate.to_big_decimal(18)).bright_yellow(),
-                format!("{} ETH", estimate_with_buffer.to_big_decimal(18)).bright_yellow()
+                format!("{} ETH", utils::felt_to_bigdecimal(estimate, 18)).bright_yellow(),
+                format!("{} ETH", utils::felt_to_bigdecimal(estimate_with_buffer, 18))
+                    .bright_yellow()
             );
         }
     }
@@ -412,7 +412,7 @@ fn write_account_to_file(file: PathBuf, account: AccountConfig) -> Result<(), an
 }
 
 async fn simulate_account_deploy(
-    account_deployment: &starknet::accounts::AccountDeployment<
+    account_deployment: &starknet::accounts::AccountDeploymentV1<
         '_,
         OpenZeppelinAccountFactory<LocalWallet, &JsonRpcClient<HttpTransport>>,
     >,
@@ -430,7 +430,7 @@ pub async fn fetch(
     provider: JsonRpcClient<HttpTransport>,
     force: bool,
     output: PathBuf,
-    address: FieldElement,
+    address: Felt,
 ) -> Result<()> {
     if output.exists() && !force {
         anyhow::bail!("account config file already exists");

@@ -4,7 +4,7 @@ use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
 use starknet::accounts::{Call, ConnectedAccount};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
 
 use crate::utils;
@@ -13,7 +13,7 @@ pub async fn execute<A>(
     ui: &Ui,
     contract: String,
     entrypoint: String,
-    calldata: Vec<FieldElement>,
+    calldata: Vec<Felt>,
     world: &WorldContract<A>,
     txn_config: &TxnConfig,
 ) -> Result<()>

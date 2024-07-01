@@ -1,12 +1,12 @@
-use katana_cairo::starknet::core::crypto::compute_hash_on_elements;
+use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
 use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use crate::version::Version;
 use crate::FieldElement;
 
-pub type BlockIdOrTag = katana_cairo::starknet::core::types::BlockId;
-pub type BlockTag = katana_cairo::starknet::core::types::BlockTag;
+pub type BlockIdOrTag = starknet::core::types::BlockId;
+pub type BlockTag = starknet::core::types::BlockTag;
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

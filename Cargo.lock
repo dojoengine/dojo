@@ -1716,9 +1716,9 @@ dependencies = [
 
 [[package]]
 name = "bigdecimal"
-version = "0.4.3"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9324c8014cd04590682b34f1e9448d38f0674d0f7b2dc553331016ef0e4e9ebc"
+checksum = "51d712318a27c7150326677b321a5fa91b55f6d9034ffd67f20319e147d40cee"
 dependencies = [
  "autocfg",
  "libm",
@@ -5167,6 +5167,7 @@ dependencies = [
  "serde_json",
  "serde_with 2.3.3",
  "smol_str",
+ "starknet 0.10.0",
  "starknet 0.11.0",
  "thiserror",
  "tokio",
@@ -5221,6 +5222,7 @@ dependencies = [
  "serde_with 2.3.3",
  "similar-asserts",
  "smol_str",
+ "starknet 0.10.0",
  "starknet 0.11.0",
  "starknet-crypto 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
@@ -8407,8 +8409,6 @@ dependencies = [
  "cairo-lang-starknet-classes 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
  "cairo-lang-utils 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
  "cairo-vm 0.9.2",
- "starknet 0.10.0",
- "starknet-crypto 0.6.2",
 ]
 
 [[package]]
@@ -8462,6 +8462,7 @@ dependencies = [
  "katana-tasks",
  "lazy_static",
  "metrics",
+ "num-traits 0.2.19",
  "parking_lot 0.12.2",
  "rand",
  "reqwest 0.12.4",
@@ -8537,12 +8538,15 @@ dependencies = [
  "flate2",
  "katana-cairo",
  "lazy_static",
+ "num-traits 0.2.19",
  "rand",
  "rayon",
  "serde",
  "serde_json",
  "serde_with 2.3.3",
  "similar-asserts",
+ "starknet 0.11.0",
+ "starknet-crypto 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "starknet_api",
  "strum 0.25.0",
  "strum_macros 0.25.3",
@@ -8607,7 +8611,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet 0.11.0",
+ "starknet 0.10.0",
  "starknet_api",
  "tempfile",
  "thiserror",
@@ -8626,7 +8630,7 @@ dependencies = [
  "katana-core",
  "katana-primitives",
  "katana-rpc-types",
- "starknet 0.11.0",
+ "starknet 0.10.0",
 ]
 
 [[package]]
@@ -8642,6 +8646,7 @@ dependencies = [
  "katana-executor",
  "katana-primitives",
  "katana-provider",
+ "num-traits 0.2.19",
  "rstest 0.18.2",
  "serde",
  "serde_json",
@@ -10139,9 +10144,9 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c165a9ab64cf766f73521c0dd2cfdff64f488b8f0b3e621face3462d3db536d7"
+checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
 dependencies = [
  "num-integer",
  "num-traits 0.2.19",
@@ -12454,10 +12459,11 @@ dependencies = [
  "katana-rpc-api",
  "katana-rpc-types",
  "lazy_static",
+ "num-traits 0.2.19",
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet 0.11.0",
+ "starknet 0.10.0",
  "starknet_api",
  "thiserror",
  "tokio",
@@ -13297,7 +13303,7 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
- "bigdecimal 0.4.3",
+ "bigdecimal 0.4.5",
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?branch=bump-starknet-rs)",
  "cairo-lang-compiler 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-defs 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
@@ -13358,6 +13364,7 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
+ "bigdecimal 0.4.5",
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?branch=bump-starknet-rs)",
  "cairo-lang-compiler 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-defs 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
@@ -13388,6 +13395,8 @@ dependencies = [
  "katana-runner",
  "notify",
  "notify-debouncer-mini",
+ "num-bigint",
+ "num-traits 0.2.19",
  "rpassword",
  "scarb",
  "scarb-ui",
@@ -14981,6 +14990,7 @@ dependencies = [
  "katana-runner",
  "lazy_static",
  "log",
+ "num-traits 0.2.19",
  "once_cell",
  "reqwest 0.12.4",
  "scarb",
@@ -15055,6 +15065,7 @@ dependencies = [
  "futures-util",
  "hex",
  "hyper 0.14.28",
+ "num-traits 0.2.19",
  "parking_lot 0.12.2",
  "prost 0.11.9",
  "prost 0.12.4",

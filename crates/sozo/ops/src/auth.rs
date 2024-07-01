@@ -8,21 +8,21 @@ use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::Felt;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
-use starknet_crypto::FieldElement;
 
 use crate::utils;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResourceType {
     Contract(String),
-    Model(FieldElement),
+    Model(Felt),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelContract {
-    pub model: FieldElement,
+    pub model: Felt,
     pub contract: String,
 }
 
@@ -50,7 +50,7 @@ impl FromStr for ModelContract {
 #[derive(Debug, Clone, PartialEq)]
 pub struct OwnerResource {
     pub resource: ResourceType,
-    pub owner: FieldElement,
+    pub owner: Felt,
 }
 
 impl FromStr for OwnerResource {
@@ -67,7 +67,7 @@ impl FromStr for OwnerResource {
             ),
         };
 
-        let owner = FieldElement::from_hex_be(owner_part)
+        let owner = Felt::from_hex(owner_part)
             .map_err(|_| anyhow::anyhow!("Invalid owner address: {}", owner_part))?;
 
         let resource_parts = resource_part.split_once(':');

@@ -5,7 +5,8 @@ use std::time::Duration;
 
 use futures::FutureExt;
 use starknet::accounts::{
-    AccountError, AccountFactory, AccountFactoryError, ConnectedAccount, DeclarationV2, ExecutionV1,
+    AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
+    DeclarationV2, ExecutionV1,
 };
 use starknet::core::types::{
     DeclareTransactionResult, DeployAccountTransactionResult, ExecutionResult, Felt,
@@ -280,7 +281,7 @@ where
 }
 
 #[inline]
-fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResult {
+pub fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResult {
     match receipt {
         TransactionReceipt::Invoke(receipt) => &receipt.execution_result,
         TransactionReceipt::Deploy(receipt) => &receipt.execution_result,
@@ -361,28 +362,28 @@ where
     }
 }
 
-// impl<T> TransactionExt<T> for AccountDeployment<'_, T>
-// where
-//     T: AccountFactory + Sync,
-// {
-//     type R = DeployAccountTransactionResult;
-//     type U = AccountFactoryError<T::SignError>;
+impl<T> TransactionExt<T> for AccountDeploymentV1<'_, T>
+where
+    T: AccountFactory + Sync,
+{
+    type R = DeployAccountTransactionResult;
+    type U = AccountFactoryError<T::SignError>;
 
-//     async fn send_with_cfg(
-//         mut self,
-//         txn_config: &TxnConfig,
-//     ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
-//         if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
-//             self = self.fee_estimate_multiplier(*fee_est_mul);
-//         }
+    async fn send_with_cfg(
+        mut self,
+        txn_config: &TxnConfig,
+    ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
+        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
+            self = self.fee_estimate_multiplier(*fee_est_mul);
+        }
 
-//         if let TxnConfig { max_fee_raw: Some(max_raw_f), .. } = txn_config {
-//             self = self.max_fee(*max_raw_f);
-//         }
+        if let TxnConfig { max_fee_raw: Some(max_raw_f), .. } = txn_config {
+            self = self.max_fee(*max_raw_f);
+        }
 
-//         self.send().await
-//     }
-// }
+        self.send().await
+    }
+}
 
 #[cfg(test)]
 mod tests {
