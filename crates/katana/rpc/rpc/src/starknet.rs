@@ -22,8 +22,7 @@ use katana_rpc_types::block::{
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
-use katana_rpc_types::receipt::ReceiptBlock;
-use katana_rpc_types::receipt::{MaybePendingTxReceipt, TxReceiptWithBlockInfo};
+use katana_rpc_types::receipt::{ReceiptBlock, TxReceipt, TxReceiptWithBlockInfo};
 use katana_rpc_types::state_update::StateUpdate;
 use katana_rpc_types::trace::FunctionInvocation;
 use katana_rpc_types::transaction::{
@@ -37,7 +36,8 @@ use katana_rpc_types::{
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    BlockTag, DeclareTransactionTrace, DeployAccountTransactionTrace, ExecuteInvocation,
+    BlockTag, ComputationResources, DataAvailabilityResources, DataResources,
+    DeclareTransactionTrace, DeployAccountTransactionTrace, ExecuteInvocation, ExecutionResources,
     InvokeTransactionTrace, L1HandlerTransactionTrace, RevertedInvocation, SimulatedTransaction,
     TransactionExecutionStatus, TransactionStatus, TransactionTrace,
 };
@@ -378,7 +378,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn transaction_receipt(
         &self,
         transaction_hash: FieldElement,
-    ) -> RpcResult<MaybePendingTxReceipt> {
+    ) -> RpcResult<TxReceiptWithBlockInfo> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
             let receipt = ReceiptBuilder::new(transaction_hash, provider)
@@ -386,7 +386,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?;
 
             match receipt {
-                Some(receipt) => Ok(MaybePendingTxReceipt::Receipt(receipt)),
+                Some(receipt) => Ok(receipt),
 
                 None => {
                     let executor = this.inner.sequencer.pending_executor();
@@ -407,12 +407,12 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         })
                         .ok_or(Error::from(StarknetApiError::TxnHashNotFound))?;
 
-                    Ok(MaybePendingTxReceipt::Pending(TxReceiptWithBlockInfo::new(
+                    Ok(TxReceiptWithBlockInfo::new(
                         ReceiptBlock::Pending,
                         transaction_hash,
                         FinalityStatus::AcceptedOnL2,
                         pending_receipt,
-                    )))
+                    ))
                 }
             }
         })
@@ -846,6 +846,27 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         // TODO: compute the state diff
                         let state_diff = None;
 
+                        let execution_resources = ExecutionResources {
+                            computation_resources: ComputationResources {
+                                steps: 0,
+                                memory_holes: None,
+                                segment_arena_builtin: None,
+                                ecdsa_builtin_applications: None,
+                                ec_op_builtin_applications: None,
+                                keccak_builtin_applications: None,
+                                bitwise_builtin_applications: None,
+                                pedersen_builtin_applications: None,
+                                poseidon_builtin_applications: None,
+                                range_check_builtin_applications: None,
+                            },
+                            data_resources: DataResources {
+                                data_availability: DataAvailabilityResources {
+                                    l1_gas: 0,
+                                    l1_data_gas: 0,
+                                },
+                            },
+                        };
+
                         let transaction_trace = match receipt {
                             Receipt::Invoke(_) => {
                                 TransactionTrace::Invoke(InvokeTransactionTrace {
@@ -862,6 +883,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                                                 .expect("should exist if not reverted"),
                                         )
                                     },
+                                    execution_resources: execution_resources.clone(),
                                 })
                             }
 
@@ -870,6 +892,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                                     fee_transfer_invocation,
                                     validate_invocation,
                                     state_diff,
+                                    execution_resources: execution_resources.clone(),
                                 })
                             }
 
@@ -880,6 +903,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                                     state_diff,
                                     constructor_invocation: execute_invocation
                                         .expect("should exist bcs tx succeed"),
+                                    execution_resources: execution_resources.clone(),
                                 })
                             }
 
@@ -888,6 +912,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                                     state_diff,
                                     function_invocation: execute_invocation
                                         .expect("should exist bcs tx succeed"),
+                                    execution_resources,
                                 })
                             }
                         };

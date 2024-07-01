@@ -16,7 +16,7 @@ use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
-use torii_core::error::{Error, ParseError};
+use torii_core::error::Error;
 use tracing::{debug, error, trace};
 
 use super::error::SubscriptionError;

@@ -371,7 +371,7 @@ where
     let calls = resources.iter().map(|r| world.set_metadata_getcall(r)).collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
-        migrator.execute(calls).send_with_cfg(&txn_config).await.map_err(|e| {
+        migrator.execute_v1(calls).send_with_cfg(&txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register metadata into the resource registry: {e}")
         })?;
@@ -452,7 +452,7 @@ where
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
-        world.account.execute(calls).send_with_cfg(txn_config).await.map_err(|e| {
+        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register models to World: {e}")
         })?;

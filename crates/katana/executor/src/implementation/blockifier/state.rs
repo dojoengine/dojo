@@ -315,8 +315,10 @@ mod tests {
         let api_address = utils::to_blk_address(address);
         let actual_class_hash = cached_state.get_class_hash_at(api_address)?;
         let actual_nonce = cached_state.get_nonce_at(api_address)?;
-        let actual_storage_value =
-            cached_state.get_storage_at(api_address, StorageKey(patricia_key!(storage_key)))?;
+        let actual_storage_value = cached_state.get_storage_at(
+            api_address,
+            StorageKey(patricia_key!(utils::to_stark_felt(storage_key))),
+        )?;
         let actual_compiled_hash = cached_state.get_compiled_class_hash(actual_class_hash)?;
         let actual_class = cached_state.get_compiled_contract_class(actual_class_hash)?;
         let actual_legacy_class = cached_state
@@ -387,14 +389,15 @@ mod tests {
             let address = utils::to_blk_address(new_address);
             let storage_key = StorageKey(patricia_key!(new_storage_key));
             let storage_value = utils::to_stark_felt(new_storage_value);
-            let class_hash = ClassHash(new_class_hash.into());
+            let class_hash = ClassHash(utils::to_stark_felt(new_class_hash));
             let class =
                 utils::to_class(new_compiled_sierra_class.clone()).unwrap().contract_class();
-            let compiled_hash = CompiledClassHash(new_compiled_hash.into());
-            let legacy_class_hash = ClassHash(new_legacy_class_hash.into());
+            let compiled_hash = CompiledClassHash(utils::to_stark_felt(new_compiled_hash));
+            let legacy_class_hash = ClassHash(utils::to_stark_felt(new_legacy_class_hash));
             let legacy_class =
                 utils::to_class(DEFAULT_LEGACY_UDC_CASM.clone()).unwrap().contract_class();
-            let legacy_compiled_hash = CompiledClassHash(new_legacy_compiled_hash.into());
+            let legacy_compiled_hash =
+                CompiledClassHash(utils::to_stark_felt(new_legacy_compiled_hash));
 
             blk_state.increment_nonce(address)?;
             blk_state.set_class_hash_at(address, legacy_class_hash)?;

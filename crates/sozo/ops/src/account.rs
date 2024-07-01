@@ -233,7 +233,7 @@ pub async fn deploy(
         }
     };
 
-    let account_deployment = factory.deploy(undeployed_status.salt);
+    let account_deployment = factory.deploy_v1(undeployed_status.salt);
 
     let target_deployment_address = account.deploy_account_address()?;
 

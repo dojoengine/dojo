@@ -19,7 +19,7 @@ use starknet::providers::JsonRpcClient;
 use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
-use torii_grpc::types::schema::{Entity, SchemaError};
+use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
@@ -55,7 +55,7 @@ impl Client {
         torii_url: String,
         rpc_url: String,
         relay_url: String,
-        world: FieldElement,
+        world: Felt,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 

@@ -74,7 +74,7 @@ pub async fn starknet_apply_diffs(
     let account = account.lock().await;
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let tx = account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: world,
             selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
             calldata,

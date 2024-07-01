@@ -178,7 +178,7 @@ where
 
     let res = world
         .account
-        .execute(calls)
+        .execute_v1(calls)
         .send_with_cfg(&txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;
@@ -235,7 +235,7 @@ where
     if !calls.is_empty() {
         let res = world
             .account
-            .execute(calls)
+            .execute_v1(calls)
             .send_with_cfg(&txn_config)
             .await
             .with_context(|| "Failed to send transaction")?;
@@ -284,7 +284,7 @@ where
 
     let res = world
         .account
-        .execute(calls)
+        .execute_v1(calls)
         .send_with_cfg(&txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;

@@ -674,9 +674,8 @@ mod tests {
     use starknet_api::stark_felt;
     use starknet_api::transaction::{EventContent, EventData, EventKey};
 
-    use crate::implementation::blockifier::utils;
-
     use super::*;
+    use crate::implementation::blockifier::utils;
 
     #[test]
     fn convert_chain_id() {
@@ -759,12 +758,12 @@ mod tests {
         let expected_contract_address = to_address(call.call.storage_address);
         let expected_caller_address = to_address(call.call.caller_address);
         let expected_code_address = call.call.code_address.map(to_address);
-        let expected_class_hash = call.call.class_hash.map(|a| utils::to_stark_felt(a.0));
-        let expected_entry_point_selector = call.call.entry_point_selector.0.into();
+        let expected_class_hash = call.call.class_hash.map(to_felt);
+        let expected_entry_point_selector = to_felt(call.call.entry_point_selector.0);
         let expected_calldata: Vec<FieldElement> =
-            call.call.calldata.0.iter().map(|f| (*f).into()).collect();
+            call.call.calldata.0.iter().map(|f| to_felt(*f)).collect();
         let expected_retdata: Vec<FieldElement> =
-            call.execution.retdata.0.iter().map(|f| (*f).into()).collect();
+            call.execution.retdata.0.iter().map(|f| to_felt(*f)).collect();
 
         let builtin_counter = call.resources.builtin_instance_counter.clone();
         let expected_execution_resources = trace::ExecutionResources {

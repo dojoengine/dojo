@@ -23,7 +23,7 @@ where
     let contract_address = utils::get_contract_address(world, contract).await?;
     let res = world
         .account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             calldata,
             to: contract_address,
             selector: get_selector_from_name(&entrypoint)?,
