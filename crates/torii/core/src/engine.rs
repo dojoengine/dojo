@@ -175,8 +175,9 @@ impl<P: Provider + Sync> Engine<P> {
                     match e.to_string().as_str() {
                         "TransactionHashNotFound" => {
                             // We failed to fetch the transaction, which is because
-                            // the transaction might not have been processed fast enough by the provider.
-                            // So we can fail silently and try again in the next iteration.
+                            // the transaction might not have been processed fast enough by the
+                            // provider. So we can fail silently and try
+                            // again in the next iteration.
                             warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Retrieving pending transaction.");
                             return Ok(pending_block_tx);
                         }
