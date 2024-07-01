@@ -4,6 +4,7 @@ use std::{fs, io};
 use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use dojo_world::contracts::WorldContract;
+use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use dojo_world::manifest::{
     DojoContract, DojoModel, Manifest, OverlayClass, OverlayDojoContract, OverlayDojoModel,
     OverlayManifest, BASE_CONTRACT_NAME, BASE_DIR, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
@@ -12,11 +13,8 @@ use dojo_world::manifest::{
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
-use smol_str::ToSmolStr;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
-
-use crate::utils::get_default_namespace_from_ws;
 
 mod auto_auth;
 mod migrate;
@@ -39,14 +37,13 @@ pub struct MigrationOutput {
     // If false that means migration got partially completed.
     pub full: bool,
 
-    pub models: Vec<(String, String)>,
+    pub models: Vec<String>,
     pub contracts: Vec<Option<ContractMigrationOutput>>,
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct ContractMigrationOutput {
-    pub name: String,
-    pub namespace: String,
+    pub tag: String,
     pub contract_address: FieldElement,
     pub base_class_hash: FieldElement,
 }
@@ -70,11 +67,13 @@ where
     let ui = ws.config().ui();
 
     // its path to a file so `parent` should never return `None`
-    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+    let root_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     let profile_name =
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
-    let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(&profile_name);
+    let manifest_dir = root_dir.join(MANIFESTS_DIR).join(&profile_name);
+    let manifest_base_dir = manifest_dir.join(BASE_DIR);
+    let overlay_dir = root_dir.join(OVERLAYS_DIR).join(&profile_name);
 
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
@@ -82,16 +81,22 @@ where
     let default_namespace = get_default_namespace_from_ws(ws);
 
     // Load local and remote World manifests.
-    let (local_manifest, remote_manifest) =
-        utils::load_world_manifests(&profile_dir, &account, world_address, &ui, skip_manifests)
-            .await
-            .map_err(|e| {
-                ui.error(e.to_string());
-                anyhow!(
-                    "\n Use `sozo clean` to clean your project.\nThen, rebuild your project with \
-                     `sozo build`.",
-                )
-            })?;
+    let (local_manifest, remote_manifest) = utils::load_world_manifests(
+        &manifest_base_dir,
+        &overlay_dir,
+        &account,
+        world_address,
+        &ui,
+        skip_manifests,
+    )
+    .await
+    .map_err(|e| {
+        ui.error(e.to_string());
+        anyhow!(
+            "\n Use `sozo clean` to clean your project.\nThen, rebuild your project with `sozo \
+             build`.",
+        )
+    })?;
 
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
@@ -245,11 +250,8 @@ fn overlay_dojo_contracts_from_path(path: &Utf8PathBuf) -> Result<Vec<OverlayDoj
         if path.is_file() {
             let manifest: Manifest<DojoContract> = toml::from_str(&fs::read_to_string(path)?)?;
 
-            let overlay_manifest = OverlayDojoContract {
-                name: manifest.inner.name.to_smolstr(),
-                namespace: manifest.inner.namespace,
-                ..Default::default()
-            };
+            let overlay_manifest =
+                OverlayDojoContract { tag: manifest.inner.tag, ..Default::default() };
             elements.push(overlay_manifest);
         } else {
             continue;
@@ -271,11 +273,8 @@ fn overlay_model_from_path(path: &Utf8PathBuf) -> Result<Vec<OverlayDojoModel>> 
         if path.is_file() {
             let manifest: Manifest<DojoModel> = toml::from_str(&fs::read_to_string(path)?)?;
 
-            let overlay_manifest = OverlayDojoModel {
-                name: manifest.inner.name.to_smolstr(),
-                namespace: manifest.inner.namespace,
-                ..Default::default()
-            };
+            let overlay_manifest =
+                OverlayDojoModel { tag: manifest.inner.tag, ..Default::default() };
             elements.push(overlay_manifest);
         } else {
             continue;

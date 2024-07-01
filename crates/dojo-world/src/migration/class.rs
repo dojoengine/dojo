@@ -9,10 +9,8 @@ use super::{Declarable, MigrationType, StateDiff};
 /// Represents differences between a local and remote class.
 #[derive(Debug, Default, Clone)]
 pub struct ClassDiff {
-    pub artifact_name: String, /* name used to identify the corresponding artifact produced by
-                                * the compiler */
-    pub name: String,      // class name as defined in Cairo files
-    pub namespace: String, // namespace of the class as defined in Cairo files
+    pub tag: String, /* name used to identify the corresponding artifact produced by the
+                      * compiler */
     pub local_class_hash: FieldElement,
     pub original_class_hash: FieldElement,
     pub remote_class_hash: Option<FieldElement>,
@@ -30,7 +28,7 @@ impl StateDiff for ClassDiff {
 
 impl Display for ClassDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}:", self.name)?;
+        writeln!(f, "{}:", self.tag)?;
         writeln!(f, "   Local: {:#x}", self.local_class_hash)?;
 
         if let Some(remote) = self.remote_class_hash {

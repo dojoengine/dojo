@@ -9,11 +9,13 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
-use dojo_world::manifest::utils::{compute_bytearray_hash, compute_model_selector_from_hash};
+use dojo_world::manifest::utils::{
+    compute_bytearray_hash, compute_model_selector_from_hash, get_tag,
+};
 use dojo_world::manifest::Member;
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
-use crate::utils::is_namespace_valid;
+use crate::utils::is_name_valid;
 
 const DEFAULT_MODEL_VERSION: u8 = 1;
 
@@ -204,22 +206,24 @@ pub fn handle_model_struct(
         Option::None => package_id,
     };
 
-    if !is_namespace_valid(&model_namespace) {
-        return (
-            RewriteNode::empty(),
-            vec![PluginDiagnostic {
-                stable_ptr: struct_ast.name(db).stable_ptr().0,
-                message: format!(
-                    "The model namespace '{}' can only contain lower case characters (a-z) and \
-                     underscore (_)",
-                    &model_namespace
-                )
-                .to_string(),
-                severity: Severity::Error,
-            }],
-        );
+    for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
+        if !is_name_valid(value) {
+            return (
+                RewriteNode::empty(),
+                vec![PluginDiagnostic {
+                    stable_ptr: struct_ast.name(db).stable_ptr().0,
+                    message: format!(
+                        "The model {id} '{value}' can only contain characters (a-z/A-Z), numbers \
+                         (0-9) and underscore (_)"
+                    )
+                    .to_string(),
+                    severity: Severity::Error,
+                }],
+            );
+        }
     }
 
+    let model_tag = get_tag(&model_namespace, &model_name);
     let model_name_hash = compute_bytearray_hash(&model_name);
     let model_namespace_hash = compute_bytearray_hash(&model_namespace);
 
@@ -367,6 +371,11 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        \"$model_tag$\"
+    }
+    
+    #[inline(always)]
     fn keys(self: @$type_name$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_keys$
@@ -442,6 +451,10 @@ mod $contract_name$ {
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<$type_name$>::namespace_selector()
         }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<$type_name$>::tag()
+        }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<$type_name$>::size()
@@ -480,6 +493,7 @@ mod $contract_name$ {
                     "model_namespace_hash".to_string(),
                     RewriteNode::Text(model_namespace_hash.to_string()),
                 ),
+                ("model_tag".to_string(), RewriteNode::Text(model_tag.clone())),
             ]),
         ),
         diagnostics,

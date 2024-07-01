@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
+use dojo_world::manifest::utils::get_name_from_tag;
 use dojo_world::migration::strategy::generate_salt;
 use dojo_world::utils::{execution_status_from_maybe_pending_receipt, TransactionWaiter};
-use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
@@ -31,7 +31,7 @@ pub async fn get_contract_address<A: ConnectedAccount + Sync>(
     } else {
         let contract_class_hash = world.base().call().await?;
         Ok(starknet::core::utils::get_contract_address(
-            generate_salt(&name_or_address),
+            generate_salt(&get_name_from_tag(&name_or_address)),
             contract_class_hash.into(),
             &[],
             world.address,
@@ -60,7 +60,7 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
     } else {
         let contract_class_hash = world_reader.base().call().await?;
         Ok(starknet::core::utils::get_contract_address(
-            generate_salt(&name_or_address),
+            generate_salt(&get_name_from_tag(&name_or_address)),
             contract_class_hash.into(),
             &[],
             world_reader.address,
@@ -136,8 +136,4 @@ pub fn parse_block_id(block_str: String) -> Result<BlockId> {
             Err(_) => Err(anyhow!("Unable to parse block ID: {}", block_str)),
         }
     }
-}
-
-pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
-    ws.current_package().unwrap().id.name.to_string()
 }

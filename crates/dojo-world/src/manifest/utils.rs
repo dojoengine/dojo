@@ -1,58 +1,87 @@
 use anyhow::{anyhow, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use convert_case::{Case, Casing};
+use scarb::core::Workspace;
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 
-pub const FULLNAME_SEPARATOR: char = ':';
-pub const MANIFEST_NAME_SEPARATOR: char = '-';
+pub const CONTRACT_NAME_SEPARATOR: &str = "::";
+pub const TAG_SEPARATOR: char = ':';
+pub const FILENAME_SEPARATOR: &str = "-";
+pub const SELECTOR_CHUNK_SIZE: usize = 8;
 
-/// The artifact name is used as key to access to some information about
-/// compiled elements during the compilation.
-/// An artifact name is built by concatenating the fully qualified module name
-/// and the element name in snake case, separated by '::'.
-///
-/// TODO: we don't want to depend on module name, but namespace instead.
-pub fn get_artifact_name(module_name: &str, element_name: &str) -> String {
-    format!("{module_name}::{element_name}").to_case(Case::Snake)
+pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
+    ws.current_package().unwrap().id.name.to_string()
 }
 
-/// Build the full name of an element by concatenating its namespace and its name,
-/// using a dedicated separator.
-pub fn get_full_world_element_name(namespace: &str, element_name: &str) -> String {
-    format!("{}{FULLNAME_SEPARATOR}{}", namespace, element_name)
+pub fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
 }
 
-/// Build the full name of an element by concatenating its namespace and its name,
-/// using a specific separator.
-pub fn get_manifest_name(namespace: &str, element_name: &str) -> String {
-    format!(
-        "{}{MANIFEST_NAME_SEPARATOR}{}",
-        namespace.to_case(Case::Snake),
-        element_name.to_case(Case::Snake)
-    )
+pub fn get_name_from_tag(tag: &str) -> String {
+    let parts: Vec<&str> = tag.split(TAG_SEPARATOR).collect();
+    parts.last().unwrap().to_string()
 }
 
-/// Get the namespace and the name of a world element from its full name.
-/// If no namespace is specified, use the default one.
-pub fn split_full_world_element_name(
-    full_name: &str,
-    default_namespace: &str,
-) -> Result<(String, String)> {
-    let parts: Vec<&str> = full_name.split(FULLNAME_SEPARATOR).collect();
+pub fn get_namespace_from_tag(tag: &str) -> String {
+    let parts: Vec<&str> = tag.split(TAG_SEPARATOR).collect();
+    parts.first().unwrap().to_string()
+}
+
+pub fn get_tag(namespace: &str, name: &str) -> String {
+    format!("{namespace}{TAG_SEPARATOR}{name}")
+}
+
+/// Get the namespace and the name of a world element from its tag.
+pub fn split_tag(tag: &str) -> Result<(String, String)> {
+    let parts: Vec<&str> = tag.split(TAG_SEPARATOR).collect();
     match parts.len() {
-        1 => Ok((default_namespace.to_string(), full_name.to_string())),
         2 => Ok((parts[0].to_string(), parts[1].to_string())),
         _ => Err(anyhow!(
-            "Unexpected full name. Expected format: <NAMESPACE>{FULLNAME_SEPARATOR}<NAME> or \
-             <NAME>"
+            "Unexpected tag. Expected format: <NAMESPACE>{TAG_SEPARATOR}<NAME> or <NAME>"
         )),
     }
+}
+
+pub fn ensure_namespace(tag: &str, default_namespace: &str) -> String {
+    if tag.contains(TAG_SEPARATOR) { tag.to_string() } else { get_tag(default_namespace, tag) }
+}
+
+pub fn get_filename_from_tag(tag: &str) -> Result<String> {
+    let (namespace, name) = split_tag(tag)?;
+
+    if ["world", "base"].contains(&name.as_str()) {
+        return Ok(format!("{namespace}{FILENAME_SEPARATOR}{name}"));
+    }
+
+    let mut selector = format!("{:x}", compute_bytearray_hash(&name));
+    selector.truncate(SELECTOR_CHUNK_SIZE);
+
+    Ok(format!("{namespace}{FILENAME_SEPARATOR}{name}{FILENAME_SEPARATOR}{selector}"))
+}
+
+// TODO: should not be useful with a standard WORLD/BASE name
+pub fn get_filename_from_special_contract_name(name: &str) -> String {
+    get_filename_from_tag(&get_tag_from_special_contract_name(name)).unwrap()
+}
+
+// TODO: should not be useful with a standard WORLD/BASE name
+pub fn get_tag_from_special_contract_name(name: &str) -> String {
+    let parts = name.split(CONTRACT_NAME_SEPARATOR).collect::<Vec<_>>();
+    format!("{}{TAG_SEPARATOR}{}", parts.first().unwrap(), parts.last().unwrap())
 }
 
 pub fn compute_bytearray_hash(namespace: &str) -> FieldElement {
     let ba = ByteArray::from_string(namespace).unwrap();
     poseidon_hash_many(&ByteArray::cairo_serialize(&ba))
+}
+
+pub fn compute_model_selector_from_tag(tag: &str) -> FieldElement {
+    let (namespace, name) = split_tag(tag).unwrap();
+    compute_model_selector_from_names(&namespace, &name)
 }
 
 pub fn compute_model_selector_from_names(namespace: &str, model_name: &str) -> FieldElement {

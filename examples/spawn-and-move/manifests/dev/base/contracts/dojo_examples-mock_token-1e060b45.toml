@@ -1,0 +1,11 @@
+kind = "DojoContract"
+class_hash = "0x35cec8c62ba7a93be10ec69e8e8a0e3963b83873dc0679102f20e011a3dae94"
+original_class_hash = "0x35cec8c62ba7a93be10ec69e8e8a0e3963b83873dc0679102f20e011a3dae94"
+base_class_hash = "0x0"
+abi = "manifests/dev/abis/base/contracts/dojo_examples-mock_token-1e060b45.json"
+reads = []
+writes = []
+computed = []
+init_calldata = []
+tag = "dojo_examples:mock_token"
+manifest_name = "dojo_examples-mock_token-1e060b45"

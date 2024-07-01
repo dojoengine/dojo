@@ -47,6 +47,8 @@ pub enum ModelError {
     Packing(#[from] PackingError),
     #[error(transparent)]
     Cainome(#[from] CainomeError),
+    #[error("{0}")]
+    TagError(String),
 }
 
 // TODO: to update to match with new model interface

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function, FunctionOutputKind, Token};
+use dojo_world::manifest::utils::{capitalize, get_name_from_tag};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -235,7 +236,7 @@ public class {} : ModelInstance {{
             handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
 
             // first index is our model struct
-            if token.type_name() == model.name {
+            if token.type_name() == get_name_from_tag(&model.tag) {
                 model_struct = Some(token.to_composite().unwrap());
                 continue;
             }
@@ -474,13 +475,10 @@ public class {} : ModelInstance {{
         )
     }
 
-    // Formats a contract file path into a pretty contract name
-    // eg. dojo_examples::actions::actions.json -> Actions
-    fn formatted_contract_name(contract_file_name: &str) -> String {
-        let contract_name =
-            contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
-        // capitalize contract name
-        contract_name.chars().next().unwrap().to_uppercase().to_string() + &contract_name[1..]
+    // Formats a contract tag into a pretty contract name
+    // eg. dojo_examples:actions.json -> Actions
+    fn formatted_contract_name(tag: &str) -> String {
+        capitalize(&get_name_from_tag(tag))
     }
 
     // Handles a contract definition and its underlying systems
@@ -515,9 +513,9 @@ public class {} : MonoBehaviour {{
     {}
 }}
         ",
-            contract.qualified_path,
+            contract.tag,
             // capitalize contract name
-            UnityPlugin::formatted_contract_name(&contract.qualified_path),
+            UnityPlugin::formatted_contract_name(&contract.tag),
             systems
         );
 

@@ -7,7 +7,6 @@ use cainome::parser::{AbiParser, TokenizedAbi};
 use camino::Utf8PathBuf;
 use dojo_world::manifest::BaseManifest;
 pub mod error;
-use dojo_world::manifest::utils::get_full_world_element_name;
 use error::BindgenResult;
 
 mod plugins;
@@ -19,10 +18,8 @@ pub use plugins::BuiltinPlugins;
 
 #[derive(Debug, PartialEq)]
 pub struct DojoModel {
-    /// PascalCase name of the model.
-    pub name: String,
-    /// Fully qualified path of the model type in cairo code.
-    pub qualified_path: String,
+    /// model tag.
+    pub tag: String,
     /// List of tokens found in the model contract ABI.
     /// Only structs and enums are currently used.
     pub tokens: TokenizedAbi,
@@ -30,8 +27,8 @@ pub struct DojoModel {
 
 #[derive(Debug, PartialEq)]
 pub struct DojoContract {
-    /// Contract's fully qualified name.
-    pub qualified_path: String,
+    /// Contract tag.
+    pub tag: String,
     /// Full ABI of the contract in case the plugin wants to make extra checks,
     /// or generated other functions than the systems.
     pub tokens: TokenizedAbi,
@@ -122,7 +119,7 @@ fn gather_dojo_data(
     let mut base_manifest = BaseManifest::load_from_path(&base_manifest_dir)?;
 
     if let Some(skip_manifests) = skip_migration {
-        base_manifest.remove_items(skip_manifests);
+        base_manifest.remove_tags(skip_manifests);
     }
 
     let mut models = HashMap::new();
@@ -138,6 +135,7 @@ fn gather_dojo_data(
             .load_abi_string(&root_dir)?;
 
         let tokens = AbiParser::tokens_from_abi_string(&abi, &HashMap::new())?;
+        let tag = contract_manifest.inner.tag.clone();
 
         // Identify the systems -> for now only take the functions from the
         // interfaces.
@@ -151,15 +149,7 @@ fn gather_dojo_data(
             }
         }
 
-        let contract_name = get_full_world_element_name(
-            &contract_manifest.inner.namespace,
-            &contract_manifest.inner.name,
-        );
-
-        contracts.insert(
-            contract_name.clone(),
-            DojoContract { qualified_path: contract_name, tokens, systems },
-        );
+        contracts.insert(tag.clone(), DojoContract { tag, tokens, systems });
     }
 
     for model_manifest in &base_manifest.models {
@@ -172,19 +162,11 @@ fn gather_dojo_data(
             .load_abi_string(&root_dir)?;
 
         let tokens = AbiParser::tokens_from_abi_string(&abi, &HashMap::new())?;
+        let tag = model_manifest.inner.tag.clone();
 
-        let full_name = get_full_world_element_name(
-            &model_manifest.inner.namespace,
-            &model_manifest.inner.name,
-        );
+        let model = DojoModel { tag: tag.clone(), tokens: filter_model_tokens(&tokens) };
 
-        let model = DojoModel {
-            name: full_name.clone(),
-            qualified_path: full_name.clone(),
-            tokens: filter_model_tokens(&tokens),
-        };
-
-        models.insert(full_name, model);
+        models.insert(tag.clone(), model);
     }
 
     let world = DojoWorld { name: root_package_name.to_string() };

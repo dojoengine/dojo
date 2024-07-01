@@ -4,6 +4,7 @@ use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use dojo_world::manifest::{
     BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
     WORLD_CONTRACT_NAME,
@@ -27,7 +28,7 @@ use starknet_crypto::FieldElement;
 
 use super::setup;
 use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
-use crate::utils::{get_contract_address_from_reader, get_default_namespace_from_ws};
+use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_auto_mine() {
@@ -126,7 +127,7 @@ async fn metadata_calculated_properly() {
     for (key, value) in migration.metadata.iter() {
         match value {
             MigrationMetadata::Contract(c) => {
-                assert_eq!(key, &c.name);
+                assert_eq!(key, &c.tag);
             }
         }
     }

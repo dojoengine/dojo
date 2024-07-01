@@ -775,6 +775,11 @@ abigen!(
         "name": "namespace",
         "type": "core::byte_array::ByteArray",
         "kind": "data"
+      },
+      {
+        "name": "name",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
       }
     ]
   },

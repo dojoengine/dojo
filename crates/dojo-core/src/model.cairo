@@ -16,12 +16,14 @@ trait Model<T> {
     fn instance_selector(self: @T) -> felt252;
 
     /// Returns the namespace of the model as it was written in the `dojo::model` attribute.
-    /// only lower case characters (a-z) and underscore (_) are allowed.
     fn namespace() -> ByteArray;
 
     /// Returns the model namespace selector built from its namespace.
     /// namespace_selector = hash(namespace_name)
     fn namespace_selector() -> felt252;
+
+    // Returns the model tag
+    fn tag() -> ByteArray;
 
     fn keys(self: @T) -> Span<felt252>;
     fn values(self: @T) -> Span<felt252>;
@@ -37,6 +39,7 @@ trait IModel<T> {
     fn version(self: @T) -> u8;
     fn namespace(self: @T) -> ByteArray;
     fn namespace_selector(self: @T) -> felt252;
+    fn tag(self: @T) -> ByteArray;
     fn unpacked_size(self: @T) -> Option<usize>;
     fn packed_size(self: @T) -> Option<usize>;
     fn layout(self: @T) -> dojo::database::introspect::Layout;

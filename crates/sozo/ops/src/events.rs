@@ -6,7 +6,11 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
-use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods, MANIFESTS_DIR};
+use dojo_world::manifest::utils::get_filename_from_special_contract_name;
+use dojo_world::manifest::{
+    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, MANIFESTS_DIR,
+    WORLD_CONTRACT_NAME,
+};
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -117,10 +121,16 @@ fn extract_events(
 
     // Read the world and base ABI from scarb artifacts as the
     // manifest does not include them (at least base is not included).
-    let world_abi_path = manifest_dir.join("target/dev/dojo::world::world.json");
+    let world_abi_path = manifest_dir.join(format!(
+        "target/dev/{}.json",
+        get_filename_from_special_contract_name(WORLD_CONTRACT_NAME)
+    ));
     process_abi(&mut events_map, &world_abi_path)?;
 
-    let base_abi_path = manifest_dir.join("target/dev/dojo::base::base.json");
+    let base_abi_path = manifest_dir.join(format!(
+        "target/dev/{}.json",
+        get_filename_from_special_contract_name(BASE_CONTRACT_NAME)
+    ));
     process_abi(&mut events_map, &base_abi_path)?;
 
     Ok(events_map)
@@ -259,7 +269,7 @@ fn process_inners(
 mod tests {
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
-    use dojo_world::manifest::{BaseManifest, BASE_DIR};
+    use dojo_world::manifest::{BaseManifest, BASE_DIR, WORLD_QUALIFIED_PATH};
     use starknet::core::types::EmittedEvent;
 
     use super::*;
@@ -282,7 +292,7 @@ mod tests {
     #[test]
     fn test_core_basic() {
         let composite = Composite {
-            type_path: "dojo::world::world::TestEvent".to_string(),
+            type_path: format!("{WORLD_QUALIFIED_PATH}::TestEvent"),
             inners: vec![
                 CompositeInner {
                     index: 0,
@@ -390,10 +400,11 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::TestEvent\nfelt252: 0x5465737431 \
-                               \"Test1\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: \
-                               5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n"
-            .to_string();
+        let expected_output = format!(
+            "Event name: {WORLD_QUALIFIED_PATH}::TestEvent\nfelt252: 0x5465737431 \
+             \"Test1\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: 5\nusize: 6\nclass_hash: \
+             0x54657374\ncontract_address: 0x54657374\n"
+        );
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -406,7 +417,7 @@ mod tests {
     #[test]
     fn test_array() {
         let composite = Composite {
-            type_path: "dojo::world::world::StoreDelRecord".to_string(),
+            type_path: format!("{WORLD_QUALIFIED_PATH}::StoreDelRecord"),
             inners: vec![
                 CompositeInner {
                     index: 0,
@@ -455,9 +466,10 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: 0x54657374 \
-                               \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n"
-            .to_string();
+        let expected_output = format!(
+            "Event name: {WORLD_QUALIFIED_PATH}::StoreDelRecord\ntable: 0x54657374 \
+             \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n"
+        );
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -470,7 +482,7 @@ mod tests {
     #[test]
     fn test_custom_event() {
         let composite = Composite {
-            type_path: "dojo::world::world::CustomEvent".to_string(),
+            type_path: format!("{WORLD_QUALIFIED_PATH}::CustomEvent"),
             inners: vec![
                 CompositeInner {
                     index: 0,
@@ -529,9 +541,10 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: \
-                               0x5465737431 \"Test1\"\ndata_1: 1\ndata_2: 2\n"
-            .to_string();
+        let expected_output = format!(
+            "Event name: {WORLD_QUALIFIED_PATH}::CustomEvent\nkey_1: 3\nkey_2: 0x5465737431 \
+             \"Test1\"\ndata_1: 1\ndata_2: 2\n"
+        );
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -544,7 +557,7 @@ mod tests {
     #[test]
     fn test_zero_felt() {
         let composite = Composite {
-            type_path: "dojo::world::world::StoreDelRecord".to_string(),
+            type_path: format!("{WORLD_QUALIFIED_PATH}::StoreDelRecord"),
             inners: vec![
                 CompositeInner {
                     index: 0,
@@ -593,9 +606,10 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: 0x0\nkeys: \
-                               [0x0, 0x1, 0x2]\n"
-            .to_string();
+        let expected_output = format!(
+            "Event name: {WORLD_QUALIFIED_PATH}::StoreDelRecord\ntable: 0x0\nkeys: [0x0, 0x1, \
+             0x2]\n"
+        );
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 

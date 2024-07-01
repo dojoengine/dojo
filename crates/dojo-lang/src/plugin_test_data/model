@@ -453,6 +453,11 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:BadModelMultipleVersions"
+    }
+    
+    #[inline(always)]
     fn keys(self: @BadModelMultipleVersions) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -527,6 +532,10 @@ mod bad_model_multiple_versions {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<BadModelMultipleVersions>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<BadModelMultipleVersions>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -652,6 +661,11 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:BadModelBadVersionType"
+    }
+    
+    #[inline(always)]
     fn keys(self: @BadModelBadVersionType) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -726,6 +740,10 @@ mod bad_model_bad_version_type {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<BadModelBadVersionType>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<BadModelBadVersionType>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -851,6 +869,11 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:BadModelNoVersionValue"
+    }
+    
+    #[inline(always)]
     fn keys(self: @BadModelNoVersionValue) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -925,6 +948,10 @@ mod bad_model_no_version_value {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<BadModelNoVersionValue>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<BadModelNoVersionValue>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -1050,6 +1077,11 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:BadModelUnexpectedArgWithValue"
+    }
+    
+    #[inline(always)]
     fn keys(self: @BadModelUnexpectedArgWithValue) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -1124,6 +1156,10 @@ mod bad_model_unexpected_arg_with_value {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<BadModelUnexpectedArgWithValue>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -1249,6 +1285,11 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:BadModelUnexpectedArg"
+    }
+    
+    #[inline(always)]
     fn keys(self: @BadModelUnexpectedArg) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -1323,6 +1364,10 @@ mod bad_model_unexpected_arg {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<BadModelUnexpectedArg>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<BadModelUnexpectedArg>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -1448,6 +1493,11 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:BadModelNotSupportedVersion"
+    }
+    
+    #[inline(always)]
     fn keys(self: @BadModelNotSupportedVersion) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -1522,6 +1572,10 @@ mod bad_model_not_supported_version {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<BadModelNotSupportedVersion>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<BadModelNotSupportedVersion>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -1647,6 +1701,11 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:Modelv0"
+    }
+    
+    #[inline(always)]
     fn keys(self: @Modelv0) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -1722,6 +1781,10 @@ mod modelv_0 {
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<Modelv0>::namespace_selector()
         }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<Modelv0>::tag()
+        }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<Modelv0>::size()
@@ -1785,6 +1848,173 @@ dojo::database::introspect::Member {
                 ].span()
             }
         )
+    }
+}
+        
+impl ModelWithBadNamespaceFormatModel of dojo::model::Model<ModelWithBadNamespaceFormat> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithBadNamespaceFormat {
+        let values = dojo::world::IWorldDispatcherTrait::entity(
+            world,
+            Self::selector(),
+            keys,
+            layout
+        );
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithBadNamespaceFormat>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithBadNamespaceFormat>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithBadNamespaceFormat`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithBadNamespaceFormat>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithBadNamespaceFormat"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        3498075185010572568869958326439183660947774785526793544998939163671395407352
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithBadNamespaceFormat) -> felt252 {
+        Self::selector()
+    }
+
+    #[inline(always)]
+    fn namespace() -> ByteArray {
+        "MyNamespace"
+    }
+
+    #[inline(always)]
+    fn namespace_selector() -> felt252 {
+        2518247443458975119180817677753479732439290689944304814934908400279022945373
+    }
+
+    #[inline(always)]
+    fn tag() -> ByteArray {
+        "MyNamespace:ModelWithBadNamespaceFormat"
+    }
+    
+    #[inline(always)]
+    fn keys(self: @ModelWithBadNamespaceFormat) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.id);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithBadNamespaceFormat) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithBadNamespaceFormat>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithBadNamespaceFormat) -> dojo::database::introspect::Layout {
+        Self::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = Self::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::Enum(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_bad_namespace_format<T> {
+    fn ensure_abi(self: @T, model: ModelWithBadNamespaceFormat);
+}
+
+#[starknet::contract]
+mod model_with_bad_namespace_format {
+    use super::ModelWithBadNamespaceFormat;
+    use super::Imodel_with_bad_namespace_format;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithBadNamespaceFormat>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithBadNamespaceFormat>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithBadNamespaceFormat>::version()
+        }
+        
+        fn namespace(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithBadNamespaceFormat>::namespace()
+        }
+
+        fn namespace_selector(self: @ContractState) -> felt252 {
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::tag()
+        }
+        
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithBadNamespaceFormat>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithBadNamespaceFormat>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_bad_namespace_formatImpl of Imodel_with_bad_namespace_format<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithBadNamespaceFormat) {
+        }
     }
 }
 
@@ -1887,6 +2117,11 @@ impl ModelWithShortStringNamespaceModel of dojo::model::Model<ModelWithShortStri
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "my_namespace:ModelWithShortStringNamespace"
+    }
+    
+    #[inline(always)]
     fn keys(self: @ModelWithShortStringNamespace) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -1961,6 +2196,10 @@ mod model_with_short_string_namespace {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<ModelWithShortStringNamespace>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<ModelWithShortStringNamespace>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -2086,6 +2325,11 @@ impl ModelWithStringNamespaceModel of dojo::model::Model<ModelWithStringNamespac
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "my_namespace:ModelWithStringNamespace"
+    }
+    
+    #[inline(always)]
     fn keys(self: @ModelWithStringNamespace) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -2160,6 +2404,10 @@ mod model_with_string_namespace {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<ModelWithStringNamespace>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<ModelWithStringNamespace>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -2285,6 +2533,11 @@ impl PositionModel of dojo::model::Model<Position> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:Position"
+    }
+    
+    #[inline(always)]
     fn keys(self: @Position) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -2359,6 +2612,10 @@ mod position {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<Position>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<Position>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -2484,6 +2741,11 @@ impl RolesModel of dojo::model::Model<Roles> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:Roles"
+    }
+    
+    #[inline(always)]
     fn keys(self: @Roles) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         
@@ -2558,6 +2820,10 @@ mod roles {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<Roles>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<Roles>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -2675,6 +2941,11 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:OnlyKeyModel"
+    }
+    
+    #[inline(always)]
     fn keys(self: @OnlyKeyModel) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
@@ -2749,6 +3020,10 @@ mod only_key_model {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<OnlyKeyModel>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<OnlyKeyModel>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -2866,6 +3141,11 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:U256KeyModel"
+    }
+    
+    #[inline(always)]
     fn keys(self: @U256KeyModel) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.id, ref serialized);
@@ -2940,6 +3220,10 @@ mod u_256_key_model {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<U256KeyModel>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<U256KeyModel>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -3070,6 +3354,11 @@ impl PlayerModel of dojo::model::Model<Player> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:Player"
+    }
+    
+    #[inline(always)]
     fn keys(self: @Player) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.game);core::serde::Serde::serialize(self.player, ref serialized);
@@ -3144,6 +3433,10 @@ mod player {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<Player>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<Player>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -3283,6 +3576,11 @@ impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:ModelWithSimpleArray"
+    }
+    
+    #[inline(always)]
     fn keys(self: @ModelWithSimpleArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
@@ -3357,6 +3655,10 @@ mod model_with_simple_array {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<ModelWithSimpleArray>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<ModelWithSimpleArray>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -3492,6 +3794,11 @@ impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:ModelWithByteArray"
+    }
+    
+    #[inline(always)]
     fn keys(self: @ModelWithByteArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
@@ -3566,6 +3873,10 @@ mod model_with_byte_array {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<ModelWithByteArray>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<ModelWithByteArray>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -3705,6 +4016,11 @@ impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:ModelWithComplexArray"
+    }
+    
+    #[inline(always)]
     fn keys(self: @ModelWithComplexArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
@@ -3779,6 +4095,10 @@ mod model_with_complex_array {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<ModelWithComplexArray>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<ModelWithComplexArray>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -3925,6 +4245,11 @@ impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:ModelWithTuple"
+    }
+    
+    #[inline(always)]
     fn keys(self: @ModelWithTuple) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
@@ -3999,6 +4324,10 @@ mod model_with_tuple {
 
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<ModelWithTuple>::namespace_selector()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<ModelWithTuple>::tag()
         }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -4154,6 +4483,11 @@ impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimi
     }
 
     #[inline(always)]
+    fn tag() -> ByteArray {
+        "dojo_plugin:ModelWithTupleNoPrimitives"
+    }
+    
+    #[inline(always)]
     fn keys(self: @ModelWithTupleNoPrimitives) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
@@ -4229,6 +4563,10 @@ mod model_with_tuple_no_primitives {
         fn namespace_selector(self: @ContractState) -> felt252 {
             dojo::model::Model::<ModelWithTupleNoPrimitives>::namespace_selector()
         }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::tag()
+        }
         
         fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<ModelWithTupleNoPrimitives>::size()
@@ -4290,11 +4628,6 @@ error: dojo::model version 2 not supported
 #[dojo::model(version: 2)]
                        ^
 
-error: The model namespace 'MyNamespace' can only contain lower case characters (a-z) and underscore (_)
- --> test_src/lib.cairo:59:8
-struct ModelWithBadNamespaceFormat {
-       ^*************************^
-
 error: Model must define at least one #[key] attribute
  --> test_src/lib.cairo:87:8
 struct Roles {
@@ -4349,6 +4682,11 @@ error: Unsupported attribute.
  --> test_src/lib.cairo:51:1
 #[dojo::model(version: 0)]
 ^************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:58:1
+#[dojo::model(namespace: 'MyNamespace')]
+^**************************************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo:65:1
@@ -4514,6 +4852,21 @@ error: Unsupported attribute.
  --> test_src/lib.cairo:51:1
 #[dojo::model(version: 0)]
 ^************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:58:1
+#[dojo::model(namespace: 'MyNamespace')]
+^**************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:58:1
+#[dojo::model(namespace: 'MyNamespace')]
+^**************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:58:1
+#[dojo::model(namespace: 'MyNamespace')]
+^**************************************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo:65:1

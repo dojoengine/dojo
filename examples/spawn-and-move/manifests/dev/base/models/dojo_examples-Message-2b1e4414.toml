@@ -1,0 +1,26 @@
+kind = "DojoModel"
+class_hash = "0x60a1c33b918cb63ec0842285b67ae18dd6ba22a95baaaceffb370db630eeaa4"
+original_class_hash = "0x60a1c33b918cb63ec0842285b67ae18dd6ba22a95baaaceffb370db630eeaa4"
+abi = "manifests/dev/abis/base/models/dojo_examples-Message-2b1e4414.json"
+tag = "dojo_examples:Message"
+manifest_name = "dojo_examples-Message-2b1e4414"
+
+[[members]]
+name = "identity"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "channel"
+type = "felt252"
+key = true
+
+[[members]]
+name = "message"
+type = "ByteArray"
+key = false
+
+[[members]]
+name = "salt"
+type = "felt252"
+key = true

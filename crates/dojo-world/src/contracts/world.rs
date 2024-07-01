@@ -7,6 +7,7 @@ pub use abigen::world::{
 use starknet::providers::Provider;
 
 use super::model::{ModelError, ModelRPCReader};
+use crate::manifest::utils::split_tag;
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -22,6 +23,14 @@ impl<P> WorldContractReader<P>
 where
     P: Provider + Sync + Send,
 {
+    pub async fn model_reader_with_tag(
+        &self,
+        tag: &str,
+    ) -> Result<ModelRPCReader<'_, P>, ModelError> {
+        let (namespace, name) = split_tag(tag).map_err(|e| ModelError::TagError(e.to_string()))?;
+        ModelRPCReader::new(&namespace, &name, self).await
+    }
+
     pub async fn model_reader(
         &self,
         namespace: &str,

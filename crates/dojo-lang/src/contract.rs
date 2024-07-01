@@ -11,12 +11,12 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
-use dojo_world::manifest::utils::compute_bytearray_hash;
+use dojo_world::manifest::utils::{compute_bytearray_hash, get_tag};
 
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 use crate::syntax::{self_param, utils as syntax_utils};
-use crate::utils::is_namespace_valid;
+use crate::utils::is_name_valid;
 
 const DOJO_INIT_FN: &str = "dojo_init";
 const CONTRACT_NAMESPACE: &str = "namespace";
@@ -53,22 +53,25 @@ impl DojoContract {
             None => package_id,
         };
 
-        if !is_namespace_valid(&contract_namespace) {
-            return PluginResult {
-                code: None,
-                diagnostics: vec![PluginDiagnostic {
-                    stable_ptr: module_ast.stable_ptr().0,
-                    message: format!(
-                        "The contract namespace '{}' can only contain lower case characters (a-z) \
-                         and underscore (_)",
-                        &contract_namespace,
-                    ),
-                    severity: Severity::Error,
-                }],
-                remove_original_item: false,
-            };
+        for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {
+            if !is_name_valid(value) {
+                return PluginResult {
+                    code: None,
+                    diagnostics: vec![PluginDiagnostic {
+                        stable_ptr: module_ast.stable_ptr().0,
+                        message: format!(
+                            "The contract {id} '{value}' can only contain characters (a-z/A-Z), \
+                             numbers (0-9) and underscore (_)"
+                        ),
+                        severity: Severity::Error,
+                    }],
+                    remove_original_item: false,
+                };
+            }
         }
 
+        let contract_tag = get_tag(&contract_namespace, &name);
+        let contract_name_selector = compute_bytearray_hash(&name);
         let contract_namespace_selector = compute_bytearray_hash(&contract_namespace);
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
@@ -149,27 +152,30 @@ impl DojoContract {
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-                    use dojo::world::IDojoResourceProvider;
-                    use dojo::world::INamespace;
+                    use dojo::contract::IContract;
 
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
                  upgradeable, event: UpgradeableEvent);
 
                     #[abi(embed_v0)]
-                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
-                        fn dojo_resource(self: @ContractState) -> felt252 {
-                            '$name$'
+                    impl ContractImpl of IContract<ContractState> {
+                        fn contract_name(self: @ContractState) -> ByteArray {
+                            \"$name$\"
                         }
-                    }
+                        fn selector(self: @ContractState) -> felt252 {
+                            $contract_name_selector$
+                        }
 
-                    #[abi(embed_v0)]
-                    impl NamespaceImpl of INamespace<ContractState> {
                         fn namespace(self: @ContractState) -> ByteArray {
                             \"$contract_namespace$\"
                         }
 
                         fn namespace_selector(self: @ContractState) -> felt252 {
                             $contract_namespace_selector$
+                        }
+
+                        fn tag(self: @ContractState) -> ByteArray {
+                            \"$contract_tag$\"
                         }
                     }
 
@@ -189,6 +195,10 @@ impl DojoContract {
                 ",
                 &UnorderedHashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
+                    (
+                        "contract_name_selector".to_string(),
+                        RewriteNode::Text(contract_name_selector.to_string()),
+                    ),
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                     (
                         "contract_namespace".to_string(),
@@ -198,6 +208,7 @@ impl DojoContract {
                         "contract_namespace_selector".to_string(),
                         RewriteNode::Text(contract_namespace_selector.to_string()),
                     ),
+                    ("contract_tag".to_string(), RewriteNode::Text(contract_tag)),
                 ]),
             ));
 

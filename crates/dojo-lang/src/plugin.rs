@@ -16,7 +16,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_types::system::Dependency;
-use dojo_world::manifest::utils::split_full_world_element_name;
+use dojo_world::manifest::utils::get_tag;
 use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
@@ -85,8 +85,7 @@ pub struct ComputedValuesAuxData {
     // Name of entrypoint to get computed value
     pub entrypoint: SmolStr,
     // Model to bind to
-    pub namespace: Option<String>,
-    pub model: Option<String>,
+    pub tag: Option<String>,
 }
 
 impl GeneratedFileAuxData for ComputedValuesAuxData {
@@ -169,19 +168,10 @@ impl BuiltinDojoPlugin {
         let fn_name = fn_decl.name(db).text(db);
         let params = fn_decl.signature(db).parameters(db);
         let param_els = params.elements(db);
-        let mut model = None;
-        let mut namespace = None;
+        let mut tag = None;
         if args.len() == 1 {
             let model_name = args[0].text(db);
-            match split_full_world_element_name(&model_name, &package_id) {
-                Ok((ns, n)) => {
-                    model = Some(n);
-                    namespace = Some(ns);
-                }
-                Err(e) => {
-                    return self.result_with_diagnostic(attr.args_stable_ptr.0, e.to_string());
-                }
-            };
+            tag = Some(get_tag(&model_name, &package_id));
 
             let model_type_node = param_els[1].type_clause(db).ty(db);
             if let ast::Expr::Path(model_type_path) = model_type_node {
@@ -220,8 +210,7 @@ impl BuiltinDojoPlugin {
                 name: fn_name.clone(),
                 content: "".into(),
                 aux_data: Some(DynGeneratedFileAuxData::new(ComputedValuesAuxData {
-                    namespace,
-                    model,
+                    tag,
                     entrypoint: fn_name,
                 })),
                 code_mappings: vec![],

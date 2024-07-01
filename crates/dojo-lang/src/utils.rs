@@ -5,10 +5,9 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use regex::Regex;
 use toml::Table;
 
-/// Check if the provided namespace follows the format rules:
-/// only lower case characters (a-z) and underscore (_)
-pub fn is_namespace_valid(namespace: &str) -> bool {
-    Regex::new(r"^[a-z_]+$").unwrap().is_match(namespace)
+/// Check if the provided name follows the format rules.
+pub fn is_name_valid(name: &str) -> bool {
+    Regex::new(r"^[a-zA-Z0-9_]+$").unwrap().is_match(name)
 }
 
 // parse the configuration file of the first crate to extract
