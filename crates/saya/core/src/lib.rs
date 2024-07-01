@@ -2,6 +2,7 @@
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+use std::convert::identity;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
@@ -10,12 +11,13 @@ use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
 use futures::future;
+use itertools::Itertools;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use katana_rpc_types::trace::TxExecutionInfo;
-use prover::{HttpProverParams, ProverIdentifier};
+use prover::{HttpProverParams, ProofAndDiff, ProverIdentifier};
 pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
@@ -52,7 +54,7 @@ pub struct SayaConfig {
     pub prover_url: Url,
     pub prover_key: ProverAccessKey,
     pub store_proofs: bool,
-    pub start_block: u64,
+    pub block_range: (u64, Option<u64>),
     pub batch_size: usize,
     pub data_availability: Option<DataAvailabilityConfig>,
     pub world_address: FieldElement,
@@ -138,7 +140,8 @@ impl Saya {
     /// Should be refacto in crates as necessary.
     pub async fn start(&mut self) -> SayaResult<()> {
         let poll_interval_secs = 1;
-        let mut block = self.config.start_block.max(1); // Genesis block is not proven. We advance to block 1
+
+        let mut block = self.config.block_range.0.max(1); // Genesis block is not proven. We advance to block 1
 
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
@@ -149,13 +152,9 @@ impl Saya {
         }));
 
         // The structure responsible for proving.
-        let mut prove_scheduler = Scheduler::new(
-            self.config.batch_size,
-            self.config.world_address,
-            prover_identifier.clone(),
-        );
+        let mut prove_scheduler = None;
 
-        loop {
+        let unproven_blocks = loop {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
@@ -165,8 +164,10 @@ impl Saya {
                 }
             };
 
-            if block > latest_block {
-                trace!(target: LOG_TARGET, block_number = block, "Waiting for block.");
+            // Wait for the end of the range if it is specified
+            let minimum_expected = self.config.block_range.1.unwrap_or(block);
+            if minimum_expected > latest_block {
+                trace!(target: LOG_TARGET, block_number = latest_block + 1, "Waiting for block.");
                 tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                 continue;
             }
@@ -178,22 +179,51 @@ impl Saya {
             // Updating the local state sequentially, as there is only one instance of
             // `self.blockchain` This part does no actual  proving, so should not be a
             // problem
-            for p in params {
-                self.process_block(&mut prove_scheduler, block, p)?;
 
-                if prove_scheduler.is_full() {
-                    self.process_proven(prove_scheduler).await?;
+            if self.config.block_range.1.is_none() {
+                for p in params {
+                    let mut scheduler = if let Some(scheduler) = prove_scheduler {
+                        prove_scheduler = None;
+                        scheduler
+                    } else {
+                        Scheduler::new(
+                            self.config.batch_size,
+                            self.config.world_address,
+                            prover_identifier.clone(),
+                        )
+                    };
 
-                    prove_scheduler = Scheduler::new(
-                        self.config.batch_size,
-                        self.config.world_address,
-                        prover_identifier.clone(),
-                    );
+                    if let Some(prover_input) = self.process_block(block, p)? {
+                        scheduler.push_diff(prover_input)?;
+                        if scheduler.is_full() {
+                            self.process_proven(scheduler.proved().await?).await?;
+                        } else {
+                            prove_scheduler = Some(scheduler);
+                        }
+                    }
                 }
 
                 block += 1;
+            } else {
+                break params
+                    .into_iter()
+                    .map(|p| self.process_block(block, p))
+                    .collect::<Result<Vec<_>, _>>()?
+                    .into_iter()
+                    .filter_map(identity)
+                    .collect_vec();
             }
-        }
+        };
+
+        let (proof, diff) =
+            Scheduler::merge(unproven_blocks, self.config.world_address, prover_identifier).await?;
+
+        let block_range = (self.config.block_range.0, self.config.block_range.1.unwrap());
+        self.process_proven((proof, diff, block_range)).await?;
+
+        println!("Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
+
+        Ok(())
     }
 
     async fn prefetch_blocks(
@@ -277,10 +307,9 @@ impl Saya {
     ///   the genesis block.
     fn process_block(
         &mut self,
-        prove_scheduler: &mut Scheduler,
         block_number: BlockNumber,
         block_info: FetchedBlockInfo,
-    ) -> SayaResult<()> {
+    ) -> SayaResult<Option<ProgramInput>> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
         let FetchedBlockInfo { block, prev_state_root, state_updates, exec_infos, block_number } =
@@ -293,12 +322,12 @@ impl Saya {
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
         if block_number == 0 {
-            return Ok(());
+            return Ok(None);
         }
 
         if exec_infos.is_empty() {
             trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
-            return Ok(());
+            return Ok(None);
         }
 
         let transactions = block
@@ -327,11 +356,9 @@ impl Saya {
         };
         state_diff_prover_input.fill_da(self.config.world_address);
 
-        prove_scheduler.push_diff(state_diff_prover_input)?;
-
         info!(target: LOG_TARGET, block_number, "Block processed.");
 
-        Ok(())
+        Ok(Some(state_diff_prover_input))
     }
 
     /// Registers the facts + the send the proof to verifier. Not all provers require this step
@@ -341,10 +368,9 @@ impl Saya {
     ///
     /// * `prove_scheduler` - A full parallel prove scheduler.
     /// * `last_block` - The last block number in the `prove_scheduler`.
-    async fn process_proven(&self, prove_scheduler: Scheduler) -> SayaResult<()> {
+    async fn process_proven(&self, proven: ProofAndDiff) -> SayaResult<()> {
         // Prove each of the leaf nodes of the recursion tree and merge them into one
-        let (proof, state_diff, (_, last_block)) =
-            prove_scheduler.proved().await.context("Failed to prove.")?;
+        let (proof, state_diff, (_, last_block)) = proven;
 
         trace!(target: LOG_TARGET, last_block, "Processing proven blocks.");
 

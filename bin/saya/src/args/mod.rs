@@ -52,9 +52,12 @@ pub struct SayaArgs {
     /// Specify a block to start fetching data from.
     #[arg(short, long, default_value = "0")]
     pub start_block: u64,
+    #[arg(short, long)]
+    pub end_block: Option<u64>,
 
     #[arg(short, long, default_value = "1")]
     #[arg(help = "The number of blocks to be merged into a single proof.")]
+    #[arg(conflicts_with = "end_block")]
     pub batch_size: usize,
 
     #[command(flatten)]
@@ -147,7 +150,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 prover_url: args.proof.prover_url,
                 prover_key,
                 store_proofs: args.store_proofs,
-                start_block: args.start_block,
+                block_range: (args.start_block, args.end_block),
                 batch_size: args.batch_size,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
@@ -180,6 +183,7 @@ mod tests {
             store_proofs: true,
             json_log: false,
             start_block: 0,
+            end_block: None,
             batch_size: 4,
             data_availability: DataAvailabilityOptions {
                 da_chain: None,
@@ -215,7 +219,8 @@ mod tests {
         );
         assert!(!config.store_proofs);
         assert!(config.skip_publishing_proof);
-        assert_eq!(config.start_block, 0);
+        assert_eq!(config.block_range.0, 0);
+        assert_eq!(config.block_range.1, None);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");
             assert_eq!(celestia_config.node_auth_token, Some("your_auth_token".to_string()));
