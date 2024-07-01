@@ -20,7 +20,9 @@ pub enum ProvingState {
     Proved,
     NotPushed,
 }
+
 type ProvingStateWithBlock = (u64, ProvingState);
+pub type ProofAndDiff = (Proof, ProgramInput, (u64, u64));
 
 #[allow(missing_debug_implementations)]
 pub struct Scheduler {
@@ -70,7 +72,7 @@ impl Scheduler {
         Ok(())
     }
 
-    pub async fn proved(self) -> anyhow::Result<(Proof, ProgramInput, (u64, u64))> {
+    pub async fn proved(self) -> anyhow::Result<ProofAndDiff> {
         let (proof, input) = self.root_task.await?;
         Ok((proof, input, self.block_range))
     }
