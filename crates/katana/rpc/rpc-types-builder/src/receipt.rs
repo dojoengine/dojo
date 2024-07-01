@@ -24,23 +24,10 @@ where
         let receipt = ReceiptProvider::receipt_by_hash(&self.provider, self.transaction_hash)?;
         let Some(receipt) = receipt else { return Ok(None) };
 
-        let transaction_hash = self.transaction_hash;
-        let (block_number, block_hash) = TransactionProvider::transaction_block_num_and_hash(
-            &self.provider,
-            self.transaction_hash,
-        )?
-        .expect("must exist");
-
         let finality_status =
             TransactionStatusProvider::transaction_status(&self.provider, self.transaction_hash)?
                 .expect("must exist");
 
-        Ok(Some(TxReceipt::new(
-            transaction_hash,
-            block_number,
-            block_hash,
-            finality_status,
-            receipt,
-        )))
+        Ok(Some(TxReceipt::new(self.transaction_hash, finality_status, receipt)))
     }
 }

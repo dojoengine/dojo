@@ -1,3 +1,4 @@
+use num_traits::FromPrimitive;
 use starknet::core::types::Felt;
 use starknet::macros::short_string;
 use starknet_crypto::poseidon_hash_many;
@@ -15,5 +16,7 @@ pub(crate) fn compute_all_storage_addresses(
     packed_size: u32,
 ) -> Vec<Felt> {
     let base = compute_storage_base_address(model, entity_keys);
-    (0..packed_size).map(|i| base + i.into()).collect::<Vec<_>>()
+    (0..packed_size)
+        .map(|i| base + Felt::from_u32(i).expect("u32 should fit in Felt"))
+        .collect::<Vec<_>>()
 }

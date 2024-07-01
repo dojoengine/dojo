@@ -15,7 +15,7 @@ use dojo_world::utils::TransactionExt;
 use itertools::chain;
 use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{
-    BlockId, BlockTag, FieldElement, TransactionExecutionStatus, TransactionStatus,
+    BlockId, BlockTag, Felt, TransactionExecutionStatus, TransactionStatus,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -36,11 +36,11 @@ lazy_static::lazy_static!(
             Url::parse(STARKNET_URL).unwrap(),
         ));
 
-        let signer = FieldElement::from_hex_be(SIGNER_KEY).expect("invalid signer hex");
+        let signer = Felt::from_hex(SIGNER_KEY).expect("invalid signer hex");
         let signer = LocalWallet::from(SigningKey::from_secret_scalar(signer));
 
-        let address = FieldElement::from_hex_be(SIGNER_ADDRESS).expect("invalid signer address");
-        let chain_id = FieldElement::from_hex_be(CHAIN_ID).expect("invalid chain id");
+        let address = Felt::from_hex(SIGNER_ADDRESS).expect("invalid signer address");
+        let chain_id = Felt::from_hex(CHAIN_ID).expect("invalid chain id");
 
         let mut account = SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::New);
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -49,14 +49,14 @@ lazy_static::lazy_static!(
 );
 
 pub async fn starknet_apply_diffs(
-    world: FieldElement,
-    new_state: Vec<FieldElement>,
-    program_output: Vec<FieldElement>,
-    program_hash: FieldElement,
-    nonce: FieldElement,
+    world: Felt,
+    new_state: Vec<Felt>,
+    program_output: Vec<Felt>,
+    program_hash: Felt,
+    nonce: Felt,
 ) -> anyhow::Result<String> {
     let calldata = chain![
-        vec![FieldElement::from(new_state.len() as u64 / 2)].into_iter(),
+        vec![Felt::from(new_state.len() as u64 / 2)].into_iter(),
         new_state.clone().into_iter(),
         program_output.into_iter(),
         vec![program_hash],
