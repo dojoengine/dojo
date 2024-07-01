@@ -30,7 +30,7 @@ pub enum Clause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub enum EntityKeysClause {
-    HashedKeys(Vec<FieldElement>),
+    HashedKeys(Vec<Felt>),
     Keys(KeysClause),
 }
 
@@ -42,7 +42,7 @@ pub struct ModelKeysClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct KeysClause {
-    pub keys: Vec<Option<FieldElement>>,
+    pub keys: Vec<Option<Felt>>,
     pub pattern_matching: PatternMatching,
     pub models: Vec<String>,
 }
@@ -194,19 +194,15 @@ impl From<KeysClause> for proto::types::KeysClause {
     }
 }
 
-impl TryFrom<proto::types::KeysClause> for KeysClause {
-    type Error = FromByteSliceError;
-
-    fn try_from(value: proto::types::KeysClause) -> Result<Self, Self::Error> {
+impl From<proto::types::KeysClause> for KeysClause {
+    fn from(value: proto::types::KeysClause) -> Self {
         let keys = value
             .keys
             .iter()
-            .map(|k| {
-                if k.is_empty() { Ok(None) } else { Ok(Some(FieldElement::from_byte_slice_be(k)?)) }
-            })
-            .collect::<Result<Vec<Option<FieldElement>>, _>>()?;
+            .map(|k| if k.is_empty() { None } else { Some(Felt::from_bytes_be_slice(k)) })
+            .collect::<Vec<Option<Felt>>>();
 
-        Ok(Self { keys, pattern_matching: value.pattern_matching().into(), models: value.models })
+        Self { keys, pattern_matching: value.pattern_matching().into(), models: value.models }
     }
 }
 
@@ -243,23 +239,20 @@ impl From<EntityKeysClause> for proto::types::EntityKeysClause {
     }
 }
 
-impl TryFrom<proto::types::EntityKeysClause> for EntityKeysClause {
-    type Error = FromByteSliceError;
-
-    fn try_from(value: proto::types::EntityKeysClause) -> Result<Self, Self::Error> {
+impl From<proto::types::EntityKeysClause> for EntityKeysClause {
+    fn from(value: proto::types::EntityKeysClause) -> Self {
         match value.clause_type.expect("must have") {
             proto::types::entity_keys_clause::ClauseType::HashedKeys(clause) => {
                 let keys = clause
                     .hashed_keys
                     .into_iter()
-                    .map(|k| FieldElement::from_byte_slice_be(&k))
-                    .collect::<Result<Vec<_>, _>>()?;
+                    .map(|k| Felt::from_bytes_be_slice(&k))
+                    .collect::<Vec<_>>();
 
-                Ok(Self::HashedKeys(keys))
+                Self::HashedKeys(keys)
             }
-            proto::types::entity_keys_clause::ClauseType::Keys(clause) => {
-                Ok(Self::Keys(clause.try_into()?))
-            }
+
+            proto::types::entity_keys_clause::ClauseType::Keys(clause) => Self::Keys(clause.into()),
         }
     }
 }
@@ -384,7 +377,7 @@ impl From<proto::types::Event> for Event {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct EventQuery {
-    pub keys: Vec<FieldElement>,
+    pub keys: KeysClause,
     pub limit: u32,
     pub offset: u32,
 }

@@ -674,6 +674,8 @@ mod tests {
     use starknet_api::stark_felt;
     use starknet_api::transaction::{EventContent, EventData, EventKey};
 
+    use crate::implementation::blockifier::utils;
+
     use super::*;
 
     #[test]
@@ -757,7 +759,7 @@ mod tests {
         let expected_contract_address = to_address(call.call.storage_address);
         let expected_caller_address = to_address(call.call.caller_address);
         let expected_code_address = call.call.code_address.map(to_address);
-        let expected_class_hash = call.call.class_hash.map(|a| a.0.into());
+        let expected_class_hash = call.call.class_hash.map(|a| utils::to_stark_felt(a.0));
         let expected_entry_point_selector = call.call.entry_point_selector.0.into();
         let expected_calldata: Vec<FieldElement> =
             call.call.calldata.0.iter().map(|f| (*f).into()).collect();
@@ -793,9 +795,9 @@ mod tests {
         };
 
         let expected_storage_read_values: Vec<FieldElement> =
-            call.storage_read_values.iter().map(|f| (*f).into()).collect();
+            call.storage_read_values.into_iter().map(utils::to_felt).collect();
         let expected_storage_keys: HashSet<FieldElement> =
-            call.accessed_storage_keys.iter().map(|k| (*k.0.key()).into()).collect();
+            call.accessed_storage_keys.into_iter().map(|k| utils::to_felt(*k.0.key())).collect();
         let expected_inner_calls: Vec<_> =
             call.inner_calls.clone().into_iter().map(to_call_info).collect();
 

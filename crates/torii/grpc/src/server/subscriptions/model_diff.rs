@@ -63,8 +63,7 @@ impl StateDiffManager {
         let storage_addresses = reqs
             .into_iter()
             .map(|req| {
-                let keys: ModelKeysClause =
-                    req.keys.try_into().map_err(ParseError::FromByteSliceError)?;
+                let keys: ModelKeysClause = req.keys.into();
 
                 let base = poseidon_hash_many(&[
                     short_string!("dojo_storage"),

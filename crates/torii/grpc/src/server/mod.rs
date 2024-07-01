@@ -531,9 +531,7 @@ impl DojoWorld {
                         .hashed_keys
                         .iter()
                         .map(|id| {
-                            Ok(FieldElement::from_byte_slice_be(id)
-                                .map(|id| format!("{table}.id = '{id:#x}'"))
-                                .map_err(ParseError::FromByteSliceError)?)
+                            Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id)))
                         })
                         .collect::<Result<Vec<_>, Error>>()?;
                     where_clauses.push(format!("({})", ids.join(" OR ")));
@@ -897,9 +895,7 @@ fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
     Ok(data
         .trim_end_matches('/')
         .split('/')
-        .map(|d| {
-            FieldElement::from_str(d).map_err(ParseError::FromStr).map(|f| f.to_bytes_be().to_vec())
-        })
+        .map(|d| Felt::from_str(d).map_err(ParseError::FromStr).map(|f| f.to_bytes_be().to_vec()))
         .collect::<Result<Vec<_>, _>>()?)
 }
 
@@ -907,7 +903,7 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
     let keys = process_event_field(&row.0)?;
     let data = process_event_field(&row.1)?;
     let transaction_hash =
-        FieldElement::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
+        Felt::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
 
     Ok(proto::types::Event { keys, data, transaction_hash })
 }
@@ -917,8 +913,7 @@ fn map_row_to_entity(
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
     schemas: &[Ty],
 ) -> Result<proto::types::Entity, Error> {
-    let hashed_keys =
-        FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+    let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
         .iter()
         .map(|schema| {
@@ -940,9 +935,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
             if bytes.is_empty() {
                 return Ok("0x[0-9a-fA-F]+".to_string());
             }
-            Ok(FieldElement::from_byte_slice_be(bytes)
-                .map(|felt| format!("{felt:#x}"))
-                .map_err(ParseError::FromByteSliceError)?)
+            Ok(format!("{:#x}", Felt::from_bytes_be_slice(bytes)))
         })
         .collect::<Result<Vec<_>, Error>>()?;
     let mut keys_pattern = format!("^{}", keys.join("/"));

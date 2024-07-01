@@ -134,7 +134,7 @@ impl WorldClient {
 
         Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
             Some(entity) => entity.try_into().expect("must able to serialize"),
-            None => Entity { hashed_keys: FieldElement::ZERO, models: vec![] },
+            None => Entity { hashed_keys: Felt::ZERO, models: vec![] },
         }))))
     }
 

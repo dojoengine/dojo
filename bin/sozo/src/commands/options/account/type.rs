@@ -4,8 +4,8 @@ use async_trait::async_trait;
 
 use starknet::accounts::{
     single_owner, Account, Call, ConnectedAccount, DeclarationV2, DeclarationV3, ExecutionEncoder,
-    ExecutionV1, ExecutionV3, LegacyDeclaration, RawDeclarationV2, RawExecutionV1, RawExecutionV3,
-    RawLegacyDeclaration, SingleOwnerAccount,
+    ExecutionV1, ExecutionV3, LegacyDeclaration, RawDeclarationV2, RawDeclarationV3,
+    RawExecutionV1, RawExecutionV3, RawLegacyDeclaration, SingleOwnerAccount,
 };
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{Felt, FlattenedSierraClass};
@@ -166,6 +166,22 @@ where
             #[cfg(feature = "controller")]
             Self::Controller(account) => {
                 account.sign_declaration_v2(declaration, query_only).await?
+            }
+        };
+        Ok(result)
+    }
+
+    async fn sign_declaration_v3(
+        &self,
+        declaration: &RawDeclarationV3,
+        query_only: bool,
+    ) -> Result<Vec<Felt>, Self::SignError> {
+        let result = match self {
+            Self::Standard(account) => account.sign_declaration_v3(declaration, query_only).await?,
+
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => {
+                account.sign_declaration_v3(declaration, query_only).await?
             }
         };
         Ok(result)

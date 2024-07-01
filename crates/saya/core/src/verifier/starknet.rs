@@ -13,17 +13,17 @@ use crate::dojo_os::get_starknet_account;
 use crate::StarknetAccountData;
 
 pub async fn starknet_verify(
-    fact_registry_address: FieldElement,
-    serialized_proof: Vec<FieldElement>,
+    fact_registry_address: Felt,
+    serialized_proof: Vec<Felt>,
     starknet_config: StarknetAccountData,
-) -> anyhow::Result<(String, FieldElement)> {
+) -> anyhow::Result<(String, Felt)> {
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let account = get_starknet_account(starknet_config)?;
     let account = account.lock().await;
 
     let nonce = account.get_nonce().await?;
     let tx = account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
             calldata: serialized_proof,

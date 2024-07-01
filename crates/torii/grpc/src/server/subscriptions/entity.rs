@@ -91,12 +91,12 @@ impl Service {
         entity: &Entity,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
-        let hashed = FieldElement::from_str(&entity.id).map_err(ParseError::FromStr)?;
+        let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;
         let keys = entity
             .keys
             .trim_end_matches(FELT_DELIMITER)
             .split(FELT_DELIMITER)
-            .map(FieldElement::from_str)
+            .map(Felt::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;
 
