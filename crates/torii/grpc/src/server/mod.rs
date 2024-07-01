@@ -216,11 +216,7 @@ impl DojoWorld {
                 let ids = hashed_keys
                     .hashed_keys
                     .iter()
-                    .map(|id| {
-                        Ok(Felt::from_byte_slice_be(id)
-                            .map(|id| format!("{table}.id = '{id:#x}'"))
-                            .map_err(ParseError::FromByteSliceError)?)
-                    })
+                    .map(|id| Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id))))
                     .collect::<Result<Vec<_>, Error>>()?;
 
                 format!("WHERE {}", ids.join(" OR "))
@@ -314,9 +310,7 @@ impl DojoWorld {
                 if bytes.is_empty() {
                     return Ok("%".to_string());
                 }
-                Ok(Felt::from_byte_slice_be(bytes)
-                    .map(|felt| format!("{felt:#x}"))
-                    .map_err(ParseError::FromByteSliceError)?)
+                Ok(format!("{:#x}", Felt::from_bytes_be_slice(bytes)))
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
@@ -401,9 +395,7 @@ impl DojoWorld {
                     return Ok("%".to_string());
                 }
 
-                Ok(Felt::from_byte_slice_be(bytes)
-                    .map(|felt| format!("{felt:#x}"))
-                    .map_err(ParseError::FromByteSliceError)?)
+                Ok(format!("{:#x}", Felt::from_bytes_be_slice(bytes)))
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
@@ -752,15 +744,7 @@ impl DojoWorld {
         clause: proto::types::EventKeysClause,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
         self.event_manager
-            .add_subscriber(
-                clause
-                    .keys
-                    .iter()
-                    .map(|key| {
-                        Felt::from_byte_slice_be(key).map_err(ParseError::FromByteSliceError)
-                    })
-                    .collect::<Result<Vec<_>, _>>()?,
-            )
+            .add_subscriber(clause.keys.iter().map(|key| Felt::from_bytes_be_slice(key)).collect())
             .await
     }
 
@@ -850,12 +834,8 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { hashed_keys } = request.into_inner();
-        let hashed_keys = hashed_keys
-            .iter()
-            .map(|id| {
-                Felt::from_byte_slice_be(id).map_err(|e| Status::invalid_argument(e.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let hashed_keys =
+            hashed_keys.iter().map(|id| Felt::from_bytes_be_slice(id)).collect::<Vec<_>>();
         let rx = self
             .subscribe_entities(hashed_keys)
             .await
@@ -884,12 +864,8 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { hashed_keys } = request.into_inner();
-        let hashed_keys = hashed_keys
-            .iter()
-            .map(|id| {
-                Felt::from_byte_slice_be(id).map_err(|e| Status::invalid_argument(e.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let hashed_keys =
+            hashed_keys.iter().map(|id| Felt::from_bytes_be_slice(id)).collect::<Vec<_>>();
         let rx = self
             .subscribe_event_messages(hashed_keys)
             .await

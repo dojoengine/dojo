@@ -180,8 +180,8 @@ impl From<KeysClause> for proto::types::KeysClause {
 
 impl From<proto::types::KeysClause> for KeysClause {
     fn from(value: proto::types::KeysClause) -> Self {
-        let keys = value.keys.into_iter().map(Felt::from_byte_slice_be).collect::<Vec<_>>();
-        Ok(Self { model: value.model, keys })
+        let keys = value.keys.into_iter().map(|v| Felt::from_bytes_be_slice(&v)).collect();
+        Self { model: value.model, keys }
     }
 }
 
@@ -280,14 +280,10 @@ pub struct Event {
 
 impl From<proto::types::Event> for Event {
     fn from(value: proto::types::Event) -> Self {
-        let keys = value.keys.into_iter().map(|k| Felt::from_byte_slice_be(&k)).collect::<Vec<_>>();
-        let data = value.data.into_iter().map(|d| Felt::from_byte_slice_be(&d)).collect::<Vec<_>>();
-
-        Ok(Self {
-            keys,
-            data,
-            transaction_hash: Felt::from_byte_slice_be(&value.transaction_hash)?,
-        })
+        let keys = value.keys.into_iter().map(|k| Felt::from_bytes_be_slice(&k)).collect();
+        let data = value.data.into_iter().map(|d| Felt::from_bytes_be_slice(&d)).collect();
+        let transaction_hash = Felt::from_bytes_be_slice(&value.transaction_hash);
+        Self { keys, data, transaction_hash }
     }
 }
 

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
@@ -21,7 +21,7 @@ pub struct CallArgs {
     #[arg(value_delimiter = ',')]
     #[arg(help = "The calldata to be passed to the entrypoint. Comma separated values e.g., \
                   0x12345,0x69420.")]
-    pub calldata: Vec<FieldElement>,
+    pub calldata: Vec<Felt>,
 
     #[arg(short, long)]
     #[arg(help = "The block ID (could be a hash, a number, 'pending' or 'latest')")]

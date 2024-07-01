@@ -17,8 +17,8 @@ use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use num_traits::ToPrimitive;
 use starknet::core::types::{
-    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
-    StateDiff, StateUpdate,
+    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, Felt, NonceUpdate, StateDiff,
+    StateUpdate,
 };
 
 use crate::ProviderResult;
@@ -65,7 +65,7 @@ pub fn state_updates_from_rpc(state_update: &StateUpdate) -> ProviderResult<Stat
     Ok(out)
 }
 
-/// Converts the [`StateDiff`] from RPC types into a [`Vec<FieldElement>`].
+/// Converts the [`StateDiff`] from RPC types into a [`Vec<Felt>`].
 ///
 /// Currently, Katana does not support `replaced_classes` and `deprecated_declared_classes`:
 /// <https://github.com/dojoengine/dojo/blob/10031f0abba7ca8dafc7040a52883e5af469863a/crates/katana/rpc/rpc-types/src/state_update.rs#L66>.
@@ -76,7 +76,7 @@ pub fn state_updates_from_rpc(state_update: &StateUpdate) -> ProviderResult<Stat
 /// # Arguments
 ///
 /// * `state_diff` - The [`StateDiff`] to serialize.
-pub fn state_diff_to_felts(state_diff: &StateDiff) -> Vec<FieldElement> {
+pub fn state_diff_to_felts(state_diff: &StateDiff) -> Vec<Felt> {
     let mut data = vec![];
 
     // Order matters here, storage then nonce then deployed.
@@ -100,17 +100,14 @@ pub fn state_diff_to_felts(state_diff: &StateDiff) -> Vec<FieldElement> {
 
 /// Serializes for the DA all the contracts that have at least one storage update.
 /// This may include nonce and/or deployed-declared updates.
-/// Returns a [`HashSet<FieldElement>`] of all the contract addresses that
+/// Returns a [`HashSet<Felt>`] of all the contract addresses that
 /// were uniquely processed.
 ///
 /// # Arguments
 ///
 /// * `state_diff` - The state diff to process.
 /// * `out` - The output buffer to serialize into.
-fn serialize_storage_updates(
-    state_diff: &StateDiff,
-    out: &mut Vec<FieldElement>,
-) -> HashSet<FieldElement> {
+fn serialize_storage_updates(state_diff: &StateDiff, out: &mut Vec<Felt>) -> HashSet<Felt> {
     let mut processed_addresses = HashSet::new();
 
     for contract_diff in &state_diff.storage_diffs {
@@ -154,8 +151,8 @@ fn serialize_storage_updates(
 /// * `out` - The output buffer to serialize into.
 fn serialize_nonce_updates(
     state_diff: &StateDiff,
-    processed_addresses: &mut HashSet<FieldElement>,
-    out: &mut Vec<FieldElement>,
+    processed_addresses: &mut HashSet<Felt>,
+    out: &mut Vec<Felt>,
 ) {
     for nonce_update in &state_diff.nonces {
         let NonceUpdate { contract_address, nonce: new_nonce } = *nonce_update;
@@ -189,8 +186,8 @@ fn serialize_nonce_updates(
 /// * `out` - The output buffer to serialize into.
 fn serialize_deployed_updates(
     state_diff: &StateDiff,
-    processed_addresses: &mut HashSet<FieldElement>,
-    out: &mut Vec<FieldElement>,
+    processed_addresses: &mut HashSet<Felt>,
+    out: &mut Vec<Felt>,
 ) {
     for deployed in &state_diff.deployed_contracts {
         let DeployedContractItem { address, class_hash } = *deployed;
@@ -217,10 +214,10 @@ fn serialize_deployed_updates(
 /// * `is_storage_only` - True if the contract address was only modified with storage updates. False
 ///   if the contract was deployed or it's class hash replaced during this state update.
 fn compute_update_meta_info(
-    new_nonce: Option<FieldElement>,
+    new_nonce: Option<Felt>,
     n_storage_updates: u64,
     is_storage_only: bool,
-) -> FieldElement {
+) -> Felt {
     let mut meta = if is_storage_only {
         U256::from(0)
     } else {
@@ -235,7 +232,7 @@ fn compute_update_meta_info(
 
     meta += U256::from(n_storage_updates);
 
-    FieldElement::from_hex(format!("0x{:064x}", meta).as_str()).unwrap()
+    Felt::from_hex(format!("0x{:064x}", meta).as_str()).unwrap()
 }
 
 #[cfg(test)]
@@ -247,13 +244,13 @@ mod tests {
 
     #[test]
     fn compute_update_meta_info_no_flag() {
-        let info = compute_update_meta_info(Some(FieldElement::ONE), 1, true);
+        let info = compute_update_meta_info(Some(Felt::ONE), 1, true);
         assert_eq!(info, felt!("0x00000000000000010000000000000001"));
     }
 
     #[test]
     fn compute_update_meta_info_with_flag() {
-        let info = compute_update_meta_info(Some(FieldElement::ONE), 1, false);
+        let info = compute_update_meta_info(Some(Felt::ONE), 1, false);
         assert_eq!(info, felt!("0x100000000000000010000000000000001"));
     }
 

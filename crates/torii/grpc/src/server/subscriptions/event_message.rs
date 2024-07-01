@@ -9,7 +9,7 @@ use futures::Stream;
 use futures_util::StreamExt;
 use rand::Rng;
 use sqlx::{Pool, Sqlite};
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use torii_core::cache::ModelCache;
@@ -25,7 +25,7 @@ use crate::proto::world::SubscribeEntityResponse;
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
 pub struct EventMessagesSubscriber {
     /// Entity ids that the subscriber is interested in
-    hashed_keys: HashSet<FieldElement>,
+    hashed_keys: HashSet<Felt>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
@@ -38,7 +38,7 @@ pub struct EventMessageManager {
 impl EventMessageManager {
     pub async fn add_subscriber(
         &self,
-        hashed_keys: Vec<FieldElement>,
+        hashed_keys: Vec<Felt>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
@@ -92,7 +92,7 @@ impl Service {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            let hashed = FieldElement::from_str(hashed_keys).map_err(ParseError::FromStr)?;
+            let hashed = Felt::from_str(hashed_keys).map_err(ParseError::FromStr)?;
             // publish all updates if ids is empty or only ids that are subscribed to
             if sub.hashed_keys.is_empty() || sub.hashed_keys.contains(&hashed) {
                 let models_query = r#"

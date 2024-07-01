@@ -9,7 +9,7 @@ use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
 use slot::session::Policy;
 use starknet::core::types::contract::{AbiEntry, StateMutability};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::short_string;
 use starknet::providers::Provider;
@@ -121,7 +121,7 @@ where
 /// project's base manifest ( `/manifests/<profile>/base` ) and convert them into policies.
 fn collect_policies(
     world_addr_or_name: WorldAddressOrName,
-    user_address: FieldElement,
+    user_address: Felt,
     config: &Config,
 ) -> Result<Vec<Policy>> {
     let root_dir = config.root();
@@ -140,7 +140,7 @@ fn get_project_base_manifest(root_dir: &Utf8Path, profile: &str) -> Result<BaseM
 
 fn collect_policies_from_base_manifest(
     world_address: WorldAddressOrName,
-    user_address: FieldElement,
+    user_address: Felt,
     base_path: &Utf8Path,
     manifest: BaseManifest,
 ) -> Result<Vec<Policy>> {
@@ -182,7 +182,7 @@ fn collect_policies_from_base_manifest(
 fn policies_from_abis(
     policies: &mut Vec<Policy>,
     contract_name: &str,
-    contract_address: FieldElement,
+    contract_address: Felt,
     entries: &[AbiEntry],
 ) {
     for entry in entries {
@@ -205,10 +205,7 @@ fn policies_from_abis(
     }
 }
 
-fn get_dojo_contract_address(
-    world_address: FieldElement,
-    manifest: &Manifest<DojoContract>,
-) -> FieldElement {
+fn get_dojo_contract_address(world_address: Felt, manifest: &Manifest<DojoContract>) -> Felt {
     if let Some(address) = manifest.inner.address {
         address
     } else {
@@ -220,7 +217,7 @@ fn get_dojo_contract_address(
 fn get_dojo_world_address(
     world_address: WorldAddressOrName,
     manifest: &BaseManifest,
-) -> Result<FieldElement> {
+) -> Result<Felt> {
     match world_address {
         WorldAddressOrName::Address(addr) => Ok(addr),
         WorldAddressOrName::Name(name) => {
@@ -230,7 +227,7 @@ fn get_dojo_world_address(
                 salt,
                 manifest.world.inner.original_class_hash,
                 &[manifest.base.inner.original_class_hash],
-                FieldElement::ZERO,
+                Felt::ZERO,
             );
             Ok(address)
         }

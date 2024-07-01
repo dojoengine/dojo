@@ -12,10 +12,10 @@ use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
 use futures::lock::Mutex;
 use parking_lot::{RwLock, RwLockReadGuard};
+use starknet::core::types::Felt;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
@@ -55,7 +55,7 @@ impl Client {
         torii_url: String,
         rpc_url: String,
         relay_url: String,
-        world: FieldElement,
+        world: Felt,
         models_keys: Option<Vec<KeysClause>>,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
@@ -153,18 +153,11 @@ impl Client {
     pub async fn starknet_events(&self, query: EventQuery) -> Result<Vec<Event>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEventsResponse { events } = grpc_client.retrieve_events(query).await?;
-        Ok(events
-            .into_iter()
-            .map(TryInto::try_into)
-            .collect::<Result<Vec<Event>, _>>()
-            .map_err(SchemaError::SliceError)?)
+        Ok(events.into_iter().map(Event::from).collect::<Vec<Event>>())
     }
 
     /// A direct stream to grpc subscribe entities
-    pub async fn on_entity_updated(
-        &self,
-        ids: Vec<FieldElement>,
-    ) -> Result<EntityUpdateStreaming, Error> {
+    pub async fn on_entity_updated(&self, ids: Vec<Felt>) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_entities(ids).await?;
         Ok(stream)
@@ -173,7 +166,7 @@ impl Client {
     /// A direct stream to grpc subscribe event messages
     pub async fn on_event_message_updated(
         &self,
-        ids: Vec<FieldElement>,
+        ids: Vec<Felt>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_event_messages(ids).await?;
@@ -182,7 +175,7 @@ impl Client {
 
     pub async fn on_starknet_event(
         &self,
-        keys: Option<Vec<FieldElement>>,
+        keys: Option<Vec<Felt>>,
     ) -> Result<EventUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_events(keys).await?;
@@ -298,7 +291,7 @@ impl Client {
         Ok(stream)
     }
 
-    async fn initiate_model(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
+    async fn initiate_model(&self, model: &str, keys: Vec<Felt>) -> Result<(), Error> {
         let model_reader = self.world_reader.model_reader(model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(

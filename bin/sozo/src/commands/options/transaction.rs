@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use clap::Args;
 use dojo_world::migration::{TxnAction, TxnConfig};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use tracing::trace;
 
 #[derive(Debug, Args, Default)]
@@ -20,7 +20,7 @@ pub struct TransactionOptions {
     #[arg(help = "Maximum raw value to be used for fees, in Wei.")]
     #[arg(conflicts_with = "fee_estimate_multiplier")]
     #[arg(global = true)]
-    pub max_fee_raw: Option<FieldElement>,
+    pub max_fee_raw: Option<Felt>,
 
     #[arg(long)]
     #[arg(help = "Wait until the transaction is accepted by the sequencer, returning the status \
