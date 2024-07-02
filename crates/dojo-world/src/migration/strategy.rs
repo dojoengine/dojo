@@ -107,6 +107,8 @@ pub fn prepare_for_migration(
     diff: WorldDiff,
 ) -> Result<MigrationStrategy> {
     let mut metadata = HashMap::new();
+    // when would this be triggered?
+    //
     let entries = fs::read_dir(target_dir).with_context(|| {
         format!(
             "Failed trying to read target directory ({target_dir})\nNOTE: build files are profile \

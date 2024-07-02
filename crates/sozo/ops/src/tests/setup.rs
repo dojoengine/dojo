@@ -6,6 +6,7 @@ use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::strategy::MigrationStrategy;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use scarb::core::{Config, Workspace};
 use scarb::ops;
 use starknet::accounts::SingleOwnerAccount;
@@ -31,7 +32,7 @@ pub fn load_config() -> Config {
     let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move/");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
-    compiler::copy_tmp_config(&source_project_dir, &dojo_core_path)
+    compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV)
 }
 
 /// Setups the workspace for the spawn-and-moves project.

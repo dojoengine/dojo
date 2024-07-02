@@ -3,6 +3,7 @@ use dojo_test_utils::compiler;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use starknet::accounts::ConnectedAccount;
 use starknet::macros::felt;
 
@@ -20,6 +21,7 @@ async fn test_model() {
     let config = compiler::copy_tmp_config(
         &Utf8PathBuf::from("../../examples/spawn-and-move"),
         &Utf8PathBuf::from("../dojo-core"),
+        Profile::DEV,
     );
 
     let manifest_dir = config.manifest_path().parent().unwrap();

@@ -319,30 +319,30 @@
   },
   {
     "type": "impl",
-    "name": "contract_initializedImpl",
-    "interface_name": "dojo_examples::others::others::Icontract_initialized"
+    "name": "server_profileImpl",
+    "interface_name": "dojo_examples::models::Iserver_profile"
   },
   {
     "type": "struct",
-    "name": "dojo_examples::others::others::ContractInitialized",
+    "name": "dojo_examples::models::ServerProfile",
     "members": [
       {
-        "name": "contract_address",
+        "name": "player",
         "type": "core::starknet::contract_address::ContractAddress"
       },
       {
-        "name": "contract_class",
-        "type": "core::starknet::class_hash::ClassHash"
+        "name": "server_id",
+        "type": "core::integer::u32"
       },
       {
-        "name": "value",
-        "type": "core::integer::u8"
+        "name": "name",
+        "type": "core::byte_array::ByteArray"
       }
     ]
   },
   {
     "type": "interface",
-    "name": "dojo_examples::others::others::Icontract_initialized",
+    "name": "dojo_examples::models::Iserver_profile",
     "items": [
       {
         "type": "function",
@@ -350,7 +350,7 @@
         "inputs": [
           {
             "name": "model",
-            "type": "dojo_examples::others::others::ContractInitialized"
+            "type": "dojo_examples::models::ServerProfile"
           }
         ],
         "outputs": [],
@@ -360,7 +360,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::others::others::contract_initialized::Event",
+    "name": "dojo_examples::models::server_profile::Event",
     "kind": "enum",
     "variants": []
   }

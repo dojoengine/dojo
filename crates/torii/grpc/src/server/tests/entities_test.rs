@@ -11,6 +11,7 @@ use dojo_world::contracts::WorldContractReader;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
+use scarb::compiler::Profile;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -42,7 +43,7 @@ async fn test_entities_queries() {
     let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
@@ -65,7 +66,8 @@ async fn test_entities_queries() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let config =
+        build_test_config("../../../examples/spawn-and-move/Scarb.toml", Profile::DEV).unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
     let migration_output =

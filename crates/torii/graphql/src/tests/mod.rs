@@ -16,6 +16,7 @@ use dojo_world::manifest::DeploymentManifest;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
+use scarb::compiler::Profile;
 use scarb::ops;
 use serde::Deserialize;
 use serde_json::Value;
@@ -282,7 +283,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let source_project_dir = Utf8PathBuf::from("../types-test");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
@@ -292,7 +293,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
     let migration =
         prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
-    let config = build_test_config("../types-test/Scarb.toml").unwrap();
+    let config = build_test_config("../types-test/Scarb.toml", Profile::DEV).unwrap();
     let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
     let sequencer =
