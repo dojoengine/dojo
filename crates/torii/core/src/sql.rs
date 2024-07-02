@@ -96,6 +96,7 @@ impl Sql {
     #[allow(clippy::too_many_arguments)]
     pub async fn register_model(
         &mut self,
+        namespace: &str,
         model: Ty,
         layout: Layout,
         class_hash: FieldElement,
@@ -105,7 +106,7 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let insert_models =
-            "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
+            "INSERT INTO models (id, name, namespace, class_hash, contract_address, layout, packed_size, \
              unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
              UPDATE SET contract_address=EXCLUDED.contract_address, \
              class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
@@ -115,6 +116,7 @@ impl Sql {
             // this is temporary until the model hash is precomputed
             .bind(&format!("{:#x}", &get_selector_from_name(&model.name())?))
             .bind(model.name())
+            .bind(namespace)
             .bind(format!("{class_hash:#x}"))
             .bind(format!("{contract_address:#x}"))
             .bind(serde_json::to_string(&layout)?)
