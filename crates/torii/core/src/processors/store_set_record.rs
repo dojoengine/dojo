@@ -49,7 +49,7 @@ where
     ) -> Result<(), Error> {
         let selector = event.data[MODEL_INDEX];
 
-        let model = db.model(&format!("{:#x}", selector)).await?;
+        let model = db.model(selector).await?;
 
         info!(
             target: LOG_TARGET,

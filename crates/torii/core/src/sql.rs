@@ -305,8 +305,8 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn model(&self, model: &str) -> Result<ModelSQLReader> {
-        let reader = ModelSQLReader::new(model, self.pool.clone()).await?;
+    pub async fn model(&self, selector: FieldElement) -> Result<ModelSQLReader> {
+        let reader = ModelSQLReader::new(selector, self.pool.clone()).await?;
         Ok(reader)
     }
 

@@ -55,9 +55,8 @@ pub enum ModelError {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
-    // TODO: kept for compatibility but should be removed
-    // because it returns the model name hash and not the model name itself.
-    fn name(&self) -> String;
+    fn namespace(&self) -> &str;
+    fn name(&self) -> &str;
     fn selector(&self) -> FieldElement;
     fn class_hash(&self) -> FieldElement;
     fn contract_address(&self) -> FieldElement;
@@ -68,8 +67,12 @@ pub trait ModelReader<E> {
 }
 
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
-    /// The name of the model
-    name: FieldElement,
+    /// Namespace of the model
+    namespace: String,
+    /// Name of the model
+    name: String,
+    /// The selector of the model
+    selector: FieldElement,
     /// The class hash of the model
     class_hash: FieldElement,
     /// The contract address of the model
@@ -103,10 +106,12 @@ where
         let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
 
         Ok(Self {
+            namespace: namespace.into(),
+            name: name.into(),
             world_reader: world,
             class_hash: class_hash.into(),
             contract_address: contract_address.into(),
-            name: model_selector,
+            selector: model_selector,
             model_reader,
         })
     }
@@ -144,12 +149,16 @@ impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
 where
     P: Provider + Sync + Send,
 {
-    fn name(&self) -> String {
-        self.name.to_string()
+    fn namespace(&self) -> &str {
+        &self.namespace
+    }
+
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn selector(&self) -> FieldElement {
-        self.name
+        self.selector
     }
 
     fn class_hash(&self) -> FieldElement {
