@@ -188,7 +188,7 @@ impl StateProvider for ForkedSnapshot {
 
 impl ContractClassProvider for ForkedSnapshot {
     fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        if self.inner.compiled_class_hashes.get(&hash).is_some() {
+        if self.inner.compiled_class_hashes.contains_key(&hash) {
             Ok(self.classes.sierra_classes.read().get(&hash).cloned())
         } else {
             ContractClassProvider::sierra_class(&self.inner.db, hash)
@@ -206,7 +206,7 @@ impl ContractClassProvider for ForkedSnapshot {
     }
 
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if self.inner.compiled_class_hashes.get(&hash).is_some() {
+        if self.inner.compiled_class_hashes.contains_key(&hash) {
             Ok(self.classes.compiled_classes.read().get(&hash).cloned())
         } else {
             ContractClassProvider::class(&self.inner.db, hash)
