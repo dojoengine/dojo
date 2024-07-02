@@ -430,7 +430,7 @@ mod tests {
     fn mock_receipt(
         finality_status: TransactionFinalityStatus,
         execution_result: ExecutionResult,
-    ) -> TransactionReceipt {
+    ) -> TransactionReceiptWithBlockInfo {
         let receipt = TransactionReceipt::Invoke(InvokeTransactionReceipt {
             finality_status,
             execution_result,
@@ -443,7 +443,10 @@ mod tests {
 
         TransactionReceiptWithBlockInfo {
             receipt,
-            block: ReceiptBlock::Block { block_hash: 0, block_number: 0 },
+            block: ReceiptBlock::Block {
+                block_hash: Default::default(),
+                block_number: Default::default(),
+            },
         }
     }
 
@@ -508,10 +511,8 @@ mod tests {
     #[test]
     fn wait_for_finality_status_with_no_succeed() {
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL2,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
 
             assert_eval_receipt!(
                 (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL2)),
@@ -520,10 +521,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL2,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
 
             assert!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -536,10 +535,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL1,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
 
             assert_eval_receipt!(
                 (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL2)),
@@ -548,10 +545,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL1,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
 
             assert_eval_receipt!(
                 (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL1)),
@@ -563,10 +558,8 @@ mod tests {
     #[test]
     fn wait_for_finality_status_with_must_succeed() {
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL2,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
 
             assert_eq!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -581,10 +574,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL1,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
 
             assert_eq!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -599,10 +590,10 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
+            let receipt = mock_receipt(
                 TransactionFinalityStatus::AcceptedOnL1,
                 ExecutionResult::Reverted { reason: Default::default() },
-            ));
+            );
 
             let err =
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -620,9 +611,7 @@ mod tests {
     #[test]
     fn wait_for_pending_tx() {
         {
-            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
-                ExecutionResult::Succeeded,
-            ));
+            let receipt = mock_pending_receipt(ExecutionResult::Succeeded);
 
             assert!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -635,9 +624,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
-                ExecutionResult::Reverted { reason: Default::default() },
-            ));
+            let receipt =
+                mock_pending_receipt(ExecutionResult::Reverted { reason: Default::default() });
 
             assert_eq!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -652,9 +640,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
-                ExecutionResult::Reverted { reason: Default::default() },
-            ));
+            let receipt =
+                mock_pending_receipt(ExecutionResult::Reverted { reason: Default::default() });
 
             let err =
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
