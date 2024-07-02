@@ -363,10 +363,10 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
         strk_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.strk),
     };
 
-    let eth_l1_gas_price = NonZeroU128::new(block_env.l1_gas_prices.eth)
-        .unwrap_or_else(|| NonZeroU128::new(1).unwrap());
-    let strk_l1_gas_price = NonZeroU128::new(block_env.l1_gas_prices.strk)
-        .unwrap_or_else(|| NonZeroU128::new(1).unwrap());
+    let eth_l1_gas_price =
+        NonZeroU128::new(block_env.l1_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
+    let strk_l1_gas_price =
+        NonZeroU128::new(block_env.l1_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
 
     let gas_prices = GasPrices {
         eth_l1_gas_price,
