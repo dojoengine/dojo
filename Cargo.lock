@@ -5224,6 +5224,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
+ "sha2 0.10.8",
  "similar-asserts",
  "smol_str",
  "starknet",

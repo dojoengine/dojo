@@ -9,7 +9,7 @@ use dojo_world::manifest::{
     ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,
     DEPLOYMENTS_DIR, MANIFESTS_DIR,
 };
-use dojo_world::metadata::{dojo_metadata_from_workspace, ResourceMetadata};
+use dojo_world::metadata::{dojo_metadata_from_workspace, ArtifactMetadata, ResourceMetadata};
 use dojo_world::migration::class::ClassMigration;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
@@ -775,6 +775,20 @@ pub async fn update_manifests_and_abis(
         rpc_url: rpc_url.to_string(),
     });
 
+    // Serialize the WorldMetadata to a string
+    let metadata = serde_json::to_string(&local_manifest.world.inner.metadata.as_ref().unwrap())?;
+    // let ipfs_hash = calculate_ipfs_hash(&local_manifest).await?;
+
+    // Create an ArtifactMetadata object from the serialized metadata
+    let artifact = ArtifactMetadata { abi: None, source: Some(serde_json::from_str(&metadata)?) };
+    let ipfs_hash = artifact.calculate_ipfs_hash();
+
+    // Store the IPFS hash in the metadata_ipfs_hash field
+    match ipfs_hash {
+        Ok(hash) => local_manifest.world.inner.metadata_ipfs_hash = Some(hash),
+        Err(e) => return Err(e.into()), /* convert the error into the type that your function
+                                         * returns */
+    }
     if deployed_path.exists() {
         let previous_manifest = DeploymentManifest::load_from_path(&deployed_path)?;
         local_manifest.merge_from_previous(previous_manifest);

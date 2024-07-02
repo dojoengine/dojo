@@ -16,6 +16,7 @@ cairo-lang-starknet.workspace = true
 camino.workspace = true
 convert_case.workspace = true
 futures.workspace = true
+sha2 = "0.10.0"
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
