@@ -188,7 +188,7 @@ mod tests {
     use std::str::FromStr;
 
     use dojo_world::contracts::cairo_utils;
-    use starknet_crypto::FieldElement;
+    use starknet::core::types::Felt;
 
     use super::*;
 
@@ -196,7 +196,7 @@ mod tests {
     fn test_owner_resource_from_str() {
         // Test valid input
         let input = "contract:path::to::contract,0x1234";
-        let expected_owner = FieldElement::from_hex_be("0x1234").unwrap();
+        let expected_owner = Felt::from_hex("0x1234").unwrap();
         let expected_resource = auth::ResourceType::Contract("path::to::contract".to_string());
         let expected = auth::OwnerResource { owner: expected_owner, resource: expected_resource };
         let result = auth::OwnerResource::from_str(input).unwrap();
@@ -204,7 +204,7 @@ mod tests {
 
         // Test valid input with model
         let input = "model:model_name,0x1234";
-        let expected_owner = FieldElement::from_hex_be("0x1234").unwrap();
+        let expected_owner = Felt::from_hex("0x1234").unwrap();
         let expected_model = cairo_utils::str_to_felt("model_name").unwrap();
         let expected_resource = auth::ResourceType::Model(expected_model);
         let expected = auth::OwnerResource { owner: expected_owner, resource: expected_resource };

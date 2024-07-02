@@ -12,11 +12,12 @@ use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
+use starknet::core::types::Felt;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -101,7 +102,7 @@ async fn test_load_from_remote() {
 
     // spawn
     let tx = account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: migration_output
                 .contracts
                 .first()
@@ -225,7 +226,7 @@ async fn test_load_from_remote_del() {
 
     // spawn
     account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: migration_output
                 .contracts
                 .first()
@@ -244,7 +245,7 @@ async fn test_load_from_remote_del() {
 
     // Set player config.
     account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: migration_output
                 .contracts
                 .first()
@@ -254,7 +255,7 @@ async fn test_load_from_remote_del() {
                 .contract_address,
             selector: get_selector_from_name("set_player_config").unwrap(),
             // Empty ByteArray.
-            calldata: vec![FieldElement::ZERO, FieldElement::ZERO, FieldElement::ZERO],
+            calldata: vec![Felt::ZERO, Felt::ZERO, Felt::ZERO],
         }])
         .send_with_cfg(&TxnConfig::init_wait())
         .await
@@ -263,7 +264,7 @@ async fn test_load_from_remote_del() {
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: migration_output
                 .contracts
                 .first()

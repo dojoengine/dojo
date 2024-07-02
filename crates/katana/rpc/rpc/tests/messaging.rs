@@ -11,14 +11,15 @@ use dojo_world::utils::TransactionWaiter;
 use katana_primitives::utils::transaction::{
     compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
 };
+use katana_rpc_types::receipt::ReceiptBlock;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use rand::Rng;
 use serde_json::json;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, FieldElement, Hash256, MaybePendingTransactionReceipt,
-    Transaction, TransactionFinalityStatus, TransactionReceipt,
+    BlockId, BlockTag, ContractClass, Felt, Hash256, Transaction, TransactionFinalityStatus,
+    TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
@@ -94,7 +95,7 @@ async fn test_messaging() {
 
         // Declare the contract
         let class_hash = contract.class_hash();
-        let res = katana_account.declare(contract.into(), compiled_hash).send().await.unwrap();
+        let res = katana_account.declare_v2(contract.into(), compiled_hash).send().await.unwrap();
 
         // The waiter already checks that the transaction is accepted and succeeded on L2.
         TransactionWaiter::new(res.transaction_hash, katana_account.provider())
@@ -109,11 +110,11 @@ async fn test_messaging() {
         assert_eq!(class.class_hash(), class_hash, "invalid declared class"); // just to make sure the rpc returns the correct class
 
         // Compute the contract address
-        let address = get_contract_address(FieldElement::ZERO, class_hash, &[], FieldElement::ZERO);
+        let address = get_contract_address(Felt::ZERO, class_hash, &[], Felt::ZERO);
 
         // Deploy the contract using UDC
         let res = ContractFactory::new(class_hash, &katana_account)
-            .deploy(Vec::new(), FieldElement::ZERO, false)
+            .deploy_v1(Vec::new(), Felt::ZERO, false)
             .send()
             .await
             .expect("Unable to deploy contract");
@@ -173,12 +174,12 @@ async fn test_messaging() {
 
         // In an l1_handler transaction, the first element of the calldata is always the Ethereum
         // address of the sender (msg.sender).
-        let mut l1_tx_calldata = vec![FieldElement::from_byte_slice_be(sender.as_slice()).unwrap()];
-        l1_tx_calldata.extend(calldata.iter().map(|x| FieldElement::from(*x)));
+        let mut l1_tx_calldata = vec![Felt::from_bytes_be_slice(sender.as_slice())];
+        l1_tx_calldata.extend(calldata.iter().map(|x| Felt::from(*x)));
 
         // Compute transaction hash
         let tx_hash = compute_l1_handler_tx_hash(
-            FieldElement::ZERO,
+            Felt::ZERO,
             recipient,
             selector,
             &l1_tx_calldata,
@@ -203,15 +204,15 @@ async fn test_messaging() {
         assert_eq!(tx.calldata, l1_tx_calldata);
 
         // fetch the receipt
-        let receipt = katana_account
+        let receipt_res = katana_account
             .provider()
             .get_transaction_receipt(tx.transaction_hash)
             .await
             .expect("failed to get receipt");
 
-        match receipt {
-            MaybePendingTransactionReceipt::Receipt(receipt) => {
-                let TransactionReceipt::L1Handler(receipt) = receipt else {
+        match receipt_res.block {
+            ReceiptBlock::Block { .. } => {
+                let TransactionReceipt::L1Handler(receipt) = receipt_res.receipt else {
                     panic!("invalid receipt type");
                 };
 
@@ -219,7 +220,7 @@ async fn test_messaging() {
                     sender.as_slice().try_into().unwrap(),
                     recipient,
                     selector,
-                    &calldata.iter().map(|x| FieldElement::from(*x)).collect::<Vec<_>>(),
+                    &calldata.iter().map(|x| Felt::from(*x)).collect::<Vec<_>>(),
                     nonce.to::<u64>(),
                 );
 
@@ -243,13 +244,13 @@ async fn test_messaging() {
     {
         // The L1 contract address to send the message to
         let l1_contract_address = l1_test_contract.address();
-        let l1_contract_address = FieldElement::from_str(&l1_contract_address.to_string()).unwrap();
+        let l1_contract_address = Felt::from_str(&l1_contract_address.to_string()).unwrap();
 
         let l2_contract = CairoMessagingContract::new(l2_test_contract, &katana_account);
 
         // Send message to L1
         let res = l2_contract
-            .send_message_value(&EthAddress::from(l1_contract_address), &FieldElement::TWO)
+            .send_message_value(&EthAddress::from(l1_contract_address), &Felt::TWO)
             .send()
             .await
             .expect("Call to send_message_value failed");
@@ -266,11 +267,8 @@ async fn test_messaging() {
         // registered. If the message is registered, calling `l2ToL1Messages` of the L1 core
         // contract with the message hash should return a non-zero value.
 
-        let l2_l1_msg_hash = compute_l2_to_l1_message_hash(
-            l2_test_contract,
-            l1_contract_address,
-            &[FieldElement::TWO],
-        );
+        let l2_l1_msg_hash =
+            compute_l2_to_l1_message_hash(l2_test_contract, l1_contract_address, &[Felt::TWO]);
 
         let msg_fee = core_contract
             .l2ToL1Messages(l2_l1_msg_hash)

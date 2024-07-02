@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::bail;
+use bigdecimal::BigDecimal;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{CallInfo, EntryPointType};
@@ -38,7 +39,7 @@ where
         let mut seq = serializer.serialize_seq(Some(da.len()))?;
 
         for d in da {
-            let decimal = d.to_big_decimal(0); // Convert with no decimal places
+            let decimal: BigDecimal = d.to_bigint().into(); // Convert with no decimal places
             let num = decimal.to_string();
             seq.serialize_element(&num)?;
         }
@@ -258,7 +259,10 @@ impl ProgramInput {
         let serialized =
             inputs.iter().flat_map(|input| input.serialize_to_prover_args()).collect::<Vec<_>>();
 
-        let joined = serialized.iter().map(|f| f.to_big_decimal(0).to_string()).collect::<Vec<_>>();
+        let joined = serialized
+            .iter()
+            .map(|f| BigDecimal::from(f.to_bigint()).to_string())
+            .collect::<Vec<_>>();
 
         format!("[{} {}]", inputs.len(), joined.join(" "))
     }
@@ -285,7 +289,7 @@ impl MessageToStarknet {
             let serialized = message.serialize().unwrap();
             // Instead of adding serialized as an array, add each element individually
             for field_element in serialized {
-                let decimal = field_element.to_big_decimal(0); // Assuming no decimal places for simplicity
+                let decimal: BigDecimal = field_element.to_bigint().into(); // Assuming no decimal places for simplicity
                 let num = decimal.to_string();
                 seq.serialize_element(&num)?;
             }
@@ -375,7 +379,7 @@ impl MessageToAppchain {
         for message in messages {
             let serialized = message.serialize().unwrap();
             for field_element in serialized {
-                let decimal = field_element.to_big_decimal(0); // Assuming no decimal places for simplicity
+                let decimal: BigDecimal = field_element.to_bigint().into(); // Assuming no decimal places for simplicity
                 let num = decimal.to_string();
                 seq.serialize_element(&num)?;
             }

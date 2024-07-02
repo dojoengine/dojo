@@ -2,13 +2,13 @@
 mod tests {
     use dojo_world::metadata::{project_to_world_metadata, ProjectMetadata};
     use sqlx::SqlitePool;
-    use starknet_crypto::FieldElement;
+    use starknet::core::types::Felt;
     use torii_core::sql::Sql;
 
     use crate::schema::build_schema;
     use crate::tests::{run_graphql_query, Connection, Content, Metadata as SqlMetadata, Social};
 
-    const RESOURCE: FieldElement = FieldElement::ZERO;
+    const RESOURCE: Felt = Felt::ZERO;
     const URI: &str = "ipfs://QmcDVFdDph5N2AoW7L2vruyhy6A3wiU8Mh5hEyfVY68ynh";
     const BLOCK_TIMESTAMP: u64 = 1710754478;
     const QUERY: &str = r#"
@@ -47,7 +47,7 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_metadata(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         let cover_img = "QWxsIHlvdXIgYmFzZSBiZWxvbmcgdG8gdXM=";
@@ -93,7 +93,7 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_empty_content(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);

@@ -68,8 +68,8 @@ impl CalldataDecoder for U256CalldataDecoder {
         let low = &bigint % &u128_max_plus_1;
 
         // Unwrapping is safe as these are never out of range
-        let high = Felt::from_byte_slice_be(&high.to_bytes_be()).unwrap();
-        let low = Felt::from_byte_slice_be(&low.to_bytes_be()).unwrap();
+        let high = Felt::from_bytes_be_slice(&high.to_bytes_be());
+        let low = Felt::from_bytes_be_slice(&low.to_bytes_be());
 
         Ok(vec![low, high])
     }
@@ -98,7 +98,7 @@ struct DefaultCalldataDecoder;
 impl CalldataDecoder for DefaultCalldataDecoder {
     fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
         let felt = if let Some(hex_str) = input.strip_prefix("0x") {
-            Felt::from_hex_be(hex_str)?
+            Felt::from_hex(hex_str)?
         } else {
             Felt::from_dec_str(input)?
         };

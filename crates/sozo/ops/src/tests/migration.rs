@@ -18,12 +18,12 @@ use dojo_world::migration::TxnConfig;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
+use starknet::core::types::Felt;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
 
 use super::setup;
 use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
@@ -79,16 +79,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let account = sequencer.account(0);
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &migration,
-            &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &migration,
+        &account,
+        TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
+    )
+    .await
+    .is_err());
 }
 
 #[tokio::test]
@@ -275,7 +273,7 @@ async fn migrate_with_metadata() {
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
     // check world metadata
-    let resource = world_reader.metadata(&FieldElement::ZERO).call().await.unwrap();
+    let resource = world_reader.metadata(&Felt::ZERO).call().await.unwrap();
     let element_name = WORLD_CONTRACT_NAME.to_string();
 
     let full_uri = resource.metadata_uri.to_string().unwrap();
@@ -586,7 +584,7 @@ async fn check_ipfs_metadata(
 async fn check_artifact_metadata<P: starknet::providers::Provider + Sync>(
     client: &HyperBackend,
     world_reader: &WorldContractReader<P>,
-    resource_id: FieldElement,
+    resource_id: Felt,
     element_name: &String,
     dojo_metadata: &DojoMetadata,
 ) {

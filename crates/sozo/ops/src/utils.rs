@@ -3,7 +3,6 @@ use bigdecimal::BigDecimal;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::migration::strategy::generate_salt;
 use dojo_world::utils::{execution_status_from_receipt, TransactionWaiter};
-use num_bigint::{BigInt, Sign};
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
@@ -143,8 +142,5 @@ where
     F: AsRef<Felt>,
     D: Into<i64>,
 {
-    BigDecimal::new(
-        BigInt::from_bytes_be(Sign::Plus, &felt.as_ref().to_bytes_be()),
-        decimals.into(),
-    )
+    BigDecimal::from((felt.as_ref().to_bigint(), decimals.into()))
 }

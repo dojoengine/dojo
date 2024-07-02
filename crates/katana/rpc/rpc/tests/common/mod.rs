@@ -7,12 +7,12 @@ use cairo_lang_starknet_classes::contract_class::ContractClass;
 use katana_primitives::conversion::rpc::CompiledClass;
 use starknet::accounts::Call;
 use starknet::core::types::contract::SierraClass;
-use starknet::core::types::{FieldElement, FlattenedSierraClass};
+use starknet::core::types::{Felt, FlattenedSierraClass};
 use starknet::core::utils::get_selector_from_name;
 
 pub fn prepare_contract_declaration_params(
     artifact_path: &PathBuf,
-) -> Result<(FlattenedSierraClass, FieldElement)> {
+) -> Result<(FlattenedSierraClass, Felt)> {
     let flattened_class = get_flattened_class(artifact_path)
         .map_err(|e| anyhow!("error flattening the contract class: {e}"))?;
     let compiled_class_hash = get_compiled_class_hash(artifact_path)
@@ -26,7 +26,7 @@ fn get_flattened_class(artifact_path: &PathBuf) -> Result<FlattenedSierraClass> 
     Ok(contract_artifact.flatten()?)
 }
 
-fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
+fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<Felt> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
     let casm_contract =
@@ -40,15 +40,15 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
 // TODO: not sure why this function is not seen as used
 // as prepare_contract_declaration_params is.
 #[allow(dead_code)]
-pub fn build_deploy_cairo1_contract_call(class_hash: FieldElement, salt: FieldElement) -> Call {
-    let constructor_calldata = vec![FieldElement::from(1_u32), FieldElement::from(2_u32)];
+pub fn build_deploy_cairo1_contract_call(class_hash: Felt, salt: Felt) -> Call {
+    let constructor_calldata = vec![Felt::from(1_u32), Felt::from(2_u32)];
 
     let calldata = [
         vec![
-            class_hash,                                     // class hash
-            salt,                                           // salt
-            FieldElement::ZERO,                             // unique
-            FieldElement::from(constructor_calldata.len()), // constructor calldata len
+            class_hash,                             // class hash
+            salt,                                   // salt
+            Felt::ZERO,                             // unique
+            Felt::from(constructor_calldata.len()), // constructor calldata len
         ],
         constructor_calldata.clone(),
     ]
@@ -57,10 +57,8 @@ pub fn build_deploy_cairo1_contract_call(class_hash: FieldElement, salt: FieldEl
     Call {
         calldata,
         // devnet UDC address
-        to: FieldElement::from_hex_be(
-            "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
-        )
-        .unwrap(),
+        to: Felt::from_hex("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf")
+            .unwrap(),
         selector: get_selector_from_name("deployContract").unwrap(),
     }
 }

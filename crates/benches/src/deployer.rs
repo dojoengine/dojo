@@ -12,12 +12,12 @@ use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use sozo::args::SozoArgs;
 use sozo::commands::Commands;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use tokio::process::Command;
 
 use crate::{CONTRACT, CONTRACT_RELATIVE_TO_TESTS, RUNTIME};
 
-pub async fn deploy(runner: &KatanaRunner) -> Result<FieldElement> {
+pub async fn deploy(runner: &KatanaRunner) -> Result<Felt> {
     if let Some(contract) = runner.contract().await {
         return Ok(contract);
     }
@@ -37,15 +37,12 @@ pub async fn deploy(runner: &KatanaRunner) -> Result<FieldElement> {
     Ok(address)
 }
 
-pub fn deploy_sync(runner: &KatanaRunner) -> Result<FieldElement> {
+pub fn deploy_sync(runner: &KatanaRunner) -> Result<Felt> {
     let _rt = RUNTIME.enter();
     block_on(async move { deploy(runner).await })
 }
 
-async fn deploy_contract(
-    runner: &KatanaRunner,
-    manifest_and_script: (&str, &str),
-) -> Result<FieldElement> {
+async fn deploy_contract(runner: &KatanaRunner, manifest_and_script: (&str, &str)) -> Result<Felt> {
     let args = SozoArgs::parse_from([
         "sozo",
         "migrate",
@@ -72,7 +69,7 @@ async fn deploy_contract(
     Ok(constract_address)
 }
 
-async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
+async fn prepare_migration_args(args: SozoArgs) -> Result<Felt> {
     // Preparing config, as in https://github.com/dojoengine/dojo/blob/25fbb7fc973cff4ce1273625c4664545d9b088e9/bin/sozo/src/main.rs#L28-L29
     let mut compilers = CompilerRepository::std();
     let cairo_plugins = CairoPluginRepository::default();

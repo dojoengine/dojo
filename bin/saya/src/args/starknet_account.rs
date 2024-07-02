@@ -1,7 +1,7 @@
 //! Data availability options.
 
 use clap::Args;
-use katana_primitives::FieldElement;
+use katana_primitives::Felt;
 use url::Url;
 
 #[derive(Debug, Args, Clone)]
@@ -19,10 +19,10 @@ pub struct StarknetAccountOptions {
     #[arg(long)]
     #[arg(env)]
     #[arg(help = "The address of the starknet account.")]
-    pub signer_address: FieldElement,
+    pub signer_address: Felt,
 
     #[arg(long)]
     #[arg(env)]
     #[arg(help = "The private key of the starknet account.")]
-    pub signer_key: FieldElement,
+    pub signer_key: Felt,
 }

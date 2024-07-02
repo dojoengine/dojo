@@ -22,7 +22,7 @@ use katana_rpc_types::block::{
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
-use katana_rpc_types::receipt::{ReceiptBlock, TxReceipt, TxReceiptWithBlockInfo};
+use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 use katana_rpc_types::state_update::StateUpdate;
 use katana_rpc_types::trace::FunctionInvocation;
 use katana_rpc_types::transaction::{

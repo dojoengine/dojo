@@ -54,7 +54,7 @@ pub enum TransactionWaitingError {
 ///
 /// let provider = JsonRpcClient::new(HttpTransport::new(Url::parse("http://localhost:5000").unwrap()));
 ///
-/// let tx_hash = FieldElement::from(0xbadbeefu64);
+/// let tx_hash = Felt::from(0xbadbeefu64);
 /// let receipt = TransactionWaiter::new(tx_hash, &provider).with_tx_status(TransactionFinalityStatus::AcceptedOnL2).await.unwrap();
 /// ```
 #[must_use = "TransactionWaiter does nothing unless polled"]
@@ -393,9 +393,8 @@ mod tests {
     };
     use starknet::core::types::{
         ComputationResources, DataAvailabilityResources, DataResources, ExecutionResources,
-        ExecutionResult, FeePayment, FieldElement, InvokeTransactionReceipt,
-        MaybePendingTransactionReceipt, PendingInvokeTransactionReceipt, PendingTransactionReceipt,
-        PriceUnit, TransactionFinalityStatus, TransactionReceipt,
+        ExecutionResult, FeePayment, Felt, InvokeTransactionReceipt, PriceUnit, ReceiptBlock,
+        TransactionFinalityStatus, TransactionReceipt, TransactionReceiptWithBlockInfo,
     };
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
@@ -432,7 +431,7 @@ mod tests {
         finality_status: TransactionFinalityStatus,
         execution_result: ExecutionResult,
     ) -> TransactionReceipt {
-        TransactionReceipt::Invoke(InvokeTransactionReceipt {
+        let receipt = TransactionReceipt::Invoke(InvokeTransactionReceipt {
             finality_status,
             execution_result,
             events: Default::default(),
@@ -440,18 +439,26 @@ mod tests {
             messages_sent: Default::default(),
             transaction_hash: Default::default(),
             execution_resources: EXECUTION_RESOURCES,
-        })
+        });
+
+        TransactionReceiptWithBlockInfo {
+            receipt,
+            block: ReceiptBlock::Block { block_hash: 0, block_number: 0 },
+        }
     }
 
-    fn mock_pending_receipt(execution_result: ExecutionResult) -> PendingTransactionReceipt {
-        PendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
+    fn mock_pending_receipt(execution_result: ExecutionResult) -> TransactionReceiptWithBlockInfo {
+        let receipt = TransactionReceipt::Invoke(InvokeTransactionReceipt {
             execution_result,
             events: Default::default(),
+            finality_status: TransactionFinalityStatus::AcceptedOnL2,
             actual_fee: FeePayment { amount: Default::default(), unit: PriceUnit::Wei },
             messages_sent: Default::default(),
             transaction_hash: Default::default(),
             execution_resources: EXECUTION_RESOURCES,
-        })
+        });
+
+        TransactionReceiptWithBlockInfo { receipt, block: ReceiptBlock::Pending }
     }
 
     #[tokio::test]
@@ -459,7 +466,7 @@ mod tests {
         let (_sequencer, provider) = create_test_sequencer().await;
 
         assert_matches!(
-            TransactionWaiter::new(FieldElement::from_hex_be("0x1234").unwrap(), &provider)
+            TransactionWaiter::new(Felt::from_hex("0x1234").unwrap(), &provider)
                 .with_timeout(Duration::from_secs(1))
                 .await,
             Err(super::TransactionWaitingError::Timeout)
@@ -468,10 +475,8 @@ mod tests {
 
     #[test]
     fn wait_for_no_finality_status() {
-        let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-            TransactionFinalityStatus::AcceptedOnL2,
-            ExecutionResult::Succeeded,
-        ));
+        let receipt =
+            mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
 
         assert_eq!(
             TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(

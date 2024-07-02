@@ -267,6 +267,7 @@ mod tests {
     use katana_provider::traits::contract::ContractClassWriter;
     use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
     use starknet::macros::felt;
+    use starknet_api::{core::PatriciaKey, hash::StarkHash, patricia_key};
 
     use super::{CachedState, *};
     use crate::StateProviderDb;
@@ -387,7 +388,7 @@ mod tests {
             let blk_state = &mut lock.inner;
 
             let address = utils::to_blk_address(new_address);
-            let storage_key = StorageKey(patricia_key!(new_storage_key));
+            let storage_key = StorageKey(patricia_key!(utils::to_stark_felt(new_storage_key)));
             let storage_value = utils::to_stark_felt(new_storage_value);
             let class_hash = ClassHash(utils::to_stark_felt(new_class_hash));
             let class =
@@ -498,8 +499,8 @@ mod tests {
         let mut cached_state = CachedState::new(StateProviderDb(sp));
 
         let api_address = utils::to_blk_address(address);
-        let api_storage_key = StorageKey(patricia_key!(storage_key));
-        let api_class_hash = ClassHash(class_hash.into());
+        let api_storage_key = StorageKey(patricia_key!(utils::to_stark_felt(storage_key)));
+        let api_class_hash = ClassHash(utils::to_stark_felt(class_hash));
 
         let actual_nonce =
             cached_state.get_nonce_at(api_address).expect("should return default value");

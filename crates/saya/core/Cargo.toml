@@ -16,6 +16,7 @@ saya-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
+bigdecimal.workspace = true
 cairo-proof-parser.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
