@@ -1,6 +1,8 @@
-use crate::{felt::FromStrError, FieldElement};
 use starknet::core::utils::{cairo_short_string_to_felt, CairoShortStringToFeltError};
 use starknet::macros::short_string;
+
+use crate::felt::FromStrError;
+use crate::FieldElement;
 
 /// Known chain ids that has been assigned a name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]

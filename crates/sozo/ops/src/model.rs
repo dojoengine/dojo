@@ -138,19 +138,11 @@ fn format_layout_ref(type_name: &str) -> String {
 }
 
 fn format_selector(selector: String) -> String {
-    if selector.starts_with("0x") {
-        format!("[{}]", selector)
-    } else {
-        selector
-    }
+    if selector.starts_with("0x") { format!("[{}]", selector) } else { selector }
 }
 
 fn format_name(name: String) -> String {
-    if !name.is_empty() {
-        format!(" {} ", name)
-    } else {
-        name
-    }
+    if !name.is_empty() { format!(" {} ", name) } else { name }
 }
 
 fn format_field(selector: String, name: String, layout: String) -> String {
@@ -403,11 +395,7 @@ fn deep_print_layout(
 }
 
 fn _start_indent(level: usize, start_indent: bool) -> String {
-    if start_indent {
-        INDENT.repeat(level)
-    } else {
-        "".to_string()
-    }
+    if start_indent { INDENT.repeat(level) } else { "".to_string() }
 }
 
 fn format_primitive(

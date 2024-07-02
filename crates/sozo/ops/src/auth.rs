@@ -8,8 +8,7 @@ use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::Felt;
-use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 
 use crate::utils;

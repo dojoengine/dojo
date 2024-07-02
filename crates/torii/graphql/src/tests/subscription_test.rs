@@ -9,8 +9,7 @@ mod tests {
     use dojo_world::contracts::abi::model::Layout;
     use serial_test::serial;
     use sqlx::SqlitePool;
-    use starknet::core::types::Event;
-    use starknet::core::types::Felt;
+    use starknet::core::types::{Event, Felt};
     use starknet::core::utils::get_selector_from_name;
     use starknet_crypto::poseidon_hash_many;
     use tokio::sync::mpsc;

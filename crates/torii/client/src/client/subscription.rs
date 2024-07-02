@@ -8,8 +8,7 @@ use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::{Mutex, RwLock};
-use starknet::core::types::Felt;
-use starknet::core::types::{StateDiff, StateUpdate};
+use starknet::core::types::{Felt, StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use torii_grpc::client::ModelDiffsStreaming;
 use torii_grpc::types::ModelKeysClause;
@@ -192,11 +191,7 @@ impl SubscriptionService {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
             let current = d.address;
-            if current == expected {
-                Some(d.storage_entries)
-            } else {
-                None
-            }
+            if current == expected { Some(d.storage_entries) } else { None }
         });
 
         let Some(entries) = storage_entries else {

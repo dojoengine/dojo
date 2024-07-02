@@ -18,8 +18,7 @@ use dojo_world::migration::TxnConfig;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
-use starknet::core::types::Felt;
-use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -79,14 +78,16 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let account = sequencer.account(0);
 
-    assert!(execute_strategy(
-        &ws,
-        &migration,
-        &account,
-        TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
-    )
-    .await
-    .is_err());
+    assert!(
+        execute_strategy(
+            &ws,
+            &migration,
+            &account,
+            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
+        )
+        .await
+        .is_err()
+    );
 }
 
 #[tokio::test]

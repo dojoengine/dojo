@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-
 use starknet::accounts::{
     single_owner, Account, Call, ConnectedAccount, DeclarationV2, DeclarationV3, ExecutionEncoder,
     ExecutionV1, ExecutionV3, LegacyDeclaration, RawDeclarationV2, RawDeclarationV3,

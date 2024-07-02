@@ -2,7 +2,6 @@ use core::panic;
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::utils;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use colored_json::{ColorMode, Output};
@@ -22,6 +21,8 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::{LocalWallet, Signer, SigningKey};
 use starknet_crypto::Felt;
+
+use crate::utils;
 
 /// The canonical hash of a contract class. This is the class hash value of a contract instance.
 pub type ClassHash = Felt;

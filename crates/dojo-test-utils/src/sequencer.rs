@@ -15,8 +15,7 @@ use katana_rpc::{spawn, NodeHandle};
 use katana_rpc_api::ApiKind;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
-use starknet::core::types::Felt;
-use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
@@ -98,7 +97,7 @@ impl TestSequencer {
             JsonRpcClient::new(HttpTransport::new(self.url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(self.account.private_key)),
             self.account.account_address,
-            chain_id::TESTNET,
+            chain_id::SEPOLIA,
             ExecutionEncoding::New,
         );
 
@@ -125,7 +124,7 @@ impl TestSequencer {
             JsonRpcClient::new(HttpTransport::new(self.url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
             address,
-            chain_id::TESTNET,
+            chain_id::SEPOLIA,
             ExecutionEncoding::New,
         );
 

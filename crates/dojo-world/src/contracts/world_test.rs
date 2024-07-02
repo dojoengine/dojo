@@ -4,8 +4,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::Felt;
-use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 
 use super::{WorldContract, WorldContractReader};
 use crate::manifest::{BaseManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};

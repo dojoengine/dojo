@@ -149,11 +149,7 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<S
                             &simple_field.r#type[1..simple_field.r#type.len() - 1]
                                 .split(',')
                                 .map(|t| {
-                                    if !t.is_empty() {
-                                        format!("\"{}\"", t)
-                                    } else {
-                                        t.to_string()
-                                    }
+                                    if !t.is_empty() { format!("\"{}\"", t) } else { t.to_string() }
                                 })
                                 .collect::<Vec<String>>()
                                 .join(",");

@@ -170,11 +170,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         };
 
         let hash = to_felt(hash.0);
-        if hash == FieldElement::ZERO {
-            Ok(None)
-        } else {
-            Ok(Some(hash))
-        }
+        if hash == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash)) }
     }
 
     fn nonce(
@@ -267,7 +263,9 @@ mod tests {
     use katana_provider::traits::contract::ContractClassWriter;
     use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
     use starknet::macros::felt;
-    use starknet_api::{core::PatriciaKey, hash::StarkHash, patricia_key};
+    use starknet_api::core::PatriciaKey;
+    use starknet_api::hash::StarkHash;
+    use starknet_api::patricia_key;
 
     use super::{CachedState, *};
     use crate::StateProviderDb;

@@ -22,9 +22,8 @@ use futures::future;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::Felt;
 use starknet::core::types::{
-    BlockId, BlockTag, FunctionCall, InvokeTransactionResult, StarknetError,
+    BlockId, BlockTag, Felt, FunctionCall, InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name,

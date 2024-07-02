@@ -3,14 +3,13 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{MessageToL1, Receipt, TxExecutionResources};
 use katana_primitives::transaction::TxHash;
 use serde::{Deserialize, Serialize};
+pub use starknet::core::types::ReceiptBlock;
 use starknet::core::types::{
     ComputationResources, DataAvailabilityResources, DataResources, DeclareTransactionReceipt,
     DeployAccountTransactionReceipt, ExecutionResult, FeePayment, Hash256,
     InvokeTransactionReceipt, L1HandlerTransactionReceipt, TransactionFinalityStatus,
     TransactionReceipt, TransactionReceiptWithBlockInfo,
 };
-
-pub use starknet::core::types::ReceiptBlock;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
