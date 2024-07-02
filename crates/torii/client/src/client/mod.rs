@@ -185,8 +185,7 @@ impl Client {
         };
 
         if !self.subscribed_models.is_synced(keys) {
-            // TODO: handle namespace
-            let model = self.world_reader.model_reader("TODO", &keys.model).await?;
+            let model = self.world_reader.model_reader(&keys.namespace, &keys.model).await?;
             return Ok(Some(model.entity(&keys.keys).await?));
         }
 
@@ -235,7 +234,7 @@ impl Client {
     /// NOTE: This will establish a new subscription stream with the server.
     pub async fn add_models_to_sync(&self, models_keys: Vec<ModelKeysClause>) -> Result<(), Error> {
         for keys in &models_keys {
-            self.initiate_model(&keys.model, keys.keys.clone()).await?;
+            self.initiate_model(&keys.namespace, &keys.model, keys.keys.clone()).await?;
         }
 
         self.subscribed_models.add_models(models_keys)?;
@@ -284,9 +283,8 @@ impl Client {
         Ok(stream)
     }
 
-    async fn initiate_model(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
-        // TODO: handle namespace
-        let model_reader = self.world_reader.model_reader("TODO", model).await?;
+    async fn initiate_model(&self, namespace: &str, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
+        let model_reader = self.world_reader.model_reader(namespace, model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(
             cairo_short_string_to_felt(model).map_err(ParseError::CairoShortStringToFelt)?,

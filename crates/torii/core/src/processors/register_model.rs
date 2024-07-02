@@ -64,11 +64,11 @@ where
 
         let class_hash = event.data[offset];
         // NOTE: offset + 1 is the prev_class_hash, as denoted in
-        // the ModelRegistered event
+        // the ModelRegistered event. so contract address is at offset + 2
         let contract_address = event.data[offset + 2];
 
         info!(
-            target: LOG_TARGET,
+            target: LOG_TARGET, 
             name = %name,
             "Registered model."
         );
