@@ -6,6 +6,22 @@ use strum_macros::AsRefStr;
 
 use crate::primitive::{Primitive, PrimitiveError};
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Model {
+    pub namespace: String,
+    pub name: String,
+    pub members: Vec<Member>,
+}
+
+impl From<Model> for Struct {
+    fn from(model: Model) -> Self {
+        Struct {
+            name: model.name,
+            children: model.members,
+        }
+    }
+}
+
 /// Represents a model member.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct Member {

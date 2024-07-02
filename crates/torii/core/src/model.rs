@@ -4,7 +4,7 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+use dojo_types::schema::{Enum, EnumOption, Member, Model, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::manifest::utils::compute_model_selector_from_names;
@@ -56,7 +56,16 @@ impl ModelSQLReader {
 
         let layout = serde_json::from_str(&layout).map_err(error::ParseError::FromJsonStr)?;
 
-        Ok(Self { namespace, name, class_hash, contract_address, pool, packed_size, unpacked_size, layout })
+        Ok(Self {
+            namespace,
+            name,
+            class_hash,
+            contract_address,
+            pool,
+            packed_size,
+            unpacked_size,
+            layout,
+        })
     }
 }
 
@@ -217,7 +226,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
 
 /// Creates a query that fetches all models and their nested data.
 pub fn build_sql_query(
-    model_schemas: &Vec<Ty>,
+    model_schemas: &Vec<Model>,
     entities_table: &str,
     entity_relation_column: &str,
     where_clause: Option<&str>,
@@ -322,12 +331,12 @@ pub fn build_sql_query(
 
     let mut arrays_queries = HashMap::new();
 
-    for ty in model_schemas {
-        let schema = ty.as_struct().expect("schema should be struct");
+    for model in model_schemas {
+        let ty = Ty::Struct(model.clone().into());
         parse_ty(
             "",
-            &schema.name,
-            ty,
+            &model.name,
+            &ty,
             &mut global_selections,
             &mut global_tables,
             &mut arrays_queries,
@@ -536,7 +545,7 @@ pub fn map_row_to_ty(
 
 #[cfg(test)]
 mod tests {
-    use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+    use dojo_types::schema::{Enum, EnumOption, Member, Model, Struct, Ty};
 
     use super::{build_sql_query, SqlModelMember};
     use crate::model::parse_sql_model_members;
@@ -845,9 +854,10 @@ mod tests {
 
     #[test]
     fn struct_ty_to_query() {
-        let position = Ty::Struct(Struct {
+        let position = Model {
+            namespace: "Test".into(),
             name: "Position".into(),
-            children: vec![
+            members: vec![
                 dojo_types::schema::Member {
                     name: "player".into(),
                     key: true,
@@ -905,11 +915,12 @@ mod tests {
                     })]),
                 },
             ],
-        });
+        };
 
-        let player_config = Ty::Struct(Struct {
+        let player_config = Model {
+            namespace: "Test".into(),
             name: "PlayerConfig".into(),
-            children: vec![
+            members: vec![
                 dojo_types::schema::Member {
                     name: "favorite_item".into(),
                     key: false,
@@ -945,7 +956,7 @@ mod tests {
                     })]),
                 },
             ],
-        });
+        };
 
         let query =
             build_sql_query(&vec![position, player_config], "entities", "entity_id", None, None)

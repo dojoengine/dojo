@@ -62,6 +62,7 @@ pub struct EventMessage {
 #[serde(rename_all = "camelCase")]
 pub struct Model {
     pub id: String,
+    pub namespace: String,
     pub name: String,
     pub class_hash: String,
     pub contract_address: String,
