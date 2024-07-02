@@ -1,6 +1,7 @@
 use gossipsub::Event as GossipsubEvent;
 use libp2p::{gossipsub, identify, ping};
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) enum ClientEvent {
     Gossipsub(GossipsubEvent),
