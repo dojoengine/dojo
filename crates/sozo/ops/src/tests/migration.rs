@@ -107,11 +107,11 @@ async fn metadata_calculated_properly() {
     )
     .unwrap();
 
-    let overlay_manifest =
-        OverlayManifest::load_from_path(&base.join(MANIFESTS_DIR).join("dev").join(OVERLAYS_DIR))
-            .unwrap();
-
-    manifest.merge(overlay_manifest);
+    let overlay_dir = base.join(OVERLAYS_DIR).join(profile_name);
+    if overlay_dir.exists() {
+        let overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &manifest).unwrap();
+        manifest.merge(overlay_manifest);
+    }
 
     let world = WorldDiff::compute(manifest, None);
 
@@ -174,14 +174,14 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
         .await
         .expect("Failed to load remote manifest");
 
-    let overlay = OverlayManifest::load_from_path(
-        &base.join(MANIFESTS_DIR).join(&profile_name).join(OVERLAYS_DIR),
-    )
-    .expect("Failed to load overlay");
+    let overlay_dir = base.join(OVERLAYS_DIR).join(profile_name);
+    if overlay_dir.exists() {
+        let overlay = OverlayManifest::load_from_path(&overlay_dir, &manifest)
+            .expect("Failed to load overlay");
 
-    // adding correct calldata
-    manifest.merge(overlay);
-
+        // adding correct calldata
+        manifest.merge(overlay);
+    }
     let default_namespace = get_default_namespace_from_ws(&ws);
 
     let mut world = WorldDiff::compute(manifest, Some(remote_manifest));
@@ -336,12 +336,11 @@ async fn migrate_with_auto_authorize() {
         BaseManifest::load_from_path(&manifest_base.join(MANIFESTS_DIR).join("dev").join(BASE_DIR))
             .unwrap();
 
-    let overlay_manifest = OverlayManifest::load_from_path(
-        &manifest_base.join(MANIFESTS_DIR).join("dev").join(OVERLAYS_DIR),
-    )
-    .unwrap();
-
-    manifest.merge(overlay_manifest);
+    let overlay_dir = manifest_base.join(OVERLAYS_DIR).join("dev");
+    if overlay_dir.exists() {
+        let overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &manifest).unwrap();
+        manifest.merge(overlay_manifest);
+    }
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
