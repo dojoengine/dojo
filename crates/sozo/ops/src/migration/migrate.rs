@@ -781,7 +781,7 @@ pub async fn update_manifests_and_abis(
     };
 
     local_manifest.world.inner.address = Some(world_address);
-    local_manifest.world.inner.seed = salt.to_owned();
+    salt.clone_into(&mut local_manifest.world.inner.seed);
 
     // when the migration has not been applied because in `plan` mode or because of an error,
     // the `migration_output` is empty.

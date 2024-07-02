@@ -530,7 +530,7 @@ mod tests {
         );
 
         assert!(
-            actual_state_updates.declared_sierra_classes.get(&fee_token.class_hash).is_none(),
+            !actual_state_updates.declared_sierra_classes.contains_key(&fee_token.class_hash),
             "The default fee token class doesnt have a sierra class"
         );
 
@@ -553,7 +553,7 @@ mod tests {
         );
 
         assert!(
-            actual_state_updates.declared_sierra_classes.get(&ud.class_hash).is_none(),
+            !actual_state_updates.declared_sierra_classes.contains_key(&ud.class_hash),
             "The default universal deployer class doesnt have a sierra class"
         );
 

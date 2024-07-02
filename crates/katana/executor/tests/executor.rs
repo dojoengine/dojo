@@ -305,15 +305,15 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_storage_updates = states.state_updates.storage_updates;
     assert_eq!(actual_storage_updates.len(), 3, "only 3 contracts whose storage should be updated");
     assert!(
-        actual_storage_updates.get(&DEFAULT_FEE_TOKEN_ADDRESS).is_some(),
+        actual_storage_updates.contains_key(&DEFAULT_FEE_TOKEN_ADDRESS),
         "fee token storage must get updated"
     );
     assert!(
-        actual_storage_updates.get(&(deployed_contract.into())).is_some(),
+        actual_storage_updates.contains_key(&(deployed_contract.into())),
         "deployed contract storage must get updated"
     );
     assert!(
-        actual_storage_updates.get(&new_acc).is_some(),
+        actual_storage_updates.contains_key(&new_acc),
         "newly deployed account storage must get updated"
     );
 }

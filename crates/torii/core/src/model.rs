@@ -474,7 +474,7 @@ pub fn map_row_to_ty(
             let option = row.try_get::<String, &str>(&column_name)?;
             enum_ty.set_option(&option)?;
 
-            let path = [path, &name].join("$");
+            let path = [path, name].join("$");
             for option in &mut enum_ty.options {
                 map_row_to_ty(&path, &option.name, &mut option.ty, row, arrays_rows)?;
             }
@@ -483,21 +483,21 @@ pub fn map_row_to_ty(
             // struct can be the main entrypoint to our model schema
             // so we dont format the table name if the path is empty
             let path =
-                if path.is_empty() { struct_ty.name.clone() } else { [path, &name].join("$") };
+                if path.is_empty() { struct_ty.name.clone() } else { [path, name].join("$") };
 
             for member in &mut struct_ty.children {
                 map_row_to_ty(&path, &member.name, &mut member.ty, row, arrays_rows)?;
             }
         }
         Ty::Tuple(ty) => {
-            let path = [path, &name].join("$");
+            let path = [path, name].join("$");
 
             for (i, member) in ty.iter_mut().enumerate() {
                 map_row_to_ty(&path, &format!("_{}", i), member, row, arrays_rows)?;
             }
         }
         Ty::Array(ty) => {
-            let path = [path, &name].join("$");
+            let path = [path, name].join("$");
             // filter by entity id in case we have multiple entities
             let rows = arrays_rows
                 .get(&path)
