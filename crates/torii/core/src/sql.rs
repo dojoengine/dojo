@@ -6,6 +6,7 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
+use dojo_world::manifest::utils::compute_model_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
@@ -106,7 +107,7 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let insert_models =
-            "INSERT INTO models (id, name, namespace, class_hash, contract_address, layout, packed_size, \
+            "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, packed_size, \
              unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
              UPDATE SET contract_address=EXCLUDED.contract_address, \
              class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
@@ -114,9 +115,9 @@ impl Sql {
              executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             // this is temporary until the model hash is precomputed
-            .bind(&format!("{:#x}", &get_selector_from_name(&model.name())?))
-            .bind(model.name())
+            .bind(&format!("{:#x}", &compute_model_selector_from_names(namespace, &model.name())))
             .bind(namespace)
+            .bind(model.name())
             .bind(format!("{class_hash:#x}"))
             .bind(format!("{contract_address:#x}"))
             .bind(serde_json::to_string(&layout)?)
@@ -597,7 +598,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;

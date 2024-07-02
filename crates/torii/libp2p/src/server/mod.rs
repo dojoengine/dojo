@@ -635,7 +635,7 @@ async fn validate_message(
     })?;
 
     let mut ty = db
-        .model(&format!("{:#x}", model_selector))
+        .model(model_selector)
         .await
         .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model_name, e)))?
         .schema()
