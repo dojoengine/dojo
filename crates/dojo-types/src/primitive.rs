@@ -104,6 +104,13 @@ impl Primitive {
     as_primitive!(as_u64, U64, u64);
     as_primitive!(as_u128, U128, u128);
     as_primitive!(as_u256, U256, U256);
+
+    as_primitive!(as_i8, I8, i8);
+    as_primitive!(as_i16, I16, i16);
+    as_primitive!(as_i32, I32, i32);
+    as_primitive!(as_i64, I64, i64);
+    as_primitive!(as_i128, I128, i128);
+
     as_primitive!(as_bool, Bool, bool);
     as_primitive!(as_usize, USize, u32);
     as_primitive!(as_felt252, Felt252, FieldElement);
@@ -116,6 +123,13 @@ impl Primitive {
     set_primitive!(set_u64, U64, u64);
     set_primitive!(set_u128, U128, u128);
     set_primitive!(set_u256, U256, U256);
+
+    set_primitive!(set_i8, I8, i8);
+    set_primitive!(set_i16, I16, i16);
+    set_primitive!(set_i32, I32, i32);
+    set_primitive!(set_i64, I64, i64);
+    set_primitive!(set_i128, I128, i128);
+
     set_primitive!(set_bool, Bool, bool);
     set_primitive!(set_usize, USize, u32);
     set_primitive!(set_felt252, Felt252, FieldElement);
@@ -131,10 +145,15 @@ impl Primitive {
             Primitive::U128(_) => 4,
             Primitive::U256(_) => 5,
             Primitive::USize(_) => 6,
-            Primitive::Bool(_) => 7,
-            Primitive::Felt252(_) => 8,
-            Primitive::ClassHash(_) => 9,
-            Primitive::ContractAddress(_) => 10,
+            Primitive::I8(_) => 7,
+            Primitive::I16(_) => 8,
+            Primitive::I32(_) => 9,
+            Primitive::I64(_) => 10,
+            Primitive::I128(_) => 11,
+            Primitive::Bool(_) => 12,
+            Primitive::Felt252(_) => 13,
+            Primitive::ClassHash(_) => 14,
+            Primitive::ContractAddress(_) => 15,
         }
     }
 
@@ -148,6 +167,11 @@ impl Primitive {
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::USize(_)
+            | Primitive::I8(_)
+            | Primitive::I16(_)
+            | Primitive::I32(_)
+            | Primitive::I64(_)
+            | Primitive::I128(_)
             | Primitive::Bool(_) => SqlType::Integer,
 
             Primitive::U64(_)
@@ -171,6 +195,11 @@ impl Primitive {
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::USize(_)
+            | Primitive::I8(_)
+            | Primitive::I16(_)
+            | Primitive::I32(_)
+            | Primitive::I64(_)
+            | Primitive::I128(_)
             | Primitive::Bool(_) => Ok(format!("{}", value[0])),
 
             Primitive::U64(_)
