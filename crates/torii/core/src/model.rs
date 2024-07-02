@@ -7,6 +7,7 @@ use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::model::ModelReader;
+use dojo_world::manifest::utils::compute_model_selector_from_names;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
@@ -16,6 +17,8 @@ use super::error::{self, Error};
 use crate::error::{ParseError, QueryError};
 
 pub struct ModelSQLReader {
+    /// Namespace of the model
+    namespace: String,
     /// The name of the model
     name: String,
     /// The class hash of the model
@@ -29,8 +32,9 @@ pub struct ModelSQLReader {
 }
 
 impl ModelSQLReader {
-    pub async fn new(name: &str, pool: Pool<Sqlite>) -> Result<Self, Error> {
-        let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
+    pub async fn new(selector: FieldElement, pool: Pool<Sqlite>) -> Result<Self, Error> {
+        let (namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout): (
+            String,
             String,
             String,
             String,
@@ -38,10 +42,10 @@ impl ModelSQLReader {
             u32,
             String,
         ) = sqlx::query_as(
-            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
+            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
              models WHERE id = ?",
         )
-        .bind(name)
+        .bind(format!("{:#x}", selector))
         .fetch_one(&pool)
         .await?;
 
@@ -52,20 +56,24 @@ impl ModelSQLReader {
 
         let layout = serde_json::from_str(&layout).map_err(error::ParseError::FromJsonStr)?;
 
-        Ok(Self { name, class_hash, contract_address, pool, packed_size, unpacked_size, layout })
+        Ok(Self { namespace, name, class_hash, contract_address, pool, packed_size, unpacked_size, layout })
     }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl ModelReader<Error> for ModelSQLReader {
-    fn name(&self) -> String {
-        self.name.to_string()
+    fn namespace(&self) -> &str {
+        &self.namespace
+    }
+
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn selector(&self) -> FieldElement {
         // this should never fail
-        get_selector_from_name(&self.name).unwrap()
+        compute_model_selector_from_names(&self.namespace, &self.name)
     }
 
     fn class_hash(&self) -> FieldElement {
