@@ -19,9 +19,11 @@ chrono.workspace = true
 convert_case = "0.6.0"
 dojo-types = { path = "../../dojo-types" }
 lazy_static.workspace = true
+regex.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sozo-ops.workspace = true
 sqlx.workspace = true
 strum.workspace = true
 strum_macros.workspace = true
@@ -32,10 +34,8 @@ tokio.workspace = true
 toml.workspace = true
 torii-core = { path = "../core" }
 tracing.workspace = true
-regex.workspace = true
 url.workspace = true
 warp.workspace = true
-sozo-ops.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
@@ -43,6 +43,5 @@ dojo-test-utils = { path = "../../dojo-test-utils", features = [ "build-examples
 dojo-world = { path = "../../dojo-world" }
 scarb.workspace = true
 serial_test = "2.0.0"
-sozo = { path = "../../../bin/sozo" }
 starknet-crypto.workspace = true
 starknet.workspace = true

@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use starknet::core::utils::get_storage_var_address;
+use starknet::macros::felt;
 
 use crate::class::{ClassHash, CompiledClass, CompiledClassHash, SierraClass};
 use crate::contract::{ContractAddress, StorageKey};
@@ -121,6 +122,8 @@ pub const DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash =
         190499602541245794,
     ]);
 
+pub const CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = felt!("0xCC");
+
 // Pre-compiled contract classes
 lazy_static! {
 
@@ -134,7 +137,13 @@ lazy_static! {
     // Default account contract
     pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../../contracts/compiled/oz_account_080.json")).unwrap();
     pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/oz_account_080.json"));
+}
 
+#[cfg(feature = "controller")]
+lazy_static! {
+    // Cartridge Controller account
+    pub static ref CONTROLLER_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../../contracts/compiled/controller_CartridgeAccount.contract_class.json")).unwrap();
+    pub static ref CONTROLLER_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/compiled/oz_account_080.json"));
 }
 
 /// A helper function to get the base storage address for the fee token balance of a given account.

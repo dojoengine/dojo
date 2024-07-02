@@ -22,8 +22,8 @@ manifest_name = "dojo-base"
 
 [[contracts]]
 kind = "DojoContract"
-class_hash = "0x7b39442bf860c74e8c3dae198623c996c4c24c6d442735d5be20cc58ce15e4e"
-original_class_hash = "0x7b39442bf860c74e8c3dae198623c996c4c24c6d442735d5be20cc58ce15e4e"
+class_hash = "0x1e25819012944715e33045da9b9f1bced52553412935816b3886cffe5ce0d90"
+original_class_hash = "0x1e25819012944715e33045da9b9f1bced52553412935816b3886cffe5ce0d90"
 base_class_hash = "0x0"
 abi = "abis/deployments/contracts/dojo_examples-actions-49cbe40e.json"
 reads = []
@@ -213,4 +213,27 @@ key = true
 [[models.members]]
 name = "vec"
 type = "Vec2"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x66a806d59e69873946a5b06e0e3df94c2f9cb139d8cc32f73e4f9ebc0ff885"
+original_class_hash = "0x66a806d59e69873946a5b06e0e3df94c2f9cb139d8cc32f73e4f9ebc0ff885"
+abi = "abis/deployments/models/dojo_examples-ServerProfile-71e0f153.json"
+tag = "dojo_examples:ServerProfile"
+manifest_name = "dojo_examples-ServerProfile-71e0f153"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "server_id"
+type = "u32"
+key = true
+
+[[models.members]]
+name = "name"
+type = "ByteArray"
 key = false

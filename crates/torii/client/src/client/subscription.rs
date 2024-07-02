@@ -12,7 +12,7 @@ use starknet::core::types::{StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
 use torii_grpc::client::ModelDiffsStreaming;
-use torii_grpc::types::KeysClause;
+use torii_grpc::types::ModelKeysClause;
 
 use crate::client::error::{Error, ParseError};
 use crate::client::storage::ModelStorage;
@@ -24,13 +24,13 @@ pub enum SubscriptionEvent {
 
 pub struct SubscribedModels {
     metadata: Arc<RwLock<WorldMetadata>>,
-    pub(crate) models_keys: RwLock<HashSet<KeysClause>>,
+    pub(crate) models_keys: RwLock<HashSet<ModelKeysClause>>,
     /// All the relevant storage addresses derived from the subscribed models
     pub(crate) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
 }
 
 impl SubscribedModels {
-    pub(crate) fn is_synced(&self, keys: &KeysClause) -> bool {
+    pub(crate) fn is_synced(&self, keys: &ModelKeysClause) -> bool {
         self.models_keys.read().contains(keys)
     }
 
@@ -42,21 +42,21 @@ impl SubscribedModels {
         }
     }
 
-    pub(crate) fn add_models(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub(crate) fn add_models(&self, models_keys: Vec<ModelKeysClause>) -> Result<(), Error> {
         for keys in models_keys {
             Self::add_model(self, keys)?;
         }
         Ok(())
     }
 
-    pub(crate) fn remove_models(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub(crate) fn remove_models(&self, entities_keys: Vec<ModelKeysClause>) -> Result<(), Error> {
         for keys in entities_keys {
             Self::remove_model(self, keys)?;
         }
         Ok(())
     }
 
-    pub(crate) fn add_model(&self, keys: KeysClause) -> Result<(), Error> {
+    pub(crate) fn add_model(&self, keys: ModelKeysClause) -> Result<(), Error> {
         if !self.models_keys.write().insert(keys.clone()) {
             return Ok(());
         }
@@ -83,7 +83,7 @@ impl SubscribedModels {
         Ok(())
     }
 
-    pub(crate) fn remove_model(&self, keys: KeysClause) -> Result<(), Error> {
+    pub(crate) fn remove_model(&self, keys: ModelKeysClause) -> Result<(), Error> {
         if !self.models_keys.write().remove(&keys) {
             return Ok(());
         }
@@ -247,7 +247,7 @@ mod tests {
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
     use starknet::macros::felt;
-    use torii_grpc::types::KeysClause;
+    use torii_grpc::types::ModelKeysClause;
 
     use crate::utils::compute_all_storage_addresses;
 
@@ -283,7 +283,7 @@ mod tests {
 
         let metadata = self::create_dummy_metadata();
 
-        let keys = KeysClause { model: model_name, keys };
+        let keys = ModelKeysClause { model: model_name, keys };
 
         let subscribed_models = super::SubscribedModels::new(Arc::new(RwLock::new(metadata)));
         subscribed_models.add_models(vec![keys.clone()]).expect("able to add model");

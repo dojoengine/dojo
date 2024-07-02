@@ -175,10 +175,11 @@ impl<P: Provider + Sync> Engine<P> {
                     match e.to_string().as_str() {
                         "TransactionHashNotFound" => {
                             // We failed to fetch the transaction, which is because
-                            // the transaction might not have passed the validation stage.
-                            // So we can safely ignore this transaction and not process it, as it
-                            // rejected.
-                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Ignored failed pending transaction.");
+                            // the transaction might not have been processed fast enough by the
+                            // provider. So we can fail silently and try
+                            // again in the next iteration.
+                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Retrieving pending transaction receipt.");
+                            return Ok(pending_block_tx);
                         }
                         _ => {
                             error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processing pending transaction.");
@@ -406,7 +407,7 @@ impl<P: Provider + Sync> Engine<P> {
         for processor in &self.processors.block {
             processor
                 .process(&mut self.db, self.provider.as_ref(), block_number, block_timestamp)
-                .await?;
+                .await?
         }
         Ok(())
     }
@@ -457,7 +458,7 @@ impl<P: Provider + Sync> Engine<P> {
                 || get_selector_from_name(&processor.event_key())? == event.keys[0])
                 && processor.validate(event)
             {
-                processor
+                if let Err(e) = processor
                     .process(
                         &self.world,
                         &mut self.db,
@@ -467,7 +468,10 @@ impl<P: Provider + Sync> Engine<P> {
                         event_id,
                         event,
                     )
-                    .await?;
+                    .await
+                {
+                    error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
+                }
             } else {
                 let unprocessed_event = UnprocessedEvent {
                     keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),

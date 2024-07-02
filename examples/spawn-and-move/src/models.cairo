@@ -86,6 +86,16 @@ struct PlayerConfig {
     favorite_item: Option<u32>,
 }
 
+#[derive(Drop, Serde)]
+#[dojo::model]
+struct ServerProfile {
+    #[key]
+    player: ContractAddress,
+    #[key]
+    server_id: u32,
+    name: ByteArray,
+}
+
 trait Vec2Trait {
     fn is_zero(self: Vec2) -> bool;
     fn is_equal(self: Vec2, b: Vec2) -> bool;
