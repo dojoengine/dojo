@@ -311,6 +311,7 @@ mod test {
 
         // Register the model of our Message
         db.register_model(
+            "Test",
             Ty::Struct(Struct {
                 name: "Message".to_string(),
                 children: vec![
