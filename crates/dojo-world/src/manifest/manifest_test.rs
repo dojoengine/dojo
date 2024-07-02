@@ -339,12 +339,13 @@ fn fetch_remote_manifest() {
         local_manifest.remove_tags(skip_manifests);
     }
 
-    let overlay_manifest = OverlayManifest::load_from_path(
-        &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
-    )
-    .unwrap();
+    let overlay_dir = temp_project_dir.join(OVERLAYS_DIR).join(profile_name);
+    if overlay_dir.exists() {
+        let overlay_manifest =
+            OverlayManifest::load_from_path(&overlay_dir, &local_manifest).unwrap();
 
-    local_manifest.merge(overlay_manifest);
+        local_manifest.merge(overlay_manifest);
+    }
 
     let remote_manifest = config.tokio_handle().block_on(async {
         DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
@@ -482,11 +483,11 @@ fn overlay_merge_for_world_work_as_expected() {
     // when other.world is none and current.world is some
     let other = OverlayManifest { ..Default::default() };
     let mut current = OverlayManifest {
-        world: Some(OverlayClass { name: "world".into(), ..Default::default() }),
+        world: Some(OverlayClass { tag: "dojo:world".to_string(), ..Default::default() }),
         ..Default::default()
     };
     let expected = OverlayManifest {
-        world: Some(OverlayClass { name: "world".into(), ..Default::default() }),
+        world: Some(OverlayClass { tag: "dojo:world".to_string(), ..Default::default() }),
         ..Default::default()
     };
     current.merge(other);
@@ -495,12 +496,12 @@ fn overlay_merge_for_world_work_as_expected() {
 
     // when other.world is some and current.world is none
     let other = OverlayManifest {
-        world: Some(OverlayClass { name: "world".into(), ..Default::default() }),
+        world: Some(OverlayClass { tag: "dojo:world".to_string(), ..Default::default() }),
         ..Default::default()
     };
     let mut current = OverlayManifest { ..Default::default() };
     let expected = OverlayManifest {
-        world: Some(OverlayClass { name: "world".into(), ..Default::default() }),
+        world: Some(OverlayClass { tag: "dojo:world".to_string(), ..Default::default() }),
         ..Default::default()
     };
 
@@ -509,15 +510,15 @@ fn overlay_merge_for_world_work_as_expected() {
 
     // when other.world is some and current.world is some
     let other = OverlayManifest {
-        world: Some(OverlayClass { name: "worldother".into(), ..Default::default() }),
+        world: Some(OverlayClass { tag: "dojo:worldother".to_string(), ..Default::default() }),
         ..Default::default()
     };
     let mut current = OverlayManifest {
-        world: Some(OverlayClass { name: "worldcurrent".into(), ..Default::default() }),
+        world: Some(OverlayClass { tag: "dojo:worldcurrent".to_string(), ..Default::default() }),
         ..Default::default()
     };
     let expected = OverlayManifest {
-        world: Some(OverlayClass { name: "worldcurrent".into(), ..Default::default() }),
+        world: Some(OverlayClass { tag: "dojo:worldcurrent".to_string(), ..Default::default() }),
         ..Default::default()
     };
 
@@ -538,11 +539,11 @@ fn overlay_merge_for_base_work_as_expected() {
     // when other.base is none and current.base is some
     let other = OverlayManifest { ..Default::default() };
     let mut current = OverlayManifest {
-        base: Some(OverlayClass { name: "base".into(), ..Default::default() }),
+        base: Some(OverlayClass { tag: "dojo:base".to_string(), ..Default::default() }),
         ..Default::default()
     };
     let expected = OverlayManifest {
-        base: Some(OverlayClass { name: "base".into(), ..Default::default() }),
+        base: Some(OverlayClass { tag: "dojo:base".to_string(), ..Default::default() }),
         ..Default::default()
     };
     current.merge(other);
@@ -551,12 +552,12 @@ fn overlay_merge_for_base_work_as_expected() {
 
     // when other.base is some and current.base is none
     let other = OverlayManifest {
-        base: Some(OverlayClass { name: "base".into(), ..Default::default() }),
+        base: Some(OverlayClass { tag: "dojo:base".to_string(), ..Default::default() }),
         ..Default::default()
     };
     let mut current = OverlayManifest { ..Default::default() };
     let expected = OverlayManifest {
-        base: Some(OverlayClass { name: "base".into(), ..Default::default() }),
+        base: Some(OverlayClass { tag: "dojo:base".to_string(), ..Default::default() }),
         ..Default::default()
     };
 
@@ -565,15 +566,15 @@ fn overlay_merge_for_base_work_as_expected() {
 
     // when other.base is some and current.base is some
     let other = OverlayManifest {
-        base: Some(OverlayClass { name: "baseother".into(), ..Default::default() }),
+        base: Some(OverlayClass { tag: "dojo:baseother".to_string(), ..Default::default() }),
         ..Default::default()
     };
     let mut current = OverlayManifest {
-        base: Some(OverlayClass { name: "basecurrent".into(), ..Default::default() }),
+        base: Some(OverlayClass { tag: "dojo:basecurrent".to_string(), ..Default::default() }),
         ..Default::default()
     };
     let expected = OverlayManifest {
-        base: Some(OverlayClass { name: "basecurrent".into(), ..Default::default() }),
+        base: Some(OverlayClass { tag: "dojo:basecurrent".to_string(), ..Default::default() }),
         ..Default::default()
     };
 
@@ -595,7 +596,7 @@ fn base_manifest_remove_items_work_as_expected() {
     let models = ["ns:m1", "ns:m2", "ns:m3"];
 
     let world = Manifest { manifest_name: "world".into(), inner: Default::default() };
-    let base = Manifest { manifest_name: "base".into(), inner: Default::default() };
+    let base = Manifest { manifest_name: "dojo-base".to_string(), inner: Default::default() };
 
     let contracts = contracts
         .iter()

@@ -26,7 +26,7 @@ where
 {
     ui.print_step(1, "🌎", "Building World state...");
 
-    let mut local_manifest = BaseManifest::load_from_path(&manifest_dir)
+    let mut local_manifest = BaseManifest::load_from_path(manifest_dir)
         .map_err(|e| anyhow!("Fail to load local manifest file: {e}."))?;
 
     if let Some(skip_manifests) = skip_migration {
@@ -34,7 +34,7 @@ where
     }
 
     if overlay_dir.exists() {
-        let overlay_manifest = OverlayManifest::load_from_path(overlay_dir)
+        let overlay_manifest = OverlayManifest::load_from_path(overlay_dir, &local_manifest)
             .map_err(|e| anyhow!("Fail to load overlay manifest file: {e}."))?;
 
         // merge user defined changes to base manifest

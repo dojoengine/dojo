@@ -1,7 +1,9 @@
 use starknet::macros::felt;
 
 use super::*;
-use crate::manifest::utils::{get_filename_from_tag, get_tag, get_tag_from_special_contract_name};
+use crate::manifest::utils::{
+    get_filename_from_special_contract_name, get_filename_from_tag, get_tag,
+};
 use crate::manifest::{BaseManifest, Class, DojoContract, DojoModel, Manifest};
 
 #[test]
