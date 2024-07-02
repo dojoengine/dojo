@@ -152,6 +152,7 @@ pub struct Class {
     #[serde_as(as = "UfeHex")]
     pub original_class_hash: FieldElement,
     pub abi: Option<AbiFormat>,
+    pub tag: String,
 }
 
 #[serde_as]
@@ -185,7 +186,7 @@ pub struct OverlayContract {
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayClass {
-    pub name: SmolStr,
+    pub tag: String,
     pub original_class_hash: Option<FieldElement>,
 }
 
