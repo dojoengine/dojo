@@ -272,6 +272,10 @@ impl Primitive {
                 *value = Some(U256::from_be_bytes(bytes));
                 Ok(())
             }
+            // Primitive::I8(ref mut value) => {
+            //     *value = Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
+            //     Ok(())
+            // }
             Primitive::ContractAddress(ref mut value) => {
                 *value = Some(felts.remove(0));
                 Ok(())
