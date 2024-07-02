@@ -156,6 +156,66 @@ impl Introspect_u256 of Introspect<u256> {
     }
 }
 
+impl Introspect_i8 of Introspect<i8> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i8')
+    }
+}
+
+impl Introspect_i16 of Introspect<i16> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i16')
+    }
+}
+
+impl Introspect_i32 of Introspect<i32> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i32')
+    }
+}
+
+impl Introspect_i64 of Introspect<i64> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i64')
+    }
+}
+
+impl Introspect_i128 of Introspect<i128> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed(array![251].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('i128')
+    }
+}
+
 impl Introspect_address of Introspect<starknet::ContractAddress> {
     fn size() -> Option<usize> {
         Option::Some(1)
