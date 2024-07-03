@@ -16,12 +16,6 @@ use super::options::world::WorldOptions;
 
 #[derive(Debug, Args)]
 pub struct DevArgs {
-    #[arg(long)]
-    #[arg(help = "Name of the World.")]
-    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
-                       contract to avoid address conflicts.")]
-    pub name: Option<String>,
-
     #[command(flatten)]
     pub world: WorldOptions,
 
@@ -53,13 +47,9 @@ impl DevArgs {
         BuildArgs::default().run(config)?;
         info!("Initial build completed.");
 
-        let _ = MigrateArgs::new_apply(
-            self.name.clone(),
-            self.world.clone(),
-            self.starknet.clone(),
-            self.account.clone(),
-        )
-        .run(config);
+        let _ =
+            MigrateArgs::new_apply(self.world.clone(), self.starknet.clone(), self.account.clone())
+                .run(config);
 
         info!(
             directory = watched_directory.to_string(),
@@ -89,7 +79,6 @@ impl DevArgs {
                 let _ = BuildArgs::default().run(config);
 
                 let _ = MigrateArgs::new_apply(
-                    self.name.clone(),
                     self.world.clone(),
                     self.starknet.clone(),
                     self.account.clone(),

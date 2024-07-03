@@ -53,27 +53,16 @@ fn build_artifact_from_name(
 /// # Returns
 ///
 /// A [`WorldMetadata`] object initialized with project metadata.
-pub fn project_to_world_metadata(project_metadata: Option<ProjectWorldMetadata>) -> WorldMetadata {
-    if let Some(m) = project_metadata {
-        WorldMetadata {
-            name: m.name,
-            description: m.description,
-            cover_uri: m.cover_uri,
-            icon_uri: m.icon_uri,
-            website: m.website,
-            socials: m.socials,
-            ..Default::default()
-        }
-    } else {
-        WorldMetadata {
-            name: None,
-            description: None,
-            cover_uri: None,
-            icon_uri: None,
-            website: None,
-            socials: None,
-            ..Default::default()
-        }
+pub fn project_to_world_metadata(m: ProjectWorldMetadata) -> WorldMetadata {
+    WorldMetadata {
+        name: m.name,
+        description: m.description,
+        cover_uri: m.cover_uri,
+        icon_uri: m.icon_uri,
+        website: m.website,
+        socials: m.socials,
+        seed: m.seed,
+        ..Default::default()
     }
 }
 
@@ -154,7 +143,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
 /// Metadata coming from project configuration (Scarb.toml)
 #[derive(Default, Deserialize, Debug, Clone)]
 pub struct ProjectMetadata {
-    pub world: Option<ProjectWorldMetadata>,
+    pub world: ProjectWorldMetadata,
     pub env: Option<Environment>,
     pub skip_migration: Option<Vec<String>>,
 }
@@ -232,6 +221,7 @@ impl Uri {
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectWorldMetadata {
     pub name: Option<String>,
+    pub seed: String,
     pub description: Option<String>,
     pub cover_uri: Option<Uri>,
     pub icon_uri: Option<Uri>,
@@ -243,6 +233,7 @@ pub struct ProjectWorldMetadata {
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct WorldMetadata {
     pub name: Option<String>,
+    pub seed: String,
     pub description: Option<String>,
     pub cover_uri: Option<Uri>,
     pub icon_uri: Option<Uri>,

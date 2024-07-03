@@ -24,13 +24,6 @@ pub struct MigrateArgs {
     #[command(subcommand)]
     pub command: MigrateCommand,
 
-    #[arg(long, global = true)]
-    #[arg(help = "Name of the World.")]
-    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
-                       contract to avoid address conflicts. If not provided root package's name \
-                       will be used.")]
-    name: Option<String>,
-
     #[command(flatten)]
     world: WorldOptions,
 
@@ -57,14 +50,12 @@ pub enum MigrateCommand {
 impl MigrateArgs {
     /// Creates a new `MigrateArgs` with the `Apply` command.
     pub fn new_apply(
-        name: Option<String>,
         world: WorldOptions,
         starknet: StarknetOptions,
         account: AccountOptions,
     ) -> Self {
         Self {
             command: MigrateCommand::Apply { transaction: TransactionOptions::init_wait() },
-            name,
             world,
             starknet,
             account,
@@ -83,6 +74,8 @@ impl MigrateArgs {
                  workspaces."
             ));
         };
+
+        dbg!(&dojo_metadata);
 
         // This variant is tested before the match on `self.command` to avoid
         // having the need to spin up a Katana to generate the files.
@@ -103,11 +96,9 @@ impl MigrateArgs {
             return Err(anyhow!("Build project using `sozo build` first"));
         }
 
-        let MigrateArgs { name, world, starknet, account, .. } = self;
+        let MigrateArgs { world, starknet, account, .. } = self;
 
-        let name = name.unwrap_or_else(|| {
-            ws.current_package().expect("Root package to be present").id.name.to_string()
-        });
+        let name = dojo_metadata.world.seed;
 
         let (world_address, account, rpc_url) = config.tokio_handle().block_on(async {
             setup_env(&ws, account, starknet, world, &name, env_metadata.as_ref()).await
