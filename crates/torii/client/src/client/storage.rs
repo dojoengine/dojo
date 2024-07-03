@@ -6,7 +6,7 @@ use futures::channel::mpsc::{channel, Receiver, Sender};
 use parking_lot::{Mutex, RwLock};
 use starknet_crypto::FieldElement;
 
-use super::error::{Error, ParseError};
+use super::error::Error;
 use crate::utils::compute_all_storage_addresses;
 
 pub type EntityKeys = Vec<FieldElement>;
@@ -124,9 +124,9 @@ impl ModelStorage {
         let model_packed_size = self
             .metadata
             .read()
-            .model(&model_name)
+            .model(&model)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(model_name))?;
+            .ok_or(Error::UnknownModel(model))?;
 
         Ok(compute_all_storage_addresses(model, raw_keys, model_packed_size))
     }
@@ -151,7 +151,7 @@ mod tests {
 
     fn create_dummy_metadata() -> WorldMetadata {
         let models = HashMap::from([(
-            "Position".into(),
+            compute_model_selector_from_names("Test", "Position"),
             dojo_types::schema::ModelMetadata {
                 namespace: "Test".into(),
                 name: "Position".into(),
@@ -205,10 +205,8 @@ mod tests {
         );
         assert!(actual_values == expected_values);
         assert!(storage.storage.read().len() == model.packed_size as usize);
-        assert!(
-            actual_storage_addresses
-                .into_iter()
-                .all(|address| expected_storage_addresses.contains(&address))
-        );
+        assert!(actual_storage_addresses
+            .into_iter()
+            .all(|address| expected_storage_addresses.contains(&address)));
     }
 }
