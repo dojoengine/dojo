@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1719846793563,
+  "lastUpdate": 1720018822415,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10735,6 +10735,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16530352,
             "range": "± 342156",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "60488569+tcoratger@users.noreply.github.com",
+            "name": "Thomas Coratger",
+            "username": "tcoratger"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f1348833a9bfcbd505d4121fbf4f900d78421eee",
+          "message": "fix unsafe precondition check (#2129)\n\n* bump rust to 1.79\r\n\r\n* fix clippy\r\n\r\n* fix clippy\r\n\r\n* fix ensure wasm\r\n\r\n* revert rust version",
+          "timestamp": "2024-07-03T08:48:09-06:00",
+          "tree_id": "97cb714573caedb5ab340ad4d7a6b1d1c8c40e28",
+          "url": "https://github.com/dojoengine/dojo/commit/f1348833a9bfcbd505d4121fbf4f900d78421eee"
+        },
+        "date": 1720018821161,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16378448,
+            "range": "± 206312",
             "unit": "ns/iter"
           }
         ]
