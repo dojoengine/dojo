@@ -20,6 +20,7 @@ use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::poseidon_hash_many;
+use starknet_types_core::felt::Felt;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
@@ -388,7 +389,7 @@ impl Saya {
             world_da,
             program_output,
             program_hash,
-            nonce_after + 1u64.into(),
+            nonce_after + Felt::ONE,
             self.config.starknet_account.clone(),
         )
         .await?;
