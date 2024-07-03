@@ -1,23 +1,45 @@
 use alloy_primitives::B256;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{DataAvailabilityMode, EthAddress, MsgToL1, MsgToL2, ResourceBounds};
-use starknet::macros::short_string;
 use starknet_crypto::poseidon_hash_many;
 
 use crate::FieldElement;
 
 /// 2^ 128
 const QUERY_VERSION_OFFSET: FieldElement =
-    FieldElement::from_raw([18446744073700081665, 17407, 18446744073709551584, 576460752142434320]);
+    FieldElement::from_raw([576460752142434320, 18446744073709551584, 17407, 18446744073700081665]);
 
 /// Cairo string for "invoke"
-const PREFIX_INVOKE: FieldElement = short_string!("invoke");
+const PREFIX_INVOKE: FieldElement = FieldElement::from_raw([
+    513398556346534256,
+    18446744073709551615,
+    18446744073709551615,
+    18443034532770911073,
+]);
 
-const PREFIX_DECLARE: FieldElement = short_string!("declare");
+/// Cairo string for "declare"
+const PREFIX_DECLARE: FieldElement = FieldElement::from_raw([
+    191557713328401194,
+    18446744073709551615,
+    18446744073709551615,
+    17542456862011667323,
+]);
 
-const PREFIX_DEPLOY_ACCOUNT: FieldElement = short_string!("deploy_account");
+/// Cairo string for "deploy_account"
+const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_raw([
+    461298303000467581,
+    18446744073709551615,
+    18443211694809419988,
+    3350261884043292318,
+]);
 
-const PREFIX_L1_HANDLER: FieldElement = short_string!("l1_handler");
+/// Cairo string for "l1_handler"
+const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_raw([
+    157895833347907735,
+    18446744073709551615,
+    18446744073708665300,
+    1365666230910873368,
+]);
 
 /// Compute the hash of a V1 DeployAccount transaction.
 #[allow(clippy::too_many_arguments)]
@@ -308,9 +330,23 @@ fn encode_da_mode(
 mod tests {
     use num_traits::ToPrimitive;
     use starknet::core::chain_id;
-    use starknet::macros::felt;
+    use starknet::macros::{felt, short_string};
 
     use super::*;
+
+    #[test]
+    fn test_query_version_offset() {
+        // 2^ 128
+        assert_eq!(QUERY_VERSION_OFFSET, FieldElement::TWO.pow(128u8));
+    }
+
+    #[test]
+    fn test_prefix_constants() {
+        assert_eq!(PREFIX_INVOKE, short_string!("invoke"));
+        assert_eq!(PREFIX_DECLARE, short_string!("declare"));
+        assert_eq!(PREFIX_DEPLOY_ACCOUNT, short_string!("deploy_account"));
+        assert_eq!(PREFIX_L1_HANDLER, short_string!("l1_handler"));
+    }
 
     #[test]
     fn test_compute_deploy_account_v1_tx_hash() {
