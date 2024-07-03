@@ -172,11 +172,13 @@ where
     Ok(())
 }
 
+#[allow(dead_code)]
 enum ContractDeploymentOutput {
     AlreadyDeployed(FieldElement),
     Output(DeployOutput),
 }
 
+#[allow(dead_code)]
 enum ContractUpgradeOutput {
     Output(UpgradeOutput),
 }
