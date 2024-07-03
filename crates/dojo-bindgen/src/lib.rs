@@ -242,19 +242,15 @@ mod tests {
         assert_eq!(data.world.name, "dojo_example");
 
         let pos = data.models.get("Position").unwrap();
-        assert_eq!(pos.name, "Position");
-        assert_eq!(pos.qualified_path, "dojo_examples::models::Position");
+        assert_eq!(pos.tag, "Position");
 
         let moves = data.models.get("Moves").unwrap();
-        assert_eq!(moves.name, "Moves");
-        assert_eq!(moves.qualified_path, "dojo_examples::models::Moves");
+        assert_eq!(moves.tag, "Moves");
 
         let moved = data.models.get("Message").unwrap();
-        assert_eq!(moved.name, "Message");
-        assert_eq!(moved.qualified_path, "dojo_examples::models::Message");
+        assert_eq!(moved.tag, "Message");
 
         let player_config = data.models.get("PlayerConfig").unwrap();
-        assert_eq!(player_config.name, "PlayerConfig");
-        assert_eq!(player_config.qualified_path, "dojo_examples::models::PlayerConfig");
+        assert_eq!(player_config.tag, "PlayerConfig");
     }
 }

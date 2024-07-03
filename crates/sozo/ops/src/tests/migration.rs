@@ -80,16 +80,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let account = sequencer.account(0);
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &migration,
-            &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &migration,
+        &account,
+        TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
+    )
+    .await
+    .is_err());
 }
 
 #[tokio::test]
@@ -303,20 +301,20 @@ async fn migrate_with_metadata() {
 
     // check model metadata
     for m in migration.models {
-        let selector = get_selector_from_name(&m.diff.name).unwrap();
-        check_artifact_metadata(&client, &world_reader, selector, &m.diff.name, &dojo_metadata)
+        let selector = get_selector_from_name(&m.diff.tag).unwrap();
+        check_artifact_metadata(&client, &world_reader, selector, &m.diff.tag, &dojo_metadata)
             .await;
     }
 
     // check contract metadata
     for c in migration.contracts {
         let contract_address =
-            get_contract_address_from_reader(&world_reader, c.diff.name.clone()).await.unwrap();
+            get_contract_address_from_reader(&world_reader, c.diff.tag.clone()).await.unwrap();
         check_artifact_metadata(
             &client,
             &world_reader,
             contract_address,
-            &c.diff.name,
+            &c.diff.tag,
             &dojo_metadata,
         )
         .await;
@@ -364,12 +362,12 @@ async fn migrate_with_auto_authorize() {
     // check contract metadata
     for c in migration.contracts {
         let contract_address =
-            get_contract_address_from_reader(&world_reader, c.diff.name.clone()).await.unwrap();
+            get_contract_address_from_reader(&world_reader, c.diff.tag.clone()).await.unwrap();
 
         let contract = manifest
             .contracts
             .iter()
-            .find(|a| a.inner.namespace == c.diff.namespace && a.inner.name == c.diff.name)
+            .find(|a| a.inner.tag == c.diff.tag && a.inner.tag == c.diff.tag)
             .unwrap();
 
         for model in &contract.inner.writes {
