@@ -616,13 +616,13 @@ impl DojoWorld {
                 .into_iter()
                 .map(|(column, op, value)| {
                     bind_values.push(value);
-                    format!("{}.{} {} ?", model, column, op)
+                    format!("[{}].{} {} ?", model, column, op)
                 })
                 .collect::<Vec<_>>()
                 .join(" AND ");
 
             join_clauses.push(format!(
-                "JOIN {} ON {}.id = {}.entity_id AND ({})",
+                "JOIN [{}] ON [{}].id = [{}].entity_id AND ({})",
                 model, table, model, model_conditions
             ));
         }
@@ -641,8 +641,8 @@ impl DojoWorld {
 
         let count_query = format!(
             r#"
-            SELECT COUNT(DISTINCT {table}.id)
-            FROM {table}
+            SELECT COUNT(DISTINCT [{table}].id)
+            FROM [{table}]
             {join_clause}
             {where_clause}
             "#
@@ -661,14 +661,14 @@ impl DojoWorld {
 
         let query = format!(
             r#"
-            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
-            FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+            SELECT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
+            FROM [{table}]
+            JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
             {join_clause}
             {where_clause}
-            GROUP BY {table}.id
+            GROUP BY [{table}].id
             {having_clause}
-            ORDER BY {table}.event_id DESC
+            ORDER BY [{table}].event_id DESC
             LIMIT ? OFFSET ?
             "#
         );
@@ -694,8 +694,8 @@ impl DojoWorld {
                 &schemas,
                 table,
                 entity_relation_column,
-                Some(&format!("{table}.id = ?")),
-                Some(&format!("{table}.id = ?")),
+                Some(&format!("[{table}].id = ?")),
+                Some(&format!("[{table}].id = ?")),
             )?;
 
             let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
