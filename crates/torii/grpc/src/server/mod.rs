@@ -12,7 +12,8 @@ use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use dojo_types::schema::Ty;
+use dojo_types::schema::{Model, Ty};
+use dojo_world::manifest::utils::compute_model_selector_from_names;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
@@ -125,8 +126,8 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models: Vec<(String, String, String, String, u32, u32, String)> = sqlx::query_as(
-            "SELECT id, name, class_hash, contract_address, packed_size, unpacked_size, layout \
+        let models: Vec<(String, String, String, String, String, u32, u32, String)> = sqlx::query_as(
+            "SELECT id, namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout \
              FROM models",
         )
         .fetch_all(&self.pool)
@@ -134,14 +135,18 @@ impl DojoWorld {
 
         let mut models_metadata = Vec::with_capacity(models.len());
         for model in models {
-            let schema = self.model_cache.schema(&model.0).await?;
+            let schema = self
+                .model_cache
+                .schema(&FieldElement::from_str(&model.0).map_err(ParseError::FromStr)?)
+                .await?;
             models_metadata.push(proto::types::ModelMetadata {
-                name: model.1,
-                class_hash: model.2,
-                contract_address: model.3,
-                packed_size: model.4,
-                unpacked_size: model.5,
-                layout: model.6.as_bytes().to_vec(),
+                namespace: model.1,
+                name: model.2,
+                class_hash: model.3,
+                contract_address: model.4,
+                packed_size: model.5,
+                unpacked_size: model.6,
+                layout: model.7.as_bytes().to_vec(),
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
@@ -267,9 +272,13 @@ impl DojoWorld {
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         let mut entities = Vec::with_capacity(db_entities.len());
-        for (entity_id, models_str) in &db_entities {
-            let model_ids: Vec<&str> = models_str.split(',').collect();
-            let schemas = self.model_cache.schemas(model_ids).await?;
+        for (entity_id, models_str) in db_entities {
+            let model_ids: Vec<FieldElement> = models_str
+                .split(',')
+                .map(FieldElement::from_str)
+                .collect::<Result<_, _>>()
+                .map_err(ParseError::FromStr)?;
+            let schemas = self.model_cache.schemas(&model_ids).await?;
 
             let (entity_query, arrays_queries) = build_sql_query(
                 &schemas,
@@ -472,8 +481,12 @@ impl DojoWorld {
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 
-        let model_ids = models_str.split(',').collect::<Vec<&str>>();
-        let schemas = self.model_cache.schemas(model_ids).await?;
+        let model_ids = models_str
+            .split(',')
+            .map(FieldElement::from_str)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(ParseError::FromStr)?;
+        let schemas = self.model_cache.schemas(&model_ids).await?;
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
@@ -666,10 +679,13 @@ impl DojoWorld {
         Ok((entities, total_count))
     }
 
-    pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
+    pub async fn model_metadata(
+        &self,
+        namespace: &str,
+        name: &str,
+    ) -> Result<proto::types::ModelMetadata, Error> {
         // selector
-        let model =
-            format!("{:#x}", get_selector_from_name(model).map_err(ParseError::NonAsciiName)?);
+        let model = compute_model_selector_from_names(namespace, name);
 
         let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
             String,
@@ -679,10 +695,10 @@ impl DojoWorld {
             u32,
             String,
         ) = sqlx::query_as(
-            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
+            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
              models WHERE id = ?",
         )
-        .bind(&model)
+        .bind(format!("{:#x}", model))
         .fetch_one(&self.pool)
         .await?;
 
@@ -690,6 +706,7 @@ impl DojoWorld {
         let layout = layout.as_bytes().to_vec();
 
         Ok(proto::types::ModelMetadata {
+            namespace: namespace.to_string(),
             name,
             layout,
             class_hash,
@@ -710,7 +727,7 @@ impl DojoWorld {
                 .map_err(ParseError::CairoShortStringToFelt)?;
 
             let proto::types::ModelMetadata { packed_size, .. } =
-                self.model_metadata(&keys.model).await?;
+                self.model_metadata(&keys.namespace, &keys.model).await?;
 
             subs.push(ModelDiffRequest {
                 keys,
@@ -919,16 +936,21 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
 fn map_row_to_entity(
     row: &SqliteRow,
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
-    schemas: &[Ty],
+    schemas: &[Model],
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys =
         FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
         .iter()
         .map(|schema| {
-            let mut schema = schema.to_owned();
-            map_row_to_ty("", &schema.name(), &mut schema, row, arrays_rows)?;
-            Ok(schema.as_struct().expect("schema should be struct").to_owned().try_into().unwrap())
+            let mut ty = Ty::Struct(schema.clone().into());
+            map_row_to_ty("", &schema.name, &mut ty, row, arrays_rows)?;
+            Ok(Model {
+                namespace: schema.namespace.clone(),
+                name: schema.name.clone(),
+                members: ty.as_struct().expect("schema should be a struct").children.clone(),
+            }
+            .into())
         })
         .collect::<Result<Vec<_>, Error>>()?;
 

@@ -103,8 +103,9 @@ message Clause {
 }
 
 message ModelKeysClause {
-    string model = 1;
-    repeated bytes keys = 2;
+    string namespace = 1;
+    string model = 2;
+    repeated bytes keys = 3;
 }
 
 message EntityKeysClause {

@@ -192,7 +192,11 @@ impl SubscriptionService {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
             let current = d.address;
-            if current == expected { Some(d.storage_entries) } else { None }
+            if current == expected {
+                Some(d.storage_entries)
+            } else {
+                None
+            }
         });
 
         let Some(entries) = storage_entries else {
@@ -283,7 +287,7 @@ mod tests {
 
         let metadata = self::create_dummy_metadata();
 
-        let keys = ModelKeysClause { model: model_name, keys };
+        let keys = ModelKeysClause { namespace: &"Test", model: model_name, keys };
 
         let subscribed_models = super::SubscribedModels::new(Arc::new(RwLock::new(metadata)));
         subscribed_models.add_models(vec![keys.clone()]).expect("able to add model");

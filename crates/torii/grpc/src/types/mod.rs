@@ -37,12 +37,14 @@ pub enum EntityKeysClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct ModelKeysClause {
+    pub namespace: String,
     pub model: String,
     pub keys: Vec<FieldElement>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct KeysClause {
+    pub namespace: String,
     pub keys: Vec<Option<FieldElement>>,
     pub pattern_matching: PatternMatching,
     pub models: Vec<String>,
@@ -56,6 +58,7 @@ pub enum PatternMatching {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct MemberClause {
+    pub namespace: String,
     pub model: String,
     pub member: String,
     pub operator: ComparisonOperator,
@@ -64,6 +67,7 @@ pub struct MemberClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct CompositeClause {
+    pub namespace: String,
     pub model: String,
     pub operator: LogicalOperator,
     pub clauses: Vec<Clause>,
@@ -268,6 +272,7 @@ impl TryFrom<proto::types::EntityKeysClause> for EntityKeysClause {
 impl From<ModelKeysClause> for proto::types::ModelKeysClause {
     fn from(value: ModelKeysClause) -> Self {
         Self {
+            namespace: value.namespace,
             model: value.model,
             keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect(),
         }
@@ -284,13 +289,14 @@ impl TryFrom<proto::types::ModelKeysClause> for ModelKeysClause {
             .map(|k| FieldElement::from_byte_slice_be(&k))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Self { model: value.model, keys })
+        Ok(Self { namespace: value.namespace, model: value.model, keys })
     }
 }
 
 impl From<MemberClause> for proto::types::MemberClause {
     fn from(value: MemberClause) -> Self {
         Self {
+            namespace: value.namespace,
             model: value.model,
             member: value.member,
             operator: value.operator as i32,
@@ -302,6 +308,7 @@ impl From<MemberClause> for proto::types::MemberClause {
 impl From<CompositeClause> for proto::types::CompositeClause {
     fn from(value: CompositeClause) -> Self {
         Self {
+            namespace: value.namespace,
             model: value.model,
             operator: value.operator as i32,
             clauses: value.clauses.into_iter().map(|clause| clause.into()).collect(),
