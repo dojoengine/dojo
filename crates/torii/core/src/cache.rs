@@ -21,7 +21,7 @@ impl ModelCache {
     pub async fn schemas(&self, selectors: &[FieldElement]) -> Result<Vec<Ty>, Error> {
         let mut schemas = Vec::with_capacity(selectors.len());
         for selector in selectors {
-            schemas.push(self.schema(&selector).await?);
+            schemas.push(self.schema(selector).await?);
         }
 
         Ok(schemas)
@@ -60,7 +60,7 @@ impl ModelCache {
 
         let schema = parse_sql_model_members(&namespace, &name, &model_members);
         let mut cache = self.cache.write().await;
-        cache.insert(selector.clone(), schema.clone());
+        cache.insert(*selector, schema.clone());
 
         Ok(schema)
     }

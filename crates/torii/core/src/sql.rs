@@ -436,6 +436,7 @@ impl Sql {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn build_register_queries_recursive(
         &mut self,
         selector: FieldElement,
@@ -786,6 +787,7 @@ impl Sql {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn build_model_query(
         &mut self,
         selector: FieldElement,

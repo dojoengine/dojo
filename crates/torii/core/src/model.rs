@@ -335,7 +335,7 @@ pub fn build_sql_query(
         parse_ty(
             "",
             &model.name(),
-            &model,
+            model,
             &mut global_selections,
             &mut global_tables,
             &mut arrays_queries,
