@@ -127,8 +127,12 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
 
         if !type_mapping.is_empty() {
             // add models objects & unions
-            let field_name = format!("{}{}", model.namespace.to_case(Case::Camel), model.name.to_case(Case::Pascal));
-            let type_name = format!("{}{}", model.namespace.to_case(Case::Pascal), model.name.to_case(Case::Pascal));
+            let field_name = format!(
+                "{}{}",
+                model.namespace.to_case(Case::Camel),
+                model.name.to_case(Case::Pascal)
+            );
+            let type_name = format!("{}_{}", model.namespace, model.name);
 
             model_union = model_union.possible_type(&type_name);
 

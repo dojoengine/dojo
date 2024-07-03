@@ -68,7 +68,7 @@ where
         let contract_address = event.data[offset + 2];
 
         info!(
-            target: LOG_TARGET, 
+            target: LOG_TARGET,
             name = %name,
             "Registered model."
         );

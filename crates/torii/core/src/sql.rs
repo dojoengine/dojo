@@ -108,9 +108,9 @@ impl Sql {
         let selector = compute_model_selector_from_names(namespace, &model.name());
 
         let insert_models =
-            "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, packed_size, \
-             unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
-             UPDATE SET contract_address=EXCLUDED.contract_address, \
+            "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
+             packed_size, unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON \
+             CONFLICT(id) DO UPDATE SET contract_address=EXCLUDED.contract_address, \
              class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
              packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
              executed_at=EXCLUDED.executed_at RETURNING *";
@@ -231,10 +231,7 @@ impl Sql {
         self.query_queue.enqueue(
             "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
-            vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(model_id.clone()),
-            ],
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         );
 
         let keys_str = felts_sql_string(&keys);
@@ -614,11 +611,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return;
@@ -883,10 +876,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            selector
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(member_idx as i64),
                         Argument::String(name),
@@ -912,10 +902,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            selector
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),
                         Argument::String(format!("_{}", idx)),
@@ -942,10 +929,7 @@ impl Sql {
                 let arguments = vec![
                     Argument::String(table_id.clone()),
                     // TEMP: this is temporary until the model hash is precomputed
-                    Argument::String(format!(
-                        "{:#x}",
-                        selector
-                    )),
+                    Argument::String(format!("{:#x}", selector)),
                     Argument::Int(model_idx),
                     Argument::Int(0),
                     Argument::String("data".to_string()),
@@ -984,10 +968,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            selector
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),
                         Argument::String(child.name.clone()),

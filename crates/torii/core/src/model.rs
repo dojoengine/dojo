@@ -42,8 +42,8 @@ impl ModelSQLReader {
             u32,
             String,
         ) = sqlx::query_as(
-            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
-             models WHERE id = ?",
+            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
+             layout FROM models WHERE id = ?",
         )
         .bind(format!("{:#x}", selector))
         .fetch_one(&pool)
@@ -134,7 +134,11 @@ pub struct SqlModelMember {
 // assume that the model members are sorted by model_idx and member_idx
 // `id` is the type id of the model member
 /// A helper function to parse the model members from sql table to `Ty`
-pub fn parse_sql_model_members(namespace: &str, model: &str, model_members_all: &[SqlModelMember]) -> Ty {
+pub fn parse_sql_model_members(
+    namespace: &str,
+    model: &str,
+    model_members_all: &[SqlModelMember],
+) -> Ty {
     fn parse_sql_member(member: &SqlModelMember, model_members_all: &[SqlModelMember]) -> Ty {
         match member.type_enum.as_str() {
             "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
@@ -371,7 +375,8 @@ pub fn build_sql_query(
                         )
                     } else {
                         format!(
-                            " JOIN [{table}] ON [{table}].full_array_id = [{prev_table}].full_array_id",
+                            " JOIN [{table}] ON [{table}].full_array_id = \
+                             [{prev_table}].full_array_id",
                             prev_table = tables[idx - 1]
                         )
                     }
@@ -606,7 +611,10 @@ mod tests {
         });
 
         assert_eq!(parse_sql_model_members("Test", "Position", &model_members), expected_position);
-        assert_eq!(parse_sql_model_members("Test", "PlayerConfig", &model_members), expected_player_config);
+        assert_eq!(
+            parse_sql_model_members("Test", "PlayerConfig", &model_members),
+            expected_player_config
+        );
     }
 
     #[test]
@@ -810,7 +818,10 @@ mod tests {
         });
 
         assert_eq!(parse_sql_model_members("Test", "Position", &model_members), expected_position);
-        assert_eq!(parse_sql_model_members("Test", "PlayerConfig", &model_members), expected_player_config);
+        assert_eq!(
+            parse_sql_model_members("Test", "PlayerConfig", &model_members),
+            expected_player_config
+        );
     }
 
     #[test]

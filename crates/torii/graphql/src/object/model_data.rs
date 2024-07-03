@@ -64,9 +64,13 @@ impl BasicObject for ModelDataObject {
     }
 
     fn objects(&self) -> Vec<Object> {
+        let mut parts = self.type_name().split('_').collect::<Vec<&str>>();
+        let model = parts.pop().unwrap();
+        let namespace = parts.join("_");
+        let type_name = format!("{}-{}", namespace, model);
         let mut objects = data_objects_recursion(
             &TypeData::Nested((TypeRef::named(self.type_name()), self.type_mapping.clone())),
-            &vec![self.type_name().to_string()],
+            &vec![type_name],
         );
 
         // root object requires entity_field association
@@ -96,7 +100,10 @@ impl ResolvableObject for ModelDataObject {
         let mut field = Field::new(self.name().1, TypeRef::named(field_type), move |ctx| {
             let type_mapping = type_mapping.clone();
             let where_mapping = where_mapping.clone();
-            let type_name = type_name.clone();
+            let mut parts = type_name.split('_').collect::<Vec<&str>>();
+            let model = parts.pop().unwrap();
+            let namespace = parts.join("_");
+            let type_name = format!("{}-{}", namespace, model);
 
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;

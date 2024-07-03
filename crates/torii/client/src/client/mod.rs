@@ -283,7 +283,12 @@ impl Client {
         Ok(stream)
     }
 
-    async fn initiate_model(&self, namespace: &str, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
+    async fn initiate_model(
+        &self,
+        namespace: &str,
+        model: &str,
+        keys: Vec<FieldElement>,
+    ) -> Result<(), Error> {
         let model_reader = self.world_reader.model_reader(namespace, model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(

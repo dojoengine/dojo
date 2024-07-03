@@ -154,7 +154,14 @@ fn model_union_field() -> Field {
                             _ => unreachable!(),
                         };
 
-                        results.push(FieldValue::with_type(FieldValue::owned_any(data), format!("{}{}", namespace.to_case(Case::Pascal), name.to_case(Case::Pascal))))
+                        results.push(FieldValue::with_type(
+                            FieldValue::owned_any(data),
+                            format!(
+                                "{}{}",
+                                namespace.to_case(Case::Pascal),
+                                name.to_case(Case::Pascal)
+                            ),
+                        ))
                     }
 
                     Ok(Some(FieldValue::list(results)))

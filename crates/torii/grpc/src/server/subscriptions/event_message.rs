@@ -124,8 +124,10 @@ impl Service {
                                 let (clause_namespace, clause_model) =
                                     clause_model.split_once('-').unwrap();
                                 // if both namespace and model are empty, we should match all.
-                                // if namespace is specified and model is empty or * we should match all models in the namespace
-                                // if namespace and model are specified, we should match the specific model
+                                // if namespace is specified and model is empty or * we should match
+                                // all models in the namespace
+                                // if namespace and model are specified, we should match the
+                                // specific model
                                 (clause_namespace.is_empty()
                                     || clause_namespace == namespace
                                     || clause_namespace == "*")

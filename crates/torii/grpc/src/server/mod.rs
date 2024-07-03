@@ -21,7 +21,7 @@ use proto::world::{
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
-use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
@@ -126,12 +126,13 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models: Vec<(String, String, String, String, String, u32, u32, String)> = sqlx::query_as(
-            "SELECT id, namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout \
-             FROM models",
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let models: Vec<(String, String, String, String, String, u32, u32, String)> =
+            sqlx::query_as(
+                "SELECT id, namespace, name, class_hash, contract_address, packed_size, \
+                 unpacked_size, layout FROM models",
+            )
+            .fetch_all(&self.pool)
+            .await?;
 
         let mut models_metadata = Vec::with_capacity(models.len());
         for model in models {
@@ -434,7 +435,6 @@ impl DojoWorld {
                 arrays_rows.insert(name, rows);
             }
 
-
             entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
         }
 
@@ -599,8 +599,12 @@ impl DojoWorld {
                         comparison_value,
                     ));
 
-                    let model_id =
-                        get_selector_from_name(&member.model).map_err(ParseError::NonAsciiName)?;
+                    let (namespace, model) = member
+                        .model
+                        .split_once('-')
+                        .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
+                    let model_id: FieldElement =
+                        compute_model_selector_from_names(namespace, model);
                     having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
                 }
                 _ => return Err(QueryError::UnsupportedQuery.into()),
@@ -724,8 +728,8 @@ impl DojoWorld {
             u32,
             String,
         ) = sqlx::query_as(
-            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
-             models WHERE id = ?",
+            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
+             layout FROM models WHERE id = ?",
         )
         .bind(format!("{:#x}", model))
         .fetch_one(&self.pool)
