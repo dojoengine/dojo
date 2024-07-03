@@ -97,7 +97,6 @@ message Clause {
 }
 
 message ModelKeysClause {
-    string namespace = 1;
     string model = 2;
     repeated bytes keys = 3;
 }
@@ -120,7 +119,6 @@ message HashedKeysClause {
 }
 
 message MemberClause {
-    string namespace = 1;
     string model = 2;
     string member = 3;
     ComparisonOperator operator = 4;

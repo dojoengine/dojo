@@ -488,6 +488,11 @@ impl DojoWorld {
 
         let comparison_value = value_to_string(&value_type)?;
 
+        let (namespace, model) = member_clause
+            .model
+            .split_once('-')
+            .ok_or(QueryError::InvalidNamespacedModel(member_clause.model.clone()))?;
+
         let models_query = format!(
             r#"
             SELECT group_concat({model_relation_table}.model_id) as model_ids
@@ -497,7 +502,7 @@ impl DojoWorld {
             HAVING INSTR(model_ids, '{:#x}') > 0
             LIMIT 1
         "#,
-            compute_model_selector_from_names(&member_clause.namespace, &member_clause.model)
+            compute_model_selector_from_names(namespace, model)
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 
@@ -747,16 +752,20 @@ impl DojoWorld {
     ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
         let mut subs = Vec::with_capacity(models_keys.len());
         for keys in models_keys {
-            let model = cairo_short_string_to_felt(&keys.model)
-                .map_err(ParseError::CairoShortStringToFelt)?;
+            let (namespace, model) = keys
+                .model
+                .split_once('-')
+                .ok_or(QueryError::InvalidNamespacedModel(keys.model.clone()))?;
+
+            let selector = compute_model_selector_from_names(namespace, model);
 
             let proto::types::ModelMetadata { packed_size, .. } =
-                self.model_metadata(&keys.namespace, &keys.model).await?;
+                self.model_metadata(namespace, model).await?;
 
             subs.push(ModelDiffRequest {
                 keys,
                 model: subscriptions::model_diff::ModelMetadata {
-                    name: model,
+                    name: selector,
                     packed_size: packed_size as usize,
                 },
             });

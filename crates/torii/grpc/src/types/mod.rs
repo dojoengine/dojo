@@ -37,7 +37,6 @@ pub enum EntityKeysClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct ModelKeysClause {
-    pub namespace: String,
     pub model: String,
     pub keys: Vec<FieldElement>,
 }
@@ -57,7 +56,6 @@ pub enum PatternMatching {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct MemberClause {
-    pub namespace: String,
     pub model: String,
     pub member: String,
     pub operator: ComparisonOperator,
@@ -142,6 +140,7 @@ impl TryFrom<proto::types::ModelMetadata> for dojo_types::schema::ModelMetadata 
             schema,
             layout,
             name: value.name,
+            namespace: value.namespace,
             packed_size: value.packed_size,
             unpacked_size: value.unpacked_size,
             class_hash: FieldElement::from_str(&value.class_hash)?,
@@ -269,7 +268,6 @@ impl TryFrom<proto::types::EntityKeysClause> for EntityKeysClause {
 impl From<ModelKeysClause> for proto::types::ModelKeysClause {
     fn from(value: ModelKeysClause) -> Self {
         Self {
-            namespace: value.namespace,
             model: value.model,
             keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect(),
         }
@@ -286,14 +284,13 @@ impl TryFrom<proto::types::ModelKeysClause> for ModelKeysClause {
             .map(|k| FieldElement::from_byte_slice_be(&k))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Self { namespace: value.namespace, model: value.model, keys })
+        Ok(Self { model: value.model, keys })
     }
 }
 
 impl From<MemberClause> for proto::types::MemberClause {
     fn from(value: MemberClause) -> Self {
         Self {
-            namespace: value.namespace,
             model: value.model,
             member: value.member,
             operator: value.operator as i32,
