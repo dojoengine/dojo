@@ -5238,6 +5238,7 @@ dependencies = [
  "topological-sort",
  "tracing",
  "url",
+ "walkdir",
 ]
 
 [[package]]

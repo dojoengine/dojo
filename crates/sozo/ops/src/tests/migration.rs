@@ -4,7 +4,7 @@ use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
-use dojo_world::manifest::utils::get_default_namespace_from_ws;
+use dojo_world::manifest::utils::{compute_model_selector_from_tag, get_default_namespace_from_ws};
 use dojo_world::manifest::{
     BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
     WORLD_CONTRACT_NAME,
@@ -103,11 +103,11 @@ async fn metadata_calculated_properly() {
     let profile_name = ws.current_profile().unwrap().to_string();
 
     let mut manifest = BaseManifest::load_from_path(
-        &base.to_path_buf().join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+        &base.to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
 
-    let overlay_dir = base.join(OVERLAYS_DIR).join(profile_name);
+    let overlay_dir = base.join(OVERLAYS_DIR).join(&profile_name);
     if overlay_dir.exists() {
         let overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &manifest).unwrap();
         manifest.merge(overlay_manifest);
@@ -303,20 +303,20 @@ async fn migrate_with_metadata() {
 
     // check model metadata
     for m in migration.models {
-        let selector = get_selector_from_name(&m.diff.name).unwrap();
-        check_artifact_metadata(&client, &world_reader, selector, &m.diff.name, &dojo_metadata)
+        let selector = compute_model_selector_from_tag(&m.diff.tag);
+        check_artifact_metadata(&client, &world_reader, selector, &m.diff.tag, &dojo_metadata)
             .await;
     }
 
     // check contract metadata
     for c in migration.contracts {
         let contract_address =
-            get_contract_address_from_reader(&world_reader, c.diff.name.clone()).await.unwrap();
+            get_contract_address_from_reader(&world_reader, c.diff.tag.clone()).await.unwrap();
         check_artifact_metadata(
             &client,
             &world_reader,
             contract_address,
-            &c.diff.name,
+            &c.diff.tag,
             &dojo_metadata,
         )
         .await;
@@ -363,13 +363,9 @@ async fn migrate_with_auto_authorize() {
     // check contract metadata
     for c in migration.contracts {
         let contract_address =
-            get_contract_address_from_reader(&world_reader, c.diff.name.clone()).await.unwrap();
+            get_contract_address_from_reader(&world_reader, c.diff.tag.clone()).await.unwrap();
 
-        let contract = manifest
-            .contracts
-            .iter()
-            .find(|a| a.inner.namespace == c.diff.namespace && a.inner.name == c.diff.name)
-            .unwrap();
+        let contract = manifest.contracts.iter().find(|a| a.inner.tag == c.diff.tag).unwrap();
 
         for model in &contract.inner.writes {
             let model_selector = get_selector_from_name(model).unwrap();
@@ -439,44 +435,34 @@ fn get_hash_from_uri(uri: &str) -> String {
 /// * `uri` - the IPFS URI of the abi field.
 /// * `expected_uri` - the URI of the expected file.
 /// * `field_name` - the field name.
-/// * `element_name` - the fully qualified name of the element linked to this field.
+/// * `tag` - the tag of the element linked to this field.
 async fn check_file_field(
     client: &HyperBackend,
     uri: &Uri,
     expected_uri: &Uri,
     field_name: String,
-    element_name: &String,
+    tag: &String,
 ) {
     if let Uri::Ipfs(uri) = uri {
-        let resource_data = get_ipfs_resource_data(client, element_name, uri).await;
-        assert!(
-            !resource_data.is_empty(),
-            "{field_name} IPFS artifact for {} is empty",
-            element_name
-        );
+        let resource_data = get_ipfs_resource_data(client, tag, uri).await;
+        assert!(!resource_data.is_empty(), "{field_name} IPFS artifact for {} is empty", tag);
 
         if let Uri::File(f) = expected_uri {
             let file_content = std::fs::read_to_string(f).unwrap();
             let resource_content = std::str::from_utf8(&resource_data).unwrap_or_else(|_| {
-                panic!(
-                    "Unable to stringify resource data for field '{}' of {}",
-                    field_name, element_name
-                )
+                panic!("Unable to stringify resource data for field '{}' of {}", field_name, tag)
             });
 
             assert!(
                 file_content.eq(&resource_content),
                 "local '{field_name}' content differs from the one uploaded on IPFS for {}",
-                element_name
+                tag
             );
         } else {
-            panic!(
-                "The field '{field_name}' of {} is not a file (Should never happen !)",
-                element_name
-            );
+            panic!("The field '{field_name}' of {} is not a file (Should never happen !)", tag);
         }
     } else {
-        panic!("The '{field_name}' field is not an IPFS artifact for {}", element_name);
+        panic!("The '{field_name}' field is not an IPFS artifact for {}", tag);
     }
 }
 
@@ -485,16 +471,16 @@ async fn check_file_field(
 /// # Arguments
 ///
 /// * `raw_data` - resource data as bytes.
-/// * `element_name` - name of the element linked to this resource.
+/// * `tag` - tag of the element linked to this resource.
 ///
 /// # Returns
 ///
 /// A [`ArtifactMetadata`] object.
-fn resource_bytes_to_metadata(raw_data: &[u8], element_name: &String) -> ArtifactMetadata {
+fn resource_bytes_to_metadata(raw_data: &[u8], tag: &String) -> ArtifactMetadata {
     let data = std::str::from_utf8(raw_data)
-        .unwrap_or_else(|_| panic!("Unable to stringify raw metadata for {}", element_name));
+        .unwrap_or_else(|_| panic!("Unable to stringify raw metadata for {}", tag));
     serde_json::from_str(data)
-        .unwrap_or_else(|_| panic!("Unable to deserialize metadata for {}", element_name))
+        .unwrap_or_else(|_| panic!("Unable to deserialize metadata for {}", tag))
 }
 
 /// Convert resource bytes to a WorldMetadata object.
@@ -519,21 +505,17 @@ fn resource_bytes_to_world_metadata(raw_data: &[u8], element_name: &String) -> W
 /// # Arguments
 ///
 /// * `client` - a IPFS client.
-/// * `element_name` - the name of the element (model or contract) linked to this artifact.
+/// * `tag` - the tag of the element (model or contract) linked to this artifact.
 /// * `uri` - the IPFS resource URI.
 ///
 /// # Returns
 ///
 /// A [`Vec<u8>`] containing the resource content as bytes.
-async fn get_ipfs_resource_data(
-    client: &HyperBackend,
-    element_name: &String,
-    uri: &String,
-) -> Vec<u8> {
+async fn get_ipfs_resource_data(client: &HyperBackend, tag: &String, uri: &String) -> Vec<u8> {
     let hash = get_hash_from_uri(uri);
 
     let res = client.cat(&hash).map_ok(|chunk| chunk.to_vec()).try_concat().await;
-    assert!(res.is_ok(), "Unable to read the IPFS artifact {} for {}", uri, element_name);
+    assert!(res.is_ok(), "Unable to read the IPFS artifact {} for {}", uri, tag);
 
     res.unwrap()
 }
@@ -545,22 +527,22 @@ async fn get_ipfs_resource_data(
 /// * `client` - a IPFS client.
 /// * `metadata` - the metadata to check.
 /// * `expected_metadata` - the metadata values coming from local Dojo metadata.
-/// * `element_name` - the name of the element linked to this metadata.
+/// * `tag` - the tag of the element linked to this metadata.
 async fn check_artifact_fields(
     client: &HyperBackend,
     metadata: &ArtifactMetadata,
     expected_metadata: &ArtifactMetadata,
-    element_name: &String,
+    tag: &String,
 ) {
-    assert!(metadata.abi.is_some(), "'abi' field not set for {}", element_name);
+    assert!(metadata.abi.is_some(), "'abi' field not set for {}", tag);
     let abi = metadata.abi.as_ref().unwrap();
     let expected_abi = expected_metadata.abi.as_ref().unwrap();
-    check_file_field(client, abi, expected_abi, "abi".to_string(), element_name).await;
+    check_file_field(client, abi, expected_abi, "abi".to_string(), tag).await;
 
-    assert!(metadata.source.is_some(), "'source' field not set for {}", element_name);
+    assert!(metadata.source.is_some(), "'source' field not set for {}", tag);
     let source = metadata.source.as_ref().unwrap();
     let expected_source = expected_metadata.source.as_ref().unwrap();
-    check_file_field(client, source, expected_source, "source".to_string(), element_name).await;
+    check_file_field(client, source, expected_source, "source".to_string(), tag).await;
 }
 
 /// Check the validity of a IPFS artifact metadata.
@@ -568,19 +550,19 @@ async fn check_artifact_fields(
 /// # Arguments
 ///
 /// * `client` - a IPFS client.
-/// * `element_name` - the fully qualified name of the element linked to the artifact.
+/// * `tag` - the tag of the element linked to the artifact.
 /// * `uri` - the full metadata URI.
 /// * `expected_metadata` - the expected metadata values coming from local Dojo metadata.
 async fn check_ipfs_metadata(
     client: &HyperBackend,
-    element_name: &String,
+    tag: &String,
     uri: &String,
     expected_metadata: &ArtifactMetadata,
 ) {
-    let resource_bytes = get_ipfs_resource_data(client, element_name, uri).await;
-    let metadata = resource_bytes_to_metadata(&resource_bytes, element_name);
+    let resource_bytes = get_ipfs_resource_data(client, tag, uri).await;
+    let metadata = resource_bytes_to_metadata(&resource_bytes, tag);
 
-    check_artifact_fields(client, &metadata, expected_metadata, element_name).await;
+    check_artifact_fields(client, &metadata, expected_metadata, tag).await;
 }
 
 /// Check an artifact metadata read from the resource registry against its value
@@ -591,28 +573,24 @@ async fn check_ipfs_metadata(
 /// * `client` - a IPFS client.
 /// * `world_reader` - a world reader object.
 /// * `resource_id` - the resource ID in the resource registry.
-/// * `element_name` - the fully qualified name of the element linked to this metadata.
+/// * `tag` - the tag of the element linked to this metadata.
 /// * `dojo_metadata` - local Dojo metadata.
 async fn check_artifact_metadata<P: starknet::providers::Provider + Sync>(
     client: &HyperBackend,
     world_reader: &WorldContractReader<P>,
     resource_id: FieldElement,
-    element_name: &String,
+    tag: &String,
     dojo_metadata: &DojoMetadata,
 ) {
     let resource = world_reader.metadata(&resource_id).call().await.unwrap();
 
-    let expected_resource = dojo_metadata.resources_artifacts.get(element_name);
-    assert!(
-        expected_resource.is_some(),
-        "Unable to find local artifact metadata for {}",
-        element_name
-    );
+    let expected_resource = dojo_metadata.resources_artifacts.get(tag);
+    assert!(expected_resource.is_some(), "Unable to find local artifact metadata for {}", tag);
     let expected_resource = expected_resource.unwrap();
 
     check_ipfs_metadata(
         client,
-        element_name,
+        tag,
         &resource.metadata_uri.to_string().unwrap(),
         &expected_resource.artifacts,
     )

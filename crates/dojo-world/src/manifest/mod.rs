@@ -19,6 +19,7 @@ use toml;
 use toml::Table;
 use tracing::error;
 use utils::{get_filename_from_special_contract_name, get_tag_from_special_contract_name};
+use walkdir::WalkDir;
 
 use crate::contracts::model::ModelError;
 use crate::contracts::world::WorldEvent;
@@ -229,21 +230,25 @@ impl OverlayManifest {
         base_manifest: &BaseManifest,
     ) -> Result<Self, AbstractManifestError> {
         fs::create_dir_all(path)?;
-        let entries = fs::read_dir(path)?;
 
         let kind_from_tags = Self::build_kind_from_tags(base_manifest);
         let mut loaded_tags = HashMap::<String, bool>::new();
         let mut overlays = OverlayManifest::default();
 
-        for entry in entries.flatten() {
+        for entry in WalkDir::new(path).into_iter() {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(e) => return Err(AbstractManifestError::IO(e.into())),
+            };
             let file_path = entry.path();
             let file_name = entry.file_name().to_string_lossy().to_string();
-            if !file_name.ends_with(".toml") {
+
+            if !file_name.clone().ends_with(".toml") {
                 continue;
             }
 
             // an overlay file must contain a 'tag' key.
-            let toml_data = toml::from_str::<Table>(&fs::read_to_string(file_path.clone())?)?;
+            let toml_data = toml::from_str::<Table>(&fs::read_to_string(file_path)?)?;
             if !toml_data.contains_key("tag") {
                 return Err(AbstractManifestError::TagError(format!(
                     "The overlay '{file_name}' must contain the 'tag' key."
@@ -275,7 +280,7 @@ impl OverlayManifest {
                 )));
             }
 
-            Self::load_overlay(&file_path, kind_from_tags[&tag], &mut overlays)?;
+            Self::load_overlay(&file_path.to_path_buf(), kind_from_tags[&tag], &mut overlays)?;
             loaded_tags.insert(tag, true);
         }
 
