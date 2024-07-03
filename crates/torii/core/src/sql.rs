@@ -145,6 +145,7 @@ impl Sql {
 
     pub async fn set_entity(
         &mut self,
+        namespace: &str,
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
@@ -160,13 +161,13 @@ impl Sql {
         };
 
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        let model_id =
+            format!("{:#x}", compute_model_selector_from_names(namespace, &entity.name()));
+
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
-            vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
-            ],
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         );
 
         let keys_str = felts_sql_string(&keys);
@@ -182,7 +183,7 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
-        entity_updated.updated_model = Some(entity.clone());
+        entity_updated.updated_model = Some((namespace.to_string(), entity.clone()));
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(
@@ -202,6 +203,7 @@ impl Sql {
 
     pub async fn set_event_message(
         &mut self,
+        namespace: &str,
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
@@ -217,12 +219,15 @@ impl Sql {
         };
 
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        let model_id =
+            format!("{:#x}", compute_model_selector_from_names(namespace, &entity.name()));
+
         self.query_queue.enqueue(
             "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
             vec![
                 Argument::String(entity_id.clone()),
-                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
+                Argument::String(model_id.clone()),
             ],
         );
 
@@ -239,7 +244,7 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
-        event_message_updated.updated_model = Some(entity.clone());
+        event_message_updated.updated_model = Some((namespace.to_string(), entity.clone()));
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(
@@ -321,9 +326,11 @@ impl Sql {
     }
 
     pub async fn model(&self, selector: FieldElement) -> Result<ModelSQLReader> {
-    match ModelSQLReader::new(selector, self.pool.clone()).await {
+        match ModelSQLReader::new(selector, self.pool.clone()).await {
             Ok(reader) => Ok(reader),
-            Err(e) => Err(anyhow::anyhow!("Failed to get model from db for selector {selector:#x}: {e}")),
+            Err(e) => {
+                Err(anyhow::anyhow!("Failed to get model from db for selector {selector:#x}: {e}"))
+            }
         }
     }
 
