@@ -13218,7 +13218,7 @@ dependencies = [
 [[package]]
 name = "slot"
 version = "0.8.0"
-source = "git+https://github.com/cartridge-gg/slot?branch=bump-starknet#1e0d342e8d10ec6b8d8cc2382e137e5d81b67948"
+source = "git+https://github.com/cartridge-gg/slot?rev=4c1165d#4c1165d8308495f8de57a8ac52362ce8322e545b"
 dependencies = [
  "anyhow",
  "axum",

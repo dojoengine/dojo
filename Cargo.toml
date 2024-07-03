@@ -225,7 +225,7 @@ criterion = "0.5.1"
 
 # Controller integration
 account_sdk = { git = "https://github.com/cartridge-gg/controller", branch = "bump-starknet" }
-slot = { git = "https://github.com/cartridge-gg/slot", branch = "bump-starknet" }
+slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
