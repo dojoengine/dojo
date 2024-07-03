@@ -41,7 +41,7 @@ async fn test_model() {
     .await;
 
     let world = WorldContractReader::new(world_address, provider);
-    let position = world.model_reader("Dojo", "Position").await.unwrap();
+    let position = world.model_reader("dojo_examples", "Position").await.unwrap();
     let schema = position.schema().await.unwrap();
 
     assert_eq!(
@@ -79,7 +79,7 @@ async fn test_model() {
 
     assert_eq!(
         position.class_hash(),
-        felt!("0x027942375b09862291ece780c573e8c625df4ba41fd7524e0658ca75fff014ff")
+        felt!("0x059e57c16c3bc8c59a768a342496837275e399509366640620a0682826275a34")
     );
 
     let moves = world.model_reader("Dojo", "Moves").await.unwrap();

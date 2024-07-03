@@ -98,7 +98,7 @@ pub async fn deploy_world(
             manifest.clone().world.inner.class_hash,
             vec![base_class_hash],
             &account,
-            &&TxnConfig::init_wait(),
+            &TxnConfig::init_wait(),
         )
         .await
         .unwrap()
@@ -106,13 +106,17 @@ pub async fn deploy_world(
 
     let mut declare_output = vec![];
     for model in strategy.models {
-        let res = model.declare(&account, &&TxnConfig::init_wait()).await.unwrap();
+        let res = model.declare(&account, &TxnConfig::init_wait()).await.unwrap();
         declare_output.push(res);
     }
 
     let world = WorldContract::new(world_address, &account);
 
-    world.register_namespace(&cainome::cairo_serde::ByteArray::from_string("dojo_examples").unwrap()).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
+    world
+        .register_namespace(&cainome::cairo_serde::ByteArray::from_string("dojo_examples").unwrap())
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
 
     // Wondering why the `init_wait` is not enough and causes a nonce error.
     // May be to a delay to create the block as we are in instant mining.

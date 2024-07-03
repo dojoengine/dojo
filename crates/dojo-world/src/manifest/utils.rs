@@ -46,11 +46,7 @@ pub fn split_tag(tag: &str) -> Result<(String, String)> {
 }
 
 pub fn ensure_namespace(tag: &str, default_namespace: &str) -> String {
-    if tag.contains(TAG_SEPARATOR) {
-        tag.to_string()
-    } else {
-        get_tag(default_namespace, tag)
-    }
+    if tag.contains(TAG_SEPARATOR) { tag.to_string() } else { get_tag(default_namespace, tag) }
 }
 
 pub fn get_filename_from_tag(tag: &str) -> Result<String> {
