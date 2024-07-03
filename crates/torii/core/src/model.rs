@@ -554,7 +554,7 @@ mod tests {
     fn parse_simple_model_members_to_ty() {
         let model_members = vec![
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "x".into(),
                 r#type: "u256".into(),
                 key: false,
@@ -564,7 +564,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "y".into(),
                 r#type: "u256".into(),
                 key: false,
@@ -574,7 +574,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig".into(),
+                id: "Test-PlayerConfig".into(),
                 name: "name".into(),
                 r#type: "ByteArray".into(),
                 key: false,
@@ -586,7 +586,7 @@ mod tests {
         ];
 
         let expected_position = Ty::Struct(Struct {
-            name: "Position".into(),
+            name: "Test-Position".into(),
             children: vec![
                 dojo_types::schema::Member {
                     name: "x".into(),
@@ -602,7 +602,7 @@ mod tests {
         });
 
         let expected_player_config = Ty::Struct(Struct {
-            name: "PlayerConfig".into(),
+            name: "Test-PlayerConfig".into(),
             children: vec![dojo_types::schema::Member {
                 name: "name".into(),
                 key: false,
@@ -621,7 +621,7 @@ mod tests {
     fn parse_complex_model_members_to_ty() {
         let model_members = vec![
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "name".into(),
                 r#type: "felt252".into(),
                 key: false,
@@ -631,7 +631,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "age".into(),
                 r#type: "u8".into(),
                 key: false,
@@ -641,7 +641,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "vec".into(),
                 r#type: "Vec2".into(),
                 key: false,
@@ -651,7 +651,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position$vec".into(),
+                id: "Test-Position$vec".into(),
                 name: "x".into(),
                 r#type: "u256".into(),
                 key: false,
@@ -661,7 +661,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position$vec".into(),
+                id: "Test-Position$vec".into(),
                 name: "y".into(),
                 r#type: "u256".into(),
                 key: false,
@@ -671,7 +671,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig".into(),
+                id: "Test-PlayerConfig".into(),
                 name: "favorite_item".into(),
                 r#type: "Option<u32>".into(),
                 key: false,
@@ -681,7 +681,7 @@ mod tests {
                 enum_options: Some("None,Some".into()),
             },
             SqlModelMember {
-                id: "PlayerConfig".into(),
+                id: "Test-PlayerConfig".into(),
                 name: "items".into(),
                 r#type: "Array<PlayerItem>".into(),
                 key: false,
@@ -691,7 +691,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$items".into(),
+                id: "Test-PlayerConfig$items".into(),
                 name: "data".into(),
                 r#type: "PlayerItem".into(),
                 key: false,
@@ -701,7 +701,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$items$data".into(),
+                id: "Test-PlayerConfig$items$data".into(),
                 name: "item_id".into(),
                 r#type: "u32".into(),
                 key: false,
@@ -711,7 +711,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$items$data".into(),
+                id: "Test-PlayerConfig$items$data".into(),
                 name: "quantity".into(),
                 r#type: "u32".into(),
                 key: false,
@@ -721,7 +721,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$favorite_item".into(),
+                id: "Test-PlayerConfig$favorite_item".into(),
                 name: "Some".into(),
                 r#type: "u32".into(),
                 key: false,
@@ -731,7 +731,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$favorite_item".into(),
+                id: "Test-PlayerConfig$favorite_item".into(),
                 name: "option".into(),
                 r#type: "Option<u32>".into(),
                 key: false,
@@ -743,7 +743,7 @@ mod tests {
         ];
 
         let expected_position = Ty::Struct(Struct {
-            name: "Position".into(),
+            name: "Test-Position".into(),
             children: vec![
                 dojo_types::schema::Member {
                     name: "name".into(),
@@ -778,7 +778,7 @@ mod tests {
         });
 
         let expected_player_config = Ty::Struct(Struct {
-            name: "PlayerConfig".into(),
+            name: "Test-PlayerConfig".into(),
             children: vec![
                 dojo_types::schema::Member {
                     name: "favorite_item".into(),
@@ -827,7 +827,7 @@ mod tests {
     #[test]
     fn parse_model_members_with_enum_to_ty() {
         let model_members = vec![SqlModelMember {
-            id: "Moves".into(),
+            id: "Test-Moves".into(),
             name: "direction".into(),
             r#type: "Direction".into(),
             key: false,
@@ -838,7 +838,7 @@ mod tests {
         }];
 
         let expected_ty = Ty::Struct(Struct {
-            name: "Moves".into(),
+            name: "Test-Moves".into(),
             children: vec![dojo_types::schema::Member {
                 name: "direction".into(),
                 key: false,

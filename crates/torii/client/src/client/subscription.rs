@@ -62,7 +62,7 @@ impl SubscribedModels {
         }
 
         let (namespace, model) =
-            keys.model.split_once('.').ok_or(Error::InvalidModelName(keys.model.clone()))?;
+            keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
         let selector = compute_model_selector_from_names(namespace, model);
 
         let model_packed_size = self
@@ -90,7 +90,7 @@ impl SubscribedModels {
         }
 
         let (namespace, model) =
-            keys.model.split_once('.').ok_or(Error::InvalidModelName(keys.model.clone()))?;
+            keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
         let selector = compute_model_selector_from_names(namespace, model);
 
         let model_packed_size = self
