@@ -12,7 +12,7 @@ use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use dojo_types::schema::{Model, Ty};
+use dojo_types::schema::Ty;
 use dojo_world::manifest::utils::compute_model_selector_from_names;
 use futures::Stream;
 use proto::world::{
@@ -297,7 +297,7 @@ impl DojoWorld {
                 arrays_rows.insert(name, rows);
             }
 
-            entities.push(map_row_to_entity(&row, &arrays_rows, &schemas)?);
+            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
         }
 
         Ok((entities, total_count))
@@ -382,8 +382,10 @@ impl DojoWorld {
                     .models
                     .iter()
                     .map(|model| {
-                        let model_id =
-                            get_selector_from_name(model).map_err(ParseError::NonAsciiName)?;
+                        let (namespace, name) = model
+                            .split_once('-')
+                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
+                        let model_id = compute_model_selector_from_names(namespace, name);
                         Ok(format!("INSTR(model_ids, '{:#x}') > 0", model_id))
                     })
                     .collect::<Result<Vec<_>, Error>>()?
@@ -432,7 +434,8 @@ impl DojoWorld {
                 arrays_rows.insert(name, rows);
             }
 
-            entities.push(map_row_to_entity(&row, &arrays_rows, &schemas)?);
+
+            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
         }
 
         Ok((entities, total_count))
@@ -533,7 +536,7 @@ impl DojoWorld {
 
         let entities_collection = db_entities
             .iter()
-            .map(|row| map_row_to_entity(row, &arrays_rows, &schemas))
+            .map(|row| map_row_to_entity(row, &arrays_rows, schemas.clone()))
             .collect::<Result<Vec<_>, Error>>()?;
         // Since there is not limit and offset, total_count is same as number of entities
         let total_count = entities_collection.len() as u32;
@@ -694,7 +697,7 @@ impl DojoWorld {
                 arrays_rows.insert(name, rows);
             }
 
-            entities.push(map_row_to_entity(&row, &arrays_rows, &schemas)?);
+            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
         }
 
         Ok((entities, total_count))
@@ -957,21 +960,15 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
 fn map_row_to_entity(
     row: &SqliteRow,
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
-    schemas: &[Model],
+    mut schemas: Vec<Ty>,
 ) -> Result<proto::types::Entity, Error> {
     let hashed_keys =
         FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
-        .iter()
-        .map(|schema| {
-            let mut ty = Ty::Struct(schema.clone().into());
-            map_row_to_ty("", &schema.name, &mut ty, row, arrays_rows)?;
-            Ok(Model {
-                namespace: schema.namespace.clone(),
-                name: schema.name.clone(),
-                members: ty.as_struct().expect("schema should be a struct").children.clone(),
-            }
-            .into())
+        .iter_mut()
+        .map(|mut schema| {
+            map_row_to_ty("", &schema.name(), &mut schema, row, arrays_rows)?;
+            Ok(schema.as_struct().unwrap().clone().into())
         })
         .collect::<Result<Vec<_>, Error>>()?;
 

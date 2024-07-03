@@ -4,14 +4,12 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Enum, EnumOption, Member, Model, Struct, Ty};
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::model::ModelReader;
-use dojo_world::manifest::utils::compute_model_selector_from_names;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
-use starknet::core::utils::get_selector_from_name;
 
 use super::error::{self, Error};
 use crate::error::{ParseError, QueryError};
@@ -21,6 +19,8 @@ pub struct ModelSQLReader {
     namespace: String,
     /// The name of the model
     name: String,
+    /// The selector of the model
+    selector: FieldElement,
     /// The class hash of the model
     class_hash: FieldElement,
     /// The contract address of the model
@@ -59,6 +59,7 @@ impl ModelSQLReader {
         Ok(Self {
             namespace,
             name,
+            selector,
             class_hash,
             contract_address,
             pool,
@@ -81,8 +82,7 @@ impl ModelReader<Error> for ModelSQLReader {
     }
 
     fn selector(&self) -> FieldElement {
-        // this should never fail
-        compute_model_selector_from_names(&self.namespace, &self.name)
+        self.selector
     }
 
     fn class_hash(&self) -> FieldElement {
@@ -94,19 +94,15 @@ impl ModelReader<Error> for ModelSQLReader {
     }
 
     async fn schema(&self) -> Result<Ty, Error> {
-        // this is temporary until the hash for the model name is precomputed
-        let model_selector =
-            get_selector_from_name(&self.name).map_err(error::ParseError::NonAsciiName)?;
-
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
             "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
              model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
         )
-        .bind(format!("{:#x}", model_selector))
+        .bind(format!("{:#x}", self.selector))
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(parse_sql_model_members(&self.name, &model_members))
+        Ok(parse_sql_model_members(&self.namespace, &self.name, &model_members))
     }
 
     async fn packed_size(&self) -> Result<u32, Error> {
@@ -138,7 +134,7 @@ pub struct SqlModelMember {
 // assume that the model members are sorted by model_idx and member_idx
 // `id` is the type id of the model member
 /// A helper function to parse the model members from sql table to `Ty`
-pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]) -> Ty {
+pub fn parse_sql_model_members(namespace: &str, model: &str, model_members_all: &[SqlModelMember]) -> Ty {
     fn parse_sql_member(member: &SqlModelMember, model_members_all: &[SqlModelMember]) -> Ty {
         match member.type_enum.as_str() {
             "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
@@ -210,10 +206,10 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
     }
 
     Ty::Struct(Struct {
-        name: model.into(),
+        name: format!("{}-{}", namespace, model),
         children: model_members_all
             .iter()
-            .filter(|m| m.id == model)
+            .filter(|m| m.id == format!("{}-{}", namespace, model))
             .map(|m| Member {
                 key: m.key,
                 name: m.name.to_owned(),
@@ -226,7 +222,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
 
 /// Creates a query that fetches all models and their nested data.
 pub fn build_sql_query(
-    model_schemas: &Vec<Model>,
+    schemas: &Vec<Ty>,
     entities_table: &str,
     entity_relation_column: &str,
     where_clause: Option<&str>,
@@ -245,7 +241,7 @@ pub fn build_sql_query(
                 // struct can be the main entrypoint to our model schema
                 // so we dont format the table name if the path is empty
                 let table_name =
-                    if path.is_empty() { s.name.clone() } else { format!("{}${}", path, name) };
+                    if path.is_empty() { name.to_string() } else { format!("{}${}", path, name) };
 
                 for child in &s.children {
                     parse_ty(
@@ -314,14 +310,14 @@ pub fn build_sql_query(
                     is_typed = true;
                 }
 
-                selections.push(format!("{}.external_{} AS \"{}.{}\"", path, name, path, name));
+                selections.push(format!("[{path}].external_{name} AS \"{path}.{name}\""));
                 if is_typed {
                     tables.push(table_name);
                 }
             }
             _ => {
                 // alias selected columns to avoid conflicts in `JOIN`
-                selections.push(format!("{}.external_{} AS \"{}.{}\"", path, name, path, name));
+                selections.push(format!("[{path}].external_{name} AS \"{path}.{name}\""));
             }
         }
     }
@@ -329,14 +325,13 @@ pub fn build_sql_query(
     let mut global_selections = Vec::new();
     let mut global_tables = Vec::new();
 
-    let mut arrays_queries = HashMap::new();
+    let mut arrays_queries: HashMap<String, (Vec<String>, Vec<String>)> = HashMap::new();
 
-    for model in model_schemas {
-        let ty = Ty::Struct(model.clone().into());
+    for model in schemas {
         parse_ty(
             "",
-            &model.name,
-            &ty,
+            &model.name(),
+            &model,
             &mut global_selections,
             &mut global_tables,
             &mut arrays_queries,
@@ -352,7 +347,7 @@ pub fn build_sql_query(
     let join_clause = global_tables
         .into_iter()
         .map(|table| {
-            format!(" JOIN {table} ON {entities_table}.id = {table}.{entity_relation_column}")
+            format!(" JOIN [{table}] ON {entities_table}.id = [{table}].{entity_relation_column}")
         })
         .collect::<Vec<_>>()
         .join(" ");
@@ -371,12 +366,12 @@ pub fn build_sql_query(
                 .map(|(idx, table)| {
                     if idx == 0 {
                         format!(
-                            " JOIN {table} ON {entities_table}.id = \
-                             {table}.{entity_relation_column}"
+                            " JOIN [{table}] ON {entities_table}.id = \
+                             [{table}].{entity_relation_column}"
                         )
                     } else {
                         format!(
-                            " JOIN {table} ON {table}.full_array_id = {prev_table}.full_array_id",
+                            " JOIN [{table}] ON [{table}].full_array_id = [{prev_table}].full_array_id",
                             prev_table = tables[idx - 1]
                         )
                     }
@@ -545,7 +540,7 @@ pub fn map_row_to_ty(
 
 #[cfg(test)]
 mod tests {
-    use dojo_types::schema::{Enum, EnumOption, Member, Model, Struct, Ty};
+    use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 
     use super::{build_sql_query, SqlModelMember};
     use crate::model::parse_sql_model_members;
@@ -610,8 +605,8 @@ mod tests {
             }],
         });
 
-        assert_eq!(parse_sql_model_members("Position", &model_members), expected_position);
-        assert_eq!(parse_sql_model_members("PlayerConfig", &model_members), expected_player_config);
+        assert_eq!(parse_sql_model_members("Test", "Position", &model_members), expected_position);
+        assert_eq!(parse_sql_model_members("Test", "PlayerConfig", &model_members), expected_player_config);
     }
 
     #[test]
@@ -814,8 +809,8 @@ mod tests {
             ],
         });
 
-        assert_eq!(parse_sql_model_members("Position", &model_members), expected_position);
-        assert_eq!(parse_sql_model_members("PlayerConfig", &model_members), expected_player_config);
+        assert_eq!(parse_sql_model_members("Test", "Position", &model_members), expected_position);
+        assert_eq!(parse_sql_model_members("Test", "PlayerConfig", &model_members), expected_player_config);
     }
 
     #[test]
@@ -849,15 +844,14 @@ mod tests {
             }],
         });
 
-        assert_eq!(parse_sql_model_members("Moves", &model_members), expected_ty);
+        assert_eq!(parse_sql_model_members("Test", "Moves", &model_members), expected_ty);
     }
 
     #[test]
     fn struct_ty_to_query() {
-        let position = Model {
-            namespace: "Test".into(),
-            name: "Position".into(),
-            members: vec![
+        let position = Ty::Struct(Struct {
+            name: "Test-Position".into(),
+            children: vec![
                 dojo_types::schema::Member {
                     name: "player".into(),
                     key: true,
@@ -915,12 +909,11 @@ mod tests {
                     })]),
                 },
             ],
-        };
+        });
 
-        let player_config = Model {
-            namespace: "Test".into(),
-            name: "PlayerConfig".into(),
-            members: vec![
+        let player_config = Ty::Struct(Struct {
+            name: "Test-PlayerConfig".into(),
+            children: vec![
                 dojo_types::schema::Member {
                     name: "favorite_item".into(),
                     key: false,
@@ -956,7 +949,7 @@ mod tests {
                     })]),
                 },
             ],
-        };
+        });
 
         let query =
             build_sql_query(&vec![position, player_config], "entities", "entity_id", None, None)

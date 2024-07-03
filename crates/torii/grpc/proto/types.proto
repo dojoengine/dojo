@@ -35,17 +35,11 @@ message ModelMetadata {
     string contract_address = 8;
 }
 
-message Model {
-    string namespace = 1;
-    string name = 2;
-    repeated Member members = 3;
-}
-
 message Entity {
     // The entity's hashed keys
     bytes hashed_keys = 1;
     // Models of the entity
-    repeated Model models = 2;
+    repeated Struct models = 2;
 }
 
 message Event {

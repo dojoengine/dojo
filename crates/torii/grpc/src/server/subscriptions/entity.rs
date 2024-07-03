@@ -116,7 +116,10 @@ impl Service {
                 Some(EntityKeysClause::Keys(clause)) => {
                     // if we have a model clause, then we need to check that the entity
                     // has an updated model and that the model name matches the clause
-                    if let Some((namespace, updated_model)) = &entity.updated_model {
+                    if let Some(updated_model) = &entity.updated_model {
+                        let name = updated_model.name();
+                        let (namespace, name) = name.split_once('-').unwrap();
+
                         if !clause.models.is_empty()
                             && !clause.models.iter().any(|clause_model| {
                                 let (clause_namespace, clause_model) =
@@ -128,7 +131,7 @@ impl Service {
                                     || clause_namespace == namespace
                                     || clause_namespace == "*")
                                     && (clause_model.is_empty()
-                                        || clause_model == updated_model.name()
+                                        || clause_model == name
                                         || clause_model == "*")
                             })
                         {
@@ -191,7 +194,11 @@ impl Service {
                 "#;
             let (model_ids,): (String,) =
                 sqlx::query_as(models_query).bind(&entity.id).fetch_one(&pool).await?;
-            let model_ids: Vec<FieldElement> = model_ids.split(',').map(FieldElement::from_str).collect::<Result<_, _>>().map_err(ParseError::FromStr)?;
+            let model_ids: Vec<FieldElement> = model_ids
+                .split(',')
+                .map(FieldElement::from_str)
+                .collect::<Result<_, _>>()
+                .map_err(ParseError::FromStr)?;
             let schemas = cache.schemas(&model_ids).await?;
 
             let (entity_query, arrays_queries) = build_sql_query(
@@ -210,7 +217,7 @@ impl Service {
             }
 
             let resp = proto::world::SubscribeEntityResponse {
-                entity: Some(map_row_to_entity(&row, &arrays_rows, &schemas)?),
+                entity: Some(map_row_to_entity(&row, &arrays_rows, schemas.clone())?),
             };
 
             if sub.sender.send(Ok(resp)).await.is_err() {

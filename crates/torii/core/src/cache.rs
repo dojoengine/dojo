@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use dojo_types::schema::Model;
+use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock;
@@ -10,7 +10,7 @@ use crate::model::{parse_sql_model_members, SqlModelMember};
 
 pub struct ModelCache {
     pool: SqlitePool,
-    cache: RwLock<HashMap<FieldElement, Model>>,
+    cache: RwLock<HashMap<FieldElement, Ty>>,
 }
 
 impl ModelCache {
@@ -18,7 +18,7 @@ impl ModelCache {
         Self { pool, cache: RwLock::new(HashMap::new()) }
     }
 
-    pub async fn schemas(&self, selectors: &[FieldElement]) -> Result<Vec<Model>, Error> {
+    pub async fn schemas(&self, selectors: &[FieldElement]) -> Result<Vec<Ty>, Error> {
         let mut schemas = Vec::with_capacity(selectors.len());
         for selector in selectors {
             schemas.push(self.schema(&selector).await?);
@@ -27,7 +27,7 @@ impl ModelCache {
         Ok(schemas)
     }
 
-    pub async fn schema(&self, selector: &FieldElement) -> Result<Model, Error> {
+    pub async fn schema(&self, selector: &FieldElement) -> Result<Ty, Error> {
         {
             let cache = self.cache.read().await;
             if let Some(model) = cache.get(selector).cloned() {
@@ -38,7 +38,7 @@ impl ModelCache {
         self.update_schema(selector).await
     }
 
-    async fn update_schema(&self, selector: &FieldElement) -> Result<Model, Error> {
+    async fn update_schema(&self, selector: &FieldElement) -> Result<Ty, Error> {
         let formatted_selector = format!("{:#x}", selector);
 
         let (namespace, name): (String, String) =
@@ -47,7 +47,7 @@ impl ModelCache {
                 .fetch_one(&self.pool)
                 .await?;
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
-            "SELECT id, model_idx, member_idx, namespace, name, type, type_enum, enum_options, key FROM \
+            "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
              model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
         )
         .bind(formatted_selector)
@@ -58,19 +58,11 @@ impl ModelCache {
             return Err(QueryError::ModelNotFound(name.clone()).into());
         }
 
-        let model = Model {
-            namespace,
-            name: name.clone(),
-            members: parse_sql_model_members(&name, &model_members)
-                .as_struct()
-                .unwrap()
-                .children
-                .clone(),
-        };
+        let schema = parse_sql_model_members(&namespace, &name, &model_members);
         let mut cache = self.cache.write().await;
-        cache.insert(selector.clone(), model.clone());
+        cache.insert(selector.clone(), schema.clone());
 
-        Ok(model)
+        Ok(schema)
     }
 
     pub async fn clear(&self) {

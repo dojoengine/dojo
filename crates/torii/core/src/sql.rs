@@ -11,7 +11,6 @@ use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransaction, Transaction};
-use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -106,16 +105,18 @@ impl Sql {
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
+        let selector = compute_model_selector_from_names(namespace, &model.name());
+
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, packed_size, \
-             unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
+             unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
              UPDATE SET contract_address=EXCLUDED.contract_address, \
              class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
              packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
              executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             // this is temporary until the model hash is precomputed
-            .bind(&format!("{:#x}", &compute_model_selector_from_names(namespace, &model.name())))
+            .bind(&format!("{:#x}", selector))
             .bind(namespace)
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
@@ -129,8 +130,9 @@ impl Sql {
 
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
+            selector,
             &model,
-            vec![model.name()],
+            vec![format!("{}-{}", namespace, model.name())],
             &mut model_idx,
             block_timestamp,
             &mut 0,
@@ -145,7 +147,6 @@ impl Sql {
 
     pub async fn set_entity(
         &mut self,
-        namespace: &str,
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
@@ -160,9 +161,12 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
+        let namespaced_name = entity.name();
+        let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
+
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let model_id =
-            format!("{:#x}", compute_model_selector_from_names(namespace, &entity.name()));
+            format!("{:#x}", compute_model_selector_from_names(model_namespace, model_name));
 
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
@@ -183,9 +187,9 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
-        entity_updated.updated_model = Some((namespace.to_string(), entity.clone()));
+        entity_updated.updated_model = Some(entity.clone());
 
-        let path = vec![entity.name()];
+        let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
             path,
             event_id,
@@ -203,7 +207,6 @@ impl Sql {
 
     pub async fn set_event_message(
         &mut self,
-        namespace: &str,
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
@@ -218,9 +221,12 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
+        let namespaced_name = entity.name();
+        let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
+
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let model_id =
-            format!("{:#x}", compute_model_selector_from_names(namespace, &entity.name()));
+            format!("{:#x}", compute_model_selector_from_names(model_namespace, model_name));
 
         self.query_queue.enqueue(
             "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
@@ -244,9 +250,9 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
-        event_message_updated.updated_model = Some((namespace.to_string(), entity.clone()));
+        event_message_updated.updated_model = Some(entity.clone());
 
-        let path = vec![entity.name()];
+        let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
             path,
             event_id,
@@ -435,6 +441,7 @@ impl Sql {
 
     fn build_register_queries_recursive(
         &mut self,
+        selector: FieldElement,
         model: &Ty,
         path: Vec<String>,
         model_idx: &mut i64,
@@ -450,6 +457,7 @@ impl Sql {
         }
 
         self.build_model_query(
+            selector,
             path.clone(),
             model,
             *model_idx,
@@ -469,6 +477,7 @@ impl Sql {
             path_clone.push(pathname.to_string());
 
             self.build_register_queries_recursive(
+                selector,
                 member,
                 path_clone,
                 &mut (*model_idx + 1),
@@ -786,6 +795,7 @@ impl Sql {
 
     fn build_model_query(
         &mut self,
+        selector: FieldElement,
         path: Vec<String>,
         model: &Ty,
         model_idx: i64,
@@ -816,7 +826,7 @@ impl Sql {
                 create_table_query
                     .push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
             } else if let Ty::Enum(e) = &ty {
@@ -835,7 +845,7 @@ impl Sql {
                 create_table_query.push_str(if array_idx > 0 { ", " } else { "NOT NULL, " });
 
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
 
@@ -850,7 +860,7 @@ impl Sql {
             } else if let Ty::ByteArray(_) = &ty {
                 create_table_query.push_str(&format!("external_{name} TEXT, "));
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
             }
@@ -875,7 +885,7 @@ impl Sql {
                         // TEMP: this is temporary until the model hash is precomputed
                         Argument::String(format!(
                             "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
+                            selector
                         )),
                         Argument::Int(model_idx),
                         Argument::Int(member_idx as i64),
@@ -904,7 +914,7 @@ impl Sql {
                         // TEMP: this is temporary until the model hash is precomputed
                         Argument::String(format!(
                             "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
+                            selector
                         )),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),
@@ -934,7 +944,7 @@ impl Sql {
                     // TEMP: this is temporary until the model hash is precomputed
                     Argument::String(format!(
                         "{:#x}",
-                        get_selector_from_name(&path[0].clone()).unwrap()
+                        selector
                     )),
                     Argument::Int(model_idx),
                     Argument::Int(0),
@@ -976,7 +986,7 @@ impl Sql {
                         // TEMP: this is temporary until the model hash is precomputed
                         Argument::String(format!(
                             "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
+                            selector
                         )),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),

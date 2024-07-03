@@ -1,6 +1,6 @@
 use crypto_bigint::{Encoding, U256};
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Enum, EnumOption, Member, Model, Struct, Ty};
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FromByteSliceError;
 use starknet_crypto::FieldElement;
@@ -20,7 +20,7 @@ pub enum SchemaError {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Entity {
     pub hashed_keys: FieldElement,
-    pub models: Vec<Model>,
+    pub models: Vec<Struct>,
 }
 
 impl TryFrom<proto::types::Entity> for Entity {
@@ -34,31 +34,6 @@ impl TryFrom<proto::types::Entity> for Entity {
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?,
         })
-    }
-}
-
-impl TryFrom<proto::types::Model> for Model {
-    type Error = SchemaError;
-    fn try_from(model: proto::types::Model) -> Result<Self, Self::Error> {
-        Ok(Self {
-            namespace: model.namespace,
-            name: model.name,
-            members: model
-                .members
-                .into_iter()
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<_>, _>>()?,
-        })
-    }
-}
-
-impl From<Model> for proto::types::Model {
-    fn from(model: Model) -> Self {
-        Self {
-            namespace: model.namespace,
-            name: model.name,
-            members: model.members.into_iter().map(Into::into).collect(),
-        }
     }
 }
 

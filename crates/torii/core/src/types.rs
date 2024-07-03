@@ -29,8 +29,6 @@ impl fmt::LowerHex for SQLFieldElement {
     }
 }
 
-type Namespace = String;
-
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
@@ -42,7 +40,7 @@ pub struct Entity {
     pub updated_at: DateTime<Utc>,
     // if updated_model is None, then the entity has been deleted
     #[sqlx(skip)]
-    pub updated_model: Option<(Namespace, Ty)>,
+    pub updated_model: Option<Ty>,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -57,7 +55,7 @@ pub struct EventMessage {
 
     // this should never be None. as a EventMessage cannot be deleted
     #[sqlx(skip)]
-    pub updated_model: Option<(Namespace, Ty)>,
+    pub updated_model: Option<Ty>,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
