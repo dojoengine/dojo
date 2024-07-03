@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720018822415,
+  "lastUpdate": 1720028863256,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10765,6 +10765,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16378448,
             "range": "± 206312",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "89b883584fd3ba5c36b66e09428495f39e88f00b",
+          "message": "chore: remove `dbg!` macro (#2131)",
+          "timestamp": "2024-07-03T11:36:00-06:00",
+          "tree_id": "09dbe3aabddbc071e71b1a1abf2f3a20cb6bcf1f",
+          "url": "https://github.com/dojoengine/dojo/commit/89b883584fd3ba5c36b66e09428495f39e88f00b"
+        },
+        "date": 1720028862675,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16553533,
+            "range": "± 464990",
             "unit": "ns/iter"
           }
         ]
