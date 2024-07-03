@@ -7,7 +7,7 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use super::setup;
 use crate::utils;
 
-const ACTION_CONTRACT_TAG: &str = "dojo_examples:actions";
+const ACTION_CONTRACT_TAG: &str = "dojo_examples-actions";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_world() {

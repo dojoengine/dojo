@@ -454,7 +454,7 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:BadModelMultipleVersions"
+        "dojo_plugin-BadModelMultipleVersions"
     }
     
     #[inline(always)]
@@ -662,7 +662,7 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:BadModelBadVersionType"
+        "dojo_plugin-BadModelBadVersionType"
     }
     
     #[inline(always)]
@@ -870,7 +870,7 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:BadModelNoVersionValue"
+        "dojo_plugin-BadModelNoVersionValue"
     }
     
     #[inline(always)]
@@ -1078,7 +1078,7 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:BadModelUnexpectedArgWithValue"
+        "dojo_plugin-BadModelUnexpectedArgWithValue"
     }
     
     #[inline(always)]
@@ -1286,7 +1286,7 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:BadModelUnexpectedArg"
+        "dojo_plugin-BadModelUnexpectedArg"
     }
     
     #[inline(always)]
@@ -1494,7 +1494,7 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:BadModelNotSupportedVersion"
+        "dojo_plugin-BadModelNotSupportedVersion"
     }
     
     #[inline(always)]
@@ -1702,7 +1702,7 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:Modelv0"
+        "dojo_plugin-Modelv0"
     }
     
     #[inline(always)]
@@ -1910,7 +1910,7 @@ impl ModelWithBadNamespaceFormatModel of dojo::model::Model<ModelWithBadNamespac
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "MyNamespace:ModelWithBadNamespaceFormat"
+        "MyNamespace-ModelWithBadNamespaceFormat"
     }
     
     #[inline(always)]
@@ -2118,7 +2118,7 @@ impl ModelWithShortStringNamespaceModel of dojo::model::Model<ModelWithShortStri
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "my_namespace:ModelWithShortStringNamespace"
+        "my_namespace-ModelWithShortStringNamespace"
     }
     
     #[inline(always)]
@@ -2326,7 +2326,7 @@ impl ModelWithStringNamespaceModel of dojo::model::Model<ModelWithStringNamespac
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "my_namespace:ModelWithStringNamespace"
+        "my_namespace-ModelWithStringNamespace"
     }
     
     #[inline(always)]
@@ -2534,7 +2534,7 @@ impl PositionModel of dojo::model::Model<Position> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:Position"
+        "dojo_plugin-Position"
     }
     
     #[inline(always)]
@@ -2742,7 +2742,7 @@ impl RolesModel of dojo::model::Model<Roles> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:Roles"
+        "dojo_plugin-Roles"
     }
     
     #[inline(always)]
@@ -2942,7 +2942,7 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:OnlyKeyModel"
+        "dojo_plugin-OnlyKeyModel"
     }
     
     #[inline(always)]
@@ -3142,7 +3142,7 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:U256KeyModel"
+        "dojo_plugin-U256KeyModel"
     }
     
     #[inline(always)]
@@ -3355,7 +3355,7 @@ impl PlayerModel of dojo::model::Model<Player> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:Player"
+        "dojo_plugin-Player"
     }
     
     #[inline(always)]
@@ -3577,7 +3577,7 @@ impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:ModelWithSimpleArray"
+        "dojo_plugin-ModelWithSimpleArray"
     }
     
     #[inline(always)]
@@ -3795,7 +3795,7 @@ impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:ModelWithByteArray"
+        "dojo_plugin-ModelWithByteArray"
     }
     
     #[inline(always)]
@@ -4017,7 +4017,7 @@ impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:ModelWithComplexArray"
+        "dojo_plugin-ModelWithComplexArray"
     }
     
     #[inline(always)]
@@ -4246,7 +4246,7 @@ impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:ModelWithTuple"
+        "dojo_plugin-ModelWithTuple"
     }
     
     #[inline(always)]
@@ -4484,7 +4484,7 @@ impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimi
 
     #[inline(always)]
     fn tag() -> ByteArray {
-        "dojo_plugin:ModelWithTupleNoPrimitives"
+        "dojo_plugin-ModelWithTupleNoPrimitives"
     }
     
     #[inline(always)]

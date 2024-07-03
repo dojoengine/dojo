@@ -476,7 +476,7 @@ public class {} : ModelInstance {{
     }
 
     // Formats a contract tag into a pretty contract name
-    // eg. dojo_examples:actions.json -> Actions
+    // eg. dojo_examples-actions.json -> Actions
     fn formatted_contract_name(tag: &str) -> String {
         capitalize(&get_name_from_tag(tag))
     }

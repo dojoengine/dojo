@@ -87,7 +87,9 @@ pub async fn setup(
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let migration = setup_migration(&config)?;
+    let mut migration = setup_migration(&config)?;
+    let _ =
+        migration.resolve_variable(migration.world_address().expect("world address must exist"));
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));

@@ -10,7 +10,7 @@ use super::setup;
 use crate::auth::{self, ModelContract, OwnerResource, ResourceType};
 use crate::execute;
 
-const ACTION_CONTRACT_NAME: &str = "dojo_examples::actions::actions";
+const ACTION_CONTRACT_NAME: &str = "dojo_examples-actions";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_writer_ok() {

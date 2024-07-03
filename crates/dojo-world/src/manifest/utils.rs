@@ -5,8 +5,7 @@ use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 
 pub const CONTRACT_NAME_SEPARATOR: &str = "::";
-pub const TAG_SEPARATOR: char = ':';
-pub const FILENAME_SEPARATOR: &str = "-";
+pub const TAG_SEPARATOR: char = '-';
 pub const SELECTOR_CHUNK_SIZE: usize = 8;
 
 pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
@@ -51,16 +50,16 @@ pub fn ensure_namespace(tag: &str, default_namespace: &str) -> String {
 }
 
 pub fn get_filename_from_tag(tag: &str) -> Result<String> {
-    let (namespace, name) = split_tag(tag)?;
-
-    if ["world", "base"].contains(&name.as_str()) {
-        return Ok(format!("{namespace}{FILENAME_SEPARATOR}{name}"));
+    if [format!("dojo{TAG_SEPARATOR}world").as_str(), format!("dojo{TAG_SEPARATOR}base").as_str()]
+        .contains(&tag)
+    {
+        return Ok(tag.to_string());
     }
 
-    let mut selector = format!("{:x}", compute_bytearray_hash(&name));
+    let mut selector = format!("{:x}", compute_model_selector_from_tag(tag));
     selector.truncate(SELECTOR_CHUNK_SIZE);
 
-    Ok(format!("{namespace}{FILENAME_SEPARATOR}{name}{FILENAME_SEPARATOR}{selector}"))
+    Ok(format!("{tag}{TAG_SEPARATOR}{selector}"))
 }
 
 // TODO: should not be useful with a standard WORLD/BASE name
