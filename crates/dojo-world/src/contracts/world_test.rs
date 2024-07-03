@@ -67,12 +67,11 @@ pub async fn deploy_world(
         manifest.remove_tags(skip_manifests);
     }
 
-    let overlay_manifest = OverlayManifest::load_from_path(
-        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
-    )
-    .unwrap();
-
-    manifest.merge(overlay_manifest);
+    let overlay_dir = manifest_dir.join(OVERLAYS_DIR).join(profile_name);
+    if overlay_dir.exists() {
+        let overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &manifest).unwrap();
+        manifest.merge(overlay_manifest);
+    }
 
     let mut world = WorldDiff::compute(manifest.clone(), None);
     world.update_order(default_namespace).unwrap();

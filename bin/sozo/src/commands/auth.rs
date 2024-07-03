@@ -110,7 +110,7 @@ pub enum AuthKind {
         #[arg(required = true)]
         #[arg(value_name = "resource,owner_address")]
         #[arg(help = "A list of owners and resources to grant ownership to. Comma separated \
-                      values to indicate owner address and resouce e.g. \
+                      values to indicate owner address and resource e.g. \
                       contract:path::to::contract,0x1234 contract:contract_address,0x1111, \
                       model:model_name,0xbeef")]
         owners_resources: Vec<auth::OwnerResource>,
