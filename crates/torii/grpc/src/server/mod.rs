@@ -768,7 +768,7 @@ impl DojoWorld {
             subs.push(ModelDiffRequest {
                 keys,
                 model: subscriptions::model_diff::ModelMetadata {
-                    name: selector,
+                    selector,
                     packed_size: packed_size as usize,
                 },
             });
