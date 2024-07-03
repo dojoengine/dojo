@@ -1123,15 +1123,16 @@
     "class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
     "original_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
     "abi": "manifests/dev/abis/base/dojo-base.json",
+    "tag": "dojo:base",
     "manifest_name": "dojo-base"
   },
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": null,
+      "address": "0x2a570e12405096e725508ba1f4ade127edd42e0fcb5890b8f12f76ef043623",
       "class_hash": "0x1e25819012944715e33045da9b9f1bced52553412935816b3886cffe5ce0d90",
       "original_class_hash": "0x1e25819012944715e33045da9b9f1bced52553412935816b3886cffe5ce0d90",
-      "base_class_hash": "0x0",
+      "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
       "abi": [
         {
           "type": "impl",
@@ -1509,10 +1510,10 @@
     },
     {
       "kind": "DojoContract",
-      "address": null,
+      "address": "0x26f33e8d81dad06c79c2d944ea519a850e007eb8432ae20d38db82caea590b2",
       "class_hash": "0x35cec8c62ba7a93be10ec69e8e8a0e3963b83873dc0679102f20e011a3dae94",
       "original_class_hash": "0x35cec8c62ba7a93be10ec69e8e8a0e3963b83873dc0679102f20e011a3dae94",
-      "base_class_hash": "0x0",
+      "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
       "abi": [
         {
           "type": "impl",
@@ -1717,10 +1718,10 @@
     },
     {
       "kind": "DojoContract",
-      "address": null,
+      "address": "0x3304896afaa421f362b3b8e8586773f9a7fcaca050b3fd6885400908803f344",
       "class_hash": "0x6e4c6cc2e7bc17b82246ee99a3b2a3dcb5d7dd8f7666858e0baa86a1e2ac4f6",
       "original_class_hash": "0x6e4c6cc2e7bc17b82246ee99a3b2a3dcb5d7dd8f7666858e0baa86a1e2ac4f6",
-      "base_class_hash": "0x0",
+      "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
       "abi": [
         {
           "type": "impl",
@@ -1932,7 +1933,11 @@
       "reads": [],
       "writes": [],
       "computed": [],
-      "init_calldata": [],
+      "init_calldata": [
+        "$contract_address:dojo_examples:actions",
+        "$class_hash:dojo_examples:actions",
+        "10"
+      ],
       "tag": "dojo_examples:others",
       "manifest_name": "dojo_examples-others-1297eb86"
     }

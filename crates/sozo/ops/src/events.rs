@@ -8,7 +8,7 @@ use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
 use dojo_world::manifest::utils::get_filename_from_special_contract_name;
 use dojo_world::manifest::{
-    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, MANIFESTS_DIR,
+    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, MANIFESTS_DIR, TARGET_DIR,
     WORLD_CONTRACT_NAME,
 };
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
@@ -38,15 +38,13 @@ pub async fn parse(
     continuation_token: Option<String>,
     event_filter: EventFilter,
     json: bool,
-    manifest_dir: &Utf8PathBuf,
+    project_dir: &Utf8PathBuf,
     profile_name: &str,
 ) -> Result<()> {
     let events_map = if !json {
-        let deployed_manifest = manifest_dir
-            .join(MANIFESTS_DIR)
-            .join(profile_name)
-            .join("manifest")
-            .with_extension("toml");
+        let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
+        let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
+        let deployed_manifest = manifest_dir.join("manifest").with_extension("toml");
 
         if !deployed_manifest.exists() {
             return Err(anyhow!("Run scarb migrate before running this command"));
@@ -54,7 +52,8 @@ pub async fn parse(
 
         Some(extract_events(
             &DeploymentManifest::load_from_path(&deployed_manifest)?,
-            manifest_dir,
+            &manifest_dir,
+            &target_dir,
         )?)
     } else {
         None
@@ -80,6 +79,7 @@ fn is_event(token: &Token) -> bool {
 fn extract_events(
     manifest: &DeploymentManifest,
     manifest_dir: &Utf8PathBuf,
+    target_dir: &Utf8PathBuf,
 ) -> Result<HashMap<String, Vec<Token>>> {
     fn process_abi(
         events: &mut HashMap<String, Vec<Token>>,
@@ -121,16 +121,12 @@ fn extract_events(
 
     // Read the world and base ABI from scarb artifacts as the
     // manifest does not include them (at least base is not included).
-    let world_abi_path = manifest_dir.join(format!(
-        "target/dev/{}.json",
-        get_filename_from_special_contract_name(WORLD_CONTRACT_NAME)
-    ));
+    let world_abi_path = target_dir
+        .join(format!("{}.json", get_filename_from_special_contract_name(WORLD_CONTRACT_NAME)));
     process_abi(&mut events_map, &world_abi_path)?;
 
-    let base_abi_path = manifest_dir.join(format!(
-        "target/dev/{}.json",
-        get_filename_from_special_contract_name(BASE_CONTRACT_NAME)
-    ));
+    let base_abi_path = target_dir
+        .join(format!("{}.json", get_filename_from_special_contract_name(BASE_CONTRACT_NAME)));
     process_abi(&mut events_map, &base_abi_path)?;
 
     Ok(events_map)
@@ -277,13 +273,12 @@ mod tests {
     #[test]
     fn extract_events_work_as_expected() {
         let profile_name = "dev";
-        let manifest_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
-        let manifest = BaseManifest::load_from_path(
-            &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
-        )
-        .unwrap()
-        .into();
-        let result = extract_events(&manifest, &manifest_dir).unwrap();
+        let project_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
+        let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
+        let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
+        let manifest = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)).unwrap().into();
+
+        let result = extract_events(&manifest, &manifest_dir, &target_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
         assert_eq!(result.len(), 15);
