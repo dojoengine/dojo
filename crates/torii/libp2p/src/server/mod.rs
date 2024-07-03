@@ -10,6 +10,7 @@ use chrono::Utc;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
+use dojo_world::manifest::utils::compute_model_selector_from_names;
 use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
@@ -179,7 +180,7 @@ impl<P: Provider + Sync> Relay<P> {
                                 }
                             };
 
-                            let ty = match validate_message(&self.db, &data.message.message).await {
+                            let (namespace, ty) = match validate_message(&self.db, &data.message.message).await {
                                 Ok(parsed_message) => parsed_message,
                                 Err(e) => {
                                     info!(
@@ -248,6 +249,7 @@ impl<P: Provider + Sync> Relay<P> {
                                 if let Err(e) = self
                                     .db
                                     .set_entity(
+                                        &namespace,
                                         ty,
                                         &message_id.to_string(),
                                         Utc::now().timestamp() as u64,
@@ -355,6 +357,7 @@ impl<P: Provider + Sync> Relay<P> {
                                 .db
                                 // event id is message id
                                 .set_entity(
+                                    &namespace,
                                     ty,
                                     &message_id.to_string(),
                                     Utc::now().timestamp() as u64,
@@ -617,22 +620,23 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
 
 // Validates the message model
 // and returns the identity and signature
+type Namespace = String;
 async fn validate_message(
     db: &Sql,
     message: &IndexMap<String, PrimitiveType>,
-) -> Result<Ty, Error> {
-    let model_name = if let Some(model_name) = message.get("model") {
+) -> Result<(Namespace, Ty), Error> {
+    let (namespace, model_name) = if let Some(model_name) = message.get("model") {
         if let PrimitiveType::String(model_name) = model_name {
-            model_name
+            model_name.split_once('-').ok_or_else(|| {
+                Error::InvalidMessageError("Model name is not in the format namespace.model".to_string())
+            })?
         } else {
             return Err(Error::InvalidMessageError("Model name is not a string".to_string()));
         }
     } else {
         return Err(Error::InvalidMessageError("Model name is missing".to_string()));
     };
-    let model_selector = get_selector_from_name(model_name).map_err(|e| {
-        Error::InvalidMessageError(format!("Failed to get selector from model name: {}", e))
-    })?;
+    let model_selector = compute_model_selector_from_names(namespace, model_name);
 
     let mut ty = db
         .model(model_selector)
@@ -653,7 +657,7 @@ async fn validate_message(
         return Err(Error::InvalidMessageError("Model is missing".to_string()));
     };
 
-    Ok(ty)
+    Ok((namespace.to_string(), ty))
 }
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {

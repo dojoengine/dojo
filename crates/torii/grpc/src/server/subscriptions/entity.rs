@@ -116,9 +116,21 @@ impl Service {
                 Some(EntityKeysClause::Keys(clause)) => {
                     // if we have a model clause, then we need to check that the entity
                     // has an updated model and that the model name matches the clause
-                    if let Some(updated_model) = &entity.updated_model {
+                    if let Some((namespace, updated_model)) = &entity.updated_model {
                         if !clause.models.is_empty()
-                            && !clause.models.contains(&updated_model.name())
+                            && !clause.models.iter().any(|clause_model| {
+                                let (clause_namespace, clause_model) =
+                                    clause_model.split_once('-').unwrap();
+                                // if both namespace and model are empty, we should match all.
+                                // if namespace is specified and model is empty or * we should match all models in the namespace
+                                // if namespace and model are specified, we should match the specific model
+                                (clause_namespace.is_empty()
+                                    || clause_namespace == namespace
+                                    || clause_namespace == "*")
+                                    && (clause_model.is_empty()
+                                        || clause_model == updated_model.name()
+                                        || clause_model == "*")
+                            })
                         {
                             continue;
                         }
