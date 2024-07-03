@@ -46,6 +46,7 @@ pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world";
 pub const BASE_QUALIFIED_PATH: &str = "dojo::base::base";
 
 pub const MANIFESTS_DIR: &str = "manifests";
+pub const TARGET_DIR: &str = "target";
 pub const BASE_DIR: &str = "base";
 pub const OVERLAYS_DIR: &str = "overlays";
 pub const DEPLOYMENTS_DIR: &str = "deployments";

@@ -135,3 +135,7 @@ pub fn generate_version() -> String {
     );
     version_string
 }
+
+pub fn is_address(tag_or_address: &str) -> bool {
+    tag_or_address.starts_with("0x")
+}

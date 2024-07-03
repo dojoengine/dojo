@@ -49,8 +49,8 @@ impl EventsArgs {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         trace!(ws_members_count = ws.members().count(), "Read workspace.");
 
-        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-        trace!(?manifest_dir, "Manifest directory defined from workspace.");
+        let project_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+        trace!(?project_dir, "Project directory defined from workspace.");
 
         let provider = self.starknet.provider(env_metadata.as_ref())?;
         trace!(?provider, "Starknet RPC client provider.");
@@ -79,7 +79,7 @@ impl EventsArgs {
                 self.continuation_token,
                 event_filter,
                 self.json,
-                &manifest_dir,
+                &project_dir,
                 &profile_name,
             )
             .await
