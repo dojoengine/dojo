@@ -669,6 +669,7 @@ mod tests {
 
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_primitives::chain::{ChainId, NamedChainId};
+    use katana_primitives::felt::FieldElement;
     use starknet_api::core::EntryPointSelector;
     use starknet_api::hash::StarkFelt;
     use starknet_api::stark_felt;
@@ -676,6 +677,28 @@ mod tests {
 
     use super::*;
     use crate::implementation::blockifier::utils;
+
+    #[test]
+    fn test_to_stark_felt() {
+        let field_element = FieldElement::from_hex("0x1234567890abcdef").unwrap();
+        let stark_felt = to_stark_felt(field_element);
+        assert_eq!(stark_felt, StarkFelt::try_from("0x1234567890abcdef").unwrap());
+    }
+
+    #[test]
+    fn test_to_felt() {
+        let stark_felt = StarkFelt::try_from("0xabcdef1234567890").unwrap();
+        let field_element = to_felt(stark_felt);
+        assert_eq!(field_element, FieldElement::from_hex("0xabcdef1234567890").unwrap());
+    }
+
+    #[test]
+    fn test_roundtrip_felt_conversion() {
+        let original_felt = FieldElement::from_hex("0x123456789abcdef0").unwrap();
+        let stark_felt = to_stark_felt(original_felt);
+        let roundtrip_felt = to_felt(stark_felt);
+        assert_eq!(original_felt, roundtrip_felt);
+    }
 
     #[test]
     fn convert_chain_id() {
