@@ -4,7 +4,8 @@ use katana_primitives::block::{BlockIdOrTag, BlockNumber};
 use katana_primitives::transaction::TxHash;
 use katana_primitives::FieldElement;
 use katana_rpc_types::block::{
-    BlockHashAndNumber, BlockTxCount, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    BlockHashAndNumber, BlockTxCount, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs,
 };
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
@@ -21,7 +22,7 @@ use katana_rpc_types::{
 use starknet::core::types::{SimulatedTransaction, TransactionStatus};
 
 /// The currently supported version of the Starknet JSON-RPC specification.
-pub const RPC_SPEC_VERSION: &str = "0.6.0";
+pub const RPC_SPEC_VERSION: &str = "0.7.1";
 
 /// Starknet JSON-RPC APIs: <https://github.com/starkware-libs/starknet-specs>
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
@@ -43,6 +44,13 @@ pub trait StarknetApi {
     /// Get block information with full transactions given the block id.
     #[method(name = "getBlockWithTxs")]
     async fn block_with_txs(&self, block_id: BlockIdOrTag) -> RpcResult<MaybePendingBlockWithTxs>;
+
+    /// Get block information with full transactions and receipts given the block id.
+    #[method(name = "getBlockWithReceipts")]
+    async fn block_with_receipts(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> RpcResult<MaybePendingBlockWithReceipts>;
 
     /// Get the information about the result of executing the requested block.
     #[method(name = "getStateUpdate")]

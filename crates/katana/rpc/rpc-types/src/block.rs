@@ -1,7 +1,16 @@
-use katana_primitives::block::{Block, BlockHash, BlockNumber, FinalityStatus, PartialHeader};
+use katana_primitives::block::{
+    Block, BlockHash, BlockNumber, FinalityStatus, Header, PartialHeader,
+};
+use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{BlockStatus, L1DataAvailabilityMode, ResourcePrice};
+use starknet::core::types::{
+    BlockStatus, L1DataAvailabilityMode, ResourcePrice, TransactionWithReceipt,
+};
+use starknet::providers::Provider;
+
+use crate::receipt::TxReceipt;
+use crate::transaction::Tx;
 
 pub type BlockTxCount = u64;
 
@@ -169,4 +178,96 @@ impl From<(BlockHash, BlockNumber)> for BlockHashAndNumber {
     fn from((hash, number): (BlockHash, BlockNumber)) -> Self {
         Self::new(hash, number)
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct BlockWithReceipts(starknet::core::types::BlockWithReceipts);
+
+impl BlockWithReceipts {
+    pub fn new(
+        header: Header,
+        finality_status: FinalityStatus,
+        receipts: impl Iterator<Item = (TxWithHash, Receipt)>,
+    ) -> Self {
+        let l1_gas_price = ResourcePrice {
+            price_in_wei: header.gas_prices.eth.into(),
+            price_in_fri: header.gas_prices.strk.into(),
+        };
+
+        let transactions = receipts
+            .map(|(tx_with_hash, receipt)| {
+                let receipt = TxReceipt::new(tx_with_hash.hash, finality_status, receipt).0;
+                let transaction = Tx::from(tx_with_hash).0;
+                TransactionWithReceipt { transaction, receipt }
+            })
+            .collect();
+
+        Self(starknet::core::types::BlockWithReceipts {
+            status: match finality_status {
+                FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
+                FinalityStatus::AcceptedOnL2 => BlockStatus::AcceptedOnL2,
+            },
+            block_hash: header.parent_hash,
+            parent_hash: header.parent_hash,
+            block_number: header.number,
+            new_root: header.state_root,
+            timestamp: header.timestamp,
+            sequencer_address: header.sequencer_address.into(),
+            l1_gas_price,
+            l1_data_gas_price: ResourcePrice {
+                price_in_fri: Default::default(),
+                price_in_wei: Default::default(),
+            },
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            starknet_version: header.version.to_string(),
+            transactions,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct PendingBlockWithReceipts(starknet::core::types::PendingBlockWithReceipts);
+
+impl PendingBlockWithReceipts {
+    pub fn new(
+        header: PartialHeader,
+        receipts: impl Iterator<Item = (TxWithHash, Receipt)>,
+    ) -> Self {
+        let l1_gas_price = ResourcePrice {
+            price_in_wei: header.gas_prices.eth.into(),
+            price_in_fri: header.gas_prices.strk.into(),
+        };
+
+        let transactions = receipts
+            .map(|(tx_with_hash, receipt)| {
+                let receipt =
+                    TxReceipt::new(tx_with_hash.hash, FinalityStatus::AcceptedOnL2, receipt).0;
+                let transaction = Tx::from(tx_with_hash).0;
+                TransactionWithReceipt { transaction, receipt }
+            })
+            .collect();
+
+        Self(starknet::core::types::PendingBlockWithReceipts {
+            transactions,
+            l1_gas_price,
+            timestamp: header.timestamp,
+            sequencer_address: header.sequencer_address.into(),
+            parent_hash: header.parent_hash,
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            l1_data_gas_price: ResourcePrice {
+                price_in_fri: Default::default(),
+                price_in_wei: Default::default(),
+            },
+            starknet_version: header.version.to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum MaybePendingBlockWithReceipts {
+    Pending(PendingBlockWithReceipts),
+    Block(BlockWithReceipts),
 }

@@ -13,7 +13,7 @@ use starknet::core::types::{
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct TxReceipt(starknet::core::types::TransactionReceipt);
+pub struct TxReceipt(pub(crate) starknet::core::types::TransactionReceipt);
 
 impl TxReceipt {
     pub fn new(

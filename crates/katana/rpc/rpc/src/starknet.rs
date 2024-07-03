@@ -16,8 +16,9 @@ use katana_provider::traits::transaction::{
 };
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_types::block::{
-    BlockHashAndNumber, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    PendingBlockWithTxHashes, PendingBlockWithTxs,
+    BlockHashAndNumber, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, PendingBlockWithReceipts, PendingBlockWithTxHashes,
+    PendingBlockWithTxs,
 };
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
@@ -346,6 +347,62 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
                 .map(MaybePendingBlockWithTxs::Block)
                 .ok_or(Error::from(StarknetApiError::BlockNotFound))
+        })
+        .await
+    }
+
+    async fn block_with_receipts(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> RpcResult<MaybePendingBlockWithReceipts> {
+        self.on_io_blocking_task(move |this| {
+            let provider = this.inner.sequencer.backend.blockchain.provider();
+
+            if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
+                if let Some(executor) = this.inner.sequencer.pending_executor() {
+                    let block_env = executor.read().block_env();
+                    let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
+
+                    let gas_prices = block_env.l1_gas_prices.clone();
+
+                    let header = PartialHeader {
+                        number: block_env.number,
+                        gas_prices,
+                        parent_hash: latest_hash,
+                        version: CURRENT_STARKNET_VERSION,
+                        timestamp: block_env.timestamp,
+                        sequencer_address: block_env.sequencer_address,
+                    };
+
+                    let receipts = executor
+                        .read()
+                        .transactions()
+                        .iter()
+                        .filter_map(|(tx, result)| match result {
+                            ExecutionResult::Success { receipt, .. } => {
+                                Some((tx.clone(), receipt.clone()))
+                            }
+                            ExecutionResult::Failed { .. } => None,
+                        })
+                        .collect::<Vec<_>>();
+
+                    return Ok(MaybePendingBlockWithReceipts::Pending(
+                        PendingBlockWithReceipts::new(header, receipts.into_iter()),
+                    ));
+                }
+            }
+
+            let block_num = BlockIdReader::convert_block_id(provider, block_id)
+                .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
+                .map(BlockHashOrNumber::Num)
+                .ok_or(StarknetApiError::BlockNotFound)?;
+
+            let block = katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
+                .build_with_receipts()
+                .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
+                .ok_or(Error::from(StarknetApiError::BlockNotFound))?;
+
+            Ok(MaybePendingBlockWithReceipts::Block(block))
         })
         .await
     }
