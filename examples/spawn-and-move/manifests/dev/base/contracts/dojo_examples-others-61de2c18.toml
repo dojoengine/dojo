@@ -1,0 +1,11 @@
+kind = "DojoContract"
+class_hash = "0x3a61e2fafaee0ca4ed5166fbb417270563b4d8518cd1e086733cc346e8ea6b9"
+original_class_hash = "0x3a61e2fafaee0ca4ed5166fbb417270563b4d8518cd1e086733cc346e8ea6b9"
+base_class_hash = "0x0"
+abi = "manifests/dev/abis/base/contracts/dojo_examples-others-61de2c18.json"
+reads = []
+writes = []
+computed = []
+init_calldata = []
+tag = "dojo_examples-others"
+manifest_name = "dojo_examples-others-61de2c18"

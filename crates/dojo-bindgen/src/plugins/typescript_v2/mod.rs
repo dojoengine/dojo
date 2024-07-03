@@ -577,7 +577,7 @@ type {} = ",
     }
 
     // Formats a contract tag into a pretty contract name
-    // eg. dojo_examples:actions -> Actions
+    // eg. dojo_examples-actions -> Actions
     fn formatted_contract_name(tag: &str) -> String {
         capitalize(&get_name_from_tag(tag))
     }

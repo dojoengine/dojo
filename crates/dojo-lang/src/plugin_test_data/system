@@ -944,7 +944,7 @@ mod testcomponent2 {
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "my_namespace:spawn"
+                            "my_namespace-spawn"
                         }
                     }
 
@@ -1019,7 +1019,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "my_namespace:proxy"
+                            "my_namespace-proxy"
                         }
                     }
 
@@ -1091,7 +1091,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "dojo_plugin:ctxnamed"
+                            "dojo_plugin-ctxnamed"
                         }
                     }
 
@@ -1166,7 +1166,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "dojo_plugin:withevent"
+                            "dojo_plugin-withevent"
                         }
                     }
 
@@ -1242,7 +1242,7 @@ impl TestEventDrop of core::traits::Drop::<TestEvent>;
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "dojo_plugin:withcomponent"
+                            "dojo_plugin-withcomponent"
                         }
                     }
 
@@ -1358,7 +1358,7 @@ self: @TContractState, vec: Vec2, ref another_world: IWorldDispatcher
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "dojo_plugin:MyFaultyContract"
+                            "dojo_plugin-MyFaultyContract"
                         }
                     }
 
@@ -1476,7 +1476,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "dojo_plugin:MyNominalContract"
+                            "dojo_plugin-MyNominalContract"
                         }
                     }
 
@@ -1600,7 +1600,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "dojo_plugin:init_test"
+                            "dojo_plugin-init_test"
                         }
                     }
 
@@ -1681,7 +1681,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         }
 
                         fn tag(self: @ContractState) -> ByteArray {
-                            "dojo_plugin:no_init_test"
+                            "dojo_plugin-no_init_test"
                         }
                     }
 
