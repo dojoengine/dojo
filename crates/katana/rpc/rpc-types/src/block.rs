@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     BlockStatus, L1DataAvailabilityMode, ResourcePrice, TransactionWithReceipt,
 };
-use starknet::providers::Provider;
 
 use crate::receipt::TxReceipt;
 use crate::transaction::Tx;

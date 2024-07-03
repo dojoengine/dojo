@@ -56,7 +56,7 @@ where
         let receipts = ReceiptProvider::receipts_by_block(&self.provider, self.block_id)?
             .expect("should exist if block exists");
 
-        let receipts_with_txs = block.body.into_iter().zip(receipts.into_iter());
+        let receipts_with_txs = block.body.into_iter().zip(receipts);
 
         Ok(Some(BlockWithReceipts::new(block.header, finality_status, receipts_with_txs)))
     }

@@ -722,7 +722,7 @@ impl DojoWorld {
         &self,
         keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(keys.map(|keys| keys.try_into().unwrap())).await
+        self.entity_manager.add_subscriber(keys.map(|keys| keys.into())).await
     }
 
     async fn retrieve_entities(
@@ -799,7 +799,7 @@ impl DojoWorld {
         &self,
         keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.event_message_manager.add_subscriber(keys.map(|keys| keys.try_into().unwrap())).await
+        self.event_message_manager.add_subscriber(keys.map(|keys| keys.into())).await
     }
 
     async fn retrieve_event_messages(
@@ -887,7 +887,7 @@ impl DojoWorld {
         &self,
         clause: proto::types::KeysClause,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
-        self.event_manager.add_subscriber(clause.try_into().unwrap()).await
+        self.event_manager.add_subscriber(clause.into()).await
     }
 }
 

@@ -86,7 +86,7 @@ where
         &self,
         contract_class: Arc<FlattenedSierraClass>,
         compiled_class_hash: Felt,
-    ) -> DeclarationV2<Self> {
+    ) -> DeclarationV2<'_, Self> {
         DeclarationV2::new(contract_class, compiled_class_hash, self)
     }
 
@@ -94,7 +94,7 @@ where
         &self,
         contract_class: Arc<FlattenedSierraClass>,
         compiled_class_hash: Felt,
-    ) -> DeclarationV3<Self> {
+    ) -> DeclarationV3<'_, Self> {
         DeclarationV3::new(contract_class, compiled_class_hash, self)
     }
 
@@ -102,11 +102,11 @@ where
         ExecutionV1::new(calls, self)
     }
 
-    fn execute_v1(&self, calls: Vec<Call>) -> ExecutionV1<Self> {
+    fn execute_v1(&self, calls: Vec<Call>) -> ExecutionV1<'_, Self> {
         ExecutionV1::new(calls, self)
     }
 
-    fn execute_v3(&self, calls: Vec<Call>) -> ExecutionV3<Self> {
+    fn execute_v3(&self, calls: Vec<Call>) -> ExecutionV3<'_, Self> {
         ExecutionV3::new(calls, self)
     }
 

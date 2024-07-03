@@ -153,7 +153,7 @@ impl WorldClient {
             .map(|res| res.into_inner())?;
 
         Ok(EventUpdateStreaming(stream.map_ok(Box::new(|res| match res.event {
-            Some(event) => event.try_into().expect("must able to serialize"),
+            Some(event) => event.into(),
             None => Event { keys: vec![], data: vec![], transaction_hash: Felt::ZERO },
         }))))
     }

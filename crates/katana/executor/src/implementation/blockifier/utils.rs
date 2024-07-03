@@ -657,7 +657,7 @@ fn to_l2_l1_messages(
 }
 
 pub fn to_stark_felt(value: FieldElement) -> StarkFelt {
-    StarkFelt::new(value.to_bytes_be().clone()).expect("can convert from field element")
+    StarkFelt::new(value.to_bytes_be()).expect("can convert from field element")
 }
 
 pub fn to_felt(value: StarkFelt) -> FieldElement {
