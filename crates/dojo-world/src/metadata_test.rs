@@ -173,10 +173,8 @@ async fn get_full_dojo_metadata_from_workspace() {
 
     let artifacts = get_artifacts_from_manifest(&manifest_dir);
 
-    dbg!(&artifacts);
     for (abi_subdir, name) in artifacts {
         let resource = dojo_metadata.resources_artifacts.get(&name);
-        dbg!(&dojo_metadata.resources_artifacts);
         assert!(resource.is_some(), "bad resource metadata for {}", name);
         let resource = resource.unwrap();
 

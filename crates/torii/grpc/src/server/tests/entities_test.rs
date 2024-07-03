@@ -55,8 +55,6 @@ async fn test_entities_queries() {
         prepare_migration(source_project_dir, target_path, dojo_metadata.skip_migration).unwrap();
     migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
-    dbg!(&migration);
-
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));

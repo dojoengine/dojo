@@ -369,7 +369,7 @@ impl DeploymentManifest {
 // #[async_trait]
 // impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeploymentManifest {}
 
-async fn get_remote_models_and_contracts<P: Provider>(
+async fn get_remote_models_and_contracts<P>(
     world: Felt,
     provider: P,
 ) -> Result<(Vec<Manifest<DojoModel>>, Vec<Manifest<DojoContract>>), AbstractManifestError>
