@@ -213,6 +213,7 @@ pub async fn run_graphql_subscription(
 
 pub async fn model_fixtures(db: &mut Sql) {
     db.register_model(
+        "Test",
         Ty::Struct(Struct {
             name: "Record".to_string(),
             children: vec![

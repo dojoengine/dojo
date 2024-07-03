@@ -7,6 +7,7 @@ mod tests {
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abi::model::Layout;
+    use dojo_world::manifest::utils::compute_model_selector_from_names;
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
@@ -247,8 +248,9 @@ mod tests {
     async fn test_model_subscription(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
+        let namespace = "Test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
+        let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
         let block_timestamp: u64 = 1710754478_u64;
@@ -270,6 +272,7 @@ mod tests {
                 }],
             });
             db.register_model(
+                &namespace,
                 model,
                 Layout::Fixed(vec![]),
                 class_hash,
@@ -308,8 +311,9 @@ mod tests {
     async fn test_model_subscription_with_id(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
+        let namespace = "Test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
+        let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
         let block_timestamp: u64 = 1710754478_u64;
@@ -331,6 +335,7 @@ mod tests {
                 }],
             });
             db.register_model(
+                &namespace,
                 model,
                 Layout::Fixed(vec![]),
                 class_hash,
