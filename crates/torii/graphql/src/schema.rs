@@ -127,8 +127,8 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
 
         if !type_mapping.is_empty() {
             // add models objects & unions
-            let field_name = model.name.to_case(Case::Camel);
-            let type_name = model.name;
+            let field_name = format!("{}{}", model.namespace.to_case(Case::Camel), model.name.to_case(Case::Pascal));
+            let type_name = format!("{}{}", model.namespace.to_case(Case::Pascal), model.name.to_case(Case::Pascal));
 
             model_union = model_union.possible_type(&type_name);
 
@@ -137,20 +137,6 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
                 type_name,
                 type_mapping.clone(),
             ))));
-
-            // add enum unions
-            // Should we consider using unions for enums? Not sure about
-            // the practicality and benefit
-            // for (_, type_data) in &type_mapping {
-            //     if let TypeData::Enum((type_ref, types)) = type_data {
-            //         let mut enum_union = Union::new(&type_ref.to_string());
-            //         for (type_ref, _) in types {
-            //             enum_union = enum_union.possible_type(&type_ref.to_string());
-            //         }
-
-            //         unions.push(enum_union);
-            //     }
-            // }
         }
     }
 
