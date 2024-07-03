@@ -58,6 +58,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
+      - name: Install wasm32 target
+        run: rustup target add wasm32-unknown-unknown
       - run: cargo build -r --target wasm32-unknown-unknown -p torii-client
 
   ensure-windows:
@@ -74,7 +76,7 @@ jobs:
         with:
           repo-token: ${{ secrets.github_token }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
-  
+
   # This job is used to ensure the built katana image doesn't depend on any
   # libraries that don't exist in the base docker image we use for distribution
   ensure-docker:
