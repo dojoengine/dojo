@@ -179,8 +179,8 @@ impl Service {
                 "#;
             let (model_ids,): (String,) =
                 sqlx::query_as(models_query).bind(&entity.id).fetch_one(&pool).await?;
-            let model_ids: Vec<&str> = model_ids.split(',').collect();
-            let schemas = cache.schemas(model_ids).await?;
+            let model_ids: Vec<FieldElement> = model_ids.split(',').map(FieldElement::from_str).collect::<Result<_, _>>().map_err(ParseError::FromStr)?;
+            let schemas = cache.schemas(&model_ids).await?;
 
             let (entity_query, arrays_queries) = build_sql_query(
                 &schemas,

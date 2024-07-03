@@ -288,10 +288,12 @@ impl DojoWorld {
                 Some(&format!("{table}.id = ?")),
             )?;
 
-            let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
+            let row =
+                sqlx::query(&entity_query).bind(entity_id.clone()).fetch_one(&self.pool).await?;
             let mut arrays_rows = HashMap::new();
             for (name, query) in arrays_queries {
-                let rows = sqlx::query(&query).bind(entity_id).fetch_all(&self.pool).await?;
+                let rows =
+                    sqlx::query(&query).bind(entity_id.clone()).fetch_all(&self.pool).await?;
                 arrays_rows.insert(name, rows);
             }
 
@@ -320,13 +322,24 @@ impl DojoWorld {
             {}
         "#,
             if !keys_clause.models.is_empty() {
+                // split the model names to namespace and model
                 let model_ids = keys_clause
                     .models
                     .iter()
-                    .map(|model| get_selector_from_name(model).map_err(ParseError::NonAsciiName))
+                    .map(|model| {
+                        model
+                            .split_once('-')
+                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))
+                    })
                     .collect::<Result<Vec<_>, _>>()?;
-                let model_ids_str =
-                    model_ids.iter().map(|id| format!("'{:#x}'", id)).collect::<Vec<_>>().join(",");
+                // get the model selector from namespace and model and format
+                let model_ids_str = model_ids
+                    .iter()
+                    .map(|(namespace, model)| {
+                        format!("'{:#x}'", compute_model_selector_from_names(namespace, model))
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",");
                 format!(
                     r#"
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
@@ -397,8 +410,12 @@ impl DojoWorld {
 
         let mut entities = Vec::with_capacity(db_entities.len());
         for (entity_id, models_strs) in &db_entities {
-            let model_ids: Vec<&str> = models_strs.split(',').collect();
-            let schemas = self.model_cache.schemas(model_ids).await?;
+            let model_ids: Vec<FieldElement> = models_strs
+                .split(',')
+                .map(FieldElement::from_str)
+                .collect::<Result<_, _>>()
+                .map_err(ParseError::FromStr)?;
+            let schemas = self.model_cache.schemas(&model_ids).await?;
 
             let (entity_query, arrays_queries) = build_sql_query(
                 &schemas,
@@ -477,7 +494,7 @@ impl DojoWorld {
             HAVING INSTR(model_ids, '{:#x}') > 0
             LIMIT 1
         "#,
-            get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?
+            compute_model_selector_from_names(&member_clause.namespace, &member_clause.model)
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 
@@ -655,8 +672,12 @@ impl DojoWorld {
 
         let mut entities = Vec::with_capacity(db_entities.len());
         for (entity_id, models_str) in &db_entities {
-            let model_ids: Vec<&str> = models_str.split(',').collect();
-            let schemas = self.model_cache.schemas(model_ids).await?;
+            let model_ids: Vec<FieldElement> = models_str
+                .split(',')
+                .map(FieldElement::from_str)
+                .collect::<Result<_, _>>()
+                .map_err(ParseError::FromStr)?;
+            let schemas = self.model_cache.schemas(&model_ids).await?;
 
             let (entity_query, arrays_queries) = build_sql_query(
                 &schemas,

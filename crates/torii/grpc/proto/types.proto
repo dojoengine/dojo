@@ -116,7 +116,6 @@ message EntityKeysClause {
 }
 
 message KeysClause {
-    string namespace = 1;
     repeated bytes keys = 2;
     PatternMatching pattern_matching = 3;
     repeated string models = 4;
@@ -135,8 +134,6 @@ message MemberClause {
 }
 
 message CompositeClause {
-    string namespace = 1;
-    string model = 2;
     LogicalOperator operator = 3;
     repeated Clause clauses = 4;
 }

@@ -44,7 +44,6 @@ pub struct ModelKeysClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct KeysClause {
-    pub namespace: String,
     pub keys: Vec<Option<FieldElement>>,
     pub pattern_matching: PatternMatching,
     pub models: Vec<String>,
@@ -67,8 +66,6 @@ pub struct MemberClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct CompositeClause {
-    pub namespace: String,
-    pub model: String,
     pub operator: LogicalOperator,
     pub clauses: Vec<Clause>,
 }
@@ -308,8 +305,6 @@ impl From<MemberClause> for proto::types::MemberClause {
 impl From<CompositeClause> for proto::types::CompositeClause {
     fn from(value: CompositeClause) -> Self {
         Self {
-            namespace: value.namespace,
-            model: value.model,
             operator: value.operator as i32,
             clauses: value.clauses.into_iter().map(|clause| clause.into()).collect(),
         }

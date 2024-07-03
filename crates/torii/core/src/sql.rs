@@ -320,10 +320,10 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn model(&self, model: &str) -> Result<ModelSQLReader> {
-        match ModelSQLReader::new(model, self.pool.clone()).await {
+    pub async fn model(&self, selector: FieldElement) -> Result<ModelSQLReader> {
+    match ModelSQLReader::new(selector, self.pool.clone()).await {
             Ok(reader) => Ok(reader),
-            Err(e) => Err(anyhow::anyhow!("Failed to get model from db for selector {model}: {e}")),
+            Err(e) => Err(anyhow::anyhow!("Failed to get model from db for selector {selector:#x}: {e}")),
         }
     }
 
