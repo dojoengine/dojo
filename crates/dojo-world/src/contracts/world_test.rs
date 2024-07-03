@@ -12,6 +12,7 @@ use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
 use crate::migration::{Declarable, Deployable, TxnConfig};
+use crate::utils::TransactionExt;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
@@ -88,10 +89,7 @@ pub async fn deploy_world(
     strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
 
     let base_class_hash =
-        strategy.base.unwrap().declare(&account, &TxnConfig::default()).await.unwrap().class_hash;
-
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
+        strategy.base.unwrap().declare(&account, &TxnConfig::init_wait()).await.unwrap().class_hash;
 
     let world_address = strategy
         .world
@@ -100,7 +98,7 @@ pub async fn deploy_world(
             manifest.clone().world.inner.class_hash,
             vec![base_class_hash],
             &account,
-            &TxnConfig::default(),
+            &TxnConfig::init_wait(),
         )
         .await
         .unwrap()
@@ -108,24 +106,28 @@ pub async fn deploy_world(
 
     let mut declare_output = vec![];
     for model in strategy.models {
-        let res = model.declare(&account, &TxnConfig::default()).await.unwrap();
+        let res = model.declare(&account, &TxnConfig::init_wait()).await.unwrap();
         declare_output.push(res);
     }
 
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
-
     let world = WorldContract::new(world_address, &account);
+
+    world
+        .register_namespace(&cainome::cairo_serde::ByteArray::from_string("dojo_examples").unwrap())
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    // Wondering why the `init_wait` is not enough and causes a nonce error.
+    // May be to a delay to create the block as we are in instant mining.
+    tokio::time::sleep(Duration::from_millis(2000)).await;
 
     let calls = declare_output
         .iter()
         .map(|o| world.register_model_getcall(&o.class_hash.into()))
         .collect::<Vec<_>>();
 
-    let _ = account.execute(calls).send().await.unwrap();
-
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    let _ = account.execute(calls).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
 
     for contract in strategy.contracts {
         let declare_res = contract.declare(&account, &TxnConfig::default()).await.unwrap();
@@ -135,15 +137,12 @@ pub async fn deploy_world(
                 declare_res.class_hash,
                 base_class_hash,
                 &account,
-                &TxnConfig::default(),
+                &TxnConfig::init_wait(),
                 &contract.diff.init_calldata,
             )
             .await
             .unwrap();
     }
-
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
 
     world_address
 }

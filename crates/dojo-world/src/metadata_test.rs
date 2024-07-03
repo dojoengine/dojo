@@ -6,9 +6,7 @@ use dojo_test_utils::compiler;
 use scarb::ops;
 use url::Url;
 
-use crate::manifest::utils::{
-    get_filename_from_special_contract_name, FILENAME_SEPARATOR, TAG_SEPARATOR,
-};
+use crate::manifest::utils::{get_filename_from_special_contract_name, TAG_SEPARATOR};
 use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_NAME};
 use crate::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, ProjectMetadata, Uri, WorldMetadata, ABIS_DIR,
@@ -240,7 +238,7 @@ fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(&str, String)
 }
 
 fn get_tag_from_filename(filename: &str) -> String {
-    let parts = filename.split(FILENAME_SEPARATOR).collect::<Vec<_>>();
+    let parts = filename.split(TAG_SEPARATOR).collect::<Vec<_>>();
     assert!(parts.len() >= 2);
     format!("{}{TAG_SEPARATOR}{}", parts[0], parts[1])
 }
