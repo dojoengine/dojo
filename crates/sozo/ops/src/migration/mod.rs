@@ -104,9 +104,9 @@ where
     if let Some(world_address) = world_address {
         if world_address != generated_world_address {
             bail!(format!(
-                "Calculated world address ({:#x}) doesn't match provided world address. If you are \
-                     deploying with custom seed make sure `world_address` is correctly configured \
-                     (or not set) `Scarb.toml`",
+                "Calculated world address ({:#x}) doesn't match provided world address. If you \
+                 are deploying with custom seed make sure `world_address` is correctly configured \
+                 (or not set) `Scarb.toml`",
                 generated_world_address
             ))
         }

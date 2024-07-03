@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use scarb::core::{ManifestMetadata, Workspace};
@@ -73,7 +73,7 @@ pub fn project_to_world_metadata(m: ProjectWorldMetadata) -> WorldMetadata {
 ///
 /// # Returns
 /// A [`DojoMetadata`] object containing all Dojo metadata.
-pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> {
+pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> {
     let profile = ws.config().profile();
 
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
@@ -83,11 +83,14 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
     let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
 
     let project_metadata = if let Ok(current_package) = ws.current_package() {
-        current_package.manifest.metadata.dojo()
+        current_package.manifest.metadata.dojo()?
     } else {
         // On workspaces, dojo metadata are not accessible because if no current package is defined
         // (being the only package or using --package).
-        return None;
+        return Err(anyhow!(
+            "No current package with dojo metadata found, this subcommand is not yet support for \
+             workspaces."
+        ));
     };
 
     let mut dojo_metadata = DojoMetadata {
@@ -137,7 +140,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
         }
     }
 
-    Some(dojo_metadata)
+    Ok(dojo_metadata)
 }
 
 /// Metadata coming from project configuration (Scarb.toml)
@@ -400,16 +403,23 @@ impl DojoMetadata {
 }
 
 trait MetadataExt {
-    fn dojo(&self) -> ProjectMetadata;
+    fn dojo(&self) -> Result<ProjectMetadata>;
 }
 
 impl MetadataExt for ManifestMetadata {
-    fn dojo(&self) -> ProjectMetadata {
-        self.tool_metadata
+    fn dojo(&self) -> Result<ProjectMetadata> {
+        let metadata = self
+            .tool_metadata
             .as_ref()
             .and_then(|e| e.get("dojo"))
-            .cloned()
-            .map(|v| v.try_into::<ProjectMetadata>().unwrap_or_default())
-            .unwrap_or_default()
+            // TODO: see if we can make error more descriptive
+            .ok_or_else(|| anyhow!("Some of the fields in [tool.dojo] are required."))?
+            .clone();
+
+        let project_metadata: ProjectMetadata = metadata
+            .try_into()
+            .with_context(|| "Project metadata (i.e. [tool.dojo]) is not properly configured.")?;
+
+        Ok(project_metadata)
     }
 }
