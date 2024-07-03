@@ -21,7 +21,6 @@ use proto::world::{
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
-use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;

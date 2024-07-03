@@ -255,6 +255,7 @@ mod tests {
         let components = HashMap::from([(
             "Position".into(),
             dojo_types::schema::ModelMetadata {
+                namespace: "Test".into(),
                 name: "Position".into(),
                 class_hash: felt!("1"),
                 contract_address: felt!("2"),
@@ -283,7 +284,7 @@ mod tests {
 
         let metadata = self::create_dummy_metadata();
 
-        let keys = ModelKeysClause { namespace: &"Test", model: model_name, keys };
+        let keys = ModelKeysClause { model: model_name, keys };
 
         let subscribed_models = super::SubscribedModels::new(Arc::new(RwLock::new(metadata)));
         subscribed_models.add_models(vec![keys.clone()]).expect("able to add model");

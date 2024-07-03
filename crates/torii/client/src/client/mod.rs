@@ -185,7 +185,8 @@ impl Client {
         };
 
         if !self.subscribed_models.is_synced(keys) {
-            let model = self.world_reader.model_reader(&keys.namespace, &keys.model).await?;
+            let (namespace, model) = keys.model.split_once('-').unwrap();
+            let model = self.world_reader.model_reader(namespace, model).await?;
             return Ok(Some(model.entity(&keys.keys).await?));
         }
 
@@ -234,7 +235,8 @@ impl Client {
     /// NOTE: This will establish a new subscription stream with the server.
     pub async fn add_models_to_sync(&self, models_keys: Vec<ModelKeysClause>) -> Result<(), Error> {
         for keys in &models_keys {
-            self.initiate_model(&keys.namespace, &keys.model, keys.keys.clone()).await?;
+            let (namespace, model) = keys.model.split_once('-').unwrap();
+            self.initiate_model(namespace, model, keys.keys.clone()).await?;
         }
 
         self.subscribed_models.add_models(models_keys)?;

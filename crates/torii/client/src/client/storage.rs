@@ -157,6 +157,7 @@ mod tests {
         let models = HashMap::from([(
             "Position".into(),
             dojo_types::schema::ModelMetadata {
+                namespace: "Test".into(),
                 name: "Position".into(),
                 class_hash: felt!("1"),
                 contract_address: felt!("2"),
