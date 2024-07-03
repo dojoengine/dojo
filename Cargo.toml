@@ -244,3 +244,4 @@ alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e437
 # To enable std feature on `starknet-types-core`.
 # To re-export the entire `felt` module from `starknet-types-core`.
 starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
+starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }
