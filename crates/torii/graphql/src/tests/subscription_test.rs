@@ -24,6 +24,7 @@ mod tests {
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
+        let namespace = "Test".to_string();
         let model_name = "Record".to_string();
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
@@ -34,7 +35,7 @@ mod tests {
                 "id": entity_id,
                 "keys":vec![keys_str],
                 "models" : [{
-                    "__typename": model_name,
+                    "__typename": format!("{}_{}", namespace, model_name),
                         "depth": "Zero",
                         "record_id": 0,
                         "typeU16": 1,
@@ -54,7 +55,7 @@ mod tests {
             // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: model_name,
+                    name: format!("{}-{}", namespace, model_name),
                     children: vec![
                         Member {
                             name: "depth".to_string(),
@@ -120,7 +121,7 @@ mod tests {
                     keys
                     models {
                         __typename
-                        ... on Record {
+                        ... on Test_Record {
                             depth
                             record_id
                             typeU16
@@ -147,6 +148,7 @@ mod tests {
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
+        let namespace = "Test".to_string();
         let model_name = "Record".to_string();
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
@@ -157,7 +159,7 @@ mod tests {
                 "id": entity_id,
                 "keys":vec![keys_str],
                 "models" : [{
-                    "__typename": model_name,
+                    "__typename": format!("{}_{}", namespace, model_name),
                         "depth": "Zero",
                         "record_id": 0,
                         "type_felt": format!("{:#x}", FieldElement::from(1u128)),
@@ -174,7 +176,7 @@ mod tests {
             // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: model_name,
+                    name: format!("{}-{}", namespace, model_name),
                     children: vec![
                         Member {
                             name: "depth".to_string(),
@@ -225,7 +227,7 @@ mod tests {
                     keys
                     models {
                         __typename
-                        ... on Record {
+                        ... on Test_Record {
                             depth
                             record_id
                             type_felt
