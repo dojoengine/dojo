@@ -18,7 +18,6 @@ use thiserror::Error;
 use toml;
 use toml::Table;
 use tracing::error;
-use utils::{get_filename_from_special_contract_name, get_tag_from_special_contract_name};
 use walkdir::WalkDir;
 
 use crate::contracts::model::ModelError;
@@ -39,8 +38,8 @@ pub use types::{
     OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldContract, WorldMetadata,
 };
 
-pub const WORLD_CONTRACT_NAME: &str = "dojo::world::world";
-pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
+pub const WORLD_CONTRACT_TAG: &str = "dojo-world";
+pub const BASE_CONTRACT_TAG: &str = "dojo-base";
 
 pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world";
 pub const BASE_QUALIFIED_PATH: &str = "dojo::base::base";
@@ -118,13 +117,11 @@ impl BaseManifest {
     /// Load the manifest from a file at the given path.
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
         let world: Manifest<Class> = toml::from_str(&fs::read_to_string(
-            path.join(get_filename_from_special_contract_name(WORLD_CONTRACT_NAME))
-                .with_extension("toml"),
+            path.join(get_filename_from_tag(WORLD_CONTRACT_TAG)).with_extension("toml"),
         )?)?;
 
         let base: Manifest<Class> = toml::from_str(&fs::read_to_string(
-            path.join(get_filename_from_special_contract_name(BASE_CONTRACT_NAME))
-                .with_extension("toml"),
+            path.join(get_filename_from_tag(BASE_CONTRACT_TAG)).with_extension("toml"),
         )?)?;
 
         let contracts = elements_from_path::<DojoContract>(&path.join(CONTRACTS_DIR))?;
@@ -179,14 +176,8 @@ impl OverlayManifest {
     fn build_kind_from_tags(base_manifest: &BaseManifest) -> HashMap<String, ManifestKind> {
         let mut kind_from_tags = HashMap::<String, ManifestKind>::new();
 
-        kind_from_tags.insert(
-            get_tag_from_special_contract_name(WORLD_CONTRACT_NAME),
-            ManifestKind::WorldClass,
-        );
-        kind_from_tags.insert(
-            get_tag_from_special_contract_name(BASE_CONTRACT_NAME),
-            ManifestKind::BaseClass,
-        );
+        kind_from_tags.insert(WORLD_CONTRACT_TAG.to_string(), ManifestKind::WorldClass);
+        kind_from_tags.insert(BASE_CONTRACT_TAG.to_string(), ManifestKind::BaseClass);
 
         for model in base_manifest.models.as_slice() {
             kind_from_tags.insert(model.inner.tag.clone(), ManifestKind::Model);
@@ -297,17 +288,15 @@ impl OverlayManifest {
 
         if let Some(ref world) = self.world {
             let world = toml::to_string(world)?;
-            let file_name = path
-                .join(get_filename_from_special_contract_name(WORLD_CONTRACT_NAME))
-                .with_extension("toml");
+            let file_name =
+                path.join(get_filename_from_tag(WORLD_CONTRACT_TAG)).with_extension("toml");
             fs::write(file_name, world)?;
         }
 
         if let Some(ref base) = self.base {
             let base = toml::to_string(base)?;
-            let file_name = path
-                .join(get_filename_from_special_contract_name(BASE_CONTRACT_NAME))
-                .with_extension("toml");
+            let file_name =
+                path.join(get_filename_from_tag(BASE_CONTRACT_TAG)).with_extension("toml");
             fs::write(file_name, base)?;
         }
 
@@ -448,16 +437,16 @@ impl DeploymentManifest {
                     class_hash: world_class_hash,
                     ..Default::default()
                 },
-                get_filename_from_special_contract_name(WORLD_CONTRACT_NAME),
+                get_filename_from_tag(WORLD_CONTRACT_TAG),
             ),
             base: Manifest::new(
                 Class {
                     class_hash: base_class_hash,
                     abi: None,
                     original_class_hash: base_class_hash,
-                    tag: get_tag_from_special_contract_name(BASE_CONTRACT_NAME),
+                    tag: BASE_CONTRACT_TAG.to_string(),
                 },
-                get_filename_from_special_contract_name(BASE_CONTRACT_NAME),
+                get_filename_from_tag(BASE_CONTRACT_TAG),
             ),
         })
     }
@@ -521,8 +510,7 @@ where
     let mut contracts = parse_contracts_events(contract_deployed_events, contract_upgraded_events);
 
     for contract in &mut contracts {
-        contract.manifest_name = get_filename_from_tag(&contract.inner.tag)
-            .map_err(|e| AbstractManifestError::TagError(e.to_string()))?;
+        contract.manifest_name = get_filename_from_tag(&contract.inner.tag);
     }
 
     Ok((models, contracts))
@@ -626,7 +614,7 @@ fn parse_contracts_events(
                     tag: tag.clone(),
                     ..Default::default()
                 },
-                get_filename_from_tag(&tag).expect("ASCII encoded filename"),
+                get_filename_from_tag(&tag),
             )
         })
         .collect()
@@ -665,7 +653,7 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
         .into_iter()
         .map(|(tag, class_hash)| Manifest::<DojoModel> {
             inner: DojoModel { tag: tag.clone(), class_hash, abi: None, ..Default::default() },
-            manifest_name: get_filename_from_tag(&tag).unwrap(),
+            manifest_name: get_filename_from_tag(&tag),
         })
         .collect()
 }
@@ -708,8 +696,7 @@ where
     fs::create_dir_all(path)?;
 
     for element in elements {
-        let filename = get_filename_from_tag(&get_tag(element))
-            .map_err(|e| AbstractManifestError::TagError(e.to_string()))?;
+        let filename = get_filename_from_tag(&get_tag(element));
         let path = path.join(filename).with_extension("toml");
         fs::write(path, toml::to_string(element)?)?;
     }

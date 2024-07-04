@@ -6,8 +6,8 @@ use dojo_test_utils::compiler;
 use scarb::ops;
 use url::Url;
 
-use crate::manifest::utils::{get_filename_from_special_contract_name, TAG_SEPARATOR};
-use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_NAME};
+use crate::manifest::utils::{get_filename_from_tag, TAG_SEPARATOR};
+use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 use crate::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, ProjectMetadata, Uri, WorldMetadata, ABIS_DIR,
     BASE_DIR, MANIFESTS_DIR,
@@ -162,7 +162,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(dojo_metadata.world.website.is_none());
     assert!(dojo_metadata.world.socials.is_none());
 
-    let world_filename = get_filename_from_special_contract_name(WORLD_CONTRACT_NAME);
+    let world_filename = get_filename_from_tag(WORLD_CONTRACT_TAG);
     assert!(dojo_metadata.world.artifacts.abi.is_some(), "No abi for {world_filename}");
     let abi = dojo_metadata.world.artifacts.abi.unwrap();
     assert_eq!(

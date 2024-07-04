@@ -10,8 +10,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
 
-use crate::manifest::utils::{get_filename_from_special_contract_name, get_filename_from_tag};
-use crate::manifest::{BaseManifest, CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_NAME};
+use crate::manifest::utils::get_filename_from_tag;
+use crate::manifest::{BaseManifest, CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 
 #[cfg(test)]
 #[path = "metadata_test.rs"]
@@ -110,7 +110,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
     let world_artifact = build_artifact_from_filename(
         &abi_dir,
         &source_dir,
-        &get_filename_from_special_contract_name(WORLD_CONTRACT_NAME),
+        &get_filename_from_tag(WORLD_CONTRACT_TAG),
     );
 
     // inialize Dojo world metadata with world metadata coming from project configuration
@@ -131,7 +131,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
                         artifacts: build_artifact_from_filename(
                             &abi_model_dir,
                             &source_model_dir,
-                            &get_filename_from_tag(&tag).unwrap(),
+                            &get_filename_from_tag(&tag),
                         ),
                     },
                 );
@@ -148,7 +148,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
                         artifacts: build_artifact_from_filename(
                             &abi_contract_dir,
                             &source_contract_dir,
-                            &get_filename_from_tag(&tag).unwrap(),
+                            &get_filename_from_tag(&tag),
                         ),
                     },
                 );

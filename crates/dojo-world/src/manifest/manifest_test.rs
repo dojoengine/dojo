@@ -60,7 +60,7 @@ fn parse_registered_model_events() {
                 class_hash: felt!("0x5555"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns", "modelA")).unwrap(),
+            get_filename_from_tag(&get_tag("ns", "modelA")),
         ),
         Manifest::new(
             DojoModel {
@@ -68,7 +68,7 @@ fn parse_registered_model_events() {
                 class_hash: felt!("0x6666"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns", "modelB")).unwrap(),
+            get_filename_from_tag(&get_tag("ns", "modelB")),
         ),
     ];
 
@@ -107,7 +107,7 @@ fn parse_deployed_contracts_events_without_upgrade() {
                 tag: get_tag("ns1", "c1"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns1", "c1")).unwrap(),
+            get_filename_from_tag(&get_tag("ns1", "c1")),
         ),
         Manifest::new(
             DojoContract {
@@ -116,7 +116,7 @@ fn parse_deployed_contracts_events_without_upgrade() {
                 tag: get_tag("ns2", "c2"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns2", "c2")).unwrap(),
+            get_filename_from_tag(&get_tag("ns2", "c2")),
         ),
         Manifest::new(
             DojoContract {
@@ -125,7 +125,7 @@ fn parse_deployed_contracts_events_without_upgrade() {
                 tag: get_tag("ns3", "c3"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns3", "c3")).unwrap(),
+            get_filename_from_tag(&get_tag("ns3", "c3")),
         ),
     ];
 
@@ -149,7 +149,7 @@ fn parse_deployed_contracts_events_with_upgrade() {
                 tag: get_tag("ns1", "c1"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns1", "c1")).unwrap(),
+            get_filename_from_tag(&get_tag("ns1", "c1")),
         ),
         Manifest::new(
             DojoContract {
@@ -158,7 +158,7 @@ fn parse_deployed_contracts_events_with_upgrade() {
                 tag: get_tag("ns2", "c2"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns2", "c2")).unwrap(),
+            get_filename_from_tag(&get_tag("ns2", "c2")),
         ),
         Manifest::new(
             DojoContract {
@@ -167,7 +167,7 @@ fn parse_deployed_contracts_events_with_upgrade() {
                 tag: get_tag("ns3", "c3"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns3", "c3")).unwrap(),
+            get_filename_from_tag(&get_tag("ns3", "c3")),
         ),
     ];
 
@@ -226,7 +226,7 @@ fn events_without_block_number_arent_parsed() {
                 tag: get_tag("ns1", "c1"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns1", "c1")).unwrap(),
+            get_filename_from_tag(&get_tag("ns1", "c1")),
         ),
         Manifest::new(
             DojoContract {
@@ -235,7 +235,7 @@ fn events_without_block_number_arent_parsed() {
                 tag: get_tag("ns2", "c2"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns2", "c2")).unwrap(),
+            get_filename_from_tag(&get_tag("ns2", "c2")),
         ),
         Manifest::new(
             DojoContract {
@@ -244,7 +244,7 @@ fn events_without_block_number_arent_parsed() {
                 tag: get_tag("ns3", "c3"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("ns3", "c3")).unwrap(),
+            get_filename_from_tag(&get_tag("ns3", "c3")),
         ),
     ];
 

@@ -7,7 +7,7 @@ use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::utils::{compute_model_selector_from_tag, get_default_namespace_from_ws};
 use dojo_world::manifest::{
     BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
-    WORLD_CONTRACT_NAME,
+    WORLD_CONTRACT_TAG,
 };
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,
@@ -279,7 +279,7 @@ async fn migrate_with_metadata() {
 
     // check world metadata
     let resource = world_reader.metadata(&FieldElement::ZERO).call().await.unwrap();
-    let element_name = WORLD_CONTRACT_NAME.to_string();
+    let element_name = WORLD_CONTRACT_TAG.to_string();
 
     let full_uri = resource.metadata_uri.to_string().unwrap();
     let resource_bytes = get_ipfs_resource_data(&client, &element_name, &full_uri).await;
