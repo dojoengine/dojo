@@ -328,7 +328,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let records_contract = manifest
         .contracts
         .iter()
-        .find(|contract| contract.manifest_name.eq("types_test-records"))
+        .find(|contract| contract.inner.tag.eq("types_test-records"))
         .unwrap();
     let record_contract_address = records_contract.inner.address.unwrap();
     let InvokeTransactionResult { transaction_hash } = account

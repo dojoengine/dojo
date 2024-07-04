@@ -967,15 +967,16 @@ mod tests {
                 .unwrap();
 
         let expected_query =
-            "SELECT entities.id, entities.keys, [Test-Position].external_player AS \"Test-Position.player\", \
-            [Test-Position$vec].external_x AS \"Test-Position$vec.x\", \
-            [Test-Position$vec].external_y AS \"Test-Position$vec.y\", \
-            [Test-PlayerConfig$favorite_item].external_Some AS \"Test-PlayerConfig$favorite_item.Some\", \
-            [Test-PlayerConfig].external_favorite_item AS \"Test-PlayerConfig.favorite_item\" \
-            FROM entities JOIN [Test-Position$vec] ON entities.id = [Test-Position$vec].entity_id  \
-            JOIN [Test-Position] ON entities.id = [Test-Position].entity_id  \
-            JOIN [Test-PlayerConfig$favorite_item] ON entities.id = [Test-PlayerConfig$favorite_item].entity_id  \
-            JOIN [Test-PlayerConfig] ON entities.id = [Test-PlayerConfig].entity_id";
+            "SELECT entities.id, entities.keys, [Test-Position].external_player AS \
+             \"Test-Position.player\", [Test-Position$vec].external_x AS \"Test-Position$vec.x\", \
+             [Test-Position$vec].external_y AS \"Test-Position$vec.y\", \
+             [Test-PlayerConfig$favorite_item].external_Some AS \
+             \"Test-PlayerConfig$favorite_item.Some\", [Test-PlayerConfig].external_favorite_item \
+             AS \"Test-PlayerConfig.favorite_item\" FROM entities JOIN [Test-Position$vec] ON \
+             entities.id = [Test-Position$vec].entity_id  JOIN [Test-Position] ON entities.id = \
+             [Test-Position].entity_id  JOIN [Test-PlayerConfig$favorite_item] ON entities.id = \
+             [Test-PlayerConfig$favorite_item].entity_id  JOIN [Test-PlayerConfig] ON entities.id \
+             = [Test-PlayerConfig].entity_id";
         // todo: completely tests arrays
         assert_eq!(query.0, expected_query);
     }
