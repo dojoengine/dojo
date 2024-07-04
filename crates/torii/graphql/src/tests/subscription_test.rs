@@ -11,7 +11,6 @@ mod tests {
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
-    use starknet::core::utils::get_selector_from_name;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
     use torii_core::sql::Sql;
