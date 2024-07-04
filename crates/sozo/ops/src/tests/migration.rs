@@ -354,7 +354,9 @@ async fn migrate_with_auto_authorize() {
     let world_address = migration.world_address().expect("must be present");
     let world = WorldContract::new(world_address, account);
 
-    let res = auto_authorize(&ws, &world, &txn_config, &manifest, &output).await;
+    let default_namespace = get_default_namespace_from_ws(&ws);
+    let res =
+        auto_authorize(&ws, &world, &txn_config, &manifest, &output, &default_namespace).await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();

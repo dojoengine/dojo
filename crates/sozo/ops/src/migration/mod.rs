@@ -159,24 +159,26 @@ where
         )
         .await?;
 
-        // TODO: temporary deactivate auto-auth because it should be adapted
-        // with the new namespace feature.
         let account = Arc::new(account);
         let world = WorldContract::new(world_address, account.clone());
         if let Some(migration_output) = migration_output {
-            // TODO
-            if false {
-                match auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output)
-                    .await
-                {
-                    Ok(()) => {
-                        ui.print_sub("Auto authorize completed successfully");
-                    }
-                    Err(e) => {
-                        ui.print_sub(format!("Failed to auto authorize with error: {e}"));
-                    }
-                };
-            }
+            match auto_authorize(
+                ws,
+                &world,
+                &txn_config,
+                &local_manifest,
+                &migration_output,
+                &default_namespace,
+            )
+            .await
+            {
+                Ok(()) => {
+                    ui.print_sub("Auto authorize completed successfully");
+                }
+                Err(e) => {
+                    ui.print_sub(format!("Failed to auto authorize with error: {e}"));
+                }
+            };
 
             //
             if !ws.config().offline() {

@@ -145,7 +145,7 @@ async fn get_full_dojo_metadata_from_workspace() {
         env.private_key.unwrap().eq("0x1800000000300000180000000000030000000000003006001800006600")
     );
 
-    assert!(env.world_address.is_none());
+    assert!(env.world_address.is_some());
 
     assert!(env.keystore_path.is_none());
     assert!(env.keystore_password.is_none());

@@ -85,7 +85,6 @@ fn extract_events(
         events: &mut HashMap<String, Vec<Token>>,
         full_abi_path: &Utf8PathBuf,
     ) -> Result<()> {
-        println!("full_abi_path {:?}", full_abi_path);
         let abi_str = fs::read_to_string(full_abi_path)?;
 
         match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {

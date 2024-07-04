@@ -1502,7 +1502,10 @@
         }
       ],
       "reads": [],
-      "writes": [],
+      "writes": [
+        "dojo_examples-Moves",
+        "dojo_examples-Position"
+      ],
       "computed": [],
       "init_calldata": [],
       "tag": "dojo_examples-actions",
