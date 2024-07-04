@@ -339,10 +339,9 @@ fn fetch_remote_manifest() {
         local_manifest.remove_tags(skip_manifests);
     }
 
-    let overlay_manifest = OverlayManifest::load_from_path(
-        &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
-    )
-    .unwrap();
+    let overlay_manifest =
+        OverlayManifest::load_from_path(&temp_project_dir.join(OVERLAYS_DIR).join(profile_name))
+            .unwrap();
 
     local_manifest.merge(overlay_manifest);
 

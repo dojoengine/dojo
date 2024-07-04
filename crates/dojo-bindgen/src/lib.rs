@@ -241,16 +241,16 @@ mod tests {
 
         assert_eq!(data.world.name, "dojo_example");
 
-        let pos = data.models.get("Position").unwrap();
-        assert_eq!(pos.tag, "Position");
+        let pos = data.models.get("dojo_examples:Position").unwrap();
+        assert_eq!(pos.tag, "dojo_examples:Position");
 
-        let moves = data.models.get("Moves").unwrap();
-        assert_eq!(moves.tag, "Moves");
+        let moves = data.models.get("dojo_examples:Moves").unwrap();
+        assert_eq!(moves.tag, "dojo_examples:Moves");
 
-        let moved = data.models.get("Message").unwrap();
-        assert_eq!(moved.tag, "Message");
+        let moved = data.models.get("dojo_examples:Message").unwrap();
+        assert_eq!(moved.tag, "dojo_examples:Message");
 
-        let player_config = data.models.get("PlayerConfig").unwrap();
-        assert_eq!(player_config.tag, "PlayerConfig");
+        let player_config = data.models.get("dojo_examples:PlayerConfig").unwrap();
+        assert_eq!(player_config.tag, "dojo_examples:PlayerConfig");
     }
 }

@@ -30,7 +30,7 @@ cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
 socials.x = "https://x.com/dojostarknet"
-seed = "dojo_example"
+seed = "dojo_examples"
         "#,
     )
     .unwrap();
