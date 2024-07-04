@@ -100,7 +100,7 @@ where
         )
     })?;
 
-    let generated_world_address = get_world_address(&local_manifest, &name)?;
+    let generated_world_address = get_world_address(&local_manifest, name)?;
     if let Some(world_address) = world_address {
         if world_address != generated_world_address {
             bail!(format!(
@@ -208,7 +208,7 @@ fn get_world_address(
     local_manifest: &dojo_world::manifest::BaseManifest,
     name: &str,
 ) -> Result<FieldElement> {
-    let name = cairo_short_string_to_felt(&name)?;
+    let name = cairo_short_string_to_felt(name)?;
     let salt = poseidon_hash_single(name);
 
     let generated_world_address = get_contract_address(
