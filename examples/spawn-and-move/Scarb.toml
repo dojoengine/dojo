@@ -20,6 +20,7 @@ build-external-contracts = [  ]
 [tool.dojo.world]
 description = "example world"
 name = "example"
+seed = "dojo_examples"
 
 [tool.dojo.env]
 rpc_url = "http://localhost:5050/"

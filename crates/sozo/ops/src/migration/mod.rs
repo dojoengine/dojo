@@ -1,7 +1,7 @@
 use std::fs;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::WorldContract;
 use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use dojo_world::manifest::{
@@ -13,6 +13,8 @@ use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
+use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
+use starknet_crypto::poseidon_hash_single;
 
 mod auto_auth;
 mod migrate;
@@ -95,6 +97,18 @@ where
              build`.",
         )
     })?;
+
+    let generated_world_address = get_world_address(&local_manifest, name)?;
+    if let Some(world_address) = world_address {
+        if world_address != generated_world_address {
+            bail!(format!(
+                "Calculated world address ({:#x}) doesn't match provided world address. If you \
+                 are deploying with custom seed make sure `world_address` is correctly configured \
+                 (or not set) `Scarb.toml`",
+                generated_world_address
+            ))
+        }
+    }
 
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
@@ -188,6 +202,23 @@ where
     };
 
     Ok(())
+}
+
+fn get_world_address(
+    local_manifest: &dojo_world::manifest::BaseManifest,
+    name: &str,
+) -> Result<FieldElement> {
+    let name = cairo_short_string_to_felt(name)?;
+    let salt = poseidon_hash_single(name);
+
+    let generated_world_address = get_contract_address(
+        salt,
+        local_manifest.world.inner.original_class_hash,
+        &[local_manifest.base.inner.class_hash],
+        FieldElement::ZERO,
+    );
+
+    Ok(generated_world_address)
 }
 
 enum ContractDeploymentOutput {

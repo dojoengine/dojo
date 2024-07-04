@@ -32,6 +32,7 @@ cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
 socials.x = "https://x.com/dojostarknet"
+seed = "dojo_examples"
         "#,
     )
     .unwrap();
@@ -55,8 +56,7 @@ socials.x = "https://x.com/dojostarknet"
         Some("0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a")
     );
 
-    assert!(metadata.world.is_some());
-    let world = metadata.world.unwrap();
+    let world = metadata.world;
 
     assert_eq!(world.name(), Some("example"));
     assert_eq!(world.description(), Some("example world"));
@@ -64,12 +64,14 @@ socials.x = "https://x.com/dojostarknet"
     assert_eq!(world.icon_uri, Some(Uri::File("example_icon.png".into())));
     assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
+    assert_eq!(world.seed, String::from("dojo_examples"));
 }
 
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
     let meta = WorldMetadata {
         name: Some("Test World".to_string()),
+        seed: String::from("dojo_examples"),
         description: Some("A world used for testing".to_string()),
         cover_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
         icon_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
@@ -107,7 +109,7 @@ website = "https://dojoengine.org"
     )
     .unwrap();
 
-    assert!(metadata.world.is_some());
+    assert!(metadata.world.socials.is_none());
 }
 
 #[tokio::test]
