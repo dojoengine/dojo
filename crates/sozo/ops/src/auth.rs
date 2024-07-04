@@ -3,14 +3,15 @@ use std::str::FromStr;
 use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelError;
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::contracts::{cairo_utils, WorldContractReader};
-use dojo_world::manifest::utils::compute_model_selector_from_names;
+use dojo_world::contracts::WorldContractReader;
+use dojo_world::manifest::utils::{
+    compute_bytearray_hash, compute_model_selector_from_tag, ensure_namespace,
+};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::parse_cairo_short_string;
 use starknet_crypto::FieldElement;
 
 use crate::utils;
@@ -18,82 +19,92 @@ use crate::utils;
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResourceType {
     Contract(String),
-    Model(FieldElement),
+    Namespace(String),
+    Model(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModelContract {
-    pub model: FieldElement,
-    pub contract: String, // contract name or address
-}
-
-impl FromStr for ModelContract {
+impl FromStr for ResourceType {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split(',').collect();
-
-        let (model, contract) = match parts.as_slice() {
-            [model, contract] => (model, contract),
-            _ => anyhow::bail!(
-                "Model and contract address are expected to be comma separated: `sozo auth grant \
-                 writer model_name,0x1234`"
-            ),
-        };
-
-        let model = cairo_utils::str_to_felt(model)
-            .map_err(|_| anyhow::anyhow!("Invalid model name: {}", model))?;
-
-        Ok(ModelContract { model, contract: contract.to_string() })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct OwnerResource {
-    pub resource: ResourceType,
-    pub owner: FieldElement,
-}
-
-impl FromStr for OwnerResource {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split(',').collect();
-
-        let (resource_part, owner_part) = match parts.as_slice() {
-            [resource, owner] => (*resource, *owner),
-            _ => anyhow::bail!(
-                "Owner and resource are expected to be comma separated: `sozo auth grant owner \
-                 resource_type:resource_name,0x1234`"
-            ),
-        };
-
-        let owner = FieldElement::from_hex_be(owner_part)
-            .map_err(|_| anyhow::anyhow!("Invalid owner address: {}", owner_part))?;
-
-        let resource_parts = resource_part.split_once(':');
-        let resource = match resource_parts {
-            Some(("contract", name)) => ResourceType::Contract(name.to_string()),
-            Some(("model", name)) => {
-                let model = cairo_utils::str_to_felt(name)
-                    .map_err(|_| anyhow::anyhow!("Invalid model name: {}", name))?;
-                ResourceType::Model(model)
+        let parts = s.split_once(':');
+        let resource = match parts {
+            Some(("contract", name)) | Some(("c", name)) => {
+                ResourceType::Contract(name.to_string())
+            }
+            Some(("model", name)) | Some(("m", name)) => ResourceType::Model(name.to_string()),
+            Some(("namespace", name)) | Some(("ns", name)) => {
+                ResourceType::Namespace(name.to_string())
             }
             _ => anyhow::bail!(
                 "Resource is expected to be in the format `resource_type:resource_name`: `sozo \
                  auth grant owner resource_type:resource_name,0x1234`"
             ),
         };
+        Ok(resource)
+    }
+}
 
-        Ok(OwnerResource { owner, resource })
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResourceWriter {
+    pub resource: ResourceType,
+    pub tag_or_address: String,
+}
+
+impl FromStr for ResourceWriter {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(',').collect();
+
+        let (resource, tag_or_address) = match parts.as_slice() {
+            [resource, tag_or_address] => (resource, tag_or_address.to_string()),
+            _ => anyhow::bail!(
+                "Resource and contract are expected to be comma separated: `sozo auth grant \
+                 writer model:model_name,0x1234`"
+            ),
+        };
+
+        let resource = ResourceType::from_str(resource)?;
+        Ok(ResourceWriter { resource, tag_or_address })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResourceOwner {
+    pub resource: ResourceType,
+    pub owner: FieldElement,
+}
+
+impl FromStr for ResourceOwner {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(',').collect();
+
+        let (resource, owner) = match parts.as_slice() {
+            [resource, owner] => (resource, owner),
+            _ => anyhow::bail!(
+                "Resource and owner are expected to be comma separated: `sozo auth grant owner \
+                 resource_type:resource_name,0x1234`"
+            ),
+        };
+
+        let owner = FieldElement::from_hex_be(owner)
+            .map_err(|_| anyhow::anyhow!("Invalid owner address: {}", owner))?;
+
+        let resource = ResourceType::from_str(resource)?;
+
+        Ok(ResourceOwner { owner, resource })
     }
 }
 
 pub async fn grant_writer<'a, A>(
     ui: &'a Ui,
     world: &WorldContract<A>,
-    models_contracts: Vec<ModelContract>,
+    new_writers: Vec<ResourceWriter>,
     txn_config: TxnConfig,
+    default_namespace: &str,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send,
@@ -101,31 +112,12 @@ where
 {
     let mut calls = Vec::new();
 
-    let world_reader = WorldContractReader::new(world.address, world.account.provider())
-        .with_block(BlockId::Tag(BlockTag::Pending));
-
-    // TODO: Is some models have version 0 (using the name of the struct instead of the selector),
-    // we're not able to distinguish that.
-    // Should we add the version into the `ModelContract` struct? Can we always know that?
-    for mc in models_contracts {
-        let model_name = parse_cairo_short_string(&mc.model)?;
-        let namespace = "TODO".to_string();
-        let model_selector = compute_model_selector_from_names(&namespace, &model_name);
-
-        match world_reader.model_reader(&namespace, &model_name).await {
-            Ok(_) => {
-                let contract = utils::get_contract_address(world, mc.contract).await?;
-                calls.push(world.grant_writer_getcall(&model_selector, &contract.into()));
-            }
-
-            Err(ModelError::ModelNotFound) => {
-                ui.print(format!("Unknown model '{}' => IGNORED", model_name));
-            }
-
-            Err(err) => {
-                return Err(err.into());
-            }
-        }
+    for new_writer in new_writers {
+        let resource_selector =
+            get_resource_selector(ui, world, &new_writer.resource, default_namespace).await?;
+        let contract_address =
+            utils::get_contract_address(world, new_writer.tag_or_address).await?;
+        calls.push(world.grant_writer_getcall(&resource_selector, &contract_address.into()));
     }
 
     if !calls.is_empty() {
@@ -152,31 +144,19 @@ where
 pub async fn grant_owner<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    owners_resources: Vec<OwnerResource>,
+    new_owners: Vec<ResourceOwner>,
     txn_config: TxnConfig,
+    default_namespace: &str,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
 {
     let mut calls = Vec::new();
 
-    for or in owners_resources {
-        let resource = match &or.resource {
-            ResourceType::Model(name) => {
-                // TODO: Is some models have version 0 (using the name of the struct instead of the
-                // selector), we're not able to distinguish that.
-                // Should we add the version into the `ModelContract` struct? Can we always know
-                // that?
-                let model_name = parse_cairo_short_string(name)?;
-                let namespace = "TODO".to_string();
-                compute_model_selector_from_names(&namespace, &model_name)
-            }
-            ResourceType::Contract(name_or_address) => {
-                utils::get_contract_address(world, name_or_address.clone()).await?
-            }
-        };
-
-        calls.push(world.grant_owner_getcall(&or.owner.into(), &resource));
+    for new_owner in new_owners {
+        let resource_selector =
+            get_resource_selector(ui, world, &new_owner.resource, default_namespace).await?;
+        calls.push(world.grant_owner_getcall(&new_owner.owner.into(), &resource_selector));
     }
 
     let res = world
@@ -201,39 +181,21 @@ where
 pub async fn revoke_writer<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    models_contracts: Vec<ModelContract>,
+    new_writers: Vec<ResourceWriter>,
     txn_config: TxnConfig,
+    default_namespace: &str,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
 {
     let mut calls = Vec::new();
 
-    let mut world_reader = WorldContractReader::new(world.address, world.account.provider());
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
-
-    for mc in models_contracts {
-        // TODO: Is some models have version 0 (using the name of the struct instead of the
-        // selector), we're not able to distinguish that.
-        // Should we add the version into the `ModelContract` struct? Can we always know that?
-        let model_name = parse_cairo_short_string(&mc.model)?;
-        let namespace = "TODO".to_string();
-        let model_selector = compute_model_selector_from_names(&namespace, &model_name);
-
-        match world_reader.model_reader(&namespace, &model_name).await {
-            Ok(_) => {
-                let contract = utils::get_contract_address(world, mc.contract).await?;
-                calls.push(world.revoke_writer_getcall(&model_selector, &contract.into()));
-            }
-
-            Err(ModelError::ModelNotFound) => {
-                ui.print(format!("Unknown model '{}::{}' => IGNORED", namespace, model_name));
-            }
-
-            Err(err) => {
-                return Err(err.into());
-            }
-        }
+    for new_writer in new_writers {
+        let resource_selector =
+            get_resource_selector(ui, world, &new_writer.resource, default_namespace).await?;
+        let contract_address =
+            utils::get_contract_address(world, new_writer.tag_or_address).await?;
+        calls.push(world.revoke_writer_getcall(&resource_selector, &contract_address.into()));
     }
 
     if !calls.is_empty() {
@@ -260,31 +222,19 @@ where
 pub async fn revoke_owner<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    owners_resources: Vec<OwnerResource>,
+    new_owners: Vec<ResourceOwner>,
     txn_config: TxnConfig,
+    default_namespace: &str,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
 {
     let mut calls = Vec::new();
 
-    for or in owners_resources {
-        let resource = match &or.resource {
-            ResourceType::Model(name) => {
-                // TODO: Is some models have version 0 (using the name of the struct instead of the
-                // selector), we're not able to distinguish that.
-                // Should we add the version into the `ModelContract` struct? Can we always know
-                // that?
-                let model_name = parse_cairo_short_string(name)?;
-                let namespace = "TODO".to_string();
-                compute_model_selector_from_names(&namespace, &model_name)
-            }
-            ResourceType::Contract(name_or_address) => {
-                utils::get_contract_address(world, name_or_address.clone()).await?
-            }
-        };
-
-        calls.push(world.revoke_owner_getcall(&or.owner.into(), &resource));
+    for new_owner in new_owners {
+        let resource_selector =
+            get_resource_selector(ui, world, &new_owner.resource, default_namespace).await?;
+        calls.push(world.revoke_owner_getcall(&new_owner.owner.into(), &resource_selector));
     }
 
     let res = world
@@ -304,4 +254,51 @@ where
     .await?;
 
     Ok(())
+}
+
+async fn get_resource_selector<A>(
+    ui: &Ui,
+    world: &WorldContract<A>,
+    resource: &ResourceType,
+    default_namespace: &str,
+) -> Result<FieldElement>
+where
+    A: ConnectedAccount + Sync + Send,
+    <A as Account>::SignError: 'static,
+{
+    let world_reader = WorldContractReader::new(world.address, world.account.provider())
+        .with_block(BlockId::Tag(BlockTag::Pending));
+
+    let resource_selector = match resource {
+        ResourceType::Contract(tag_or_address) => {
+            let tag_or_address = if tag_or_address.starts_with("0x") {
+                tag_or_address.to_string()
+            } else {
+                ensure_namespace(tag_or_address, default_namespace)
+            };
+            utils::get_contract_address(world, tag_or_address).await?
+        }
+        ResourceType::Model(tag_or_name) => {
+            // TODO: Is some models have version 0 (using the name of the struct instead of the
+            // selector), we're not able to distinguish that.
+            // Should we add the version into the `ModelContract` struct? Can we always know that?
+            let tag = ensure_namespace(tag_or_name, default_namespace);
+
+            // be sure that the model exists
+            match world_reader.model_reader_with_tag(&tag).await {
+                Err(ModelError::ModelNotFound) => {
+                    ui.print(format!("Unknown model '{}' => IGNORED", tag));
+                }
+                Err(err) => {
+                    return Err(err.into());
+                }
+                _ => {}
+            };
+
+            compute_model_selector_from_tag(&tag)
+        }
+        ResourceType::Namespace(name) => compute_bytearray_hash(name),
+    };
+
+    Ok(resource_selector)
 }

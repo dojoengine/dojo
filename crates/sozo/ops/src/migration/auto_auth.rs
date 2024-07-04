@@ -1,5 +1,7 @@
+use std::str::FromStr;
+
 use anyhow::Result;
-use dojo_world::contracts::{cairo_utils, WorldContract};
+use dojo_world::contracts::WorldContract;
 use dojo_world::manifest::BaseManifest;
 use dojo_world::migration::TxnConfig;
 use scarb::core::Workspace;
@@ -8,7 +10,7 @@ use starknet::accounts::ConnectedAccount;
 
 use super::ui::MigrationUi;
 use super::MigrationOutput;
-use crate::auth::{grant_writer, ModelContract};
+use crate::auth::{grant_writer, ResourceType, ResourceWriter};
 
 pub async fn auto_authorize<A>(
     ws: &Workspace<'_>,
@@ -16,6 +18,7 @@ pub async fn auto_authorize<A>(
     txn_config: &TxnConfig,
     local_manifest: &BaseManifest,
     migration_output: &MigrationOutput,
+    default_namespace: &str,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send,
@@ -26,15 +29,15 @@ where
     ui.print(" ");
     ui.print_step(6, "🖋️", "Authorizing Models to Systems (based on overlay)...");
     ui.print(" ");
-    let models_contracts = compute_models_contracts(&ui, local_manifest, migration_output)?;
-    grant_writer(&ui, world, models_contracts, *txn_config).await
+    let new_writers = compute_writers(&ui, local_manifest, migration_output)?;
+    grant_writer(&ui, world, new_writers, *txn_config, default_namespace).await
 }
 
-pub fn compute_models_contracts(
+pub fn compute_writers(
     ui: &Ui,
     local_manifest: &BaseManifest,
     migration_output: &MigrationOutput,
-) -> Result<Vec<crate::auth::ModelContract>> {
+) -> Result<Vec<crate::auth::ResourceWriter>> {
     let mut res = vec![];
     let local_contracts = &local_manifest.contracts;
 
@@ -51,13 +54,13 @@ pub fn compute_models_contracts(
             contract.inner.tag, contract.inner.writes
         ));
 
-        // Read all the models that its supposed to write and collect them in a Vec<ModelContract>
+        // Read all the models that its supposed to write and collect them in a Vec<ResourceWriter>
         // so we can call `grant_writer` on all of them.
-        for model in &contract.inner.writes {
-            let model = cairo_utils::str_to_felt(model)?;
-            let contract_addr_str = format!("{:#x}", migrated_contract.contract_address);
+        for model_tag in &contract.inner.writes {
+            let resource = ResourceType::from_str(format!("model:{model_tag}").as_str())?;
+            let tag_or_address = format!("{:#x}", migrated_contract.contract_address);
 
-            res.push(ModelContract { model, contract: contract_addr_str });
+            res.push(ResourceWriter { resource, tag_or_address });
         }
     }
 

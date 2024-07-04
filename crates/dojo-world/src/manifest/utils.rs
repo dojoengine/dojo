@@ -10,6 +10,7 @@ pub const SELECTOR_CHUNK_SIZE: usize = 8;
 
 pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
     ws.current_package().unwrap().id.name.to_string()
+    // dojo metadata -> namespace.
 }
 
 pub fn capitalize(s: &str) -> String {
