@@ -491,7 +491,7 @@ pub fn map_row_to_ty(
             let option = row.try_get::<String, &str>(&column_name)?;
             enum_ty.set_option(&option)?;
 
-            let path = [path, &name].join("$");
+        let path = [path, &name].join("$");
             for option in &mut enum_ty.options {
                 map_row_to_ty(&path, &option.name, &mut option.ty, row, arrays_rows)?;
             }
@@ -967,14 +967,14 @@ mod tests {
                 .unwrap();
 
         let expected_query =
-            "SELECT entities.id, entities.keys, Position.external_player AS \"Position.player\", \
-             Position$vec.external_x AS \"Position$vec.x\", Position$vec.external_y AS \
-             \"Position$vec.y\", PlayerConfig$favorite_item.external_Some AS \
-             \"PlayerConfig$favorite_item.Some\", PlayerConfig.external_favorite_item AS \
-             \"PlayerConfig.favorite_item\" FROM entities JOIN Position$vec ON entities.id = \
-             Position$vec.entity_id  JOIN Position ON entities.id = Position.entity_id  JOIN \
-             PlayerConfig$favorite_item ON entities.id = PlayerConfig$favorite_item.entity_id  \
-             JOIN PlayerConfig ON entities.id = PlayerConfig.entity_id";
+            "SELECT entities.id, entities.keys, [Test-Position].external_player AS \"Test-Position.player\", \
+             [Test-Position$vec].external_x AS \"Test-Position$vec.x\", [Test-Position$vec].external_y AS \
+             \"Test-Position$vec.y\", [Test-PlayerConfig$favorite_item].external_Some AS \
+             \"Test-PlayerConfig$favorite_item.Some\", [Test-PlayerConfig].external_favorite_item AS \
+             \"Test-PlayerConfig.favorite_item\" FROM entities JOIN [Test-Position$vec] ON entities.id = \
+             [Test-Position$vec].entity_id  JOIN Position ON entities.id = [Test-Position].entity_id  JOIN \
+             [Test-PlayerConfig$favorite_item] ON entities.id = [Test-PlayerConfig$favorite_item].entity_id  \
+             JOIN [Test-PlayerConfig] ON entities.id = [Test-PlayerConfig].entity_id";
         // todo: completely tests arrays
         assert_eq!(query.0, expected_query);
     }
