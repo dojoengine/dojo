@@ -221,11 +221,13 @@ fn get_world_address(
     Ok(generated_world_address)
 }
 
+#[allow(dead_code)]
 enum ContractDeploymentOutput {
     AlreadyDeployed(FieldElement),
     Output(DeployOutput),
 }
 
+#[allow(dead_code)]
 enum ContractUpgradeOutput {
     Output(UpgradeOutput),
 }
