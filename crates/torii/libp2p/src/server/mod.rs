@@ -626,7 +626,7 @@ async fn validate_message(
         if let PrimitiveType::String(model_name) = model_name {
             model_name.split_once('-').ok_or_else(|| {
                 Error::InvalidMessageError(
-                    "Model name is not in the format namespace.model".to_string(),
+                    "Model name is not in the format namespace-model".to_string(),
                 )
             })?
         } else {
