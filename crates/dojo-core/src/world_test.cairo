@@ -22,6 +22,7 @@ use dojo::config::component::Config::{
 };
 use dojo::model::Model;
 use dojo::benchmarks::{Character, GasCounterImpl};
+use dojo::utils::entity_id_from_keys;
 
 #[derive(Introspect, Copy, Drop, Serde)]
 enum OneEnum {
@@ -958,6 +959,20 @@ fn test_can_call_init() {
 }
 
 #[test]
+fn test_set_entity_by_id() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let selector = dojo::model::Model::<Foo>::selector();
+    let entity_id = entity_id_from_keys(array![0x01234].span());
+    let values = create_foo();
+    let layout = dojo::model::Model::<Foo>::layout();
+
+    world.set_entity_by_id(selector, entity_id, values, layout);
+    let read_values = world.entity_by_id(selector, entity_id, layout);
+    assert_array(read_values, values);
+}
+
+#[test]
 fn test_set_entity_with_fixed_layout() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -1124,6 +1139,25 @@ fn test_set_entity_with_struct_generics_enum_layout() {
 
     let read_values = world.entity(selector, keys, layout);
     assert_array(read_values, values);
+}
+
+#[test]
+fn test_delete_entity_by_id() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let selector = dojo::model::Model::<Foo>::selector();
+    let entity_id = entity_id_from_keys(get_key_test());
+    let values = create_foo();
+    let layout = dojo::model::Model::<Foo>::layout();
+
+    world.set_entity_by_id(selector, entity_id, values, layout);
+
+    world.delete_entity_by_id(selector, entity_id, layout);
+
+    let read_values = world.entity_by_id(selector, entity_id, layout);
+
+    assert!(read_values.len() == values.len());
+    assert_empty_array(read_values);
 }
 
 #[test]

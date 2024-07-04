@@ -309,6 +309,30 @@ abigen!(
       },
       {
         "type": "function",
+        "name": "entity_by_id",
+        "inputs": [
+          {
+            "name": "model_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "entity_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "layout",
+            "type": "dojo::database::introspect::Layout"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::array::Span::<core::felt252>"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
         "name": "set_entity",
         "inputs": [
           {
@@ -333,6 +357,30 @@ abigen!(
       },
       {
         "type": "function",
+        "name": "set_entity_by_id",
+        "inputs": [
+          {
+            "name": "model_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "entity_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "values",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "layout",
+            "type": "dojo::database::introspect::Layout"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
         "name": "delete_entity",
         "inputs": [
           {
@@ -342,6 +390,26 @@ abigen!(
           {
             "name": "keys",
             "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "layout",
+            "type": "dojo::database::introspect::Layout"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "delete_entity_by_id",
+        "inputs": [
+          {
+            "name": "model_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "entity_id",
+            "type": "core::felt252"
           },
           {
             "name": "layout",
@@ -907,6 +975,28 @@ abigen!(
   },
   {
     "type": "event",
+    "name": "dojo::world::world::StoreSetEntity",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "model_id",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "entity_id",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "values",
+        "type": "core::array::Span::<core::felt252>",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
     "name": "dojo::world::world::StoreDelRecord",
     "kind": "struct",
     "members": [
@@ -918,6 +1008,23 @@ abigen!(
       {
         "name": "keys",
         "type": "core::array::Span::<core::felt252>",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::world::world::StoreDeleteEntity",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "model_id",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "entity_id",
+        "type": "core::felt252",
         "kind": "data"
       }
     ]
@@ -1082,8 +1189,18 @@ abigen!(
         "kind": "nested"
       },
       {
+        "name": "StoreSetEntity",
+        "type": "dojo::world::world::StoreSetEntity",
+        "kind": "nested"
+      },
+      {
         "name": "StoreDelRecord",
         "type": "dojo::world::world::StoreDelRecord",
+        "kind": "nested"
+      },
+      {
+        "name": "StoreDeleteEntity",
+        "type": "dojo::world::world::StoreDeleteEntity",
         "kind": "nested"
       },
       {

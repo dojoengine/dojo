@@ -7,6 +7,8 @@ mod database;
 mod database_test;
 mod interfaces;
 mod model;
+#[cfg(test)]
+mod model_test;
 mod contract;
 mod packing;
 #[cfg(test)]

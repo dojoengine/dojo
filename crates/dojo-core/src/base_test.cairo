@@ -178,7 +178,7 @@ mod invalid_model {
         fn selector(self: @ContractState) -> felt252 {
             // NOTE: Need to update this value if address changes
             // Pre-computed address of a contract deployed through the world.
-            0x3f692e9669a95a2ace68e1eec4fdc26594d4b1413d78a62262249d9108c4194
+            0x1283f33fcba696bd31a63eed71f5d8b1411ecb0d454a377b414591d7989bd6c
         }
 
         fn namespace(self: @ContractState) -> ByteArray {

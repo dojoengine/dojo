@@ -23,7 +23,8 @@ mod actions {
 
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{
-        Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile
+        Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile, PositionModel,
+        MovesModel, MovesValues, MovesModelValues
     };
     use dojo_examples::utils::next_position;
 
@@ -73,11 +74,28 @@ mod actions {
 
         fn move(ref world: IWorldDispatcher, direction: Direction) {
             let player = get_caller_address();
-            let (mut position, mut moves) = get!(world, player, (Position, Moves));
+
+            // instead of using the `get!` macro, you can directly use
+            // the <ModelName>Model::get method
+            let mut position = PositionModel::get(world, player);
+
+            // you can also get entity values by entity ID with the `<ModelName>ModelValues` trait.
+            // Note that it returns a `<ModelName>Values` struct which contains
+            // model values only.
+            let move_id = MovesModel::entity_id_from_keys(player);
+            let mut moves = MovesModelValues::get(world, move_id);
+
             moves.remaining -= 1;
             moves.last_direction = direction;
             let next = next_position(position, direction);
-            set!(world, (moves, next));
+
+            // instead of using the `set!` macro, you can directly use
+            // the <ModelName>Model::set method
+            next.set(world);
+
+            // you can also set entity values by entity ID with the `<ModelName>ModelValues` trait.
+            moves.set(world, move_id);
+
             emit!(world, (Moved { player, direction }));
         }
 

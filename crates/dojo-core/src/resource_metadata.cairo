@@ -45,6 +45,17 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
         core::option::OptionTrait::<ResourceMetadata>::unwrap(entity)
     }
 
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world, Self::selector(), keys, values, layout
+        );
+    }
+
     #[inline(always)]
     fn name() -> ByteArray {
         "ResourceMetadata"
@@ -77,6 +88,11 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     fn tag() -> ByteArray {
         "__DOJO__:ResourceMetadata"
+    }
+
+    #[inline(always)]
+    fn entity_id(self: @ResourceMetadata) -> felt252 {
+        poseidon::poseidon_hash_span(self.keys())
     }
 
     #[inline(always)]

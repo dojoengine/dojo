@@ -395,7 +395,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersions> {
+#[derive(Drop, Serde)]
+pub struct BadModelMultipleVersionsValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl BadModelMultipleVersionsModel of BadModelMultipleVersionsTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelMultipleVersions {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<BadModelMultipleVersions>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<BadModelMultipleVersions>::layout()
+        )
+    }
+
+    fn set(self: @BadModelMultipleVersions, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<BadModelMultipleVersions>::set_entity(
+            world,
+            dojo::model::Model::<BadModelMultipleVersions>::keys(self),
+            dojo::model::Model::<BadModelMultipleVersions>::values(self),
+            dojo::model::Model::<BadModelMultipleVersions>::layout()
+        )
+    }
+}
+
+impl BadModelMultipleVersionsModelValues of dojo::model::ModelValues<BadModelMultipleVersionsValues> {
+    fn values(self: @BadModelMultipleVersionsValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> BadModelMultipleVersionsValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<BadModelMultipleVersionsValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelMultipleVersionsValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `BadModelMultipleVersionsValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelMultipleVersionsValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelMultipleVersionsValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<BadModelMultipleVersions>::selector(),
+            id,
+            dojo::model::Model::<BadModelMultipleVersions>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @BadModelMultipleVersionsValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<BadModelMultipleVersions>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<BadModelMultipleVersions>::layout()
+        );
+    }
+}
+
+impl BadModelMultipleVersionsImpl of dojo::model::Model<BadModelMultipleVersions> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelMultipleVersions {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -420,6 +499,21 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
         }
 
         core::option::OptionTrait::<BadModelMultipleVersions>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -458,9 +552,15 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
     }
     
     #[inline(always)]
+    fn entity_id(self: @BadModelMultipleVersions) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @BadModelMultipleVersions) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -468,6 +568,7 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
     fn values(self: @BadModelMultipleVersions) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -603,7 +704,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
+#[derive(Drop, Serde)]
+pub struct BadModelBadVersionTypeValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl BadModelBadVersionTypeModel of BadModelBadVersionTypeTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelBadVersionType {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<BadModelBadVersionType>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<BadModelBadVersionType>::layout()
+        )
+    }
+
+    fn set(self: @BadModelBadVersionType, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<BadModelBadVersionType>::set_entity(
+            world,
+            dojo::model::Model::<BadModelBadVersionType>::keys(self),
+            dojo::model::Model::<BadModelBadVersionType>::values(self),
+            dojo::model::Model::<BadModelBadVersionType>::layout()
+        )
+    }
+}
+
+impl BadModelBadVersionTypeModelValues of dojo::model::ModelValues<BadModelBadVersionTypeValues> {
+    fn values(self: @BadModelBadVersionTypeValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> BadModelBadVersionTypeValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<BadModelBadVersionTypeValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelBadVersionTypeValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `BadModelBadVersionTypeValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelBadVersionTypeValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelBadVersionTypeValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<BadModelBadVersionType>::selector(),
+            id,
+            dojo::model::Model::<BadModelBadVersionType>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @BadModelBadVersionTypeValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<BadModelBadVersionType>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<BadModelBadVersionType>::layout()
+        );
+    }
+}
+
+impl BadModelBadVersionTypeImpl of dojo::model::Model<BadModelBadVersionType> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelBadVersionType {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -628,6 +808,21 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
         }
 
         core::option::OptionTrait::<BadModelBadVersionType>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -666,9 +861,15 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @BadModelBadVersionType) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @BadModelBadVersionType) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -676,6 +877,7 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
     fn values(self: @BadModelBadVersionType) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -811,7 +1013,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
+#[derive(Drop, Serde)]
+pub struct BadModelNoVersionValueValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl BadModelNoVersionValueModel of BadModelNoVersionValueTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelNoVersionValue {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<BadModelNoVersionValue>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<BadModelNoVersionValue>::layout()
+        )
+    }
+
+    fn set(self: @BadModelNoVersionValue, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<BadModelNoVersionValue>::set_entity(
+            world,
+            dojo::model::Model::<BadModelNoVersionValue>::keys(self),
+            dojo::model::Model::<BadModelNoVersionValue>::values(self),
+            dojo::model::Model::<BadModelNoVersionValue>::layout()
+        )
+    }
+}
+
+impl BadModelNoVersionValueModelValues of dojo::model::ModelValues<BadModelNoVersionValueValues> {
+    fn values(self: @BadModelNoVersionValueValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> BadModelNoVersionValueValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<BadModelNoVersionValueValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelNoVersionValueValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `BadModelNoVersionValueValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelNoVersionValueValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelNoVersionValueValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<BadModelNoVersionValue>::selector(),
+            id,
+            dojo::model::Model::<BadModelNoVersionValue>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @BadModelNoVersionValueValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<BadModelNoVersionValue>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<BadModelNoVersionValue>::layout()
+        );
+    }
+}
+
+impl BadModelNoVersionValueImpl of dojo::model::Model<BadModelNoVersionValue> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelNoVersionValue {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -836,6 +1117,21 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
         }
 
         core::option::OptionTrait::<BadModelNoVersionValue>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -874,9 +1170,15 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @BadModelNoVersionValue) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @BadModelNoVersionValue) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -884,6 +1186,7 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
     fn values(self: @BadModelNoVersionValue) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1019,7 +1322,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpectedArgWithValue> {
+#[derive(Drop, Serde)]
+pub struct BadModelUnexpectedArgWithValueValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl BadModelUnexpectedArgWithValueModel of BadModelUnexpectedArgWithValueTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelUnexpectedArgWithValue {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<BadModelUnexpectedArgWithValue>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
+        )
+    }
+
+    fn set(self: @BadModelUnexpectedArgWithValue, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<BadModelUnexpectedArgWithValue>::set_entity(
+            world,
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::keys(self),
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::values(self),
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
+        )
+    }
+}
+
+impl BadModelUnexpectedArgWithValueModelValues of dojo::model::ModelValues<BadModelUnexpectedArgWithValueValues> {
+    fn values(self: @BadModelUnexpectedArgWithValueValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> BadModelUnexpectedArgWithValueValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<BadModelUnexpectedArgWithValueValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelUnexpectedArgWithValueValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `BadModelUnexpectedArgWithValueValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelUnexpectedArgWithValueValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelUnexpectedArgWithValueValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::selector(),
+            id,
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @BadModelUnexpectedArgWithValueValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
+        );
+    }
+}
+
+impl BadModelUnexpectedArgWithValueImpl of dojo::model::Model<BadModelUnexpectedArgWithValue> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelUnexpectedArgWithValue {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -1044,6 +1426,21 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
         }
 
         core::option::OptionTrait::<BadModelUnexpectedArgWithValue>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -1082,9 +1479,15 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
     }
     
     #[inline(always)]
+    fn entity_id(self: @BadModelUnexpectedArgWithValue) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @BadModelUnexpectedArgWithValue) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1092,6 +1495,7 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
     fn values(self: @BadModelUnexpectedArgWithValue) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1227,7 +1631,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
+#[derive(Drop, Serde)]
+pub struct BadModelUnexpectedArgValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl BadModelUnexpectedArgModel of BadModelUnexpectedArgTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelUnexpectedArg {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<BadModelUnexpectedArg>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<BadModelUnexpectedArg>::layout()
+        )
+    }
+
+    fn set(self: @BadModelUnexpectedArg, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<BadModelUnexpectedArg>::set_entity(
+            world,
+            dojo::model::Model::<BadModelUnexpectedArg>::keys(self),
+            dojo::model::Model::<BadModelUnexpectedArg>::values(self),
+            dojo::model::Model::<BadModelUnexpectedArg>::layout()
+        )
+    }
+}
+
+impl BadModelUnexpectedArgModelValues of dojo::model::ModelValues<BadModelUnexpectedArgValues> {
+    fn values(self: @BadModelUnexpectedArgValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> BadModelUnexpectedArgValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<BadModelUnexpectedArgValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelUnexpectedArgValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `BadModelUnexpectedArgValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelUnexpectedArgValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelUnexpectedArgValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<BadModelUnexpectedArg>::selector(),
+            id,
+            dojo::model::Model::<BadModelUnexpectedArg>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @BadModelUnexpectedArgValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<BadModelUnexpectedArg>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<BadModelUnexpectedArg>::layout()
+        );
+    }
+}
+
+impl BadModelUnexpectedArgImpl of dojo::model::Model<BadModelUnexpectedArg> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelUnexpectedArg {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -1252,6 +1735,21 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
         }
 
         core::option::OptionTrait::<BadModelUnexpectedArg>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -1290,9 +1788,15 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @BadModelUnexpectedArg) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @BadModelUnexpectedArg) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1300,6 +1804,7 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
     fn values(self: @BadModelUnexpectedArg) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1435,7 +1940,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupportedVersion> {
+#[derive(Drop, Serde)]
+pub struct BadModelNotSupportedVersionValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl BadModelNotSupportedVersionModel of BadModelNotSupportedVersionTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelNotSupportedVersion {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<BadModelNotSupportedVersion>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<BadModelNotSupportedVersion>::layout()
+        )
+    }
+
+    fn set(self: @BadModelNotSupportedVersion, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<BadModelNotSupportedVersion>::set_entity(
+            world,
+            dojo::model::Model::<BadModelNotSupportedVersion>::keys(self),
+            dojo::model::Model::<BadModelNotSupportedVersion>::values(self),
+            dojo::model::Model::<BadModelNotSupportedVersion>::layout()
+        )
+    }
+}
+
+impl BadModelNotSupportedVersionModelValues of dojo::model::ModelValues<BadModelNotSupportedVersionValues> {
+    fn values(self: @BadModelNotSupportedVersionValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> BadModelNotSupportedVersionValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<BadModelNotSupportedVersionValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<BadModelNotSupportedVersionValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `BadModelNotSupportedVersionValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<BadModelNotSupportedVersionValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelNotSupportedVersionValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<BadModelNotSupportedVersion>::selector(),
+            id,
+            dojo::model::Model::<BadModelNotSupportedVersion>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @BadModelNotSupportedVersionValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<BadModelNotSupportedVersion>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<BadModelNotSupportedVersion>::layout()
+        );
+    }
+}
+
+impl BadModelNotSupportedVersionImpl of dojo::model::Model<BadModelNotSupportedVersion> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelNotSupportedVersion {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -1460,6 +2044,21 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
         }
 
         core::option::OptionTrait::<BadModelNotSupportedVersion>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -1498,9 +2097,15 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
     }
     
     #[inline(always)]
+    fn entity_id(self: @BadModelNotSupportedVersion) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @BadModelNotSupportedVersion) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1508,6 +2113,7 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
     fn values(self: @BadModelNotSupportedVersion) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1643,7 +2249,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl Modelv0Model of dojo::model::Model<Modelv0> {
+#[derive(Drop, Serde)]
+pub struct Modelv0Values {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl Modelv0Model of Modelv0Trait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> Modelv0 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<Modelv0>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<Modelv0>::layout()
+        )
+    }
+
+    fn set(self: @Modelv0, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<Modelv0>::set_entity(
+            world,
+            dojo::model::Model::<Modelv0>::keys(self),
+            dojo::model::Model::<Modelv0>::values(self),
+            dojo::model::Model::<Modelv0>::layout()
+        )
+    }
+}
+
+impl Modelv0ModelValues of dojo::model::ModelValues<Modelv0Values> {
+    fn values(self: @Modelv0Values) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> Modelv0Values {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<Modelv0Values>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<Modelv0Values>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `Modelv0Values`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<Modelv0Values>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> Modelv0Values {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<Modelv0>::selector(),
+            id,
+            dojo::model::Model::<Modelv0>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @Modelv0Values, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<Modelv0>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<Modelv0>::layout()
+        );
+    }
+}
+
+impl Modelv0Impl of dojo::model::Model<Modelv0> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Modelv0 {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -1668,6 +2353,21 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
         }
 
         core::option::OptionTrait::<Modelv0>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -1706,9 +2406,15 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @Modelv0) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @Modelv0) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1716,6 +2422,7 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
     fn values(self: @Modelv0) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1851,7 +2558,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl ModelWithBadNamespaceFormatModel of dojo::model::Model<ModelWithBadNamespaceFormat> {
+#[derive(Drop, Serde)]
+pub struct ModelWithBadNamespaceFormatValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl ModelWithBadNamespaceFormatModel of ModelWithBadNamespaceFormatTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithBadNamespaceFormat {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<ModelWithBadNamespaceFormat>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::layout()
+        )
+    }
+
+    fn set(self: @ModelWithBadNamespaceFormat, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<ModelWithBadNamespaceFormat>::set_entity(
+            world,
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::keys(self),
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::values(self),
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::layout()
+        )
+    }
+}
+
+impl ModelWithBadNamespaceFormatModelValues of dojo::model::ModelValues<ModelWithBadNamespaceFormatValues> {
+    fn values(self: @ModelWithBadNamespaceFormatValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> ModelWithBadNamespaceFormatValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<ModelWithBadNamespaceFormatValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithBadNamespaceFormatValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `ModelWithBadNamespaceFormatValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithBadNamespaceFormatValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithBadNamespaceFormatValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::selector(),
+            id,
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @ModelWithBadNamespaceFormatValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<ModelWithBadNamespaceFormat>::layout()
+        );
+    }
+}
+
+impl ModelWithBadNamespaceFormatImpl of dojo::model::Model<ModelWithBadNamespaceFormat> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithBadNamespaceFormat {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -1876,6 +2662,21 @@ impl ModelWithBadNamespaceFormatModel of dojo::model::Model<ModelWithBadNamespac
         }
 
         core::option::OptionTrait::<ModelWithBadNamespaceFormat>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -1914,9 +2715,15 @@ impl ModelWithBadNamespaceFormatModel of dojo::model::Model<ModelWithBadNamespac
     }
     
     #[inline(always)]
+    fn entity_id(self: @ModelWithBadNamespaceFormat) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @ModelWithBadNamespaceFormat) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -1924,6 +2731,7 @@ impl ModelWithBadNamespaceFormatModel of dojo::model::Model<ModelWithBadNamespac
     fn values(self: @ModelWithBadNamespaceFormat) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -2059,7 +2867,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl ModelWithShortStringNamespaceModel of dojo::model::Model<ModelWithShortStringNamespace> {
+#[derive(Drop, Serde)]
+pub struct ModelWithShortStringNamespaceValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl ModelWithShortStringNamespaceModel of ModelWithShortStringNamespaceTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithShortStringNamespace {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<ModelWithShortStringNamespace>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<ModelWithShortStringNamespace>::layout()
+        )
+    }
+
+    fn set(self: @ModelWithShortStringNamespace, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<ModelWithShortStringNamespace>::set_entity(
+            world,
+            dojo::model::Model::<ModelWithShortStringNamespace>::keys(self),
+            dojo::model::Model::<ModelWithShortStringNamespace>::values(self),
+            dojo::model::Model::<ModelWithShortStringNamespace>::layout()
+        )
+    }
+}
+
+impl ModelWithShortStringNamespaceModelValues of dojo::model::ModelValues<ModelWithShortStringNamespaceValues> {
+    fn values(self: @ModelWithShortStringNamespaceValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> ModelWithShortStringNamespaceValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<ModelWithShortStringNamespaceValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithShortStringNamespaceValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `ModelWithShortStringNamespaceValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithShortStringNamespaceValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithShortStringNamespaceValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithShortStringNamespace>::selector(),
+            id,
+            dojo::model::Model::<ModelWithShortStringNamespace>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @ModelWithShortStringNamespaceValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithShortStringNamespace>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<ModelWithShortStringNamespace>::layout()
+        );
+    }
+}
+
+impl ModelWithShortStringNamespaceImpl of dojo::model::Model<ModelWithShortStringNamespace> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithShortStringNamespace {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -2084,6 +2971,21 @@ impl ModelWithShortStringNamespaceModel of dojo::model::Model<ModelWithShortStri
         }
 
         core::option::OptionTrait::<ModelWithShortStringNamespace>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -2122,9 +3024,15 @@ impl ModelWithShortStringNamespaceModel of dojo::model::Model<ModelWithShortStri
     }
     
     #[inline(always)]
+    fn entity_id(self: @ModelWithShortStringNamespace) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @ModelWithShortStringNamespace) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -2132,6 +3040,7 @@ impl ModelWithShortStringNamespaceModel of dojo::model::Model<ModelWithShortStri
     fn values(self: @ModelWithShortStringNamespace) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -2267,7 +3176,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl ModelWithStringNamespaceModel of dojo::model::Model<ModelWithStringNamespace> {
+#[derive(Drop, Serde)]
+pub struct ModelWithStringNamespaceValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl ModelWithStringNamespaceModel of ModelWithStringNamespaceTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithStringNamespace {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<ModelWithStringNamespace>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<ModelWithStringNamespace>::layout()
+        )
+    }
+
+    fn set(self: @ModelWithStringNamespace, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<ModelWithStringNamespace>::set_entity(
+            world,
+            dojo::model::Model::<ModelWithStringNamespace>::keys(self),
+            dojo::model::Model::<ModelWithStringNamespace>::values(self),
+            dojo::model::Model::<ModelWithStringNamespace>::layout()
+        )
+    }
+}
+
+impl ModelWithStringNamespaceModelValues of dojo::model::ModelValues<ModelWithStringNamespaceValues> {
+    fn values(self: @ModelWithStringNamespaceValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> ModelWithStringNamespaceValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<ModelWithStringNamespaceValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithStringNamespaceValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `ModelWithStringNamespaceValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithStringNamespaceValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithStringNamespaceValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithStringNamespace>::selector(),
+            id,
+            dojo::model::Model::<ModelWithStringNamespace>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @ModelWithStringNamespaceValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithStringNamespace>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<ModelWithStringNamespace>::layout()
+        );
+    }
+}
+
+impl ModelWithStringNamespaceImpl of dojo::model::Model<ModelWithStringNamespace> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithStringNamespace {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -2292,6 +3280,21 @@ impl ModelWithStringNamespaceModel of dojo::model::Model<ModelWithStringNamespac
         }
 
         core::option::OptionTrait::<ModelWithStringNamespace>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -2330,9 +3333,15 @@ impl ModelWithStringNamespaceModel of dojo::model::Model<ModelWithStringNamespac
     }
     
     #[inline(always)]
+    fn entity_id(self: @ModelWithStringNamespace) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @ModelWithStringNamespace) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -2340,6 +3349,7 @@ impl ModelWithStringNamespaceModel of dojo::model::Model<ModelWithStringNamespac
     fn values(self: @ModelWithStringNamespace) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -2475,7 +3485,86 @@ dojo::database::introspect::Member {
     }
 }
         
-impl PositionModel of dojo::model::Model<Position> {
+#[derive(Drop, Serde)]
+pub struct PositionValues {
+    v: Vec3,
+
+}
+
+#[generate_trait]
+impl PositionModel of PositionTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> Position {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<Position>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<Position>::layout()
+        )
+    }
+
+    fn set(self: @Position, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<Position>::set_entity(
+            world,
+            dojo::model::Model::<Position>::keys(self),
+            dojo::model::Model::<Position>::values(self),
+            dojo::model::Model::<Position>::layout()
+        )
+    }
+}
+
+impl PositionModelValues of dojo::model::ModelValues<PositionValues> {
+    fn values(self: @PositionValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.v, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> PositionValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<PositionValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<PositionValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `PositionValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<PositionValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> PositionValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<Position>::selector(),
+            id,
+            dojo::model::Model::<Position>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @PositionValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<Position>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<Position>::layout()
+        );
+    }
+}
+
+impl PositionImpl of dojo::model::Model<Position> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Position {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -2500,6 +3589,21 @@ impl PositionModel of dojo::model::Model<Position> {
         }
 
         core::option::OptionTrait::<Position>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -2538,9 +3642,15 @@ impl PositionModel of dojo::model::Model<Position> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @Position) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @Position) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -2548,6 +3658,7 @@ impl PositionModel of dojo::model::Model<Position> {
     fn values(self: @Position) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.v, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -2683,7 +3794,84 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
     }
 }
         
-impl RolesModel of dojo::model::Model<Roles> {
+#[derive(Drop, Serde)]
+pub struct RolesValues {
+    role_ids: Array<u8>,
+
+}
+
+#[generate_trait]
+impl RolesModel of RolesTrait {
+    fn entity_id_from_keys() -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, ) -> Roles {
+        let mut serialized = core::array::ArrayTrait::new();
+        
+
+        dojo::model::Model::<Roles>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<Roles>::layout()
+        )
+    }
+
+    fn set(self: @Roles, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<Roles>::set_entity(
+            world,
+            dojo::model::Model::<Roles>::keys(self),
+            dojo::model::Model::<Roles>::values(self),
+            dojo::model::Model::<Roles>::layout()
+        )
+    }
+}
+
+impl RolesModelValues of dojo::model::ModelValues<RolesValues> {
+    fn values(self: @RolesValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.role_ids, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> RolesValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<RolesValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<RolesValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `RolesValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<RolesValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> RolesValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<Roles>::selector(),
+            id,
+            dojo::model::Model::<Roles>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @RolesValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<Roles>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<Roles>::layout()
+        );
+    }
+}
+
+impl RolesImpl of dojo::model::Model<Roles> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Roles {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -2708,6 +3896,21 @@ impl RolesModel of dojo::model::Model<Roles> {
         }
 
         core::option::OptionTrait::<Roles>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -2746,6 +3949,11 @@ impl RolesModel of dojo::model::Model<Roles> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @Roles) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @Roles) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         
@@ -2756,6 +3964,7 @@ impl RolesModel of dojo::model::Model<Roles> {
     fn values(self: @Roles) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.role_ids, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -2883,7 +4092,84 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
     }
 }
         
-impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
+#[derive(Drop, Serde)]
+pub struct OnlyKeyModelValues {
+    
+}
+
+#[generate_trait]
+impl OnlyKeyModelModel of OnlyKeyModelTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> OnlyKeyModel {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, id);
+
+
+        dojo::model::Model::<OnlyKeyModel>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<OnlyKeyModel>::layout()
+        )
+    }
+
+    fn set(self: @OnlyKeyModel, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<OnlyKeyModel>::set_entity(
+            world,
+            dojo::model::Model::<OnlyKeyModel>::keys(self),
+            dojo::model::Model::<OnlyKeyModel>::values(self),
+            dojo::model::Model::<OnlyKeyModel>::layout()
+        )
+    }
+}
+
+impl OnlyKeyModelModelValues of dojo::model::ModelValues<OnlyKeyModelValues> {
+    fn values(self: @OnlyKeyModelValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> OnlyKeyModelValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<OnlyKeyModelValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<OnlyKeyModelValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `OnlyKeyModelValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<OnlyKeyModelValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> OnlyKeyModelValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<OnlyKeyModel>::selector(),
+            id,
+            dojo::model::Model::<OnlyKeyModel>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @OnlyKeyModelValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<OnlyKeyModel>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<OnlyKeyModel>::layout()
+        );
+    }
+}
+
+impl OnlyKeyModelImpl of dojo::model::Model<OnlyKeyModel> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> OnlyKeyModel {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -2908,6 +4194,21 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
         }
 
         core::option::OptionTrait::<OnlyKeyModel>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -2946,9 +4247,15 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @OnlyKeyModel) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @OnlyKeyModel) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.id);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -3083,7 +4390,84 @@ impl U256KeyModelIntrospect<> of dojo::database::introspect::Introspect<U256KeyM
     }
 }
         
-impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
+#[derive(Drop, Serde)]
+pub struct U256KeyModelValues {
+    
+}
+
+#[generate_trait]
+impl U256KeyModelModel of U256KeyModelTrait {
+    fn entity_id_from_keys(id: u256) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@id, ref serialized);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: u256) -> U256KeyModel {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@id, ref serialized);
+
+
+        dojo::model::Model::<U256KeyModel>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<U256KeyModel>::layout()
+        )
+    }
+
+    fn set(self: @U256KeyModel, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<U256KeyModel>::set_entity(
+            world,
+            dojo::model::Model::<U256KeyModel>::keys(self),
+            dojo::model::Model::<U256KeyModel>::values(self),
+            dojo::model::Model::<U256KeyModel>::layout()
+        )
+    }
+}
+
+impl U256KeyModelModelValues of dojo::model::ModelValues<U256KeyModelValues> {
+    fn values(self: @U256KeyModelValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> U256KeyModelValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<U256KeyModelValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<U256KeyModelValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `U256KeyModelValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<U256KeyModelValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> U256KeyModelValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<U256KeyModel>::selector(),
+            id,
+            dojo::model::Model::<U256KeyModel>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @U256KeyModelValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<U256KeyModel>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<U256KeyModel>::layout()
+        );
+    }
+}
+
+impl U256KeyModelImpl of dojo::model::Model<U256KeyModel> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> U256KeyModel {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -3108,6 +4492,21 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
         }
 
         core::option::OptionTrait::<U256KeyModel>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -3146,9 +4545,15 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @U256KeyModel) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @U256KeyModel) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.id, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -3296,7 +4701,88 @@ dojo::database::introspect::Member {
     }
 }
         
-impl PlayerModel of dojo::model::Model<Player> {
+#[derive(Drop, Serde)]
+pub struct PlayerValues {
+    name: felt252,
+
+}
+
+#[generate_trait]
+impl PlayerModel of PlayerTrait {
+    fn entity_id_from_keys(game: felt252, player: ContractAddress) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, game);
+core::serde::Serde::serialize(@player, ref serialized);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, game: felt252, player: ContractAddress) -> Player {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, game);
+core::serde::Serde::serialize(@player, ref serialized);
+
+
+        dojo::model::Model::<Player>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<Player>::layout()
+        )
+    }
+
+    fn set(self: @Player, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<Player>::set_entity(
+            world,
+            dojo::model::Model::<Player>::keys(self),
+            dojo::model::Model::<Player>::values(self),
+            dojo::model::Model::<Player>::layout()
+        )
+    }
+}
+
+impl PlayerModelValues of dojo::model::ModelValues<PlayerValues> {
+    fn values(self: @PlayerValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::ArrayTrait::append(ref serialized, *self.name);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> PlayerValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<PlayerValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<PlayerValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `PlayerValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<PlayerValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> PlayerValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<Player>::selector(),
+            id,
+            dojo::model::Model::<Player>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @PlayerValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<Player>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<Player>::layout()
+        );
+    }
+}
+
+impl PlayerImpl of dojo::model::Model<Player> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Player {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -3321,6 +4807,21 @@ impl PlayerModel of dojo::model::Model<Player> {
         }
 
         core::option::OptionTrait::<Player>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -3359,9 +4860,16 @@ impl PlayerModel of dojo::model::Model<Player> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @Player) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @Player) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
-        core::array::ArrayTrait::append(ref serialized, *self.game);core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::append(ref serialized, *self.game);
+core::serde::Serde::serialize(self.player, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -3369,6 +4877,7 @@ impl PlayerModel of dojo::model::Model<Player> {
     fn values(self: @Player) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, *self.name);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -3518,7 +5027,88 @@ dojo::database::introspect::Member {
     }
 }
         
-impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
+#[derive(Drop, Serde)]
+pub struct ModelWithSimpleArrayValues {
+    x: u16,
+y: Array<u8>,
+
+}
+
+#[generate_trait]
+impl ModelWithSimpleArrayModel of ModelWithSimpleArrayTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithSimpleArray {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+
+        dojo::model::Model::<ModelWithSimpleArray>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<ModelWithSimpleArray>::layout()
+        )
+    }
+
+    fn set(self: @ModelWithSimpleArray, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<ModelWithSimpleArray>::set_entity(
+            world,
+            dojo::model::Model::<ModelWithSimpleArray>::keys(self),
+            dojo::model::Model::<ModelWithSimpleArray>::values(self),
+            dojo::model::Model::<ModelWithSimpleArray>::layout()
+        )
+    }
+}
+
+impl ModelWithSimpleArrayModelValues of dojo::model::ModelValues<ModelWithSimpleArrayValues> {
+    fn values(self: @ModelWithSimpleArrayValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> ModelWithSimpleArrayValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<ModelWithSimpleArrayValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithSimpleArrayValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `ModelWithSimpleArrayValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithSimpleArrayValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithSimpleArrayValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithSimpleArray>::selector(),
+            id,
+            dojo::model::Model::<ModelWithSimpleArray>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @ModelWithSimpleArrayValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithSimpleArray>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<ModelWithSimpleArray>::layout()
+        );
+    }
+}
+
+impl ModelWithSimpleArrayImpl of dojo::model::Model<ModelWithSimpleArray> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithSimpleArray {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -3543,6 +5133,21 @@ impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
         }
 
         core::option::OptionTrait::<ModelWithSimpleArray>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -3581,16 +5186,24 @@ impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @ModelWithSimpleArray) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @ModelWithSimpleArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @ModelWithSimpleArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
-        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -3736,7 +5349,88 @@ dojo::database::introspect::Member {
     }
 }
         
-impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
+#[derive(Drop, Serde)]
+pub struct ModelWithByteArrayValues {
+    x: u16,
+y: ByteArray,
+
+}
+
+#[generate_trait]
+impl ModelWithByteArrayModel of ModelWithByteArrayTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithByteArray {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+
+        dojo::model::Model::<ModelWithByteArray>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<ModelWithByteArray>::layout()
+        )
+    }
+
+    fn set(self: @ModelWithByteArray, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<ModelWithByteArray>::set_entity(
+            world,
+            dojo::model::Model::<ModelWithByteArray>::keys(self),
+            dojo::model::Model::<ModelWithByteArray>::values(self),
+            dojo::model::Model::<ModelWithByteArray>::layout()
+        )
+    }
+}
+
+impl ModelWithByteArrayModelValues of dojo::model::ModelValues<ModelWithByteArrayValues> {
+    fn values(self: @ModelWithByteArrayValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> ModelWithByteArrayValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<ModelWithByteArrayValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithByteArrayValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `ModelWithByteArrayValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithByteArrayValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithByteArrayValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithByteArray>::selector(),
+            id,
+            dojo::model::Model::<ModelWithByteArray>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @ModelWithByteArrayValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithByteArray>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<ModelWithByteArray>::layout()
+        );
+    }
+}
+
+impl ModelWithByteArrayImpl of dojo::model::Model<ModelWithByteArray> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithByteArray {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -3761,6 +5455,21 @@ impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
         }
 
         core::option::OptionTrait::<ModelWithByteArray>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -3799,16 +5508,24 @@ impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @ModelWithByteArray) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @ModelWithByteArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @ModelWithByteArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
-        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -3958,7 +5675,88 @@ dojo::database::introspect::Member {
     }
 }
         
-impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
+#[derive(Drop, Serde)]
+pub struct ModelWithComplexArrayValues {
+    x: u16,
+y: Array<Vec3>,
+
+}
+
+#[generate_trait]
+impl ModelWithComplexArrayModel of ModelWithComplexArrayTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithComplexArray {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+
+        dojo::model::Model::<ModelWithComplexArray>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<ModelWithComplexArray>::layout()
+        )
+    }
+
+    fn set(self: @ModelWithComplexArray, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<ModelWithComplexArray>::set_entity(
+            world,
+            dojo::model::Model::<ModelWithComplexArray>::keys(self),
+            dojo::model::Model::<ModelWithComplexArray>::values(self),
+            dojo::model::Model::<ModelWithComplexArray>::layout()
+        )
+    }
+}
+
+impl ModelWithComplexArrayModelValues of dojo::model::ModelValues<ModelWithComplexArrayValues> {
+    fn values(self: @ModelWithComplexArrayValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> ModelWithComplexArrayValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<ModelWithComplexArrayValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithComplexArrayValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `ModelWithComplexArrayValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithComplexArrayValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithComplexArrayValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithComplexArray>::selector(),
+            id,
+            dojo::model::Model::<ModelWithComplexArray>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @ModelWithComplexArrayValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithComplexArray>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<ModelWithComplexArray>::layout()
+        );
+    }
+}
+
+impl ModelWithComplexArrayImpl of dojo::model::Model<ModelWithComplexArray> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithComplexArray {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -3983,6 +5781,21 @@ impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
         }
 
         core::option::OptionTrait::<ModelWithComplexArray>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -4021,16 +5834,24 @@ impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @ModelWithComplexArray) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @ModelWithComplexArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @ModelWithComplexArray) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
-        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -4187,7 +6008,88 @@ dojo::database::introspect::Introspect::<u32>::ty()
     }
 }
         
-impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
+#[derive(Drop, Serde)]
+pub struct ModelWithTupleValues {
+    x: u16,
+y: (u8, u16, u32),
+
+}
+
+#[generate_trait]
+impl ModelWithTupleModel of ModelWithTupleTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithTuple {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+
+        dojo::model::Model::<ModelWithTuple>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<ModelWithTuple>::layout()
+        )
+    }
+
+    fn set(self: @ModelWithTuple, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<ModelWithTuple>::set_entity(
+            world,
+            dojo::model::Model::<ModelWithTuple>::keys(self),
+            dojo::model::Model::<ModelWithTuple>::values(self),
+            dojo::model::Model::<ModelWithTuple>::layout()
+        )
+    }
+}
+
+impl ModelWithTupleModelValues of dojo::model::ModelValues<ModelWithTupleValues> {
+    fn values(self: @ModelWithTupleValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> ModelWithTupleValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<ModelWithTupleValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithTupleValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `ModelWithTupleValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithTupleValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithTupleValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithTuple>::selector(),
+            id,
+            dojo::model::Model::<ModelWithTuple>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @ModelWithTupleValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithTuple>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<ModelWithTuple>::layout()
+        );
+    }
+}
+
+impl ModelWithTupleImpl of dojo::model::Model<ModelWithTuple> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithTuple {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -4212,6 +6114,21 @@ impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
         }
 
         core::option::OptionTrait::<ModelWithTuple>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -4250,16 +6167,24 @@ impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
     }
     
     #[inline(always)]
+    fn entity_id(self: @ModelWithTuple) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @ModelWithTuple) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @ModelWithTuple) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
-        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -4425,7 +6350,88 @@ dojo::database::introspect::Introspect::<u32>::ty()
     }
 }
         
-impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimitives> {
+#[derive(Drop, Serde)]
+pub struct ModelWithTupleNoPrimitivesValues {
+    x: u16,
+y: (u8, Vec3, u32),
+
+}
+
+#[generate_trait]
+impl ModelWithTupleNoPrimitivesModel of ModelWithTupleNoPrimitivesTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252 {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+        core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithTupleNoPrimitives {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(@player, ref serialized);
+
+
+        dojo::model::Model::<ModelWithTupleNoPrimitives>::entity(
+            world,
+            serialized.span(),
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+        )
+    }
+
+    fn set(self: @ModelWithTupleNoPrimitives, world: dojo::world::IWorldDispatcher) {
+        dojo::model::Model::<ModelWithTupleNoPrimitives>::set_entity(
+            world,
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::keys(self),
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::values(self),
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+        )
+    }
+}
+
+impl ModelWithTupleNoPrimitivesModelValues of dojo::model::ModelValues<ModelWithTupleNoPrimitivesValues> {
+    fn values(self: @ModelWithTupleNoPrimitivesValues) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    fn from_values(values: Span<felt252>) -> ModelWithTupleNoPrimitivesValues {
+        let mut serialized = values;
+        let entity_values = core::serde::Serde::<ModelWithTupleNoPrimitivesValues>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithTupleNoPrimitivesValues>::is_none(@entity_values) {
+            panic!(
+                "ModelValues `ModelWithTupleNoPrimitivesValues`: deserialization failed."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithTupleNoPrimitivesValues>::unwrap(entity_values)
+    }
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithTupleNoPrimitivesValues {
+        let values = dojo::world::IWorldDispatcherTrait::entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::selector(),
+            id,
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+        );
+        Self::from_values(values)
+    }
+
+    fn set(self: @ModelWithTupleNoPrimitivesValues, world: dojo::world::IWorldDispatcher, id: felt252) {
+        dojo::world::IWorldDispatcherTrait::set_entity_by_id(
+            world,
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::selector(),
+            id,
+            self.values(),
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+        );
+    }
+}
+
+impl ModelWithTupleNoPrimitivesImpl of dojo::model::Model<ModelWithTupleNoPrimitives> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithTupleNoPrimitives {
         let values = dojo::world::IWorldDispatcherTrait::entity(
             world,
@@ -4450,6 +6456,21 @@ impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimi
         }
 
         core::option::OptionTrait::<ModelWithTupleNoPrimitives>::unwrap(entity)
+    }
+
+    fn set_entity(
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    ) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world,
+            Self::selector(),
+            keys,
+            values,
+            layout
+        );
     }
 
     #[inline(always)]
@@ -4488,16 +6509,24 @@ impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimi
     }
     
     #[inline(always)]
+    fn entity_id(self: @ModelWithTupleNoPrimitives) -> felt252 {
+        core::poseidon::poseidon_hash_span(self.keys())
+    }
+
+    #[inline(always)]
     fn keys(self: @ModelWithTupleNoPrimitives) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(self.player, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
     #[inline(always)]
     fn values(self: @ModelWithTupleNoPrimitives) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
-        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::serde::Serde::serialize(self.x, ref serialized);
+core::serde::Serde::serialize(self.y, ref serialized);
+
         core::array::ArrayTrait::span(@serialized)
     }
 
@@ -4591,6 +6620,376 @@ mod model_with_tuple_no_primitives {
         }
     }
 }
+impl BadModelMultipleVersionsValuesDrop of core::traits::Drop::<BadModelMultipleVersionsValues>;
+impl BadModelMultipleVersionsValuesSerde of core::serde::Serde::<BadModelMultipleVersionsValues> {
+    fn serialize(self: @BadModelMultipleVersionsValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<BadModelMultipleVersionsValues> {
+        core::option::Option::Some(BadModelMultipleVersionsValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait BadModelMultipleVersionsTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelMultipleVersions;
+
+    fn set(self: @BadModelMultipleVersions, world: dojo::world::IWorldDispatcher);
+}
+impl BadModelBadVersionTypeValuesDrop of core::traits::Drop::<BadModelBadVersionTypeValues>;
+impl BadModelBadVersionTypeValuesSerde of core::serde::Serde::<BadModelBadVersionTypeValues> {
+    fn serialize(self: @BadModelBadVersionTypeValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<BadModelBadVersionTypeValues> {
+        core::option::Option::Some(BadModelBadVersionTypeValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait BadModelBadVersionTypeTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelBadVersionType;
+
+    fn set(self: @BadModelBadVersionType, world: dojo::world::IWorldDispatcher);
+}
+impl BadModelNoVersionValueValuesDrop of core::traits::Drop::<BadModelNoVersionValueValues>;
+impl BadModelNoVersionValueValuesSerde of core::serde::Serde::<BadModelNoVersionValueValues> {
+    fn serialize(self: @BadModelNoVersionValueValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<BadModelNoVersionValueValues> {
+        core::option::Option::Some(BadModelNoVersionValueValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait BadModelNoVersionValueTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelNoVersionValue;
+
+    fn set(self: @BadModelNoVersionValue, world: dojo::world::IWorldDispatcher);
+}
+impl BadModelUnexpectedArgWithValueValuesDrop of core::traits::Drop::<BadModelUnexpectedArgWithValueValues>;
+impl BadModelUnexpectedArgWithValueValuesSerde of core::serde::Serde::<BadModelUnexpectedArgWithValueValues> {
+    fn serialize(self: @BadModelUnexpectedArgWithValueValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<BadModelUnexpectedArgWithValueValues> {
+        core::option::Option::Some(BadModelUnexpectedArgWithValueValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait BadModelUnexpectedArgWithValueTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelUnexpectedArgWithValue;
+
+    fn set(self: @BadModelUnexpectedArgWithValue, world: dojo::world::IWorldDispatcher);
+}
+impl BadModelUnexpectedArgValuesDrop of core::traits::Drop::<BadModelUnexpectedArgValues>;
+impl BadModelUnexpectedArgValuesSerde of core::serde::Serde::<BadModelUnexpectedArgValues> {
+    fn serialize(self: @BadModelUnexpectedArgValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<BadModelUnexpectedArgValues> {
+        core::option::Option::Some(BadModelUnexpectedArgValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait BadModelUnexpectedArgTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelUnexpectedArg;
+
+    fn set(self: @BadModelUnexpectedArg, world: dojo::world::IWorldDispatcher);
+}
+impl BadModelNotSupportedVersionValuesDrop of core::traits::Drop::<BadModelNotSupportedVersionValues>;
+impl BadModelNotSupportedVersionValuesSerde of core::serde::Serde::<BadModelNotSupportedVersionValues> {
+    fn serialize(self: @BadModelNotSupportedVersionValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<BadModelNotSupportedVersionValues> {
+        core::option::Option::Some(BadModelNotSupportedVersionValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait BadModelNotSupportedVersionTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> BadModelNotSupportedVersion;
+
+    fn set(self: @BadModelNotSupportedVersion, world: dojo::world::IWorldDispatcher);
+}
+impl Modelv0ValuesDrop of core::traits::Drop::<Modelv0Values>;
+impl Modelv0ValuesSerde of core::serde::Serde::<Modelv0Values> {
+    fn serialize(self: @Modelv0Values, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Modelv0Values> {
+        core::option::Option::Some(Modelv0Values {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait Modelv0Trait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> Modelv0;
+
+    fn set(self: @Modelv0, world: dojo::world::IWorldDispatcher);
+}
+impl ModelWithBadNamespaceFormatValuesDrop of core::traits::Drop::<ModelWithBadNamespaceFormatValues>;
+impl ModelWithBadNamespaceFormatValuesSerde of core::serde::Serde::<ModelWithBadNamespaceFormatValues> {
+    fn serialize(self: @ModelWithBadNamespaceFormatValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithBadNamespaceFormatValues> {
+        core::option::Option::Some(ModelWithBadNamespaceFormatValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait ModelWithBadNamespaceFormatTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithBadNamespaceFormat;
+
+    fn set(self: @ModelWithBadNamespaceFormat, world: dojo::world::IWorldDispatcher);
+}
+impl ModelWithShortStringNamespaceValuesDrop of core::traits::Drop::<ModelWithShortStringNamespaceValues>;
+impl ModelWithShortStringNamespaceValuesSerde of core::serde::Serde::<ModelWithShortStringNamespaceValues> {
+    fn serialize(self: @ModelWithShortStringNamespaceValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithShortStringNamespaceValues> {
+        core::option::Option::Some(ModelWithShortStringNamespaceValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait ModelWithShortStringNamespaceTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithShortStringNamespace;
+
+    fn set(self: @ModelWithShortStringNamespace, world: dojo::world::IWorldDispatcher);
+}
+impl ModelWithStringNamespaceValuesDrop of core::traits::Drop::<ModelWithStringNamespaceValues>;
+impl ModelWithStringNamespaceValuesSerde of core::serde::Serde::<ModelWithStringNamespaceValues> {
+    fn serialize(self: @ModelWithStringNamespaceValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithStringNamespaceValues> {
+        core::option::Option::Some(ModelWithStringNamespaceValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait ModelWithStringNamespaceTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> ModelWithStringNamespace;
+
+    fn set(self: @ModelWithStringNamespace, world: dojo::world::IWorldDispatcher);
+}
+impl PositionValuesDrop of core::traits::Drop::<PositionValues>;
+impl PositionValuesSerde of core::serde::Serde::<PositionValues> {
+    fn serialize(self: @PositionValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.v, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<PositionValues> {
+        core::option::Option::Some(PositionValues {
+            v: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait PositionTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> Position;
+
+    fn set(self: @Position, world: dojo::world::IWorldDispatcher);
+}
+impl RolesValuesDrop of core::traits::Drop::<RolesValues>;
+impl RolesValuesSerde of core::serde::Serde::<RolesValues> {
+    fn serialize(self: @RolesValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.role_ids, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<RolesValues> {
+        core::option::Option::Some(RolesValues {
+            role_ids: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait RolesTrait {
+    fn entity_id_from_keys() -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, ) -> Roles;
+
+    fn set(self: @Roles, world: dojo::world::IWorldDispatcher);
+}
+impl OnlyKeyModelValuesDrop of core::traits::Drop::<OnlyKeyModelValues>;
+impl OnlyKeyModelValuesSerde of core::serde::Serde::<OnlyKeyModelValues> {
+    fn serialize(self: @OnlyKeyModelValues, ref output: core::array::Array<felt252>) {
+        
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<OnlyKeyModelValues> {
+        core::option::Option::Some(OnlyKeyModelValues {
+            
+        })
+    }
+}
+trait OnlyKeyModelTrait {
+    fn entity_id_from_keys(id: felt252) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: felt252) -> OnlyKeyModel;
+
+    fn set(self: @OnlyKeyModel, world: dojo::world::IWorldDispatcher);
+}
+impl U256KeyModelValuesDrop of core::traits::Drop::<U256KeyModelValues>;
+impl U256KeyModelValuesSerde of core::serde::Serde::<U256KeyModelValues> {
+    fn serialize(self: @U256KeyModelValues, ref output: core::array::Array<felt252>) {
+        
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<U256KeyModelValues> {
+        core::option::Option::Some(U256KeyModelValues {
+            
+        })
+    }
+}
+trait U256KeyModelTrait {
+    fn entity_id_from_keys(id: u256) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, id: u256) -> U256KeyModel;
+
+    fn set(self: @U256KeyModel, world: dojo::world::IWorldDispatcher);
+}
+impl PlayerValuesDrop of core::traits::Drop::<PlayerValues>;
+impl PlayerValuesSerde of core::serde::Serde::<PlayerValues> {
+    fn serialize(self: @PlayerValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.name, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<PlayerValues> {
+        core::option::Option::Some(PlayerValues {
+            name: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait PlayerTrait {
+    fn entity_id_from_keys(game: felt252, player: ContractAddress) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, game: felt252, player: ContractAddress) -> Player;
+
+    fn set(self: @Player, world: dojo::world::IWorldDispatcher);
+}
+impl ModelWithSimpleArrayValuesDrop of core::traits::Drop::<ModelWithSimpleArrayValues>;
+impl ModelWithSimpleArrayValuesSerde of core::serde::Serde::<ModelWithSimpleArrayValues> {
+    fn serialize(self: @ModelWithSimpleArrayValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithSimpleArrayValues> {
+        core::option::Option::Some(ModelWithSimpleArrayValues {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait ModelWithSimpleArrayTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithSimpleArray;
+
+    fn set(self: @ModelWithSimpleArray, world: dojo::world::IWorldDispatcher);
+}
+impl ModelWithByteArrayValuesDrop of core::traits::Drop::<ModelWithByteArrayValues>;
+impl ModelWithByteArrayValuesSerde of core::serde::Serde::<ModelWithByteArrayValues> {
+    fn serialize(self: @ModelWithByteArrayValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithByteArrayValues> {
+        core::option::Option::Some(ModelWithByteArrayValues {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait ModelWithByteArrayTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithByteArray;
+
+    fn set(self: @ModelWithByteArray, world: dojo::world::IWorldDispatcher);
+}
+impl ModelWithComplexArrayValuesDrop of core::traits::Drop::<ModelWithComplexArrayValues>;
+impl ModelWithComplexArrayValuesSerde of core::serde::Serde::<ModelWithComplexArrayValues> {
+    fn serialize(self: @ModelWithComplexArrayValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithComplexArrayValues> {
+        core::option::Option::Some(ModelWithComplexArrayValues {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait ModelWithComplexArrayTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithComplexArray;
+
+    fn set(self: @ModelWithComplexArray, world: dojo::world::IWorldDispatcher);
+}
+impl ModelWithTupleValuesDrop of core::traits::Drop::<ModelWithTupleValues>;
+impl ModelWithTupleValuesSerde of core::serde::Serde::<ModelWithTupleValues> {
+    fn serialize(self: @ModelWithTupleValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithTupleValues> {
+        core::option::Option::Some(ModelWithTupleValues {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait ModelWithTupleTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithTuple;
+
+    fn set(self: @ModelWithTuple, world: dojo::world::IWorldDispatcher);
+}
+impl ModelWithTupleNoPrimitivesValuesDrop of core::traits::Drop::<ModelWithTupleNoPrimitivesValues>;
+impl ModelWithTupleNoPrimitivesValuesSerde of core::serde::Serde::<ModelWithTupleNoPrimitivesValues> {
+    fn serialize(self: @ModelWithTupleNoPrimitivesValues, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithTupleNoPrimitivesValues> {
+        core::option::Option::Some(ModelWithTupleNoPrimitivesValues {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+trait ModelWithTupleNoPrimitivesTrait {
+    fn entity_id_from_keys(player: ContractAddress) -> felt252;
+
+    fn get(world: dojo::world::IWorldDispatcher, player: ContractAddress) -> ModelWithTupleNoPrimitives;
+
+    fn set(self: @ModelWithTupleNoPrimitives, world: dojo::world::IWorldDispatcher);
+}
 
 //! > expected_diagnostics
 error: A Dojo model must have zero or one dojo::model attribute.
@@ -4638,12 +7037,12 @@ error: Model must define at least one member that is not a key
 struct OnlyKeyModel {
        ^**********^
 
-error: Model must define at least one member that is not a key
- --> test_src/lib.cairo:98:8
-struct U256KeyModel {
-       ^**********^
-
 error: Key is only supported for core types that are 1 felt long once serialized. `u256` is a struct of 2 u128, hence not supported.
+ --> test_src/lib.cairo:100:5
+    id: u256
+    ^^
+
+error: Model must define at least one member that is not a key
  --> test_src/lib.cairo:98:8
 struct U256KeyModel {
        ^**********^

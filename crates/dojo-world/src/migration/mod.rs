@@ -207,7 +207,7 @@ pub trait Deployable: Declarable + Sync {
             }
 
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                println!("calldada {:?}", calldata);
+                println!("calldata {:?}", calldata);
                 let init_calldata: Vec<FieldElement> = calldata
                     .iter()
                     .map(|s| FieldElement::from_str(s))

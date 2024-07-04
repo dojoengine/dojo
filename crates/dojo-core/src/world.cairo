@@ -19,6 +19,9 @@ trait IWorld<T> {
     fn entity(
         self: @T, model: felt252, keys: Span<felt252>, layout: dojo::database::introspect::Layout
     ) -> Span<felt252>;
+    fn entity_by_id(
+        self: @T, model_id: felt252, entity_id: felt252, layout: dojo::database::introspect::Layout
+    ) -> Span<felt252>;
     fn set_entity(
         ref self: T,
         model: felt252,
@@ -26,8 +29,21 @@ trait IWorld<T> {
         values: Span<felt252>,
         layout: dojo::database::introspect::Layout
     );
+    fn set_entity_by_id(
+        ref self: T,
+        model_id: felt252,
+        entity_id: felt252,
+        values: Span<felt252>,
+        layout: dojo::database::introspect::Layout
+    );
     fn delete_entity(
         ref self: T, model: felt252, keys: Span<felt252>, layout: dojo::database::introspect::Layout
+    );
+    fn delete_entity_by_id(
+        ref self: T,
+        model_id: felt252,
+        entity_id: felt252,
+        layout: dojo::database::introspect::Layout
     );
     fn base(self: @T) -> ClassHash;
 
@@ -108,6 +124,7 @@ mod world {
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
     use dojo::resource_metadata::ResourceMetadata;
+    use dojo::utils::entity_id_from_keys;
 
     use super::Errors;
 
@@ -135,7 +152,9 @@ mod world {
         NamespaceRegistered: NamespaceRegistered,
         ModelRegistered: ModelRegistered,
         StoreSetRecord: StoreSetRecord,
+        StoreSetEntity: StoreSetEntity,
         StoreDelRecord: StoreDelRecord,
+        StoreDeleteEntity: StoreDeleteEntity,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
         ConfigEvent: Config::Event,
@@ -203,9 +222,22 @@ mod world {
     }
 
     #[derive(Drop, starknet::Event)]
+    struct StoreSetEntity {
+        model_id: felt252,
+        entity_id: felt252,
+        values: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
     struct StoreDelRecord {
         table: felt252,
         keys: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct StoreDeleteEntity {
+        model_id: felt252,
+        entity_id: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -288,14 +320,15 @@ mod world {
         ///
         /// `resource_id` - The resource id.
         fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
+            let mut model = array![resource_id];
+            let entity_id = entity_id_from_keys(model.span());
             let mut data = self
-                ._read_model_data(
+                ._read_model_entity(
                     dojo::model::Model::<ResourceMetadata>::selector(),
-                    array![resource_id].span(),
+                    entity_id,
                     Model::<ResourceMetadata>::layout()
                 );
 
-            let mut model = array![resource_id];
             core::array::serialize_array_helper(data, ref model);
 
             let mut model_span = model.span();
@@ -315,11 +348,11 @@ mod world {
             );
 
             let model = Model::<ResourceMetadata>::selector();
-            let keys = Model::<ResourceMetadata>::keys(@metadata);
+            let entity_id = Model::<ResourceMetadata>::entity_id(@metadata);
             let values = Model::<ResourceMetadata>::values(@metadata);
             let layout = Model::<ResourceMetadata>::layout();
 
-            self._write_model_data(model, keys, values, layout);
+            self._write_model_entity(model, entity_id, values, layout);
 
             EventEmitter::emit(
                 ref self,
@@ -745,11 +778,37 @@ mod world {
                 self.can_write_model(model, get_caller_address()), Errors::NO_MODEL_WRITE_ACCESS
             );
 
-            self._write_model_data(model, keys, values, layout);
+            let entity_id = entity_id_from_keys(keys);
+            self._write_model_entity(model, entity_id, values, layout);
+
             EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, values });
         }
 
-        /// Deletes a model from an entity.
+        /// Sets the model value for an entity.
+        ///
+        /// # Arguments
+        ///
+        /// * `model` - The selector of the model to be set.
+        /// * `entity_id` - The id of the entity to set.
+        /// * `value_names` - The name of model fields which are not a key.
+        /// * `values` - The value to be set.
+        /// * `layout` - The memory layout of the entity.
+        fn set_entity_by_id(
+            ref self: ContractState,
+            model_id: felt252,
+            entity_id: felt252,
+            values: Span<felt252>,
+            layout: dojo::database::introspect::Layout
+        ) {
+            assert(
+                self.can_write_model(model_id, get_caller_address()), Errors::NO_MODEL_WRITE_ACCESS
+            );
+
+            self._write_model_entity(model_id, entity_id, values, layout);
+            EventEmitter::emit(ref self, StoreSetEntity { model_id, entity_id, values });
+        }
+
+        /// Deletes an existing entity.
         /// Deleting is setting all the values to 0 in the given layout.
         ///
         /// # Arguments
@@ -768,8 +827,32 @@ mod world {
                 self.can_write_model(model, get_caller_address()), Errors::NO_MODEL_WRITE_ACCESS
             );
 
-            self._delete_model_data(model, keys, layout);
+            let entity_id = entity_id_from_keys(keys);
+            self._delete_model_entity(model, entity_id, layout);
             EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
+        }
+
+        /// Deletes an existing entity.
+        /// Deleting is setting all the values to 0 in the given layout.
+        ///
+        /// # Arguments
+        ///
+        /// * `model_id` - The selector of the model to be deleted.
+        /// * `entity_id` - The id to be used to find the entity.
+        /// * `value_names` - The name of model fields which are not a key.
+        /// * `layout` - The memory layout of the entity.
+        fn delete_entity_by_id(
+            ref self: ContractState,
+            model_id: felt252,
+            entity_id: felt252,
+            layout: dojo::database::introspect::Layout
+        ) {
+            assert(
+                self.can_write_model(model_id, get_caller_address()), Errors::NO_MODEL_WRITE_ACCESS
+            );
+
+            self._delete_model_entity(model_id, entity_id, layout);
+            EventEmitter::emit(ref self, StoreDeleteEntity { model_id, entity_id });
         }
 
         /// Gets the model value for an entity. Returns a zero initialized
@@ -791,7 +874,30 @@ mod world {
             keys: Span<felt252>,
             layout: dojo::database::introspect::Layout
         ) -> Span<felt252> {
-            self._read_model_data(model, keys, layout)
+            let entity_id = entity_id_from_keys(keys);
+            self._read_model_entity(model, entity_id, layout)
+        }
+
+        /// Gets the model value for an entity. Returns a zero initialized
+        /// model value if the entity has not been set.
+        ///
+        /// # Arguments
+        ///
+        /// * `model` - The selector of the model to be retrieved.
+        /// * `entity_id` - The id used to find the entity.
+        /// * `value_names` - The name of model fields which are not a key.
+        /// * `layout` - The memory layout of the entity.
+        ///
+        /// # Returns
+        ///
+        /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
+        fn entity_by_id(
+            self: @ContractState,
+            model_id: felt252,
+            entity_id: felt252,
+            layout: dojo::database::introspect::Layout
+        ) -> Span<felt252> {
+            self._read_model_entity(model_id, entity_id, layout)
         }
 
         /// Gets the base contract class hash.
@@ -991,78 +1097,76 @@ mod world {
                 || self.is_account_writer(resource_id)
         }
 
-        /// Write a new model record.
+        /// Write a new entity.
         ///
         /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `keys` - the list of model keys to identify the record
+        ///   * `model_id` - the model selector
+        ///   * `entity_id` - the id used to identify the entity.
         ///   * `values` - the field values of the record
         ///   * `layout` - the model layout
-        fn _write_model_data(
+        fn _write_model_entity(
             ref self: ContractState,
-            model: felt252,
-            keys: Span<felt252>,
+            model_id: felt252,
+            entity_id: felt252,
             values: Span<felt252>,
             layout: dojo::database::introspect::Layout
         ) {
-            let model_key = poseidon::poseidon_hash_span(keys);
             let mut offset = 0;
 
             match layout {
                 Layout::Fixed(layout) => {
-                    Self::_write_fixed_layout(model, model_key, values, ref offset, layout);
+                    Self::_write_fixed_layout(model_id, entity_id, values, ref offset, layout);
                 },
                 Layout::Struct(layout) => {
-                    Self::_write_struct_layout(model, model_key, values, ref offset, layout);
+                    Self::_write_struct_layout(model_id, entity_id, values, ref offset, layout);
                 },
                 _ => { panic!("Unexpected layout type for a model."); }
             };
         }
 
-        /// Delete a model record.
+        /// Delete an entity.
         ///
         /// # Arguments
         ///   * `model` - the model selector
-        ///   * `keys` - the list of model keys to identify the record
+        ///   * `entity_id` - the id used to identify the entity.
         ///   * `layout` - the model layout
-        fn _delete_model_data(
+        fn _delete_model_entity(
             ref self: ContractState,
-            model: felt252,
-            keys: Span<felt252>,
+            model_id: felt252,
+            entity_id: felt252,
             layout: dojo::database::introspect::Layout
         ) {
-            let model_key = poseidon::poseidon_hash_span(keys);
-
             match layout {
-                Layout::Fixed(layout) => { Self::_delete_fixed_layout(model, model_key, layout); },
+                Layout::Fixed(layout) => {
+                    Self::_delete_fixed_layout(model_id, entity_id, layout);
+                },
                 Layout::Struct(layout) => {
-                    Self::_delete_struct_layout(model, model_key, layout);
+                    Self::_delete_struct_layout(model_id, entity_id, layout);
                 },
                 _ => { panic!("Unexpected layout type for a model."); }
             };
         }
 
-        /// Read a model record.
+        /// Read an entity.
         ///
         /// # Arguments
         ///   * `model` - the model selector
-        ///   * `keys` - the list of model keys to identify the record
+        ////   * `entity_id` - the id used to identify the entity.
         ///   * `layout` - the model layout
-        fn _read_model_data(
+        fn _read_model_entity(
             self: @ContractState,
-            model: felt252,
-            keys: Span<felt252>,
+            model_id: felt252,
+            entity_id: felt252,
             layout: dojo::database::introspect::Layout
         ) -> Span<felt252> {
-            let model_key = poseidon::poseidon_hash_span(keys);
             let mut read_data = ArrayTrait::<felt252>::new();
 
             match layout {
                 Layout::Fixed(layout) => {
-                    Self::_read_fixed_layout(model, model_key, ref read_data, layout);
+                    Self::_read_fixed_layout(model_id, entity_id, ref read_data, layout);
                 },
                 Layout::Struct(layout) => {
-                    Self::_read_struct_layout(model, model_key, ref read_data, layout);
+                    Self::_read_struct_layout(model_id, entity_id, ref read_data, layout);
                 },
                 _ => { panic!("Unexpected layout type for a model."); }
             };

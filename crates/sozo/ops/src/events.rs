@@ -275,15 +275,13 @@ mod tests {
         let profile_name = "dev";
         let project_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
         let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
-        println!("manifest_dir {:?}", manifest_dir);
         let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
-        println!("target dir {:?}", target_dir);
         let manifest = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)).unwrap().into();
 
         let result = extract_events(&manifest, &project_dir, &target_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 16);
+        assert_eq!(result.len(), 18);
     }
 
     #[test]
