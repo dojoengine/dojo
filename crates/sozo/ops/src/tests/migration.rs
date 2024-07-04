@@ -370,7 +370,7 @@ async fn migrate_with_auto_authorize() {
         let contract = manifest.contracts.iter().find(|a| a.inner.tag == c.diff.tag).unwrap();
 
         for model in &contract.inner.writes {
-            let model_selector = get_selector_from_name(model).unwrap();
+            let model_selector = compute_model_selector_from_tag(model);
             let contract_address = ContractAddress(contract_address);
             let is_writer =
                 world_reader.is_writer(&model_selector, &contract_address).call().await.unwrap();
