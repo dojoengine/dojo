@@ -16,6 +16,7 @@ mod tests {
     use torii_core::sql::Sql;
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
+    use crate::utils;
 
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
@@ -24,18 +25,20 @@ mod tests {
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
-        let namespace = "Test".to_string();
+        let namespace = "types_test".to_string();
         let model_name = "Record".to_string();
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let block_timestamp = 1710754478_u64;
+        let type_name = utils::type_name_from_names(&namespace, &model_name);
+
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
                 "models" : [{
-                    "__typename": format!("{}_{}", namespace, model_name),
+                    "__typename": type_name,
                         "depth": "Zero",
                         "record_id": 0,
                         "typeU16": 1,
@@ -55,7 +58,7 @@ mod tests {
             // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: format!("{}-{}", namespace, model_name),
+                    name: utils::struct_name_from_names(&namespace, &model_name),
                     children: vec![
                         Member {
                             name: "depth".to_string(),
@@ -121,7 +124,7 @@ mod tests {
                     keys
                     models {
                         __typename
-                        ... on Test_Record {
+                        ... on types_test_Record {
                             depth
                             record_id
                             typeU16
@@ -148,18 +151,20 @@ mod tests {
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
-        let namespace = "Test".to_string();
+        let namespace = "types_test".to_string();
         let model_name = "Record".to_string();
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let block_timestamp = 1710754478_u64;
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        let type_name = utils::type_name_from_names(&namespace, &model_name);
+
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
                 "models" : [{
-                    "__typename": format!("{}_{}", namespace, model_name),
+                    "__typename": type_name,
                         "depth": "Zero",
                         "record_id": 0,
                         "type_felt": format!("{:#x}", FieldElement::from(1u128)),
@@ -176,7 +181,7 @@ mod tests {
             // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: format!("{}-{}", namespace, model_name),
+                    name: utils::struct_name_from_names(&namespace, &model_name),
                     children: vec![
                         Member {
                             name: "depth".to_string(),
@@ -227,7 +232,7 @@ mod tests {
                     keys
                     models {
                         __typename
-                        ... on Test_Record {
+                        ... on types_test_Record {
                             depth
                             record_id
                             type_felt
@@ -249,7 +254,7 @@ mod tests {
     async fn test_model_subscription(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
-        let namespace = "Test".to_string();
+        let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
         let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
         let class_hash = FieldElement::TWO;
@@ -312,7 +317,7 @@ mod tests {
     async fn test_model_subscription_with_id(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
-        let namespace = "Test".to_string();
+        let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
         let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
         let class_hash = FieldElement::TWO;
