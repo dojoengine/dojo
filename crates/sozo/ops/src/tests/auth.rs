@@ -1,16 +1,18 @@
+use std::str::FromStr;
+
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::cairo_short_string_to_felt;
 
 use super::setup;
-use crate::auth::{self, ModelContract, OwnerResource, ResourceType};
+use crate::auth::{self, ResourceOwner, ResourceType, ResourceWriter};
 use crate::execute;
 
 const ACTION_CONTRACT_NAME: &str = "dojo_examples-actions";
+const DEFAULT_NAMESPACE: &str = "dojo_examples";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_writer_ok() {
@@ -29,14 +31,14 @@ async fn auth_grant_writer_ok() {
     // Account2 does not have the permission to write, but granting
     // writer to the actions contract allows the execution of it's systems by
     // any account.
-    let moves_mc = ModelContract {
-        model: cairo_short_string_to_felt("Moves").unwrap(),
-        contract: ACTION_CONTRACT_NAME.to_string(),
+    let moves_mc = ResourceWriter {
+        resource: ResourceType::from_str("model:Moves").unwrap(),
+        tag_or_address: ACTION_CONTRACT_NAME.to_string(),
     };
 
-    let position_mc = ModelContract {
-        model: cairo_short_string_to_felt("Position").unwrap(),
-        contract: ACTION_CONTRACT_NAME.to_string(),
+    let position_mc = ResourceWriter {
+        resource: ResourceType::from_str("model:Position").unwrap(),
+        tag_or_address: ACTION_CONTRACT_NAME.to_string(),
     };
 
     auth::grant_writer(
@@ -44,6 +46,7 @@ async fn auth_grant_writer_ok() {
         &world,
         vec![moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
+        DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
@@ -69,14 +72,14 @@ async fn auth_revoke_writer_ok() {
     // Account2 does not have the permission to write, but granting
     // writer to the actions contract allows the execution of it's systems by
     // any account.
-    let moves_mc = ModelContract {
-        model: cairo_short_string_to_felt("Moves").unwrap(),
-        contract: ACTION_CONTRACT_NAME.to_string(),
+    let moves_mc = ResourceWriter {
+        resource: ResourceType::from_str("model:Moves").unwrap(),
+        tag_or_address: ACTION_CONTRACT_NAME.to_string(),
     };
 
-    let position_mc = ModelContract {
-        model: cairo_short_string_to_felt("Position").unwrap(),
-        contract: ACTION_CONTRACT_NAME.to_string(),
+    let position_mc = ResourceWriter {
+        resource: ResourceType::from_str("model:Position").unwrap(),
+        tag_or_address: ACTION_CONTRACT_NAME.to_string(),
     };
 
     // Here we are granting the permission to write
@@ -85,6 +88,7 @@ async fn auth_revoke_writer_ok() {
         &world,
         vec![moves_mc.clone(), position_mc.clone()],
         TxnConfig { wait: true, ..Default::default() },
+        DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
@@ -98,6 +102,7 @@ async fn auth_revoke_writer_ok() {
         &world,
         vec![moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
+        DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
@@ -123,13 +128,13 @@ async fn auth_grant_owner_ok() {
 
     // Account2 does not have the permission to write, let's give this account
     // ownership of both models.
-    let moves = OwnerResource {
-        resource: ResourceType::Model(cairo_short_string_to_felt("Moves").unwrap()),
+    let moves = ResourceOwner {
+        resource: ResourceType::from_str("model:Moves").unwrap(),
         owner: account_2_addr,
     };
 
-    let position = OwnerResource {
-        resource: ResourceType::Model(cairo_short_string_to_felt("Position").unwrap()),
+    let position = ResourceOwner {
+        resource: ResourceType::from_str("model:Position").unwrap(),
         owner: account_2_addr,
     };
 
@@ -138,6 +143,7 @@ async fn auth_grant_owner_ok() {
         &world,
         vec![moves, position],
         TxnConfig { wait: true, ..Default::default() },
+        DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
@@ -162,13 +168,13 @@ async fn auth_revoke_owner_ok() {
 
     // Account2 does not have the permission to write, let's give this account
     // ownership of both models.
-    let moves = OwnerResource {
-        resource: ResourceType::Model(cairo_short_string_to_felt("Moves").unwrap()),
+    let moves = ResourceOwner {
+        resource: ResourceType::from_str("model:Moves").unwrap(),
         owner: account_2_addr,
     };
 
-    let position = OwnerResource {
-        resource: ResourceType::Model(cairo_short_string_to_felt("Position").unwrap()),
+    let position = ResourceOwner {
+        resource: ResourceType::from_str("model:Position").unwrap(),
         owner: account_2_addr,
     };
 
@@ -177,6 +183,7 @@ async fn auth_revoke_owner_ok() {
         &world,
         vec![moves.clone(), position.clone()],
         TxnConfig { wait: true, ..Default::default() },
+        DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
@@ -188,6 +195,7 @@ async fn auth_revoke_owner_ok() {
         &world,
         vec![moves, position],
         TxnConfig { wait: true, ..Default::default() },
+        DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();

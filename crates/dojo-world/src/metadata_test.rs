@@ -6,8 +6,8 @@ use dojo_test_utils::compiler;
 use scarb::ops;
 use url::Url;
 
-use crate::manifest::utils::{get_filename_from_special_contract_name, TAG_SEPARATOR};
-use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_NAME};
+use crate::manifest::utils::{get_filename_from_tag, TAG_SEPARATOR};
+use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 use crate::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, ProjectMetadata, Uri, WorldMetadata, ABIS_DIR,
     BASE_DIR, MANIFESTS_DIR,
@@ -32,6 +32,7 @@ cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
 socials.x = "https://x.com/dojostarknet"
+seed = "dojo_examples"
         "#,
     )
     .unwrap();
@@ -55,8 +56,7 @@ socials.x = "https://x.com/dojostarknet"
         Some("0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a")
     );
 
-    assert!(metadata.world.is_some());
-    let world = metadata.world.unwrap();
+    let world = metadata.world;
 
     assert_eq!(world.name(), Some("example"));
     assert_eq!(world.description(), Some("example world"));
@@ -64,12 +64,14 @@ socials.x = "https://x.com/dojostarknet"
     assert_eq!(world.icon_uri, Some(Uri::File("example_icon.png".into())));
     assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
+    assert_eq!(world.seed, String::from("dojo_examples"));
 }
 
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
     let meta = WorldMetadata {
         name: Some("Test World".to_string()),
+        seed: String::from("dojo_examples"),
         description: Some("A world used for testing".to_string()),
         cover_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
         icon_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
@@ -107,7 +109,7 @@ website = "https://dojoengine.org"
     )
     .unwrap();
 
-    assert!(metadata.world.is_some());
+    assert!(metadata.world.socials.is_none());
 }
 
 #[tokio::test]
@@ -145,7 +147,7 @@ async fn get_full_dojo_metadata_from_workspace() {
         env.private_key.unwrap().eq("0x1800000000300000180000000000030000000000003006001800006600")
     );
 
-    assert!(env.world_address.is_none());
+    assert!(env.world_address.is_some());
 
     assert!(env.keystore_path.is_none());
     assert!(env.keystore_password.is_none());
@@ -162,7 +164,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(dojo_metadata.world.website.is_none());
     assert!(dojo_metadata.world.socials.is_none());
 
-    let world_filename = get_filename_from_special_contract_name(WORLD_CONTRACT_NAME);
+    let world_filename = get_filename_from_tag(WORLD_CONTRACT_TAG);
     assert!(dojo_metadata.world.artifacts.abi.is_some(), "No abi for {world_filename}");
     let abi = dojo_metadata.world.artifacts.abi.unwrap();
     assert_eq!(

@@ -7,7 +7,7 @@ use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::utils::{compute_model_selector_from_tag, get_default_namespace_from_ws};
 use dojo_world::manifest::{
     BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
-    WORLD_CONTRACT_NAME,
+    WORLD_CONTRACT_TAG,
 };
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,
@@ -20,7 +20,6 @@ use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -279,7 +278,7 @@ async fn migrate_with_metadata() {
 
     // check world metadata
     let resource = world_reader.metadata(&FieldElement::ZERO).call().await.unwrap();
-    let element_name = WORLD_CONTRACT_NAME.to_string();
+    let element_name = WORLD_CONTRACT_TAG.to_string();
 
     let full_uri = resource.metadata_uri.to_string().unwrap();
     let resource_bytes = get_ipfs_resource_data(&client, &element_name, &full_uri).await;
@@ -354,7 +353,9 @@ async fn migrate_with_auto_authorize() {
     let world_address = migration.world_address().expect("must be present");
     let world = WorldContract::new(world_address, account);
 
-    let res = auto_authorize(&ws, &world, &txn_config, &manifest, &output).await;
+    let default_namespace = get_default_namespace_from_ws(&ws);
+    let res =
+        auto_authorize(&ws, &world, &txn_config, &manifest, &output, &default_namespace).await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();
@@ -368,7 +369,7 @@ async fn migrate_with_auto_authorize() {
         let contract = manifest.contracts.iter().find(|a| a.inner.tag == c.diff.tag).unwrap();
 
         for model in &contract.inner.writes {
-            let model_selector = get_selector_from_name(model).unwrap();
+            let model_selector = compute_model_selector_from_tag(model);
             let contract_address = ContractAddress(contract_address);
             let is_writer =
                 world_reader.is_writer(&model_selector, &contract_address).call().await.unwrap();

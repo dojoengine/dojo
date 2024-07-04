@@ -127,7 +127,7 @@ impl BuildArgs {
         trace!(pluginManager=?bindgen, "Generating bindings.");
 
         // Only generate bindgen if a current package is defined with dojo metadata.
-        if let Some(dojo_metadata) = dojo_metadata_from_workspace(&ws) {
+        if let Ok(dojo_metadata) = dojo_metadata_from_workspace(&ws) {
             tokio::runtime::Runtime::new()
                 .unwrap()
                 .block_on(bindgen.generate(dojo_metadata.skip_migration))

@@ -1,20 +1,20 @@
 use std::fs;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::WorldContract;
-use dojo_world::manifest::utils::{
-    get_default_namespace_from_ws, get_tag_from_special_contract_name,
-};
+use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use dojo_world::manifest::{
     BaseManifest, OverlayClass, OverlayDojoContract, OverlayDojoModel, OverlayManifest,
-    BASE_CONTRACT_NAME, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_NAME,
+    BASE_CONTRACT_TAG, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_TAG,
 };
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
+use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
+use starknet_crypto::poseidon_hash_single;
 
 mod auto_auth;
 mod migrate;
@@ -98,6 +98,18 @@ where
         )
     })?;
 
+    let generated_world_address = get_world_address(&local_manifest, name)?;
+    if let Some(world_address) = world_address {
+        if world_address != generated_world_address {
+            bail!(format!(
+                "Calculated world address ({:#x}) doesn't match provided world address. If you \
+                 are deploying with custom seed make sure `world_address` is correctly configured \
+                 (or not set) `Scarb.toml`",
+                generated_world_address
+            ))
+        }
+    }
+
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
     let mut diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
@@ -161,24 +173,26 @@ where
         )
         .await?;
 
-        // TODO: temporary deactivate auto-auth because it should be adapted
-        // with the new namespace feature.
         let account = Arc::new(account);
         let world = WorldContract::new(world_address, account.clone());
         if let Some(migration_output) = migration_output {
-            // TODO
-            if false {
-                match auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output)
-                    .await
-                {
-                    Ok(()) => {
-                        ui.print_sub("Auto authorize completed successfully");
-                    }
-                    Err(e) => {
-                        ui.print_sub(format!("Failed to auto authorize with error: {e}"));
-                    }
-                };
-            }
+            match auto_authorize(
+                ws,
+                &world,
+                &txn_config,
+                &local_manifest,
+                &migration_output,
+                &default_namespace,
+            )
+            .await
+            {
+                Ok(()) => {
+                    ui.print_sub("Auto authorize completed successfully");
+                }
+                Err(e) => {
+                    ui.print_sub(format!("Failed to auto authorize with error: {e}"));
+                }
+            };
 
             //
             if !ws.config().offline() {
@@ -188,6 +202,23 @@ where
     };
 
     Ok(())
+}
+
+fn get_world_address(
+    local_manifest: &dojo_world::manifest::BaseManifest,
+    name: &str,
+) -> Result<FieldElement> {
+    let name = cairo_short_string_to_felt(name)?;
+    let salt = poseidon_hash_single(name);
+
+    let generated_world_address = get_contract_address(
+        salt,
+        local_manifest.world.inner.original_class_hash,
+        &[local_manifest.base.inner.class_hash],
+        FieldElement::ZERO,
+    );
+
+    Ok(generated_world_address)
 }
 
 enum ContractDeploymentOutput {
@@ -212,13 +243,10 @@ pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
 
     let default_overlay = OverlayManifest {
         world: Some(OverlayClass {
-            tag: get_tag_from_special_contract_name(WORLD_CONTRACT_NAME),
+            tag: WORLD_CONTRACT_TAG.to_string(),
             original_class_hash: None,
         }),
-        base: Some(OverlayClass {
-            tag: get_tag_from_special_contract_name(BASE_CONTRACT_NAME),
-            original_class_hash: None,
-        }),
+        base: Some(OverlayClass { tag: BASE_CONTRACT_TAG.to_string(), original_class_hash: None }),
         contracts: base_manifest
             .contracts
             .iter()

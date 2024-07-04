@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{Error, Result};
 use camino::Utf8PathBuf;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
@@ -26,13 +26,7 @@ use crate::commands::options::world::WorldOptions;
 pub fn load_metadata_from_config(config: &Config) -> Result<Option<Environment>, Error> {
     let env_metadata = if config.manifest_path().exists() {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let dojo_metadata = if let Some(metadata) = dojo_metadata_from_workspace(&ws) {
-            metadata
-        } else {
-            return Err(anyhow!(
-                "No current package with dojo metadata found, workspaces are not suppored yet."
-            ));
-        };
+        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
 
         dojo_metadata.env().cloned()
     } else {

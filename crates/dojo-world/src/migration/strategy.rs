@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
@@ -142,16 +142,6 @@ pub fn prepare_for_migration(
             FieldElement::ZERO,
         );
 
-        if let Some(world_address) = world_address {
-            if world_address != generated_world_address {
-                println!("generated_world_address: {:?}", generated_world_address);
-                bail!(
-                    "Calculated world address doesn't match provided world address.\nIf you are \
-                     deploying with custom seed make sure `world_address` is correctly configured \
-                     (or not set) `Scarb.toml`"
-                )
-            }
-        }
         world.contract_address = generated_world_address;
     }
 
@@ -186,7 +176,7 @@ fn evaluate_class_to_migrate(
             Ok(None)
         }
         _ => {
-            let path = find_artifact_path(&get_filename_from_tag(&class.tag)?, artifact_paths)?;
+            let path = find_artifact_path(&get_filename_from_tag(&class.tag), artifact_paths)?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
@@ -207,7 +197,7 @@ fn evaluate_contracts_to_migrate(
                 continue;
             }
             _ => {
-                let path = find_artifact_path(&get_filename_from_tag(&c.tag)?, artifact_paths)?;
+                let path = find_artifact_path(&get_filename_from_tag(&c.tag), artifact_paths)?;
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
@@ -230,7 +220,7 @@ fn evaluate_contract_to_migrate(
         || contract.remote_class_hash.is_none()
         || matches!(contract.remote_class_hash, Some(remote_hash) if remote_hash != contract.local_class_hash)
     {
-        let path = find_artifact_path(&get_filename_from_tag(&contract.tag)?, artifact_paths)?;
+        let path = find_artifact_path(&get_filename_from_tag(&contract.tag), artifact_paths)?;
 
         Ok(Some(ContractMigration {
             diff: contract.clone(),
