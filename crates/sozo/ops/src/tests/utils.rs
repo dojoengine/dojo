@@ -7,7 +7,7 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use super::setup;
 use crate::utils;
 
-const ACTION_CONTRACT_NAME: &str = "dojo_examples::actions::actions";
+const ACTION_CONTRACT_TAG: &str = "dojo_examples-actions";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_world() {
@@ -16,7 +16,7 @@ async fn get_contract_address_from_world() {
     let world = setup::setup(&sequencer).await.unwrap();
 
     let contract_address =
-        utils::get_contract_address(&world, ACTION_CONTRACT_NAME.to_string()).await.unwrap();
+        utils::get_contract_address(&world, ACTION_CONTRACT_TAG.to_string()).await.unwrap();
 
     assert!(contract_address != FieldElement::ZERO);
 }
@@ -43,7 +43,7 @@ async fn get_contract_address_from_world_with_world_reader() {
     let world_reader = WorldContractReader::new(world.address, provider);
 
     let contract_address =
-        utils::get_contract_address_from_reader(&world_reader, ACTION_CONTRACT_NAME.to_string())
+        utils::get_contract_address_from_reader(&world_reader, ACTION_CONTRACT_TAG.to_string())
             .await
             .unwrap();
 

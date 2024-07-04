@@ -6,7 +6,6 @@ use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{FromStrError, StateDiff, StateUpdate};
 use starknet_crypto::FieldElement;
 
-use crate::proto::types::EventKeysClause;
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
@@ -14,7 +13,7 @@ use crate::proto::world::{
     SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use crate::types::schema::{self, Entity, SchemaError};
-use crate::types::{Event, EventQuery, KeysClause, Query};
+use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -105,12 +104,12 @@ impl WorldClient {
     /// Subscribe to entities updates of a World.
     pub async fn subscribe_entities(
         &mut self,
-        hashed_keys: Vec<FieldElement>,
+        clause: Option<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
-        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+        let clause = clause.map(|c| c.into());
         let stream = self
             .inner
-            .subscribe_entities(SubscribeEntitiesRequest { hashed_keys })
+            .subscribe_entities(SubscribeEntitiesRequest { clause })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -124,30 +123,28 @@ impl WorldClient {
     /// Subscribe to event messages of a World.
     pub async fn subscribe_event_messages(
         &mut self,
-        hashed_keys: Vec<FieldElement>,
+        clause: Option<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
-        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+        let clause = clause.map(|c| c.into());
         let stream = self
             .inner
-            .subscribe_event_messages(SubscribeEntitiesRequest { hashed_keys })
+            .subscribe_event_messages(SubscribeEntitiesRequest { clause })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
-            let entity = res.entity.expect("entity must exist");
-            entity.try_into().expect("must able to serialize")
+        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
+            Some(entity) => entity.try_into().expect("must able to serialize"),
+            None => Entity { hashed_keys: FieldElement::ZERO, models: vec![] },
         }))))
     }
 
     /// Subscribe to the events of a World.
     pub async fn subscribe_events(
         &mut self,
-        keys: Option<Vec<FieldElement>>,
+        keys: Option<KeysClause>,
     ) -> Result<EventUpdateStreaming, Error> {
-        let keys = keys.map(|keys| EventKeysClause {
-            keys: keys.iter().map(|key| key.to_bytes_be().to_vec()).collect(),
-        });
+        let keys = keys.map(|c| c.into());
 
         let stream = self
             .inner
@@ -165,7 +162,7 @@ impl WorldClient {
     /// Subscribe to the model diff for a set of models of a World.
     pub async fn subscribe_model_diffs(
         &mut self,
-        models_keys: Vec<KeysClause>,
+        models_keys: Vec<ModelKeysClause>,
     ) -> Result<ModelDiffsStreaming, Error> {
         let stream = self
             .inner

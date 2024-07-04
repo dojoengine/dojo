@@ -38,7 +38,6 @@ hex = "0.4.3"
 hex-literal = "0.4.1"
 katana-rpc-api.workspace = true
 notify = "6.0.1"
-notify-debouncer-mini = "0.3.0"
 num-bigint = "0.4.3"
 num-integer = "0.1.45"
 prettytable-rs = "0.10.0"

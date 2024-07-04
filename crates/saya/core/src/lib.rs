@@ -18,6 +18,7 @@ pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
+use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::poseidon_hash_many;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -45,8 +46,8 @@ pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
     #[serde(deserialize_with = "url_deserializer")]
-    pub url: Url,
-    pub private_key: ProverAccessKey,
+    pub prover_url: Url,
+    pub prover_key: ProverAccessKey,
     pub store_proofs: bool,
     pub start_block: u64,
     pub batch_size: usize,
@@ -54,14 +55,33 @@ pub struct SayaConfig {
     pub world_address: FieldElement,
     pub fact_registry_address: FieldElement,
     pub skip_publishing_proof: bool,
+    pub starknet_account: StarknetAccountData,
 }
 
-fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StarknetAccountData {
+    #[serde(deserialize_with = "url_deserializer")]
+    pub starknet_url: Url,
+    #[serde(deserialize_with = "felt_string_deserializer")]
+    pub chain_id: FieldElement,
+    pub signer_address: FieldElement,
+    pub signer_key: FieldElement,
+}
+
+pub fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
     Url::parse(&s).map_err(serde::de::Error::custom)
+}
+
+pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<FieldElement, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    cairo_short_string_to_felt(&s).map_err(serde::de::Error::custom)
 }
 
 /// Saya.
@@ -120,8 +140,8 @@ impl Saya {
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
         let prover_identifier = ProverIdentifier::Http(Arc::new(HttpProverParams {
-            prover_url: self.config.url.clone(),
-            prover_key: self.config.private_key.clone(),
+            prover_url: self.config.prover_url.clone(),
+            prover_key: self.config.prover_key.clone(),
         }));
 
         // The structure responsible for proving.
@@ -348,6 +368,7 @@ impl Saya {
         let (transaction_hash, nonce_after) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
+            self.config.starknet_account.clone(),
         )
         .await?;
         info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
@@ -368,6 +389,7 @@ impl Saya {
             program_output,
             program_hash,
             nonce_after + 1u64.into(),
+            self.config.starknet_account.clone(),
         )
         .await?;
         info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");

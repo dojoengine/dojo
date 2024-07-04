@@ -6,9 +6,11 @@ use dojo_test_utils::compiler;
 use scarb::ops;
 use url::Url;
 
+use crate::manifest::utils::{get_filename_from_special_contract_name, TAG_SEPARATOR};
+use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_NAME};
 use crate::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, ProjectMetadata, Uri, WorldMetadata, ABIS_DIR,
-    BASE_DIR, MANIFESTS_DIR, SOURCES_DIR,
+    BASE_DIR, MANIFESTS_DIR,
 };
 
 #[test]
@@ -110,7 +112,6 @@ website = "https://dojoengine.org"
     assert!(metadata.world.socials.is_none());
 }
 
-#[ignore]
 #[tokio::test]
 async fn get_full_dojo_metadata_from_workspace() {
     let config = compiler::build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
@@ -121,7 +122,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
     let manifest_dir = manifest_dir.join(MANIFESTS_DIR).join(profile.as_str());
     let target_dir = ws.target_dir().path_existent().unwrap();
-    let sources_dir = target_dir.join(profile.as_str()).join(SOURCES_DIR);
+    let target_dir = target_dir.join(profile.as_str());
     let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
 
     let dojo_metadata =
@@ -146,11 +147,7 @@ async fn get_full_dojo_metadata_from_workspace() {
         .unwrap()
         .eq("0x1800000000300000180000000000030000000000003006001800006600"));
 
-    assert!(env.world_address.is_some());
-    assert_eq!(
-        env.world_address.unwrap(),
-        "0x07efebb0c2d4cc285d48a97a7174def3be7fdd6b7bd29cca758fa2e17e03ef30"
-    );
+    assert!(env.world_address.is_none());
 
     assert!(env.keystore_path.is_none());
     assert!(env.keystore_password.is_none());
@@ -167,78 +164,83 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(dojo_metadata.world.website.is_none());
     assert!(dojo_metadata.world.socials.is_none());
 
-    println!("world resource: {:#?}", dojo_metadata.world.artifacts);
-
-    check_artifact(
-        dojo_metadata.world.artifacts,
-        "dojo_world_world".to_string(),
-        &abis_dir,
-        &sources_dir,
+    let world_filename = get_filename_from_special_contract_name(WORLD_CONTRACT_NAME);
+    assert!(dojo_metadata.world.artifacts.abi.is_some(), "No abi for {world_filename}");
+    let abi = dojo_metadata.world.artifacts.abi.unwrap();
+    assert_eq!(
+        abi,
+        Uri::File(abis_dir.join(format!("{world_filename}.json")).into()),
+        "Bad abi for {world_filename}",
     );
 
     let artifacts = get_artifacts_from_manifest(&manifest_dir);
 
     dbg!(&artifacts);
-    for (abi_subdir, name) in artifacts {
-        let resource = dojo_metadata.resources_artifacts.get(&name);
-        println!("name: {} resource: {:#?}", name, resource);
+    for (subdir, filename) in artifacts {
+        let tag = get_tag_from_filename(&filename);
+        let resource = dojo_metadata.resources_artifacts.get(&tag);
         dbg!(&dojo_metadata.resources_artifacts);
-        assert!(resource.is_some(), "bad resource metadata for {}", name);
-        let resource = resource.unwrap();
 
-        let sanitized_name = name.replace("::", "_");
+        assert!(resource.is_some(), "bad resource metadata for {}", tag);
+        let resource = resource.unwrap();
 
         check_artifact(
             resource.artifacts.clone(),
-            sanitized_name,
-            &abis_dir.join(abi_subdir),
-            &sources_dir,
+            filename,
+            &abis_dir.join(subdir),
+            &target_dir.join(subdir),
         );
     }
 }
 
 fn check_artifact(
     artifact: ArtifactMetadata,
-    name: String,
+    basename: String,
     abis_dir: &Utf8PathBuf,
-    sources_dir: &Utf8PathBuf,
+    source_dir: &Utf8PathBuf,
 ) {
-    assert!(artifact.abi.is_some());
+    assert!(artifact.abi.is_some(), "No abi for {}", basename);
     let abi = artifact.abi.unwrap();
     assert_eq!(
         abi,
-        Uri::File(abis_dir.join(format!("{name}.json")).into()),
+        Uri::File(abis_dir.join(format!("{basename}.json")).into()),
         "Bad abi for {}",
-        name
+        basename
     );
 
-    assert!(artifact.source.is_some());
+    assert!(artifact.source.is_some(), "No source for {}", basename);
     let source = artifact.source.unwrap();
     assert_eq!(
         source,
-        Uri::File(sources_dir.join(format!("{name}.cairo")).into()),
+        Uri::File(source_dir.join(format!("{basename}.cairo")).into()),
         "Bad source for {}",
-        name
+        basename
     );
 }
 
-fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, String)> {
-    let contracts_dir = manifest_dir.join(BASE_DIR).join("contracts");
-    let models_dir = manifest_dir.join(BASE_DIR).join("models");
+fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(&str, String)> {
+    let contracts_dir = manifest_dir.join(BASE_DIR).join(CONTRACTS_DIR);
+    let models_dir = manifest_dir.join(BASE_DIR).join(MODELS_DIR);
 
     let mut artifacts = vec![];
 
     // models
     for entry in fs::read_dir(models_dir).unwrap().flatten() {
-        let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
-        artifacts.push(("models".to_string(), name));
+        let filename = entry.path().file_stem().unwrap().to_string_lossy().to_string();
+        artifacts.push((MODELS_DIR, filename));
     }
 
     // contracts
     for entry in fs::read_dir(contracts_dir).unwrap().flatten() {
-        let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
-        artifacts.push(("contracts".to_string(), name));
+        let filename = entry.path().file_stem().unwrap().to_string_lossy().to_string();
+        artifacts.push((CONTRACTS_DIR, filename));
     }
 
     artifacts
+}
+
+fn get_tag_from_filename(filename: &str) -> String {
+    let parts = filename.split(TAG_SEPARATOR).collect::<Vec<_>>();
+    assert!(parts.len() >= 2);
+    format!("{}{TAG_SEPARATOR}{}", parts[0], parts[1])
 }

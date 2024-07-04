@@ -8,12 +8,12 @@ use crate::utils::{get_contract_address_from_reader, parse_block_id};
 
 pub async fn call<P: Provider + Sync + Send>(
     world_reader: WorldContractReader<P>,
-    contract: String,
+    tag_or_address: String,
     entrypoint: String,
     calldata: Vec<FieldElement>,
     block_id: Option<String>,
 ) -> Result<()> {
-    let contract_address = get_contract_address_from_reader(&world_reader, contract).await?;
+    let contract_address = get_contract_address_from_reader(&world_reader, tag_or_address).await?;
     let block_id = if let Some(block_id) = block_id {
         parse_block_id(block_id)?
     } else {

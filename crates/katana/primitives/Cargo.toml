@@ -12,7 +12,6 @@ base64.workspace = true
 derive_more.workspace = true
 lazy_static.workspace = true
 rand = { workspace = true, features = [ "small_rng" ] }
-rayon.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
@@ -32,5 +31,8 @@ similar-asserts.workspace = true
 
 [features]
 default = [ "serde" ]
+
+controller = [  ]
 rpc = [  ]
 serde = [ "alloy-primitives/serde" ]
+slot = [ "controller" ]

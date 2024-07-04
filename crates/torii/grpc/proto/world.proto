@@ -43,7 +43,7 @@ message MetadataResponse {
 
 message SubscribeModelsRequest {
     // The list of model keys to subscribe to.
-    repeated types.KeysClause models_keys = 1;
+    repeated types.ModelKeysClause models_keys = 1;
 }
 
 message SubscribeModelsResponse {
@@ -52,11 +52,11 @@ message SubscribeModelsResponse {
 }
 
 message SubscribeEntitiesRequest {
-    repeated bytes hashed_keys = 1;
+    types.EntityKeysClause clause = 1;
 }
 
 message SubscribeEventMessagesRequest {
-    repeated bytes hashed_keys = 1;
+    types.EntityKeysClause clause = 1;
 }
 
 message SubscribeEntityResponse {
@@ -83,7 +83,7 @@ message RetrieveEventsResponse {
 }
 
 message SubscribeEventsRequest {
-    types.EventKeysClause keys = 1;
+    types.KeysClause keys = 1;
 }
 
 message SubscribeEventsResponse {

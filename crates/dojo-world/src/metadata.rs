@@ -10,7 +10,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
 
-use crate::manifest::{BaseManifest, WORLD_CONTRACT_NAME};
+use crate::manifest::utils::{get_filename_from_special_contract_name, get_filename_from_tag};
+use crate::manifest::{BaseManifest, CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_NAME};
 
 #[cfg(test)]
 #[path = "metadata_test.rs"]
@@ -23,16 +24,15 @@ pub const IPFS_PASSWORD: &str = "12290b883db9138a8ae3363b6739d220";
 // copy constants from dojo-lang to avoid circular dependency
 pub const MANIFESTS_DIR: &str = "manifests";
 pub const ABIS_DIR: &str = "abis";
-pub const SOURCES_DIR: &str = "src";
 pub const BASE_DIR: &str = "base";
 
-fn build_artifact_from_name(
-    source_dir: &Utf8PathBuf,
+fn build_artifact_from_filename(
     abi_dir: &Utf8PathBuf,
-    element_name: &str,
+    source_dir: &Utf8PathBuf,
+    filename: &str,
 ) -> ArtifactMetadata {
-    let abi_file = abi_dir.join(format!("{element_name}.json"));
-    let src_file = source_dir.join(format!("{element_name}.cairo"));
+    let abi_file = abi_dir.join(format!("{filename}.json"));
+    let src_file = source_dir.join(format!("{filename}.cairo"));
 
     ArtifactMetadata {
         abi: if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None },
@@ -78,9 +78,9 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
 
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
     let manifest_dir = manifest_dir.join(MANIFESTS_DIR).join(profile.as_str());
-    let target_dir = ws.target_dir().path_existent().unwrap();
-    let sources_dir = target_dir.join(profile.as_str()).join(SOURCES_DIR);
-    let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
+    let abi_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
+    let source_dir = ws.target_dir().path_existent().unwrap();
+    let source_dir = source_dir.join(profile.as_str());
 
     let project_metadata = if let Ok(current_package) = ws.current_package() {
         current_package.manifest.metadata.dojo()?
@@ -99,7 +99,11 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
         ..Default::default()
     };
 
-    let world_artifact = build_artifact_from_name(&sources_dir, &abis_dir, WORLD_CONTRACT_NAME);
+    let world_artifact = build_artifact_from_filename(
+        &abi_dir,
+        &source_dir,
+        &get_filename_from_special_contract_name(WORLD_CONTRACT_NAME),
+    );
 
     // inialize Dojo world metadata with world metadata coming from project configuration
     dojo_metadata.world = project_to_world_metadata(project_metadata.world);
@@ -109,30 +113,34 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
     if manifest_dir.join(BASE_DIR).exists() {
         if let Ok(manifest) = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)) {
             for model in manifest.models {
-                let full_name = model.inner.tag.clone();
+                let tag = model.inner.tag.clone();
+                let abi_model_dir = abi_dir.join(MODELS_DIR);
+                let source_model_dir = source_dir.join(MODELS_DIR);
                 dojo_metadata.resources_artifacts.insert(
-                    full_name.clone(),
+                    tag.clone(),
                     ResourceMetadata {
-                        name: full_name.clone(),
-                        artifacts: build_artifact_from_name(
-                            &sources_dir,
-                            &abis_dir.join("models"),
-                            &full_name,
+                        name: tag.clone(),
+                        artifacts: build_artifact_from_filename(
+                            &abi_model_dir,
+                            &source_model_dir,
+                            &get_filename_from_tag(&tag).unwrap(),
                         ),
                     },
                 );
             }
 
             for contract in manifest.contracts {
-                let full_name = contract.inner.tag.clone();
+                let tag = contract.inner.tag.clone();
+                let abi_contract_dir = abi_dir.join(CONTRACTS_DIR);
+                let source_contract_dir = source_dir.join(CONTRACTS_DIR);
                 dojo_metadata.resources_artifacts.insert(
-                    full_name.clone(),
+                    tag.clone(),
                     ResourceMetadata {
-                        name: full_name.clone(),
-                        artifacts: build_artifact_from_name(
-                            &sources_dir,
-                            &abis_dir.join("contracts"),
-                            &full_name,
+                        name: tag.clone(),
+                        artifacts: build_artifact_from_filename(
+                            &abi_contract_dir,
+                            &source_contract_dir,
+                            &get_filename_from_tag(&tag).unwrap(),
                         ),
                     },
                 );

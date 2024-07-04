@@ -255,12 +255,17 @@ fn update_files(
             &manifest_dir,
             &mut Manifest::new(
                 // abi path will be written by `write_manifest`
-                Class { class_hash: *hash, abi: None, original_class_hash: *hash },
+                Class {
+                    class_hash: *hash,
+                    abi: None,
+                    original_class_hash: *hash,
+                    tag: tag.clone(),
+                },
                 filename.clone(),
             ),
             &class.abi,
         )?;
-        save_json_artifact_file(ws, &target_dir, class, &filename, &tag)?;
+        save_json_artifact_file(ws, target_dir, class, &filename, &tag)?;
     }
 
     let mut models = BTreeMap::new();

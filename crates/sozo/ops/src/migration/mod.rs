@@ -1,14 +1,14 @@
+use std::fs;
 use std::sync::Arc;
-use std::{fs, io};
 
 use anyhow::{anyhow, bail, Context, Result};
-use camino::Utf8PathBuf;
 use dojo_world::contracts::WorldContract;
-use dojo_world::manifest::utils::get_default_namespace_from_ws;
+use dojo_world::manifest::utils::{
+    get_default_namespace_from_ws, get_tag_from_special_contract_name,
+};
 use dojo_world::manifest::{
-    DojoContract, DojoModel, Manifest, OverlayClass, OverlayDojoContract, OverlayDojoModel,
-    OverlayManifest, BASE_CONTRACT_NAME, BASE_DIR, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
-    OVERLAYS_DIR, WORLD_CONTRACT_NAME,
+    BaseManifest, OverlayClass, OverlayDojoContract, OverlayDojoModel, OverlayManifest,
+    BASE_CONTRACT_NAME, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_NAME,
 };
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
@@ -128,7 +128,6 @@ where
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
     strategy.resolve_variable(world_address)?;
-    dbg!(&strategy);
 
     if dry_run {
         print_strategy(&ui, account.provider(), &strategy, world_address).await;
@@ -236,82 +235,56 @@ pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
 
     // its path to a file so `parent` should never return `None`
-    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-    let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
+    let root_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+    let manifest_base_dir = root_dir.join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR);
+    let overlay_dir = root_dir.join(OVERLAYS_DIR).join(&profile_name);
 
-    let base_manifests = profile_dir.join(BASE_DIR);
+    let base_manifest = BaseManifest::load_from_path(&manifest_base_dir)?;
 
-    let world = OverlayClass { name: WORLD_CONTRACT_NAME.into(), original_class_hash: None };
-    let base = OverlayClass { name: BASE_CONTRACT_NAME.into(), original_class_hash: None };
+    let default_overlay = OverlayManifest {
+        world: Some(OverlayClass {
+            tag: get_tag_from_special_contract_name(WORLD_CONTRACT_NAME),
+            original_class_hash: None,
+        }),
+        base: Some(OverlayClass {
+            tag: get_tag_from_special_contract_name(BASE_CONTRACT_NAME),
+            original_class_hash: None,
+        }),
+        contracts: base_manifest
+            .contracts
+            .iter()
+            .map(|c| OverlayDojoContract { tag: c.inner.tag.clone(), ..Default::default() })
+            .collect::<Vec<_>>(),
+        models: base_manifest
+            .models
+            .iter()
+            .map(|m| OverlayDojoModel { tag: m.inner.tag.clone(), ..Default::default() })
+            .collect::<Vec<_>>(),
+    };
 
-    // generate default OverlayManifest from base manifests
-    let contracts = overlay_dojo_contracts_from_path(&base_manifests.join(CONTRACTS_DIR))
-        .with_context(|| "Failed to build default DojoContract Overlays from path.")?;
-    let models = overlay_model_from_path(&base_manifests.join(MODELS_DIR))
-        .with_context(|| "Failed to build default DojoModel Overlays from path.")?;
+    if overlay_dir.exists() {
+        // read existing OverlayManifest from path
+        let mut overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &base_manifest)
+            .with_context(|| "Failed to load OverlayManifest from path.")?;
 
-    let default_overlay =
-        OverlayManifest { world: Some(world), base: Some(base), contracts, models };
+        // merge them to get OverlayManifest which contains all the contracts and models from base
+        // manifests
+        overlay_manifest.merge(default_overlay);
 
-    let overlay_path = profile_dir.join(OVERLAYS_DIR);
+        // to avoid duplicated overlay manifests, existing overlays must be removed before being
+        // rewritten by `overlay_manifest.write_to_path_nested()`
+        fs::remove_dir_all(&overlay_dir)?;
+        fs::create_dir_all(&overlay_dir)?;
 
-    // read existing OverlayManifest from path
-    let mut overlay_manifest = OverlayManifest::load_from_path(&overlay_path)
-        .with_context(|| "Failed to load OverlayManifest from path.")?;
-
-    // merge them to get OverlayManifest which contains all the contracts and models from base
-    // manifests
-    overlay_manifest.merge(default_overlay);
-
-    overlay_manifest
-        .write_to_path_nested(&overlay_path)
-        .with_context(|| "Failed to write OverlayManifest to path.")?;
+        overlay_manifest
+            .write_to_path_nested(&overlay_dir)
+            .with_context(|| "Failed to write OverlayManifest to path.")?;
+    } else {
+        fs::create_dir_all(&overlay_dir)?;
+        default_overlay
+            .write_to_path_nested(&overlay_dir)
+            .with_context(|| "Failed to write OverlayManifest to path.")?;
+    }
 
     Ok(())
-}
-
-fn overlay_dojo_contracts_from_path(path: &Utf8PathBuf) -> Result<Vec<OverlayDojoContract>> {
-    let mut elements = vec![];
-
-    let entries = path
-        .read_dir()?
-        .map(|entry| entry.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
-
-    for path in entries {
-        if path.is_file() {
-            let manifest: Manifest<DojoContract> = toml::from_str(&fs::read_to_string(path)?)?;
-
-            let overlay_manifest =
-                OverlayDojoContract { tag: manifest.inner.tag, ..Default::default() };
-            elements.push(overlay_manifest);
-        } else {
-            continue;
-        }
-    }
-
-    Ok(elements)
-}
-
-fn overlay_model_from_path(path: &Utf8PathBuf) -> Result<Vec<OverlayDojoModel>> {
-    let mut elements = vec![];
-
-    let entries = path
-        .read_dir()?
-        .map(|entry| entry.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
-
-    for path in entries {
-        if path.is_file() {
-            let manifest: Manifest<DojoModel> = toml::from_str(&fs::read_to_string(path)?)?;
-
-            let overlay_manifest =
-                OverlayDojoModel { tag: manifest.inner.tag, ..Default::default() };
-            elements.push(overlay_manifest);
-        } else {
-            continue;
-        }
-    }
-
-    Ok(elements)
 }

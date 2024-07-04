@@ -13,3 +13,6 @@ proc-macro2 = "1.0.70"
 quote = "1.0.33"
 serde.workspace = true
 syn = { version = "2.0.41", features = [ "extra-traits", "full" ] }
+
+[package.metadata.cargo-udeps.ignore]
+normal = [ "serde" ]

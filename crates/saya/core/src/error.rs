@@ -14,6 +14,8 @@ pub enum Error {
     BlockNotFound(katana_primitives::block::BlockIdOrTag),
     // #[error(transparent)]
     // Snos(#[from] snos::error::SnOsError),
+    #[error("Invalid chain_id ")]
+    InvalidChainId,
 }
 
 pub type SayaResult<T, E = Error> = Result<T, E>;

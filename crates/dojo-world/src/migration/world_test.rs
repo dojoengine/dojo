@@ -137,12 +137,12 @@ fn diff_when_local_and_remote_are_different() {
 #[test]
 fn updating_order_as_expected() {
     let init_calldata = vec![
-        ("ns", "c4", vec!["$contract_address:ns:c1", "0x0"]),
+        ("ns", "c4", vec!["$contract_address:ns-c1", "0x0"]),
         ("ns", "c3", vec!["0x0"]),
-        ("ns", "c5", vec!["$contract_address:ns:c4", "0x0"]),
-        ("ns", "c7", vec!["$contract_address:ns:c4", "0x0"]),
+        ("ns", "c5", vec!["$contract_address:ns-c4", "0x0"]),
+        ("ns", "c7", vec!["$contract_address:ns-c4", "0x0"]),
         ("ns", "c2", vec!["0x0"]),
-        ("ns", "c6", vec!["$contract_address:ns:c4", "$contract_address:ns:c3", "0x0"]),
+        ("ns", "c6", vec!["$contract_address:ns-c4", "$contract_address:ns-c3", "0x0"]),
         ("ns", "c1", vec!["0x0"]),
     ];
 
@@ -164,7 +164,7 @@ fn updating_order_as_expected() {
 
     diff.update_order("ns").unwrap();
 
-    let expected_order = ["ns:c1", "ns:c2", "ns:c3", "ns:c4", "ns:c5", "ns:c6", "ns:c7"];
+    let expected_order = ["ns-c1", "ns-c2", "ns-c3", "ns-c4", "ns-c5", "ns-c6", "ns-c7"];
     for (i, contract) in diff.contracts.iter().enumerate() {
         assert_eq!(contract.tag, expected_order[i]);
     }
@@ -173,12 +173,12 @@ fn updating_order_as_expected() {
 #[test]
 fn updating_order_when_cyclic_dependency_fail() {
     let init_calldata = vec![
-        ("ns", "c4", vec!["$contract_address:ns:c1", "$contract_address:ns:c6", "0x0"]),
+        ("ns", "c4", vec!["$contract_address:ns-c1", "$contract_address:ns-c6", "0x0"]),
         ("ns", "c3", vec!["0x0"]),
-        ("ns", "c5", vec!["$contract_address:ns:c4", "0x0"]),
-        ("ns", "c7", vec!["$contract_address:ns:c4", "0x0"]),
+        ("ns", "c5", vec!["$contract_address:ns-c4", "0x0"]),
+        ("ns", "c7", vec!["$contract_address:ns-c4", "0x0"]),
         ("ns", "c2", vec!["0x0"]),
-        ("ns", "c6", vec!["$contract_address:ns:c4", "$contract_address:ns:c3", "0x0"]),
+        ("ns", "c6", vec!["$contract_address:ns-c4", "$contract_address:ns-c3", "0x0"]),
         ("ns", "c1", vec!["0x0"]),
     ];
 
