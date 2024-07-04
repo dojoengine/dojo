@@ -176,7 +176,7 @@ fn evaluate_class_to_migrate(
             Ok(None)
         }
         _ => {
-            let path = find_artifact_path(&get_filename_from_tag(&class.tag)?, artifact_paths)?;
+            let path = find_artifact_path(&get_filename_from_tag(&class.tag), artifact_paths)?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
@@ -197,7 +197,7 @@ fn evaluate_contracts_to_migrate(
                 continue;
             }
             _ => {
-                let path = find_artifact_path(&get_filename_from_tag(&c.tag)?, artifact_paths)?;
+                let path = find_artifact_path(&get_filename_from_tag(&c.tag), artifact_paths)?;
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
@@ -220,7 +220,7 @@ fn evaluate_contract_to_migrate(
         || contract.remote_class_hash.is_none()
         || matches!(contract.remote_class_hash, Some(remote_hash) if remote_hash != contract.local_class_hash)
     {
-        let path = find_artifact_path(&get_filename_from_tag(&contract.tag)?, artifact_paths)?;
+        let path = find_artifact_path(&get_filename_from_tag(&contract.tag), artifact_paths)?;
 
         Ok(Some(ContractMigration {
             diff: contract.clone(),

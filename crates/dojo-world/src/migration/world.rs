@@ -9,9 +9,9 @@ use topological_sort::TopologicalSort;
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::utils::{ensure_namespace, get_tag_from_special_contract_name};
+use crate::manifest::utils::ensure_namespace;
 use crate::manifest::{
-    BaseManifest, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+    BaseManifest, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, WORLD_CONTRACT_TAG,
 };
 
 #[cfg(test)]
@@ -75,14 +75,14 @@ impl WorldDiff {
             .collect::<Vec<_>>();
 
         let base = ClassDiff {
-            tag: get_tag_from_special_contract_name(BASE_CONTRACT_NAME),
+            tag: BASE_CONTRACT_TAG.to_string(),
             local_class_hash: *local.base.inner.class_hash(),
             original_class_hash: *local.base.inner.original_class_hash(),
             remote_class_hash: remote.as_ref().map(|m| *m.base.inner.class_hash()),
         };
 
         let world = ContractDiff {
-            tag: get_tag_from_special_contract_name(WORLD_CONTRACT_NAME),
+            tag: WORLD_CONTRACT_TAG.to_string(),
             local_class_hash: *local.world.inner.class_hash(),
             original_class_hash: *local.world.inner.original_class_hash(),
             base_class_hash: *local.base.inner.class_hash(),

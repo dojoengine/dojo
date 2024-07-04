@@ -3,12 +3,10 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::WorldContract;
-use dojo_world::manifest::utils::{
-    get_default_namespace_from_ws, get_tag_from_special_contract_name,
-};
+use dojo_world::manifest::utils::get_default_namespace_from_ws;
 use dojo_world::manifest::{
     BaseManifest, OverlayClass, OverlayDojoContract, OverlayDojoModel, OverlayManifest,
-    BASE_CONTRACT_NAME, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_NAME,
+    BASE_CONTRACT_TAG, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_TAG,
 };
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
@@ -175,24 +173,26 @@ where
         )
         .await?;
 
-        // TODO: temporary deactivate auto-auth because it should be adapted
-        // with the new namespace feature.
         let account = Arc::new(account);
         let world = WorldContract::new(world_address, account.clone());
         if let Some(migration_output) = migration_output {
-            // TODO
-            if false {
-                match auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output)
-                    .await
-                {
-                    Ok(()) => {
-                        ui.print_sub("Auto authorize completed successfully");
-                    }
-                    Err(e) => {
-                        ui.print_sub(format!("Failed to auto authorize with error: {e}"));
-                    }
-                };
-            }
+            match auto_authorize(
+                ws,
+                &world,
+                &txn_config,
+                &local_manifest,
+                &migration_output,
+                &default_namespace,
+            )
+            .await
+            {
+                Ok(()) => {
+                    ui.print_sub("Auto authorize completed successfully");
+                }
+                Err(e) => {
+                    ui.print_sub(format!("Failed to auto authorize with error: {e}"));
+                }
+            };
 
             //
             if !ws.config().offline() {
@@ -243,13 +243,10 @@ pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
 
     let default_overlay = OverlayManifest {
         world: Some(OverlayClass {
-            tag: get_tag_from_special_contract_name(WORLD_CONTRACT_NAME),
+            tag: WORLD_CONTRACT_TAG.to_string(),
             original_class_hash: None,
         }),
-        base: Some(OverlayClass {
-            tag: get_tag_from_special_contract_name(BASE_CONTRACT_NAME),
-            original_class_hash: None,
-        }),
+        base: Some(OverlayClass { tag: BASE_CONTRACT_TAG.to_string(), original_class_hash: None }),
         contracts: base_manifest
             .contracts
             .iter()

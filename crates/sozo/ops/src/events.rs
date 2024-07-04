@@ -6,10 +6,10 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
-use dojo_world::manifest::utils::get_filename_from_special_contract_name;
+use dojo_world::manifest::utils::get_filename_from_tag;
 use dojo_world::manifest::{
-    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, MANIFESTS_DIR, TARGET_DIR,
-    WORLD_CONTRACT_NAME,
+    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, MANIFESTS_DIR, TARGET_DIR,
+    WORLD_CONTRACT_TAG,
 };
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
@@ -85,7 +85,6 @@ fn extract_events(
         events: &mut HashMap<String, Vec<Token>>,
         full_abi_path: &Utf8PathBuf,
     ) -> Result<()> {
-        println!("full_abi_path {:?}", full_abi_path);
         let abi_str = fs::read_to_string(full_abi_path)?;
 
         match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
@@ -122,12 +121,12 @@ fn extract_events(
 
     // Read the world and base ABI from scarb artifacts as the
     // manifest does not include them (at least base is not included).
-    let world_abi_path = target_dir
-        .join(format!("{}.json", get_filename_from_special_contract_name(WORLD_CONTRACT_NAME)));
+    let world_abi_path =
+        target_dir.join(format!("{}.json", get_filename_from_tag(WORLD_CONTRACT_TAG)));
     process_abi(&mut events_map, &world_abi_path)?;
 
-    let base_abi_path = target_dir
-        .join(format!("{}.json", get_filename_from_special_contract_name(BASE_CONTRACT_NAME)));
+    let base_abi_path =
+        target_dir.join(format!("{}.json", get_filename_from_tag(BASE_CONTRACT_TAG)));
     process_abi(&mut events_map, &base_abi_path)?;
 
     Ok(events_map)

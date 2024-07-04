@@ -1,21 +1,19 @@
 use starknet::macros::felt;
 
 use super::*;
-use crate::manifest::utils::{
-    get_filename_from_special_contract_name, get_filename_from_tag, get_tag,
-};
+use crate::manifest::utils::{get_filename_from_tag, get_tag};
 use crate::manifest::{BaseManifest, Class, DojoContract, DojoModel, Manifest};
 
 #[test]
 fn no_diff_when_local_and_remote_are_equal() {
     let world_contract = Manifest::new(
         Class { class_hash: 66_u32.into(), ..Default::default() },
-        get_filename_from_special_contract_name(WORLD_CONTRACT_NAME),
+        get_filename_from_tag(WORLD_CONTRACT_TAG),
     );
 
     let base_contract = Manifest::new(
         Class { class_hash: 77_u32.into(), ..Default::default() },
-        get_filename_from_special_contract_name(BASE_CONTRACT_NAME),
+        get_filename_from_tag(BASE_CONTRACT_TAG),
     );
 
     let models = vec![Manifest::new(
@@ -45,12 +43,12 @@ fn no_diff_when_local_and_remote_are_equal() {
 fn diff_when_local_and_remote_are_different() {
     let world_contract = Manifest::new(
         Class { class_hash: 66_u32.into(), ..Default::default() },
-        get_filename_from_special_contract_name(WORLD_CONTRACT_NAME),
+        get_filename_from_tag(WORLD_CONTRACT_TAG),
     );
 
     let base_contract = Manifest::new(
         Class { class_hash: 77_u32.into(), ..Default::default() },
-        get_filename_from_special_contract_name(BASE_CONTRACT_NAME),
+        get_filename_from_tag(BASE_CONTRACT_TAG),
     );
 
     let models = vec![
@@ -61,7 +59,7 @@ fn diff_when_local_and_remote_are_different() {
                 class_hash: felt!("0x11"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("dojo_mock", "model")).unwrap(),
+            get_filename_from_tag(&get_tag("dojo_mock", "model")),
         ),
         Manifest::new(
             DojoModel {
@@ -70,7 +68,7 @@ fn diff_when_local_and_remote_are_different() {
                 class_hash: felt!("0x22"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("dojo_mock", "model2")).unwrap(),
+            get_filename_from_tag(&get_tag("dojo_mock", "model2")),
         ),
     ];
 
@@ -82,7 +80,7 @@ fn diff_when_local_and_remote_are_different() {
                 class_hash: felt!("0x11"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("dojo_mock", "model")).unwrap(),
+            get_filename_from_tag(&get_tag("dojo_mock", "model")),
         ),
         Manifest::new(
             DojoModel {
@@ -92,7 +90,7 @@ fn diff_when_local_and_remote_are_different() {
                 class_hash: felt!("0x33"),
                 ..Default::default()
             },
-            get_filename_from_tag(&get_tag("dojo_mock", "model2")).unwrap(),
+            get_filename_from_tag(&get_tag("dojo_mock", "model2")),
         ),
     ];
 
@@ -104,7 +102,7 @@ fn diff_when_local_and_remote_are_different() {
                 address: Some(felt!("0x2222")),
                 ..DojoContract::default()
             },
-            get_filename_from_tag(&get_tag("dojo_mock", "my_contract")).unwrap(),
+            get_filename_from_tag(&get_tag("dojo_mock", "my_contract")),
         ),
         Manifest::new(
             DojoContract {
@@ -113,7 +111,7 @@ fn diff_when_local_and_remote_are_different() {
                 address: Some(felt!("4444")),
                 ..DojoContract::default()
             },
-            get_filename_from_tag(&get_tag("dojo_mock", "my_contract2")).unwrap(),
+            get_filename_from_tag(&get_tag("dojo_mock", "my_contract2")),
         ),
     ];
 

@@ -82,7 +82,7 @@ async fn test_model() {
         felt!("0x059e57c16c3bc8c59a768a342496837275e399509366640620a0682826275a34")
     );
 
-    let moves = world.model_reader("Dojo", "Moves").await.unwrap();
+    let moves = world.model_reader("dojo_examples", "Moves").await.unwrap();
     let schema = moves.schema().await.unwrap();
 
     assert_eq!(

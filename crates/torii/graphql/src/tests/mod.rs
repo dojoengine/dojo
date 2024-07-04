@@ -324,8 +324,11 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     //  Execute `create` and insert 11 records into storage
     // TODO: `manifest_name` is probably not the correct field to use => handle namespace.
-    let records_contract =
-        manifest.contracts.iter().find(|contract| contract.manifest_name.eq("records")).unwrap();
+    let records_contract = manifest
+        .contracts
+        .iter()
+        .find(|contract| contract.manifest_name.eq("types_test-records"))
+        .unwrap();
     let record_contract_address = records_contract.inner.address.unwrap();
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {

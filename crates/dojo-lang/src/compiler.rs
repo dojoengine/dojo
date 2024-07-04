@@ -21,13 +21,12 @@ use cairo_lang_utils::UpcastMut;
 use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::utils::{
-    get_default_namespace_from_ws, get_filename_from_special_contract_name, get_filename_from_tag,
-    get_name_from_tag, get_tag, get_tag_from_special_contract_name,
+    get_default_namespace_from_ws, get_filename_from_tag, get_name_from_tag, get_tag,
 };
 use dojo_world::manifest::{
     AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
-    ABIS_DIR, BASE_CONTRACT_NAME, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
-    MODELS_DIR, WORLD_CONTRACT_NAME, WORLD_QUALIFIED_PATH,
+    ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
+    MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
@@ -192,8 +191,8 @@ fn find_project_contracts(
 
 pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     [
-        ContractSelector(BASE_CONTRACT_NAME.to_string()),
-        ContractSelector(WORLD_CONTRACT_NAME.to_string()),
+        ContractSelector(BASE_QUALIFIED_PATH.to_string()),
+        ContractSelector(WORLD_QUALIFIED_PATH.to_string()),
     ]
     .iter()
     .map(|selector| selector.package().into())
@@ -243,12 +242,11 @@ fn update_files(
 
     let mut crate_ids = crate_ids.to_vec();
 
-    for (qualified_path, name) in
-        [(WORLD_QUALIFIED_PATH, WORLD_CONTRACT_NAME), (BASE_QUALIFIED_PATH, BASE_CONTRACT_NAME)]
+    for (qualified_path, tag) in
+        [(WORLD_QUALIFIED_PATH, WORLD_CONTRACT_TAG), (BASE_QUALIFIED_PATH, BASE_CONTRACT_TAG)]
     {
         let (hash, class) = get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
-        let filename = get_filename_from_special_contract_name(name);
-        let tag = get_tag_from_special_contract_name(name);
+        let filename = get_filename_from_tag(tag);
         write_manifest_and_abi(
             &relative_manifests_dir,
             &relative_abis_dir,
@@ -259,13 +257,13 @@ fn update_files(
                     class_hash: *hash,
                     abi: None,
                     original_class_hash: *hash,
-                    tag: tag.clone(),
+                    tag: tag.to_string(),
                 },
                 filename.clone(),
             ),
             &class.abi,
         )?;
-        save_json_artifact_file(ws, target_dir, class, &filename, &tag)?;
+        save_json_artifact_file(ws, target_dir, class, &filename, tag)?;
     }
 
     let mut models = BTreeMap::new();
@@ -344,7 +342,7 @@ fn update_files(
             &class.abi,
         )?;
 
-        let filename = get_filename_from_tag(&manifest.inner.tag)?;
+        let filename = get_filename_from_tag(&manifest.inner.tag);
         save_expanded_source_file(
             ws,
             *module_id,
@@ -370,7 +368,7 @@ fn update_files(
             &class.abi,
         )?;
 
-        let filename = get_filename_from_tag(&manifest.inner.tag)?;
+        let filename = get_filename_from_tag(&manifest.inner.tag);
         save_expanded_source_file(ws, *module_id, db, &models_dir, &filename, &manifest.inner.tag)?;
         save_json_artifact_file(ws, &models_dir, class, &filename, &manifest.inner.tag)?;
     }
@@ -411,7 +409,7 @@ fn get_dojo_model_artifacts(
                                 members: model.members.clone(),
                                 original_class_hash: class_hash,
                             },
-                            get_filename_from_tag(&tag)?,
+                            get_filename_from_tag(&tag),
                         ),
                         class,
                         module_id,
@@ -484,7 +482,7 @@ fn get_dojo_contract_artifacts(
                     original_class_hash: *class_hash,
                     ..Default::default()
                 },
-                get_filename_from_tag(tag)?,
+                get_filename_from_tag(tag),
             );
 
             result.insert(qualified_path.to_string(), (manifest, class.clone(), *module_id));
