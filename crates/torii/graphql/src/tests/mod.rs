@@ -179,6 +179,7 @@ pub struct Content {
     pub socials: Vec<Social>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Metadata {

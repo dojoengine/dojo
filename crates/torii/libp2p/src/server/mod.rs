@@ -602,7 +602,7 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 }
             },
             Ty::ByteArray(s) => {
-                *s = string.clone();
+                s.clone_from(string);
             }
             _ => {
                 return Err(Error::InvalidMessageError(format!(
