@@ -71,7 +71,7 @@ seed = "dojo_examples"
 async fn world_metadata_hash_and_upload() {
     let meta = WorldMetadata {
         name: Some("Test World".to_string()),
-        seed: String::from("dojo_example"),
+        seed: String::from("dojo_examples"),
         description: Some("A world used for testing".to_string()),
         cover_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
         icon_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
