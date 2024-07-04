@@ -14881,6 +14881,7 @@ dependencies = [
  "futures-util",
  "hex",
  "hyper 0.14.29",
+ "katana-runner",
  "parking_lot 0.12.3",
  "prost 0.11.9",
  "prost 0.12.6",

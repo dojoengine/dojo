@@ -50,28 +50,17 @@ pub fn ensure_namespace(tag: &str, default_namespace: &str) -> String {
     if tag.contains(TAG_SEPARATOR) { tag.to_string() } else { get_tag(default_namespace, tag) }
 }
 
-pub fn get_filename_from_tag(tag: &str) -> Result<String> {
+pub fn get_filename_from_tag(tag: &str) -> String {
     if [format!("dojo{TAG_SEPARATOR}world").as_str(), format!("dojo{TAG_SEPARATOR}base").as_str()]
         .contains(&tag)
     {
-        return Ok(tag.to_string());
+        return tag.to_string();
     }
 
     let mut selector = format!("{:x}", compute_model_selector_from_tag(tag));
     selector.truncate(SELECTOR_CHUNK_SIZE);
 
-    Ok(format!("{tag}{TAG_SEPARATOR}{selector}"))
-}
-
-// TODO: should not be useful with a standard WORLD/BASE name
-pub fn get_filename_from_special_contract_name(name: &str) -> String {
-    get_filename_from_tag(&get_tag_from_special_contract_name(name)).unwrap()
-}
-
-// TODO: should not be useful with a standard WORLD/BASE name
-pub fn get_tag_from_special_contract_name(name: &str) -> String {
-    let parts = name.split(CONTRACT_NAME_SEPARATOR).collect::<Vec<_>>();
-    format!("{}{TAG_SEPARATOR}{}", parts.first().unwrap(), parts.last().unwrap())
+    format!("{tag}{TAG_SEPARATOR}{selector}")
 }
 
 pub fn compute_bytearray_hash(namespace: &str) -> FieldElement {
