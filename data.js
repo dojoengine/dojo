@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720050425598,
+  "lastUpdate": 1720193334189,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10825,6 +10825,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16782658,
             "range": "± 222833",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ejembioche50@gmail.com",
+            "name": "Oche",
+            "username": "EjembiEmmanuel"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b2a4df6c7d8e9da9a07bbe4a356dfd11a2696cfb",
+          "message": "feat: sozo init remove git (#2139)\n\n* feat: sozo init remove git\r\n\r\n* refac: remove `.github` folder",
+          "timestamp": "2024-07-05T20:47:01+05:30",
+          "tree_id": "1f0bf16aa41d236f92026401e170bd6017b132c8",
+          "url": "https://github.com/dojoengine/dojo/commit/b2a4df6c7d8e9da9a07bbe4a356dfd11a2696cfb"
+        },
+        "date": 1720193333606,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17025771,
+            "range": "± 197027",
             "unit": "ns/iter"
           }
         ]
