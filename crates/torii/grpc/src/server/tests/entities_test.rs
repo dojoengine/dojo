@@ -41,6 +41,7 @@ async fn test_entities_queries() {
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
     let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    println!("config path {:?}", config.manifest_path());
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
@@ -52,7 +53,7 @@ async fn test_entities_queries() {
     let default_namespace = get_default_namespace_from_ws(&ws);
 
     let mut migration = prepare_migration(
-        source_project_dir,
+        config.manifest_path().parent().unwrap().into(),
         target_path,
         dojo_metadata.skip_migration,
         &default_namespace,
@@ -72,6 +73,8 @@ async fn test_entities_queries() {
         execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 
     let world_address = migration_output.world_address;
+
+    println!("output {:?}", migration_output);
 
     // spawn
     let tx = account
@@ -133,7 +136,7 @@ async fn test_entities_queries() {
     assert_eq!(entities.len(), 1);
 
     let entity: Entity = entities.first().unwrap().clone().try_into().unwrap();
-    assert_eq!(entity.models.first().unwrap().name, "Position");
-    assert_eq!(entity.models.get(1).unwrap().name, "Moves");
+    assert_eq!(entity.models.first().unwrap().name, "dojo_examples-Position");
+    assert_eq!(entity.models.get(1).unwrap().name, "dojo_examples-Moves");
     assert_eq!(entity.hashed_keys, poseidon_hash_many(&[account.address()]));
 }

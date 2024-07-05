@@ -16,12 +16,12 @@ pub mod system;
 pub struct WorldMetadata {
     pub world_address: FieldElement,
     pub world_class_hash: FieldElement,
-    pub models: HashMap<String, ModelMetadata>,
+    pub models: HashMap<FieldElement, ModelMetadata>,
 }
 
 impl WorldMetadata {
     /// Retrieves the metadata of a model.
-    pub fn model(&self, name: impl AsRef<str>) -> Option<&ModelMetadata> {
-        self.models.get(name.as_ref())
+    pub fn model(&self, model: &FieldElement) -> Option<&ModelMetadata> {
+        self.models.get(model)
     }
 }

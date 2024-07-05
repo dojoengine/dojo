@@ -25,7 +25,7 @@ pub fn prepare_migration(
         manifest.remove_tags(skip_manifests);
     }
 
-    let overlay_dir = Utf8PathBuf::new().join(OVERLAYS_DIR).join(profile_name);
+    let overlay_dir = manifest_dir.join(OVERLAYS_DIR).join(profile_name);
 
     if overlay_dir.exists() {
         let overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &manifest).unwrap();

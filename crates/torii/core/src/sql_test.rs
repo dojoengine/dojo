@@ -4,7 +4,9 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_world::contracts::world::WorldContractReader;
-use dojo_world::manifest::utils::get_default_namespace_from_ws;
+use dojo_world::manifest::utils::{
+    compute_model_selector_from_names, get_default_namespace_from_ws,
+};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
@@ -132,39 +134,54 @@ async fn test_load_from_remote() {
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 8);
 
-    let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Position'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
+        sqlx::query_as(
+            "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
+             'Position'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-    assert_eq!(id, format!("{:#x}", get_selector_from_name("Position").unwrap()));
+    assert_eq!(
+        id,
+        format!("{:#x}", compute_model_selector_from_names("dojo_examples", "Position"))
+    );
     assert_eq!(name, "Position");
+    assert_eq!(namespace, "dojo_examples");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
 
-    let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Moves'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
+        sqlx::query_as(
+            "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
+             'Moves'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-    assert_eq!(id, format!("{:#x}", get_selector_from_name("Moves").unwrap()));
+    assert_eq!(id, format!("{:#x}", compute_model_selector_from_names("dojo_examples", "Moves")));
     assert_eq!(name, "Moves");
+    assert_eq!(namespace, "dojo_examples");
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 2);
 
-    let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'PlayerConfig'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
+        sqlx::query_as(
+            "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
+             'PlayerConfig'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-    assert_eq!(id, format!("{:#x}", get_selector_from_name("PlayerConfig").unwrap()));
+    assert_eq!(
+        id,
+        format!("{:#x}", compute_model_selector_from_names("dojo_examples", "PlayerConfig"))
+    );
     assert_eq!(name, "PlayerConfig");
+    assert_eq!(namespace, "dojo_examples");
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 0);
 
@@ -297,9 +314,9 @@ async fn test_load_from_remote_del() {
     let mut db = Sql::new(pool.clone(), world_address).await.unwrap();
     let _ = bootstrap_engine(world, db.clone(), &provider).await;
 
-    assert_eq!(count_table("PlayerConfig", &pool).await, 0);
-    assert_eq!(count_table("PlayerConfig$favorite_item", &pool).await, 0);
-    assert_eq!(count_table("PlayerConfig$items", &pool).await, 0);
+    assert_eq!(count_table("dojo_examples-PlayerConfig", &pool).await, 0);
+    assert_eq!(count_table("dojo_examples-PlayerConfig$favorite_item", &pool).await, 0);
+    assert_eq!(count_table("dojo_examples-PlayerConfig$items", &pool).await, 0);
 
     // TODO: check how we can have a test that is more chronological with Torii re-syncing
     // to ensure we can test intermediate states.
@@ -316,7 +333,7 @@ async fn test_load_from_remote_del() {
 /// # Returns
 /// The number of rows in the table.
 async fn count_table(table_name: &str, pool: &sqlx::Pool<sqlx::Sqlite>) -> i64 {
-    let count_query = format!("SELECT COUNT(*) FROM {}", table_name);
+    let count_query = format!("SELECT COUNT(*) FROM [{}]", table_name);
     let count: (i64,) = sqlx::query_as(&count_query).fetch_one(pool).await.unwrap();
 
     count.0

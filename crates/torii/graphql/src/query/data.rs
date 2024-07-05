@@ -13,7 +13,7 @@ pub async fn count_rows(
     keys: &Option<Vec<String>>,
     filters: &Option<Vec<Filter>>,
 ) -> Result<i64> {
-    let mut query = format!("SELECT COUNT(*) FROM {}", table_name);
+    let mut query = format!("SELECT COUNT(*) FROM [{}]", table_name);
     let conditions = build_conditions(keys, filters);
 
     if !conditions.is_empty() {
@@ -36,7 +36,7 @@ pub async fn fetch_single_row(
     id_column: &str,
     id: &str,
 ) -> sqlx::Result<SqliteRow> {
-    let query = format!("SELECT * FROM {} WHERE {} = '{}'", table_name, id_column, id);
+    let query = format!("SELECT * FROM [{}] WHERE {} = '{}'", table_name, id_column, id);
     sqlx::query(&query).fetch_one(conn).await
 }
 
@@ -63,7 +63,7 @@ pub async fn fetch_multiple_rows(
         conditions.push(handle_cursor(before_cursor, order, CursorDirection::Before, id_column)?);
     }
 
-    let mut query = format!("SELECT * FROM {}", table_name);
+    let mut query = format!("SELECT * FROM [{}]", table_name);
     if !conditions.is_empty() {
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
     }

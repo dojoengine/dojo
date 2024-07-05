@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
+use dojo_world::manifest::utils::compute_model_selector_from_names;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
@@ -64,7 +65,6 @@ pub struct MemberClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct CompositeClause {
-    pub model: String,
     pub operator: LogicalOperator,
     pub clauses: Vec<Clause>,
 }
@@ -141,6 +141,7 @@ impl TryFrom<proto::types::ModelMetadata> for dojo_types::schema::ModelMetadata 
             schema,
             layout,
             name: value.name,
+            namespace: value.namespace,
             packed_size: value.packed_size,
             unpacked_size: value.unpacked_size,
             class_hash: FieldElement::from_str(&value.class_hash)?,
@@ -155,7 +156,12 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
         let models = value
             .models
             .into_iter()
-            .map(|component| Ok((component.name.clone(), component.try_into()?)))
+            .map(|component| {
+                Ok((
+                    compute_model_selector_from_names(&component.namespace, &component.name),
+                    component.try_into()?,
+                ))
+            })
             .collect::<Result<HashMap<_, dojo_types::schema::ModelMetadata>, _>>()?;
 
         Ok(dojo_types::WorldMetadata {
@@ -302,7 +308,6 @@ impl From<MemberClause> for proto::types::MemberClause {
 impl From<CompositeClause> for proto::types::CompositeClause {
     fn from(value: CompositeClause) -> Self {
         Self {
-            model: value.model,
             operator: value.operator as i32,
             clauses: value.clauses.into_iter().map(|clause| clause.into()).collect(),
         }

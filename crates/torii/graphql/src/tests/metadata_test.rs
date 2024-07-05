@@ -56,6 +56,7 @@ mod tests {
   [world]
   name = "example"
   description = "example world"
+  seed = "example"
   cover_uri = "file://example_cover.png"
   website = "https://dojoengine.org"
   socials.x = "https://x.com/dojostarknet"
