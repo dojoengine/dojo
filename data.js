@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720193334189,
+  "lastUpdate": 1720198956375,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10855,6 +10855,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17025771,
             "range": "± 197027",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ff266dfdbdd24690b7b6fa93a7da3e16b931a90a",
+          "message": "fix: override `block_id` method of ConnectedAccount for SozoAccount (#2140)",
+          "timestamp": "2024-07-05T10:50:34-06:00",
+          "tree_id": "f21a2a6ad31fbf34ea25d953ec485e7817250ae8",
+          "url": "https://github.com/dojoengine/dojo/commit/ff266dfdbdd24690b7b6fa93a7da3e16b931a90a"
+        },
+        "date": 1720198955207,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16809342,
+            "range": "± 247260",
             "unit": "ns/iter"
           }
         ]
