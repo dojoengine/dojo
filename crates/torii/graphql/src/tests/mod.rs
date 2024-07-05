@@ -10,7 +10,6 @@ use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::manifest::utils::get_default_namespace_from_ws;
-use dojo_world::manifest::DeploymentManifest;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
@@ -314,21 +313,17 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
-
-    let manifest =
-        DeploymentManifest::load_from_remote(&provider, migration.world_address().unwrap())
-            .await
-            .unwrap();
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 
     //  Execute `create` and insert 11 records into storage
-    let records_contract = manifest
+    let records_contract = output
         .contracts
         .iter()
-        .find(|contract| contract.inner.tag.eq("types_test-Records"))
+        .find(|contract| contract.as_ref().unwrap().tag.eq("types_test-records"))
         .unwrap();
 
-    let record_contract_address = records_contract.inner.address.unwrap();
+    let record_contract_address = records_contract.as_ref().unwrap().contract_address;
+
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],

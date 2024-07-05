@@ -232,18 +232,18 @@ mod tests {
 
         // models should contain record & recordsibling
         let record: Record = serde_json::from_value(models[0].clone()).unwrap();
-        assert_eq!(&record.__typename, "types_test-Record");
+        assert_eq!(&record.__typename, "types_test_Record");
         assert_eq!(record.record_id, 0);
 
         let record_sibling: RecordSibling = serde_json::from_value(models[1].clone()).unwrap();
-        assert_eq!(&record_sibling.__typename, "types_test-RecordSibling");
+        assert_eq!(&record_sibling.__typename, "types_test_RecordSibling");
         assert_eq!(record_sibling.record_id, 0);
 
         let id = poseidon_hash_many(&[FieldElement::ZERO, FieldElement::ONE]);
         let entity = entity_model_query(&schema, &id).await;
         let models = entity.get("models").ok_or("no models found").unwrap();
         let subrecord: Subrecord = serde_json::from_value(models[0].clone()).unwrap();
-        assert_eq!(&subrecord.__typename, "types_test-Subrecord");
+        assert_eq!(&subrecord.__typename, "types_test_Subrecord");
         assert_eq!(subrecord.subrecord_id, 1);
         Ok(())
     }
