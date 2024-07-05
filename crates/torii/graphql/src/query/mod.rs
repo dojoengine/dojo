@@ -146,7 +146,7 @@ fn parse_nested_type(member: &ModelMember, nested_members: &[&ModelMember]) -> T
     // for eg. Position_Array<Vec2> -> Position_ArrayVec2
     // Position_(u8, Vec2) -> Position_u8Vec2
     let re = Regex::new(r"[, ()<>-]").unwrap();
-    let sanitized_model_name = model_name.replace("-", "_");
+    let sanitized_model_name = model_name.replace('-', "_");
     let sanitized_member_type_name = re.replace_all(&member.ty, "");
     let namespaced = format!("{}_{}", sanitized_model_name, sanitized_member_type_name);
     TypeData::Nested((TypeRef::named(namespaced), nested_mapping))

@@ -67,7 +67,7 @@ impl BasicObject for ModelDataObject {
         let mut parts = self.type_name().split('_').collect::<Vec<&str>>();
         let model = parts.pop().unwrap();
         let namespace = parts.join("_");
-        let type_name = utils::struct_name_from_names(&namespace, &model);
+        let type_name = utils::struct_name_from_names(&namespace, model);
         let mut objects = data_objects_recursion(
             &TypeData::Nested((TypeRef::named(self.type_name()), self.type_mapping.clone())),
             &vec![type_name],
@@ -103,7 +103,7 @@ impl ResolvableObject for ModelDataObject {
             let mut parts = type_name.split('_').collect::<Vec<&str>>();
             let model = parts.pop().unwrap();
             let namespace = parts.join("_");
-            let type_name = utils::struct_name_from_names(&namespace, &model);
+            let type_name = utils::struct_name_from_names(&namespace, model);
 
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;

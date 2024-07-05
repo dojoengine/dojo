@@ -19,6 +19,7 @@ use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
 };
+use sqlx::prelude::FromRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -125,28 +126,39 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models: Vec<(String, String, String, String, String, u32, u32, String)> =
-            sqlx::query_as(
-                "SELECT id, namespace, name, class_hash, contract_address, packed_size, \
-                 unpacked_size, layout FROM models",
-            )
-            .fetch_all(&self.pool)
-            .await?;
+        #[derive(FromRow)]
+        struct ModelDb {
+            id: String,
+            namespace: String,
+            name: String,
+            class_hash: String,
+            contract_address: String,
+            packed_size: u32,
+            unpacked_size: u32,
+            layout: String,
+        }
+
+        let models: Vec<ModelDb> = sqlx::query_as(
+            "SELECT id, namespace, name, class_hash, contract_address, packed_size, \
+             unpacked_size, layout FROM models",
+        )
+        .fetch_all(&self.pool)
+        .await?;
 
         let mut models_metadata = Vec::with_capacity(models.len());
         for model in models {
             let schema = self
                 .model_cache
-                .schema(&FieldElement::from_str(&model.0).map_err(ParseError::FromStr)?)
+                .schema(&FieldElement::from_str(&model.id).map_err(ParseError::FromStr)?)
                 .await?;
             models_metadata.push(proto::types::ModelMetadata {
-                namespace: model.1,
-                name: model.2,
-                class_hash: model.3,
-                contract_address: model.4,
-                packed_size: model.5,
-                unpacked_size: model.6,
-                layout: model.7.as_bytes().to_vec(),
+                namespace: model.namespace,
+                name: model.name,
+                class_hash: model.class_hash,
+                contract_address: model.contract_address,
+                packed_size: model.packed_size,
+                unpacked_size: model.unpacked_size,
+                layout: model.layout.as_bytes().to_vec(),
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
@@ -978,8 +990,8 @@ fn map_row_to_entity(
         FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
         .iter_mut()
-        .map(|mut schema| {
-            map_row_to_ty("", &schema.name(), &mut schema, row, arrays_rows)?;
+        .map(|schema| {
+            map_row_to_ty("", &schema.name(), schema, row, arrays_rows)?;
             Ok(schema.as_struct().unwrap().clone().into())
         })
         .collect::<Result<Vec<_>, Error>>()?;
