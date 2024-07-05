@@ -19,7 +19,7 @@ use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
-use crate::utils::extract;
+use crate::utils;
 pub struct EntityObject;
 
 impl BasicObject for EntityObject {
@@ -117,11 +117,11 @@ fn model_union_field() -> Field {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
 
-                    let entity_id = extract::<String>(indexmap, "id")?;
+                    let entity_id = utils::extract::<String>(indexmap, "id")?;
                     // fetch name from the models table
                     // using the model id (hashed model name)
-                    let model_ids: Vec<(String, String)> = sqlx::query_as(
-                        "SELECT id, name
+                    let model_ids: Vec<(String, String, String)> = sqlx::query_as(
+                        "SELECT id, namespace, name
                         FROM models
                         WHERE id IN (    
                             SELECT model_id
@@ -134,14 +134,14 @@ fn model_union_field() -> Field {
                     .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for (id, name) in model_ids {
+                    for (id, namespace, name) in model_ids {
                         // the model id in the model mmeebrs table is the hashed model name (id)
                         let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
                         // but the table name for the model data is the unhashed model name
                         let data: ValueMapping = match model_data_recursive_query(
                             &mut conn,
-                            vec![name.clone()],
+                            vec![format!("{namespace}-{name}")],
                             &entity_id,
                             &[],
                             &type_mapping,
@@ -153,7 +153,10 @@ fn model_union_field() -> Field {
                             _ => unreachable!(),
                         };
 
-                        results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
+                        results.push(FieldValue::with_type(
+                            FieldValue::owned_any(data),
+                            utils::type_name_from_names(&namespace, &name),
+                        ))
                     }
 
                     Ok(Some(FieldValue::list(results)))
@@ -177,7 +180,7 @@ pub async fn model_data_recursive_query(
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
-    let mut query = format!("SELECT * FROM {} WHERE entity_id = '{}' ", table_name, entity_id);
+    let mut query = format!("SELECT * FROM [{}] WHERE entity_id = '{}' ", table_name, entity_id);
     for (column_idx, index) in indexes.iter().enumerate() {
         query.push_str(&format!("AND idx_{} = {} ", column_idx, index));
     }

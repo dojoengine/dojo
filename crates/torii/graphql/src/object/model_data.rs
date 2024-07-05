@@ -16,7 +16,7 @@ use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
-use crate::utils::extract;
+use crate::utils;
 
 #[derive(FromRow, Deserialize, PartialEq, Eq, Debug)]
 pub struct ModelMember {
@@ -64,9 +64,13 @@ impl BasicObject for ModelDataObject {
     }
 
     fn objects(&self) -> Vec<Object> {
+        let mut parts = self.type_name().split('_').collect::<Vec<&str>>();
+        let model = parts.pop().unwrap();
+        let namespace = parts.join("_");
+        let type_name = utils::struct_name_from_names(&namespace, model);
         let mut objects = data_objects_recursion(
             &TypeData::Nested((TypeRef::named(self.type_name()), self.type_mapping.clone())),
-            &vec![self.type_name().to_string()],
+            &vec![type_name],
         );
 
         // root object requires entity_field association
@@ -96,7 +100,10 @@ impl ResolvableObject for ModelDataObject {
         let mut field = Field::new(self.name().1, TypeRef::named(field_type), move |ctx| {
             let type_mapping = type_mapping.clone();
             let where_mapping = where_mapping.clone();
-            let type_name = type_name.clone();
+            let mut parts = type_name.split('_').collect::<Vec<&str>>();
+            let model = parts.pop().unwrap();
+            let namespace = parts.join("_");
+            let type_name = utils::struct_name_from_names(&namespace, model);
 
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -188,7 +195,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                             Value::Object(indexmap) => {
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                                 let entity_id =
-                                    extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
+                                    utils::extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
 
                                 // if we already fetched our model data, return it
                                 if let Some(data) = indexmap.get(&field_name) {
@@ -242,7 +249,7 @@ fn entity_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let entity_id = extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
+                    let entity_id = utils::extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
                     let data =
                         fetch_single_row(&mut conn, ENTITY_TABLE, ID_COLUMN, &entity_id).await?;
                     let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;

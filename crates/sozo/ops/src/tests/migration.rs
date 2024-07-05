@@ -388,24 +388,18 @@ async fn migration_with_mismatching_world_address_and_seed() {
 
     let default_namespace = get_default_namespace_from_ws(&ws);
 
-    let result = prepare_migration_with_world_and_seed(
+    let strategy = prepare_migration_with_world_and_seed(
         base_dir,
         target_dir,
-        Some(felt!("0x1")),
+        Some(FieldElement::ONE),
         "sozo_test",
         &default_namespace,
-    );
+    )
+    .unwrap();
 
-    assert!(result.is_err());
-
-    let error_message = result.unwrap_err().to_string();
-
-    assert_eq!(
-        error_message,
-        "Calculated world address doesn't match provided world address.\nIf you are deploying \
-         with custom seed make sure `world_address` is correctly configured (or not set) \
-         `Scarb.toml`"
-    );
+    // The strategy.world has it's address set with the seed directly, and not
+    // from the world address provided by the user.
+    assert_ne!(strategy.world_address.unwrap(), strategy.world.unwrap().contract_address);
 }
 
 /// Get the hash from a IPFS URI

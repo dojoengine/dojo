@@ -17,32 +17,29 @@ message WorldMetadata {
 }
 
 message ModelMetadata {
+    // Model namespace
+    string namespace = 1;
     // Model name
-    string name = 1;
+    string name = 2;
     // Model size when it is packed for storage
-    uint32 packed_size = 2;
+    uint32 packed_size = 3;
     // Model size when it is unpacked
-    uint32 unpacked_size = 3;
+    uint32 unpacked_size = 4;
     // hex-encoded class hash of the component
-    string class_hash = 4;
+    string class_hash = 5;
     // The layout of the component in bytes
-    bytes layout = 5;
+    bytes layout = 6;
     // The schema of the component serialized in bytes (for simplicity sake)
-    bytes schema = 6;
+    bytes schema = 7;
     // hex-encoded contract address of the component
-    string contract_address = 7;
-}
-
-message Model {
-    string name = 1;
-    repeated Member members = 2;
+    string contract_address = 8;
 }
 
 message Entity {
     // The entity's hashed keys
     bytes hashed_keys = 1;
     // Models of the entity
-    repeated Model models = 2;
+    repeated Struct models = 2;
 }
 
 message Event {
@@ -100,8 +97,8 @@ message Clause {
 }
 
 message ModelKeysClause {
-    string model = 1;
-    repeated bytes keys = 2;
+    string model = 2;
+    repeated bytes keys = 3;
 }
 
 message EntityKeysClause {
@@ -112,9 +109,9 @@ message EntityKeysClause {
 }
 
 message KeysClause {
-    repeated bytes keys = 1;
-    PatternMatching pattern_matching = 2;
-    repeated string models = 3;
+    repeated bytes keys = 2;
+    PatternMatching pattern_matching = 3;
+    repeated string models = 4;
 }
 
 message HashedKeysClause {
@@ -122,16 +119,15 @@ message HashedKeysClause {
 }
 
 message MemberClause {
-    string model = 1;
-    string member = 2;
-    ComparisonOperator operator = 3;
-    Value value = 4;
+    string model = 2;
+    string member = 3;
+    ComparisonOperator operator = 4;
+    Value value = 5;
 }
 
 message CompositeClause {
-    string model = 1;
-    LogicalOperator operator = 2;
-    repeated Clause clauses = 3;
+    LogicalOperator operator = 3;
+    repeated Clause clauses = 4;
 }
 
 enum PatternMatching {

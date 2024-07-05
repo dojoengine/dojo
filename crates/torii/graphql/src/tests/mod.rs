@@ -5,19 +5,16 @@ use async_graphql::dynamic::Schema;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
-use dojo_test_utils::sequencer::{
-    get_default_test_starknet_config, SequencerConfig, TestSequencer,
-};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::manifest::utils::get_default_namespace_from_ws;
-use dojo_world::manifest::DeploymentManifest;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use scarb::compiler::Profile;
+use katana_runner::KatanaRunner;
 use scarb::ops;
 use serde::Deserialize;
 use serde_json::Value;
@@ -25,7 +22,7 @@ use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::accounts::{Account, Call};
-use starknet::core::types::{BlockId, BlockTag, FieldElement, InvokeTransactionResult};
+use starknet::core::types::{FieldElement, InvokeTransactionResult};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -215,6 +212,7 @@ pub async fn run_graphql_subscription(
 
 pub async fn model_fixtures(db: &mut Sql) {
     db.register_model(
+        "types_test",
         Ty::Struct(Struct {
             name: "Record".to_string(),
             children: vec![
@@ -296,7 +294,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let default_namespace = get_default_namespace_from_ws(&ws);
 
-    let migration = prepare_migration(
+    let mut migration = prepare_migration(
         source_project_dir,
         target_path,
         dojo_metadata.skip_migration,
@@ -304,34 +302,29 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     )
     .unwrap();
 
+    migration.resolve_variable(migration.world.clone().unwrap().contract_address).unwrap();
+
     let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
-    let mut account = sequencer.account();
-    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+    let account = sequencer.account(0);
 
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
-    let ws = ops::read_workspace(config.manifest_path(), &config)
-        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
-
-    let manifest =
-        DeploymentManifest::load_from_remote(&provider, migration.world_address().unwrap())
-            .await
-            .unwrap();
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 
     //  Execute `create` and insert 11 records into storage
-    // TODO: `manifest_name` is probably not the correct field to use => handle namespace.
-    let records_contract = manifest
+    let records_contract = output
         .contracts
         .iter()
-        .find(|contract| contract.manifest_name.eq("types_test-records"))
+        .find(|contract| contract.as_ref().unwrap().tag.eq("types_test-records"))
         .unwrap();
-    let record_contract_address = records_contract.inner.address.unwrap();
+
+    let record_contract_address = records_contract.as_ref().unwrap().contract_address;
+
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],
