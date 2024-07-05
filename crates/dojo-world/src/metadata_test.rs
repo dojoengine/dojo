@@ -6,7 +6,7 @@ use dojo_test_utils::compiler;
 use scarb::ops;
 use url::Url;
 
-use crate::manifest::utils::{get_filename_from_tag, TAG_SEPARATOR};
+use crate::contracts::naming::{get_filename_from_tag, TAG_SEPARATOR};
 use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 use crate::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, ProjectMetadata, Uri, WorldMetadata, ABIS_DIR,

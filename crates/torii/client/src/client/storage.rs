@@ -143,7 +143,7 @@ mod tests {
 
     use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
-    use dojo_world::manifest::utils::compute_model_selector_from_names;
+    use dojo_world::contracts::naming::compute_model_selector_from_names;
     use parking_lot::RwLock;
     use starknet::macros::felt;
 
