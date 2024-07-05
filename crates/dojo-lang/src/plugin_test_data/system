@@ -461,11 +461,6 @@ error: Unsupported attribute.
 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:92:5
-    #[my_attr]
-    ^********^
-
-error: Unsupported attribute.
  --> test_src/lib.cairo:124:1
 #[dojo::contract]
 ^***************^
@@ -1296,40 +1291,19 @@ impl EventDrop of core::traits::Drop::<Event>;
 
                 #[starknet::interface]
                 trait IFaultyTrait<TContractState> {
-                    
-    #[my_attr]
-    fn do_with_attrs(self: @TContractState, p1: u8) -> u16;
-
+                    fn do_with_attrs(self: @TContractState, p1: u8) -> u16;
                 }
 
                 #[starknet::interface]
                 trait INominalTrait<TContractState> {
-                        fn do_no_param(self: @TContractState) -> felt252;
-    fn do_no_param_but_world(self: @TContractState) -> felt252;
-    fn do_no_param_but_world_ref(ref self: TContractState) -> felt252;
-    fn do_params_no_world(self: @TContractState, p1: felt252, p2: u8) -> felt252;
-    fn do_params_and_world(self: @TContractState, p2: u8) -> felt252;
-    fn do_params_and_world_ref(ref self: TContractState, p2: u8) -> felt252;
-
-    fn do_with_self(self: @ContractState) -> felt252;
-    fn do_with_ref_self(ref self: ContractState) -> felt252;
-
+                    fn do_no_param(self: @TContractState) -> felt252;fn do_no_param_but_world(self: @TContractState) -> felt252;fn do_no_param_but_world_ref(ref self: TContractState) -> felt252;fn do_params_no_world(self: @TContractState, p1: felt252, p2: u8) -> felt252;fn do_params_and_world(self: @TContractState, p2: u8) -> felt252;fn do_params_and_world_ref(ref self: TContractState, p2: u8) -> felt252;fn do_with_self(self: @ContractState) -> felt252;fn do_with_ref_self(ref self: ContractState) -> felt252;
                 }
 
                 #[starknet::interface]
                 trait IFaultyTrait<TContractState> {
-                        fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252;
-    fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;
-    fn do_with_self_and_world_inv(self: @TContractState, self: @ContractState) -> felt252;
-    fn do_with_ref_self_and_world_inv(
-ref self: TContractState, ref self: ContractState
-    ) -> felt252;
-    fn do_with_several_world_dispatchers(
-self: @TContractState, vec: Vec2, ref another_world: IWorldDispatcher
-    ) -> felt252;
-    fn do_with_world_not_named_world(self: @TContractState, another_world: @IWorldDispatcher) -> felt252;
-    fn do_with_world_not_first(self: @TContractState, vec: Vec2, ref world: IWorldDispatcher) -> felt252;
-
+                    fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252;fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;fn do_with_self_and_world_inv(self: @TContractState, self: @ContractState) -> felt252;fn do_with_ref_self_and_world_inv(ref self: TContractState, ref self: ContractState
+) -> felt252;fn do_with_several_world_dispatchers(self: @TContractState, vec: Vec2, ref another_world: IWorldDispatcher
+) -> felt252;fn do_with_world_not_named_world(self: @TContractState, another_world: @IWorldDispatcher) -> felt252;fn do_with_world_not_first(self: @TContractState, vec: Vec2, ref world: IWorldDispatcher) -> felt252;
                 }
 
                 #[starknet::contract]
