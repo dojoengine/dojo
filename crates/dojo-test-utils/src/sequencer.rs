@@ -149,7 +149,7 @@ impl TestSequencer {
 pub fn get_default_test_starknet_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
-        env: Environment { chain_id: ChainId::GOERLI, ..Default::default() },
+        env: Environment { chain_id: ChainId::SEPOLIA, ..Default::default() },
         ..Default::default()
     }
 }
