@@ -336,7 +336,7 @@ mod tests {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             let model = Ty::Struct(Struct {
-                name: model_type_name,
+                name: model_name,
                 children: vec![Member {
                     name: "type_u8".into(),
                     key: false,

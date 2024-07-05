@@ -14,6 +14,7 @@ use crate::constants::{
 };
 use crate::mapping::MODEL_TYPE_MAPPING;
 use crate::object::resolve_one;
+use crate::utils;
 
 const ORDER_BY_NAME: &str = "NAME";
 const ORDER_BY_HASH: &str = "CLASS_HASH";
@@ -104,8 +105,10 @@ impl ModelObject {
     pub fn value_mapping(model: Model) -> ValueMapping {
         IndexMap::from([
             (Name::new("id"), Value::from(model.id)),
-            (Name::new("name"), Value::from(model.name)),
-            (Name::new("namespace"), Value::from(model.namespace)),
+            (
+                Name::new("name"),
+                Value::from(utils::struct_name_from_names(&model.namespace, &model.name)),
+            ),
             (Name::new("classHash"), Value::from(model.class_hash)),
             (Name::new("contractAddress"), Value::from(model.contract_address)),
             (Name::new("transactionHash"), Value::from(model.transaction_hash)),
