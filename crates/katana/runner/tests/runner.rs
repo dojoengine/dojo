@@ -11,8 +11,6 @@ async fn test_run() {
         })
         .expect("failed to start another katana");
 
-        println!("ohayo");
-
         let _block_number = runner.provider().block_number().await.unwrap();
         // created by the macro at the beginning of the test
         let _other_block_number = runner.provider().block_number().await.unwrap();
