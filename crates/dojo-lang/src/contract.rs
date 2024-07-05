@@ -543,6 +543,17 @@ impl DojoContract {
         let has_generate_trait = !generate_attrs.is_empty();
 
         if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
+            // We shouldn't have generic param in the case of contract's endpoints.
+            let impl_node = RewriteNode::Mapped {
+                node: Box::new(RewriteNode::Text(format!(
+                    "{} impl {} of {} {{",
+                    impl_ast.attributes(db).as_syntax_node().get_text(db),
+                    impl_ast.name(db).as_syntax_node().get_text(db),
+                    impl_ast.trait_path(db).as_syntax_node().get_text(db),
+                ))),
+                origin: impl_ast.as_syntax_node().span_without_trivia(db),
+            };
+
             let body_nodes: Vec<_> = body
                 .items(db)
                 .elements(db)
@@ -555,7 +566,7 @@ impl DojoContract {
                 })
                 .collect();
 
-            let node = RewriteNode::Mapped {
+            let body_node = RewriteNode::Mapped {
                 node: Box::new(RewriteNode::interpolate_patched(
                     "$body$",
                     &UnorderedHashMap::from([(
@@ -566,7 +577,7 @@ impl DojoContract {
                 origin: impl_ast.as_syntax_node().span_without_trivia(db),
             };
 
-            return vec![node];
+            return vec![impl_node, body_node, RewriteNode::Text("}".to_string())];
         }
 
         vec![RewriteNode::Copied(impl_ast.as_syntax_node())]

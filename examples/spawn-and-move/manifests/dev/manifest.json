@@ -1130,8 +1130,8 @@
     {
       "kind": "DojoContract",
       "address": "0x2a570e12405096e725508ba1f4ade127edd42e0fcb5890b8f12f76ef043623",
-      "class_hash": "0x765dacf13f90d800ed386486fbfcb097b2c805edfa6c26bfaec4cce88e7b5da",
-      "original_class_hash": "0x765dacf13f90d800ed386486fbfcb097b2c805edfa6c26bfaec4cce88e7b5da",
+      "class_hash": "0x7b394d087b5cf4f3b740253c591138bf98d177ef0d9b5c00b0477a145f3fb75",
+      "original_class_hash": "0x7b394d087b5cf4f3b740253c591138bf98d177ef0d9b5c00b0477a145f3fb75",
       "base_class_hash": "0x22f3e55b61d86c2ac5239fa3b3b8761f26b9a5c0b5f61ddbd5d756ced498b46",
       "abi": [
         {
@@ -1247,6 +1247,179 @@
                 }
               ],
               "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "ActionsComputedImpl",
+          "interface_name": "dojo_examples::actions::IActionsComputed"
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Vec2",
+          "members": [
+            {
+              "name": "x",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "y",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Position",
+          "members": [
+            {
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "vec",
+              "type": "dojo_examples::models::Vec2"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo_examples::actions::IActionsComputed",
+          "items": [
+            {
+              "type": "function",
+              "name": "tile_terrain",
+              "inputs": [
+                {
+                  "name": "vec",
+                  "type": "dojo_examples::models::Vec2"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "quadrant",
+              "inputs": [
+                {
+                  "name": "pos",
+                  "type": "dojo_examples::models::Position"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::integer::u8"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "ActionsImpl",
+          "interface_name": "dojo_examples::actions::IActions"
+        },
+        {
+          "type": "enum",
+          "name": "dojo_examples::models::Direction",
+          "variants": [
+            {
+              "name": "None",
+              "type": "()"
+            },
+            {
+              "name": "Left",
+              "type": "()"
+            },
+            {
+              "name": "Right",
+              "type": "()"
+            },
+            {
+              "name": "Up",
+              "type": "()"
+            },
+            {
+              "name": "Down",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo_examples::actions::IActions",
+          "items": [
+            {
+              "type": "function",
+              "name": "spawn",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "move",
+              "inputs": [
+                {
+                  "name": "direction",
+                  "type": "dojo_examples::models::Direction"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "set_player_config",
+              "inputs": [
+                {
+                  "name": "name",
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "get_player_position",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "dojo_examples::models::Position"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "reset_player_config",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "set_player_server_profile",
+              "inputs": [
+                {
+                  "name": "server_id",
+                  "type": "core::integer::u32"
+                },
+                {
+                  "name": "name",
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
