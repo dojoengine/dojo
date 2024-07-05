@@ -21,9 +21,5 @@ pub fn listen_to_stdout(log_file: &Path, stdout: ChildStdout) {
     for line in reader.lines() {
         let line = line.expect("failed to read line from subprocess stdout");
         writeln!(log_writer, "{}", line).expect("failed to write to log file");
-
-        // if line.contains(r#""target":"katana::cli""#) {
-        //     sender.send(()).expect("failed to send start signal");
-        // }
     }
 }
