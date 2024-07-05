@@ -39,9 +39,10 @@ where
         let mut seq = serializer.serialize_seq(Some(da.len()))?;
 
         for d in da {
-            let decimal: BigDecimal = d.to_bigint().into(); // Convert with no decimal places
-            let num = decimal.to_string();
-            seq.serialize_element(&num)?;
+            // let decimal: BigDecimal = d.to_bigint().into(); // Convert with no decimal places
+            // let num = decimal.to_string();
+            // seq.serialize_element(&num)?;
+            seq.serialize_element(&d)?;
         }
 
         seq.end()
@@ -289,9 +290,10 @@ impl MessageToStarknet {
             let serialized = message.serialize().unwrap();
             // Instead of adding serialized as an array, add each element individually
             for field_element in serialized {
-                let decimal: BigDecimal = field_element.to_bigint().into(); // Assuming no decimal places for simplicity
-                let num = decimal.to_string();
-                seq.serialize_element(&num)?;
+                // let decimal: BigDecimal = field_element.to_bigint().into(); // Assuming no
+                // decimal places for simplicity let num = decimal.to_string();
+                // seq.serialize_element(&num)?;
+                seq.serialize_element(&field_element)?;
             }
         }
         seq.end()
@@ -332,8 +334,22 @@ impl MessageToStarknet {
                         .next_element::<String>()?
                         .map(|num| Felt::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
+
                     let payload_length_str = seq.next_element::<String>()?.unwrap_or_default();
-                    let payload_length: usize = payload_length_str.parse().unwrap_or_default();
+                    // TODO: for compatibility reason, the length can be in either decimal or hex
+                    // format. maybe should just expect all values to be in hex format.
+                    let payload_length = payload_length_str
+                        .parse::<usize>()
+                        .or_else(|_| {
+                            usize::from_str_radix(
+                                payload_length_str
+                                    .strip_prefix("0x")
+                                    .unwrap_or(&payload_length_str),
+                                16,
+                            )
+                        })
+                        .expect("invalid length value");
+
                     let mut payload = Vec::new();
                     for _ in 0..payload_length {
                         if let Some(element) = seq
@@ -379,9 +395,10 @@ impl MessageToAppchain {
         for message in messages {
             let serialized = message.serialize().unwrap();
             for field_element in serialized {
-                let decimal: BigDecimal = field_element.to_bigint().into(); // Assuming no decimal places for simplicity
-                let num = decimal.to_string();
-                seq.serialize_element(&num)?;
+                // let decimal: BigDecimal = field_element.to_bigint().into(); // Assuming no
+                // decimal places for simplicity let num = decimal.to_string();
+                // seq.serialize_element(&num)?;
+                seq.serialize_element(&field_element)?;
             }
         }
         seq.end()
@@ -430,8 +447,22 @@ impl MessageToAppchain {
                         .next_element::<String>()?
                         .map(|num| Felt::from_str(&num.to_string()).unwrap())
                         .unwrap_or_default();
+
                     let payload_length_str = seq.next_element::<String>()?.unwrap_or_default();
-                    let payload_length: usize = payload_length_str.parse().unwrap_or_default();
+                    // TODO: for compatibility reason, the length can be in either decimal or hex
+                    // format. maybe should just expect all values to be in hex format.
+                    let payload_length = payload_length_str
+                        .parse::<usize>()
+                        .or_else(|_| {
+                            usize::from_str_radix(
+                                payload_length_str
+                                    .strip_prefix("0x")
+                                    .unwrap_or(&payload_length_str),
+                                16,
+                            )
+                        })
+                        .expect("invalid length value");
+
                     let mut payload = Vec::new();
                     for _ in 0..payload_length {
                         if let Some(element) = seq
@@ -462,30 +493,29 @@ fn test_deserialize_input() -> anyhow::Result<()> {
     use std::str::FromStr;
 
     let input = r#"{
-        "prev_state_root":"101",
-        "block_number":102,
-        "block_hash":"103",
-        "config_hash":"104",
-        "message_to_starknet_segment":["105","106","1","1"],
-        "message_to_appchain_segment":["108","109","110","111","1","112"],
+        "prev_state_root":"0x65",
+        "block_number": 102,
+        "block_hash":"0x67",
+        "config_hash":"0x68",
+        "message_to_starknet_segment":["0x69","0x6a","0x1","0x1"],
+        "message_to_appchain_segment":["0x6c","0x6d","0x6e","0x6f","0x1","0x70"],
         "storage_updates":{
-            "42": {
-                "2010": "1200",
-                "2012": "1300"
+            "0x2a": {
+                "0x7dc": "0x514",
+                "0x7da": "0x4b0"
             }
         },
         "nonce_updates":{
-            "1111": "22222",
-            "1116": "22223"
+            "0x457": "0x56ce",
+            "0x45c": "0x56cf"
         },
         "contract_updates":{
-            "3": "437267489"
+            "0x3": "0x1a102c21"
         },
         "declared_classes":{
-            "1234": "12345"
+            "0x4d2": "0x3039"
         }
     }"#;
-
     let mut expected = ProgramInput {
         prev_state_root: Felt::from_str("101")?,
         block_number: 102,
@@ -620,31 +650,31 @@ fn test_serialize_input() -> anyhow::Result<()> {
 #[test]
 fn test_serialize_to_prover_args() -> anyhow::Result<()> {
     let input = r#"{
-        "prev_state_root":"101",
+        "prev_state_root":"0x65",
         "block_number":102,
-        "block_hash":"103",
-        "config_hash":"104",
+        "block_hash":"0x67",
+        "config_hash":"0x68",
         "nonce_updates":{
-            "1111": "22222"
+            "0x457": "0x56ce"
         },
         "storage_updates":{
-            "333": {
-                "4444": "555"
+            "0x14d": {
+                "0x115c": "0x22b"
             }
         },
         "contract_updates":{
-            "66666": "7777"
+            "0x1046a": "0x1e61"
         },
         "declared_classes":{
-            "88888": "99999"
+            "0x15b38": "0x1869f"
         },
-        "message_to_starknet_segment":["123","456","123","128"],
-        "message_to_appchain_segment":["108","109","110","111","1","112"]
+        "message_to_starknet_segment":["0x7b","0x1c8","0x7b","0x80"],
+        "message_to_appchain_segment":["0x6c","0x6d","0x6e","0x6f","0x1","0x70"]
     }"#;
     let mut input = serde_json::from_str::<ProgramInput>(input)?;
     input.fill_da(Felt::from_str("333")?);
 
-    println!("{:?}", input);
+    // println!("{:?}", input);
 
     let serialized = input.serialize_to_prover_args();
 
