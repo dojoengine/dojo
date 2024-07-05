@@ -4,7 +4,8 @@ use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_world::manifest::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
-use scarb::{core::Config, ops};
+use scarb::core::Config;
+use scarb::ops;
 use tracing::trace;
 
 #[derive(Debug, Args)]
@@ -50,10 +51,9 @@ impl CleanArgs {
             profiles.dedup();
             profiles
         } else {
-            vec![ws
-                .current_profile()
-                .expect("Scarb profile is expected at this point.")
-                .to_string()]
+            vec![
+                ws.current_profile().expect("Scarb profile is expected at this point.").to_string(),
+            ]
         };
 
         for profile_name in profile_names {

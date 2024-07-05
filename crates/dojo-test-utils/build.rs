@@ -24,7 +24,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../dojo-lang/src");
     println!("cargo:rerun-if-changed=../../bin/sozo/src");
 
-    fn compile(path: &str, profile: Profile) {
+    fn compile(path: &str, profile: &Profile) {
         let target_path = Utf8PathBuf::from_path_buf(format!("{}/target", path).into()).unwrap();
         if target_path.exists() {
             return;
