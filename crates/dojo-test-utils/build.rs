@@ -25,7 +25,8 @@ fn main() {
     println!("cargo:rerun-if-changed=../../bin/sozo/src");
 
     fn compile(path: &str, profile: &Profile) {
-        let target_path = Utf8PathBuf::from_path_buf(format!("{}/target", path).into()).unwrap();
+        let target_path =
+            Utf8PathBuf::from_path_buf(format!("{}/target/{}", path, profile).into()).unwrap();
         if target_path.exists() {
             return;
         }

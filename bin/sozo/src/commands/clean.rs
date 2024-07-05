@@ -91,7 +91,8 @@ impl CleanArgs {
     }
 }
 
-// these tests assume `example/spawn-and-move` is build for `dev` and `release` profile
+// these tests assume `example/spawn-and-move` is build for `dev` and `release` profile,
+// which are normally built by the `build.rs` of `dojo-test-utils`.
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler;
