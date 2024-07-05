@@ -411,9 +411,7 @@ mod test {
                 vec![
                     (
                         "identity".to_string(),
-                        crate::typed_data::PrimitiveType::String(
-                            account.0.to_string(),
-                        ),
+                        crate::typed_data::PrimitiveType::String(account.0.to_string()),
                     ),
                     (
                         "message".to_string(),
