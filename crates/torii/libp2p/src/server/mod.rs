@@ -622,35 +622,33 @@ async fn validate_message(
     db: &Sql,
     message: &IndexMap<String, PrimitiveType>,
 ) -> Result<Ty, Error> {
-    let (namespace, model_name) = if let Some(model_name) = message.get("model") {
+    let (selector, model) = if let Some(model_name) = message.get("model") {
         if let PrimitiveType::String(model_name) = model_name {
-            model_name.split_once('-').ok_or_else(|| {
+            let (namespace, name) = model_name.split_once('-').ok_or_else(|| {
                 Error::InvalidMessageError(
                     "Model name is not in the format namespace-model".to_string(),
                 )
-            })?
+            })?;
+
+            (compute_model_selector_from_names(namespace, name), model_name)
         } else {
             return Err(Error::InvalidMessageError("Model name is not a string".to_string()));
         }
     } else {
         return Err(Error::InvalidMessageError("Model name is missing".to_string()));
     };
-    let model_selector = compute_model_selector_from_names(namespace, model_name);
 
     let mut ty = db
-        .model(model_selector)
+        .model(selector)
         .await
-        .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model_name, e)))?
+        .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model, e)))?
         .schema()
         .await
         .map_err(|e| {
-            Error::InvalidMessageError(format!(
-                "Failed to get schema for model {}: {}",
-                model_name, e
-            ))
+            Error::InvalidMessageError(format!("Failed to get schema for model {}: {}", model, e))
         })?;
 
-    if let Some(object) = message.get(model_name) {
+    if let Some(object) = message.get(model) {
         parse_value_to_ty(object, &mut ty)?;
     } else {
         return Err(Error::InvalidMessageError("Model is missing".to_string()));
