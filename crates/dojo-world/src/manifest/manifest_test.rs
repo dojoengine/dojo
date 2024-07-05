@@ -16,8 +16,8 @@ use super::{
     parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel, OverlayDojoContract,
     OverlayManifest,
 };
+use crate::contracts::naming::{get_filename_from_tag, get_tag};
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::utils::{get_filename_from_tag, get_tag};
 use crate::manifest::{
     parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, OverlayClass,
     OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,

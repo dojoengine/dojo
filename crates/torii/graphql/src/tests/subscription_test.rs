@@ -7,7 +7,7 @@ mod tests {
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abi::model::Layout;
-    use dojo_world::manifest::utils::compute_model_selector_from_names;
+    use dojo_world::contracts::naming::compute_model_selector_from_names;
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
