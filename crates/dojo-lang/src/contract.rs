@@ -5,7 +5,9 @@ use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::node::ast::{ArgClause, Expr, MaybeModuleBody, OptionArgListParenthesized};
+use cairo_lang_syntax::node::ast::{
+    ArgClause, Expr, MaybeModuleBody, OptionArgListParenthesized, OptionReturnTypeClause,
+};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
@@ -243,7 +245,14 @@ impl DojoContract {
         fn_ast: &ast::FunctionWithBody,
     ) -> Vec<RewriteNode> {
         let fn_decl = fn_ast.declaration(db);
-        let fn_name = fn_decl.name(db).text(db);
+
+        if let OptionReturnTypeClause::ReturnTypeClause(_) = fn_decl.signature(db).ret_ty(db) {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: fn_ast.stable_ptr().untyped(),
+                message: "The dojo_init function cannot have a return type.".to_string(),
+                severity: Severity::Error,
+            });
+        }
 
         let (params_str, was_world_injected) = self.rewrite_parameters(
             db,
@@ -251,39 +260,66 @@ impl DojoContract {
             fn_ast.stable_ptr().untyped(),
         );
 
-        let mut world_read = "";
-        if was_world_injected {
-            world_read = "let world = self.world_dispatcher.read();";
-        }
-
-        let body = fn_ast.body(db).as_syntax_node().get_text(db);
-
-        let node = RewriteNode::interpolate_patched(
-            "
-                #[starknet::interface]
-                trait IDojoInit<ContractState> {
-                    fn $name$($params_str$);
-                }
-
-                #[abi(embed_v0)]
-                impl IDojoInitImpl of IDojoInit<ContractState> {
-                    fn $name$($params_str$) {
-                        $world_read$
-                        assert(starknet::get_caller_address() == self.world().contract_address, \
-             'Only world can init');
-                        $body$
-                    }
-                }
+        let trait_node = RewriteNode::interpolate_patched(
+            "#[starknet::interface]
+            trait IDojoInit<ContractState> {
+                fn dojo_init($params_str$);
+            }
             ",
-            &UnorderedHashMap::from([
-                ("name".to_string(), RewriteNode::Text(fn_name.to_string())),
-                ("params_str".to_string(), RewriteNode::Text(params_str)),
-                ("body".to_string(), RewriteNode::Text(body)),
-                ("world_read".to_string(), RewriteNode::Text(world_read.to_string())),
-            ]),
+            &UnorderedHashMap::from([(
+                "params_str".to_string(),
+                RewriteNode::Text(params_str.clone()),
+            )]),
         );
 
-        vec![node]
+        let impl_node = RewriteNode::Text(
+            "
+            #[abi(embed_v0)]
+            impl IDojoInitImpl of IDojoInit<ContractState> {
+            "
+            .to_string(),
+        );
+
+        let declaration_node = RewriteNode::Mapped {
+            node: Box::new(RewriteNode::Text(format!("fn dojo_init({}) {{", params_str))),
+            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
+        };
+
+        let world_line_node = if was_world_injected {
+            RewriteNode::Text("let world = self.world_dispatcher.read();".to_string())
+        } else {
+            RewriteNode::empty()
+        };
+
+        let assert_world_caller_node = RewriteNode::Text(
+            "assert(starknet::get_caller_address() == self.world().contract_address, 'Only world \
+             can init');"
+                .to_string(),
+        );
+
+        let func_nodes = fn_ast
+            .body(db)
+            .statements(db)
+            .elements(db)
+            .iter()
+            .map(|e| RewriteNode::Mapped {
+                node: Box::new(RewriteNode::from(e.as_syntax_node())),
+                origin: e.as_syntax_node().span_without_trivia(db),
+            })
+            .collect::<Vec<_>>();
+
+        let mut nodes = vec![
+            trait_node,
+            impl_node,
+            declaration_node,
+            world_line_node,
+            assert_world_caller_node,
+        ];
+        nodes.extend(func_nodes);
+        // Close the init function + close the impl block.
+        nodes.push(RewriteNode::Text("}\n}".to_string()));
+
+        nodes
     }
 
     pub fn merge_event(
@@ -436,22 +472,6 @@ impl DojoContract {
         (params.join(", "), world_injection != WorldParamInjectionKind::None)
     }
 
-    /// Rewrites function statements by adding the reading of `world` at first statement.
-    pub fn rewrite_statements(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        statement_list: ast::StatementList,
-    ) -> String {
-        let mut statements = statement_list
-            .elements(db)
-            .iter()
-            .map(|e| e.as_syntax_node().get_text(db))
-            .collect::<Vec<_>>();
-
-        statements.insert(0, "let world = self.world_dispatcher.read();\n".to_string());
-        statements.join("")
-    }
-
     /// Rewrites function declaration by:
     ///  * adding `self` parameter if missing,
     ///  * removing `world` if present as first parameter (self excluded),
@@ -465,13 +485,40 @@ impl DojoContract {
         fn_ast: ast::FunctionWithBody,
         has_generate_trait: bool,
     ) -> Vec<RewriteNode> {
-        let mut rewritten_fn = RewriteNode::from_ast(&fn_ast);
+        let fn_name = fn_ast.declaration(db).name(db).text(db);
+        let return_type =
+            fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
 
         let (params_str, was_world_injected) = self.rewrite_parameters(
             db,
             fn_ast.declaration(db).signature(db).parameters(db),
             fn_ast.stable_ptr().untyped(),
         );
+
+        let declaration_node = RewriteNode::Mapped {
+            node: Box::new(RewriteNode::Text(format!(
+                "fn {}({}) {} {{",
+                fn_name, params_str, return_type
+            ))),
+            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
+        };
+
+        let world_line_node = if was_world_injected {
+            RewriteNode::Text("let world = self.world_dispatcher.read();".to_string())
+        } else {
+            RewriteNode::empty()
+        };
+
+        let func_nodes = fn_ast
+            .body(db)
+            .statements(db)
+            .elements(db)
+            .iter()
+            .map(|e| RewriteNode::Mapped {
+                node: Box::new(RewriteNode::from(e.as_syntax_node())),
+                origin: e.as_syntax_node().span_without_trivia(db),
+            })
+            .collect::<Vec<_>>();
 
         if has_generate_trait && was_world_injected {
             self.diagnostics.push(PluginDiagnostic {
@@ -483,26 +530,11 @@ impl DojoContract {
             });
         }
 
-        // We always rewrite the params as the self parameter is added based on the
-        // world mutability.
-        let rewritten_params = rewritten_fn
-            .modify_child(db, ast::FunctionWithBody::INDEX_DECLARATION)
-            .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
-            .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS);
-        rewritten_params.set_str(params_str);
+        let mut nodes = vec![declaration_node, world_line_node];
+        nodes.extend(func_nodes);
+        nodes.push(RewriteNode::Text("}".to_string()));
 
-        // If the world was injected, we also need to rewrite the statements of the function
-        // to ensure the `world` injection is effective.
-        if was_world_injected {
-            let rewritten_statements = rewritten_fn
-                .modify_child(db, ast::FunctionWithBody::INDEX_BODY)
-                .modify_child(db, ast::ExprBlock::INDEX_STATEMENTS);
-
-            rewritten_statements
-                .set_str(self.rewrite_statements(db, fn_ast.body(db).statements(db)));
-        }
-
-        vec![rewritten_fn]
+        nodes
     }
 
     /// Rewrites all the functions of a Impl block.
@@ -511,6 +543,17 @@ impl DojoContract {
         let has_generate_trait = !generate_attrs.is_empty();
 
         if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
+            // We shouldn't have generic param in the case of contract's endpoints.
+            let impl_node = RewriteNode::Mapped {
+                node: Box::new(RewriteNode::Text(format!(
+                    "{} impl {} of {} {{",
+                    impl_ast.attributes(db).as_syntax_node().get_text(db),
+                    impl_ast.name(db).as_syntax_node().get_text(db),
+                    impl_ast.trait_path(db).as_syntax_node().get_text(db),
+                ))),
+                origin: impl_ast.as_syntax_node().span_without_trivia(db),
+            };
+
             let body_nodes: Vec<_> = body
                 .items(db)
                 .elements(db)
@@ -523,24 +566,18 @@ impl DojoContract {
                 })
                 .collect();
 
-            let mut builder = PatchBuilder::new(db, &impl_ast);
-            builder.add_modified(RewriteNode::interpolate_patched(
-                "$body$",
-                &UnorderedHashMap::from([(
-                    "body".to_string(),
-                    RewriteNode::new_modified(body_nodes),
-                )]),
-            ));
+            let body_node = RewriteNode::Mapped {
+                node: Box::new(RewriteNode::interpolate_patched(
+                    "$body$",
+                    &UnorderedHashMap::from([(
+                        "body".to_string(),
+                        RewriteNode::new_modified(body_nodes),
+                    )]),
+                )),
+                origin: impl_ast.as_syntax_node().span_without_trivia(db),
+            };
 
-            let mut rewritten_impl = RewriteNode::from_ast(&impl_ast);
-            let rewritten_items = rewritten_impl
-                .modify_child(db, ast::ItemImpl::INDEX_BODY)
-                .modify_child(db, ast::ImplBody::INDEX_ITEMS);
-
-            let (code, _) = builder.build();
-
-            rewritten_items.set_str(code);
-            return vec![rewritten_impl];
+            return vec![impl_node, body_node, RewriteNode::Text("}".to_string())];
         }
 
         vec![RewriteNode::Copied(impl_ast.as_syntax_node())]

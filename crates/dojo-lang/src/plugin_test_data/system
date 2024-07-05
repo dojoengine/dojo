@@ -746,9 +746,9 @@ error: Unsupported attribute.
     ^**************^
 
 error: Generated trait must have generic args matching the impl's generic params.
- --> test_src/lib.cairo:164:29
-    impl InternalImplBad of InternalUtils<ContractState> {
-                            ^**************************^
+ --> test_src/lib.cairo:163:5
+    #[generate_trait]
+    ^***************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo:124:1
@@ -1373,52 +1373,19 @@ self: @TContractState, vec: Vec2, ref another_world: IWorldDispatcher
                     impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                         #[abi(embed_v0)]
-    impl TestFaultyImpl of IFaultyTrait<ContractState> {
-        fn do_with_self_and_world(self: @ContractState) -> felt252 {
-            'land'
-        }
-
-        fn do_with_ref_self_and_world(
-            ref self: ContractState        ) -> felt252 {
-            'land'
-        }
-
-        fn do_with_self_and_world_inv(self: @ContractState, self: @ContractState) -> felt252 {
-let world = self.world_dispatcher.read();
-            'land'
-        }
-
-        fn do_with_ref_self_and_world_inv(
-ref self: ContractState, ref self: ContractState
-        ) -> felt252 {
-let world = self.world_dispatcher.read();
-            'land'
-        }
-
-        fn do_with_several_world_dispatchers(
-self: @ContractState, vec: Vec2, ref another_world: IWorldDispatcher
-        ) -> felt252 {
-let world = self.world_dispatcher.read();
-            'land'
-        }
-
-        fn do_with_world_not_named_world(self: @ContractState, another_world: @IWorldDispatcher) -> felt252 {
-            'land'
-        }
-
-        fn do_with_world_not_first(self: @ContractState, vec: Vec2) -> felt252 {
-            'land'
-        }
-    }
-
+ impl TestFaultyImpl  of IFaultyTrait<ContractState>  {fn do_with_self_and_world(self: @ContractState) -> felt252  {            'land'
+}fn do_with_ref_self_and_world(            ref self: ContractState) -> felt252  {            'land'
+}fn do_with_self_and_world_inv(self: @ContractState, self: @ContractState) -> felt252  {let world = self.world_dispatcher.read();            'land'
+}fn do_with_ref_self_and_world_inv(ref self: ContractState, ref self: ContractState
+) -> felt252  {let world = self.world_dispatcher.read();            'land'
+}fn do_with_several_world_dispatchers(self: @ContractState, vec: Vec2, ref another_world: IWorldDispatcher
+) -> felt252  {let world = self.world_dispatcher.read();            'land'
+}fn do_with_world_not_named_world(self: @ContractState, another_world: @IWorldDispatcher) -> felt252  {            'land'
+}fn do_with_world_not_first(self: @ContractState, vec: Vec2) -> felt252  {            'land'
+}}
     #[generate_trait]
-    impl InternalImplBad of InternalUtils<ContractState> {
-        fn bad_func_using_generate(self: @ContractState) -> felt252 {
-let world = self.world_dispatcher.read();
-            'land'
-        }
-    }
-
+ impl InternalImplBad  of InternalUtils<ContractState>  {fn bad_func_using_generate(self: @ContractState) -> felt252  {let world = self.world_dispatcher.read();            'land'
+}}
                     #[starknet::interface]
                     trait IDojoInit<ContractState> {
                         fn dojo_init(self: @ContractState);
@@ -1443,9 +1410,8 @@ let world = self.world_dispatcher.read();
                 #[substorage(v0)]
                 upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
-    trait InternalUtils{
-        fn bad_func_using_generate(self: @ContractState) -> felt252;
-    }
+    trait InternalUtils{fn bad_func_using_generate(self: @ContractState) -> felt252;
+}
 impl EventDrop of core::traits::Drop::<Event>;
             
                 }
@@ -1496,44 +1462,15 @@ impl EventDrop of core::traits::Drop::<Event>;
     }
 
     #[abi(embed_v0)]
-    impl TestNominalImpl of INominalTrait<ContractState> {
-        fn do_no_param(self: @ContractState) -> felt252 {
-            'land'
-        }
-
-        fn do_no_param_but_world(self: @ContractState) -> felt252 {
-let world = self.world_dispatcher.read();
-            'land'
-        }
-
-        fn do_no_param_but_world_ref(ref self: ContractState) -> felt252 {
-let world = self.world_dispatcher.read();
-            'land'
-        }
-
-        fn do_params_no_world(self: @ContractState, p1: felt252, p2: u8) -> felt252 {
-            'land'
-        }
-
-        fn do_params_and_world(self: @ContractState, p2: u8) -> felt252 {
-let world = self.world_dispatcher.read();
-            'land'
-        }
-
-        fn do_params_and_world_ref(ref self: ContractState, p2: u8) -> felt252 {
-let world = self.world_dispatcher.read();
-            'land'
-        }
-
-        fn do_with_self(self: @ContractState) -> felt252 {
-            'land'
-        }
-
-        fn do_with_ref_self(ref self: ContractState) -> felt252 {
-            'land'
-        }
-    }
-
+ impl TestNominalImpl  of INominalTrait<ContractState>  {fn do_no_param(self: @ContractState) -> felt252  {            'land'
+}fn do_no_param_but_world(self: @ContractState) -> felt252  {let world = self.world_dispatcher.read();            'land'
+}fn do_no_param_but_world_ref(ref self: ContractState) -> felt252  {let world = self.world_dispatcher.read();            'land'
+}fn do_params_no_world(self: @ContractState, p1: felt252, p2: u8) -> felt252  {            'land'
+}fn do_params_and_world(self: @ContractState, p2: u8) -> felt252  {let world = self.world_dispatcher.read();            'land'
+}fn do_params_and_world_ref(ref self: ContractState, p2: u8) -> felt252  {let world = self.world_dispatcher.read();            'land'
+}fn do_with_self(self: @ContractState) -> felt252  {            'land'
+}fn do_with_ref_self(ref self: ContractState) -> felt252  {            'land'
+}}
     #[generate_trait]
     impl ImplInternalNoContractState of InternalNoContractState {
         fn func1(world: IWorldDispatcher) -> felt252 {
@@ -1614,31 +1551,23 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
-                    
-                #[starknet::interface]
-                trait IDojoInit<ContractState> {
-                    fn dojo_init(self: @ContractState,         actions_address: ContractAddress,         actions_class: ClassHash,         value: u8
+                    #[starknet::interface]
+            trait IDojoInit<ContractState> {
+                fn dojo_init(self: @ContractState,         actions_address: ContractAddress,         actions_class: ClassHash,         value: u8
 );
-                }
-
-                #[abi(embed_v0)]
-                impl IDojoInitImpl of IDojoInit<ContractState> {
-                    fn dojo_init(self: @ContractState,         actions_address: ContractAddress,         actions_class: ClassHash,         value: u8
-) {
-                        let world = self.world_dispatcher.read();
-                        assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');
-                        {
-        emit!(
+            }
+            
+            #[abi(embed_v0)]
+            impl IDojoInitImpl of IDojoInit<ContractState> {
+            fn dojo_init(self: @ContractState,         actions_address: ContractAddress,         actions_class: ClassHash,         value: u8
+) {let world = self.world_dispatcher.read();assert(starknet::get_caller_address() == self.world().contract_address, 'Only world can init');        emit!(
             world,
             ContractInitialized {
                 contract_address: actions_address, contract_class: actions_class, value
             }
         );
-    }
-
-                    }
-                }
-            
+}
+}
             #[event]
             #[derive(Drop, starknet::Event)]
             enum Event {
