@@ -14,8 +14,8 @@ use starknet::core::utils::{
 use starknet::providers::{Provider, ProviderError};
 
 use super::abi::world::Layout;
+use super::naming;
 use crate::contracts::WorldContractReader;
-use crate::manifest::utils::compute_model_selector_from_names;
 
 #[cfg(test)]
 #[path = "model_test.rs"]
@@ -92,7 +92,7 @@ where
         name: &str,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        let model_selector = compute_model_selector_from_names(namespace, name);
+        let model_selector = naming::compute_model_selector_from_names(namespace, name);
 
         let (class_hash, contract_address) =
             world.model(&model_selector).block_id(world.block_id).call().await?;

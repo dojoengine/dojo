@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
-use dojo_world::manifest::utils::{capitalize, get_name_from_tag};
+use dojo_world::contracts::naming;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -265,7 +265,7 @@ type {} = ",
                 }
 
                 // first index is our model struct
-                if token.type_name() == get_name_from_tag(&model.tag) {
+                if token.type_name() == naming::get_name_from_tag(&model.tag) {
                     models_structs.push(token.to_composite().unwrap().clone());
                 }
 
@@ -382,7 +382,7 @@ export function defineContractComponents(world: World) {
     // Formats a contract tag into a pretty contract name
     // eg. dojo_examples-actions -> Actions
     fn formatted_contract_name(tag: &str) -> String {
-        capitalize(&get_name_from_tag(tag))
+        naming::capitalize(&naming::get_name_from_tag(tag))
     }
 
     // Handles a contract definition and its underlying systems

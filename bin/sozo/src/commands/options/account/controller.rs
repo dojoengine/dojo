@@ -4,7 +4,7 @@ use account_sdk::deploy_contract::UDC_ADDRESS;
 use account_sdk::signers::HashSigner;
 use anyhow::{Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
-use dojo_world::manifest::utils::get_name_from_tag;
+use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;

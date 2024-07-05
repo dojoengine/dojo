@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
-use dojo_world::manifest::utils::compute_model_selector_from_names;
+use dojo_world::contracts::naming;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
@@ -158,7 +158,10 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
             .into_iter()
             .map(|component| {
                 Ok((
-                    compute_model_selector_from_names(&component.namespace, &component.name),
+                    naming::compute_model_selector_from_names(
+                        &component.namespace,
+                        &component.name,
+                    ),
                     component.try_into()?,
                 ))
             })

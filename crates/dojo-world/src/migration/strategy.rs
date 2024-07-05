@@ -12,7 +12,7 @@ use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
-use crate::manifest::utils::{get_filename_from_tag, get_name_from_tag};
+use crate::contracts::naming;
 use crate::manifest::{CONTRACTS_DIR, MODELS_DIR};
 
 #[derive(Debug, Clone)]
@@ -77,7 +77,7 @@ impl MigrationStrategy {
                     match dependency_contract {
                         MigrationMetadata::Contract(c) => {
                             let contract_address = get_contract_address(
-                                generate_salt(&get_name_from_tag(&c.tag)),
+                                generate_salt(&naming::get_name_from_tag(&c.tag)),
                                 c.base_class_hash,
                                 &[],
                                 world_address,
@@ -176,7 +176,8 @@ fn evaluate_class_to_migrate(
             Ok(None)
         }
         _ => {
-            let path = find_artifact_path(&get_filename_from_tag(&class.tag), artifact_paths)?;
+            let path =
+                find_artifact_path(&naming::get_filename_from_tag(&class.tag), artifact_paths)?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
@@ -197,11 +198,12 @@ fn evaluate_contracts_to_migrate(
                 continue;
             }
             _ => {
-                let path = find_artifact_path(&get_filename_from_tag(&c.tag), artifact_paths)?;
+                let path =
+                    find_artifact_path(&naming::get_filename_from_tag(&c.tag), artifact_paths)?;
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
-                    salt: generate_salt(&get_name_from_tag(&c.tag)),
+                    salt: generate_salt(&naming::get_name_from_tag(&c.tag)),
                     ..Default::default()
                 });
             }
@@ -220,7 +222,8 @@ fn evaluate_contract_to_migrate(
         || contract.remote_class_hash.is_none()
         || matches!(contract.remote_class_hash, Some(remote_hash) if remote_hash != contract.local_class_hash)
     {
-        let path = find_artifact_path(&get_filename_from_tag(&contract.tag), artifact_paths)?;
+        let path =
+            find_artifact_path(&naming::get_filename_from_tag(&contract.tag), artifact_paths)?;
 
         Ok(Some(ContractMigration {
             diff: contract.clone(),

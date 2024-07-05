@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::manifest::utils::{ensure_namespace, get_default_namespace_from_ws};
+use dojo_world::contracts::naming::ensure_namespace;
+use dojo_world::manifest::get_default_namespace_from_ws;
 use scarb::core::Config;
 use sozo_ops::model;
 use starknet::core::types::FieldElement;

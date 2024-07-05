@@ -6,7 +6,7 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
-use dojo_world::manifest::utils::get_filename_from_tag;
+use dojo_world::contracts::naming::get_filename_from_tag;
 use dojo_world::manifest::{
     AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, MANIFESTS_DIR, TARGET_DIR,
     WORLD_CONTRACT_TAG,

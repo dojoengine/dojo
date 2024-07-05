@@ -40,30 +40,36 @@ impl DojoInterface {
                 })
                 .collect();
 
-            builder.add_modified(RewriteNode::interpolate_patched(
-                "
+            builder.add_modified(RewriteNode::Mapped {
+                node: Box::new(RewriteNode::interpolate_patched(
+                    "
                 #[starknet::interface]
                 trait $name$<TContractState> {
                     $body$
                 }
                 ",
-                &UnorderedHashMap::from([
-                    ("name".to_string(), RewriteNode::Text(name.to_string())),
-                    ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-                ]),
-            ));
+                    &UnorderedHashMap::from([
+                        ("name".to_string(), RewriteNode::Text(name.to_string())),
+                        ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+                    ]),
+                )),
+                origin: trait_ast.as_syntax_node().span_without_trivia(db),
+            });
         } else {
             // empty trait
-            builder.add_modified(RewriteNode::interpolate_patched(
-                "
+            builder.add_modified(RewriteNode::Mapped {
+                node: Box::new(RewriteNode::interpolate_patched(
+                    "
                 #[starknet::interface]
                 trait $name$<TContractState> {}
                 ",
-                &UnorderedHashMap::from([(
-                    "name".to_string(),
-                    RewriteNode::Text(name.to_string()),
-                )]),
-            ));
+                    &UnorderedHashMap::from([(
+                        "name".to_string(),
+                        RewriteNode::Text(name.to_string()),
+                    )]),
+                )),
+                origin: trait_ast.as_syntax_node().span_without_trivia(db),
+            });
         }
 
         let (code, code_mappings) = builder.build();
@@ -135,11 +141,9 @@ impl DojoInterface {
         db: &dyn SyntaxGroup,
         fn_ast: ast::TraitItemFunction,
     ) -> Vec<RewriteNode> {
-        let mut rewritten_fn = RewriteNode::from_ast(&fn_ast);
-        let rewritten_params = rewritten_fn
-            .modify_child(db, ast::TraitItemFunction::INDEX_DECLARATION)
-            .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
-            .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS);
+        let fn_name = fn_ast.declaration(db).name(db).text(db);
+        let return_type =
+            fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
 
         let params_str = self.rewrite_parameters(
             db,
@@ -147,7 +151,14 @@ impl DojoInterface {
             fn_ast.stable_ptr().untyped(),
         );
 
-        rewritten_params.set_str(params_str);
-        vec![rewritten_fn]
+        let declaration_node = RewriteNode::Mapped {
+            node: Box::new(RewriteNode::Text(format!(
+                "fn {}({}) {};",
+                fn_name, params_str, return_type
+            ))),
+            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
+        };
+
+        vec![declaration_node]
     }
 }

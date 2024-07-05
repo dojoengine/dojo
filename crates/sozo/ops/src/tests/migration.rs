@@ -3,11 +3,11 @@ use std::str;
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
+use dojo_world::contracts::naming::compute_model_selector_from_tag;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
-use dojo_world::manifest::utils::{compute_model_selector_from_tag, get_default_namespace_from_ws};
 use dojo_world::manifest::{
-    BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
-    WORLD_CONTRACT_TAG,
+    get_default_namespace_from_ws, BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR,
+    MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_TAG,
 };
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,

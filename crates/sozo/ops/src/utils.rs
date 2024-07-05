@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
+use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
-use dojo_world::manifest::utils::get_name_from_tag;
 use dojo_world::migration::strategy::generate_salt;
 use dojo_world::utils::{execution_status_from_maybe_pending_receipt, TransactionWaiter};
 use scarb_ui::Ui;

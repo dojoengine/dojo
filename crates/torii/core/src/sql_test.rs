@@ -3,10 +3,9 @@ use std::str::FromStr;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
+use dojo_world::contracts::naming::compute_model_selector_from_names;
 use dojo_world::contracts::world::WorldContractReader;
-use dojo_world::manifest::utils::{
-    compute_model_selector_from_names, get_default_namespace_from_ws,
-};
+use dojo_world::manifest::get_default_namespace_from_ws;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::{TransactionExt, TransactionWaiter};

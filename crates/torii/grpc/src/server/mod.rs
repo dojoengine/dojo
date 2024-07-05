@@ -13,7 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use dojo_types::schema::Ty;
-use dojo_world::manifest::utils::compute_model_selector_from_names;
+use dojo_world::contracts::naming::compute_model_selector_from_names;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,

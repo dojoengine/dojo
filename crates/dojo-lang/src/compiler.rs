@@ -20,13 +20,12 @@ use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_utils::UpcastMut;
 use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
-use dojo_world::manifest::utils::{
-    get_default_namespace_from_ws, get_filename_from_tag, get_name_from_tag, get_tag,
-};
+use dojo_world::contracts::naming;
 use dojo_world::manifest::{
-    AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
-    ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
-    MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
+    get_default_namespace_from_ws, AbiFormat, Class, ComputedValueEntrypoint, DojoContract,
+    DojoModel, Manifest, ManifestMethods, ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR,
+    BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG,
+    WORLD_QUALIFIED_PATH,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
@@ -246,7 +245,7 @@ fn update_files(
         [(WORLD_QUALIFIED_PATH, WORLD_CONTRACT_TAG), (BASE_QUALIFIED_PATH, BASE_CONTRACT_TAG)]
     {
         let (hash, class) = get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
-        let filename = get_filename_from_tag(tag);
+        let filename = naming::get_filename_from_tag(tag);
         write_manifest_and_abi(
             &relative_manifests_dir,
             &relative_abis_dir,
@@ -291,7 +290,7 @@ fn update_files(
                         contracts.extend(get_dojo_contract_artifacts(
                             db,
                             module_id,
-                            &get_tag(&system.namespace, &system.name),
+                            &naming::get_tag(&system.namespace, &system.name),
                             &compiled_artifacts,
                         )?);
                     }
@@ -306,7 +305,7 @@ fn update_files(
                     contracts.extend(get_dojo_contract_artifacts(
                         db,
                         module_id,
-                        &get_tag(default_namespace, &aux_data.contract_name),
+                        &naming::get_tag(default_namespace, &aux_data.contract_name),
                         &compiled_artifacts,
                     )?);
                 }
@@ -342,7 +341,7 @@ fn update_files(
             &class.abi,
         )?;
 
-        let filename = get_filename_from_tag(&manifest.inner.tag);
+        let filename = naming::get_filename_from_tag(&manifest.inner.tag);
         save_expanded_source_file(
             ws,
             *module_id,
@@ -368,7 +367,7 @@ fn update_files(
             &class.abi,
         )?;
 
-        let filename = get_filename_from_tag(&manifest.inner.tag);
+        let filename = naming::get_filename_from_tag(&manifest.inner.tag);
         save_expanded_source_file(ws, *module_id, db, &models_dir, &filename, &manifest.inner.tag)?;
         save_json_artifact_file(ws, &models_dir, class, &filename, &manifest.inner.tag)?;
     }
@@ -395,7 +394,7 @@ fn get_dojo_model_artifacts(
             // snake case was used to build `compiled_classes` in `compile()`.
             let qualified_path = struct_id.full_path(db).to_case(Case::Snake);
             let compiled_class = compiled_classes.get(&qualified_path).cloned();
-            let tag = get_tag(&model.namespace, &model.name);
+            let tag = naming::get_tag(&model.namespace, &model.name);
 
             if let Some((class_hash, class)) = compiled_class {
                 models.insert(
@@ -409,7 +408,7 @@ fn get_dojo_model_artifacts(
                                 members: model.members.clone(),
                                 original_class_hash: class_hash,
                             },
-                            get_filename_from_tag(&tag),
+                            naming::get_filename_from_tag(&tag),
                         ),
                         class,
                         module_id,
@@ -455,7 +454,7 @@ fn get_dojo_contract_artifacts(
 ) -> anyhow::Result<HashMap<String, (Manifest<DojoContract>, ContractClass, ModuleId)>> {
     let mut result = HashMap::new();
 
-    if !matches!(get_name_from_tag(tag).as_str(), "world" | "resource_metadata" | "base") {
+    if !matches!(naming::get_name_from_tag(tag).as_str(), "world" | "resource_metadata" | "base") {
         let qualified_path = module_id.full_path(db).to_string();
 
         if let Some((class_hash, class)) = compiled_classes.get(&qualified_path) {
@@ -482,7 +481,7 @@ fn get_dojo_contract_artifacts(
                     original_class_hash: *class_hash,
                     ..Default::default()
                 },
-                get_filename_from_tag(tag),
+                naming::get_filename_from_tag(tag),
             );
 
             result.insert(qualified_path.to_string(), (manifest, class.clone(), *module_id));

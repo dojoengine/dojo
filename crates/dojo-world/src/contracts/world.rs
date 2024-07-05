@@ -7,7 +7,7 @@ pub use abigen::world::{
 use starknet::providers::Provider;
 
 use super::model::{ModelError, ModelRPCReader};
-use crate::manifest::utils::split_tag;
+use super::naming;
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -27,7 +27,8 @@ where
         &self,
         tag: &str,
     ) -> Result<ModelRPCReader<'_, P>, ModelError> {
-        let (namespace, name) = split_tag(tag).map_err(|e| ModelError::TagError(e.to_string()))?;
+        let (namespace, name) =
+            naming::split_tag(tag).map_err(|e| ModelError::TagError(e.to_string()))?;
         ModelRPCReader::new(&namespace, &name, self).await
     }
 
