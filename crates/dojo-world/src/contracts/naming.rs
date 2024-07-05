@@ -1,17 +1,11 @@
 use anyhow::{anyhow, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use scarb::core::Workspace;
 use starknet::core::types::FieldElement;
 use starknet_crypto::poseidon_hash_many;
 
 pub const CONTRACT_NAME_SEPARATOR: &str = "::";
 pub const TAG_SEPARATOR: char = '-';
 pub const SELECTOR_CHUNK_SIZE: usize = 8;
-
-pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
-    ws.current_package().unwrap().id.name.to_string()
-    // dojo metadata -> namespace.
-}
 
 pub fn capitalize(s: &str) -> String {
     let mut c = s.chars();

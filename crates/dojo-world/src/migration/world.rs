@@ -9,7 +9,7 @@ use topological_sort::TopologicalSort;
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::utils::ensure_namespace;
+use crate::contracts::naming;
 use crate::manifest::{
     BaseManifest, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, WORLD_CONTRACT_TAG,
 };
@@ -115,12 +115,12 @@ impl WorldDiff {
             for field in &contract.init_calldata {
                 if let Some(dependency) = field.strip_prefix("$contract_address:") {
                     ts.add_dependency(
-                        ensure_namespace(dependency, default_namespace),
+                        naming::ensure_namespace(dependency, default_namespace),
                         contract.tag.clone(),
                     );
                 } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
                     ts.add_dependency(
-                        ensure_namespace(dependency, default_namespace),
+                        naming::ensure_namespace(dependency, default_namespace),
                         contract.tag.clone(),
                     );
                 } else {

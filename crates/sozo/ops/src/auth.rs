@@ -2,11 +2,11 @@ use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelError;
-use dojo_world::contracts::world::WorldContract;
-use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::utils::{
+use dojo_world::contracts::naming::{
     compute_bytearray_hash, compute_model_selector_from_tag, ensure_namespace,
 };
+use dojo_world::contracts::world::WorldContract;
+use dojo_world::contracts::WorldContractReader;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;

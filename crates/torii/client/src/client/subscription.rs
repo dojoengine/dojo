@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use dojo_types::WorldMetadata;
-use dojo_world::manifest::utils::compute_model_selector_from_names;
+use dojo_world::contracts::naming;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::{Mutex, RwLock};
@@ -63,7 +63,7 @@ impl SubscribedModels {
 
         let (namespace, model) =
             keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
-        let selector = compute_model_selector_from_names(namespace, model);
+        let selector = naming::compute_model_selector_from_names(namespace, model);
 
         let model_packed_size = self
             .metadata
@@ -91,7 +91,7 @@ impl SubscribedModels {
 
         let (namespace, model) =
             keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
-        let selector = compute_model_selector_from_names(namespace, model);
+        let selector = naming::compute_model_selector_from_names(namespace, model);
 
         let model_packed_size = self
             .metadata

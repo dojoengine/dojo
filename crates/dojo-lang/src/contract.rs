@@ -13,7 +13,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
-use dojo_world::manifest::utils::{compute_bytearray_hash, get_tag};
+use dojo_world::contracts::naming;
 
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
@@ -72,9 +72,9 @@ impl DojoContract {
             }
         }
 
-        let contract_tag = get_tag(&contract_namespace, &name);
-        let contract_name_selector = compute_bytearray_hash(&name);
-        let contract_namespace_selector = compute_bytearray_hash(&contract_namespace);
+        let contract_tag = naming::get_tag(&contract_namespace, &name);
+        let contract_name_selector = naming::compute_bytearray_hash(&name);
+        let contract_namespace_selector = naming::compute_bytearray_hash(&contract_namespace);
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body

@@ -9,8 +9,7 @@ use std::sync::Arc;
 use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
-use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::utils::compute_model_selector_from_names;
+use dojo_world::contracts::{naming, WorldContractReader};
 use futures::lock::Mutex;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -180,7 +179,7 @@ impl Client {
     /// the RPC.
     pub async fn model(&self, keys: &ModelKeysClause) -> Result<Option<Ty>, Error> {
         let (namespace, model) = keys.model.split_once('-').unwrap();
-        let model_selector = compute_model_selector_from_names(namespace, model);
+        let model_selector = naming::compute_model_selector_from_names(namespace, model);
         let Some(mut schema) =
             self.metadata.read().model(&model_selector).map(|m| m.schema.clone())
         else {
@@ -294,7 +293,7 @@ impl Client {
         let model_reader = self.world_reader.model_reader(namespace, model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(
-            compute_model_selector_from_names(namespace, model),
+            naming::compute_model_selector_from_names(namespace, model),
             keys,
             values,
         )?;

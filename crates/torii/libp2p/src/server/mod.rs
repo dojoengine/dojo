@@ -10,7 +10,7 @@ use chrono::Utc;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
-use dojo_world::manifest::utils::compute_model_selector_from_names;
+use dojo_world::contracts::naming::compute_model_selector_from_names;
 use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;

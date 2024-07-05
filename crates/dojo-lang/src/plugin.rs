@@ -16,7 +16,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_types::system::Dependency;
-use dojo_world::manifest::utils::get_tag;
+use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
@@ -171,7 +171,7 @@ impl BuiltinDojoPlugin {
         let mut tag = None;
         if args.len() == 1 {
             let model_name = args[0].text(db);
-            tag = Some(get_tag(&model_name, &package_id));
+            tag = Some(naming::get_tag(&model_name, &package_id));
 
             let model_type_node = param_els[1].type_clause(db).ty(db);
             if let ast::Expr::Path(model_type_path) = model_type_node {

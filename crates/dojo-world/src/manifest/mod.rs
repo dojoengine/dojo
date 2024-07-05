@@ -5,6 +5,7 @@ use std::{fs, io};
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError};
 use camino::Utf8PathBuf;
+use scarb::core::Workspace;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use starknet::core::types::{
@@ -22,15 +23,13 @@ use walkdir::WalkDir;
 
 use crate::contracts::model::ModelError;
 use crate::contracts::world::WorldEvent;
-use crate::contracts::WorldContractReader;
-use crate::manifest::utils::{get_filename_from_tag, get_tag};
+use crate::contracts::{naming, WorldContractReader};
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
 mod test;
 
 mod types;
-pub mod utils;
 
 pub use types::{
     AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, DeploymentManifest, DojoContract,
@@ -117,11 +116,11 @@ impl BaseManifest {
     /// Load the manifest from a file at the given path.
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
         let world: Manifest<Class> = toml::from_str(&fs::read_to_string(
-            path.join(get_filename_from_tag(WORLD_CONTRACT_TAG)).with_extension("toml"),
+            path.join(naming::get_filename_from_tag(WORLD_CONTRACT_TAG)).with_extension("toml"),
         )?)?;
 
         let base: Manifest<Class> = toml::from_str(&fs::read_to_string(
-            path.join(get_filename_from_tag(BASE_CONTRACT_TAG)).with_extension("toml"),
+            path.join(naming::get_filename_from_tag(BASE_CONTRACT_TAG)).with_extension("toml"),
         )?)?;
 
         let contracts = elements_from_path::<DojoContract>(&path.join(CONTRACTS_DIR))?;
@@ -289,14 +288,14 @@ impl OverlayManifest {
         if let Some(ref world) = self.world {
             let world = toml::to_string(world)?;
             let file_name =
-                path.join(get_filename_from_tag(WORLD_CONTRACT_TAG)).with_extension("toml");
+                path.join(naming::get_filename_from_tag(WORLD_CONTRACT_TAG)).with_extension("toml");
             fs::write(file_name, world)?;
         }
 
         if let Some(ref base) = self.base {
             let base = toml::to_string(base)?;
             let file_name =
-                path.join(get_filename_from_tag(BASE_CONTRACT_TAG)).with_extension("toml");
+                path.join(naming::get_filename_from_tag(BASE_CONTRACT_TAG)).with_extension("toml");
             fs::write(file_name, base)?;
         }
 
@@ -437,7 +436,7 @@ impl DeploymentManifest {
                     class_hash: world_class_hash,
                     ..Default::default()
                 },
-                get_filename_from_tag(WORLD_CONTRACT_TAG),
+                naming::get_filename_from_tag(WORLD_CONTRACT_TAG),
             ),
             base: Manifest::new(
                 Class {
@@ -446,7 +445,7 @@ impl DeploymentManifest {
                     original_class_hash: base_class_hash,
                     tag: BASE_CONTRACT_TAG.to_string(),
                 },
-                get_filename_from_tag(BASE_CONTRACT_TAG),
+                naming::get_filename_from_tag(BASE_CONTRACT_TAG),
             ),
         })
     }
@@ -510,7 +509,7 @@ where
     let mut contracts = parse_contracts_events(contract_deployed_events, contract_upgraded_events);
 
     for contract in &mut contracts {
-        contract.manifest_name = get_filename_from_tag(&contract.inner.tag);
+        contract.manifest_name = naming::get_filename_from_tag(&contract.inner.tag);
     }
 
     Ok((models, contracts))
@@ -597,7 +596,7 @@ fn parse_contracts_events(
             let name =
                 ByteArray::cairo_deserialize(str_data, offset).expect("name is missing from event");
 
-            let tag = get_tag(
+            let tag = naming::get_tag(
                 &namespace.to_string().expect("ASCII encoded namespace"),
                 &name.to_string().expect("ASCII encoded name"),
             );
@@ -614,7 +613,7 @@ fn parse_contracts_events(
                     tag: tag.clone(),
                     ..Default::default()
                 },
-                get_filename_from_tag(&tag),
+                naming::get_filename_from_tag(&tag),
             )
         })
         .collect()
@@ -637,7 +636,7 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
 
         let model_name = model_event.name.to_string().expect("ASCII encoded name");
         let namespace = model_event.namespace.to_string().expect("ASCII encoded namespace");
-        let model_tag = get_tag(&namespace, &model_name);
+        let model_tag = naming::get_tag(&namespace, &model_name);
 
         if let Some(current_class_hash) = models.get_mut(&model_tag) {
             if current_class_hash == &model_event.prev_class_hash.into() {
@@ -653,7 +652,7 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
         .into_iter()
         .map(|(tag, class_hash)| Manifest::<DojoModel> {
             inner: DojoModel { tag: tag.clone(), class_hash, abi: None, ..Default::default() },
-            manifest_name: get_filename_from_tag(&tag),
+            manifest_name: naming::get_filename_from_tag(&tag),
         })
         .collect()
 }
@@ -696,7 +695,7 @@ where
     fs::create_dir_all(path)?;
 
     for element in elements {
-        let filename = get_filename_from_tag(&get_tag(element));
+        let filename = naming::get_filename_from_tag(&get_tag(element));
         let path = path.join(filename).with_extension("toml");
         fs::write(path, toml::to_string(element)?)?;
     }
@@ -832,4 +831,9 @@ impl ManifestMethods for Class {
             self.original_class_hash = class_hash;
         }
     }
+}
+
+pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
+    ws.current_package().unwrap().id.name.to_string()
+    // dojo metadata -> namespace.
 }

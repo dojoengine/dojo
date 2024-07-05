@@ -9,9 +9,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
-use dojo_world::manifest::utils::{
-    compute_bytearray_hash, compute_model_selector_from_hash, get_tag,
-};
+use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
@@ -223,16 +221,17 @@ pub fn handle_model_struct(
         }
     }
 
-    let model_tag = get_tag(&model_namespace, &model_name);
-    let model_name_hash = compute_bytearray_hash(&model_name);
-    let model_namespace_hash = compute_bytearray_hash(&model_namespace);
+    let model_tag = naming::get_tag(&model_namespace, &model_name);
+    let model_name_hash = naming::compute_bytearray_hash(&model_name);
+    let model_namespace_hash = naming::compute_bytearray_hash(&model_namespace);
 
     let (model_version, model_selector) = match parameters.version {
         0 => (RewriteNode::Text("0".to_string()), RewriteNode::Text(format!("\"{model_name}\""))),
         _ => (
             RewriteNode::Text(DEFAULT_MODEL_VERSION.to_string()),
             RewriteNode::Text(
-                compute_model_selector_from_hash(model_namespace_hash, model_name_hash).to_string(),
+                naming::compute_model_selector_from_hash(model_namespace_hash, model_name_hash)
+                    .to_string(),
             ),
         ),
     };

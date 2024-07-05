@@ -4,10 +4,10 @@ use anyhow::{anyhow, bail, Context, Result};
 use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
 use dojo_world::contracts::abi::world;
-use dojo_world::contracts::{cairo_utils, WorldContract};
-use dojo_world::manifest::utils::{
+use dojo_world::contracts::naming::{
     compute_model_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
 };
+use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::manifest::{
     AbiFormat, BaseManifest, DeploymentManifest, DojoContract, DojoModel, Manifest,
     ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,

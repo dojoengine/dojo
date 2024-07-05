@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::manifest::utils::get_default_namespace_from_ws;
+use dojo_world::manifest::get_default_namespace_from_ws;
 use dojo_world::metadata::Environment;
 use scarb::core::Config;
 use scarb_ui::Ui;

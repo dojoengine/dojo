@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
 use convert_case::Casing;
-use dojo_world::manifest::utils::{capitalize, get_name_from_tag};
+use dojo_world::contracts::naming;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -115,12 +115,12 @@ import {
         for model in models {
             query_fields.push(format!(
                 "{model_name}: ModelClause<{model_name}>;",
-                model_name = get_name_from_tag(&model.tag)
+                model_name = naming::get_name_from_tag(&model.tag)
             ));
 
             result_mapping.push(format!(
                 "{model_name}: {model_name};",
-                model_name = get_name_from_tag(&model.tag)
+                model_name = naming::get_name_from_tag(&model.tag)
             ));
         }
 
@@ -579,7 +579,7 @@ type {} = ",
     // Formats a contract tag into a pretty contract name
     // eg. dojo_examples-actions -> Actions
     fn formatted_contract_name(tag: &str) -> String {
-        capitalize(&get_name_from_tag(tag))
+        naming::capitalize(&naming::get_name_from_tag(tag))
     }
 
     fn generate_code_content(data: &DojoData) -> String {
