@@ -7,7 +7,7 @@ use starknet::accounts::{
     RawExecutionV1, RawExecutionV3, RawLegacyDeclaration, SingleOwnerAccount,
 };
 use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::{Felt, FlattenedSierraClass};
+use starknet::core::types::{BlockId, Felt, FlattenedSierraClass};
 use starknet::providers::Provider;
 use starknet::signers::{local_wallet, LocalWallet};
 
@@ -213,6 +213,14 @@ where
             Self::Standard(account) => account.provider(),
             #[cfg(feature = "controller")]
             Self::Controller(account) => account.provider(),
+        }
+    }
+
+    fn block_id(&self) -> BlockId {
+        match self {
+            Self::Standard(account) => account.block_id(),
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => account.block_id(),
         }
     }
 }
