@@ -257,7 +257,6 @@ mod tests {
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
         let model_type_name = utils::struct_name_from_names(&namespace, &model_name);
-
         let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
@@ -265,6 +264,7 @@ mod tests {
         let expected_value: async_graphql::Value = value!({
             "modelRegistered": { "id": model_id, "name": model_type_name }
         });
+
         let (tx, mut rx) = mpsc::channel(7);
 
         tokio::spawn(async move {
@@ -272,7 +272,7 @@ mod tests {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             let model = Ty::Struct(Struct {
-                name: model_type_name,
+                name: model_name,
                 children: vec![Member {
                     name: "subrecordId".to_string(),
                     key: true,

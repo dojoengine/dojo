@@ -4,7 +4,6 @@ use async_graphql::dynamic::{
 };
 use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
-use convert_case::{Case, Casing};
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
@@ -20,7 +19,7 @@ use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
-use crate::utils::extract;
+use crate::utils;
 pub struct EntityObject;
 
 impl BasicObject for EntityObject {
@@ -118,7 +117,7 @@ fn model_union_field() -> Field {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
 
-                    let entity_id = extract::<String>(indexmap, "id")?;
+                    let entity_id = utils::extract::<String>(indexmap, "id")?;
                     // fetch name from the models table
                     // using the model id (hashed model name)
                     let model_ids: Vec<(String, String, String)> = sqlx::query_as(
@@ -156,11 +155,7 @@ fn model_union_field() -> Field {
 
                         results.push(FieldValue::with_type(
                             FieldValue::owned_any(data),
-                            format!(
-                                "{}{}",
-                                namespace.to_case(Case::Pascal),
-                                name.to_case(Case::Pascal)
-                            ),
+                            utils::type_name_from_names(&namespace, &name),
                         ))
                     }
 
