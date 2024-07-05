@@ -602,4 +602,17 @@ mod tests {
 
         assert_eq!(chain_id, actual_chain_id);
     }
+
+    #[test]
+    fn can_launch_katana_with_db_dir() {
+        let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+        let db_path = temp_dir.path().join("test-db");
+        assert!(!db_path.exists());
+
+        let _katana = Katana::new().db_dir(db_path.clone()).spawn();
+
+        // Check that the db directory is created
+        assert!(db_path.exists());
+        assert!(db_path.is_dir());
+    }
 }

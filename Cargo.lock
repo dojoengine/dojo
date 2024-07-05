@@ -8518,6 +8518,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet",
+ "tempfile",
  "thiserror",
  "tokio",
  "tracing",
