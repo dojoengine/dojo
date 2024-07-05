@@ -1,4 +1,5 @@
 use async_graphql::{Result, Value};
+use convert_case::{Case, Casing};
 
 use crate::error::ExtractError;
 use crate::types::ValueMapping;
@@ -44,4 +45,16 @@ pub fn extract<T: ExtractFromIndexMap>(
     key: &str,
 ) -> Result<T, ExtractError> {
     T::extract(values, key)
+}
+
+pub fn field_name_from_names(namespace: &str, model_name: &str) -> String {
+    format!("{}{}", namespace.to_case(Case::Camel), model_name.to_case(Case::Pascal))
+}
+
+pub fn type_name_from_names(namespace: &str, model_name: &str) -> String {
+    format!("{}_{}", namespace, model_name)
+}
+
+pub fn struct_name_from_names(namespace: &str, model_name: &str) -> String {
+    format!("{}-{}", namespace, model_name)
 }

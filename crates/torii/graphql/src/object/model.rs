@@ -105,6 +105,7 @@ impl ModelObject {
         IndexMap::from([
             (Name::new("id"), Value::from(model.id)),
             (Name::new("name"), Value::from(model.name)),
+            (Name::new("namespace"), Value::from(model.namespace)),
             (Name::new("classHash"), Value::from(model.class_hash)),
             (Name::new("contractAddress"), Value::from(model.contract_address)),
             (Name::new("transactionHash"), Value::from(model.transaction_hash)),

@@ -41,6 +41,7 @@ warp.workspace = true
 camino.workspace = true
 dojo-test-utils = { path = "../../dojo-test-utils", features = [ "build-examples" ] }
 dojo-world = { path = "../../dojo-world" }
+katana-runner.workspace = true
 scarb.workspace = true
 serial_test = "2.0.0"
 starknet-crypto.workspace = true

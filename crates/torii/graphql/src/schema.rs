@@ -1,6 +1,5 @@
 use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema, Subscription, Union};
-use convert_case::{Case, Casing};
 use sqlx::SqlitePool;
 use torii_core::types::Model;
 
@@ -9,6 +8,7 @@ use super::object::entity::EntityObject;
 use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
 use super::types::ScalarType;
+use super::utils;
 use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
 use crate::object::event_message::EventMessageObject;
 use crate::object::metadata::content::ContentObject;
@@ -127,8 +127,9 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
 
         if !type_mapping.is_empty() {
             // add models objects & unions
-            let field_name = model.name.to_case(Case::Camel);
-            let type_name = model.name;
+            let field_name = utils::field_name_from_names(&model.namespace, &model.name);
+
+            let type_name = utils::type_name_from_names(&model.namespace, &model.name);
 
             model_union = model_union.possible_type(&type_name);
 
@@ -137,20 +138,6 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
                 type_name,
                 type_mapping.clone(),
             ))));
-
-            // add enum unions
-            // Should we consider using unions for enums? Not sure about
-            // the practicality and benefit
-            // for (_, type_data) in &type_mapping {
-            //     if let TypeData::Enum((type_ref, types)) = type_data {
-            //         let mut enum_union = Union::new(&type_ref.to_string());
-            //         for (type_ref, _) in types {
-            //             enum_union = enum_union.possible_type(&type_ref.to_string());
-            //         }
-
-            //         unions.push(enum_union);
-            //     }
-            // }
         }
     }
 
