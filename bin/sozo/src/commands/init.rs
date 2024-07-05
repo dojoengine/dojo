@@ -15,6 +15,9 @@ pub struct InitArgs {
 
     #[arg(help = "Parse a full git url or a url path", default_value = "dojoengine/dojo-starter")]
     template: String,
+
+    #[arg(long, help = "Initialize a new Git repository")]
+    git: bool,
 }
 
 impl InitArgs {
@@ -58,7 +61,7 @@ impl InitArgs {
         set_current_dir(&target_dir)?;
 
         // Modify the git history.
-        modify_git_history(&repo_url)?;
+        modify_git_history(&repo_url, self.git)?;
 
         config.ui().print("\n🎉 Successfully created a new ⛩️ Dojo project!");
 
@@ -83,7 +86,7 @@ fn clone_repo(url: &str, path: &Path, config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn modify_git_history(url: &str) -> Result<()> {
+fn modify_git_history(url: &str, init_git: bool) -> Result<()> {
     trace!("Modifying Git history.");
     let git_output = Command::new("git").args(["rev-parse", "--short", "HEAD"]).output()?.stdout;
     let commit_hash = String::from_utf8(git_output)?;
@@ -91,11 +94,13 @@ fn modify_git_history(url: &str) -> Result<()> {
 
     fs::remove_dir_all(".git")?;
 
-    Command::new("git").arg("init").output()?;
-    Command::new("git").args(["add", "--all"]).output()?;
+    if init_git {
+        Command::new("git").arg("init").output()?;
+        Command::new("git").args(["add", "--all"]).output()?;
 
-    let commit_msg = format!("chore: init from {} at {}", url, commit_hash.trim());
-    Command::new("git").args(["commit", "-m", &commit_msg]).output()?;
+        let commit_msg = format!("chore: init from {} at {}", url, commit_hash.trim());
+        Command::new("git").args(["commit", "-m", &commit_msg]).output()?;
+    }
 
     trace!("Git history modified.");
     Ok(())
