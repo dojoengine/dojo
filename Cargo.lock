@@ -14927,6 +14927,7 @@ dependencies = [
  "dojo-world",
  "futures",
  "indexmap 2.2.6",
+ "katana-runner",
  "libp2p",
  "libp2p-webrtc",
  "libp2p-webrtc-websys",
