@@ -146,8 +146,9 @@ impl DojoContract {
             }
 
             let mut builder = PatchBuilder::new(db, module_ast);
-            builder.add_modified(RewriteNode::interpolate_patched(
-                "
+            builder.add_modified(RewriteNode::Mapped {
+                node: Box::new(RewriteNode::interpolate_patched(
+                    "
                 #[starknet::contract]
                 mod $name$ {
                     use dojo::world;
@@ -157,7 +158,7 @@ impl DojoContract {
                     use dojo::contract::IContract;
 
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
-                 upgradeable, event: UpgradeableEvent);
+                     upgradeable, event: UpgradeableEvent);
 
                     #[abi(embed_v0)]
                     impl ContractImpl of IContract<ContractState> {
@@ -190,29 +191,31 @@ impl DojoContract {
 
                     #[abi(embed_v0)]
                     impl UpgradableImpl = \
-                 dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+                     dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                     $body$
                 }
                 ",
-                &UnorderedHashMap::from([
-                    ("name".to_string(), RewriteNode::Text(name.to_string())),
-                    (
-                        "contract_name_selector".to_string(),
-                        RewriteNode::Text(contract_name_selector.to_string()),
-                    ),
-                    ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-                    (
-                        "contract_namespace".to_string(),
-                        RewriteNode::Text(contract_namespace.clone()),
-                    ),
-                    (
-                        "contract_namespace_selector".to_string(),
-                        RewriteNode::Text(contract_namespace_selector.to_string()),
-                    ),
-                    ("contract_tag".to_string(), RewriteNode::Text(contract_tag)),
-                ]),
-            ));
+                    &UnorderedHashMap::from([
+                        ("name".to_string(), RewriteNode::Text(name.to_string())),
+                        (
+                            "contract_name_selector".to_string(),
+                            RewriteNode::Text(contract_name_selector.to_string()),
+                        ),
+                        ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+                        (
+                            "contract_namespace".to_string(),
+                            RewriteNode::Text(contract_namespace.clone()),
+                        ),
+                        (
+                            "contract_namespace_selector".to_string(),
+                            RewriteNode::Text(contract_namespace_selector.to_string()),
+                        ),
+                        ("contract_tag".to_string(), RewriteNode::Text(contract_tag)),
+                    ]),
+                )),
+                origin: module_ast.as_syntax_node().span_without_trivia(db),
+            });
 
             let (code, code_mappings) = builder.build();
 
