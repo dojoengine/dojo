@@ -93,6 +93,9 @@ fn modify_git_history(url: &str, init_git: bool) -> Result<()> {
     trace!(commit_hash = commit_hash.trim());
 
     fs::remove_dir_all(".git")?;
+    if Path::new(".github").exists() {
+        fs::remove_dir_all(".github")?;
+    }
 
     if init_git {
         Command::new("git").arg("init").output()?;
