@@ -246,16 +246,13 @@ impl DojoContract {
     ) -> Vec<RewriteNode> {
         let fn_decl = fn_ast.declaration(db);
 
-        match fn_decl.signature(db).ret_ty(db) {
-            OptionReturnTypeClause::ReturnTypeClause(_) => {
-                self.diagnostics.push(PluginDiagnostic {
-                    stable_ptr: fn_ast.stable_ptr().untyped(),
-                    message: "The dojo_init function cannot have a return type.".to_string(),
-                    severity: Severity::Error,
-                });
-            }
-            _ => (),
-        };
+        if let OptionReturnTypeClause::ReturnTypeClause(_) = fn_decl.signature(db).ret_ty(db) {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: fn_ast.stable_ptr().untyped(),
+                message: "The dojo_init function cannot have a return type.".to_string(),
+                severity: Severity::Error,
+            });
+        }
 
         let (params_str, was_world_injected) = self.rewrite_parameters(
             db,
@@ -269,7 +266,10 @@ impl DojoContract {
                 fn dojo_init($params_str$);
             }
             ",
-            &UnorderedHashMap::from([("params_str".to_string(), RewriteNode::Text(params_str.clone()))]),
+            &UnorderedHashMap::from([(
+                "params_str".to_string(),
+                RewriteNode::Text(params_str.clone()),
+            )]),
         );
 
         let impl_node = RewriteNode::Text(
@@ -292,8 +292,8 @@ impl DojoContract {
         };
 
         let assert_world_caller_node = RewriteNode::Text(
-            "assert(starknet::get_caller_address() == self.world().contract_address, \
-             'Only world can init');"
+            "assert(starknet::get_caller_address() == self.world().contract_address, 'Only world \
+             can init');"
                 .to_string(),
         );
 
