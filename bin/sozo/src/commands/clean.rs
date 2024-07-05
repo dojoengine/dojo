@@ -1,18 +1,22 @@
 use std::fs;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_world::manifest::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
-use scarb::core::Config;
+use scarb::{core::Config, ops};
 use tracing::trace;
 
 #[derive(Debug, Args)]
 pub struct CleanArgs {
-    #[arg(short, long)]
+    #[arg(long)]
     #[arg(help = "Removes all the generated files, including scarb artifacts and ALL the \
                   manifests files.")]
-    pub all: bool,
+    pub full: bool,
+
+    #[arg(long)]
+    #[arg(help = "Clean all profiles.")]
+    pub all_profiles: bool,
 }
 
 impl CleanArgs {
@@ -39,109 +43,211 @@ impl CleanArgs {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         trace!(ws=?ws, "Workspace read successfully.");
 
-        let profile_name =
-            ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
+        let profile_names = if self.all_profiles {
+            let mut profiles = ws.profile_names().expect("given method never returns an error");
+            // currently scarb can return duplicate profiles and since the vector is sorted we can
+            // remove duplicates by calling dedup
+            profiles.dedup();
+            profiles
+        } else {
+            vec![ws
+                .current_profile()
+                .expect("Scarb profile is expected at this point.")
+                .to_string()]
+        };
 
-        // Manifest path is always a file, we can unwrap safely to get the
-        // parent folder.
-        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+        for profile_name in profile_names {
+            // Manifest path is always a file, we can unwrap safely to get the
+            // parent folder.
+            let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
-        let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
+            // By default, this command cleans the build manifests and scarb artifacts.
+            trace!("Cleaning Scarb artifacts and build manifests.");
 
-        // By default, this command cleans the build manifests and scarb artifacts.
-        trace!("Cleaning Scarb artifacts and build manifests.");
-        scarb::ops::clean(config)?;
-        Self::clean_manifests(&profile_dir)?;
+            {
+                // copied from scarb::ops::clean since scarb cleans build file of all the profiles
+                // we only want to clean build files for specified profile
+                //
+                // cleaning build files for all profiles would create inconsistency with the
+                // manifest files in `manifests` directory
+                let ws = ops::read_workspace(config.manifest_path(), config)?;
+                let path = ws.target_dir().path_unchecked().join(&profile_name);
+                if path.exists() {
+                    fs::remove_dir_all(path).context("failed to clean generated artifacts")?;
+                }
+            }
 
-        if self.all && profile_dir.exists() {
-            trace!(?profile_dir, "Removing entire profile directory.");
-            fs::remove_dir_all(profile_dir)?;
+            let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(&profile_name);
+
+            Self::clean_manifests(&profile_dir)?;
+
+            if self.full && profile_dir.exists() {
+                trace!(?profile_dir, "Removing entire profile directory.");
+                fs::remove_dir_all(profile_dir)?;
+            }
         }
 
         Ok(())
     }
 }
 
+// these tests assume `example/spawn-and-move` is build for `dev` and `release` profile
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler;
-    use dojo_world::metadata::dojo_metadata_from_workspace;
-    use dojo_world::migration::TxnConfig;
-    use katana_runner::KatanaRunner;
-    use sozo_ops::migration;
+    use scarb::compiler::Profile;
 
     use super::*;
 
     #[test]
-    fn test_clean() {
-        let source_project = "../../examples/spawn-and-move/Scarb.toml";
+    fn default_clean_works() {
+        let source_project = "../../examples/spawn-and-move";
         let dojo_core_path = "../../crates/dojo-core";
 
-        // Build a completely new project in it's own directory.
-        let (temp_project_dir, config, _) =
-            compiler::copy_build_project_temp(source_project, dojo_core_path, true);
-
-        let runner = KatanaRunner::new().expect("Fail to set runner");
-
-        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-
-        let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
-            "No current package with dojo metadata found, clean is not yet support for workspaces.",
+        let config = compiler::copy_tmp_config(
+            &Utf8PathBuf::from(source_project),
+            &Utf8PathBuf::from(dojo_core_path),
+            Profile::DEV,
         );
 
-        // Plan the migration to generate some manifests other than base.
-        config.tokio_handle().block_on(async {
-            migration::migrate(
-                &ws,
-                None,
-                runner.endpoint(),
-                runner.account(0),
-                "dojo_examples",
-                true,
-                TxnConfig::default(),
-                dojo_metadata.skip_migration,
-            )
-            .await
-            .unwrap()
-        });
+        let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
 
-        let clean_cmd = CleanArgs { all: false };
+        let clean_cmd = CleanArgs { full: false, all_profiles: false };
         clean_cmd.run(&config).unwrap();
 
-        let profile_name = config.profile().to_string();
+        let dev_profile_name = "dev";
+        let release_profile_name = "release";
 
-        let target_dev_dir = temp_project_dir.join("target").join(&profile_name);
-        let profile_manifests_dir = temp_project_dir.join("manifests").join(&profile_name);
-        let manifests_dev_base_dir = profile_manifests_dir.join("base");
-        let manifests_dev_abis_base_dir = profile_manifests_dir.join("abis").join("base");
-        let manifests_dev_abis_depl_dir = profile_manifests_dir.join("abis").join("deployments");
-        let manifest_toml = profile_manifests_dir.join("manifest").with_extension("toml");
-        let manifest_json = profile_manifests_dir.join("manifest").with_extension("json");
+        let target_dev_dir = temp_project_dir.join("target").join(dev_profile_name);
+        let target_release_dir = temp_project_dir.join("target").join(release_profile_name);
+
+        let dev_manifests_dir = temp_project_dir.join("manifests").join(dev_profile_name);
+        let release_manifests_dir = temp_project_dir.join("manifests").join(release_profile_name);
+
+        let dev_manifests_base_dir = dev_manifests_dir.join("base");
+        let dev_manifests_abis_base_dir = dev_manifests_dir.join("abis").join("base");
+        let release_manifests_base_dir = release_manifests_dir.join("base");
+        let release_manifests_abis_base_dir = release_manifests_dir.join("abis").join("base");
+
+        let dev_manifests_abis_depl_dir = dev_manifests_dir.join("abis").join("deployments");
+
+        let dev_manifest_toml = dev_manifests_dir.join("manifest").with_extension("toml");
+        let dev_manifest_json = dev_manifests_dir.join("manifest").with_extension("json");
 
         assert!(fs::read_dir(target_dev_dir).is_err(), "Expected 'target/dev' to be empty");
         assert!(
-            fs::read_dir(manifests_dev_base_dir).is_err(),
+            fs::read_dir(target_release_dir).is_ok(),
+            "Expected 'target/release' to be present"
+        );
+
+        assert!(
+            fs::read_dir(dev_manifests_base_dir).is_err(),
             "Expected 'manifests/dev/base' to be empty"
         );
         assert!(
-            fs::read_dir(manifests_dev_abis_base_dir).is_err(),
+            fs::read_dir(dev_manifests_abis_base_dir).is_err(),
             "Expected 'manifests/dev/abis/base' to be empty"
         );
         assert!(
-            fs::read_dir(&manifests_dev_abis_depl_dir).is_ok(),
+            fs::read_dir(&dev_manifests_abis_depl_dir).is_ok(),
             "Expected 'manifests/dev/abis/deployments' to not be empty"
         );
-        assert!(manifest_toml.exists(), "Expected 'manifest.toml' to exist");
-        assert!(manifest_json.exists(), "Expected 'manifest.json' to exist");
 
-        let clean_cmd = CleanArgs { all: true };
+        // we expect release profile to be not affected
+        assert!(
+            fs::read_dir(release_manifests_base_dir).is_ok(),
+            "Expected 'manifests/release/base' to be non empty"
+        );
+        assert!(
+            fs::read_dir(release_manifests_abis_base_dir).is_ok(),
+            "Expected 'manifests/release/abis/base' to be non empty"
+        );
+
+        assert!(dev_manifest_toml.exists(), "Expected 'manifest.toml' to exist");
+        assert!(dev_manifest_json.exists(), "Expected 'manifest.json' to exist");
+
+        let clean_cmd = CleanArgs { full: true, all_profiles: false };
         clean_cmd.run(&config).unwrap();
 
         assert!(
-            fs::read_dir(&manifests_dev_abis_depl_dir).is_err(),
+            fs::read_dir(&dev_manifests_abis_depl_dir).is_err(),
             "Expected 'manifests/dev/abis/deployments' to be empty"
         );
-        assert!(!manifest_toml.exists(), "Expected 'manifest.toml' to not exist");
-        assert!(!manifest_json.exists(), "Expected 'manifest.json' to not exist");
+        assert!(!dev_manifest_toml.exists(), "Expected 'manifest.toml' to not exist");
+        assert!(!dev_manifest_json.exists(), "Expected 'manifest.json' to not exist");
+    }
+
+    #[test]
+    fn all_profile_clean_works() {
+        let source_project = "../../examples/spawn-and-move";
+        let dojo_core_path = "../../crates/dojo-core";
+
+        let config = compiler::copy_tmp_config(
+            &Utf8PathBuf::from(source_project),
+            &Utf8PathBuf::from(dojo_core_path),
+            Profile::DEV,
+        );
+
+        let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
+
+        let clean_cmd = CleanArgs { full: false, all_profiles: true };
+        clean_cmd.run(&config).unwrap();
+
+        let dev_profile_name = "dev";
+        let release_profile_name = "release";
+
+        let target_dev_dir = temp_project_dir.join("target").join(dev_profile_name);
+        let target_release_dir = temp_project_dir.join("target").join(release_profile_name);
+
+        let dev_manifests_dir = temp_project_dir.join("manifests").join(dev_profile_name);
+        let release_manifests_dir = temp_project_dir.join("manifests").join(release_profile_name);
+
+        let dev_manifests_base_dir = dev_manifests_dir.join("base");
+        let dev_manifests_abis_base_dir = dev_manifests_dir.join("abis").join("base");
+        let release_manifests_base_dir = release_manifests_dir.join("base");
+        let release_manifests_abis_base_dir = release_manifests_dir.join("abis").join("base");
+
+        let dev_manifests_abis_depl_dir = dev_manifests_dir.join("abis").join("deployments");
+
+        let dev_manifest_toml = dev_manifests_dir.join("manifest").with_extension("toml");
+        let dev_manifest_json = dev_manifests_dir.join("manifest").with_extension("json");
+
+        assert!(fs::read_dir(target_dev_dir).is_err(), "Expected 'target/dev' to be empty");
+        assert!(fs::read_dir(target_release_dir).is_err(), "Expected 'target/release' to be empty");
+
+        assert!(
+            fs::read_dir(dev_manifests_base_dir).is_err(),
+            "Expected 'manifests/dev/base' to be empty"
+        );
+        assert!(
+            fs::read_dir(dev_manifests_abis_base_dir).is_err(),
+            "Expected 'manifests/dev/abis/base' to be empty"
+        );
+        assert!(
+            fs::read_dir(&dev_manifests_abis_depl_dir).is_ok(),
+            "Expected 'manifests/dev/abis/deployments' to not be empty"
+        );
+
+        assert!(
+            fs::read_dir(release_manifests_base_dir).is_err(),
+            "Expected 'manifests/release/base' to be empty"
+        );
+        assert!(
+            fs::read_dir(release_manifests_abis_base_dir).is_err(),
+            "Expected 'manifests/release/abis/base' to be empty"
+        );
+
+        assert!(dev_manifest_toml.exists(), "Expected 'manifest.toml' to exist");
+        assert!(dev_manifest_json.exists(), "Expected 'manifest.json' to exist");
+
+        let clean_cmd = CleanArgs { full: true, all_profiles: true };
+        clean_cmd.run(&config).unwrap();
+
+        assert!(
+            fs::read_dir(&dev_manifests_abis_depl_dir).is_err(),
+            "Expected 'manifests/dev/abis/deployments' to be empty"
+        );
+        assert!(!dev_manifest_toml.exists(), "Expected 'manifest.toml' to not exist");
+        assert!(!dev_manifest_json.exists(), "Expected 'manifest.json' to not exist");
     }
 }

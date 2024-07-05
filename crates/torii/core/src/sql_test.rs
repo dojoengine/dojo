@@ -9,6 +9,7 @@ use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -67,7 +68,7 @@ async fn test_load_from_remote() {
     let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move/");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
     let dojo_metadata =
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
@@ -197,7 +198,7 @@ async fn test_load_from_remote_del() {
     let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move/");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
     let dojo_metadata =
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");

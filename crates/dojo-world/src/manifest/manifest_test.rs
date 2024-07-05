@@ -5,6 +5,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
@@ -309,7 +310,7 @@ fn fetch_remote_manifest() {
 
     // Build a completely new project in it's own directory.
     let (temp_project_dir, config, _) =
-        compiler::copy_build_project_temp(source_project, dojo_core_path, true);
+        compiler::copy_build_project_temp(source_project, dojo_core_path, true, Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
     let dojo_metadata =

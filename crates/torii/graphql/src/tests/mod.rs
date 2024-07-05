@@ -17,6 +17,7 @@ use dojo_world::manifest::DeploymentManifest;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
+use scarb::compiler::Profile;
 use scarb::ops;
 use serde::Deserialize;
 use serde_json::Value;
@@ -284,7 +285,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let source_project_dir = Utf8PathBuf::from("../types-test");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
