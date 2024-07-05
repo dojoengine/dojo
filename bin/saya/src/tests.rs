@@ -8,7 +8,7 @@ use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use saya_core::prover::extract::program_input_from_program_output;
 use saya_core::prover::{
-    prove_diff, HttpProverParams, MessageToAppchain, MessageToStarknet, ProgramInput, ProveProgram,
+    HttpProverParams, MessageToAppchain, MessageToStarknet, ProgramInput, ProveDiffProgram,
     ProverIdentifier, ProvingState, Scheduler,
 };
 use saya_core::ProverAccessKey;
@@ -105,7 +105,7 @@ async fn test_program_input_from_program_output() -> anyhow::Result<()> {
 
     let serialized_input = serde_json::to_string(&input).unwrap();
     let proof =
-        prove_diff(serialized_input, prover_identifier(), ProveProgram::Differ).await.unwrap();
+        prover_identifier().prove_diff(serialized_input, ProveDiffProgram::Differ).await.unwrap();
 
     let program_output_from_proof = extract_output(&proof).unwrap().program_output;
     let program_input_from_proof = program_input_from_program_output(

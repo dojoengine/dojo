@@ -11,17 +11,17 @@ use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
 use futures::future;
-use itertools::Itertools;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use katana_rpc_types::trace::TxExecutionInfo;
-use prover::{HttpProverParams, ProofAndDiff, ProverIdentifier};
+use prover::{extract_execute_calls, HttpProverParams, ProofAndDiff, ProverIdentifier};
 pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
+use starknet::accounts::Call;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::poseidon_hash_many;
 use starknet_types_core::felt::Felt;
@@ -100,6 +100,8 @@ pub struct Saya {
     provider: Arc<dyn SayaProvider>,
     /// The blockchain state.
     blockchain: Blockchain,
+    /// The proving backend identifier.
+    prover_identifier: ProverIdentifier,
 }
 
 struct FetchedBlockInfo {
@@ -129,7 +131,12 @@ impl Saya {
 
         let blockchain = Blockchain::new();
 
-        Ok(Self { config, da_client, provider, blockchain })
+        let prover_identifier = ProverIdentifier::Http(Arc::new(HttpProverParams {
+            prover_url: config.url.clone(),
+            prover_key: config.private_key.clone(),
+        }));
+
+        Ok(Self { config, da_client, provider, blockchain, prover_identifier })
     }
 
     /// Starts the Saya mainloop to fetch and process data.
@@ -154,7 +161,7 @@ impl Saya {
         // The structure responsible for proving.
         let mut prove_scheduler = None;
 
-        let unproven_blocks = loop {
+        let proof = loop {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
@@ -172,8 +179,9 @@ impl Saya {
                 continue;
             }
 
+            let maximum_expected = self.config.block_range.1.unwrap_or(latest_block);
             let (last_state_root, params) =
-                self.prefetch_blocks(block..=latest_block, previous_block_state_root).await?;
+                self.prefetch_blocks(block..=maximum_expected, previous_block_state_root).await?;
             previous_block_state_root = last_state_root;
 
             // Updating the local state sequentially, as there is only one instance of
@@ -189,11 +197,11 @@ impl Saya {
                         Scheduler::new(
                             self.config.batch_size,
                             self.config.world_address,
-                            prover_identifier.clone(),
+                            self.prover_identifier.clone(),
                         )
                     };
 
-                    if let Some(prover_input) = self.process_block(block, p)? {
+                    if let Some((prover_input, _)) = self.process_block(block, p)? {
                         scheduler.push_diff(prover_input)?;
                         if scheduler.is_full() {
                             self.process_proven(scheduler.proved().await?).await?;
@@ -205,21 +213,34 @@ impl Saya {
 
                 block += 1;
             } else {
-                break params
+                let calls = params
                     .into_iter()
-                    .map(|p| self.process_block(block, p))
+                    .enumerate()
+                    .map(|(i, p)| self.process_block(block + i as u64, p))
                     .collect::<Result<Vec<_>, _>>()?
                     .into_iter()
                     .filter_map(identity)
-                    .collect_vec();
+                    .map(|(_, c)| c)
+                    .flatten()
+                    .collect::<Vec<_>>();
+
+                // We might want to prove the signatures as well.
+                let proof = self.prover_identifier.prove_checker(calls).await?;
+                break proof;
             }
         };
 
-        let (proof, diff) =
-            Scheduler::merge(unproven_blocks, self.config.world_address, prover_identifier).await?;
-
         let block_range = (self.config.block_range.0, self.config.block_range.1.unwrap());
-        self.process_proven((proof, diff, block_range)).await?;
+        if self.config.store_proofs {
+            let filename = "checker_proof.json";
+            let mut file = File::create(filename).await.context("Failed to create proof file.")?;
+            file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
+        }
+
+        let ExtractOutputResult { program_output: mut diff, .. } = extract_output(&proof)?;
+        // diff.remove(0); // Remove length.
+        // debug_assert!(diff.len() % 2 == 0);
+        self.process_proven((proof, dbg!(diff), block_range)).await?;
 
         println!("Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
 
@@ -309,7 +330,7 @@ impl Saya {
         &mut self,
         block_number: BlockNumber,
         block_info: FetchedBlockInfo,
-    ) -> SayaResult<Option<ProgramInput>> {
+    ) -> SayaResult<Option<(ProgramInput, Vec<Call>)>> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
         let FetchedBlockInfo { block, prev_state_root, state_updates, exec_infos, block_number } =
@@ -321,6 +342,8 @@ impl Saya {
         let state_updates_to_prove = state_updates.state_updates.clone();
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
+        let calls = extract_execute_calls(&exec_infos);
+
         if block_number == 0 {
             return Ok(None);
         }
@@ -330,7 +353,7 @@ impl Saya {
             return Ok(None);
         }
 
-        let transactions = block
+        let l1_transactions = block
             .block
             .body
             .iter()
@@ -342,7 +365,7 @@ impl Saya {
             .collect::<Vec<_>>();
 
         let (message_to_starknet_segment, message_to_appchain_segment) =
-            extract_messages(&exec_infos, &transactions);
+            extract_messages(&exec_infos, &l1_transactions);
 
         let mut state_diff_prover_input = ProgramInput {
             prev_state_root,
@@ -358,7 +381,9 @@ impl Saya {
 
         info!(target: LOG_TARGET, block_number, "Block processed.");
 
-        Ok(Some(state_diff_prover_input))
+        let calls = extract_execute_calls(&exec_infos);
+
+        Ok(Some((state_diff_prover_input, calls)))
     }
 
     /// Registers the facts + the send the proof to verifier. Not all provers require this step
@@ -381,7 +406,7 @@ impl Saya {
         }
 
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
-        let world_da = state_diff.world_da.unwrap();
+        let world_da = state_diff;
 
         // Publish state difference if DA client is available
         if let Some(da) = &self.da_client {
