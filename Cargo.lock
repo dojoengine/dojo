@@ -8512,6 +8512,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-node-bindings"
+version = "0.7.3"
+dependencies = [
+ "starknet",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "katana-primitives"
 version = "0.7.3"
 dependencies = [
