@@ -4,7 +4,9 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_world::contracts::world::WorldContractReader;
-use dojo_world::manifest::utils::{compute_model_selector_from_names, get_default_namespace_from_ws};
+use dojo_world::manifest::utils::{
+    compute_model_selector_from_names, get_default_namespace_from_ws,
+};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
@@ -132,25 +134,32 @@ async fn test_load_from_remote() {
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 8);
 
-    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = 'Position'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
+        sqlx::query_as(
+            "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
+             'Position'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-    assert_eq!(id, format!("{:#x}", compute_model_selector_from_names("dojo_examples", "Position")));
+    assert_eq!(
+        id,
+        format!("{:#x}", compute_model_selector_from_names("dojo_examples", "Position"))
+    );
     assert_eq!(name, "Position");
     assert_eq!(namespace, "dojo_examples");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
 
-    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = 'Moves'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
+        sqlx::query_as(
+            "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
+             'Moves'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
     assert_eq!(id, format!("{:#x}", compute_model_selector_from_names("dojo_examples", "Moves")));
     assert_eq!(name, "Moves");
@@ -158,14 +167,19 @@ async fn test_load_from_remote() {
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 2);
 
-    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = 'PlayerConfig'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let (id, name, namespace, packed_size, unpacked_size): (String, String, String, u8, u8) =
+        sqlx::query_as(
+            "SELECT id, name, namespace, packed_size, unpacked_size FROM models WHERE name = \
+             'PlayerConfig'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-    assert_eq!(id, format!("{:#x}", compute_model_selector_from_names("dojo_examples", "PlayerConfig")));
+    assert_eq!(
+        id,
+        format!("{:#x}", compute_model_selector_from_names("dojo_examples", "PlayerConfig"))
+    );
     assert_eq!(name, "PlayerConfig");
     assert_eq!(namespace, "dojo_examples");
     assert_eq!(packed_size, 0);
