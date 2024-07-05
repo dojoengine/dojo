@@ -4,6 +4,8 @@
 
 //! Utilities for launching a Katana instance.
 
+mod json;
+
 use std::io::{BufRead, BufReader};
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -17,6 +19,8 @@ use starknet::signers::SigningKey;
 use thiserror::Error;
 use tracing::trace;
 use url::Url;
+
+use crate::json::{JsonLogMessage, KatanaInfo};
 
 /// How long we will wait for katana to indicate that it is ready.
 const KATANA_STARTUP_TIMEOUT_MILLIS: u64 = 10_000;
@@ -512,39 +516,58 @@ impl Katana {
             let mut line = String::new();
             reader.read_line(&mut line).map_err(KatanaError::ReadLineError)?;
             trace!(target: "katana", line);
-            if let Some(addr) = line.strip_prefix("🚀 JSON-RPC server started:") {
-                // <🚀 JSON-RPC server started: http://0.0.0.0:5050>
-                // parse the actual port
-                let addr = addr.trim().strip_prefix("http://").unwrap_or(addr);
-                let addr = SocketAddr::from_str(addr)?;
-                port = addr.port();
 
-                // The address is the last thing to be displayed so we can safely break here.
-                break;
-            }
+            if self.json_log {
+                if let Ok(log) = serde_json::from_str::<JsonLogMessage>(&line) {
+                    let KatanaInfo { address, accounts: account_infos, .. } = log.fields.message;
 
-            if line.starts_with("| Account address |") {
-                if let Some(addr) = line.strip_prefix("| Account address |").map(|s| s.trim()) {
-                    let address = FieldElement::from_str(addr)?;
+                    let addr = SocketAddr::from_str(&address)?;
+                    port = addr.port();
 
-                    let private_key = if line.starts_with("| Private key     |") {
-                        let private_key_str = line
-                            .split_once('|')
-                            .and_then(|(_, s)| s.trim().split_once(' '))
-                            .map(|(_, s)| s.trim());
+                    for (address, info) in account_infos {
+                        let address = FieldElement::from_str(&address)?;
+                        let private_key = FieldElement::from_str(&info.private_key)?;
+                        let key = SigningKey::from_secret_scalar(private_key);
+                        accounts.push(Account { address, private_key: Some(key) });
+                    }
 
-                        if let Some(priv_key) = private_key_str {
-                            let private_key = FieldElement::from_str(priv_key)?;
-                            let key = SigningKey::from_secret_scalar(private_key);
-                            Some(key)
+                    break;
+                }
+            } else {
+                if let Some(addr) = line.strip_prefix("🚀 JSON-RPC server started:") {
+                    // <🚀 JSON-RPC server started: http://0.0.0.0:5050>
+                    // parse the actual port
+                    let addr = addr.trim().strip_prefix("http://").unwrap_or(addr);
+                    let addr = SocketAddr::from_str(addr)?;
+                    port = addr.port();
+
+                    // The address is the last thing to be displayed so we can safely break here.
+                    break;
+                }
+
+                if line.starts_with("| Account address |") {
+                    if let Some(addr) = line.strip_prefix("| Account address |").map(|s| s.trim()) {
+                        let address = FieldElement::from_str(addr)?;
+
+                        let private_key = if line.starts_with("| Private key     |") {
+                            let private_key_str = line
+                                .split_once('|')
+                                .and_then(|(_, s)| s.trim().split_once(' '))
+                                .map(|(_, s)| s.trim());
+
+                            if let Some(priv_key) = private_key_str {
+                                let private_key = FieldElement::from_str(priv_key)?;
+                                let key = SigningKey::from_secret_scalar(private_key);
+                                Some(key)
+                            } else {
+                                None
+                            }
                         } else {
                             None
-                        }
-                    } else {
-                        None
-                    };
+                        };
 
-                    accounts.push(Account { address, private_key });
+                        accounts.push(Account { address, private_key });
+                    }
                 }
             }
         }
@@ -564,6 +587,14 @@ mod tests {
     fn can_launch_katana() {
         let katana = Katana::new().spawn();
         // assert some default values
+        assert_eq!(katana.accounts().len(), 10);
+        assert_eq!(katana.chain_id(), short_string!("KATANA"));
+    }
+
+    #[test]
+    fn can_launch_katana_with_json_log() {
+        let katana = Katana::new().json_log(true).spawn();
+        // Assert default values when using JSON logging
         assert_eq!(katana.accounts().len(), 10);
         assert_eq!(katana.chain_id(), short_string!("KATANA"));
     }

@@ -8515,6 +8515,8 @@ dependencies = [
 name = "katana-node-bindings"
 version = "0.7.3"
 dependencies = [
+ "serde",
+ "serde_json",
  "starknet",
  "thiserror",
  "tokio",
