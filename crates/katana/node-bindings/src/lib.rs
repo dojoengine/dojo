@@ -143,7 +143,6 @@ pub enum KatanaError {
 pub struct Katana {
     // General options
     dev: bool,
-    silent: bool,
     no_mining: bool,
     json_log: bool,
     block_time: Option<u64>,
@@ -176,7 +175,6 @@ pub struct Katana {
     genesis: Option<PathBuf>,
 
     // Others
-    args: Vec<String>,
     timeout: Option<u64>,
     program: Option<PathBuf>,
 }
@@ -360,33 +358,9 @@ impl Katana {
         self
     }
 
-    /// Adds an argument to pass to the `katana`.
-    pub fn arg<T: Into<String>>(mut self, arg: T) -> Self {
-        self.args.push(arg.into());
-        self
-    }
-
-    /// Adds multiple arguments to pass to the `katana`.
-    pub fn args<I, T>(mut self, args: I) -> Self
-    where
-        I: IntoIterator<Item = T>,
-        T: Into<String>,
-    {
-        for arg in args {
-            self = self.arg(arg.into());
-        }
-        self
-    }
-
     /// Sets the timeout which will be used when the `katana` instance is launched.
     pub const fn timeout(mut self, timeout: u64) -> Self {
         self.timeout = Some(timeout);
-        self
-    }
-
-    /// Don't print anything on startup.
-    pub const fn silent(mut self, silent: bool) -> Self {
-        self.silent = silent;
         self
     }
 
@@ -413,10 +387,6 @@ impl Katana {
 
         let mut port = self.port.unwrap_or(0);
         cmd.arg("--port").arg(port.to_string());
-
-        if self.silent {
-            cmd.arg("--silent");
-        }
 
         if self.no_mining {
             cmd.arg("--no-mining");
@@ -492,8 +462,6 @@ impl Katana {
         if let Some(validate_max_steps) = self.validate_max_steps {
             cmd.arg("--validate-max-steps").arg(validate_max_steps.to_string());
         }
-
-        cmd.args(self.args);
 
         let mut child = cmd.spawn().map_err(KatanaError::SpawnError)?;
         let stdout = child.stdout.as_mut().ok_or(KatanaError::NoStderr)?;
