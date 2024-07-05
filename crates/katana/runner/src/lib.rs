@@ -101,8 +101,6 @@ impl KatanaRunner {
 
         let mut katana = builder.spawn();
 
-        panic!("katana spawned");
-
         let stdout =
             katana.child_mut().stdout.take().context("failed to take subprocess stdout")?;
 
@@ -110,8 +108,6 @@ impl KatanaRunner {
             "katana-{}.log",
             config.run_name.clone().unwrap_or_else(|| port.to_string())
         ));
-
-        panic!("gonna listen to stdout in another thread");
 
         let log_file_path = if let Some(log_path) = config.log_path {
             log_path
@@ -124,8 +120,6 @@ impl KatanaRunner {
         thread::spawn(move || {
             utils::listen_to_stdout(&log_file_path_sent, stdout);
         });
-
-        panic!("passed thread");
 
         let provider = JsonRpcClient::new(HttpTransport::new(katana.endpoint_url()));
         let contract = Mutex::new(Option::None);
@@ -169,11 +163,7 @@ impl KatanaRunner {
 /// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
 /// environment variable. If not set, try to to use katana from the PATH.
 fn determine_default_program_path() -> String {
-    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") {
-        bin
-    } else {
-        "katana".to_string()
-    }
+    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
 }
 
 #[cfg(test)]
