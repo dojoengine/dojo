@@ -19,6 +19,8 @@ mod vec252;
 pub use client::HttpProverParams;
 pub use program_input::*;
 pub use scheduler::*;
+use starknet::accounts::Call;
+use starknet_crypto::FieldElement;
 pub use stone_image::*;
 
 use self::client::http_prove;
@@ -33,22 +35,58 @@ pub enum ProverIdentifier {
     Http(Arc<HttpProverParams>),
 }
 
-#[derive(Debug)]
-pub enum ProveProgram {
+pub enum ProveDiffProgram {
     Differ,
     Merger,
 }
 
-pub async fn prove_diff(
-    input: String,
-    prover: ProverIdentifier,
-    program: ProveProgram,
-) -> anyhow::Result<String> {
-    match prover {
-        ProverIdentifier::Http(params) => http_prove(params, input, program).await,
-        ProverIdentifier::Stone => prove_stone(input, program).await,
-        ProverIdentifier::Sharp => todo!(),
-        ProverIdentifier::Platinum => todo!(),
+pub enum ProveProgram {
+    DiffProgram(ProveDiffProgram),
+    Checker,
+}
+
+impl ProverIdentifier {
+    pub async fn prove_diff(
+        &self,
+        input: String,
+        program: ProveDiffProgram,
+    ) -> anyhow::Result<String> {
+        let program = ProveProgram::DiffProgram(program);
+
+        match self {
+            ProverIdentifier::Http(params) => {
+                http_prove(params.clone(), input, program, false).await
+            }
+            ProverIdentifier::Stone => prove_stone(input, program).await,
+            ProverIdentifier::Sharp => todo!(),
+            ProverIdentifier::Platinum => todo!(),
+        }
+    }
+
+    pub async fn prove_checker(&self, calls: Vec<Call>) -> anyhow::Result<String> {
+        let len = FieldElement::from(calls.len() as u64);
+        let args = calls
+            .into_iter()
+            .map(|c| {
+                let mut felts = vec![c.to, c.selector, c.calldata.len().into()];
+                felts.extend(c.calldata);
+                felts
+            })
+            .flatten()
+            .map(|f| f.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let input = format!("[{} {}]", len, args);
+
+        match self {
+            ProverIdentifier::Http(params) => {
+                http_prove(params.clone(), dbg!(input), ProveProgram::Checker, true).await
+            }
+            ProverIdentifier::Stone => todo!(),
+            ProverIdentifier::Sharp => todo!(),
+            ProverIdentifier::Platinum => todo!(),
+        }
     }
 }
 

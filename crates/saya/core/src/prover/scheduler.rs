@@ -1,4 +1,4 @@
-use anyhow::{bail, Context};
+use anyhow::{anyhow, bail, Context};
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::BoxFuture;
 use futures::FutureExt;
@@ -7,9 +7,9 @@ use katana_primitives::FieldElement;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{info, trace};
 
-use super::{prove_diff, ProgramInput, ProverIdentifier};
+use super::{ProgramInput, ProverIdentifier};
 use crate::prover::extract::program_input_from_program_output;
-use crate::prover::ProveProgram;
+use crate::prover::ProveDiffProgram;
 use crate::LOG_TARGET;
 
 type Proof = String;
@@ -22,7 +22,7 @@ pub enum ProvingState {
 }
 
 type ProvingStateWithBlock = (u64, ProvingState);
-pub type ProofAndDiff = (Proof, ProgramInput, (u64, u64));
+pub type ProofAndDiff = (Proof, Vec<FieldElement>, (u64, u64));
 
 #[allow(missing_debug_implementations)]
 pub struct Scheduler {
@@ -74,14 +74,16 @@ impl Scheduler {
 
     pub async fn proved(self) -> anyhow::Result<ProofAndDiff> {
         let (proof, input) = self.root_task.await?;
-        Ok((proof, input, self.block_range))
+        let diff = input.world_da.ok_or(anyhow!("World DA not found"))?;
+
+        Ok((proof, diff, self.block_range))
     }
 
     pub async fn merge(
         inputs: Vec<ProgramInput>,
         world: FieldElement,
         prover: ProverIdentifier,
-    ) -> anyhow::Result<(Proof, ProgramInput)> {
+    ) -> anyhow::Result<(Proof, Vec<FieldElement>)> {
         let mut scheduler = Scheduler::new(inputs.len(), world, prover);
         let number_of_inputs = inputs.len();
         trace!(target: LOG_TARGET, number_of_inputs, "Pushing inputs to scheduler");
@@ -155,7 +157,7 @@ async fn combine_proofs(
     let prover_input =
         serde_json::to_string(&CombinedInputs { earlier: earlier_input, later: later_input })?;
 
-    let merged_proof = prove_diff(prover_input, prover, ProveProgram::Merger).await?;
+    let merged_proof = prover.prove_diff(prover_input, ProveDiffProgram::Merger).await?;
 
     Ok(merged_proof)
 }
@@ -179,7 +181,7 @@ fn prove_recursively(
             update_channel.send((block_number, ProvingState::Proving)).await.unwrap();
 
             let prover_input = serde_json::to_string(&input.clone()).unwrap();
-            let proof = prove_diff(prover_input, prover, ProveProgram::Differ).await?;
+            let proof = prover.prove_diff(prover_input, ProveDiffProgram::Differ).await?;
 
             info!(target: LOG_TARGET, block_number, "Block proven");
             update_channel.send((block_number, ProvingState::Proved)).await.unwrap();
