@@ -92,7 +92,7 @@ impl Drop for KatanaInstance {
 
 /// Errors that can occur when working with the [`Katana`].
 #[derive(Debug, Error)]
-pub enum KatanaError {
+pub enum Error {
     /// Spawning the katana process failed.
     #[error("could not start katana: {0}")]
     SpawnError(std::io::Error),
@@ -113,11 +113,23 @@ pub enum KatanaError {
     #[error("could not get stderr for katana child process")]
     NoStderr,
 
-    #[error("invalid chain id: {0}")]
-    InvalidChainId(String),
-
     #[error("failed to parse instance address: {0}")]
     AddrParse(#[from] std::net::AddrParseError),
+
+    /// A line indicating the account address was found but the actual value was not.
+    #[error("missing account address")]
+    MissingAccountAddress,
+
+    /// A line indicating the private key was found but the actual value was not.
+    #[error("missing account private key")]
+    MissingAccountPrivateKey,
+
+    /// A line indicating the instance address was found but the actual value was not.
+    #[error("missing account private key")]
+    MissingSocketAddr,
+
+    #[error("encountered unexpected format: {0}")]
+    UnexpectedFormat(String),
 }
 
 /// Builder for launching `katana`.
@@ -381,7 +393,7 @@ impl Katana {
     }
 
     /// Consumes the builder and spawns `katana`. If spawning fails, returns an error.
-    pub fn try_spawn(self) -> Result<KatanaInstance, KatanaError> {
+    pub fn try_spawn(self) -> Result<KatanaInstance, Error> {
         let mut cmd = self.program.as_ref().map_or_else(|| Command::new("katana"), Command::new);
         cmd.stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::inherit());
 
@@ -463,13 +475,16 @@ impl Katana {
             cmd.arg("--validate-max-steps").arg(validate_max_steps.to_string());
         }
 
-        let mut child = cmd.spawn().map_err(KatanaError::SpawnError)?;
-        let stdout = child.stdout.as_mut().ok_or(KatanaError::NoStderr)?;
+        let mut child = cmd.spawn().map_err(Error::SpawnError)?;
+        let stdout = child.stdout.as_mut().ok_or(Error::NoStderr)?;
 
         let start = Instant::now();
         let mut reader = BufReader::new(stdout);
 
         let mut accounts = Vec::new();
+        // var to store the current account being processed
+        let mut current_account: Option<Account> = None;
+
         // TODO: the chain id should be fetched from stdout as well but Katana doesn't display the
         // chain id atm
         let chain_id = self.chain_id.unwrap_or(short_string!("KATANA"));
@@ -478,12 +493,12 @@ impl Katana {
             if start + Duration::from_millis(self.timeout.unwrap_or(KATANA_STARTUP_TIMEOUT_MILLIS))
                 <= Instant::now()
             {
-                return Err(KatanaError::Timeout);
+                return Err(Error::Timeout);
             }
 
             let mut line = String::new();
-            reader.read_line(&mut line).map_err(KatanaError::ReadLineError)?;
-            trace!(target: "katana", line);
+            reader.read_line(&mut line).map_err(Error::ReadLineError)?;
+            trace!(line);
 
             if self.json_log {
                 if let Ok(log) = serde_json::from_str::<JsonLogMessage>(&line) {
@@ -502,10 +517,14 @@ impl Katana {
                     break;
                 }
             } else {
-                if let Some(addr) = line.strip_prefix("🚀 JSON-RPC server started:") {
+                const URL_PREFIX: &str = "🚀 JSON-RPC server started:";
+                if line.starts_with(URL_PREFIX) {
                     // <🚀 JSON-RPC server started: http://0.0.0.0:5050>
+                    let line = line.strip_prefix(URL_PREFIX).ok_or(Error::MissingSocketAddr)?;
+                    let addr = line.trim();
+
                     // parse the actual port
-                    let addr = addr.trim().strip_prefix("http://").unwrap_or(addr);
+                    let addr = addr.strip_prefix("http://").unwrap_or(addr);
                     let addr = SocketAddr::from_str(addr)?;
                     port = addr.port();
 
@@ -513,29 +532,43 @@ impl Katana {
                     break;
                 }
 
-                if line.starts_with("| Account address |") {
-                    if let Some(addr) = line.strip_prefix("| Account address |").map(|s| s.trim()) {
-                        let address = FieldElement::from_str(addr)?;
-
-                        let private_key = if line.starts_with("| Private key     |") {
-                            let private_key_str = line
-                                .split_once('|')
-                                .and_then(|(_, s)| s.trim().split_once(' '))
-                                .map(|(_, s)| s.trim());
-
-                            if let Some(priv_key) = private_key_str {
-                                let private_key = FieldElement::from_str(priv_key)?;
-                                let key = SigningKey::from_secret_scalar(private_key);
-                                Some(key)
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        };
-
-                        accounts.push(Account { address, private_key });
+                const ACC_ADDRESS_PREFIX: &str = "| Account address |";
+                if line.starts_with(ACC_ADDRESS_PREFIX) {
+                    // If there is currently an account being handled, but we've reached the next
+                    // account line, that means the previous address didn't have
+                    // a private key, so we can add it to the accounts list and
+                    // start processing the next account.
+                    if let Some(acc) = current_account.take() {
+                        accounts.push(acc);
                     }
+
+                    let hex = line
+                        .strip_prefix(ACC_ADDRESS_PREFIX)
+                        .ok_or(Error::MissingAccountAddress)?
+                        .trim();
+
+                    let address = FieldElement::from_str(hex)?;
+                    let account = Account { address, private_key: None };
+                    current_account = Some(account);
+                }
+
+                const ACC_PK_PREFIX: &str = "| Private key     |";
+                if line.starts_with(ACC_PK_PREFIX) {
+                    // the private key may or may not be present for a particular account, so we
+                    // have to handle both cases properly
+                    let Some(acc) = current_account.take() else {
+                        let msg = "Account address not found before private key".to_string();
+                        return Err(Error::UnexpectedFormat(msg));
+                    };
+
+                    let hex = line
+                        .strip_prefix(ACC_PK_PREFIX)
+                        .ok_or(Error::MissingAccountPrivateKey)?
+                        .trim();
+
+                    let private_key = FieldElement::from_str(hex)?;
+                    let signing_key = SigningKey::from_secret_scalar(private_key);
+                    accounts.push(Account { private_key: Some(signing_key), ..acc });
                 }
             }
         }
@@ -557,6 +590,8 @@ mod tests {
         // assert some default values
         assert_eq!(katana.accounts().len(), 10);
         assert_eq!(katana.chain_id(), short_string!("KATANA"));
+        // assert that all accounts have private key
+        assert!(katana.accounts().iter().all(|a| a.private_key.is_some()));
     }
 
     #[test]
@@ -565,6 +600,8 @@ mod tests {
         // Assert default values when using JSON logging
         assert_eq!(katana.accounts().len(), 10);
         assert_eq!(katana.chain_id(), short_string!("KATANA"));
+        // assert that all accounts have private key
+        assert!(katana.accounts().iter().all(|a| a.private_key.is_some()));
     }
 
     #[test]
