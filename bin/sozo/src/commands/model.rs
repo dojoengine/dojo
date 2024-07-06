@@ -4,7 +4,7 @@ use dojo_world::contracts::naming::ensure_namespace;
 use dojo_world::manifest::get_default_namespace_from_ws;
 use scarb::core::Config;
 use sozo_ops::model;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
@@ -54,7 +54,7 @@ hashes, called 'hash' in the following documentation.
         fixed layout key        = parent_key
         struct layout field key = hash(parent_key, field_selector)
         tuple layout item key   = hash(parent_key, item_index)
-        enum layout 
+        enum layout
                     variant key = parent_key
                     data key    = hash(parent_key, variant_index)
         array layout
@@ -98,7 +98,7 @@ hashes, called 'hash' in the following documentation.
         #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
         #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
-        keys: Vec<FieldElement>,
+        keys: Vec<Felt>,
 
         #[command(flatten)]
         world: WorldOptions,

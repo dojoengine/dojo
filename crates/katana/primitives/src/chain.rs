@@ -1,5 +1,8 @@
-use starknet::core::types::{FieldElement, FromStrError};
 use starknet::core::utils::{cairo_short_string_to_felt, CairoShortStringToFeltError};
+use starknet::macros::short_string;
+
+use crate::felt::FromStrError;
+use crate::FieldElement;
 
 /// Known chain ids that has been assigned a name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, strum_macros::Display)]
@@ -12,28 +15,13 @@ pub enum NamedChainId {
 
 impl NamedChainId {
     /// `SN_MAIN` in ASCII
-    pub const SN_MAIN: FieldElement = FieldElement::from_mont([
-        0xf596341657d6d657,
-        0xffffffffffffffff,
-        0xffffffffffffffff,
-        0x6f9757bd5443bc6,
-    ]);
+    pub const SN_MAIN: FieldElement = short_string!("SN_MAIN");
 
     /// `SN_GOERLI` in ASCII
-    pub const SN_GOERLI: FieldElement = FieldElement::from_mont([
-        0x3417161755cc97b2,
-        0xfffffffffffff596,
-        0xffffffffffffffff,
-        0x588778cb29612d1,
-    ]);
+    pub const SN_GOERLI: FieldElement = short_string!("SN_GOERLI");
 
     /// `SN_SEPOLIA` in ASCII
-    pub const SN_SEPOLIA: FieldElement = FieldElement::from_mont([
-        0x159755f62c97a933,
-        0xfffffffffff59634,
-        0xffffffffffffffff,
-        0x70cb558f6123c62,
-    ]);
+    pub const SN_SEPOLIA: FieldElement = short_string!("SN_SEPOLIA");
 
     /// Returns the id of the chain. It is the ASCII representation of a predefined string
     /// constants.
@@ -108,7 +96,7 @@ impl ChainId {
     /// Cairo short string.
     pub fn parse(s: &str) -> Result<Self, ParseChainIdError> {
         let id = if s.starts_with("0x") {
-            FieldElement::from_hex_be(s)?
+            FieldElement::from_hex(s)?
         } else {
             cairo_short_string_to_felt(s)?
         };

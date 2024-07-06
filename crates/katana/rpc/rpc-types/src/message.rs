@@ -16,7 +16,7 @@ impl MsgFromL1 {
         let message_hash = compute_l2_to_l1_message_hash(
             // This conversion will never fail bcs `from_address` is 20 bytes and the it will only
             // fail if the slice is > 32 bytes
-            FieldElement::from_byte_slice_be(self.0.from_address.as_bytes()).unwrap(),
+            FieldElement::from_bytes_be_slice(self.0.from_address.as_bytes()),
             self.0.to_address,
             &self.0.payload,
         );

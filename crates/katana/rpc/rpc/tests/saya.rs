@@ -9,10 +9,10 @@ use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_rpc_api::dev::DevApiClient;
 use katana_rpc_api::saya::SayaApiClient;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::macros::felt;
 
-const ENOUGH_GAS: FieldElement = felt!("0x100000000000000000");
+const ENOUGH_GAS: Felt = felt!("0x100000000000000000");
 
 mod common;
 
@@ -33,7 +33,7 @@ async fn fetch_traces_from_block() {
         common::prepare_contract_declaration_params(&path).unwrap();
     let contract = Arc::new(contract);
 
-    let res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
+    let res = account.declare_v2(contract.clone(), compiled_class_hash).send().await.unwrap();
     // wait for the tx to be mined
     TransactionWaiter::new(res.transaction_hash, account.provider())
         .with_interval(200)
@@ -47,7 +47,7 @@ async fn fetch_traces_from_block() {
         let call = common::build_deploy_cairo1_contract_call(res.class_hash, (i + 2_u32).into());
 
         let res = account
-            .execute(vec![call])
+            .execute_v1(vec![call])
             .max_fee(ENOUGH_GAS)
             .send()
             .await
@@ -102,7 +102,7 @@ async fn fetch_traces_from_pending_block() {
         common::prepare_contract_declaration_params(&path).unwrap();
     let contract = Arc::new(contract);
 
-    let res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
+    let res = account.declare_v2(contract.clone(), compiled_class_hash).send().await.unwrap();
     // wait for the tx to be mined
     TransactionWaiter::new(res.transaction_hash, account.provider())
         .with_interval(200)
@@ -118,7 +118,7 @@ async fn fetch_traces_from_pending_block() {
         // we set the nonce manually so that we can send the tx rapidly without waiting for the
         // previous tx to be mined first.
         let res = account
-            .execute(vec![call])
+            .execute_v1(vec![call])
             .max_fee(ENOUGH_GAS)
             .send()
             .await

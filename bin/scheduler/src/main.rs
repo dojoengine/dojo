@@ -2,7 +2,7 @@ use std::fs;
 use std::sync::Arc;
 
 use clap::Parser;
-use katana_primitives::FieldElement;
+use katana_primitives::felt::FieldElement;
 use saya_core::prover::{HttpProverParams, ProgramInput, ProverIdentifier, Scheduler};
 use saya_core::ProverAccessKey;
 use serde::{Deserialize, Serialize};

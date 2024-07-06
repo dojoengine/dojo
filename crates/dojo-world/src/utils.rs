@@ -6,13 +6,13 @@ use std::time::Duration;
 use anyhow::Result;
 use futures::FutureExt;
 use starknet::accounts::{
-    AccountDeployment, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
-    Declaration, Execution,
+    AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
+    DeclarationV2, ExecutionV1,
 };
 use starknet::core::types::{
-    DeclareTransactionResult, DeployAccountTransactionResult, ExecutionResult, FieldElement,
-    InvokeTransactionResult, MaybePendingTransactionReceipt, PendingTransactionReceipt,
-    StarknetError, TransactionFinalityStatus, TransactionReceipt, TransactionStatus,
+    DeclareTransactionResult, DeployAccountTransactionResult, ExecutionResult, Felt,
+    InvokeTransactionResult, ReceiptBlock, StarknetError, TransactionFinalityStatus,
+    TransactionReceipt, TransactionReceiptWithBlockInfo, TransactionStatus,
 };
 use starknet::providers::{Provider, ProviderError};
 use tokio::time::{Instant, Interval};
@@ -20,7 +20,7 @@ use tokio::time::{Instant, Interval};
 use crate::migration::TxnConfig;
 
 type GetTxStatusResult = Result<TransactionStatus, ProviderError>;
-type GetTxReceiptResult = Result<MaybePendingTransactionReceipt, ProviderError>;
+type GetTxReceiptResult = Result<TransactionReceiptWithBlockInfo, ProviderError>;
 
 type GetTxStatusFuture<'a> = Pin<Box<dyn Future<Output = GetTxStatusResult> + Send + 'a>>;
 type GetTxReceiptFuture<'a> = Pin<Box<dyn Future<Output = GetTxReceiptResult> + Send + 'a>>;
@@ -55,13 +55,13 @@ pub enum TransactionWaitingError {
 ///
 /// let provider = JsonRpcClient::new(HttpTransport::new(Url::parse("http://localhost:5000").unwrap()));
 ///
-/// let tx_hash = FieldElement::from(0xbadbeefu64);
+/// let tx_hash = Felt::from(0xbadbeefu64);
 /// let receipt = TransactionWaiter::new(tx_hash, &provider).with_tx_status(TransactionFinalityStatus::AcceptedOnL2).await.unwrap();
 /// ```
 #[must_use = "TransactionWaiter does nothing unless polled"]
 pub struct TransactionWaiter<'a, P: Provider> {
     /// The hash of the transaction to wait for.
-    tx_hash: FieldElement,
+    tx_hash: Felt,
     /// The transaction finality status to wait for.
     ///
     /// If not set, then it will wait until it is `ACCEPTED_ON_L2` whether it is reverted or not.
@@ -98,7 +98,7 @@ where
     /// Interval for use with 3rd party provider without burning the API rate limit.
     const DEFAULT_INTERVAL: Duration = Duration::from_millis(2500);
 
-    pub fn new(tx: FieldElement, provider: &'a P) -> Self {
+    pub fn new(tx: Felt, provider: &'a P) -> Self {
         Self {
             provider,
             tx_hash: tx,
@@ -131,12 +131,12 @@ where
     // Helper function to evaluate if the transaction receipt should be accepted yet or not, based
     // on the waiter's parameters. Used in the `Future` impl.
     fn evaluate_receipt_from_params(
-        receipt: MaybePendingTransactionReceipt,
+        receipt: TransactionReceiptWithBlockInfo,
         expected_finality_status: Option<TransactionFinalityStatus>,
         must_succeed: bool,
-    ) -> Option<Result<MaybePendingTransactionReceipt, TransactionWaitingError>> {
-        match &receipt {
-            MaybePendingTransactionReceipt::PendingReceipt(r) => {
+    ) -> Option<Result<TransactionReceiptWithBlockInfo, TransactionWaitingError>> {
+        match &receipt.block {
+            ReceiptBlock::Pending => {
                 // pending receipt doesn't include finality status, so we cant check it.
                 if expected_finality_status.is_some() {
                     return None;
@@ -146,7 +146,7 @@ where
                     return Some(Ok(receipt));
                 }
 
-                match execution_status_from_pending_receipt(r) {
+                match execution_status_from_receipt(&receipt.receipt) {
                     ExecutionResult::Succeeded => Some(Ok(receipt)),
                     ExecutionResult::Reverted { reason } => {
                         Some(Err(TransactionWaitingError::TransactionReverted(reason.clone())))
@@ -154,9 +154,9 @@ where
                 }
             }
 
-            MaybePendingTransactionReceipt::Receipt(r) => {
+            ReceiptBlock::Block { .. } => {
                 if let Some(expected_status) = expected_finality_status {
-                    match finality_status_from_receipt(r) {
+                    match finality_status_from_receipt(&receipt.receipt) {
                         TransactionFinalityStatus::AcceptedOnL2
                             if expected_status == TransactionFinalityStatus::AcceptedOnL1 =>
                         {
@@ -168,7 +168,7 @@ where
                                 return Some(Ok(receipt));
                             }
 
-                            match execution_status_from_receipt(r) {
+                            match execution_status_from_receipt(&receipt.receipt) {
                                 ExecutionResult::Succeeded => Some(Ok(receipt)),
                                 ExecutionResult::Reverted { reason } => Some(Err(
                                     TransactionWaitingError::TransactionReverted(reason.clone()),
@@ -188,7 +188,7 @@ impl<'a, P> Future for TransactionWaiter<'a, P>
 where
     P: Provider + Send,
 {
-    type Output = Result<MaybePendingTransactionReceipt, TransactionWaitingError>;
+    type Output = Result<TransactionReceiptWithBlockInfo, TransactionWaitingError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
@@ -256,9 +256,9 @@ where
                             return Poll::Ready(Err(TransactionWaitingError::Provider(e)));
                         }
 
-                        Ok(receipt) => {
+                        Ok(res) => {
                             if let Some(res) = Self::evaluate_receipt_from_params(
-                                receipt,
+                                res,
                                 this.tx_finality_status,
                                 this.must_succeed,
                             ) {
@@ -282,35 +282,13 @@ where
 }
 
 #[inline]
-pub fn execution_status_from_maybe_pending_receipt(
-    receipt: &MaybePendingTransactionReceipt,
-) -> &ExecutionResult {
-    match &receipt {
-        MaybePendingTransactionReceipt::PendingReceipt(r) => {
-            execution_status_from_pending_receipt(r)
-        }
-        MaybePendingTransactionReceipt::Receipt(r) => execution_status_from_receipt(r),
-    }
-}
-
-#[inline]
-fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResult {
+pub fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResult {
     match receipt {
         TransactionReceipt::Invoke(receipt) => &receipt.execution_result,
         TransactionReceipt::Deploy(receipt) => &receipt.execution_result,
         TransactionReceipt::Declare(receipt) => &receipt.execution_result,
         TransactionReceipt::L1Handler(receipt) => &receipt.execution_result,
         TransactionReceipt::DeployAccount(receipt) => &receipt.execution_result,
-    }
-}
-
-#[inline]
-fn execution_status_from_pending_receipt(receipt: &PendingTransactionReceipt) -> &ExecutionResult {
-    match receipt {
-        PendingTransactionReceipt::Invoke(receipt) => &receipt.execution_result,
-        PendingTransactionReceipt::Declare(receipt) => &receipt.execution_result,
-        PendingTransactionReceipt::L1Handler(receipt) => &receipt.execution_result,
-        PendingTransactionReceipt::DeployAccount(receipt) => &receipt.execution_result,
     }
 }
 
@@ -322,17 +300,6 @@ fn finality_status_from_receipt(receipt: &TransactionReceipt) -> TransactionFina
         TransactionReceipt::Declare(receipt) => receipt.finality_status,
         TransactionReceipt::L1Handler(receipt) => receipt.finality_status,
         TransactionReceipt::DeployAccount(receipt) => receipt.finality_status,
-    }
-}
-
-#[inline]
-pub fn block_number_from_receipt(receipt: &TransactionReceipt) -> u64 {
-    match receipt {
-        TransactionReceipt::Invoke(tx) => tx.block_number,
-        TransactionReceipt::L1Handler(tx) => tx.block_number,
-        TransactionReceipt::Declare(tx) => tx.block_number,
-        TransactionReceipt::Deploy(tx) => tx.block_number,
-        TransactionReceipt::DeployAccount(tx) => tx.block_number,
     }
 }
 
@@ -350,7 +317,7 @@ pub trait TransactionExt<T> {
     async fn send_with_cfg(self, txn_config: &TxnConfig) -> Result<Self::R, Self::U>;
 }
 
-impl<T> TransactionExt<T> for Execution<'_, T>
+impl<T> TransactionExt<T> for ExecutionV1<'_, T>
 where
     T: ConnectedAccount + Sync,
 {
@@ -373,7 +340,7 @@ where
     }
 }
 
-impl<T> TransactionExt<T> for Declaration<'_, T>
+impl<T> TransactionExt<T> for DeclarationV2<'_, T>
 where
     T: ConnectedAccount + Sync,
 {
@@ -396,7 +363,7 @@ where
     }
 }
 
-impl<T> TransactionExt<T> for AccountDeployment<'_, T>
+impl<T> TransactionExt<T> for AccountDeploymentV1<'_, T>
 where
     T: AccountFactory + Sync,
 {
@@ -426,9 +393,9 @@ mod tests {
         get_default_test_starknet_config, SequencerConfig, TestSequencer,
     };
     use starknet::core::types::{
-        ExecutionResources, ExecutionResult, FeePayment, FieldElement, InvokeTransactionReceipt,
-        MaybePendingTransactionReceipt, PendingInvokeTransactionReceipt, PendingTransactionReceipt,
-        PriceUnit, TransactionFinalityStatus, TransactionReceipt,
+        ComputationResources, DataAvailabilityResources, DataResources, ExecutionResources,
+        ExecutionResult, FeePayment, Felt, InvokeTransactionReceipt, PriceUnit, ReceiptBlock,
+        TransactionFinalityStatus, TransactionReceipt, TransactionReceiptWithBlockInfo,
     };
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
@@ -444,44 +411,58 @@ mod tests {
     }
 
     const EXECUTION_RESOURCES: ExecutionResources = ExecutionResources {
-        steps: 0,
-        memory_holes: None,
-        ec_op_builtin_applications: Some(0),
-        ecdsa_builtin_applications: Some(0),
-        keccak_builtin_applications: Some(0),
-        bitwise_builtin_applications: Some(0),
-        pedersen_builtin_applications: Some(0),
-        poseidon_builtin_applications: Some(0),
-        range_check_builtin_applications: Some(0),
-        segment_arena_builtin: Some(0),
+        computation_resources: ComputationResources {
+            steps: 0,
+            memory_holes: None,
+            ec_op_builtin_applications: Some(0),
+            ecdsa_builtin_applications: Some(0),
+            keccak_builtin_applications: Some(0),
+            bitwise_builtin_applications: Some(0),
+            pedersen_builtin_applications: Some(0),
+            poseidon_builtin_applications: Some(0),
+            range_check_builtin_applications: Some(0),
+            segment_arena_builtin: Some(0),
+        },
+        data_resources: DataResources {
+            data_availability: DataAvailabilityResources { l1_gas: 0, l1_data_gas: 0 },
+        },
     };
 
     fn mock_receipt(
         finality_status: TransactionFinalityStatus,
         execution_result: ExecutionResult,
-    ) -> TransactionReceipt {
-        TransactionReceipt::Invoke(InvokeTransactionReceipt {
+    ) -> TransactionReceiptWithBlockInfo {
+        let receipt = TransactionReceipt::Invoke(InvokeTransactionReceipt {
             finality_status,
             execution_result,
             events: Default::default(),
             actual_fee: FeePayment { amount: Default::default(), unit: PriceUnit::Wei },
-            block_hash: Default::default(),
-            block_number: Default::default(),
             messages_sent: Default::default(),
             transaction_hash: Default::default(),
             execution_resources: EXECUTION_RESOURCES,
-        })
+        });
+
+        TransactionReceiptWithBlockInfo {
+            receipt,
+            block: ReceiptBlock::Block {
+                block_hash: Default::default(),
+                block_number: Default::default(),
+            },
+        }
     }
 
-    fn mock_pending_receipt(execution_result: ExecutionResult) -> PendingTransactionReceipt {
-        PendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
+    fn mock_pending_receipt(execution_result: ExecutionResult) -> TransactionReceiptWithBlockInfo {
+        let receipt = TransactionReceipt::Invoke(InvokeTransactionReceipt {
             execution_result,
             events: Default::default(),
+            finality_status: TransactionFinalityStatus::AcceptedOnL2,
             actual_fee: FeePayment { amount: Default::default(), unit: PriceUnit::Wei },
             messages_sent: Default::default(),
             transaction_hash: Default::default(),
             execution_resources: EXECUTION_RESOURCES,
-        })
+        });
+
+        TransactionReceiptWithBlockInfo { receipt, block: ReceiptBlock::Pending }
     }
 
     #[tokio::test]
@@ -489,7 +470,7 @@ mod tests {
         let (_sequencer, provider) = create_test_sequencer().await;
 
         assert_matches!(
-            TransactionWaiter::new(FieldElement::from_hex_be("0x1234").unwrap(), &provider)
+            TransactionWaiter::new(Felt::from_hex("0x1234").unwrap(), &provider)
                 .with_timeout(Duration::from_secs(1))
                 .await,
             Err(super::TransactionWaitingError::Timeout)
@@ -498,10 +479,8 @@ mod tests {
 
     #[test]
     fn wait_for_no_finality_status() {
-        let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-            TransactionFinalityStatus::AcceptedOnL2,
-            ExecutionResult::Succeeded,
-        ));
+        let receipt =
+            mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
 
         assert_eq!(
             TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -533,10 +512,8 @@ mod tests {
     #[test]
     fn wait_for_finality_status_with_no_succeed() {
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL2,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
 
             assert_eval_receipt!(
                 (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL2)),
@@ -545,10 +522,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL2,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
 
             assert!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -561,10 +536,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL1,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
 
             assert_eval_receipt!(
                 (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL2)),
@@ -573,10 +546,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL1,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
 
             assert_eval_receipt!(
                 (receipt.clone(), Some(TransactionFinalityStatus::AcceptedOnL1)),
@@ -588,10 +559,8 @@ mod tests {
     #[test]
     fn wait_for_finality_status_with_must_succeed() {
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL2,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL2, ExecutionResult::Succeeded);
 
             assert_eq!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -606,10 +575,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL1,
-                ExecutionResult::Succeeded,
-            ));
+            let receipt =
+                mock_receipt(TransactionFinalityStatus::AcceptedOnL1, ExecutionResult::Succeeded);
 
             assert_eq!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -624,10 +591,10 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
+            let receipt = mock_receipt(
                 TransactionFinalityStatus::AcceptedOnL1,
                 ExecutionResult::Reverted { reason: Default::default() },
-            ));
+            );
 
             let err =
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -645,9 +612,7 @@ mod tests {
     #[test]
     fn wait_for_pending_tx() {
         {
-            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
-                ExecutionResult::Succeeded,
-            ));
+            let receipt = mock_pending_receipt(ExecutionResult::Succeeded);
 
             assert!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -660,9 +625,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
-                ExecutionResult::Reverted { reason: Default::default() },
-            ));
+            let receipt =
+                mock_pending_receipt(ExecutionResult::Reverted { reason: Default::default() });
 
             assert_eq!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
@@ -677,9 +641,8 @@ mod tests {
         }
 
         {
-            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
-                ExecutionResult::Reverted { reason: Default::default() },
-            ));
+            let receipt =
+                mock_pending_receipt(ExecutionResult::Reverted { reason: Default::default() });
 
             let err =
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(

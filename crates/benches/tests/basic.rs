@@ -4,7 +4,7 @@ mod imports {
     pub use hex::ToHex;
     pub use katana_runner::runner;
     pub use proptest::prelude::*;
-    pub use starknet::core::types::FieldElement;
+    pub use starknet::core::types::Felt;
 }
 
 #[cfg(not(feature = "skip-gas-benchmarks"))]
@@ -17,7 +17,7 @@ proptest! {
         runner!(bench_basic_emit);
         let contract_address = deploy_sync(runner).unwrap();
 
-        let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
+        let s_hex = Felt::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
         let fee = estimate_gas(
            &runner.account(1),
@@ -32,7 +32,7 @@ proptest! {
         runner!(bench_basic_set);
         let contract_address = deploy_sync(runner).unwrap();
 
-        let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
+        let s_hex = Felt::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
         let fee = estimate_gas(&runner.account(1),
             BenchCall("bench_basic_set", vec![s_hex]), contract_address
@@ -46,7 +46,7 @@ proptest! {
         runner!(bench_basic_double_set);
         let contract_address = deploy_sync(runner).unwrap();
 
-        let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
+        let s_hex = Felt::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
         let fee = estimate_gas(&runner.account(1),
             BenchCall("bench_basic_double_set", vec![s_hex]), contract_address
@@ -60,7 +60,7 @@ proptest! {
         runner!(bench_basic_get);
         let contract_address = deploy_sync(runner).unwrap();
 
-        let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
+        let s_hex = Felt::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
         let fee = estimate_gas_last(&runner.account(1), vec![
             BenchCall("bench_basic_set", vec![s_hex]),
             BenchCall("bench_basic_get", vec![])

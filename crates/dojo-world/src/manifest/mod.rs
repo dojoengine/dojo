@@ -8,9 +8,7 @@ use camino::Utf8PathBuf;
 use scarb::core::Workspace;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use starknet::core::types::{
-    BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, StarknetError,
-};
+use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, Felt, StarknetError};
 use starknet::core::utils::{
     starknet_keccak, CairoShortStringToFeltError, ParseCairoShortStringError,
 };
@@ -353,7 +351,7 @@ impl DeploymentManifest {
             let previous_contract =
                 previous.contracts.iter().find(|c| c.manifest_name == contract.manifest_name);
             if let Some(previous_contract) = previous_contract {
-                if previous_contract.inner.base_class_hash != FieldElement::ZERO {
+                if previous_contract.inner.base_class_hash != Felt::ZERO {
                     contract.inner.base_class_hash = previous_contract.inner.base_class_hash;
                 }
             }
@@ -404,7 +402,7 @@ impl DeploymentManifest {
     /// * `world_address` - The address of the remote World contract.
     pub async fn load_from_remote<P>(
         provider: P,
-        world_address: FieldElement,
+        world_address: Felt,
     ) -> Result<Self, AbstractManifestError>
     where
         P: Provider + Send + Sync,
@@ -465,7 +463,7 @@ impl DeploymentManifest {
 // impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeploymentManifest {}
 
 async fn get_remote_models_and_contracts<P>(
-    world: FieldElement,
+    world: Felt,
     provider: P,
 ) -> Result<(Vec<Manifest<DojoModel>>, Vec<Manifest<DojoContract>>), AbstractManifestError>
 where
@@ -517,8 +515,8 @@ where
 
 async fn get_events<P: Provider + Send + Sync>(
     provider: P,
-    world: FieldElement,
-    keys: Vec<Vec<FieldElement>>,
+    world: Felt,
+    keys: Vec<Vec<Felt>>,
 ) -> Result<Vec<EmittedEvent>, ProviderError> {
     const DEFAULT_CHUNK_SIZE: u64 = 100;
 
@@ -547,11 +545,9 @@ fn parse_contracts_events(
     deployed: Vec<EmittedEvent>,
     upgraded: Vec<EmittedEvent>,
 ) -> Vec<Manifest<DojoContract>> {
-    fn retain_only_latest_upgrade_events(
-        events: Vec<EmittedEvent>,
-    ) -> HashMap<FieldElement, FieldElement> {
+    fn retain_only_latest_upgrade_events(events: Vec<EmittedEvent>) -> HashMap<Felt, Felt> {
         // addr -> (block_num, class_hash)
-        let mut upgrades: HashMap<FieldElement, (u64, FieldElement)> = HashMap::new();
+        let mut upgrades: HashMap<Felt, (u64, Felt)> = HashMap::new();
 
         events.into_iter().for_each(|event| {
             let mut data = event.data.into_iter();
@@ -620,7 +616,7 @@ fn parse_contracts_events(
 }
 
 fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
-    let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
+    let mut models: HashMap<String, Felt> = HashMap::with_capacity(events.len());
 
     for e in events {
         let model_event = match e.try_into() {
@@ -713,15 +709,15 @@ impl ManifestMethods for DojoContract {
         self.abi = abi;
     }
 
-    fn class_hash(&self) -> &FieldElement {
+    fn class_hash(&self) -> &Felt {
         self.class_hash.as_ref()
     }
 
-    fn set_class_hash(&mut self, class_hash: FieldElement) {
+    fn set_class_hash(&mut self, class_hash: Felt) {
         self.class_hash = class_hash;
     }
 
-    fn original_class_hash(&self) -> &FieldElement {
+    fn original_class_hash(&self) -> &Felt {
         self.original_class_hash.as_ref()
     }
 
@@ -754,15 +750,15 @@ impl ManifestMethods for DojoModel {
         self.abi = abi;
     }
 
-    fn class_hash(&self) -> &FieldElement {
+    fn class_hash(&self) -> &Felt {
         self.class_hash.as_ref()
     }
 
-    fn set_class_hash(&mut self, class_hash: FieldElement) {
+    fn set_class_hash(&mut self, class_hash: Felt) {
         self.class_hash = class_hash;
     }
 
-    fn original_class_hash(&self) -> &FieldElement {
+    fn original_class_hash(&self) -> &Felt {
         self.original_class_hash.as_ref()
     }
 
@@ -784,15 +780,15 @@ impl ManifestMethods for WorldContract {
         self.abi = abi;
     }
 
-    fn class_hash(&self) -> &FieldElement {
+    fn class_hash(&self) -> &Felt {
         self.class_hash.as_ref()
     }
 
-    fn set_class_hash(&mut self, class_hash: FieldElement) {
+    fn set_class_hash(&mut self, class_hash: Felt) {
         self.class_hash = class_hash;
     }
 
-    fn original_class_hash(&self) -> &FieldElement {
+    fn original_class_hash(&self) -> &Felt {
         self.original_class_hash.as_ref()
     }
 
@@ -814,15 +810,15 @@ impl ManifestMethods for Class {
         self.abi = abi;
     }
 
-    fn class_hash(&self) -> &FieldElement {
+    fn class_hash(&self) -> &Felt {
         self.class_hash.as_ref()
     }
 
-    fn set_class_hash(&mut self, class_hash: FieldElement) {
+    fn set_class_hash(&mut self, class_hash: Felt) {
         self.class_hash = class_hash;
     }
 
-    fn original_class_hash(&self) -> &FieldElement {
+    fn original_class_hash(&self) -> &Felt {
         self.original_class_hash.as_ref()
     }
 

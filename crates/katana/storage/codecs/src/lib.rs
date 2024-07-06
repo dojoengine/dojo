@@ -63,7 +63,7 @@ macro_rules! impl_compact_felt {
                     if len > 0 {
                         let mut arr = [0u8; 32];
                         arr[32 - len..].copy_from_slice(&buf[..len]);
-                        (FieldElement::from_bytes_be(&arr).unwrap().into(), &buf[len..])
+                        (FieldElement::from_bytes_be(&arr).into(), &buf[len..])
                     } else {
                         (FieldElement::ZERO.into(), buf)
                     }

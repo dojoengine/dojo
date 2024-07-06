@@ -16,6 +16,7 @@ saya-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
+bigdecimal.workspace = true
 cairo-proof-parser.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
@@ -31,7 +32,7 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 starknet-crypto.workspace = true
-starknet-types-core = { version = "0.0.9", default-features = false, features = [ "curve", "num-traits", "serde" ] }
+starknet-types-core = { version = "0.1.4", default-features = false, features = [ "curve", "num-traits", "serde" ] }
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true

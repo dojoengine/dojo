@@ -211,7 +211,7 @@ pub async fn revoke(
 mod tests {
     use std::str::FromStr;
 
-    use starknet_crypto::FieldElement;
+    use starknet::core::types::Felt;
 
     use super::*;
 
@@ -317,14 +317,14 @@ mod tests {
                 "model:name:model_name,0x1234",
                 auth::ResourceOwner {
                     resource: auth::ResourceType::Model("name:model_name".to_string()),
-                    owner: FieldElement::from_hex_be("0x1234").unwrap(),
+                    owner: Felt::from_hex("0x1234").unwrap(),
                 },
             ),
             (
                 "ns:namespace_name,0x1111",
                 auth::ResourceOwner {
                     resource: auth::ResourceType::Namespace("namespace_name".to_string()),
-                    owner: FieldElement::from_hex_be("0x1111").unwrap(),
+                    owner: Felt::from_hex("0x1111").unwrap(),
                 },
             ),
         ];

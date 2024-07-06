@@ -3,7 +3,7 @@ use std::time::Duration;
 use futures::future::join_all;
 use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, SingleOwnerAccount};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
@@ -15,24 +15,24 @@ use crate::{parse_calls, BenchCall, ENOUGH_GAS};
 async fn spam_no_stats(
     runner: &KatanaRunner,
     accounts: &[SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>],
-    contract_address: FieldElement,
+    contract_address: Felt,
     calldata: Vec<BenchCall>,
     wait_time: Duration,
-) -> FieldElement {
-    let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
-    let mut nonce = FieldElement::ONE;
+) -> Felt {
+    let max_fee = Felt::from_hex(ENOUGH_GAS).unwrap();
+    let mut nonce = Felt::ONE;
 
     for call in parse_calls(calldata, contract_address) {
         let transactions = accounts
             .iter()
-            .map(|account| account.execute(vec![call.clone()]).nonce(nonce).max_fee(max_fee))
+            .map(|account| account.execute_v1(vec![call.clone()]).nonce(nonce).max_fee(max_fee))
             .collect::<Vec<_>>();
 
         join_all(transactions.iter().map(|t| t.send())).await;
 
         sleep(wait_time).await;
         runner.blocks_until_empty().await;
-        nonce += FieldElement::ONE;
+        nonce += Felt::ONE;
     }
 
     nonce
@@ -40,12 +40,12 @@ async fn spam_no_stats(
 
 pub async fn spam_katana(
     runner: KatanaRunner,
-    contract_address: FieldElement,
+    contract_address: Felt,
     mut calldata: Vec<BenchCall>,
     additional_sleep: u64,
     sequential: bool,
 ) -> BenchSummary {
-    let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
+    let max_fee = Felt::from_hex(ENOUGH_GAS).unwrap();
 
     let transaction_sum_before: u32 = runner.block_sizes().await.iter().sum();
     let steps_before = runner.steps().await;
@@ -78,7 +78,7 @@ pub async fn spam_katana(
     let final_transactions = accounts
         .iter()
         .map(|account| {
-            let move_call = account.execute(calls.clone()).nonce(nonce).max_fee(max_fee);
+            let move_call = account.execute_v1(calls.clone()).nonce(nonce).max_fee(max_fee);
             move_call
         })
         .collect::<Vec<_>>();

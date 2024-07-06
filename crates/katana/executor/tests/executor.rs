@@ -223,7 +223,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     let actual_storage_value_4_1 = state_provider
         .storage(
             deployed_contract.into(),
-            get_storage_var_address("ERC20_total_supply", &[]).unwrap() + 1u8.into(),
+            get_storage_var_address("ERC20_total_supply", &[]).unwrap() + FieldElement::ONE,
         )
         .unwrap();
     let actual_storage_value_5 = state_provider

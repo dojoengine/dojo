@@ -3,7 +3,8 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use num_traits::ToPrimitive;
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -12,7 +13,7 @@ const INDENT: &str = "    ";
 
 pub async fn model_class_hash(
     tag: String,
-    world_address: FieldElement,
+    world_address: Felt,
     provider: JsonRpcClient<HttpTransport>,
 ) -> Result<()> {
     let mut world_reader = WorldContractReader::new(world_address, &provider);
@@ -27,7 +28,7 @@ pub async fn model_class_hash(
 
 pub async fn model_contract_address(
     tag: String,
-    world_address: FieldElement,
+    world_address: Felt,
     provider: JsonRpcClient<HttpTransport>,
 ) -> Result<()> {
     let mut world_reader = WorldContractReader::new(world_address, &provider);
@@ -42,7 +43,7 @@ pub async fn model_contract_address(
 
 pub async fn model_layout(
     tag: String,
-    world_address: FieldElement,
+    world_address: Felt,
     provider: JsonRpcClient<HttpTransport>,
 ) -> Result<()> {
     let mut world_reader = WorldContractReader::new(world_address, &provider);
@@ -65,7 +66,7 @@ pub async fn model_layout(
 
 pub async fn model_schema(
     tag: String,
-    world_address: FieldElement,
+    world_address: Felt,
     provider: JsonRpcClient<HttpTransport>,
     to_json: bool,
 ) -> Result<()> {
@@ -86,8 +87,8 @@ pub async fn model_schema(
 
 pub async fn model_get(
     tag: String,
-    keys: Vec<FieldElement>,
-    world_address: FieldElement,
+    keys: Vec<Felt>,
+    world_address: Felt,
     provider: JsonRpcClient<HttpTransport>,
 ) -> Result<()> {
     if keys.is_empty() {
@@ -399,7 +400,7 @@ fn _start_indent(level: usize, start_indent: bool) -> String {
 
 fn format_primitive(
     p: &dojo_types::primitive::Primitive,
-    values: &mut Vec<FieldElement>,
+    values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
 ) -> String {
@@ -409,7 +410,7 @@ fn format_primitive(
     format!("{}{}", _start_indent(level, start_indent), _p.to_sql_value().unwrap())
 }
 
-fn format_byte_array(values: &mut Vec<FieldElement>, level: usize, start_indent: bool) -> String {
+fn format_byte_array(values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
     let bytearray = ByteArray::cairo_deserialize(values, 0).unwrap();
     values.drain(0..ByteArray::cairo_serialized_size(&bytearray));
 
@@ -418,7 +419,7 @@ fn format_byte_array(values: &mut Vec<FieldElement>, level: usize, start_indent:
 
 fn format_field_value(
     member: &dojo_types::schema::Member,
-    values: &mut Vec<FieldElement>,
+    values: &mut Vec<Felt>,
     level: usize,
 ) -> String {
     let field_repr = format_record_value(&member.ty, values, level, false);
@@ -427,11 +428,11 @@ fn format_field_value(
 
 fn format_array(
     item: &dojo_types::schema::Ty,
-    values: &mut Vec<FieldElement>,
+    values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
 ) -> String {
-    let length: u32 = values.remove(0).try_into().unwrap();
+    let length: u32 = values.remove(0).to_u32().unwrap();
     let mut items = vec![];
 
     for _ in 0..length {
@@ -448,7 +449,7 @@ fn format_array(
 
 fn format_tuple(
     items: &[dojo_types::schema::Ty],
-    values: &mut Vec<FieldElement>,
+    values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
 ) -> String {
@@ -467,7 +468,7 @@ fn format_tuple(
 
 fn format_struct(
     schema: &dojo_types::schema::Struct,
-    values: &mut Vec<FieldElement>,
+    values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
 ) -> String {
@@ -487,11 +488,11 @@ fn format_struct(
 
 fn format_enum(
     schema: &dojo_types::schema::Enum,
-    values: &mut Vec<FieldElement>,
+    values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
 ) -> String {
-    let variant_index: u8 = values.remove(0).try_into().unwrap();
+    let variant_index: u8 = values.remove(0).to_u8().unwrap();
     let variant_index: usize = variant_index.into();
     let variant_name = format!("{}::{}", schema.name, schema.options[variant_index].name);
     let variant_data =
@@ -511,7 +512,7 @@ fn format_enum(
 
 fn format_record_value(
     schema: &dojo_types::schema::Ty,
-    values: &mut Vec<FieldElement>,
+    values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
 ) -> String {
@@ -526,11 +527,7 @@ fn format_record_value(
 }
 
 // print the structured record values
-fn deep_print_record(
-    schema: &dojo_types::schema::Ty,
-    keys: &[FieldElement],
-    values: &[FieldElement],
-) {
+fn deep_print_record(schema: &dojo_types::schema::Ty, keys: &[Felt], values: &[Felt]) {
     let mut model_values = vec![];
     model_values.extend(keys);
     model_values.extend(values);

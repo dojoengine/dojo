@@ -3,7 +3,7 @@ mod utils;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
-use dojo_world::manifest::utils::get_default_namespace_from_ws;
+use dojo_world::manifest::get_default_namespace_from_ws;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
@@ -46,7 +46,8 @@ async fn reregister_models() {
     execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
     let world_address = &format!("0x{:x}", &migration.world_address().unwrap());
     let account_address = &format!("0x{:x}", account.address());
-    let private_key = &format!("0x{:x}", sequencer.account_data(0).1.private_key);
+    let private_key =
+        &format!("0x{:x}", sequencer.account_data(0).private_key.as_ref().unwrap().secret_scalar());
     let rpc_url = &sequencer.url().to_string();
 
     let moves_model =

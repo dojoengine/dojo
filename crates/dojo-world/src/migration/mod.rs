@@ -10,8 +10,8 @@ use cairo_lang_starknet_classes::contract_class::ContractClass;
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
-    InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
+    BlockId, BlockTag, DeclareTransactionResult, Felt, FlattenedSierraClass,
+    InvokeTransactionResult, ReceiptBlock, StarknetError, TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
 use starknet::macros::{felt, selector};
@@ -29,27 +29,27 @@ pub type DeclareOutput = DeclareTransactionResult;
 
 #[derive(Clone, Debug)]
 pub struct DeployOutput {
-    pub transaction_hash: FieldElement,
+    pub transaction_hash: Felt,
     pub block_number: Option<u64>,
-    pub contract_address: FieldElement,
+    pub contract_address: Felt,
     pub declare: Option<DeclareOutput>,
     // base class hash at time of deployment
-    pub base_class_hash: FieldElement,
+    pub base_class_hash: Felt,
     pub was_upgraded: bool,
     pub tag: Option<String>,
 }
 
 #[derive(Clone, Debug)]
 pub struct UpgradeOutput {
-    pub transaction_hash: FieldElement,
+    pub transaction_hash: Felt,
     pub block_number: Option<u64>,
-    pub contract_address: FieldElement,
+    pub contract_address: Felt,
     pub declare: Option<DeclareOutput>,
 }
 
 #[derive(Debug)]
 pub struct RegisterOutput {
-    pub transaction_hash: FieldElement,
+    pub transaction_hash: Felt,
     pub declare_output: Vec<DeclareOutput>,
     pub registered_models: Vec<String>,
 }
@@ -61,7 +61,7 @@ pub enum MigrationError<S> {
     #[error("Class already declared.")]
     ClassAlreadyDeclared,
     #[error("Contract already deployed.")]
-    ContractAlreadyDeployed(FieldElement),
+    ContractAlreadyDeployed(Felt),
     #[error(transparent)]
     Migrator(#[from] AccountError<S>),
     #[error(transparent)]
@@ -100,7 +100,7 @@ pub struct TxnConfig {
     pub fee_estimate_multiplier: Option<f64>,
     pub wait: bool,
     pub receipt: bool,
-    pub max_fee_raw: Option<FieldElement>,
+    pub max_fee_raw: Option<Felt>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -108,7 +108,7 @@ pub enum TxnAction {
     Send {
         wait: bool,
         receipt: bool,
-        max_fee_raw: Option<FieldElement>,
+        max_fee_raw: Option<Felt>,
         /// The multiplier for how much the actual transaction max fee should be relative to the
         /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
         fee_estimate_multiplier: Option<f64>,
@@ -149,7 +149,7 @@ pub trait Declarable {
         }
 
         let DeclareTransactionResult { transaction_hash, class_hash } = account
-            .declare(Arc::new(flattened_class), casm_class_hash)
+            .declare_v2(Arc::new(flattened_class), casm_class_hash)
             .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
@@ -169,9 +169,9 @@ pub trait Declarable {
 pub trait Deployable: Declarable + Sync {
     async fn deploy_dojo_contract<A>(
         &self,
-        world_address: FieldElement,
-        class_hash: FieldElement,
-        base_class_hash: FieldElement,
+        world_address: Felt,
+        class_hash: Felt,
+        base_class_hash: Felt,
         account: A,
         txn_config: &TxnConfig,
         calldata: &[String],
@@ -207,14 +207,13 @@ pub trait Deployable: Declarable + Sync {
             }
 
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                let init_calldata: Vec<FieldElement> = calldata
+                let init_calldata: Vec<Felt> = calldata
                     .iter()
-                    .map(|s| FieldElement::from_str(s))
+                    .map(|s| Felt::from_str(s))
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|_| MigrationError::BadInitCalldata)?;
 
-                let mut calldata =
-                    vec![self.salt(), class_hash, FieldElement::from(calldata.len())];
+                let mut calldata = vec![self.salt(), class_hash, Felt::from(calldata.len())];
                 calldata.extend(init_calldata);
                 Call { calldata, selector: selector!("deploy_contract"), to: world_address }
             }
@@ -227,7 +226,7 @@ pub trait Deployable: Declarable + Sync {
         };
 
         let InvokeTransactionResult { transaction_hash } = account
-            .execute(vec![call])
+            .execute_v1(vec![call])
             .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
@@ -248,8 +247,8 @@ pub trait Deployable: Declarable + Sync {
 
     async fn deploy<A>(
         &self,
-        class_hash: FieldElement,
-        constructor_calldata: Vec<FieldElement>,
+        class_hash: Felt,
+        constructor_calldata: Vec<Felt>,
         account: A,
         txn_config: &TxnConfig,
     ) -> Result<DeployOutput, MigrationError<<A as Account>::SignError>>
@@ -265,21 +264,17 @@ pub trait Deployable: Declarable + Sync {
 
         let calldata = [
             vec![
-                class_hash,                                     // class hash
-                self.salt(),                                    // salt
-                FieldElement::ZERO,                             // unique
-                FieldElement::from(constructor_calldata.len()), // constructor calldata len
+                class_hash,                             // class hash
+                self.salt(),                            // salt
+                Felt::ZERO,                             // unique
+                Felt::from(constructor_calldata.len()), // constructor calldata len
             ],
             constructor_calldata.clone(),
         ]
         .concat();
 
-        let contract_address = get_contract_address(
-            self.salt(),
-            class_hash,
-            &constructor_calldata,
-            FieldElement::ZERO,
-        );
+        let contract_address =
+            get_contract_address(self.salt(), class_hash, &constructor_calldata, Felt::ZERO);
 
         match account
             .provider()
@@ -291,7 +286,7 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(MigrationError::Provider(e)),
         }
 
-        let txn = account.execute(vec![Call {
+        let txn = account.execute_v1(vec![Call {
             calldata,
             // devnet UDC address
             selector: selector!("deployContract"),
@@ -309,13 +304,13 @@ pub trait Deployable: Declarable + Sync {
             block_number,
             contract_address,
             declare,
-            base_class_hash: FieldElement::default(),
+            base_class_hash: Felt::default(),
             was_upgraded: false,
             tag: None,
         })
     }
 
-    fn salt(&self) -> FieldElement;
+    fn salt(&self) -> Felt;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -323,9 +318,9 @@ pub trait Deployable: Declarable + Sync {
 pub trait Upgradable: Deployable + Declarable + Sync {
     async fn upgrade_world<A>(
         &self,
-        class_hash: FieldElement,
-        original_class_hash: FieldElement,
-        original_base_class_hash: FieldElement,
+        class_hash: Felt,
+        original_class_hash: Felt,
+        original_base_class_hash: Felt,
         account: A,
         txn_config: &TxnConfig,
     ) -> Result<UpgradeOutput, MigrationError<<A as Account>::SignError>>
@@ -344,7 +339,7 @@ pub trait Upgradable: Deployable + Declarable + Sync {
             self.salt(),
             original_class_hash,
             &original_constructor_calldata,
-            FieldElement::ZERO,
+            Felt::ZERO,
         );
 
         match account
@@ -359,7 +354,11 @@ pub trait Upgradable: Deployable + Declarable + Sync {
         let calldata = vec![class_hash];
 
         let InvokeTransactionResult { transaction_hash } = account
-            .execute(vec![Call { calldata, selector: selector!("upgrade"), to: contract_address }])
+            .execute_v1(vec![Call {
+                calldata,
+                selector: selector!("upgrade"),
+                to: contract_address,
+            }])
             .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
@@ -373,7 +372,7 @@ pub trait Upgradable: Deployable + Declarable + Sync {
 
 fn prepare_contract_declaration_params(
     artifact_path: &PathBuf,
-) -> Result<(FlattenedSierraClass, FieldElement)> {
+) -> Result<(FlattenedSierraClass, Felt)> {
     let flattened_class = read_class(artifact_path)?
         .flatten()
         .map_err(|e| anyhow!("error flattening the contract class: {e}"))?;
@@ -389,7 +388,7 @@ pub fn read_class(artifact_path: &PathBuf) -> Result<SierraClass> {
     Ok(contract_artifact)
 }
 
-fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
+fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<Felt> {
     let file = File::open(artifact_path)?;
     let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
     let casm_contract =
@@ -399,13 +398,9 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     Ok(compiled_class.class_hash()?)
 }
 
-fn get_block_number_from_receipt(receipt: MaybePendingTransactionReceipt) -> Option<u64> {
-    match receipt {
-        MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
-            TransactionReceipt::Deploy(r) => Some(r.block_number),
-            TransactionReceipt::Invoke(r) => Some(r.block_number),
-            _ => None,
-        },
-        MaybePendingTransactionReceipt::PendingReceipt(_receipt) => None,
+fn get_block_number_from_receipt(receipt: TransactionReceiptWithBlockInfo) -> Option<u64> {
+    match receipt.block {
+        ReceiptBlock::Pending => None,
+        ReceiptBlock::Block { block_number, .. } => Some(block_number),
     }
 }

@@ -11,8 +11,7 @@ use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag};
-use starknet_crypto::FieldElement;
+use starknet::core::types::{BlockId, BlockTag, Felt};
 
 use crate::utils;
 
@@ -73,7 +72,7 @@ impl FromStr for ResourceWriter {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResourceOwner {
     pub resource: ResourceType,
-    pub owner: FieldElement,
+    pub owner: Felt,
 }
 
 impl FromStr for ResourceOwner {
@@ -90,7 +89,7 @@ impl FromStr for ResourceOwner {
             ),
         };
 
-        let owner = FieldElement::from_hex_be(owner)
+        let owner = Felt::from_hex(owner)
             .map_err(|_| anyhow::anyhow!("Invalid owner address: {}", owner))?;
 
         let resource = ResourceType::from_str(resource)?;
@@ -123,7 +122,7 @@ where
     if !calls.is_empty() {
         let res = world
             .account
-            .execute(calls)
+            .execute_v1(calls)
             .send_with_cfg(&txn_config)
             .await
             .with_context(|| "Failed to send transaction")?;
@@ -161,7 +160,7 @@ where
 
     let res = world
         .account
-        .execute(calls)
+        .execute_v1(calls)
         .send_with_cfg(&txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;
@@ -201,7 +200,7 @@ where
     if !calls.is_empty() {
         let res = world
             .account
-            .execute(calls)
+            .execute_v1(calls)
             .send_with_cfg(&txn_config)
             .await
             .with_context(|| "Failed to send transaction")?;
@@ -239,7 +238,7 @@ where
 
     let res = world
         .account
-        .execute(calls)
+        .execute_v1(calls)
         .send_with_cfg(&txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;
@@ -261,7 +260,7 @@ async fn get_resource_selector<A>(
     world: &WorldContract<A>,
     resource: &ResourceType,
     default_namespace: &str,
-) -> Result<FieldElement>
+) -> Result<Felt>
 where
     A: ConnectedAccount + Sync + Send,
     <A as Account>::SignError: 'static,

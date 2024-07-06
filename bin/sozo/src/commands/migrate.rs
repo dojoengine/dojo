@@ -7,7 +7,7 @@ use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag, FieldElement, StarknetError};
+use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
@@ -137,7 +137,7 @@ pub async fn setup_env<'a>(
     world: WorldOptions,
     name: &str,
     env: Option<&'a Environment>,
-) -> Result<(Option<FieldElement>, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
+) -> Result<(Option<Felt>, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
     trace!("Setting up environment.");
     let ui = ws.config().ui();
 

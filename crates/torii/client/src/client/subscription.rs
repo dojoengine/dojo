@@ -9,8 +9,7 @@ use dojo_world::contracts::naming;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::{Mutex, RwLock};
-use starknet::core::types::{StateDiff, StateUpdate};
-use starknet_crypto::FieldElement;
+use starknet::core::types::{Felt, StateDiff, StateUpdate};
 use torii_grpc::client::ModelDiffsStreaming;
 use torii_grpc::types::ModelKeysClause;
 
@@ -26,7 +25,7 @@ pub struct SubscribedModels {
     metadata: Arc<RwLock<WorldMetadata>>,
     pub(crate) models_keys: RwLock<HashSet<ModelKeysClause>>,
     /// All the relevant storage addresses derived from the subscribed models
-    pub(crate) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
+    pub(crate) subscribed_storage_addresses: RwLock<HashSet<Felt>>,
 }
 
 impl SubscribedModels {
@@ -201,7 +200,7 @@ impl SubscriptionService {
             return;
         };
 
-        let entries: Vec<(FieldElement, FieldElement)> = {
+        let entries: Vec<(Felt, Felt)> = {
             let subscribed_models = self.subscribed_models.subscribed_storage_addresses.read();
             entries
                 .into_iter()
@@ -246,7 +245,7 @@ mod tests {
 
     use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
-    use dojo_world::manifest::utils::compute_model_selector_from_names;
+    use dojo_world::contracts::naming::compute_model_selector_from_names;
     use parking_lot::RwLock;
     use starknet::macros::felt;
     use torii_grpc::types::ModelKeysClause;

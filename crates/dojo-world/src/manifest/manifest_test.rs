@@ -8,7 +8,7 @@ use katana_runner::KatanaRunner;
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
-use starknet::core::types::{EmittedEvent, FieldElement};
+use starknet::core::types::{EmittedEvent, Felt};
 use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
@@ -16,8 +16,8 @@ use super::{
     parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel, OverlayDojoContract,
     OverlayManifest,
 };
+use crate::contracts::naming::{get_filename_from_tag, get_tag};
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::utils::{get_filename_from_tag, get_tag};
 use crate::manifest::{
     parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, OverlayClass,
     OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
@@ -41,7 +41,7 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
     );
 
     let rpc = JsonRpcClient::new(mock_transport);
-    let err = DeploymentManifest::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
+    let err = DeploymentManifest::load_from_remote(rpc, Felt::ONE).await.unwrap_err();
 
     match err {
         AbstractManifestError::RemoteWorldNotFound => {
@@ -630,16 +630,12 @@ fn base_manifest_remove_items_work_as_expected() {
     );
 }
 
-fn serialize_bytearray(s: &str) -> Vec<FieldElement> {
+fn serialize_bytearray(s: &str) -> Vec<Felt> {
     let ba = ByteArray::from_string(s).unwrap();
     ByteArray::cairo_serialize(&ba)
 }
 
-fn build_model_registered_event(
-    values: Vec<FieldElement>,
-    namespace: &str,
-    model: &str,
-) -> EmittedEvent {
+fn build_model_registered_event(values: Vec<Felt>, namespace: &str, model: &str) -> EmittedEvent {
     let mut data = ByteArray::cairo_serialize(&ByteArray::from_string(model).unwrap());
     data.extend(ByteArray::cairo_serialize(&ByteArray::from_string(namespace).unwrap()));
     data.extend(values);
@@ -654,7 +650,7 @@ fn build_model_registered_event(
     }
 }
 
-fn build_deploy_event(values: Vec<FieldElement>, ns: &str, name: &str) -> EmittedEvent {
+fn build_deploy_event(values: Vec<Felt>, ns: &str, name: &str) -> EmittedEvent {
     let mut data = values.to_vec();
     data.extend(serialize_bytearray(ns).iter());
     data.extend(serialize_bytearray(name).iter());

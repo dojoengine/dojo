@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use bigdecimal::BigDecimal;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::FieldElement;
@@ -15,7 +16,7 @@ pub fn program_input_from_program_output(
     let block_number = serde_json::from_str(&output[2].to_string()).unwrap();
     let block_hash = output[3];
     let config_hash = output[4];
-    let mut decimal = output[6].clone().to_big_decimal(0); // Convert with no decimal places
+    let mut decimal: BigDecimal = output[6].clone().to_bigint().into(); // Convert with no decimal places
     let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
 
     let message_to_starknet_segment = match num {
@@ -24,7 +25,7 @@ pub fn program_input_from_program_output(
     };
 
     let index = 7 + num as usize;
-    decimal = output[index].clone().to_big_decimal(0);
+    decimal = output[index].clone().to_bigint().into();
     let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
     let message_to_appchain_segment = match num {
         0..=4 => Default::default(),
@@ -59,7 +60,7 @@ fn get_message_to_starknet_segment(
         }
         let from_address = ContractAddress::from(output[index]);
         let to_address = ContractAddress::from(output[index + 1]);
-        let decimal = output[index + 2].to_big_decimal(0);
+        let decimal: BigDecimal = output[index + 2].to_bigint().into();
         let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
         let payload = output[index + 3..index + 3 + num as usize].to_vec();
         message_to_starknet_segment.push(MessageToStarknet { from_address, to_address, payload });
@@ -81,7 +82,7 @@ fn get_message_to_appchain_segment(
         let to_address = ContractAddress::from(output[index + 1]);
         let nonce = output[index + 2];
         let selector = output[index + 3];
-        let decimal = output[index + 4].to_big_decimal(0);
+        let decimal: BigDecimal = output[index + 4].to_bigint().into();
         let num = decimal.to_u64().ok_or_else(|| anyhow!("Conversion to u64 failed"))?;
         let payload = output[index + 5..index + 5 + num as usize].to_vec();
 

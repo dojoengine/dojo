@@ -36,7 +36,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use starknet::core::types::contract::SierraClass;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
 use crate::inline_macros::utils::{SYSTEM_READS, SYSTEM_WRITES};
@@ -114,7 +114,7 @@ impl Compiler for DojoCompiler {
             compile_prepared_db(db, &contracts, compiler_config)?
         };
 
-        let mut compiled_classes: HashMap<String, (FieldElement, ContractClass)> = HashMap::new();
+        let mut compiled_classes: HashMap<String, (Felt, ContractClass)> = HashMap::new();
 
         for (decl, class) in zip(contracts, classes) {
             // note that the qualified path is in snake case while
@@ -142,7 +142,7 @@ impl Compiler for DojoCompiler {
     }
 }
 
-fn compute_class_hash_of_contract_class(class: &ContractClass) -> Result<FieldElement> {
+fn compute_class_hash_of_contract_class(class: &ContractClass) -> Result<Felt> {
     let class_str = serde_json::to_string(&class)?;
     let sierra_class = serde_json::from_str::<SierraClass>(&class_str)
         .map_err(|e| anyhow!("error parsing Sierra class: {e}"))?;
@@ -217,7 +217,7 @@ fn update_files(
     ws: &Workspace<'_>,
     target_dir: &Filesystem,
     crate_ids: &[CrateId],
-    compiled_artifacts: HashMap<String, (FieldElement, ContractClass)>,
+    compiled_artifacts: HashMap<String, (Felt, ContractClass)>,
     external_contracts: Option<Vec<ContractSelector>>,
     default_namespace: &str,
 ) -> anyhow::Result<()> {
@@ -230,9 +230,9 @@ fn update_files(
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
-        artifacts: &'a HashMap<String, (FieldElement, ContractClass)>,
+        artifacts: &'a HashMap<String, (Felt, ContractClass)>,
         qualified_artifact_path: &str,
-    ) -> anyhow::Result<&'a (FieldElement, ContractClass)> {
+    ) -> anyhow::Result<&'a (Felt, ContractClass)> {
         artifacts.get(qualified_artifact_path).context(format!(
             "Contract `{qualified_artifact_path}` not found. Did you include `dojo` as a \
              dependency?",
@@ -382,7 +382,7 @@ fn get_dojo_model_artifacts(
     db: &RootDatabase,
     aux_data: &Vec<Model>,
     module_id: ModuleId,
-    compiled_classes: &HashMap<String, (FieldElement, ContractClass)>,
+    compiled_classes: &HashMap<String, (Felt, ContractClass)>,
 ) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, ContractClass, ModuleId)>> {
     let mut models = HashMap::with_capacity(aux_data.len());
 
@@ -450,7 +450,7 @@ fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
     tag: &str,
-    compiled_classes: &HashMap<String, (FieldElement, ContractClass)>,
+    compiled_classes: &HashMap<String, (Felt, ContractClass)>,
 ) -> anyhow::Result<HashMap<String, (Manifest<DojoContract>, ContractClass, ModuleId)>> {
     let mut result = HashMap::new();
 

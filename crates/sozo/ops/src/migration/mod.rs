@@ -12,7 +12,7 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet_crypto::poseidon_hash_single;
 
@@ -30,8 +30,8 @@ use self::ui::MigrationUi;
 
 #[derive(Debug, Default, Clone)]
 pub struct MigrationOutput {
-    pub world_address: FieldElement,
-    pub world_tx_hash: Option<FieldElement>,
+    pub world_address: Felt,
+    pub world_tx_hash: Option<Felt>,
     pub world_block_number: Option<u64>,
     // Represents if full migration got completeled.
     // If false that means migration got partially completed.
@@ -44,14 +44,14 @@ pub struct MigrationOutput {
 #[derive(Debug, Default, Clone)]
 pub struct ContractMigrationOutput {
     pub tag: String,
-    pub contract_address: FieldElement,
-    pub base_class_hash: FieldElement,
+    pub contract_address: Felt,
+    pub base_class_hash: Felt,
 }
 
 #[allow(clippy::too_many_arguments)]
 pub async fn migrate<A>(
     ws: &Workspace<'_>,
-    world_address: Option<FieldElement>,
+    world_address: Option<Felt>,
     rpc_url: String,
     account: A,
     name: &str,
@@ -207,7 +207,7 @@ where
 fn get_world_address(
     local_manifest: &dojo_world::manifest::BaseManifest,
     name: &str,
-) -> Result<FieldElement> {
+) -> Result<Felt> {
     let name = cairo_short_string_to_felt(name)?;
     let salt = poseidon_hash_single(name);
 
@@ -215,7 +215,7 @@ fn get_world_address(
         salt,
         local_manifest.world.inner.original_class_hash,
         &[local_manifest.base.inner.class_hash],
-        FieldElement::ZERO,
+        Felt::ZERO,
     );
 
     Ok(generated_world_address)
@@ -223,7 +223,7 @@ fn get_world_address(
 
 #[allow(dead_code)]
 enum ContractDeploymentOutput {
-    AlreadyDeployed(FieldElement),
+    AlreadyDeployed(Felt),
     Output(DeployOutput),
 }
 

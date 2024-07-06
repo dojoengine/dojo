@@ -2,18 +2,18 @@ use std::fmt::Display;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 use super::{Declarable, MigrationType, StateDiff};
 
 /// Represents differences between a local and remote class.
 #[derive(Debug, Default, Clone)]
 pub struct ClassDiff {
-    pub tag: String, /* name used to identify the corresponding artifact produced by the
-                      * compiler */
-    pub local_class_hash: FieldElement,
-    pub original_class_hash: FieldElement,
-    pub remote_class_hash: Option<FieldElement>,
+    // The tag is used to identify the corresponding artifact produced by the compiler.
+    pub tag: String,
+    pub local_class_hash: Felt,
+    pub original_class_hash: Felt,
+    pub remote_class_hash: Option<Felt>,
 }
 
 impl StateDiff for ClassDiff {

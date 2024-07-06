@@ -7,7 +7,7 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 pub mod celestia;
 
@@ -57,10 +57,7 @@ pub trait DataAvailabilityClient {
     /// * `state_diff` - An array of felt representing the data to be published on the DA layer. We
     ///   use felt as all fields inside the state diff can be expressed as a felt. Nonce and updates
     ///   count are limited to 64 bits anyway.
-    async fn publish_state_diff_felts(
-        &self,
-        state_diff: &[FieldElement],
-    ) -> DataAvailabilityResult<u64>;
+    async fn publish_state_diff_felts(&self, state_diff: &[Felt]) -> DataAvailabilityResult<u64>;
 
     /// Publishes both data and transition proof on the DA layer atomically.
     /// Returns the block height in which the state diff was included.
@@ -73,8 +70,8 @@ pub trait DataAvailabilityClient {
     ///  * `state_diff_proof` - The serialized transition proof corresponding to the `state_diff`.
     async fn publish_state_diff_and_proof_felts(
         &self,
-        state_diff: &[FieldElement],
-        state_diff_proof: &[FieldElement],
+        state_diff: &[Felt],
+        state_diff_proof: &[Felt],
     ) -> DataAvailabilityResult<u64>;
 }
 

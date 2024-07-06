@@ -13,7 +13,7 @@ mod test {
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use katana_runner::KatanaRunner;
     use serde_json::Number;
-    use starknet_crypto::FieldElement;
+    use starknet::core::types::Felt;
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
 
@@ -66,17 +66,17 @@ mod test {
         let mut ty = Ty::Primitive(Primitive::Felt252(None));
         let value = PrimitiveType::String("1".to_string());
         parse_value_to_ty(&value, &mut ty).unwrap();
-        assert_eq!(ty, Ty::Primitive(Primitive::Felt252(Some(FieldElement::ONE))));
+        assert_eq!(ty, Ty::Primitive(Primitive::Felt252(Some(Felt::ONE))));
 
         let mut ty = Ty::Primitive(Primitive::ClassHash(None));
         let value = PrimitiveType::String("1".to_string());
         parse_value_to_ty(&value, &mut ty).unwrap();
-        assert_eq!(ty, Ty::Primitive(Primitive::ClassHash(Some(FieldElement::ONE))));
+        assert_eq!(ty, Ty::Primitive(Primitive::ClassHash(Some(Felt::ONE))));
 
         let mut ty = Ty::Primitive(Primitive::ContractAddress(None));
         let value = PrimitiveType::String("1".to_string());
         parse_value_to_ty(&value, &mut ty).unwrap();
-        assert_eq!(ty, Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))));
+        assert_eq!(ty, Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))));
 
         let mut ty = Ty::Primitive(Primitive::Bool(None));
         let value = PrimitiveType::Bool(true);
@@ -204,7 +204,7 @@ mod test {
                 children: vec![
                     Member {
                         name: "player".to_string(),
-                        ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
+                        ty: Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))),
                         key: true,
                     },
                     Member {
@@ -278,7 +278,7 @@ mod test {
         use starknet::providers::jsonrpc::HttpTransport;
         use starknet::providers::JsonRpcClient;
         use starknet::signers::SigningKey;
-        use starknet_crypto::FieldElement;
+        use starknet_crypto::Felt;
         use tokio::select;
         use tokio::time::sleep;
         use torii_core::sql::Sql;
@@ -304,7 +304,7 @@ mod test {
 
         let account = sequencer.account_data(0);
 
-        let mut db = Sql::new(pool.clone(), FieldElement::from_bytes_be(&[0; 32]).unwrap()).await?;
+        let mut db = Sql::new(pool.clone(), Felt::from_bytes_be(&[0; 32])).await?;
 
         // Register the model of our Message
         db.register_model(
@@ -325,8 +325,8 @@ mod test {
                 ],
             }),
             Layout::Fixed(vec![]),
-            FieldElement::ZERO,
-            FieldElement::ZERO,
+            Felt::ZERO,
+            Felt::ZERO,
             0,
             0,
             0,
@@ -411,7 +411,7 @@ mod test {
                 vec![
                     (
                         "identity".to_string(),
-                        crate::typed_data::PrimitiveType::String(account.0.to_string()),
+                        crate::typed_data::PrimitiveType::String(account.address.to_string()),
                     ),
                     (
                         "message".to_string(),
@@ -423,9 +423,11 @@ mod test {
             ),
         );
 
-        let message_hash = typed_data.encode(account.0.into()).unwrap();
+        let message_hash = typed_data.encode(account.address).unwrap();
         let signature =
-            SigningKey::from_secret_scalar(account.1.private_key).sign(&message_hash).unwrap();
+            SigningKey::from_secret_scalar(account.private_key.clone().unwrap().secret_scalar())
+                .sign(&message_hash)
+                .unwrap();
 
         client
             .command_sender

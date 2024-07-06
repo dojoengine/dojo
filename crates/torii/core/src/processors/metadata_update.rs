@@ -8,9 +8,8 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::{Uri, WorldMetadata};
 use reqwest::Client;
-use starknet::core::types::{Event, MaybePendingTransactionReceipt};
+use starknet::core::types::{Event, Felt, TransactionReceiptWithBlockInfo};
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 use tokio_util::bytes::Bytes;
 use tracing::{error, info};
 
@@ -53,7 +52,7 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &MaybePendingTransactionReceipt,
+        _transaction_receipt: &TransactionReceiptWithBlockInfo,
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
@@ -77,7 +76,7 @@ where
     }
 }
 
-async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
+async fn try_retrieve(mut db: Sql, resource: Felt, uri_str: String) {
     match metadata(uri_str.clone()).await {
         Ok((metadata, icon_img, cover_img)) => {
             db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)

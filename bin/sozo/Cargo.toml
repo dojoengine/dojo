@@ -11,7 +11,7 @@ slot = { workspace = true, optional = true }
 
 anyhow.workspace = true
 async-trait.workspace = true
-bigdecimal = "0.4.1"
+bigdecimal.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-defs.workspace = true
 cairo-lang-filesystem.workspace = true

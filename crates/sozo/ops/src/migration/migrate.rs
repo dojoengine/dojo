@@ -28,13 +28,12 @@ use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
-    BlockId, BlockTag, FunctionCall, InvokeTransactionResult, StarknetError,
+    BlockId, BlockTag, Felt, FunctionCall, InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
 };
 use starknet::providers::{Provider, ProviderError};
-use starknet_crypto::FieldElement;
 use tokio::fs;
 
 use super::ui::{bold_message, italic_message, MigrationUi};
@@ -46,7 +45,7 @@ pub fn prepare_migration(
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
     name: &str,
-    world_address: Option<FieldElement>,
+    world_address: Option<Felt>,
     ui: &Ui,
 ) -> Result<MigrationStrategy> {
     ui.print_step(3, "📦", "Preparing for migration...");
@@ -133,7 +132,7 @@ where
     A::SignError: 'static,
 {
     let ui = ws.config().ui();
-    let mut world_tx_hash: Option<FieldElement> = None;
+    let mut world_tx_hash: Option<Felt> = None;
     let mut world_block_number: Option<u64> = None;
 
     match &strategy.base {
@@ -271,7 +270,7 @@ where
 /// on success.
 async fn upload_on_ipfs_and_create_resource(
     ui: &Ui,
-    resource_id: FieldElement,
+    resource_id: Felt,
     metadata: ResourceMetadata,
 ) -> Result<world::ResourceMetadata> {
     match metadata.upload().await {
@@ -292,10 +291,7 @@ async fn upload_on_ipfs_and_create_resource(
 /// # Returns
 /// A [`ResourceData`] object to register in the Dojo resource register
 /// on success.
-fn create_resource_metadata(
-    resource_id: FieldElement,
-    hash: String,
-) -> Result<world::ResourceMetadata> {
+fn create_resource_metadata(resource_id: Felt, hash: String) -> Result<world::ResourceMetadata> {
     let metadata_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
     Ok(world::ResourceMetadata { resource_id, metadata_uri })
 }
@@ -332,7 +328,7 @@ where
     if migration_output.world_tx_hash.is_some() {
         match dojo_metadata.world.upload().await {
             Ok(hash) => {
-                let resource = create_resource_metadata(FieldElement::ZERO, hash.clone())?;
+                let resource = create_resource_metadata(Felt::ZERO, hash.clone())?;
                 ui.print_sub(format!("world: ipfs://{}", hash));
                 resources.push(resource);
             }
@@ -385,7 +381,7 @@ where
     let calls = resources.iter().map(|r| world.set_metadata_getcall(r)).collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
-        migrator.execute(calls).send_with_cfg(&txn_config).await.map_err(|e| {
+        migrator.execute_v1(calls).send_with_cfg(&txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register metadata into the resource registry: {e}")
         })?;
@@ -405,7 +401,7 @@ where
 
 async fn register_namespaces<A>(
     namespaces: &[String],
-    world_address: FieldElement,
+    world_address: Felt,
     migrator: &A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -427,7 +423,7 @@ where
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
-        world.account.execute(calls).send_with_cfg(txn_config).await.map_err(|e| {
+        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register namespace to World: {e}")
         })?;
@@ -441,7 +437,7 @@ where
 
 async fn register_dojo_models<A>(
     models: &[ClassMigration],
-    world_address: FieldElement,
+    world_address: Felt,
     migrator: &A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -452,7 +448,7 @@ where
 {
     if models.is_empty() {
         return Ok(RegisterOutput {
-            transaction_hash: FieldElement::ZERO,
+            transaction_hash: Felt::ZERO,
             declare_output: vec![],
             registered_models: vec![],
         });
@@ -502,7 +498,7 @@ where
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
-        world.account.execute(calls).send_with_cfg(txn_config).await.map_err(|e| {
+        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register models to World: {e}")
         })?;
@@ -516,7 +512,7 @@ where
 
 async fn register_dojo_contracts<A>(
     contracts: &Vec<ContractMigration>,
-    world_address: FieldElement,
+    world_address: Felt,
     migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -606,7 +602,7 @@ where
 async fn deploy_contract<A>(
     contract: &ContractMigration,
     contract_id: &str,
-    constructor_calldata: Vec<FieldElement>,
+    constructor_calldata: Vec<Felt>,
     migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -648,8 +644,8 @@ where
 async fn upgrade_contract<A>(
     contract: &ContractMigration,
     contract_id: &str,
-    original_class_hash: FieldElement,
-    original_base_class_hash: FieldElement,
+    original_class_hash: Felt,
+    original_base_class_hash: Felt,
     migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -704,7 +700,7 @@ pub fn handle_artifact_error(ui: &Ui, artifact_path: &Path, error: anyhow::Error
 pub async fn get_contract_operation_name<P>(
     provider: P,
     contract: &ContractMigration,
-    world_address: Option<FieldElement>,
+    world_address: Option<Felt>,
 ) -> String
 where
     P: Provider + Sync + Send,
@@ -746,7 +742,7 @@ pub async fn print_strategy<P>(
     ui: &Ui,
     provider: P,
     strategy: &MigrationStrategy,
-    world_address: FieldElement,
+    world_address: Felt,
 ) where
     P: Provider + Sync + Send,
 {
@@ -804,7 +800,7 @@ pub async fn update_manifests_and_abis(
     manifest_dir: &Utf8PathBuf,
     profile_name: &str,
     rpc_url: &str,
-    world_address: FieldElement,
+    world_address: Felt,
     migration_output: Option<MigrationOutput>,
     salt: &str,
 ) -> Result<()> {
@@ -855,7 +851,7 @@ pub async fn update_manifests_and_abis(
     }
 
     local_manifest.contracts.iter_mut().for_each(|contract| {
-        if contract.inner.base_class_hash != FieldElement::ZERO {
+        if contract.inner.base_class_hash != Felt::ZERO {
             let salt = generate_salt(&get_name_from_tag(&contract.inner.tag));
             contract.inner.address = Some(get_contract_address(
                 salt,

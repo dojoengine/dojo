@@ -4,8 +4,9 @@ use cainome::cairo_serde::ByteArray;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
+use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet_crypto::poseidon_hash_many;
 
 use crate::errors::Error;
 
@@ -233,8 +234,8 @@ pub(crate) fn get_value_type(
     Err(Error::InvalidMessageError(format!("Field {} not found in types", name)))
 }
 
-fn get_hex(value: &str) -> Result<FieldElement, Error> {
-    if let Ok(felt) = FieldElement::from_str(value) {
+fn get_hex(value: &str) -> Result<Felt, Error> {
+    if let Ok(felt) = Felt::from_str(value) {
         Ok(felt)
     } else {
         // assume its a short string and encode
@@ -250,7 +251,7 @@ impl PrimitiveType {
         types: &IndexMap<String, Vec<Field>>,
         preset_types: &IndexMap<String, Vec<Field>>,
         ctx: &mut Ctx,
-    ) -> Result<FieldElement, Error> {
+    ) -> Result<Felt, Error> {
         match self {
             PrimitiveType::Object(obj) => {
                 ctx.is_preset = preset_types.contains_key(r#type);
@@ -273,7 +274,7 @@ impl PrimitiveType {
                     };
 
                     // variant index
-                    hashes.push(FieldElement::from(variant_type.index as u32));
+                    hashes.push(Felt::from(variant_type.index as u32));
 
                     // variant parameters
                     for (idx, param) in arr.iter().enumerate() {
@@ -329,8 +330,7 @@ impl PrimitiveType {
                     .as_slice(),
             )),
             PrimitiveType::Bool(boolean) => {
-                let v =
-                    if *boolean { FieldElement::from(1_u32) } else { FieldElement::from(0_u32) };
+                let v = if *boolean { Felt::from(1_u32) } else { Felt::from(0_u32) };
                 Ok(v)
             }
             PrimitiveType::String(string) => match r#type {
@@ -341,14 +341,14 @@ impl PrimitiveType {
                         Error::InvalidMessageError(format!("Invalid string for bytearray: {}", e))
                     })?;
 
-                    let mut hashes = vec![FieldElement::from(byte_array.data.len())];
+                    let mut hashes = vec![Felt::from(byte_array.data.len())];
 
                     for hash in byte_array.data {
                         hashes.push(hash.felt());
                     }
 
                     hashes.push(byte_array.pending_word);
-                    hashes.push(FieldElement::from(byte_array.pending_word_len));
+                    hashes.push(Felt::from(byte_array.pending_word_len));
 
                     Ok(poseidon_hash_many(hashes.as_slice()))
                 }
@@ -363,7 +363,7 @@ impl PrimitiveType {
                 _ => Err(Error::InvalidMessageError(format!("Invalid type {} for string", r#type))),
             },
             PrimitiveType::Number(number) => {
-                let felt = FieldElement::from_str(&number.to_string()).map_err(|_| {
+                let felt = Felt::from_str(&number.to_string()).map_err(|_| {
                     Error::InvalidMessageError(format!("Invalid number {}", number))
                 })?;
                 Ok(felt)
@@ -391,7 +391,7 @@ impl Domain {
         }
     }
 
-    pub fn encode(&self, types: &IndexMap<String, Vec<Field>>) -> Result<FieldElement, Error> {
+    pub fn encode(&self, types: &IndexMap<String, Vec<Field>>) -> Result<Felt, Error> {
         let mut object = IndexMap::new();
 
         object.insert("name".to_string(), PrimitiveType::String(self.name.clone()));
@@ -430,7 +430,7 @@ impl TypedData {
         Self { types, primary_type: primary_type.to_string(), domain, message }
     }
 
-    pub fn encode(&self, account: FieldElement) -> Result<FieldElement, Error> {
+    pub fn encode(&self, account: Felt) -> Result<Felt, Error> {
         let preset_types = get_preset_types();
 
         if self.domain.revision.clone().unwrap_or("1".to_string()) != "1" {
@@ -460,7 +460,7 @@ impl TypedData {
 #[cfg(test)]
 mod tests {
     use starknet::core::utils::starknet_keccak;
-    use starknet_crypto::FieldElement;
+    use starknet_crypto::Felt;
 
     use super::*;
 
@@ -579,17 +579,14 @@ mod tests {
 
         assert_eq!(
             domain_hash,
-            FieldElement::from_hex_be(
-                "0x555f72e550b308e50c1a4f8611483a174026c982a9893a05c185eeb85399657"
-            )
-            .unwrap()
+            Felt::from_hex("0x555f72e550b308e50c1a4f8611483a174026c982a9893a05c185eeb85399657")
+                .unwrap()
         );
     }
 
     #[test]
     fn test_message_hash() {
-        let address =
-            FieldElement::from_hex_be("0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826").unwrap();
+        let address = Felt::from_hex("0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826").unwrap();
 
         let path = "mocks/example_baseTypes.json";
         let file = std::fs::File::open(path).unwrap();
@@ -601,10 +598,8 @@ mod tests {
 
         assert_eq!(
             message_hash,
-            FieldElement::from_hex_be(
-                "0x790d9fa99cf9ad91c515aaff9465fcb1c87784d9cfb27271ed193675cd06f9c"
-            )
-            .unwrap()
+            Felt::from_hex("0x790d9fa99cf9ad91c515aaff9465fcb1c87784d9cfb27271ed193675cd06f9c")
+                .unwrap()
         );
 
         let path = "mocks/example_enum.json";
@@ -617,10 +612,8 @@ mod tests {
 
         assert_eq!(
             message_hash,
-            FieldElement::from_hex_be(
-                "0x3df10475ad5a8f49db4345a04a5b09164d2e24b09f6e1e236bc1ccd87627cc"
-            )
-            .unwrap()
+            Felt::from_hex("0x3df10475ad5a8f49db4345a04a5b09164d2e24b09f6e1e236bc1ccd87627cc")
+                .unwrap()
         );
 
         let path = "mocks/example_presetTypes.json";
@@ -633,10 +626,8 @@ mod tests {
 
         assert_eq!(
             message_hash,
-            FieldElement::from_hex_be(
-                "0x26e7b8cedfa63cdbed14e7e51b60ee53ac82bdf26724eb1e3f0710cb8987522"
-            )
-            .unwrap()
+            Felt::from_hex("0x26e7b8cedfa63cdbed14e7e51b60ee53ac82bdf26724eb1e3f0710cb8987522")
+                .unwrap()
         );
     }
 }

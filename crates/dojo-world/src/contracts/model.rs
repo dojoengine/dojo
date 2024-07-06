@@ -6,7 +6,7 @@ use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeErr
 use dojo_types::packing::{PackingError, ParseError};
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::{
     cairo_short_string_to_felt, parse_cairo_short_string, CairoShortStringToFeltError,
     NonAsciiNameError, ParseCairoShortStringError,
@@ -57,9 +57,9 @@ pub enum ModelError {
 pub trait ModelReader<E> {
     fn namespace(&self) -> &str;
     fn name(&self) -> &str;
-    fn selector(&self) -> FieldElement;
-    fn class_hash(&self) -> FieldElement;
-    fn contract_address(&self) -> FieldElement;
+    fn selector(&self) -> Felt;
+    fn class_hash(&self) -> Felt;
+    fn contract_address(&self) -> Felt;
     async fn schema(&self) -> Result<Ty, E>;
     async fn packed_size(&self) -> Result<u32, E>;
     async fn unpacked_size(&self) -> Result<u32, E>;
@@ -72,11 +72,11 @@ pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
     /// Name of the model
     name: String,
     /// The selector of the model
-    selector: FieldElement,
+    selector: Felt,
     /// The class hash of the model
-    class_hash: FieldElement,
+    class_hash: Felt,
     /// The contract address of the model
-    contract_address: FieldElement,
+    contract_address: Felt,
     /// Contract reader of the World that the model is registered to.
     world_reader: &'a WorldContractReader<P>,
     /// Contract reader of the model.
@@ -99,7 +99,7 @@ where
 
         // World Cairo contract won't raise an error in case of unknown/unregistered
         // model so raise an error here in case of zero address.
-        if contract_address == ContractAddress(FieldElement::ZERO) {
+        if contract_address == ContractAddress(Felt::ZERO) {
             return Err(ModelError::ModelNotFound);
         }
 
@@ -116,10 +116,7 @@ where
         })
     }
 
-    pub async fn entity_storage(
-        &self,
-        keys: &[FieldElement],
-    ) -> Result<Vec<FieldElement>, ModelError> {
+    pub async fn entity_storage(&self, keys: &[Felt]) -> Result<Vec<Felt>, ModelError> {
         // As the dojo::database::introspect::Layout type has been pasted
         // in both `model` and `world` ABI by abigen, the compiler sees both types
         // as different even if they are strictly identical.
@@ -131,7 +128,7 @@ where
         Ok(self.world_reader.entity(&self.selector(), &keys.to_vec(), &layout).call().await?)
     }
 
-    pub async fn entity(&self, keys: &[FieldElement]) -> Result<Ty, ModelError> {
+    pub async fn entity(&self, keys: &[Felt]) -> Result<Ty, ModelError> {
         let mut schema = self.schema().await?;
         let values = self.entity_storage(keys).await?;
 
@@ -157,15 +154,15 @@ where
         &self.name
     }
 
-    fn selector(&self) -> FieldElement {
+    fn selector(&self) -> Felt {
         self.selector
     }
 
-    fn class_hash(&self) -> FieldElement {
+    fn class_hash(&self) -> Felt {
         self.class_hash
     }
 
-    fn contract_address(&self) -> FieldElement {
+    fn contract_address(&self) -> Felt {
         self.contract_address
     }
 

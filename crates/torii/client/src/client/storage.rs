@@ -4,15 +4,15 @@ use std::sync::Arc;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use parking_lot::{Mutex, RwLock};
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 
 use super::error::Error;
 use crate::utils::compute_all_storage_addresses;
 
-pub type EntityKeys = Vec<FieldElement>;
+pub type EntityKeys = Vec<Felt>;
 
-pub type StorageKey = FieldElement;
-pub type StorageValue = FieldElement;
+pub type StorageKey = Felt;
+pub type StorageValue = Felt;
 
 /// An in-memory storage for storing the component values of entities.
 // TODO: check if we can use sql db instead.
@@ -20,7 +20,7 @@ pub struct ModelStorage {
     metadata: Arc<RwLock<WorldMetadata>>,
     storage: RwLock<HashMap<StorageKey, StorageValue>>,
     // a map of model name to a set of model keys.
-    model_index: RwLock<HashMap<FieldElement, HashSet<EntityKeys>>>,
+    model_index: RwLock<HashMap<Felt, HashSet<EntityKeys>>>,
 
     // listener for storage updates.
     senders: Mutex<HashMap<u8, Sender<()>>>,
@@ -46,11 +46,7 @@ impl ModelStorage {
     ///
     /// # Returns
     /// A receiver that will receive updates for the specified storage keys.
-    pub fn add_listener(
-        &self,
-        model: FieldElement,
-        keys: &[FieldElement],
-    ) -> Result<Receiver<()>, Error> {
+    pub fn add_listener(&self, model: Felt, keys: &[Felt]) -> Result<Receiver<()>, Error> {
         let storage_addresses = self.get_model_storage_addresses(model, keys)?;
 
         let (sender, receiver) = channel(128);
@@ -67,9 +63,9 @@ impl ModelStorage {
     /// Retrieves the raw values of an model.
     pub fn get_model_storage(
         &self,
-        model: FieldElement,
-        raw_keys: &[FieldElement],
-    ) -> Result<Option<Vec<FieldElement>>, Error> {
+        model: Felt,
+        raw_keys: &[Felt],
+    ) -> Result<Option<Vec<Felt>>, Error> {
         let storage_addresses = self.get_model_storage_addresses(model, raw_keys)?;
         Ok(storage_addresses
             .into_iter()
@@ -80,9 +76,9 @@ impl ModelStorage {
     /// Set the raw values of an model.
     pub fn set_model_storage(
         &self,
-        model: FieldElement,
-        raw_keys: Vec<FieldElement>,
-        raw_values: Vec<FieldElement>,
+        model: Felt,
+        raw_keys: Vec<Felt>,
+        raw_values: Vec<Felt>,
     ) -> Result<(), Error> {
         let storage_addresses = self.get_model_storage_addresses(model, &raw_keys)?;
         self.set_storages_at(storage_addresses.into_iter().zip(raw_values).collect());
@@ -92,7 +88,7 @@ impl ModelStorage {
     }
 
     /// Set the value of storage slots in bulk
-    pub(super) fn set_storages_at(&self, storage_models: Vec<(FieldElement, FieldElement)>) {
+    pub(super) fn set_storages_at(&self, storage_models: Vec<(Felt, Felt)>) {
         let mut senders: HashSet<u8> = Default::default();
 
         for (key, _) in &storage_models {
@@ -118,9 +114,9 @@ impl ModelStorage {
 
     fn get_model_storage_addresses(
         &self,
-        model: FieldElement,
-        raw_keys: &[FieldElement],
-    ) -> Result<Vec<FieldElement>, Error> {
+        model: Felt,
+        raw_keys: &[Felt],
+    ) -> Result<Vec<Felt>, Error> {
         let model_packed_size = self
             .metadata
             .read()
@@ -131,7 +127,7 @@ impl ModelStorage {
         Ok(compute_all_storage_addresses(model, raw_keys, model_packed_size))
     }
 
-    fn index_model(&self, model: FieldElement, raw_keys: Vec<FieldElement>) {
+    fn index_model(&self, model: Felt, raw_keys: Vec<Felt>) {
         self.model_index.write().entry(model).or_default().insert(raw_keys);
     }
 }
@@ -143,7 +139,7 @@ mod tests {
 
     use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
-    use dojo_world::manifest::utils::compute_model_selector_from_names;
+    use dojo_world::contracts::naming::compute_model_selector_from_names;
     use parking_lot::RwLock;
     use starknet::macros::felt;
 
@@ -191,7 +187,7 @@ mod tests {
             .set_model_storage(model_selector, keys.clone(), expected_values.clone())
             .expect("set storage values");
 
-        let actual_values: Vec<starknet_crypto::FieldElement> = storage
+        let actual_values: Vec<starknet::core::types::Felt> = storage
             .get_model_storage(model_selector, &keys)
             .expect("model exist")
             .expect("values are set");

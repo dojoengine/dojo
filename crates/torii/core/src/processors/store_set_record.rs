@@ -1,8 +1,9 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Context, Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, MaybePendingTransactionReceipt};
+use num_traits::ToPrimitive;
+use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
 use starknet::providers::Provider;
 use tracing::info;
 
@@ -43,7 +44,7 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &MaybePendingTransactionReceipt,
+        _transaction_receipt: &TransactionReceiptWithBlockInfo,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
@@ -58,13 +59,15 @@ where
         );
 
         let keys_start = NUM_KEYS_INDEX + 1;
-        let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);
+        let keys_end: usize =
+            keys_start + event.data[NUM_KEYS_INDEX].to_usize().context("invalid usize")?;
         let keys = event.data[keys_start..keys_end].to_vec();
 
         // keys_end is already the length of the values array.
 
         let values_start = keys_end + 1;
-        let values_end: usize = values_start + usize::from(u8::try_from(event.data[keys_end])?);
+        let values_end: usize =
+            values_start + event.data[keys_end].to_usize().context("invalid usize")?;
 
         let values = event.data[values_start..values_end].to_vec();
         let mut keys_and_unpacked = [keys, values].concat();

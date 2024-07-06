@@ -20,7 +20,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{ComputeClassHashError, JsonError};
-use starknet::core::types::FromByteArrayError;
 
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
@@ -211,9 +210,6 @@ pub enum GenesisJsonError {
     ComputeClassHash(#[from] ComputeClassHashError),
 
     #[error(transparent)]
-    ConversionError(#[from] FromByteArrayError),
-
-    #[error(transparent)]
     SierraCompilation(#[from] StarknetSierraCompilationError),
 
     #[error(transparent)]
@@ -363,7 +359,7 @@ impl TryFrom<GenesisJson> for Genesis {
 
                     (
                         class_hash,
-                        FieldElement::from_bytes_be(&compiled_hash)?,
+                        FieldElement::from_bytes_be(&compiled_hash),
                         Some(Arc::new(sierra.flatten()?)),
                         Arc::new(CompiledClass::Class(class)),
                     )

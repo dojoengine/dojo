@@ -5,7 +5,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::utils::get_default_namespace_from_ws;
+use dojo_world::manifest::get_default_namespace_from_ws;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
@@ -78,7 +78,7 @@ async fn test_entities_queries() {
 
     // spawn
     let tx = account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: migration_output
                 .contracts
                 .first()

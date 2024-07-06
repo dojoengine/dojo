@@ -16,6 +16,7 @@ cairo-lang-starknet.workspace = true
 camino.workspace = true
 convert_case.workspace = true
 futures.workspace = true
+num-traits = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
@@ -47,7 +48,7 @@ tempfile.workspace = true
 tokio.workspace = true
 
 [features]
-contracts = [ "dep:dojo-types", "dep:http" ]
+contracts = [ "dep:dojo-types", "dep:http", "dep:num-traits" ]
 manifest = [ "contracts", "dep:dojo-types", "dep:url", "dep:scarb" ]
 metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
 migration = [ "dep:tokio", "dep:scarb" ]

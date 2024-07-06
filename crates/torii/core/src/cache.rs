@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
-use starknet_crypto::FieldElement;
+use starknet_crypto::Felt;
 use tokio::sync::RwLock;
 
 use crate::error::{Error, QueryError};
@@ -10,7 +10,7 @@ use crate::model::{parse_sql_model_members, SqlModelMember};
 
 pub struct ModelCache {
     pool: SqlitePool,
-    cache: RwLock<HashMap<FieldElement, Ty>>,
+    cache: RwLock<HashMap<Felt, Ty>>,
 }
 
 impl ModelCache {
@@ -18,7 +18,7 @@ impl ModelCache {
         Self { pool, cache: RwLock::new(HashMap::new()) }
     }
 
-    pub async fn schemas(&self, selectors: &[FieldElement]) -> Result<Vec<Ty>, Error> {
+    pub async fn schemas(&self, selectors: &[Felt]) -> Result<Vec<Ty>, Error> {
         let mut schemas = Vec::with_capacity(selectors.len());
         for selector in selectors {
             schemas.push(self.schema(selector).await?);
@@ -27,7 +27,7 @@ impl ModelCache {
         Ok(schemas)
     }
 
-    pub async fn schema(&self, selector: &FieldElement) -> Result<Ty, Error> {
+    pub async fn schema(&self, selector: &Felt) -> Result<Ty, Error> {
         {
             let cache = self.cache.read().await;
             if let Some(model) = cache.get(selector).cloned() {
@@ -38,7 +38,7 @@ impl ModelCache {
         self.update_schema(selector).await
     }
 
-    async fn update_schema(&self, selector: &FieldElement) -> Result<Ty, Error> {
+    async fn update_schema(&self, selector: &Felt) -> Result<Ty, Error> {
         let formatted_selector = format!("{:#x}", selector);
 
         let (namespace, name): (String, String) =

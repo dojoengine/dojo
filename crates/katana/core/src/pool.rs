@@ -2,8 +2,8 @@
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::ExecutableTxWithHash;
+use katana_primitives::FieldElement;
 use parking_lot::RwLock;
-use starknet::core::types::FieldElement;
 use tracing::{info, warn};
 
 pub(crate) const LOG_TARGET: &str = "txpool";

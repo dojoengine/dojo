@@ -3,7 +3,7 @@ use camino::Utf8PathBuf;
 use dojo_world::manifest::{BaseManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
-use katana_primitives::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::macros::felt;
 
@@ -44,7 +44,7 @@ pub fn prepare_migration(
 pub fn prepare_migration_with_world_and_seed(
     manifest_dir: Utf8PathBuf,
     target_dir: Utf8PathBuf,
-    world_address: Option<FieldElement>,
+    world_address: Option<Felt>,
     seed: &str,
     default_namespace: &str,
 ) -> Result<MigrationStrategy> {

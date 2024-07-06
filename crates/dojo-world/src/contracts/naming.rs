@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet_crypto::poseidon_hash_many;
 
 pub const CONTRACT_NAME_SEPARATOR: &str = "::";
@@ -57,26 +57,23 @@ pub fn get_filename_from_tag(tag: &str) -> String {
     format!("{tag}{TAG_SEPARATOR}{selector}")
 }
 
-pub fn compute_bytearray_hash(namespace: &str) -> FieldElement {
+pub fn compute_bytearray_hash(namespace: &str) -> Felt {
     let ba = ByteArray::from_string(namespace).unwrap();
     poseidon_hash_many(&ByteArray::cairo_serialize(&ba))
 }
 
-pub fn compute_model_selector_from_tag(tag: &str) -> FieldElement {
+pub fn compute_model_selector_from_tag(tag: &str) -> Felt {
     let (namespace, name) = split_tag(tag).unwrap();
     compute_model_selector_from_names(&namespace, &name)
 }
 
-pub fn compute_model_selector_from_names(namespace: &str, model_name: &str) -> FieldElement {
+pub fn compute_model_selector_from_names(namespace: &str, model_name: &str) -> Felt {
     compute_model_selector_from_hash(
         compute_bytearray_hash(namespace),
         compute_bytearray_hash(model_name),
     )
 }
 
-pub fn compute_model_selector_from_hash(
-    namespace_hash: FieldElement,
-    model_hash: FieldElement,
-) -> FieldElement {
+pub fn compute_model_selector_from_hash(namespace_hash: Felt, model_hash: Felt) -> Felt {
     poseidon_hash_many(&[namespace_hash, model_hash])
 }

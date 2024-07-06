@@ -1,9 +1,9 @@
 use katana_primitives::state::StateUpdates;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 pub struct ProvedStateDiff {
-    pub genesis_state_hash: FieldElement,
-    pub prev_state_hash: FieldElement,
+    pub genesis_state_hash: Felt,
+    pub prev_state_hash: Felt,
     pub state_updates: StateUpdates,
 }
 

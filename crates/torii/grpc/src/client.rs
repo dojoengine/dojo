@@ -3,8 +3,7 @@ use std::num::ParseIntError;
 
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
-use starknet::core::types::{FromStrError, StateDiff, StateUpdate};
-use starknet_crypto::FieldElement;
+use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
 
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
@@ -32,7 +31,7 @@ pub enum Error {
 
 /// A lightweight wrapper around the grpc client.
 pub struct WorldClient {
-    _world_address: FieldElement,
+    _world_address: Felt,
     #[cfg(not(target_arch = "wasm32"))]
     inner: world_client::WorldClient<tonic::transport::Channel>,
     #[cfg(target_arch = "wasm32")]
@@ -41,7 +40,7 @@ pub struct WorldClient {
 
 impl WorldClient {
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn new<D>(dst: D, _world_address: FieldElement) -> Result<Self, Error>
+    pub async fn new<D>(dst: D, _world_address: Felt) -> Result<Self, Error>
     where
         D: TryInto<tonic::transport::Endpoint>,
         D::Error: Into<Box<(dyn std::error::Error + Send + Sync + 'static)>>,
@@ -54,7 +53,7 @@ impl WorldClient {
 
     // we make this function async so that we can keep the function signature similar
     #[cfg(target_arch = "wasm32")]
-    pub async fn new(endpoint: String, _world_address: FieldElement) -> Result<Self, Error> {
+    pub async fn new(endpoint: String, _world_address: Felt) -> Result<Self, Error> {
         Ok(Self {
             _world_address,
             inner: world_client::WorldClient::new(tonic_web_wasm_client::Client::new(endpoint)),
@@ -116,7 +115,7 @@ impl WorldClient {
 
         Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
             Some(entity) => entity.try_into().expect("must able to serialize"),
-            None => Entity { hashed_keys: FieldElement::ZERO, models: vec![] },
+            None => Entity { hashed_keys: Felt::ZERO, models: vec![] },
         }))))
     }
 
@@ -135,7 +134,7 @@ impl WorldClient {
 
         Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
             Some(entity) => entity.try_into().expect("must able to serialize"),
-            None => Entity { hashed_keys: FieldElement::ZERO, models: vec![] },
+            None => Entity { hashed_keys: Felt::ZERO, models: vec![] },
         }))))
     }
 
@@ -154,8 +153,8 @@ impl WorldClient {
             .map(|res| res.into_inner())?;
 
         Ok(EventUpdateStreaming(stream.map_ok(Box::new(|res| match res.event {
-            Some(event) => event.try_into().expect("must able to serialize"),
-            None => Event { keys: vec![], data: vec![], transaction_hash: FieldElement::ZERO },
+            Some(event) => event.into(),
+            None => Event { keys: vec![], data: vec![], transaction_hash: Felt::ZERO },
         }))))
     }
 
@@ -235,9 +234,9 @@ impl Stream for EventUpdateStreaming {
 
 fn empty_state_update() -> StateUpdate {
     StateUpdate {
-        block_hash: FieldElement::ZERO,
-        new_root: FieldElement::ZERO,
-        old_root: FieldElement::ZERO,
+        block_hash: Felt::ZERO,
+        new_root: Felt::ZERO,
+        old_root: Felt::ZERO,
         state_diff: StateDiff {
             declared_classes: vec![],
             deployed_contracts: vec![],

@@ -8,7 +8,7 @@ use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l2_to_l1_message_hash;
 use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
 use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -24,17 +24,17 @@ use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 /// In the case of execution -> the felt 'EXE' will be passed.
 /// And for normal messages, the felt 'MSG' is used.
 /// Those values are very not likely a valid account address on starknet.
-const MSG_MAGIC: FieldElement = felt!("0x4d5347");
-const EXE_MAGIC: FieldElement = felt!("0x455845");
+const MSG_MAGIC: Felt = felt!("0x4d5347");
+const EXE_MAGIC: Felt = felt!("0x455845");
 
-pub const HASH_EXEC: FieldElement = felt!("0xee");
+pub const HASH_EXEC: Felt = felt!("0xee");
 
 pub struct StarknetMessaging {
-    chain_id: FieldElement,
+    chain_id: Felt,
     provider: AnyProvider,
     wallet: LocalWallet,
-    sender_account_address: FieldElement,
-    messaging_contract_address: FieldElement,
+    sender_account_address: Felt,
+    messaging_contract_address: Felt,
 }
 
 impl StarknetMessaging {
@@ -43,13 +43,13 @@ impl StarknetMessaging {
             Url::parse(&config.rpc_url)?,
         )));
 
-        let private_key = FieldElement::from_hex_be(&config.private_key)?;
+        let private_key = Felt::from_hex(&config.private_key)?;
         let key = SigningKey::from_secret_scalar(private_key);
         let wallet = LocalWallet::from_signing_key(key);
 
         let chain_id = provider.chain_id().await?;
-        let sender_account_address = FieldElement::from_hex_be(&config.sender_address)?;
-        let messaging_contract_address = FieldElement::from_hex_be(&config.contract_address)?;
+        let sender_account_address = Felt::from_hex(&config.sender_address)?;
+        let messaging_contract_address = Felt::from_hex(&config.contract_address)?;
 
         Ok(StarknetMessaging {
             wallet,
@@ -107,7 +107,7 @@ impl StarknetMessaging {
     }
 
     /// Sends an invoke TX on starknet.
-    async fn send_invoke_tx(&self, calls: Vec<Call>) -> Result<FieldElement> {
+    async fn send_invoke_tx(&self, calls: Vec<Call>) -> Result<Felt> {
         let signer = Arc::new(&self.wallet);
 
         let mut account = SingleOwnerAccount::new(
@@ -121,19 +121,19 @@ impl StarknetMessaging {
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
         // TODO: we need to have maximum fee configurable.
-        let execution = account.execute(calls).fee_estimate_multiplier(10f64);
-        let estimated_fee = (execution.estimate_fee().await?.overall_fee) * 10u64.into();
+        let execution = account.execute_v1(calls).fee_estimate_multiplier(10f64);
+        let estimated_fee = (execution.estimate_fee().await?.overall_fee) * Felt::from(10u128);
         let tx = execution.max_fee(estimated_fee).send().await?;
 
         Ok(tx.transaction_hash)
     }
 
     /// Sends messages hashes to settlement layer by sending a transaction.
-    async fn send_hashes(&self, mut hashes: Vec<FieldElement>) -> MessengerResult<FieldElement> {
+    async fn send_hashes(&self, mut hashes: Vec<Felt>) -> MessengerResult<Felt> {
         hashes.retain(|&x| x != HASH_EXEC);
 
         if hashes.is_empty() {
-            return Ok(FieldElement::ZERO);
+            return Ok(Felt::ZERO);
         }
 
         let mut calldata = hashes;
@@ -160,7 +160,7 @@ impl StarknetMessaging {
 
 #[async_trait]
 impl Messenger for StarknetMessaging {
-    type MessageHash = FieldElement;
+    type MessageHash = Felt;
     type MessageTransaction = L1HandlerTx;
 
     async fn gather_messages(
@@ -250,8 +250,8 @@ impl Messenger for StarknetMessaging {
 ///
 /// Messages can also be labelled as EXE, which in this case generate a `Call`
 /// additionally to the hash.
-fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<FieldElement>, Vec<Call>)> {
-    let mut hashes: Vec<FieldElement> = vec![];
+fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<Felt>, Vec<Call>)> {
+    let mut hashes: Vec<Felt> = vec![];
     let mut calls: Vec<Call> = vec![];
 
     for m in messages {
@@ -295,7 +295,7 @@ fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<FieldElement
             let mut buf: Vec<u8> = vec![];
             buf.extend(m.from_address.to_bytes_be());
             buf.extend(to_address.to_bytes_be());
-            buf.extend(FieldElement::from(payload.len()).to_bytes_be());
+            buf.extend(Felt::from(payload.len()).to_bytes_be());
             for p in payload {
                 buf.extend(p.to_bytes_be());
             }
@@ -347,7 +347,7 @@ fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L
         // This is the min value paid on L1 for the message to be sent to L2.
         paid_fee_on_l1: 30000_u128,
         entry_point_selector,
-        version: FieldElement::ZERO,
+        version: Felt::ZERO,
         contract_address: to_address.into(),
     })
 }
@@ -365,8 +365,8 @@ mod tests {
         let from_address = selector!("from_address");
         let to_address = selector!("to_address");
         let selector = selector!("selector");
-        let payload_msg = vec![to_address, FieldElement::ONE, FieldElement::TWO];
-        let payload_exe = vec![to_address, selector, FieldElement::ONE, FieldElement::TWO];
+        let payload_msg = vec![to_address, Felt::ONE, Felt::TWO];
+        let payload_exe = vec![to_address, selector, Felt::ONE, Felt::TWO];
 
         let messages = vec![
             MessageToL1 {
@@ -387,7 +387,7 @@ mod tests {
         assert_eq!(
             hashes,
             vec![
-                FieldElement::from_hex_be(
+                Felt::from_hex(
                     "0x03a1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162"
                 )
                 .unwrap(),
@@ -420,7 +420,7 @@ mod tests {
     #[should_panic]
     fn parse_messages_exe_bad_payload() {
         let from_address = selector!("from_address");
-        let payload_exe = vec![FieldElement::ONE];
+        let payload_exe = vec![Felt::ONE];
 
         let messages = vec![MessageToL1 {
             from_address: from_address.into(),
@@ -437,11 +437,11 @@ mod tests {
         let to_address = selector!("to_address");
         let selector = selector!("selector");
         let chain_id = ChainId::parse("KATANA").unwrap();
-        let nonce = FieldElement::ONE;
-        let calldata = vec![from_address, FieldElement::THREE];
+        let nonce = Felt::ONE;
+        let calldata = vec![from_address, Felt::THREE];
 
-        let transaction_hash: FieldElement = compute_l1_handler_tx_hash(
-            FieldElement::ZERO,
+        let transaction_hash: Felt = compute_l1_handler_tx_hash(
+            Felt::ZERO,
             to_address,
             selector,
             &calldata,
@@ -459,12 +459,7 @@ mod tests {
                 from_address,
                 to_address,
             ],
-            data: vec![
-                selector,
-                nonce,
-                FieldElement::from(calldata.len() as u128),
-                FieldElement::THREE,
-            ],
+            data: vec![selector, nonce, Felt::from(calldata.len() as u128), Felt::THREE],
             block_hash: Some(selector!("block_hash")),
             block_number: Some(0),
             transaction_hash,
@@ -478,7 +473,7 @@ mod tests {
             chain_id,
             message_hash,
             paid_fee_on_l1: 30000_u128,
-            version: FieldElement::ZERO,
+            version: Felt::ZERO,
             entry_point_selector: selector,
             contract_address: to_address.into(),
         };
@@ -494,9 +489,9 @@ mod tests {
         let from_address = selector!("from_address");
         let to_address = selector!("to_address");
         let selector = selector!("selector");
-        let nonce = FieldElement::ONE;
-        let calldata = [from_address, FieldElement::THREE];
-        let transaction_hash = FieldElement::ZERO;
+        let nonce = Felt::ONE;
+        let calldata = [from_address, Felt::THREE];
+        let transaction_hash = Felt::ZERO;
 
         let event = EmittedEvent {
             from_address: felt!(
@@ -508,12 +503,7 @@ mod tests {
                 from_address,
                 to_address,
             ],
-            data: vec![
-                selector,
-                nonce,
-                FieldElement::from(calldata.len() as u128),
-                FieldElement::THREE,
-            ],
+            data: vec![selector, nonce, Felt::from(calldata.len() as u128), Felt::THREE],
             block_hash: Some(selector!("block_hash")),
             block_number: Some(0),
             transaction_hash,
@@ -528,9 +518,9 @@ mod tests {
         let from_address = selector!("from_address");
         let _to_address = selector!("to_address");
         let _selector = selector!("selector");
-        let _nonce = FieldElement::ONE;
-        let _calldata = [from_address, FieldElement::THREE];
-        let transaction_hash = FieldElement::ZERO;
+        let _nonce = Felt::ONE;
+        let _calldata = [from_address, Felt::THREE];
+        let transaction_hash = Felt::ZERO;
 
         let event = EmittedEvent {
             from_address: felt!(

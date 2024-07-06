@@ -3,11 +3,11 @@ use std::str;
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
+use dojo_world::contracts::naming::compute_model_selector_from_tag;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
-use dojo_world::manifest::utils::{compute_model_selector_from_tag, get_default_namespace_from_ws};
 use dojo_world::manifest::{
-    BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
-    WORLD_CONTRACT_TAG,
+    get_default_namespace_from_ws, BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR,
+    MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_TAG,
 };
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,
@@ -19,11 +19,10 @@ use dojo_world::migration::TxnConfig;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
-use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
 
 use super::setup;
 use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
@@ -277,7 +276,7 @@ async fn migrate_with_metadata() {
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
     // check world metadata
-    let resource = world_reader.metadata(&FieldElement::ZERO).call().await.unwrap();
+    let resource = world_reader.metadata(&Felt::ZERO).call().await.unwrap();
     let element_name = WORLD_CONTRACT_TAG.to_string();
 
     let full_uri = resource.metadata_uri.to_string().unwrap();
@@ -391,7 +390,7 @@ async fn migration_with_mismatching_world_address_and_seed() {
     let strategy = prepare_migration_with_world_and_seed(
         base_dir,
         target_dir,
-        Some(FieldElement::ONE),
+        Some(Felt::ONE),
         "sozo_test",
         &default_namespace,
     )
@@ -573,7 +572,7 @@ async fn check_ipfs_metadata(
 async fn check_artifact_metadata<P: starknet::providers::Provider + Sync>(
     client: &HyperBackend,
     world_reader: &WorldContractReader<P>,
-    resource_id: FieldElement,
+    resource_id: Felt,
     tag: &String,
     dojo_metadata: &DojoMetadata,
 ) {

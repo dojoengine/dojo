@@ -9,7 +9,7 @@ use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::model::ModelReader;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 use super::error::{self, Error};
 use crate::error::{ParseError, QueryError};
@@ -20,11 +20,11 @@ pub struct ModelSQLReader {
     /// The name of the model
     name: String,
     /// The selector of the model
-    selector: FieldElement,
+    selector: Felt,
     /// The class hash of the model
-    class_hash: FieldElement,
+    class_hash: Felt,
     /// The contract address of the model
-    contract_address: FieldElement,
+    contract_address: Felt,
     pool: Pool<Sqlite>,
     packed_size: u32,
     unpacked_size: u32,
@@ -32,7 +32,7 @@ pub struct ModelSQLReader {
 }
 
 impl ModelSQLReader {
-    pub async fn new(selector: FieldElement, pool: Pool<Sqlite>) -> Result<Self, Error> {
+    pub async fn new(selector: Felt, pool: Pool<Sqlite>) -> Result<Self, Error> {
         let (namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout): (
             String,
             String,
@@ -49,10 +49,9 @@ impl ModelSQLReader {
         .fetch_one(&pool)
         .await?;
 
-        let class_hash =
-            FieldElement::from_hex_be(&class_hash).map_err(error::ParseError::FromStr)?;
+        let class_hash = Felt::from_hex(&class_hash).map_err(error::ParseError::FromStr)?;
         let contract_address =
-            FieldElement::from_hex_be(&contract_address).map_err(error::ParseError::FromStr)?;
+            Felt::from_hex(&contract_address).map_err(error::ParseError::FromStr)?;
 
         let layout = serde_json::from_str(&layout).map_err(error::ParseError::FromJsonStr)?;
 
@@ -81,15 +80,15 @@ impl ModelReader<Error> for ModelSQLReader {
         &self.name
     }
 
-    fn selector(&self) -> FieldElement {
+    fn selector(&self) -> Felt {
         self.selector
     }
 
-    fn class_hash(&self) -> FieldElement {
+    fn class_hash(&self) -> Felt {
         self.class_hash
     }
 
-    fn contract_address(&self) -> FieldElement {
+    fn contract_address(&self) -> Felt {
         self.contract_address
     }
 
@@ -469,20 +468,19 @@ pub fn map_row_to_ty(
                 }
                 Primitive::Felt252(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    primitive.set_felt252(Some(
-                        FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
-                    ))?;
+                    primitive
+                        .set_felt252(Some(Felt::from_str(&value).map_err(ParseError::FromStr)?))?;
                 }
                 Primitive::ClassHash(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     primitive.set_contract_address(Some(
-                        FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
+                        Felt::from_str(&value).map_err(ParseError::FromStr)?,
                     ))?;
                 }
                 Primitive::ContractAddress(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
                     primitive.set_contract_address(Some(
-                        FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
+                        Felt::from_str(&value).map_err(ParseError::FromStr)?,
                     ))?;
                 }
             };

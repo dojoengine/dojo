@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::{bail, Result};
 use colored::Colorize;
 use starknet::signers::SigningKey;
-use starknet_crypto::FieldElement;
+use starknet_crypto::Felt;
 
 pub fn new(password: Option<String>, force: bool, file: PathBuf) -> Result<()> {
     if file.exists() && !force {
@@ -36,7 +36,7 @@ pub fn from_key(
     } else {
         rpassword::prompt_password("Enter private key: ")?
     };
-    let private_key = FieldElement::from_hex_be(private_key.trim())?;
+    let private_key = Felt::from_hex(private_key.trim())?;
 
     let password = get_password(password, false)?;
 
