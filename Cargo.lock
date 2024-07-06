@@ -8512,6 +8512,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-node-bindings"
+version = "0.7.3"
+dependencies = [
+ "serde",
+ "serde_json",
+ "starknet",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "katana-primitives"
 version = "0.7.3"
 dependencies = [
