@@ -191,7 +191,8 @@ jobs:
           sudo apt update && sudo apt install ./hurl_3.0.0_amd64.deb
           chmod +x /tmp/bins/katana
           chmod +x /tmp/bins/sozo
+          nohup /tmp/bins/katana --accounts 2 --disable-fee &
+      -run: |
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml build
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml migrate apply
-          nohup /tmp/bins/katana --accounts 2 --disable-fee &
       - run: hurl --test examples/rpc/**/*.hurl
