@@ -138,11 +138,19 @@ fn format_layout_ref(type_name: &str) -> String {
 }
 
 fn format_selector(selector: String) -> String {
-    if selector.starts_with("0x") { format!("[{}]", selector) } else { selector }
+    if selector.starts_with("0x") {
+        format!("[{}]", selector)
+    } else {
+        selector
+    }
 }
 
 fn format_name(name: String) -> String {
-    if !name.is_empty() { format!(" {} ", name) } else { name }
+    if !name.is_empty() {
+        format!(" {} ", name)
+    } else {
+        name
+    }
 }
 
 fn format_field(selector: String, name: String, layout: String) -> String {
@@ -180,6 +188,11 @@ fn get_name_from_schema(schema: &dojo_types::schema::Ty) -> String {
             dojo_types::primitive::Primitive::U128(_) => "u128".to_string(),
             dojo_types::primitive::Primitive::U256(_) => "u256".to_string(),
             dojo_types::primitive::Primitive::USize(_) => "usize".to_string(),
+            dojo_types::primitive::Primitive::I8(_) => "i8".to_string(),
+            dojo_types::primitive::Primitive::I16(_) => "i16".to_string(),
+            dojo_types::primitive::Primitive::I32(_) => "i32".to_string(),
+            dojo_types::primitive::Primitive::I64(_) => "i64".to_string(),
+            dojo_types::primitive::Primitive::I128(_) => "ui28".to_string(),
             dojo_types::primitive::Primitive::Bool(_) => "bool".to_string(),
             dojo_types::primitive::Primitive::Felt252(_) => "felt252".to_string(),
             dojo_types::primitive::Primitive::ClassHash(_) => "ClassHash".to_string(),
@@ -395,7 +408,11 @@ fn deep_print_layout(
 }
 
 fn _start_indent(level: usize, start_indent: bool) -> String {
-    if start_indent { INDENT.repeat(level) } else { "".to_string() }
+    if start_indent {
+        INDENT.repeat(level)
+    } else {
+        "".to_string()
+    }
 }
 
 fn format_primitive(

@@ -395,6 +395,31 @@ fn format_member(m: &Member) -> String {
                     str.push_str(&format!(" = {}", value));
                 }
             }
+            Primitive::I8(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            Primitive::I16(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            Primitive::I32(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            Primitive::I64(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            Primitive::I128(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
             Primitive::Bool(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));

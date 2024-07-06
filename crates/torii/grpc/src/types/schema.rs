@@ -262,6 +262,13 @@ impl TryFrom<Primitive> for proto::types::Primitive {
             Primitive::U256(u256) => {
                 u256.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
             }
+            Primitive::I8(i8) => i8.map(|val| ValueType::IntValue(val as i64)),
+            Primitive::I16(i16) => i16.map(|val| ValueType::IntValue(val as i64)),
+            Primitive::I32(i32) => i32.map(|val| ValueType::IntValue(val as i64)),
+            Primitive::I64(i64) => i64.map(ValueType::IntValue),
+            Primitive::I128(i128) => {
+                i128.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
+            }
             Primitive::Felt252(felt) => {
                 felt.map(|val| ValueType::ByteValue(val.to_bytes_be().to_vec()))
             }

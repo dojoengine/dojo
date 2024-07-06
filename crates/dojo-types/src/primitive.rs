@@ -36,11 +36,6 @@ pub enum Primitive {
     I32(Option<i32>),
     I64(Option<i64>),
     I128(Option<i128>),
-    I8(Option<i8>),
-    I16(Option<i16>),
-    I32(Option<i32>),
-    I64(Option<i64>),
-    I128(Option<i128>),
     USize(Option<u32>),
     Bool(Option<bool>),
     Felt252(Option<Felt>),
@@ -304,6 +299,46 @@ impl Primitive {
                 *value = Some(U256::from_be_bytes(bytes));
             }
 
+            Primitive::I8(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i8>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::I16(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i16().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i16>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::I32(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i32>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::I64(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i64().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i64>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::I128(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i128().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i128>(),
+                    value: felt,
+                })?);
+            }
+
             Primitive::ContractAddress(ref mut value) => {
                 *value = Some(felts.remove(0));
             }
@@ -356,6 +391,21 @@ impl Primitive {
                     let value1 = Felt::from_bytes_be(&value1_array);
                     Ok(vec![value0, value1])
                 })
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I8(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I16(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I32(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I64(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I128(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::ContractAddress(value) => {
                 value.map(|v| Ok(vec![v])).unwrap_or(Err(PrimitiveError::MissingFieldElement))
