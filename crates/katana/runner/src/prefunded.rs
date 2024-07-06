@@ -1,25 +1,21 @@
-use katana_core::backend::config::Environment;
-use katana_primitives::chain::ChainId;
-use katana_primitives::contract::ContractAddress;
-use katana_primitives::genesis::allocation::DevGenesisAccount;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet::signers::{LocalWallet, SigningKey};
+use starknet::signers::LocalWallet;
 
 use crate::KatanaRunner;
 
 impl KatanaRunner {
-    pub fn accounts_data(&self) -> &[(ContractAddress, DevGenesisAccount)] {
-        &self.accounts[1..] // The first one is used to deploy the contract
+    pub fn accounts_data(&self) -> &[katana_node_bindings::Account] {
+        self.instance.accounts()
     }
 
     pub fn accounts(&self) -> Vec<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> {
         self.accounts_data().iter().map(|account| self.account_to_single_owned(account)).collect()
     }
 
-    pub fn account_data(&self, index: usize) -> &(ContractAddress, DevGenesisAccount) {
+    pub fn account_data(&self, index: usize) -> &katana_node_bindings::Account {
         &self.accounts_data()[index]
     }
 
@@ -27,25 +23,27 @@ impl KatanaRunner {
         &self,
         index: usize,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
-        self.account_to_single_owned(&self.accounts[index])
+        self.account_to_single_owned(&self.accounts_data()[index])
     }
 
     fn account_to_single_owned(
         &self,
-        account: &(ContractAddress, DevGenesisAccount),
+        account: &katana_node_bindings::Account,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
-        let private_key = SigningKey::from_secret_scalar(account.1.private_key);
-        let signer = LocalWallet::from_signing_key(private_key);
+        let signer = if let Some(private_key) = &account.private_key {
+            LocalWallet::from(private_key.clone())
+        } else {
+            panic!("Account does not have a private key")
+        };
 
-        let chain_id = Environment::default().chain_id;
-        debug_assert_eq!(Environment::default().chain_id, ChainId::parse("KATANA").unwrap());
+        let chain_id = self.instance.chain_id();
         let provider = self.owned_provider();
 
         let mut account = SingleOwnerAccount::new(
             provider,
             signer,
-            account.0.into(),
-            chain_id.into(),
+            account.address,
+            chain_id,
             ExecutionEncoding::New,
         );
 
