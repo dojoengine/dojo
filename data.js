@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720198956375,
+  "lastUpdate": 1720236782076,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10885,6 +10885,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16809342,
             "range": "± 247260",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb3e91a7f1f3301a7653e1611eb7f4a35cec7ca3",
+          "message": "feat(katana): add better node bindings (#2142)\n\n* add katana bindings crate\r\n\r\n* handle log in json format\r\n\r\n* remove some args for safety reasons\r\n\r\n* add more test\r\n\r\n* add crate desc\r\n\r\n* improve error handling",
+          "timestamp": "2024-07-06T11:21:02+08:00",
+          "tree_id": "4f40c988dc32faaa1ba6f65eeaedff9118b7a4c7",
+          "url": "https://github.com/dojoengine/dojo/commit/bb3e91a7f1f3301a7653e1611eb7f4a35cec7ca3"
+        },
+        "date": 1720236780873,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17000709,
+            "range": "± 217506",
             "unit": "ns/iter"
           }
         ]
