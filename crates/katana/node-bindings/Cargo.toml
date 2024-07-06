@@ -2,7 +2,6 @@
 description = "Utilities for working with the Katana binary"
 edition.workspace = true
 license-file.workspace = true
-license.workspace = true
 name = "katana-node-bindings"
 repository.workspace = true
 version.workspace = true

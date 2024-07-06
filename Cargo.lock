@@ -8541,7 +8541,7 @@ version = "0.7.3"
 dependencies = [
  "serde",
  "serde_json",
- "starknet",
+ "starknet 0.11.0",
  "tempfile",
  "thiserror",
  "tokio",
