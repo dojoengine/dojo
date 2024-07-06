@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use assert_fs::TempDir;
 use katana_node_bindings::{Katana, KatanaInstance};
 pub use runner_macro::{katana_test, runner};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::sync::Mutex;
@@ -23,7 +23,7 @@ pub struct KatanaRunner {
     instance: KatanaInstance,
     provider: JsonRpcClient<HttpTransport>,
     log_file_path: PathBuf,
-    contract: Mutex<Option<FieldElement>>,
+    contract: Mutex<Option<Felt>>,
 }
 
 /// Configuration for the KatanaRunner.
@@ -150,12 +150,12 @@ impl KatanaRunner {
     // A contract needs to be deployed only once for each instance
     // In proptest runner is static but deployment would happen for each test, unless it is
     // persisted here.
-    pub async fn set_contract(&self, contract_address: FieldElement) {
+    pub async fn set_contract(&self, contract_address: Felt) {
         let mut lock = self.contract.lock().await;
         *lock = Some(contract_address);
     }
 
-    pub async fn contract(&self) -> Option<FieldElement> {
+    pub async fn contract(&self) -> Option<Felt> {
         *self.contract.lock().await
     }
 }

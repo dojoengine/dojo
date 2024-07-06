@@ -13,7 +13,7 @@ use std::process::{Child, Command};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
-use starknet::core::types::{FieldElement, FromStrError};
+use starknet::core::types::{Felt, FromStrError};
 use starknet::macros::short_string;
 use starknet::signers::SigningKey;
 use thiserror::Error;
@@ -29,7 +29,7 @@ const KATANA_STARTUP_TIMEOUT_MILLIS: u64 = 10_000;
 #[derive(Debug, Clone)]
 pub struct Account {
     /// The account contract address
-    pub address: FieldElement,
+    pub address: Felt,
     /// The private key, if any
     pub private_key: Option<SigningKey>,
 }
@@ -42,7 +42,7 @@ pub struct KatanaInstance {
     port: u16,
     child: Child,
     accounts: Vec<Account>,
-    chain_id: FieldElement,
+    chain_id: Felt,
 }
 
 impl KatanaInstance {
@@ -62,7 +62,7 @@ impl KatanaInstance {
     }
 
     /// Returns the chain of the katana instance
-    pub fn chain_id(&self) -> FieldElement {
+    pub fn chain_id(&self) -> Felt {
         self.chain_id
     }
 
@@ -179,7 +179,7 @@ pub struct Katana {
     disable_validate: bool,
 
     // Environment options
-    chain_id: Option<FieldElement>,
+    chain_id: Option<Felt>,
     validate_max_steps: Option<u64>,
     invoke_max_steps: Option<u64>,
     eth_gas_price: Option<u64>,
@@ -335,7 +335,7 @@ impl Katana {
     }
 
     /// Sets the chain ID.
-    pub const fn chain_id(mut self, id: FieldElement) -> Self {
+    pub const fn chain_id(mut self, id: Felt) -> Self {
         self.chain_id = Some(id);
         self
     }
@@ -508,8 +508,8 @@ impl Katana {
                     port = addr.port();
 
                     for (address, info) in account_infos {
-                        let address = FieldElement::from_str(&address)?;
-                        let private_key = FieldElement::from_str(&info.private_key)?;
+                        let address = Felt::from_str(&address)?;
+                        let private_key = Felt::from_str(&info.private_key)?;
                         let key = SigningKey::from_secret_scalar(private_key);
                         accounts.push(Account { address, private_key: Some(key) });
                     }
@@ -547,7 +547,7 @@ impl Katana {
                         .ok_or(Error::MissingAccountAddress)?
                         .trim();
 
-                    let address = FieldElement::from_str(hex)?;
+                    let address = Felt::from_str(hex)?;
                     let account = Account { address, private_key: None };
                     current_account = Some(account);
                 }
@@ -566,7 +566,7 @@ impl Katana {
                         .ok_or(Error::MissingAccountPrivateKey)?
                         .trim();
 
-                    let private_key = FieldElement::from_str(hex)?;
+                    let private_key = Felt::from_str(hex)?;
                     let signing_key = SigningKey::from_secret_scalar(private_key);
                     accounts.push(Account { private_key: Some(signing_key), ..acc });
                 }
