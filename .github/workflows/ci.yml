@@ -192,7 +192,7 @@ jobs:
           chmod +x /tmp/bins/katana
           chmod +x /tmp/bins/sozo
           nohup /tmp/bins/katana --accounts 2 --disable-fee &
-      -run: |
+      - run: |
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml build
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml migrate apply
       - run: hurl --test examples/rpc/**/*.hurl
