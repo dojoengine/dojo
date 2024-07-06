@@ -7,6 +7,7 @@ use dojo_world::manifest::get_default_namespace_from_ws;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use starknet::accounts::Account;
@@ -18,7 +19,7 @@ async fn reregister_models() {
     let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
     let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
 
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));

@@ -215,6 +215,7 @@ fn filter_model_tokens(tokens: &TokenizedAbi) -> TokenizedAbi {
 mod tests {
     use dojo_test_utils::compiler;
     use dojo_world::metadata::dojo_metadata_from_workspace;
+    use scarb::compiler::Profile;
 
     use super::*;
 
@@ -225,6 +226,7 @@ mod tests {
         let config = compiler::copy_tmp_config(
             &Utf8PathBuf::from("../../examples/spawn-and-move"),
             &Utf8PathBuf::from("../dojo-core"),
+            Profile::DEV,
         );
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
