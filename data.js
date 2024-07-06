@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720236782076,
+  "lastUpdate": 1720236837777,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10915,6 +10915,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17000709,
             "range": "± 217506",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8ff31b0cf56d008355833304bd9488b4ca7aad58",
+          "message": "refactor(katana-runner): use the new bindings (#2143)",
+          "timestamp": "2024-07-06T11:22:19+08:00",
+          "tree_id": "f57cb932d2dd39cf65b1b3a0616195436c5daa58",
+          "url": "https://github.com/dojoengine/dojo/commit/8ff31b0cf56d008355833304bd9488b4ca7aad58"
+        },
+        "date": 1720236836544,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16251406,
+            "range": "± 493263",
             "unit": "ns/iter"
           }
         ]
