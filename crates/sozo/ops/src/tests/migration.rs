@@ -29,6 +29,30 @@ use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
+async fn default_migrate_no_dry_run() {
+    let config = setup::load_config();
+    let ws = setup::setup_ws(&config);
+
+    let sequencer = KatanaRunner::new().expect("Fail to start runner");
+
+    let mut account = sequencer.account(0);
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+    let _ = crate::migration::migrate(
+        &ws,
+        None,
+        sequencer.url().to_string(),
+        account,
+        "dojo_examples",
+        false,
+        TxnConfig::init_wait(),
+        None,
+    )
+    .await
+    .is_ok();
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_auto_mine() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
