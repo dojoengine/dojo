@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720236837777,
+  "lastUpdate": 1720241406374,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -10945,6 +10945,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16251406,
             "range": "± 493263",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ff19cc4df1b3f1c29fea3457f1d5844a50204e7",
+          "message": "fix(katana-node-bindings): use new Felt (#2146)",
+          "timestamp": "2024-07-05T22:38:15-06:00",
+          "tree_id": "2d782b6e0e5ae5307d0454af92fd6f595907c7c7",
+          "url": "https://github.com/dojoengine/dojo/commit/0ff19cc4df1b3f1c29fea3457f1d5844a50204e7"
+        },
+        "date": 1720241405749,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16743782,
+            "range": "± 285060",
             "unit": "ns/iter"
           }
         ]
