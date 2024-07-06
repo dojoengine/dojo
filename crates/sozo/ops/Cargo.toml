@@ -8,6 +8,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+bigdecimal = "0.4.5"
 cainome.workspace = true
 cairo-lang-compiler.workspace = true
 cairo-lang-defs.workspace = true
@@ -29,6 +30,8 @@ dojo-lang.workspace = true
 dojo-types.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 futures.workspace = true
+num-bigint = "0.4.6"
+num-traits.workspace = true
 rpassword.workspace = true
 scarb-ui.workspace = true
 scarb.workspace = true

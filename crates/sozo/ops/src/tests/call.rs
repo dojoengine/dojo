@@ -1,10 +1,10 @@
 use dojo_world::contracts::WorldContractReader;
 use katana_runner::KatanaRunner;
 use starknet::accounts::SingleOwnerAccount;
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
-use starknet_crypto::FieldElement;
 
 use super::setup;
 use crate::{call, utils};
@@ -25,7 +25,7 @@ async fn call_with_bad_address() {
             world_reader,
             "0xBadCoffeeBadCode".to_string(),
             ENTRYPOINT.to_string(),
-            vec![FieldElement::ZERO, FieldElement::ZERO],
+            vec![Felt::ZERO, Felt::ZERO],
             None
         )
         .await
@@ -46,7 +46,7 @@ async fn call_with_bad_name() {
             world_reader,
             "BadName".to_string(),
             ENTRYPOINT.to_string(),
-            vec![FieldElement::ZERO, FieldElement::ZERO],
+            vec![Felt::ZERO, Felt::ZERO],
             None
         )
         .await
@@ -67,7 +67,7 @@ async fn call_with_bad_entrypoint() {
             world_reader,
             CONTRACT_NAME.to_string(),
             "BadEntryPoint".to_string(),
-            vec![FieldElement::ZERO, FieldElement::ZERO],
+            vec![Felt::ZERO, Felt::ZERO],
             None
         )
         .await
@@ -103,7 +103,7 @@ async fn call_with_contract_name() {
             world_reader,
             CONTRACT_NAME.to_string(),
             ENTRYPOINT.to_string(),
-            vec![FieldElement::ZERO, FieldElement::ZERO],
+            vec![Felt::ZERO, Felt::ZERO],
             None,
         )
         .await
@@ -130,7 +130,7 @@ async fn call_with_contract_address() {
             world_reader,
             format!("{:#x}", contract_address),
             ENTRYPOINT.to_string(),
-            vec![FieldElement::ZERO, FieldElement::ZERO],
+            vec![Felt::ZERO, Felt::ZERO],
             None,
         )
         .await

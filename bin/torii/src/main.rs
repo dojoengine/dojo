@@ -20,7 +20,7 @@ use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::sync::broadcast;
@@ -49,7 +49,7 @@ pub(crate) const LOG_TARGET: &str = "torii::cli";
 struct Args {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
-    world_address: FieldElement,
+    world_address: Felt,
 
     /// The sequencer rpc endpoint to index.
     #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]

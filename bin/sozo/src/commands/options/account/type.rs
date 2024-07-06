@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use starknet::accounts::single_owner::SignError;
 use starknet::accounts::{
-    Account, Call, ConnectedAccount, Declaration, Execution, ExecutionEncoder, LegacyDeclaration,
-    RawDeclaration, RawExecution, RawLegacyDeclaration, SingleOwnerAccount,
+    single_owner, Account, Call, ConnectedAccount, DeclarationV2, DeclarationV3, ExecutionEncoder,
+    ExecutionV1, ExecutionV3, LegacyDeclaration, RawDeclarationV2, RawDeclarationV3,
+    RawExecutionV1, RawExecutionV3, RawLegacyDeclaration, SingleOwnerAccount,
 };
 use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::{BlockId, FieldElement, FlattenedSierraClass};
+use starknet::core::types::{BlockId, Felt, FlattenedSierraClass};
 use starknet::providers::Provider;
-use starknet::signers::LocalWallet;
+use starknet::signers::{local_wallet, LocalWallet};
 
 #[cfg(feature = "controller")]
 use super::controller::ControllerSessionAccount;
@@ -17,7 +17,7 @@ use super::controller::ControllerSessionAccount;
 #[derive(Debug, thiserror::Error)]
 pub enum SozoAccountSignError {
     #[error(transparent)]
-    Standard(#[from] SignError<starknet::signers::local_wallet::SignError>),
+    Standard(#[from] single_owner::SignError<local_wallet::SignError>),
 
     #[cfg(feature = "controller")]
     #[error(transparent)]
@@ -51,7 +51,7 @@ where
 {
     type SignError = SozoAccountSignError;
 
-    fn address(&self) -> FieldElement {
+    fn address(&self) -> Felt {
         match self {
             Self::Standard(account) => account.address(),
             #[cfg(feature = "controller")]
@@ -59,20 +59,12 @@ where
         }
     }
 
-    fn chain_id(&self) -> FieldElement {
+    fn chain_id(&self) -> Felt {
         match self {
             Self::Standard(account) => account.chain_id(),
             #[cfg(feature = "controller")]
             Self::Controller(account) => account.chain_id(),
         }
-    }
-
-    fn declare(
-        &self,
-        contract_class: Arc<FlattenedSierraClass>,
-        compiled_class_hash: FieldElement,
-    ) -> Declaration<'_, Self> {
-        Declaration::new(contract_class, compiled_class_hash, self)
     }
 
     fn declare_legacy(
@@ -82,32 +74,64 @@ where
         LegacyDeclaration::new(contract_class, self)
     }
 
-    fn execute(&self, calls: Vec<Call>) -> Execution<'_, Self> {
-        Execution::new(calls, self)
+    fn declare(
+        &self,
+        contract_class: Arc<FlattenedSierraClass>,
+        compiled_class_hash: Felt,
+    ) -> DeclarationV2<'_, Self> {
+        DeclarationV2::new(contract_class, compiled_class_hash, self)
     }
 
-    async fn sign_execution(
+    fn declare_v2(
         &self,
-        execution: &RawExecution,
+        contract_class: Arc<FlattenedSierraClass>,
+        compiled_class_hash: Felt,
+    ) -> DeclarationV2<'_, Self> {
+        DeclarationV2::new(contract_class, compiled_class_hash, self)
+    }
+
+    fn declare_v3(
+        &self,
+        contract_class: Arc<FlattenedSierraClass>,
+        compiled_class_hash: Felt,
+    ) -> DeclarationV3<'_, Self> {
+        DeclarationV3::new(contract_class, compiled_class_hash, self)
+    }
+
+    fn execute(&self, calls: Vec<Call>) -> ExecutionV1<'_, Self> {
+        ExecutionV1::new(calls, self)
+    }
+
+    fn execute_v1(&self, calls: Vec<Call>) -> ExecutionV1<'_, Self> {
+        ExecutionV1::new(calls, self)
+    }
+
+    fn execute_v3(&self, calls: Vec<Call>) -> ExecutionV3<'_, Self> {
+        ExecutionV3::new(calls, self)
+    }
+
+    async fn sign_execution_v1(
+        &self,
+        execution: &RawExecutionV1,
         query_only: bool,
-    ) -> Result<Vec<FieldElement>, Self::SignError> {
+    ) -> Result<Vec<Felt>, Self::SignError> {
         let result = match self {
-            Self::Standard(account) => account.sign_execution(execution, query_only).await?,
+            Self::Standard(account) => account.sign_execution_v1(execution, query_only).await?,
             #[cfg(feature = "controller")]
-            Self::Controller(account) => account.sign_execution(execution, query_only).await?,
+            Self::Controller(account) => account.sign_execution_v1(execution, query_only).await?,
         };
         Ok(result)
     }
 
-    async fn sign_declaration(
+    async fn sign_execution_v3(
         &self,
-        declaration: &RawDeclaration,
+        execution: &RawExecutionV3,
         query_only: bool,
-    ) -> Result<Vec<FieldElement>, Self::SignError> {
+    ) -> Result<Vec<Felt>, Self::SignError> {
         let result = match self {
-            Self::Standard(account) => account.sign_declaration(declaration, query_only).await?,
+            Self::Standard(account) => account.sign_execution_v3(execution, query_only).await?,
             #[cfg(feature = "controller")]
-            Self::Controller(account) => account.sign_declaration(declaration, query_only).await?,
+            Self::Controller(account) => account.sign_execution_v3(execution, query_only).await?,
         };
         Ok(result)
     }
@@ -116,7 +140,7 @@ where
         &self,
         declaration: &RawLegacyDeclaration,
         query_only: bool,
-    ) -> Result<Vec<FieldElement>, Self::SignError> {
+    ) -> Result<Vec<Felt>, Self::SignError> {
         match self {
             Self::Standard(account) => {
                 let result = account.sign_legacy_declaration(declaration, query_only).await?;
@@ -129,6 +153,38 @@ where
             }
         }
     }
+
+    async fn sign_declaration_v2(
+        &self,
+        declaration: &RawDeclarationV2,
+        query_only: bool,
+    ) -> Result<Vec<Felt>, Self::SignError> {
+        let result = match self {
+            Self::Standard(account) => account.sign_declaration_v2(declaration, query_only).await?,
+
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => {
+                account.sign_declaration_v2(declaration, query_only).await?
+            }
+        };
+        Ok(result)
+    }
+
+    async fn sign_declaration_v3(
+        &self,
+        declaration: &RawDeclarationV3,
+        query_only: bool,
+    ) -> Result<Vec<Felt>, Self::SignError> {
+        let result = match self {
+            Self::Standard(account) => account.sign_declaration_v3(declaration, query_only).await?,
+
+            #[cfg(feature = "controller")]
+            Self::Controller(account) => {
+                account.sign_declaration_v3(declaration, query_only).await?
+            }
+        };
+        Ok(result)
+    }
 }
 
 impl<P> ExecutionEncoder for SozoAccount<P>
@@ -136,7 +192,7 @@ where
     P: Provider,
     P: Send + Sync,
 {
-    fn encode_calls(&self, calls: &[Call]) -> Vec<FieldElement> {
+    fn encode_calls(&self, calls: &[Call]) -> Vec<Felt> {
         match self {
             Self::Standard(account) => account.encode_calls(calls),
             #[cfg(feature = "controller")]

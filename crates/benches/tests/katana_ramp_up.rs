@@ -5,11 +5,11 @@ mod katana_benchmarks {
     use benches::summary::BenchSummary;
     use benches::{deploy, BenchCall};
     use katana_runner::KatanaRunner;
-    use starknet::core::types::FieldElement;
+    use starknet::core::types::Felt;
 
-    async fn run(runner: KatanaRunner, contract_address: FieldElement) -> BenchSummary {
+    async fn run(runner: KatanaRunner, contract_address: Felt) -> BenchSummary {
         let spawn = BenchCall("spawn", vec![]);
-        let calldata_move = BenchCall("move", vec![FieldElement::from_hex_be("0x3").unwrap()]);
+        let calldata_move = BenchCall("move", vec![Felt::from_hex_be("0x3").unwrap()]);
 
         spam_katana(runner, contract_address, vec![spawn, calldata_move], 0, true).await
     }

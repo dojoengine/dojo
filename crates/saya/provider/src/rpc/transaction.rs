@@ -4,8 +4,9 @@ use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeployAccountTx, DeployAccountTxV1,
     DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, L1HandlerTx, Tx, TxWithHash,
 };
+use num_traits::ToPrimitive;
 use starknet::core::types::{
-    DeclareTransaction, DeployAccountTransaction, FieldElement, InvokeTransaction, Transaction,
+    DeclareTransaction, DeployAccountTransaction, InvokeTransaction, Transaction,
 };
 
 use crate::ProviderResult;
@@ -17,7 +18,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                 hash: tx.transaction_hash,
                 transaction: {
                     Tx::Invoke(InvokeTx::V1(InvokeTxV1 {
-                        max_fee: tx.max_fee.try_into()?,
+                        max_fee: tx.max_fee.to_u128().expect("valid u128"),
                         chain_id,
                         calldata: tx.calldata.clone(),
                         signature: tx.signature.clone(),
@@ -28,7 +29,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
             InvokeTransaction::V1(tx) => Ok(TxWithHash {
                 hash: tx.transaction_hash,
                 transaction: Tx::Invoke(InvokeTx::V1(InvokeTxV1 {
-                    max_fee: tx.max_fee.try_into()?,
+                    max_fee: tx.max_fee.to_u128().expect("valid u128"),
                     chain_id,
                     calldata: tx.calldata.clone(),
                     signature: tx.signature.clone(),
@@ -62,7 +63,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                 transaction: Tx::L1Handler(L1HandlerTx {
                     nonce: tx.nonce.into(),
                     chain_id,
-                    version: FieldElement::ZERO,
+                    version: 0u8.into(),
                     calldata: tx.calldata.clone(),
                     contract_address: tx.contract_address.into(),
                     entry_point_selector: tx.entry_point_selector,
@@ -74,7 +75,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
             DeclareTransaction::V0(tx) => Ok(TxWithHash {
                 hash: tx.transaction_hash,
                 transaction: Tx::Declare(DeclareTx::V1(DeclareTxV1 {
-                    max_fee: tx.max_fee.try_into()?,
+                    max_fee: tx.max_fee.to_u128().expect("valid u128"),
                     chain_id,
                     class_hash: tx.class_hash,
                     signature: tx.signature.clone(),
@@ -86,7 +87,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                 hash: tx.transaction_hash,
                 transaction: Tx::Declare(DeclareTx::V1(DeclareTxV1 {
                     nonce: tx.nonce,
-                    max_fee: tx.max_fee.try_into()?,
+                    max_fee: tx.max_fee.to_u128().expect("valid u128"),
                     chain_id,
                     class_hash: tx.class_hash,
                     signature: tx.signature.clone(),
@@ -97,7 +98,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                 hash: tx.transaction_hash,
                 transaction: Tx::Declare(DeclareTx::V2(DeclareTxV2 {
                     nonce: tx.nonce,
-                    max_fee: tx.max_fee.try_into()?,
+                    max_fee: tx.max_fee.to_u128().expect("valid u128"),
                     chain_id,
                     class_hash: tx.class_hash,
                     signature: tx.signature.clone(),
@@ -128,7 +129,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                 hash: tx.transaction_hash,
                 transaction: Tx::DeployAccount(DeployAccountTx::V1(DeployAccountTxV1 {
                     nonce: tx.nonce,
-                    max_fee: tx.max_fee.try_into()?,
+                    max_fee: tx.max_fee.to_u128().expect("valid u128"),
                     chain_id,
                     class_hash: tx.class_hash,
                     signature: tx.signature.clone(),

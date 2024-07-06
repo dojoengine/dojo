@@ -73,7 +73,7 @@ async fn test_entities_queries() {
 
     // spawn
     let tx = account
-        .execute(vec![Call {
+        .execute_v1(vec![Call {
             to: migration_output
                 .contracts
                 .first()

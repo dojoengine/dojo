@@ -23,7 +23,7 @@ use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::accounts::{Account, Call};
-use starknet::core::types::{BlockId, BlockTag, FieldElement, InvokeTransactionResult};
+use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -263,8 +263,8 @@ pub async fn model_fixtures(db: &mut Sql) {
             ],
         }),
         Layout::Fixed(vec![]),
-        FieldElement::ONE,
-        FieldElement::TWO,
+        Felt::ONE,
+        Felt::TWO,
         0,
         0,
         1710754478_u64,
@@ -319,8 +319,8 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         manifest.contracts.iter().find(|contract| contract.name.eq("records")).unwrap();
     let record_contract_address = records_contract.inner.address.unwrap();
     let InvokeTransactionResult { transaction_hash } = account
-        .execute(vec![Call {
-            calldata: vec![FieldElement::from_str("0xa").unwrap()],
+        .execute_v1(vec![Call {
+            calldata: vec![Felt::from_str("0xa").unwrap()],
             to: record_contract_address,
             selector: selector!("create"),
         }])
@@ -332,8 +332,8 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     // Execute `delete` and delete Record with id 20
     let InvokeTransactionResult { transaction_hash } = account
-        .execute(vec![Call {
-            calldata: vec![FieldElement::from_str("0x14").unwrap()],
+        .execute_v1(vec![Call {
+            calldata: vec![Felt::from_str("0x14").unwrap()],
             to: record_contract_address,
             selector: selector!("delete"),
         }])

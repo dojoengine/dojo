@@ -20,10 +20,10 @@ use proto::world::{
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
+use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
 use subscriptions::event::EventManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Receiver;
@@ -56,7 +56,7 @@ pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_i
 #[derive(Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
-    world_address: FieldElement,
+    world_address: Felt,
     model_cache: Arc<ModelCache>,
     entity_manager: Arc<EntityManager>,
     event_message_manager: Arc<EventMessageManager>,
@@ -68,7 +68,7 @@ impl DojoWorld {
     pub fn new(
         pool: Pool<Sqlite>,
         block_rx: Receiver<u64>,
-        world_address: FieldElement,
+        world_address: Felt,
         provider: Arc<JsonRpcClient<HttpTransport>>,
     ) -> Self {
         let model_cache = Arc::new(ModelCache::new(pool.clone()));
@@ -216,11 +216,7 @@ impl DojoWorld {
                 let ids = hashed_keys
                     .hashed_keys
                     .iter()
-                    .map(|id| {
-                        Ok(FieldElement::from_byte_slice_be(id)
-                            .map(|id| format!("{table}.id = '{id:#x}'"))
-                            .map_err(ParseError::FromByteSliceError)?)
-                    })
+                    .map(|id| Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id))))
                     .collect::<Result<Vec<_>, Error>>()?;
 
                 format!("WHERE {}", ids.join(" OR "))
@@ -535,9 +531,7 @@ impl DojoWorld {
                         .hashed_keys
                         .iter()
                         .map(|id| {
-                            Ok(FieldElement::from_byte_slice_be(id)
-                                .map(|id| format!("{table}.id = '{id:#x}'"))
-                                .map_err(ParseError::FromByteSliceError)?)
+                            Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id)))
                         })
                         .collect::<Result<Vec<_>, Error>>()?;
                     where_clauses.push(format!("({})", ids.join(" OR ")));
@@ -728,7 +722,7 @@ impl DojoWorld {
         &self,
         keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(keys.map(|keys| keys.try_into().unwrap())).await
+        self.entity_manager.add_subscriber(keys.map(|keys| keys.into())).await
     }
 
     async fn retrieve_entities(
@@ -805,7 +799,7 @@ impl DojoWorld {
         &self,
         keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.event_message_manager.add_subscriber(keys.map(|keys| keys.try_into().unwrap())).await
+        self.event_message_manager.add_subscriber(keys.map(|keys| keys.into())).await
     }
 
     async fn retrieve_event_messages(
@@ -893,7 +887,7 @@ impl DojoWorld {
         &self,
         clause: proto::types::KeysClause,
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
-        self.event_manager.add_subscriber(clause.try_into().unwrap()).await
+        self.event_manager.add_subscriber(clause.into()).await
     }
 }
 
@@ -901,9 +895,7 @@ fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
     Ok(data
         .trim_end_matches('/')
         .split('/')
-        .map(|d| {
-            FieldElement::from_str(d).map_err(ParseError::FromStr).map(|f| f.to_bytes_be().to_vec())
-        })
+        .map(|d| Felt::from_str(d).map_err(ParseError::FromStr).map(|f| f.to_bytes_be().to_vec()))
         .collect::<Result<Vec<_>, _>>()?)
 }
 
@@ -911,7 +903,7 @@ fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Even
     let keys = process_event_field(&row.0)?;
     let data = process_event_field(&row.1)?;
     let transaction_hash =
-        FieldElement::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
+        Felt::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
 
     Ok(proto::types::Event { keys, data, transaction_hash })
 }
@@ -921,8 +913,7 @@ fn map_row_to_entity(
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
     schemas: &[Ty],
 ) -> Result<proto::types::Entity, Error> {
-    let hashed_keys =
-        FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+    let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
     let models = schemas
         .iter()
         .map(|schema| {
@@ -944,9 +935,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
             if bytes.is_empty() {
                 return Ok("0x[0-9a-fA-F]+".to_string());
             }
-            Ok(FieldElement::from_byte_slice_be(bytes)
-                .map(|felt| format!("{felt:#x}"))
-                .map_err(ParseError::FromByteSliceError)?)
+            Ok(format!("{:#x}", Felt::from_bytes_be_slice(bytes)))
         })
         .collect::<Result<Vec<_>, Error>>()?;
     let mut keys_pattern = format!("^{}", keys.join("/"));
@@ -1097,7 +1086,7 @@ pub async fn new(
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
     pool: &Pool<Sqlite>,
     block_rx: Receiver<u64>,
-    world_address: FieldElement,
+    world_address: Felt,
     provider: Arc<JsonRpcClient<HttpTransport>>,
 ) -> Result<
     (SocketAddr, impl Future<Output = Result<(), tonic::transport::Error>> + 'static),

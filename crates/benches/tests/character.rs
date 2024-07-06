@@ -1,7 +1,6 @@
 #[cfg(not(feature = "skip-gas-benchmarks"))]
 pub use benches::{
-    deploy, deploy_sync, estimate_gas, estimate_gas_last, log, runner, BenchCall, FieldElement,
-    CONTRACT,
+    deploy, deploy_sync, estimate_gas, estimate_gas_last, log, runner, BenchCall, Felt, CONTRACT,
 };
 #[cfg(not(feature = "skip-gas-benchmarks"))]
 pub use proptest::prelude::*;
@@ -30,7 +29,7 @@ proptest! {
 
         let points = s.chars()
             .map(|c| c.to_digit(10).unwrap())
-            .map(FieldElement::from)
+            .map(Felt::from)
             .collect();
 
         let fee = estimate_gas(&runner.account(1),
@@ -45,7 +44,7 @@ proptest! {
         runner!(bench_complex_update_minimal);
         let contract_address = deploy_sync(runner).unwrap();
 
-        let calldata = FieldElement::from(s.parse::<u32>().unwrap());
+        let calldata = Felt::from(s.parse::<u32>().unwrap());
         let fee = estimate_gas_last(&runner.account(1), vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal", vec![calldata])
@@ -59,7 +58,7 @@ proptest! {
         runner!(bench_complex_update_minimal_nested);
         let contract_address = deploy_sync(runner).unwrap();
 
-        let calldata = FieldElement::from(w as u32);
+        let calldata = Felt::from(w as u32);
         let fee = estimate_gas_last(&runner.account(1), vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal_nested", vec![calldata])
@@ -75,7 +74,7 @@ proptest! {
 
         let calldata = s.chars()
             .map(|c| c.to_digit(10).unwrap())
-            .map(FieldElement::from)
+            .map(Felt::from)
             .collect();
         let fee = estimate_gas_last(&runner.account(1), vec![
             BenchCall("bench_complex_set_with_smaller", calldata),
@@ -90,7 +89,7 @@ proptest! {
         runner!(bench_complex_get_minimal);
         let contract_address = deploy_sync(runner).unwrap();
 
-        let calldata = FieldElement::from(s.parse::<u32>().unwrap());
+        let calldata = Felt::from(s.parse::<u32>().unwrap());
         let fee = estimate_gas_last(&runner.account(1), vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal", vec![calldata]),
@@ -107,11 +106,11 @@ proptest! {
 
         let abilities = s.chars()
             .map(|c| c.to_digit(10).unwrap())
-            .map(FieldElement::from)
+            .map(Felt::from)
             .collect();
 
-        let ability = FieldElement::from(a as u32);
-        let threshold = FieldElement::from(t as u32);
+        let ability = Felt::from(a as u32);
+        let threshold = Felt::from(t as u32);
 
         let fee = estimate_gas_last(&runner.account(1), vec![
             BenchCall("bench_complex_set_with_smaller", abilities),

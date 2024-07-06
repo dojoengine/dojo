@@ -12,14 +12,14 @@ use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
 use futures::lock::Mutex;
 use parking_lot::{RwLock, RwLockReadGuard};
+use starknet::core::types::Felt;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
-use torii_grpc::types::schema::{Entity, SchemaError};
+use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
@@ -55,7 +55,7 @@ impl Client {
         torii_url: String,
         rpc_url: String,
         relay_url: String,
-        world: FieldElement,
+        world: Felt,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
@@ -135,11 +135,7 @@ impl Client {
     pub async fn starknet_events(&self, query: EventQuery) -> Result<Vec<Event>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEventsResponse { events } = grpc_client.retrieve_events(query).await?;
-        Ok(events
-            .into_iter()
-            .map(TryInto::try_into)
-            .collect::<Result<Vec<Event>, _>>()
-            .map_err(SchemaError::SliceError)?)
+        Ok(events.into_iter().map(Event::from).collect::<Vec<Event>>())
     }
 
     /// A direct stream to grpc subscribe entities
@@ -283,7 +279,7 @@ impl Client {
         Ok(stream)
     }
 
-    async fn initiate_model(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
+    async fn initiate_model(&self, model: &str, keys: Vec<Felt>) -> Result<(), Error> {
         let model_reader = self.world_reader.model_reader(model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(

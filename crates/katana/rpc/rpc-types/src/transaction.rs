@@ -14,6 +14,7 @@ use katana_primitives::transaction::{
     DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash,
 };
 use katana_primitives::FieldElement;
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
@@ -22,7 +23,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
-use crate::receipt::MaybePendingTxReceipt;
+use crate::receipt::TxReceiptWithBlockInfo;
 
 pub const CHUNK_SIZE_DEFAULT: u64 = 100;
 
@@ -46,7 +47,7 @@ impl BroadcastedInvokeTx {
                 calldata: tx.calldata,
                 signature: tx.signature,
                 sender_address: tx.sender_address.into(),
-                max_fee: tx.max_fee.try_into().expect("max_fee is too big"),
+                max_fee: tx.max_fee.to_u128().expect("max_fee is too big"),
             }),
 
             BroadcastedInvokeTransaction::V3(tx) => InvokeTx::V3(InvokeTxV3 {
@@ -107,7 +108,7 @@ impl BroadcastedDeclareTx {
                         nonce: tx.nonce,
                         signature: tx.signature,
                         sender_address: tx.sender_address.into(),
-                        max_fee: tx.max_fee.try_into().expect("max fee is too large"),
+                        max_fee: tx.max_fee.to_u128().expect("max fee is too large"),
                     }),
                 })
             }
@@ -127,7 +128,7 @@ impl BroadcastedDeclareTx {
                         signature: tx.signature,
                         sender_address: tx.sender_address.into(),
                         compiled_class_hash: tx.compiled_class_hash,
-                        max_fee: tx.max_fee.try_into().expect("max fee is too large"),
+                        max_fee: tx.max_fee.to_u128().expect("max fee is too large"),
                     }),
                 })
             }
@@ -198,7 +199,7 @@ impl BroadcastedDeployAccountTx {
                     contract_address: contract_address.into(),
                     constructor_calldata: tx.constructor_calldata,
                     contract_address_salt: tx.contract_address_salt,
-                    max_fee: tx.max_fee.try_into().expect("max_fee is too big"),
+                    max_fee: tx.max_fee.to_u128().expect("max_fee is too big"),
                 })
             }
 
@@ -340,7 +341,7 @@ impl From<TxWithHash> for Tx {
                     calldata: tx.calldata,
                     contract_address: tx.contract_address.into(),
                     entry_point_selector: tx.entry_point_selector,
-                    nonce: tx.nonce.try_into().expect("nonce should fit in u64"),
+                    nonce: tx.nonce.to_u64().expect("nonce should fit in u64"),
                     version: tx.version,
                 },
             ),
@@ -430,7 +431,7 @@ impl From<BroadcastedInvokeTx> for InvokeTx {
                 signature: tx.signature,
                 chain_id: ChainId::default(),
                 sender_address: tx.sender_address.into(),
-                max_fee: tx.max_fee.try_into().expect("max_fee is too big"),
+                max_fee: tx.max_fee.to_u128().expect("max_fee is too big"),
             }),
 
             BroadcastedInvokeTransaction::V3(tx) => InvokeTx::V3(InvokeTxV3 {
@@ -469,7 +470,7 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
                     contract_address: contract_address.into(),
                     constructor_calldata: tx.constructor_calldata,
                     contract_address_salt: tx.contract_address_salt,
-                    max_fee: tx.max_fee.try_into().expect("max_fee is too big"),
+                    max_fee: tx.max_fee.to_u128().expect("max_fee is too big"),
                 })
             }
 
@@ -515,6 +516,6 @@ impl Default for TransactionsPageCursor {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPage {
-    pub transactions: Vec<(TxWithHash, MaybePendingTxReceipt)>,
+    pub transactions: Vec<(TxWithHash, TxReceiptWithBlockInfo)>,
     pub cursor: TransactionsPageCursor,
 }

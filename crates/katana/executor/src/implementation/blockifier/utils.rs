@@ -40,13 +40,10 @@ use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::types::PriceUnit;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
-use starknet_api::core::{
-    self, ChainId, ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey,
-};
+use starknet_api::core::{self, ChainId, ClassHash, CompiledClassHash, ContractAddress, Nonce};
 use starknet_api::data_availability::DataAvailabilityMode;
 use starknet_api::deprecated_contract_class::EntryPointType;
-use starknet_api::hash::StarkHash;
-use starknet_api::patricia_key;
+use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::{
     AccountDeploymentData, Calldata, ContractAddressSalt,
     DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2,
@@ -138,8 +135,8 @@ pub fn call<S: StateReader>(
     let call = CallEntryPoint {
         initial_gas: initial_gas as u64,
         storage_address: to_blk_address(request.contract_address),
-        entry_point_selector: core::EntryPointSelector(request.entry_point_selector.into()),
-        calldata: Calldata(Arc::new(request.calldata.into_iter().map(|f| f.into()).collect())),
+        entry_point_selector: core::EntryPointSelector(to_stark_felt(request.entry_point_selector)),
+        calldata: Calldata(Arc::new(request.calldata.into_iter().map(to_stark_felt).collect())),
         ..Default::default()
     };
 
@@ -169,7 +166,7 @@ pub fn call<S: StateReader>(
     )?;
 
     let retdata = res.execution.retdata.0;
-    let retdata = retdata.into_iter().map(|f| f.into()).collect::<Vec<FieldElement>>();
+    let retdata = retdata.into_iter().map(to_felt).collect::<Vec<FieldElement>>();
     Ok(retdata)
 }
 
@@ -179,36 +176,36 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
     match tx.transaction {
         ExecutableTx::Invoke(tx) => match tx {
             InvokeTx::V1(tx) => {
-                let calldata = tx.calldata.into_iter().map(|f| f.into()).collect();
-                let signature = tx.signature.into_iter().map(|f| f.into()).collect();
+                let calldata = tx.calldata.into_iter().map(to_stark_felt).collect();
+                let signature = tx.signature.into_iter().map(to_stark_felt).collect();
 
                 Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
                     tx: ApiInvokeTransaction::V1(starknet_api::transaction::InvokeTransactionV1 {
                         max_fee: Fee(tx.max_fee),
-                        nonce: Nonce(tx.nonce.into()),
+                        nonce: Nonce(to_stark_felt(tx.nonce)),
                         sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
                         calldata: Calldata(Arc::new(calldata)),
                     }),
-                    tx_hash: TransactionHash(hash.into()),
+                    tx_hash: TransactionHash(to_stark_felt(hash)),
                     only_query: false,
                 }))
             }
 
             InvokeTx::V3(tx) => {
-                let calldata = tx.calldata.into_iter().map(|f| f.into()).collect();
-                let signature = tx.signature.into_iter().map(|f| f.into()).collect();
+                let calldata = tx.calldata.into_iter().map(to_stark_felt).collect();
+                let signature = tx.signature.into_iter().map(to_stark_felt).collect();
 
-                let paymaster_data = tx.paymaster_data.into_iter().map(|f| f.into()).collect();
+                let paymaster_data = tx.paymaster_data.into_iter().map(to_stark_felt).collect();
                 let account_deploy_data =
-                    tx.account_deployment_data.into_iter().map(|f| f.into()).collect();
+                    tx.account_deployment_data.into_iter().map(to_stark_felt).collect();
                 let fee_data_availability_mode = to_api_da_mode(tx.fee_data_availability_mode);
                 let nonce_data_availability_mode = to_api_da_mode(tx.nonce_data_availability_mode);
 
                 Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
                     tx: ApiInvokeTransaction::V3(starknet_api::transaction::InvokeTransactionV3 {
                         tip: Tip(tx.tip),
-                        nonce: Nonce(tx.nonce.into()),
+                        nonce: Nonce(to_stark_felt(tx.nonce)),
                         sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
                         calldata: Calldata(Arc::new(calldata)),
@@ -218,7 +215,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                         nonce_data_availability_mode,
                         resource_bounds: to_api_resource_bounds(tx.resource_bounds),
                     }),
-                    tx_hash: TransactionHash(hash.into()),
+                    tx_hash: TransactionHash(to_stark_felt(hash)),
                     only_query: false,
                 }))
             }
@@ -226,33 +223,33 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
         ExecutableTx::DeployAccount(tx) => match tx {
             DeployAccountTx::V1(tx) => {
-                let calldata = tx.constructor_calldata.into_iter().map(|f| f.into()).collect();
-                let signature = tx.signature.into_iter().map(|f| f.into()).collect();
-                let salt = ContractAddressSalt(tx.contract_address_salt.into());
+                let calldata = tx.constructor_calldata.into_iter().map(to_stark_felt).collect();
+                let signature = tx.signature.into_iter().map(to_stark_felt).collect();
+                let salt = ContractAddressSalt(to_stark_felt(tx.contract_address_salt));
 
                 Transaction::AccountTransaction(AccountTransaction::DeployAccount(
                     DeployAccountTransaction {
                         contract_address: to_blk_address(tx.contract_address),
                         tx: ApiDeployAccountTransaction::V1(DeployAccountTransactionV1 {
                             max_fee: Fee(tx.max_fee),
-                            nonce: Nonce(tx.nonce.into()),
+                            nonce: Nonce(to_stark_felt(tx.nonce)),
                             signature: TransactionSignature(signature),
-                            class_hash: ClassHash(tx.class_hash.into()),
+                            class_hash: ClassHash(to_stark_felt(tx.class_hash)),
                             constructor_calldata: Calldata(Arc::new(calldata)),
                             contract_address_salt: salt,
                         }),
-                        tx_hash: TransactionHash(hash.into()),
+                        tx_hash: TransactionHash(to_stark_felt(hash)),
                         only_query: false,
                     },
                 ))
             }
 
             DeployAccountTx::V3(tx) => {
-                let calldata = tx.constructor_calldata.into_iter().map(|f| f.into()).collect();
-                let signature = tx.signature.into_iter().map(|f| f.into()).collect();
-                let salt = ContractAddressSalt(tx.contract_address_salt.into());
+                let calldata = tx.constructor_calldata.into_iter().map(to_stark_felt).collect();
+                let signature = tx.signature.into_iter().map(to_stark_felt).collect();
+                let salt = ContractAddressSalt(to_stark_felt(tx.contract_address_salt));
 
-                let paymaster_data = tx.paymaster_data.into_iter().map(|f| f.into()).collect();
+                let paymaster_data = tx.paymaster_data.into_iter().map(to_stark_felt).collect();
                 let fee_data_availability_mode = to_api_da_mode(tx.fee_data_availability_mode);
                 let nonce_data_availability_mode = to_api_da_mode(tx.nonce_data_availability_mode);
 
@@ -261,9 +258,9 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                         contract_address: to_blk_address(tx.contract_address),
                         tx: ApiDeployAccountTransaction::V3(DeployAccountTransactionV3 {
                             tip: Tip(tx.tip),
-                            nonce: Nonce(tx.nonce.into()),
+                            nonce: Nonce(to_stark_felt(tx.nonce)),
                             signature: TransactionSignature(signature),
-                            class_hash: ClassHash(tx.class_hash.into()),
+                            class_hash: ClassHash(to_stark_felt(tx.class_hash)),
                             constructor_calldata: Calldata(Arc::new(calldata)),
                             contract_address_salt: salt,
                             paymaster_data: PaymasterData(paymaster_data),
@@ -271,7 +268,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                             nonce_data_availability_mode,
                             resource_bounds: to_api_resource_bounds(tx.resource_bounds),
                         }),
-                        tx_hash: TransactionHash(hash.into()),
+                        tx_hash: TransactionHash(to_stark_felt(hash)),
                         only_query: false,
                     },
                 ))
@@ -283,48 +280,52 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
             let tx = match tx.transaction {
                 DeclareTx::V1(tx) => {
-                    let signature = tx.signature.into_iter().map(|f| f.into()).collect();
+                    let signature = tx.signature.into_iter().map(to_stark_felt).collect();
 
                     ApiDeclareTransaction::V1(DeclareTransactionV0V1 {
                         max_fee: Fee(tx.max_fee),
-                        nonce: Nonce(tx.nonce.into()),
+                        nonce: Nonce(to_stark_felt(tx.nonce)),
                         sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
-                        class_hash: ClassHash(tx.class_hash.into()),
+                        class_hash: ClassHash(to_stark_felt(tx.class_hash)),
                     })
                 }
 
                 DeclareTx::V2(tx) => {
-                    let signature = tx.signature.into_iter().map(|f| f.into()).collect();
+                    let signature = tx.signature.into_iter().map(to_stark_felt).collect();
 
                     ApiDeclareTransaction::V2(DeclareTransactionV2 {
                         max_fee: Fee(tx.max_fee),
-                        nonce: Nonce(tx.nonce.into()),
+                        nonce: Nonce(to_stark_felt(tx.nonce)),
                         sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
-                        class_hash: ClassHash(tx.class_hash.into()),
-                        compiled_class_hash: CompiledClassHash(tx.compiled_class_hash.into()),
+                        class_hash: ClassHash(to_stark_felt(tx.class_hash)),
+                        compiled_class_hash: CompiledClassHash(to_stark_felt(
+                            tx.compiled_class_hash,
+                        )),
                     })
                 }
 
                 DeclareTx::V3(tx) => {
-                    let signature = tx.signature.into_iter().map(|f| f.into()).collect();
+                    let signature = tx.signature.into_iter().map(to_stark_felt).collect();
 
-                    let paymaster_data = tx.paymaster_data.into_iter().map(|f| f.into()).collect();
+                    let paymaster_data = tx.paymaster_data.into_iter().map(to_stark_felt).collect();
                     let fee_data_availability_mode = to_api_da_mode(tx.fee_data_availability_mode);
                     let nonce_data_availability_mode =
                         to_api_da_mode(tx.nonce_data_availability_mode);
                     let account_deploy_data =
-                        tx.account_deployment_data.into_iter().map(|f| f.into()).collect();
+                        tx.account_deployment_data.into_iter().map(to_stark_felt).collect();
 
                     ApiDeclareTransaction::V3(DeclareTransactionV3 {
                         tip: Tip(tx.tip),
-                        nonce: Nonce(tx.nonce.into()),
+                        nonce: Nonce(to_stark_felt(tx.nonce)),
                         sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
-                        class_hash: ClassHash(tx.class_hash.into()),
+                        class_hash: ClassHash(to_stark_felt(tx.class_hash)),
                         account_deployment_data: AccountDeploymentData(account_deploy_data),
-                        compiled_class_hash: CompiledClassHash(tx.compiled_class_hash.into()),
+                        compiled_class_hash: CompiledClassHash(to_stark_felt(
+                            tx.compiled_class_hash,
+                        )),
                         paymaster_data: PaymasterData(paymaster_data),
                         fee_data_availability_mode,
                         nonce_data_availability_mode,
@@ -333,24 +334,26 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                 }
             };
 
-            let hash = TransactionHash(hash.into());
+            let hash = TransactionHash(to_stark_felt(hash));
             let class = to_class(contract_class).unwrap();
             let tx = DeclareTransaction::new(tx, hash, class).expect("class mismatch");
             Transaction::AccountTransaction(AccountTransaction::Declare(tx))
         }
 
         ExecutableTx::L1Handler(tx) => {
-            let calldata = tx.calldata.into_iter().map(|f| f.into()).collect();
+            let calldata = tx.calldata.into_iter().map(to_stark_felt).collect();
             Transaction::L1HandlerTransaction(L1HandlerTransaction {
                 paid_fee_on_l1: Fee(tx.paid_fee_on_l1),
                 tx: starknet_api::transaction::L1HandlerTransaction {
-                    nonce: core::Nonce(tx.nonce.into()),
+                    nonce: core::Nonce(to_stark_felt(tx.nonce)),
                     calldata: Calldata(Arc::new(calldata)),
                     version: TransactionVersion(1u128.into()),
                     contract_address: to_blk_address(tx.contract_address),
-                    entry_point_selector: core::EntryPointSelector(tx.entry_point_selector.into()),
+                    entry_point_selector: core::EntryPointSelector(to_stark_felt(
+                        tx.entry_point_selector,
+                    )),
                 },
-                tx_hash: TransactionHash(hash.into()),
+                tx_hash: TransactionHash(to_stark_felt(hash)),
             })
         }
     }
@@ -410,7 +413,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
     > = HashMap::new();
 
     for (class_hash, _) in &state_diff.class_hash_to_compiled_class_hash {
-        let hash = class_hash.0.into();
+        let hash = to_felt(class_hash.0);
         let class = state.class(hash).unwrap().expect("must exist if declared");
 
         if let CompiledClass::Class(_) = class {
@@ -425,7 +428,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_diff
             .address_to_nonce
             .into_iter()
-            .map(|(key, value)| (to_address(key), value.0.into()))
+            .map(|(key, value)| (to_address(key), to_felt(value.0)))
             .collect::<HashMap<
                 katana_primitives::contract::ContractAddress,
                 katana_primitives::contract::Nonce,
@@ -437,11 +440,11 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         .map(|(addr, entries)| {
             let entries = entries
                 .into_iter()
-                .map(|(k, v)| ((*k.0.key()).into(), v.into()))
+                .map(|(k, v)| (to_felt(*k.0.key()), to_felt(v)))
                 .collect::<HashMap<
-                    katana_primitives::contract::StorageKey,
-                    katana_primitives::contract::StorageValue,
-                >>();
+                katana_primitives::contract::StorageKey,
+                katana_primitives::contract::StorageValue,
+            >>();
 
             (to_address(addr), entries)
         })
@@ -451,7 +454,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_diff
             .address_to_class_hash
             .into_iter()
-            .map(|(key, value)| (to_address(key), value.0.into()))
+            .map(|(key, value)| (to_address(key), to_felt(value.0)))
             .collect::<HashMap<
                 katana_primitives::contract::ContractAddress,
                 katana_primitives::class::ClassHash,
@@ -461,7 +464,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_diff
             .class_hash_to_compiled_class_hash
             .into_iter()
-            .map(|(key, value)| (key.0.into(), value.0.into()))
+            .map(|(key, value)| (to_felt(key.0), to_felt(value.0)))
             .collect::<HashMap<
                 katana_primitives::class::ClassHash,
                 katana_primitives::class::CompiledClassHash,
@@ -512,11 +515,11 @@ fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
 }
 
 pub fn to_blk_address(address: katana_primitives::contract::ContractAddress) -> ContractAddress {
-    ContractAddress(patricia_key!(address.0))
+    to_stark_felt(address.0).try_into().expect("valid address")
 }
 
 pub fn to_address(address: ContractAddress) -> katana_primitives::contract::ContractAddress {
-    katana_primitives::contract::ContractAddress((*address.0.key()).into())
+    katana_primitives::contract::ContractAddress(to_felt(*address.0.key()))
 }
 
 pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
@@ -558,7 +561,7 @@ fn starknet_api_ethaddr_to_felt(value: starknet_api::core::EthAddress) -> FieldE
     // Padding H160 with zeros to 32 bytes (big endian)
     bytes[12..32].copy_from_slice(value.0.as_bytes());
     let stark_felt = starknet_api::hash::StarkFelt::new(bytes).expect("valid slice for stark felt");
-    stark_felt.into()
+    to_felt(stark_felt)
 }
 
 pub fn to_exec_info(exec_info: TransactionExecutionInfo) -> TxExecInfo {
@@ -581,10 +584,10 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
     let contract_address = to_address(call.call.storage_address);
     let caller_address = to_address(call.call.caller_address);
     let code_address = call.call.code_address.map(to_address);
-    let class_hash = call.call.class_hash.map(|a| a.0.into());
-    let entry_point_selector = call.call.entry_point_selector.0.into();
-    let calldata = call.call.calldata.0.iter().map(|f| (*f).into()).collect();
-    let retdata = call.execution.retdata.0.into_iter().map(|f| f.into()).collect();
+    let class_hash = call.call.class_hash.map(|a| to_felt(a.0));
+    let entry_point_selector = to_felt(call.call.entry_point_selector.0);
+    let calldata = call.call.calldata.0.iter().map(|f| to_felt(*f)).collect();
+    let retdata = call.execution.retdata.0.into_iter().map(to_felt).collect();
 
     let builtin_counter = call.resources.builtin_instance_counter;
     let execution_resources = trace::ExecutionResources {
@@ -610,8 +613,8 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
         EntryPointType::Constructor => trace::EntryPointType::Constructor,
     };
 
-    let storage_read_values = call.storage_read_values.into_iter().map(|f| f.into()).collect();
-    let storg_keys = call.accessed_storage_keys.into_iter().map(|k| (*k.0.key()).into()).collect();
+    let storage_read_values = call.storage_read_values.into_iter().map(to_felt).collect();
+    let storg_keys = call.accessed_storage_keys.into_iter().map(|k| to_felt(*k.0.key())).collect();
     let inner_calls = call.inner_calls.into_iter().map(to_call_info).collect();
 
     trace::CallInfo {
@@ -638,8 +641,8 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
 fn to_ordered_event(e: OrderedEvent) -> event::OrderedEvent {
     event::OrderedEvent {
         order: e.order as u64,
-        keys: e.event.keys.into_iter().map(|f| f.0.into()).collect(),
-        data: e.event.data.0.into_iter().map(FieldElement::from).collect(),
+        keys: e.event.keys.iter().map(|f| to_felt(f.0)).collect(),
+        data: e.event.data.0.into_iter().map(to_felt).collect(),
     }
 }
 
@@ -649,8 +652,16 @@ fn to_l2_l1_messages(
 ) -> message::OrderedL2ToL1Message {
     let order = m.order as u64;
     let to_address = starknet_api_ethaddr_to_felt(m.message.to_address);
-    let payload = m.message.payload.0.into_iter().map(FieldElement::from).collect();
+    let payload = m.message.payload.0.into_iter().map(to_felt).collect();
     message::OrderedL2ToL1Message { order, from_address, to_address, payload }
+}
+
+pub fn to_stark_felt(value: FieldElement) -> StarkFelt {
+    StarkFelt::new(value.to_bytes_be()).expect("can convert from field element")
+}
+
+pub fn to_felt(value: StarkFelt) -> FieldElement {
+    FieldElement::from_bytes_be_slice(value.bytes())
 }
 
 #[cfg(test)]
@@ -660,12 +671,36 @@ mod tests {
 
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_primitives::chain::{ChainId, NamedChainId};
+    use katana_primitives::felt::FieldElement;
     use starknet_api::core::EntryPointSelector;
     use starknet_api::hash::StarkFelt;
     use starknet_api::stark_felt;
     use starknet_api::transaction::{EventContent, EventData, EventKey};
 
     use super::*;
+    use crate::implementation::blockifier::utils;
+
+    #[test]
+    fn test_to_stark_felt() {
+        let field_element = FieldElement::from_hex("0x1234567890abcdef").unwrap();
+        let stark_felt = to_stark_felt(field_element);
+        assert_eq!(stark_felt, StarkFelt::try_from("0x1234567890abcdef").unwrap());
+    }
+
+    #[test]
+    fn test_to_felt() {
+        let stark_felt = StarkFelt::try_from("0xabcdef1234567890").unwrap();
+        let field_element = to_felt(stark_felt);
+        assert_eq!(field_element, FieldElement::from_hex("0xabcdef1234567890").unwrap());
+    }
+
+    #[test]
+    fn test_roundtrip_felt_conversion() {
+        let original_felt = FieldElement::from_hex("0x123456789abcdef0").unwrap();
+        let stark_felt = to_stark_felt(original_felt);
+        let roundtrip_felt = to_felt(stark_felt);
+        assert_eq!(original_felt, roundtrip_felt);
+    }
 
     #[test]
     fn convert_chain_id() {
@@ -748,12 +783,12 @@ mod tests {
         let expected_contract_address = to_address(call.call.storage_address);
         let expected_caller_address = to_address(call.call.caller_address);
         let expected_code_address = call.call.code_address.map(to_address);
-        let expected_class_hash = call.call.class_hash.map(|a| a.0.into());
-        let expected_entry_point_selector = call.call.entry_point_selector.0.into();
+        let expected_class_hash = call.call.class_hash.map(|c| to_felt(c.0));
+        let expected_entry_point_selector = to_felt(call.call.entry_point_selector.0);
         let expected_calldata: Vec<FieldElement> =
-            call.call.calldata.0.iter().map(|f| (*f).into()).collect();
+            call.call.calldata.0.iter().map(|f| to_felt(*f)).collect();
         let expected_retdata: Vec<FieldElement> =
-            call.execution.retdata.0.iter().map(|f| (*f).into()).collect();
+            call.execution.retdata.0.iter().map(|f| to_felt(*f)).collect();
 
         let builtin_counter = call.resources.builtin_instance_counter.clone();
         let expected_execution_resources = trace::ExecutionResources {
@@ -784,9 +819,9 @@ mod tests {
         };
 
         let expected_storage_read_values: Vec<FieldElement> =
-            call.storage_read_values.iter().map(|f| (*f).into()).collect();
+            call.storage_read_values.iter().map(|v| utils::to_felt(*v)).collect();
         let expected_storage_keys: HashSet<FieldElement> =
-            call.accessed_storage_keys.iter().map(|k| (*k.0.key()).into()).collect();
+            call.accessed_storage_keys.iter().map(|k| utils::to_felt(*k.0.key())).collect();
         let expected_inner_calls: Vec<_> =
             call.inner_calls.clone().into_iter().map(to_call_info).collect();
 

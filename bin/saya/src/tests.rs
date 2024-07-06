@@ -12,7 +12,7 @@ use saya_core::prover::{
     ProverIdentifier, ProvingState, Scheduler,
 };
 use saya_core::ProverAccessKey;
-use starknet_crypto::FieldElement;
+use starknet_crypto::Felt;
 use tokio::time::sleep;
 
 fn prover_identifier() -> ProverIdentifier {
@@ -37,69 +37,64 @@ where
 #[tokio::test]
 async fn test_program_input_from_program_output() -> anyhow::Result<()> {
     let mut input = ProgramInput {
-        prev_state_root: FieldElement::from_str("101").unwrap(),
+        prev_state_root: Felt::from_str("101").unwrap(),
         block_number: 102,
-        block_hash: FieldElement::from_str("103").unwrap(),
-        config_hash: FieldElement::from_str("104").unwrap(),
+        block_hash: Felt::from_str("103").unwrap(),
+        config_hash: Felt::from_str("104").unwrap(),
         message_to_starknet_segment: vec![
             MessageToStarknet {
-                from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
-                payload: vec![FieldElement::from_str("107").unwrap()],
+                from_address: ContractAddress::from(Felt::from_str("105").unwrap()),
+                to_address: ContractAddress::from(Felt::from_str("106").unwrap()),
+                payload: vec![Felt::from_str("107").unwrap()],
             },
             MessageToStarknet {
-                from_address: ContractAddress::from(FieldElement::from_str("105").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("106").unwrap()),
-                payload: vec![FieldElement::from_str("107").unwrap()],
+                from_address: ContractAddress::from(Felt::from_str("105").unwrap()),
+                to_address: ContractAddress::from(Felt::from_str("106").unwrap()),
+                payload: vec![Felt::from_str("107").unwrap()],
             },
         ],
         message_to_appchain_segment: vec![
             MessageToAppchain {
-                from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
-                nonce: FieldElement::from_str("110").unwrap(),
-                selector: FieldElement::from_str("111").unwrap(),
-                payload: vec![FieldElement::from_str("112").unwrap()],
+                from_address: ContractAddress::from(Felt::from_str("108").unwrap()),
+                to_address: ContractAddress::from(Felt::from_str("109").unwrap()),
+                nonce: Felt::from_str("110").unwrap(),
+                selector: Felt::from_str("111").unwrap(),
+                payload: vec![Felt::from_str("112").unwrap()],
             },
             MessageToAppchain {
-                from_address: ContractAddress::from(FieldElement::from_str("108").unwrap()),
-                to_address: ContractAddress::from(FieldElement::from_str("109").unwrap()),
-                nonce: FieldElement::from_str("110").unwrap(),
-                selector: FieldElement::from_str("111").unwrap(),
-                payload: vec![FieldElement::from_str("112").unwrap()],
+                from_address: ContractAddress::from(Felt::from_str("108").unwrap()),
+                to_address: ContractAddress::from(Felt::from_str("109").unwrap()),
+                nonce: Felt::from_str("110").unwrap(),
+                selector: Felt::from_str("111").unwrap(),
+                payload: vec![Felt::from_str("112").unwrap()],
             },
         ],
         state_updates: StateUpdates {
             nonce_updates: {
                 let mut map = std::collections::HashMap::new();
                 map.insert(
-                    ContractAddress::from(FieldElement::from_str("1111").unwrap()),
-                    FieldElement::from_str("22222").unwrap(),
+                    ContractAddress::from(Felt::from_str("1111").unwrap()),
+                    Felt::from_str("22222").unwrap(),
                 );
                 map
             },
             storage_updates: vec![(
-                ContractAddress::from(FieldElement::from_str("333")?),
-                vec![(FieldElement::from_str("4444")?, FieldElement::from_str("555")?)]
-                    .into_iter()
-                    .collect(),
+                ContractAddress::from(Felt::from_str("333")?),
+                vec![(Felt::from_str("4444")?, Felt::from_str("555")?)].into_iter().collect(),
             )]
             .into_iter()
             .collect(),
             contract_updates: {
                 let mut map = std::collections::HashMap::new();
                 map.insert(
-                    ContractAddress::from(FieldElement::from_str("66666").unwrap()),
-                    FieldElement::from_str("7777").unwrap(),
+                    ContractAddress::from(Felt::from_str("66666").unwrap()),
+                    Felt::from_str("7777").unwrap(),
                 );
                 map
             },
             declared_classes: {
                 let mut map = std::collections::HashMap::new();
-                map.insert(
-                    FieldElement::from_str("88888").unwrap(),
-                    FieldElement::from_str("99999").unwrap(),
-                );
+                map.insert(Felt::from_str("88888").unwrap(), Felt::from_str("99999").unwrap());
                 map
             },
         },
@@ -256,7 +251,7 @@ async fn test_combine_proofs() {
         .map(|s| serde_json::from_str::<ProgramInput>(s).unwrap())
         .collect::<Vec<_>>();
 
-    let world = FieldElement::from_dec_str("333").unwrap();
+    let world = Felt::from_dec_str("333").unwrap();
     for input in &mut inputs {
         input.fill_da(world)
     }
@@ -286,7 +281,7 @@ async fn test_combine_proofs() {
 #[ignore]
 #[tokio::test]
 async fn test_4_combine_proofs() -> anyhow::Result<()> {
-    let world = FieldElement::from_dec_str("42")?;
+    let world = Felt::from_dec_str("42")?;
 
     let input_1 = r#"{
         "prev_state_root": "101",

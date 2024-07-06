@@ -9,7 +9,7 @@ use dojo_world::contracts::abi::model::Layout;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
-use starknet::core::types::{Event, FieldElement, InvokeTransaction, Transaction};
+use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
 
@@ -31,13 +31,13 @@ mod test;
 
 #[derive(Debug, Clone)]
 pub struct Sql {
-    world_address: FieldElement,
+    world_address: Felt,
     pub pool: Pool<Sqlite>,
     query_queue: QueryQueue,
 }
 
 impl Sql {
-    pub async fn new(pool: Pool<Sqlite>, world_address: FieldElement) -> Result<Self> {
+    pub async fn new(pool: Pool<Sqlite>, world_address: Felt) -> Result<Self> {
         let mut query_queue = QueryQueue::new(pool.clone());
 
         query_queue.enqueue(
@@ -54,7 +54,7 @@ impl Sql {
         Ok(Self { pool, world_address, query_queue })
     }
 
-    pub async fn head(&self) -> Result<(u64, Option<FieldElement>)> {
+    pub async fn head(&self) -> Result<(u64, Option<Felt>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer_query = sqlx::query_as::<_, (i64, Option<String>)>(
             "SELECT head, pending_block_tx FROM indexers WHERE id = ?",
@@ -64,11 +64,11 @@ impl Sql {
         let indexer: (i64, Option<String>) = indexer_query.fetch_one(&mut *conn).await?;
         Ok((
             indexer.0.try_into().expect("doesn't fit in u64"),
-            indexer.1.map(|f| FieldElement::from_str(&f)).transpose()?,
+            indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
         ))
     }
 
-    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<FieldElement>) {
+    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<Felt>) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(self.world_address);
         let pending_block_tx = if let Some(f) = pending_block_tx {
@@ -98,8 +98,8 @@ impl Sql {
         &mut self,
         model: Ty,
         layout: Layout,
-        class_hash: FieldElement,
-        contract_address: FieldElement,
+        class_hash: Felt,
+        contract_address: Felt,
         packed_size: u32,
         unpacked_size: u32,
         block_timestamp: u64,
@@ -254,7 +254,7 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn delete_entity(&mut self, keys: Vec<FieldElement>, entity: Ty) -> Result<()> {
+    pub async fn delete_entity(&mut self, keys: Vec<Felt>, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let path = vec![entity.name()];
         // delete entity models data
@@ -272,7 +272,7 @@ impl Sql {
         Ok(())
     }
 
-    pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str, block_timestamp: u64) {
+    pub fn set_metadata(&mut self, resource: &Felt, uri: &str, block_timestamp: u64) {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
@@ -287,7 +287,7 @@ impl Sql {
 
     pub async fn update_metadata(
         &mut self,
-        resource: &FieldElement,
+        resource: &Felt,
         uri: &str,
         metadata: &WorldMetadata,
         icon_img: &Option<String>,
@@ -324,7 +324,7 @@ impl Sql {
         }
     }
 
-    pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
+    pub async fn entity(&self, model: String, key: Felt) -> Result<Vec<Felt>> {
         let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ? WHERE id = ?")
             .bind(model)
             .bind(format!("{:#x}", key));
@@ -334,7 +334,7 @@ impl Sql {
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
-    pub async fn entities(&self, model: String) -> Result<Vec<Vec<FieldElement>>> {
+    pub async fn entities(&self, model: String) -> Result<Vec<Vec<Felt>>> {
         let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ?").bind(model);
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let mut rows = query.fetch_all(&mut *conn).await?;
@@ -369,8 +369,8 @@ impl Sql {
                     Argument::FieldElement(l1_handler_transaction.transaction_hash),
                     Argument::FieldElement(l1_handler_transaction.contract_address),
                     Argument::String(felts_sql_string(&l1_handler_transaction.calldata)),
-                    Argument::FieldElement(FieldElement::ZERO), // has no max_fee
-                    Argument::String("".to_string()),           // has no signature
+                    Argument::FieldElement(Felt::ZERO), // has no max_fee
+                    Argument::String("".to_string()),   // has no signature
                     Argument::FieldElement((l1_handler_transaction.nonce).into()),
                 ),
                 _ => return,
@@ -398,7 +398,7 @@ impl Sql {
         &mut self,
         event_id: &str,
         event: &Event,
-        transaction_hash: FieldElement,
+        transaction_hash: Felt,
         block_timestamp: u64,
     ) {
         let id = Argument::String(event_id.to_string());
@@ -1027,7 +1027,7 @@ impl Sql {
     }
 }
 
-fn felts_sql_string(felts: &[FieldElement]) -> String {
+fn felts_sql_string(felts: &[Felt]) -> String {
     felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(FELT_DELIMITER)
         + FELT_DELIMITER
 }

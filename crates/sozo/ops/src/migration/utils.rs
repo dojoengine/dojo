@@ -6,7 +6,7 @@ use dojo_world::manifest::{
 };
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 
 use super::ui::MigrationUi;
 
@@ -16,7 +16,7 @@ use super::ui::MigrationUi;
 pub(super) async fn load_world_manifests<A>(
     profile_dir: &Utf8PathBuf,
     account: A,
-    world_address: Option<FieldElement>,
+    world_address: Option<Felt>,
     ui: &Ui,
     skip_migration: Option<Vec<String>>,
 ) -> Result<(BaseManifest, Option<DeploymentManifest>)>

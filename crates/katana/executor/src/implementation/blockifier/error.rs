@@ -5,14 +5,14 @@ use blockifier::transaction::errors::{
     TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
 };
 
-use crate::implementation::blockifier::utils::to_address;
+use crate::implementation::blockifier::utils::{to_address, to_felt};
 use crate::ExecutionError;
 
 impl From<TransactionExecutionError> for ExecutionError {
     fn from(error: TransactionExecutionError) -> Self {
         match error {
             TransactionExecutionError::DeclareTransactionError { class_hash } => {
-                Self::ClassAlreadyDeclared(class_hash.0.into())
+                Self::ClassAlreadyDeclared(to_felt(class_hash.0))
             }
             TransactionExecutionError::ValidateTransactionError(e) => {
                 Self::TransactionValidationFailed(Box::new(Self::from(e)))
@@ -50,7 +50,7 @@ impl From<PreExecutionError> for ExecutionError {
     fn from(error: PreExecutionError) -> Self {
         match error {
             PreExecutionError::EntryPointNotFound(selector) => {
-                Self::EntryPointNotFound(selector.0.into())
+                Self::EntryPointNotFound(to_felt(selector.0))
             }
             PreExecutionError::UninitializedStorageAddress(address) => {
                 Self::ContractNotDeployed(to_address(address))
@@ -69,8 +69,8 @@ impl From<TransactionPreValidationError> for ExecutionError {
                 incoming_tx_nonce,
                 ..
             } => Self::InvalidNonce {
-                actual: incoming_tx_nonce.0.into(),
-                expected: account_nonce.0.into(),
+                actual: to_felt(incoming_tx_nonce.0),
+                expected: to_felt(account_nonce.0),
             },
             TransactionPreValidationError::TransactionFeeError(e) => Self::from(e),
             TransactionPreValidationError::StateError(e) => Self::from(e),
@@ -96,7 +96,7 @@ impl From<TransactionFeeError> for ExecutionError {
 impl From<StateError> for ExecutionError {
     fn from(error: StateError) -> Self {
         match error {
-            StateError::UndeclaredClassHash(hash) => Self::UndeclaredClass(hash.0.into()),
+            StateError::UndeclaredClassHash(hash) => Self::UndeclaredClass(to_felt(hash.0)),
             e => Self::Other(e.to_string()),
         }
     }

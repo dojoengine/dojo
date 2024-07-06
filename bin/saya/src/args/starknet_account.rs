@@ -1,7 +1,7 @@
 //! Data availability options.
 
 use clap::Args;
-use katana_primitives::FieldElement;
+use katana_primitives::felt::FieldElement;
 use url::Url;
 
 #[derive(Debug, Args, Clone)]

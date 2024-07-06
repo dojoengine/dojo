@@ -6,43 +6,39 @@ use starknet_crypto::poseidon_hash_many;
 use crate::FieldElement;
 
 /// 2^ 128
-const QUERY_VERSION_OFFSET: FieldElement = FieldElement::from_mont([
-    18446744073700081665,
-    17407,
-    18446744073709551584,
-    576460752142434320,
-]);
+const QUERY_VERSION_OFFSET: FieldElement =
+    FieldElement::from_raw([576460752142434320, 18446744073709551584, 17407, 18446744073700081665]);
 
 /// Cairo string for "invoke"
-const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
-    18443034532770911073,
-    18446744073709551615,
-    18446744073709551615,
+const PREFIX_INVOKE: FieldElement = FieldElement::from_raw([
     513398556346534256,
+    18446744073709551615,
+    18446744073709551615,
+    18443034532770911073,
 ]);
 
 /// Cairo string for "declare"
-const PREFIX_DECLARE: FieldElement = FieldElement::from_mont([
-    17542456862011667323,
-    18446744073709551615,
-    18446744073709551615,
+const PREFIX_DECLARE: FieldElement = FieldElement::from_raw([
     191557713328401194,
+    18446744073709551615,
+    18446744073709551615,
+    17542456862011667323,
 ]);
 
 /// Cairo string for "deploy_account"
-const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_mont([
-    3350261884043292318,
-    18443211694809419988,
-    18446744073709551615,
+const PREFIX_DEPLOY_ACCOUNT: FieldElement = FieldElement::from_raw([
     461298303000467581,
+    18446744073709551615,
+    18443211694809419988,
+    3350261884043292318,
 ]);
 
 /// Cairo string for "l1_handler"
-const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_mont([
-    1365666230910873368,
-    18446744073708665300,
-    18446744073709551615,
+const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_raw([
     157895833347907735,
+    18446744073709551615,
+    18446744073708665300,
+    1365666230910873368,
 ]);
 
 /// Compute the hash of a V1 DeployAccount transaction.
@@ -306,7 +302,7 @@ fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> FieldElement {
     max_amount.copy_from_slice(&bound.max_amount.to_be_bytes());
     max_price.copy_from_slice(&bound.max_price_per_unit.to_be_bytes());
 
-    FieldElement::from_bytes_be(&buffer).expect("Packed resource should fit into felt")
+    FieldElement::from_bytes_be(&buffer)
 }
 
 fn hash_fee_fields(
@@ -332,10 +328,25 @@ fn encode_da_mode(
 
 #[cfg(test)]
 mod tests {
+    use num_traits::ToPrimitive;
     use starknet::core::chain_id;
-    use starknet::macros::felt;
+    use starknet::macros::{felt, short_string};
 
     use super::*;
+
+    #[test]
+    fn test_query_version_offset() {
+        // 2^ 128
+        assert_eq!(QUERY_VERSION_OFFSET, FieldElement::TWO.pow(128u8));
+    }
+
+    #[test]
+    fn test_prefix_constants() {
+        assert_eq!(PREFIX_INVOKE, short_string!("invoke"));
+        assert_eq!(PREFIX_DECLARE, short_string!("declare"));
+        assert_eq!(PREFIX_DEPLOY_ACCOUNT, short_string!("deploy_account"));
+        assert_eq!(PREFIX_L1_HANDLER, short_string!("l1_handler"));
+    }
 
     #[test]
     fn test_compute_deploy_account_v1_tx_hash() {
@@ -363,7 +374,7 @@ mod tests {
             &constructor_calldata,
             class_hash,
             salt,
-            max_fee.try_into().unwrap(),
+            max_fee.to_u128().unwrap(),
             chain_id,
             nonce,
             false,

@@ -4,12 +4,12 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockTag, Event, EventFilter, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, PendingTransactionReceipt, Transaction, TransactionReceipt,
+    BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, ReceiptBlock, Transaction, TransactionReceipt,
+    TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
@@ -121,8 +121,8 @@ impl<P: Provider + Sync> Engine<P> {
     pub async fn sync_to_head(
         &mut self,
         from: u64,
-        mut pending_block_tx: Option<FieldElement>,
-    ) -> Result<(u64, Option<FieldElement>)> {
+        mut pending_block_tx: Option<Felt>,
+    ) -> Result<(u64, Option<Felt>)> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         if from < latest_block_number {
@@ -139,8 +139,8 @@ impl<P: Provider + Sync> Engine<P> {
     pub async fn sync_pending(
         &mut self,
         block_number: u64,
-        mut pending_block_tx: Option<FieldElement>,
-    ) -> Result<Option<FieldElement>> {
+        mut pending_block_tx: Option<Felt>,
+    ) -> Result<Option<Felt>> {
         let block = if let MaybePendingBlockWithTxs::PendingBlock(pending) =
             self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Pending)).await?
         {
@@ -207,8 +207,8 @@ impl<P: Provider + Sync> Engine<P> {
         &mut self,
         from: u64,
         to: u64,
-        pending_block_tx: Option<FieldElement>,
-    ) -> Result<Option<FieldElement>> {
+        pending_block_tx: Option<Felt>,
+    ) -> Result<Option<Felt>> {
         // Process all blocks from current to latest.
         let get_events = |token: Option<String>| {
             self.provider.get_events(
@@ -246,15 +246,20 @@ impl<P: Provider + Sync> Engine<P> {
                     // receipt Should not/rarely happen. Thus the additional
                     // fetch is acceptable.
                     None => {
-                        match self.provider.get_transaction_receipt(event.transaction_hash).await? {
-                            MaybePendingTransactionReceipt::Receipt(
-                                TransactionReceipt::Invoke(receipt),
-                            ) => receipt.block_number,
-                            MaybePendingTransactionReceipt::Receipt(
-                                TransactionReceipt::L1Handler(receipt),
-                            ) => receipt.block_number,
-                            // If it's a pending transaction, we assume the block number is the
-                            // latest + 1
+                        let TransactionReceiptWithBlockInfo { receipt, block } =
+                            self.provider.get_transaction_receipt(event.transaction_hash).await?;
+
+                        match receipt {
+                            TransactionReceipt::Invoke(_) | TransactionReceipt::L1Handler(_) => {
+                                if let ReceiptBlock::Block { block_number, .. } = block {
+                                    block_number
+                                } else {
+                                    // If the block is pending, we assume the block number is the
+                                    // latest + 1
+                                    to + 1
+                                }
+                            }
+
                             _ => to + 1,
                         }
                     }
@@ -343,25 +348,15 @@ impl<P: Provider + Sync> Engine<P> {
 
     async fn process_transaction_and_receipt(
         &mut self,
-        transaction_hash: FieldElement,
+        transaction_hash: Felt,
         transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
     ) -> Result<()> {
         let receipt = self.provider.get_transaction_receipt(transaction_hash).await?;
-        let events = match &receipt {
-            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
-                Some(&receipt.events)
-            }
-            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::L1Handler(receipt)) => {
-                Some(&receipt.events)
-            }
-            MaybePendingTransactionReceipt::PendingReceipt(PendingTransactionReceipt::Invoke(
-                receipt,
-            )) => Some(&receipt.events),
-            MaybePendingTransactionReceipt::PendingReceipt(
-                PendingTransactionReceipt::L1Handler(receipt),
-            ) => Some(&receipt.events),
+        let events = match &receipt.receipt {
+            TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
+            TransactionReceipt::L1Handler(receipt) => Some(&receipt.events),
             _ => None,
         };
 
@@ -416,8 +411,8 @@ impl<P: Provider + Sync> Engine<P> {
         &mut self,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &MaybePendingTransactionReceipt,
-        transaction_hash: FieldElement,
+        transaction_receipt: &TransactionReceiptWithBlockInfo,
+        transaction_hash: Felt,
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
@@ -441,14 +436,14 @@ impl<P: Provider + Sync> Engine<P> {
         &mut self,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &MaybePendingTransactionReceipt,
+        transaction_receipt: &TransactionReceiptWithBlockInfo,
         event_id: &str,
         event: &Event,
     ) -> Result<()> {
         self.db.store_event(
             event_id,
             event,
-            *transaction_receipt.transaction_hash(),
+            *transaction_receipt.receipt.transaction_hash(),
             block_timestamp,
         );
         for processor in &self.processors.event {

@@ -22,6 +22,7 @@ katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-primitives = { path = "../katana/primitives" }
 katana-rpc = { path = "../katana/rpc/rpc" }
 katana-rpc-api = { path = "../katana/rpc/rpc-api" }
+katana-starknet = { package = "starknet", version = "=0.10.0" }
 scarb-ui.workspace = true
 scarb.workspace = true
 serde.workspace = true

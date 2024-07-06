@@ -20,10 +20,10 @@ use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
-use starknet::core::types::{BlockId, BlockTag, FunctionCall};
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use starknet_crypto::{poseidon_hash_many, verify, FieldElement};
+use starknet_crypto::{poseidon_hash_many, verify};
 use torii_core::sql::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
@@ -271,18 +271,17 @@ impl<P: Provider + Sync> Relay<P> {
                                 }
                             }
 
-                            let entity_identity =
-                                match FieldElement::from_str(&entity_identity.unwrap()) {
-                                    Ok(identity) => identity,
-                                    Err(e) => {
-                                        warn!(
-                                            target: LOG_TARGET,
-                                            error = %e,
-                                            "Parsing identity."
-                                        );
-                                        continue;
-                                    }
-                                };
+                            let entity_identity = match Felt::from_str(&entity_identity.unwrap()) {
+                                Ok(identity) => identity,
+                                Err(e) => {
+                                    warn!(
+                                        target: LOG_TARGET,
+                                        error = %e,
+                                        "Parsing identity."
+                                    );
+                                    continue;
+                                }
+                            };
 
                             // TODO: have a nonce in model to check
                             // against entity nonce and message nonce
@@ -428,7 +427,7 @@ impl<P: Provider + Sync> Relay<P> {
     }
 }
 
-fn ty_keys(ty: &Ty) -> Result<Vec<FieldElement>, Error> {
+fn ty_keys(ty: &Ty) -> Result<Vec<Felt>, Error> {
     if let Ty::Struct(s) = &ty {
         let mut keys = Vec::new();
         for m in s.keys() {
@@ -585,13 +584,13 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                     *v = Some(u128::from_str(string).unwrap());
                 }
                 Primitive::Felt252(v) => {
-                    *v = Some(FieldElement::from_str(string).unwrap());
+                    *v = Some(Felt::from_str(string).unwrap());
                 }
                 Primitive::ClassHash(v) => {
-                    *v = Some(FieldElement::from_str(string).unwrap());
+                    *v = Some(Felt::from_str(string).unwrap());
                 }
                 Primitive::ContractAddress(v) => {
-                    *v = Some(FieldElement::from_str(string).unwrap());
+                    *v = Some(Felt::from_str(string).unwrap());
                 }
                 Primitive::Bool(v) => {
                     *v = Some(bool::from_str(string).unwrap());

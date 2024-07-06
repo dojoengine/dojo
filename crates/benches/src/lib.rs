@@ -10,7 +10,7 @@ use futures::future;
 pub use helpers::*;
 pub use katana_runner::runner;
 use lazy_static::lazy_static;
-pub use starknet::core::types::FieldElement;
+pub use starknet::core::types::Felt;
 use tokio::runtime::Runtime;
 
 pub const ENOUGH_GAS: &str = "0x100000000000000000";
@@ -25,8 +25,8 @@ lazy_static! {
 pub fn estimate_gas_last(
     account: &OwnerAccount,
     calls: Vec<BenchCall>,
-    contract: FieldElement,
-) -> Result<FieldElement> {
+    contract: Felt,
+) -> Result<Felt> {
     let mut calls = parse_calls(calls, contract);
     let all = calls.clone();
     calls.pop().expect("Empty calls vector"); // remove last call
@@ -39,11 +39,7 @@ pub fn estimate_gas_last(
     })
 }
 
-pub fn estimate_gas(
-    account: &OwnerAccount,
-    call: BenchCall,
-    contract: FieldElement,
-) -> Result<FieldElement> {
+pub fn estimate_gas(account: &OwnerAccount, call: BenchCall, contract: Felt) -> Result<Felt> {
     let calls = parse_calls(vec![call], contract);
     let _rt = RUNTIME.enter();
     block_on(async move { estimate_calls(account, calls).await })
@@ -52,8 +48,8 @@ pub fn estimate_gas(
 pub fn estimate_gas_multiple(
     account: &OwnerAccount,
     calls: Vec<BenchCall>,
-    contract: FieldElement,
-) -> Result<FieldElement> {
+    contract: Felt,
+) -> Result<Felt> {
     let calls = parse_calls(calls, contract);
     let _rt = RUNTIME.enter();
     block_on(async move { estimate_calls(account, calls).await })
@@ -62,8 +58,8 @@ pub fn estimate_gas_multiple(
 pub async fn estimate_gas_async(
     account: &OwnerAccount,
     calls: Vec<BenchCall>,
-    contract: FieldElement,
-) -> Result<FieldElement> {
+    contract: Felt,
+) -> Result<Felt> {
     let calls = parse_calls(calls, contract);
     estimate_calls(account, calls).await
 }
@@ -96,7 +92,7 @@ mod tests {
 
             let fee = estimate_gas_last(&runner.account(1), vec![
                 BenchCall("spawn", vec![]),
-                BenchCall("move", vec![FieldElement::from_hex_be(&c).unwrap()])
+                BenchCall("move", vec![Felt::from_hex_be(&c).unwrap()])
             ], contract_address).unwrap();
 
             log("bench_move", fee, &c);

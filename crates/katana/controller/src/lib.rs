@@ -50,7 +50,11 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
             storage: Some(get_contract_storage(credential_id, public_key, SignerType::Webauthn)?),
         };
 
-        (ContractAddress::from(user.contract_address), GenesisAllocation::Contract(account))
+        let address = ContractAddress::from(FieldElement::from_bytes_be(
+            &user.contract_address.to_bytes_be(),
+        ));
+
+        (address, GenesisAllocation::Contract(account))
     };
 
     genesis.extend_allocations([(address, contract)]);
@@ -102,7 +106,11 @@ pub mod json {
                 )?),
             };
 
-            (ContractAddress::from(user.account.contract_address), account)
+            let address = ContractAddress::from(FieldElement::from_bytes_be(
+                &user.account.contract_address.to_bytes_be(),
+            ));
+
+            (address, account)
         };
 
         genesis.contracts.insert(address, contract);

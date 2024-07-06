@@ -9,7 +9,7 @@ use serde_json::json;
 use smol_str::SmolStr;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
-use starknet::core::types::{EmittedEvent, FieldElement};
+use starknet::core::types::{EmittedEvent, Felt};
 use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
@@ -41,7 +41,7 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
     );
 
     let rpc = JsonRpcClient::new(mock_transport);
-    let err = DeploymentManifest::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
+    let err = DeploymentManifest::load_from_remote(rpc, Felt::ONE).await.unwrap_err();
 
     match err {
         AbstractManifestError::RemoteWorldNotFound => {

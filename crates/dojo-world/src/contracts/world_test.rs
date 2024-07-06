@@ -4,7 +4,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 
 use super::{WorldContract, WorldContractReader};
 use crate::manifest::{BaseManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
@@ -49,7 +49,7 @@ pub async fn deploy_world(
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
     skip_migration: Option<Vec<String>>,
-) -> FieldElement {
+) -> Felt {
     // Dev profile is used by default for testing:
     let profile_name = "dev";
 
@@ -74,13 +74,8 @@ pub async fn deploy_world(
 
     let account = sequencer.account(0);
 
-    let mut strategy = prepare_for_migration(
-        None,
-        FieldElement::from_hex_be("0x12345").unwrap(),
-        target_dir,
-        world,
-    )
-    .unwrap();
+    let mut strategy =
+        prepare_for_migration(None, Felt::from_hex("0x12345").unwrap(), target_dir, world).unwrap();
     strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
 
     let base_class_hash =
@@ -118,7 +113,7 @@ pub async fn deploy_world(
         .map(|o| world.register_model_getcall(&o.class_hash.into()))
         .collect::<Vec<_>>();
 
-    let _ = account.execute(calls).send().await.unwrap();
+    let _ = account.execute_v1(calls).send().await.unwrap();
 
     // wait for the tx to be mined
     tokio::time::sleep(Duration::from_millis(250)).await;
