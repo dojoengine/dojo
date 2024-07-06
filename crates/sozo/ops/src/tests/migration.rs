@@ -246,8 +246,6 @@ async fn migration_from_remote() {
     assert_eq!(local_manifest.models.len(), remote_manifest.models.len());
 }
 
-// TODO: remove ignore once IPFS node is running.
-#[ignore]
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_metadata() {
     let config = setup::load_config();
