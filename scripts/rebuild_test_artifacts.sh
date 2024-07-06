@@ -22,6 +22,9 @@ rm -rf examples/spawn-and-move/manifests/release/manifest.toml
 rm -rf crates/torii/types-test/target
 rm -rf crates/torii/types-test/manifests
 
+rm -rf crates/dojo-lang/src/manifest_test_data/compiler_cairo/target
+rm -rf crates/dojo-lang/src/manifest_test_data/compiler_cairo/manifests
+
 cargo run --bin dojo-world-abigen
 
 # Fix the cairo test to re-generate the code that is expected to be tested.
@@ -32,6 +35,7 @@ CAIRO_FIX_TESTS=1 cargo test --package dojo-lang semantics
 cargo run -r --bin sozo -- build --manifest-path examples/spawn-and-move/Scarb.toml
 cargo run -r --bin sozo -- build --manifest-path examples/spawn-and-move/Scarb.toml -P release
 cargo run -r --bin sozo -- build --manifest-path crates/torii/types-test/Scarb.toml
+cargo run -r --bin sozo -- build --manifest-path crates/dojo-lang/src/manifest_test_data/compiler_cairo/Scarb.toml
 
 # Finally, to include all the examples manifest, you should re-deploy the examples.
 cargo run -r --bin sozo -- --offline migrate apply --manifest-path examples/spawn-and-move/Scarb.toml

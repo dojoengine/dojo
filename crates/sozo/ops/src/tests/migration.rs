@@ -7,12 +7,12 @@ use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::naming::compute_model_selector_from_tag;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
-    get_default_namespace_from_ws, BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR,
-    MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_TAG,
+    BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
+    WORLD_CONTRACT_TAG,
 };
 use dojo_world::metadata::{
-    dojo_metadata_from_workspace, ArtifactMetadata, DojoMetadata, Uri, WorldMetadata,
-    IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
+    dojo_metadata_from_workspace, get_default_namespace_from_ws, ArtifactMetadata, DojoMetadata,
+    Uri, WorldMetadata, IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
 };
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationMetadata};
 use dojo_world::migration::world::WorldDiff;

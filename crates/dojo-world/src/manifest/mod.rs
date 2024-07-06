@@ -5,7 +5,6 @@ use std::{fs, io};
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError};
 use camino::Utf8PathBuf;
-use scarb::core::Workspace;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, Felt, StarknetError};
@@ -827,9 +826,4 @@ impl ManifestMethods for Class {
             self.original_class_hash = class_hash;
         }
     }
-}
-
-pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
-    ws.current_package().unwrap().id.name.to_string()
-    // dojo metadata -> namespace.
 }

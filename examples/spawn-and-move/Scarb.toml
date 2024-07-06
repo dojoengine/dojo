@@ -21,6 +21,7 @@ build-external-contracts = [  ]
 description = "example world"
 name = "example"
 seed = "dojo_examples"
+namespace = "dojo_examples"
 
 [tool.dojo.env]
 rpc_url = "http://localhost:5050/"
@@ -39,6 +40,8 @@ world_address = "0x104dd156d76aeab45146a10869637f161ca6cf9f804704f8bbb12ae5b1b5c
 [profile.release.tool.dojo.world]
 description = "example world"
 name = "example"
+seed = "dojo_examples"
+namespace = "dojo_examples"
 
 [profile.release.tool.dojo.env]
 rpc_url = "http://localhost:5050/"

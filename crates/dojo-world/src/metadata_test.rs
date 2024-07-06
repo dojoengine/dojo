@@ -34,6 +34,7 @@ icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
 socials.x = "https://x.com/dojostarknet"
 seed = "dojo_examples"
+namespace = "dojo_examples"
         "#,
     )
     .unwrap();
@@ -66,11 +67,13 @@ seed = "dojo_examples"
     assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
     assert_eq!(world.seed, String::from("dojo_examples"));
+    assert_eq!(world.namespace, String::from("dojo_examples"));
 }
 
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
     let meta = WorldMetadata {
+        namespace: "dojo_examples".to_string(),
         name: Some("Test World".to_string()),
         seed: String::from("dojo_examples"),
         description: Some("A world used for testing".to_string()),
@@ -103,6 +106,7 @@ world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697
 name = "example"
 description = "example world"
 seed = "dojo_examples"
+namespace = "dojo_examples"
 cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"

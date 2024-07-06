@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::manifest::get_default_namespace_from_ws;
-use dojo_world::metadata::Environment;
+use dojo_world::metadata::{get_default_namespace_from_ws, Environment};
 use scarb::core::Config;
 use scarb_ui::Ui;
 use sozo_ops::auth;

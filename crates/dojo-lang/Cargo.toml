@@ -33,7 +33,7 @@ camino.workspace = true
 convert_case.workspace = true
 directories = "5"
 dojo-types = { path = "../dojo-types" }
-dojo-world = { path = "../dojo-world", features = [ "manifest" ] }
+dojo-world = { path = "../dojo-world", features = [ "manifest", "metadata" ] }
 indoc.workspace = true
 itertools.workspace = true
 lazy_static.workspace = true

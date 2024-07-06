@@ -4,10 +4,10 @@ use std::sync::Arc;
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::WorldContract;
 use dojo_world::manifest::{
-    get_default_namespace_from_ws, BaseManifest, OverlayClass, OverlayDojoContract,
-    OverlayDojoModel, OverlayManifest, BASE_CONTRACT_TAG, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
-    WORLD_CONTRACT_TAG,
+    BaseManifest, OverlayClass, OverlayDojoContract, OverlayDojoModel, OverlayManifest,
+    BASE_CONTRACT_TAG, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_TAG,
 };
+use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;

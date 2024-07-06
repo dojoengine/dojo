@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Args;
 use dojo_world::contracts::naming::ensure_namespace;
-use dojo_world::manifest::get_default_namespace_from_ws;
+use dojo_world::metadata::get_default_namespace_from_ws;
 use scarb::core::Config;
 use starknet::core::types::Felt;
 use tracing::trace;

@@ -44,6 +44,21 @@ fn build_artifact_from_filename(
     }
 }
 
+/// Get the default namespace from the workspace.
+///
+/// # Arguments
+///
+/// * `ws`: the workspace.
+///
+/// # Returns
+///
+/// A [`String`] object containing the namespace.
+pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
+    let metadata = dojo_metadata_from_workspace(ws)
+        .expect("Namespace key is already checked by the parsing of the Scarb.toml file.");
+    metadata.world.namespace
+}
+
 /// Build world metadata with data read from the project configuration.
 ///
 /// # Arguments
@@ -62,6 +77,7 @@ pub fn project_to_world_metadata(m: ProjectWorldMetadata) -> WorldMetadata {
         website: m.website,
         socials: m.socials,
         seed: m.seed,
+        namespace: m.namespace,
         ..Default::default()
     }
 }
@@ -233,6 +249,7 @@ impl Uri {
 pub struct ProjectWorldMetadata {
     pub name: Option<String>,
     pub seed: String,
+    pub namespace: String,
     pub description: Option<String>,
     pub cover_uri: Option<Uri>,
     pub icon_uri: Option<Uri>,
@@ -245,6 +262,7 @@ pub struct ProjectWorldMetadata {
 pub struct WorldMetadata {
     pub name: Option<String>,
     pub seed: String,
+    pub namespace: String,
     pub description: Option<String>,
     pub cover_uri: Option<Uri>,
     pub icon_uri: Option<Uri>,

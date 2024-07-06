@@ -22,11 +22,11 @@ use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 use dojo_world::manifest::{
-    get_default_namespace_from_ws, AbiFormat, Class, ComputedValueEntrypoint, DojoContract,
-    DojoModel, Manifest, ManifestMethods, ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR,
-    BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG,
-    WORLD_QUALIFIED_PATH,
+    AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
+    ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
+    MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
+use dojo_world::metadata::get_default_namespace_from_ws;
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
