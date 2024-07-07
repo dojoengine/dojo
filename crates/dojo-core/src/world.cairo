@@ -3,6 +3,14 @@ use traits::{Into, TryInto};
 use option::OptionTrait;
 use dojo::resource_metadata::ResourceMetadata;
 
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
+enum ModelIndex {
+    Keys: Span<felt252>,
+    Id: felt252,
+    // (entity_id, member_id)
+    MemberId: (felt252, felt252)
+}
+
 #[starknet::interface]
 trait IWorld<T> {
     fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
@@ -17,19 +25,27 @@ trait IWorld<T> {
     fn upgrade_contract(ref self: T, selector: felt252, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
+
     fn entity(
-        self: @T, model: felt252, keys: Span<felt252>, layout: dojo::database::introspect::Layout
+        self: @T,
+        model_selector: felt252,
+        index: ModelIndex,
+        layout: dojo::database::introspect::Layout
     ) -> Span<felt252>;
     fn set_entity(
         ref self: T,
-        model: felt252,
-        keys: Span<felt252>,
+        model_selector: felt252,
+        index: ModelIndex,
         values: Span<felt252>,
         layout: dojo::database::introspect::Layout
     );
     fn delete_entity(
-        ref self: T, model: felt252, keys: Span<felt252>, layout: dojo::database::introspect::Layout
+        ref self: T,
+        model_selector: felt252,
+        index: ModelIndex,
+        layout: dojo::database::introspect::Layout
     );
+
     fn base(self: @T) -> ClassHash;
 
     /// In Dojo, there are 2 levels of authorization: `owner` and `writer`.
@@ -74,6 +90,7 @@ mod Errors {
     const OWNER_ONLY_UPGRADE: felt252 = 'only owner can upgrade';
     const OWNER_ONLY_UPDATE: felt252 = 'only owner can update';
     const NAMESPACE_ALREADY_REGISTERED: felt252 = 'namespace already registered';
+    const DELETE_ENTITY_MEMBER: felt252 = 'cannot delete entity member';
     const UNEXPECTED_ERROR: felt252 = 'unexpected error';
 }
 
@@ -110,8 +127,9 @@ mod world {
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
     use dojo::resource_metadata::ResourceMetadata;
+    use dojo::utils::entity_id_from_keys;
 
-    use super::Errors;
+    use super::{Errors, ModelIndex};
 
     const WORLD: felt252 = 0;
 
@@ -137,6 +155,7 @@ mod world {
         NamespaceRegistered: NamespaceRegistered,
         ModelRegistered: ModelRegistered,
         StoreSetRecord: StoreSetRecord,
+        StoreUpdateRecord: StoreUpdateRecord,
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
@@ -205,9 +224,16 @@ mod world {
     }
 
     #[derive(Drop, starknet::Event)]
+    struct StoreUpdateRecord {
+        table: felt252,
+        entity_id: felt252,
+        values: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
     struct StoreDelRecord {
         table: felt252,
-        keys: Span<felt252>,
+        entity_id: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -291,14 +317,15 @@ mod world {
         ///
         /// `resource_id` - The resource id.
         fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
+            let mut model = array![resource_id];
+            let entity_id = entity_id_from_keys(model.span());
             let mut data = self
-                ._read_model_data(
+                ._read_model_entity(
                     dojo::model::Model::<ResourceMetadata>::selector(),
-                    array![resource_id].span(),
+                    entity_id,
                     Model::<ResourceMetadata>::layout()
                 );
 
-            let mut model = array![resource_id];
             core::array::serialize_array_helper(data, ref model);
 
             let mut model_span = model.span();
@@ -318,11 +345,11 @@ mod world {
             );
 
             let model = Model::<ResourceMetadata>::selector();
-            let keys = Model::<ResourceMetadata>::keys(@metadata);
+            let entity_id = Model::<ResourceMetadata>::entity_id(@metadata);
             let values = Model::<ResourceMetadata>::values(@metadata);
             let layout = Model::<ResourceMetadata>::layout();
 
-            self._write_model_data(model, keys, values, layout);
+            self._write_model_entity(model, entity_id, values, layout);
 
             EventEmitter::emit(
                 ref self,
@@ -766,73 +793,115 @@ mod world {
             emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
 
-        /// Sets the model value for an entity.
+        /// Gets the values of a model record/entity/member.
+        /// Returns a zero initialized model value if the record/entity/member has not been set.
         ///
         /// # Arguments
         ///
-        /// * `model` - The selector of the model to be set.
-        /// * `keys` - The key to be used to find the entity.
-        /// * `value_names` - The name of model fields which are not a key.
-        /// * `values` - The value to be set.
-        /// * `layout` - The memory layout of the entity.
-        fn set_entity(
-            ref self: ContractState,
-            model: felt252,
-            keys: Span<felt252>,
-            values: Span<felt252>,
-            layout: dojo::database::introspect::Layout
-        ) {
-            assert(
-                self.can_write_model(model, get_caller_address()), Errors::NO_MODEL_WRITE_ACCESS
-            );
-
-            self._write_model_data(model, keys, values, layout);
-            EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, values });
-        }
-
-        /// Deletes a model from an entity.
-        /// Deleting is setting all the values to 0 in the given layout.
-        ///
-        /// # Arguments
-        ///
-        /// * `model` - The selector of the model to be deleted.
-        /// * `keys` - The key to be used to find the entity.
-        /// * `value_names` - The name of model fields which are not a key.
-        /// * `layout` - The memory layout of the entity.
-        fn delete_entity(
-            ref self: ContractState,
-            model: felt252,
-            keys: Span<felt252>,
-            layout: dojo::database::introspect::Layout
-        ) {
-            assert(
-                self.can_write_model(model, get_caller_address()), Errors::NO_MODEL_WRITE_ACCESS
-            );
-
-            self._delete_model_data(model, keys, layout);
-            EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
-        }
-
-        /// Gets the model value for an entity. Returns a zero initialized
-        /// model value if the entity has not been set.
-        ///
-        /// # Arguments
-        ///
-        /// * `model` - The selector of the model to be retrieved.
-        /// * `keys` - The keys used to find the entity.
-        /// * `value_names` - The name of model fields which are not a key.
-        /// * `layout` - The memory layout of the entity.
+        /// * `model_selector` - The selector of the model to be retrieved.
+        /// * `index` - The index of the record/entity/member to read.
+        /// * `layout` - The memory layout of the model.
         ///
         /// # Returns
         ///
         /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
         fn entity(
             self: @ContractState,
-            model: felt252,
-            keys: Span<felt252>,
+            model_selector: felt252,
+            index: ModelIndex,
             layout: dojo::database::introspect::Layout
         ) -> Span<felt252> {
-            self._read_model_data(model, keys, layout)
+            match index {
+                ModelIndex::Keys(keys) => {
+                    let entity_id = entity_id_from_keys(keys);
+                    self._read_model_entity(model_selector, entity_id, layout)
+                },
+                ModelIndex::Id(entity_id) => {
+                    self._read_model_entity(model_selector, entity_id, layout)
+                },
+                ModelIndex::MemberId((
+                    entity_id, member_id
+                )) => { self._read_model_member(model_selector, entity_id, member_id, layout) }
+            }
+        }
+
+        /// Sets the model value for a model record/entity/member.
+        ///
+        /// # Arguments
+        ///
+        /// * `model_selector` - The selector of the model to be set.
+        /// * `index` - The index of the record/entity/member to write.
+        /// * `values` - The value to be set, serialized using the model layout format.
+        /// * `layout` - The memory layout of the model.
+        fn set_entity(
+            ref self: ContractState,
+            model_selector: felt252,
+            index: ModelIndex,
+            values: Span<felt252>,
+            layout: dojo::database::introspect::Layout
+        ) {
+            assert(
+                self.can_write_model(model_selector, get_caller_address()),
+                Errors::NO_MODEL_WRITE_ACCESS
+            );
+
+            match index {
+                ModelIndex::Keys(keys) => {
+                    let entity_id = entity_id_from_keys(keys);
+                    self._write_model_entity(model_selector, entity_id, values, layout);
+                    EventEmitter::emit(
+                        ref self, StoreSetRecord { table: model_selector, keys, values }
+                    );
+                },
+                ModelIndex::Id(entity_id) => {
+                    self._write_model_entity(model_selector, entity_id, values, layout);
+                    EventEmitter::emit(
+                        ref self, StoreUpdateRecord { table: model_selector, entity_id, values }
+                    );
+                },
+                ModelIndex::MemberId((
+                    entity_id, member_id
+                )) => {
+                    self._write_model_member(model_selector, entity_id, member_id, values, layout)
+                }
+            }
+        }
+
+        /// Deletes a record/entity of a model..
+        /// Deleting is setting all the values to 0 in the given layout.
+        ///
+        /// # Arguments
+        ///
+        /// * `model_selector` - The selector of the model to be deleted.
+        /// * `index` - The index of the record/entity to delete.
+        /// * `layout` - The memory layout of the model.
+        fn delete_entity(
+            ref self: ContractState,
+            model_selector: felt252,
+            index: ModelIndex,
+            layout: dojo::database::introspect::Layout
+        ) {
+            assert(
+                self.can_write_model(model_selector, get_caller_address()),
+                Errors::NO_MODEL_WRITE_ACCESS
+            );
+
+            match index {
+                ModelIndex::Keys(keys) => {
+                    let entity_id = entity_id_from_keys(keys);
+                    self._delete_model_entity(model_selector, entity_id, layout);
+                    EventEmitter::emit(
+                        ref self, StoreDelRecord { table: model_selector, entity_id }
+                    );
+                },
+                ModelIndex::Id(entity_id) => {
+                    self._delete_model_entity(model_selector, entity_id, layout);
+                    EventEmitter::emit(
+                        ref self, StoreDelRecord { table: model_selector, entity_id }
+                    );
+                },
+                ModelIndex::MemberId(_) => { panic_with_felt252(Errors::DELETE_ENTITY_MEMBER); }
+            }
         }
 
         /// Gets the base contract class hash.
@@ -1063,78 +1132,80 @@ mod world {
                 || self.is_account_writer(resource_id)
         }
 
-        /// Write a new model record.
+        /// Write a new entity.
         ///
         /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `keys` - the list of model keys to identify the record
+        ///   * `model_selector` - the model selector
+        ///   * `entity_id` - the id used to identify the record
         ///   * `values` - the field values of the record
         ///   * `layout` - the model layout
-        fn _write_model_data(
+        fn _write_model_entity(
             ref self: ContractState,
-            model: felt252,
-            keys: Span<felt252>,
+            model_selector: felt252,
+            entity_id: felt252,
             values: Span<felt252>,
             layout: dojo::database::introspect::Layout
         ) {
-            let model_key = poseidon::poseidon_hash_span(keys);
             let mut offset = 0;
 
             match layout {
                 Layout::Fixed(layout) => {
-                    Self::_write_fixed_layout(model, model_key, values, ref offset, layout);
+                    Self::_write_fixed_layout(
+                        model_selector, entity_id, values, ref offset, layout
+                    );
                 },
                 Layout::Struct(layout) => {
-                    Self::_write_struct_layout(model, model_key, values, ref offset, layout);
+                    Self::_write_struct_layout(
+                        model_selector, entity_id, values, ref offset, layout
+                    );
                 },
                 _ => { panic!("Unexpected layout type for a model."); }
             };
         }
 
-        /// Delete a model record.
+        /// Delete an entity.
         ///
         /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `keys` - the list of model keys to identify the record
+        ///   * `model_selector` - the model selector
+        ///   * `entity_id` - the ID of the entity to remove.
         ///   * `layout` - the model layout
-        fn _delete_model_data(
+        fn _delete_model_entity(
             ref self: ContractState,
-            model: felt252,
-            keys: Span<felt252>,
+            model_selector: felt252,
+            entity_id: felt252,
             layout: dojo::database::introspect::Layout
         ) {
-            let model_key = poseidon::poseidon_hash_span(keys);
-
             match layout {
-                Layout::Fixed(layout) => { Self::_delete_fixed_layout(model, model_key, layout); },
+                Layout::Fixed(layout) => {
+                    Self::_delete_fixed_layout(model_selector, entity_id, layout);
+                },
                 Layout::Struct(layout) => {
-                    Self::_delete_struct_layout(model, model_key, layout);
+                    Self::_delete_struct_layout(model_selector, entity_id, layout);
                 },
                 _ => { panic!("Unexpected layout type for a model."); }
             };
         }
 
-        /// Read a model record.
+        /// Read an entity.
         ///
         /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `keys` - the list of model keys to identify the record
+        ///   * `model_selector` - the model selector
+        ///   * `entity_id` - the ID of the entity to read.
         ///   * `layout` - the model layout
-        fn _read_model_data(
+        fn _read_model_entity(
             self: @ContractState,
-            model: felt252,
-            keys: Span<felt252>,
+            model_selector: felt252,
+            entity_id: felt252,
             layout: dojo::database::introspect::Layout
         ) -> Span<felt252> {
-            let model_key = poseidon::poseidon_hash_span(keys);
             let mut read_data = ArrayTrait::<felt252>::new();
 
             match layout {
                 Layout::Fixed(layout) => {
-                    Self::_read_fixed_layout(model, model_key, ref read_data, layout);
+                    Self::_read_fixed_layout(model_selector, entity_id, ref read_data, layout);
                 },
                 Layout::Struct(layout) => {
-                    Self::_read_struct_layout(model, model_key, ref read_data, layout);
+                    Self::_read_struct_layout(model_selector, entity_id, ref read_data, layout);
                 },
                 _ => { panic!("Unexpected layout type for a model."); }
             };
@@ -1142,9 +1213,53 @@ mod world {
             read_data.span()
         }
 
-        /// Compute the full field key from parent key and current field key.
-        fn _field_key(parent_key: felt252, field_key: felt252) -> felt252 {
-            poseidon::poseidon_hash_span(array![parent_key, field_key].span())
+        /// Read a model member value.
+        ///
+        /// # Arguments
+        ///   * `model_selector` - the model selector
+        ///   * `entity_id` - the ID of the entity for which to read a member.
+        ///   * `member_id` - the selector of the model member to read. 
+        ///   * `layout` - the model layout
+        fn _read_model_member(
+            self: @ContractState,
+            model_selector: felt252,
+            entity_id: felt252,
+            member_id: felt252,
+            layout: dojo::database::introspect::Layout
+        ) -> Span<felt252> {
+            let mut read_data = ArrayTrait::<felt252>::new();
+            Self::_read_layout(
+                model_selector, Self::_combine_key(entity_id, member_id), ref read_data, layout
+            );
+
+            read_data.span()
+        }
+
+        /// Write a model member value.
+        ///
+        /// # Arguments
+        ///   * `model_selector` - the model selector
+        ///   * `entity_id` - the ID of the entity for which to write a member.
+        ///   * `member_id` - the selector of the model member to write.
+        ///   * `values` - the new member value. 
+        ///   * `layout` - the model layout
+        fn _write_model_member(
+            self: @ContractState,
+            model_selector: felt252,
+            entity_id: felt252,
+            member_id: felt252,
+            values: Span<felt252>,
+            layout: dojo::database::introspect::Layout
+        ) {
+            let mut offset = 0;
+            Self::_write_layout(
+                model_selector, Self::_combine_key(entity_id, member_id), values, ref offset, layout
+            )
+        }
+
+        /// Combine parent and child keys to build one full key.
+        fn _combine_key(parent_key: felt252, child_key: felt252) -> felt252 {
+            poseidon::poseidon_hash_span(array![parent_key, child_key].span())
         }
 
         /// Append some values to an array.
@@ -1265,7 +1380,7 @@ mod world {
                 if i >= array_len {
                     break;
                 }
-                let key = Self::_field_key(key, i.into());
+                let key = Self::_combine_key(key, i.into());
 
                 Self::_write_layout(model, key, values, ref offset, item_layout);
 
@@ -1323,7 +1438,7 @@ mod world {
                 }
 
                 let field_layout = *layout.at(i);
-                let field_key = Self::_field_key(key, field_layout.selector);
+                let field_key = Self::_combine_key(key, field_layout.selector);
 
                 Self::_write_layout(model, field_key, values, ref offset, field_layout.layout);
 
@@ -1353,7 +1468,7 @@ mod world {
                 }
 
                 let field_layout = *layout.at(i);
-                let key = Self::_field_key(key, i.into());
+                let key = Self::_combine_key(key, i.into());
 
                 Self::_write_layout(model, key, values, ref offset, field_layout);
 
@@ -1377,7 +1492,7 @@ mod world {
             offset += 1;
 
             // find the corresponding layout and then write the full variant
-            let variant_data_key = Self::_field_key(key, variant);
+            let variant_data_key = Self::_combine_key(key, variant);
 
             match Self::_find_variant_layout(variant, variant_layouts) {
                 Option::Some(layout) => Self::_write_layout(
@@ -1452,7 +1567,7 @@ mod world {
                 }
 
                 let field_layout = *layout.at(i);
-                let key = Self::_field_key(key, field_layout.selector);
+                let key = Self::_combine_key(key, field_layout.selector);
 
                 Self::_delete_layout(model, key, field_layout.layout);
 
@@ -1474,7 +1589,7 @@ mod world {
                 }
 
                 let field_layout = *layout.at(i);
-                let key = Self::_field_key(key, i.into());
+                let key = Self::_combine_key(key, i.into());
 
                 Self::_delete_layout(model, key, field_layout);
 
@@ -1494,7 +1609,7 @@ mod world {
             database::delete(model, key, array![251].span());
 
             // find the corresponding layout and the delete the full variant
-            let variant_data_key = Self::_field_key(key, variant);
+            let variant_data_key = Self::_combine_key(key, variant);
 
             match Self::_find_variant_layout(variant, variant_layouts) {
                 Option::Some(layout) => Self::_delete_layout(model, variant_data_key, layout),
@@ -1572,7 +1687,7 @@ mod world {
                     break;
                 }
 
-                let field_key = Self::_field_key(key, i.into());
+                let field_key = Self::_combine_key(key, i.into());
                 Self::_read_layout(model, field_key, ref read_data, item_layout);
 
                 i += 1;
@@ -1623,7 +1738,7 @@ mod world {
                 }
 
                 let field_layout = *layout.at(i);
-                let field_key = Self::_field_key(key, field_layout.selector);
+                let field_key = Self::_combine_key(key, field_layout.selector);
 
                 Self::_read_layout(model, field_key, ref read_data, field_layout.layout);
 
@@ -1648,7 +1763,7 @@ mod world {
                 }
 
                 let field_layout = *layout.at(i);
-                let field_key = Self::_field_key(key, i.into());
+                let field_key = Self::_combine_key(key, i.into());
                 Self::_read_layout(model, field_key, ref read_data, field_layout);
 
                 i += 1;
@@ -1671,7 +1786,7 @@ mod world {
             read_data.append(variant);
 
             // find the corresponding layout and the read the variant data
-            let variant_data_key = Self::_field_key(key, variant);
+            let variant_data_key = Self::_combine_key(key, variant);
 
             match Self::_find_variant_layout(variant, variant_layouts) {
                 Option::Some(layout) => Self::_read_layout(

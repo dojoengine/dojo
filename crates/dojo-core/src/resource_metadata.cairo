@@ -3,8 +3,9 @@
 //! Manually expand to ensure that dojo-core
 //! does not depend on dojo plugin to be built.
 //!
-use dojo::world::{IWorldDispatcherTrait};
+use dojo::world::{IWorldDispatcherTrait, ModelIndex};
 use dojo::model::Model;
+use dojo::utils;
 
 fn initial_address() -> starknet::ContractAddress {
     starknet::contract_address_const::<0>()
@@ -24,12 +25,8 @@ struct ResourceMetadata {
 }
 
 impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
-    fn entity(
-        world: dojo::world::IWorldDispatcher,
-        keys: Span<felt252>,
-        layout: dojo::database::introspect::Layout
-    ) -> ResourceMetadata {
-        let values = world.entity(Self::selector(), keys, layout);
+    fn get(world: dojo::world::IWorldDispatcher, keys: Span<felt252>) -> ResourceMetadata {
+        let values = world.entity(Self::selector(), ModelIndex::Keys(keys), Self::layout());
         let mut serialized = core::array::ArrayTrait::new();
         core::array::serialize_array_helper(keys, ref serialized);
         core::array::serialize_array_helper(values, ref serialized);
@@ -43,6 +40,51 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
         }
 
         core::option::OptionTrait::<ResourceMetadata>::unwrap(entity)
+    }
+
+    fn set(self: @ResourceMetadata, world: dojo::world::IWorldDispatcher,) {
+        dojo::world::IWorldDispatcherTrait::set_entity(
+            world, Self::selector(), ModelIndex::Keys(self.keys()), self.values(), Self::layout()
+        );
+    }
+
+    fn delete(self: @ResourceMetadata, world: dojo::world::IWorldDispatcher,) {
+        world.delete_entity(Self::selector(), ModelIndex::Keys(self.keys()), Self::layout());
+    }
+
+    fn get_member(
+        world: dojo::world::IWorldDispatcher, keys: Span<felt252>, member_id: felt252
+    ) -> Span<felt252> {
+        match utils::find_model_field_layout(Self::layout(), member_id) {
+            Option::Some(field_layout) => {
+                let entity_id = utils::entity_id_from_keys(keys);
+                world
+                    .entity(
+                        Self::selector(), ModelIndex::MemberId((entity_id, member_id)), field_layout
+                    )
+            },
+            Option::None => panic_with_felt252('bad member id')
+        }
+    }
+
+    fn set_member(
+        self: @ResourceMetadata,
+        world: dojo::world::IWorldDispatcher,
+        member_id: felt252,
+        values: Span<felt252>
+    ) {
+        match utils::find_model_field_layout(Self::layout(), member_id) {
+            Option::Some(field_layout) => {
+                world
+                    .set_entity(
+                        Self::selector(),
+                        ModelIndex::MemberId((self.entity_id(), member_id)),
+                        values,
+                        field_layout
+                    )
+            },
+            Option::None => panic_with_felt252('bad member id')
+        }
     }
 
     #[inline(always)]
@@ -74,11 +116,16 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
     }
 
     fn name_hash() -> felt252 {
-        dojo::utils::hash(@Self::name())
+        utils::hash(@Self::name())
     }
 
     fn namespace_hash() -> felt252 {
-        dojo::utils::hash(@Self::namespace())
+        utils::hash(@Self::namespace())
+    }
+
+    #[inline(always)]
+    fn entity_id(self: @ResourceMetadata) -> felt252 {
+        poseidon::poseidon_hash_span(self.keys())
     }
 
     #[inline(always)]

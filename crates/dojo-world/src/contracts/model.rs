@@ -25,6 +25,9 @@ pub mod abigen {
     pub mod model {
         pub use crate::contracts::abi::model::*;
     }
+    pub mod world {
+        pub use crate::contracts::abi::world::*;
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -126,7 +129,11 @@ where
         let raw_layout = self.model_reader.layout().raw_call().await?;
         let layout = Layout::cairo_deserialize(raw_layout.as_slice(), 0)?;
 
-        Ok(self.world_reader.entity(&self.selector(), &keys.to_vec(), &layout).call().await?)
+        Ok(self
+            .world_reader
+            .entity(&self.selector(), &abigen::world::ModelIndex::Keys(keys.to_vec()), &layout)
+            .call()
+            .await?)
     }
 
     pub async fn entity(&self, keys: &[Felt]) -> Result<Ty, ModelError> {

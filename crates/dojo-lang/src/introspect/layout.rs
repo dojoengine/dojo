@@ -27,7 +27,7 @@ pub fn build_field_layouts(
             }
 
             let field_name = m.name(db).text(db);
-            let field_selector = get_selector_from_name(field_name.as_str()).unwrap().to_string();
+            let field_selector = get_selector_from_name(&field_name.to_string()).unwrap();
             let field_layout = get_layout_from_type_clause(db, diagnostics, &m.type_clause(db));
             Some(format!(
                 "dojo::database::introspect::FieldLayout {{
