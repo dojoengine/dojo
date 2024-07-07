@@ -205,7 +205,7 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
         // adding correct calldata
         manifest.merge(overlay);
     }
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let mut world = WorldDiff::compute(manifest, Some(remote_manifest));
     world.update_order(&default_namespace).expect("Failed to update order");
@@ -375,7 +375,7 @@ async fn migrate_with_auto_authorize() {
     let world_address = migration.world_address().expect("must be present");
     let world = WorldContract::new(world_address, account);
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
     let res =
         auto_authorize(&ws, &world, &txn_config, &manifest, &output, &default_namespace).await;
     assert!(res.is_ok());
@@ -408,7 +408,7 @@ async fn migration_with_mismatching_world_address_and_seed() {
     let base_dir = config.manifest_path().parent().unwrap().to_path_buf();
     let target_dir = base_dir.join("target").join("dev");
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let strategy = prepare_migration_with_world_and_seed(
         base_dir,

@@ -53,10 +53,9 @@ fn build_artifact_from_filename(
 /// # Returns
 ///
 /// A [`String`] object containing the namespace.
-pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
-    let metadata = dojo_metadata_from_workspace(ws)
-        .expect("Namespace key is already checked by the parsing of the Scarb.toml file.");
-    metadata.world.namespace
+pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> Result<String> {
+    let metadata = dojo_metadata_from_workspace(ws)?;
+    Ok(metadata.world.namespace)
 }
 
 /// Build world metadata with data read from the project configuration.
@@ -99,13 +98,18 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
     let source_dir = source_dir.join(profile.as_str());
 
     let project_metadata = if let Ok(current_package) = ws.current_package() {
-        current_package.manifest.metadata.dojo()?
+        current_package
+            .manifest
+            .metadata
+            .dojo()
+            .with_context(|| format!("Error parsing manifest file `{}`", ws.manifest_path()))?
     } else {
         // On workspaces, dojo metadata are not accessible because if no current package is defined
         // (being the only package or using --package).
         return Err(anyhow!(
-            "No current package with dojo metadata found, this subcommand is not yet support for \
-             workspaces."
+            "No current package with dojo metadata found, virtual manifest in workspace are not \
+             supported. Until package compilation is supported, you will have to provide the path \
+             to the Scarb.toml file using the --manifest-path option."
         ));
     };
 
@@ -438,13 +442,14 @@ impl MetadataExt for ManifestMetadata {
             .tool_metadata
             .as_ref()
             .and_then(|e| e.get("dojo"))
-            // TODO: see if we can make error more descriptive
-            .ok_or_else(|| anyhow!("Some of the fields in [tool.dojo] are required."))?
+            .with_context(|| "No [tool.dojo] section found in the manifest.".to_string())?
             .clone();
 
+        // The details of which field has failed to be loaded are logged inside the `try_into`
+        // error.
         let project_metadata: ProjectMetadata = metadata
             .try_into()
-            .with_context(|| "Project metadata (i.e. [tool.dojo]) is not properly configured.")?;
+            .with_context(|| "Project metadata [tool.dojo] is not properly configured.")?;
 
         Ok(project_metadata)
     }

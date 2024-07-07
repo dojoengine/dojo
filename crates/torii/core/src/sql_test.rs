@@ -77,7 +77,7 @@ async fn test_load_from_remote() {
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let mut migration = prepare_migration(
         base_dir.into(),
@@ -222,7 +222,7 @@ async fn test_load_from_remote_del() {
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let mut migration = prepare_migration(
         base_dir.into(),

@@ -47,7 +47,7 @@ impl CallArgs {
             self.tag_or_address
         } else {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-            let default_namespace = get_default_namespace_from_ws(&ws);
+            let default_namespace = get_default_namespace_from_ws(&ws)?;
             ensure_namespace(&self.tag_or_address, &default_namespace)
         };
 
