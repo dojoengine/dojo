@@ -361,6 +361,31 @@ fn format_member(m: &Member) -> String {
 
     if let Ty::Primitive(ty) = &m.ty {
         match ty {
+            Primitive::I8(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            Primitive::I16(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            Primitive::I32(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            Primitive::I64(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
+            Primitive::I128(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {}", value));
+                }
+            }
             Primitive::U8(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));

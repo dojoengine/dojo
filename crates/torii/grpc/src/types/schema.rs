@@ -189,18 +189,25 @@ impl From<Primitive> for proto::types::Primitive {
         use proto::types::value::ValueType;
 
         let value_type = match primitive {
-            Primitive::Bool(bool) => bool.map(ValueType::BoolValue),
+            Primitive::I8(i8) => i8.map(|val| ValueType::IntValue(val as i64)),
+            Primitive::I16(i16) => i16.map(|val| ValueType::IntValue(val as i64)),
+            Primitive::I32(i32) => i32.map(|val| ValueType::IntValue(val as i64)),
+            Primitive::I64(i64) => i64.map(ValueType::IntValue),
+            Primitive::I128(i128) => {
+                i128.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
+            }
             Primitive::U8(u8) => u8.map(|val| ValueType::UintValue(val as u64)),
             Primitive::U16(u16) => u16.map(|val| ValueType::UintValue(val as u64)),
             Primitive::U32(u32) => u32.map(|val| ValueType::UintValue(val as u64)),
             Primitive::U64(u64) => u64.map(ValueType::UintValue),
-            Primitive::USize(usize) => usize.map(|val| ValueType::UintValue(val as u64)),
             Primitive::U128(u128) => {
                 u128.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
             }
             Primitive::U256(u256) => {
                 u256.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
             }
+            Primitive::USize(usize) => usize.map(|val| ValueType::UintValue(val as u64)),
+            Primitive::Bool(bool) => bool.map(ValueType::BoolValue),
             Primitive::Felt252(felt) => {
                 felt.map(|val| ValueType::ByteValue(val.to_bytes_be().to_vec()))
             }
