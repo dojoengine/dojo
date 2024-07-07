@@ -64,7 +64,6 @@ async fn test_load_from_remote() {
         SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-
     let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move/");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
