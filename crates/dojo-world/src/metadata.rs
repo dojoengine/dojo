@@ -34,6 +34,7 @@ fn build_artifact_from_filename(
     let abi_file = abi_dir.join(format!("{filename}.json"));
     let src_file = source_dir.join(format!("{filename}.cairo"));
 
+    dbg!(&abi_file, &src_file);
     ArtifactMetadata {
         abi: if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None },
         source: if src_file.exists() {
@@ -93,7 +94,7 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
 
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
     let manifest_dir = manifest_dir.join(MANIFESTS_DIR).join(profile.as_str());
-    let abi_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
+    let abi_dir = manifest_dir.join(BASE_DIR).join(ABIS_DIR);
     let source_dir = ws.target_dir().path_existent().unwrap();
     let source_dir = source_dir.join(profile.as_str());
 
