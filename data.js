@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720242094133,
+  "lastUpdate": 1720311859900,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11005,6 +11005,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17166986,
             "range": "± 280484",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed9f0cedef1db52ff596beb88ab7fa82b055ea9e",
+          "message": "feat: namespaces (#2148)\n\n* Namespace feature\r\n\r\n* Handle namespace for models and contracts (#2023)\r\n\r\n* fix(migrate): when `init_calldata` depends on contract that was already deployed (#2058)\r\n\r\n* fix(migrate): when `init_calldata` depends on contract that was already deployed\r\n\r\n* add tests\r\n\r\n* fix(ci): ensure katana runs in debian:bookworm-slim (#2073)\r\n\r\n* Ensure katana runs in debian:bookworm-slim\r\n\r\n* chore: switch to cartridge fork and adjust CI to 4 core to build Katana\r\n\r\n* chore: add old prover-sdk version to check CI fail\r\n\r\n* fix katana bin permissions\r\n\r\n* chore: add ensure-docker as requirement for big jobs\r\n\r\n* chore: point to http-prover using rustls-tls\r\n\r\n* dbg\r\n\r\n* wip\r\n\r\n* chore: bump to artifacts v4\r\n\r\n* fix: typo\r\n\r\n* wip\r\n\r\n* fix: don't use path explicitely\r\n\r\n* wip\r\n\r\n* fix: fix artifacts managment\r\n\r\n* add ls\r\n\r\n* fix: use other path with checkout\r\n\r\n* fix: remove prints\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* [dojo-core]: update gas logs (#1877)\r\n\r\ndojo-core: update gas logs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Prepare release: v0.7.1 (#2076)\r\n\r\nCo-authored-by: glihm <glihm@users.noreply.github.com>\r\n\r\n* fix: allow the use of self and world in an exclusive manner (#2063)\r\n\r\n* fix: allow the use of self and world in an exclusive manner\r\n\r\n* fix: fmt\r\n\r\n* fix: cairo fmt\r\n\r\n* fix: ensure a warning is emitted with generate trait and world\r\n\r\n* fix: cairo fmt\r\n\r\n* Update devcontainer image: v0.7.1 (#2077)\r\n\r\nCo-authored-by: glihm <glihm@users.noreply.github.com>\r\n\r\n* Namespace feature\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>\r\nCo-authored-by: Tarrence van As <tarrencev@users.noreply.github.com>\r\nCo-authored-by: glihm <dev@glihm.net>\r\nCo-authored-by: notV4l <122404722+notV4l@users.noreply.github.com>\r\nCo-authored-by: glihm <glihm@users.noreply.github.com>\r\n\r\n* fix: update manifests\r\n\r\n* fix: update manifests\r\n\r\n* fix: update world address in Scarb.toml\r\n\r\n* fix world_test\r\n\r\n* Namespace feature improvements (#2108)\r\n\r\n* standardize model/system interface for name/namespace/selectors\r\n\r\n* wip\r\n\r\n* Overlays (#2127)\r\n\r\n* load custom overlay manifests\r\n\r\n* update metadata management + some fixes\r\n\r\n* update sozo commands with namespace\r\n\r\n* fix: change tag separator to `-` (#2132)\r\n\r\n* wip\r\n\r\n* fix tests\r\n\r\n* update sozo auth command + auto-auth feature (#2134)\r\n\r\n* update sozo auth command + auto-auth feature\r\n\r\n* fix: fix some tests\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* replace {WORLD,BASE}_CONTRACT_NAME by {WORLD,BASE}_CONTRACT_TAG (#2136)\r\n\r\n* replace {WORLD,BASE}_CONTRACT_NAME by {WORLD,BASE}_CONTRACT_TAG\r\n\r\n* fix: ensure model selector correctly computed in tests\r\n\r\n* fix: wip on tests and use Katana Runner\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* fix(sozo): migration with seed and world address both provided (#2135)\r\n\r\n* initial commit\r\n\r\n* add seed to manifest and remove from cli\r\n\r\n* add overlays for dojo_init\r\n\r\n* make tests compile\r\n\r\n* fix some tests\r\n\r\n* fix lints\r\n\r\n* fix: use same name for seed tests\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* feat(torii-core): namespace in processor & db migration (#2130)\r\n\r\n* feat(torii-core): namespace in processor & db migration\r\n\r\n* refactor: selector logic and model readers for new namespace\r\n\r\n* feat: compute correct selector on model register\r\n\r\n* fix: contract address in event data\r\n\r\n* refactor: update proto for new namespace\r\n\r\n* feat: update torii client for new namespaces\r\n\r\n* refactor: cache and schema types\r\n\r\n* feat: rebase from main update to new types\r\n\r\n* feat: update grpc service to support namespaces\r\n\r\n* feat: add namespace to broker\r\n\r\n* feat: fix libp2p and update grpc subs for pattern on models\r\n\r\n* feat: finish up refactor on grpc\r\n\r\n* chore: revert changes on proto to use onlky model field\r\n\r\n* feat: first graphql support\r\n\r\n* fix: composite clauses & wrap up\r\n\r\n* fix: storage and tests\r\n\r\n* refactor: storage to use selector\r\n\r\n* fix: storage subscriptions\r\n\r\n* escape composite tbales\r\n\r\n* Overlays (#2127)\r\n\r\n* load custom overlay manifests\r\n\r\n* update metadata management + some fixes\r\n\r\n* update sozo commands with namespace\r\n\r\n* fix: change tag separator to `-` (#2132)\r\n\r\n* wip\r\n\r\n* fix tests\r\n\r\n* merge and remove print\r\n\r\n* fix: remove print\r\n\r\n* fix: fmt and clippy wip\r\n\r\n* fix: graphql tests\r\n\r\n* model tests\r\n\r\n* query test\r\n\r\n* fmt\r\n\r\n* fix: query\r\n\r\n* chore: graphql subscription tests\r\n\r\n* wip: fix testing\r\n\r\n* wip: wip on testing\r\n\r\n* fix: fix typo\r\n\r\n* fix: use correct model name\r\n\r\n* wip: testing\r\n\r\n* feat: add namespace to model object\r\n\r\n* fix: fix subscription tests\r\n\r\n* fix: fix tests\r\n\r\n* fix: fmt\r\n\r\n* fix: clippy\r\n\r\n* wip: latest torii test\r\n\r\n* fix: fmt\r\n\r\n* fix(torii-libp2p): validate namespace message\r\n\r\n* fix(torii-libp2p): escape table name\r\n\r\n* fmt\r\n\r\n---------\r\n\r\nCo-authored-by: Rémy Baranx <remy.baranx@gmail.com>\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* fix: fix compiler diags by rewriting the function with rewrite node (#2141)\r\n\r\n* fix: fix compiler diags by rewriting the function with rewrite node\r\n\r\n* fix: ensure dojo init also shows correct diagnostics\r\n\r\n* fix: fmt + clippy\r\n\r\n* fix: ensure impl is correctly impl with RewriteNode\r\n\r\n* fix: add missing mapping to interfaces\r\n\r\n* fix: ensure wasm compatibility\r\n\r\n* fix: test fixes for wasm32 changes (#2144)\r\n\r\n* fix: test fixes for wasm32 changes\r\n\r\n* fix: fix cairo tests\r\n\r\n* fix: clean subcommand (#2122)\r\n\r\n* fix: clean should only remove target/manifest file of particular profile by defaul\r\n\r\n* fix lints\r\n\r\n* fix formatting\r\n\r\n* fix: ensure every target is considered independently\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* fix: uncomment tests\r\n\r\n* fix: add more tests\r\n\r\n* fix: fix metadata test\r\n\r\n* fix: add tests and fix metadata\r\n\r\n* fix: attempt to fix flaky test with 1s delay\r\n\r\n---------\r\n\r\nCo-authored-by: remy.baranx@gmail.com <remy.baranx@gmail.com>\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>\r\nCo-authored-by: Tarrence van As <tarrencev@users.noreply.github.com>\r\nCo-authored-by: notV4l <122404722+notV4l@users.noreply.github.com>\r\nCo-authored-by: glihm <glihm@users.noreply.github.com>\r\nCo-authored-by: notV4l <imV4l@proton.me>\r\nCo-authored-by: Larko <59736843+Larkooo@users.noreply.github.com>",
+          "timestamp": "2024-07-06T18:12:23-06:00",
+          "tree_id": "5ccd021cf9b102cc15295f66aed337e8c1f6db25",
+          "url": "https://github.com/dojoengine/dojo/commit/ed9f0cedef1db52ff596beb88ab7fa82b055ea9e"
+        },
+        "date": 1720311859276,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16768206,
+            "range": "± 47432",
             "unit": "ns/iter"
           }
         ]
