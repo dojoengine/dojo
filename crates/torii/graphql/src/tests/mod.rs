@@ -291,7 +291,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let mut migration = prepare_migration(
         source_project_dir,

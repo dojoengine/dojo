@@ -50,7 +50,7 @@ async fn test_entities_queries() {
 
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let mut migration = prepare_migration(
         config.manifest_path().parent().unwrap().into(),

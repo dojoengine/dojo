@@ -61,7 +61,7 @@ pub fn setup_migration(config: &Config) -> Result<MigrationStrategy> {
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     prepare_migration_with_world_and_seed(
         base_dir.into(),

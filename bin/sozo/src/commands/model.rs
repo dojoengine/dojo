@@ -113,7 +113,7 @@ impl ModelArgs {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         let env_metadata = utils::load_metadata_from_config(config)?;
-        let default_namespace = get_default_namespace_from_ws(&ws);
+        let default_namespace = get_default_namespace_from_ws(&ws)?;
 
         config.tokio_handle().block_on(async {
             match self.command {

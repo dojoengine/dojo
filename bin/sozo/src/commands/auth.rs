@@ -64,7 +64,7 @@ impl AuthArgs {
         trace!(metadata=?env_metadata, "Loaded environment.");
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let default_namespace = get_default_namespace_from_ws(&ws);
+        let default_namespace = get_default_namespace_from_ws(&ws)?;
 
         match self.command {
             AuthCommand::Grant { kind, world, starknet, account, transaction } => {

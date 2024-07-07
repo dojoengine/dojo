@@ -45,6 +45,23 @@ impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
+        if let Ok(current_package) = ws.current_package() {
+            if current_package.target(&TargetKind::new("dojo")).is_none() {
+                return Err(anyhow::anyhow!(
+                    "No Dojo target found in the {} package. Add [[target.dojo]] to the {} \
+                     manifest to enable Dojo features and compile with sozo.",
+                    current_package.id.to_string(),
+                    current_package.manifest_path()
+                ));
+            }
+        }
+
+        // Namespaces are required to compute contracts/models data. Hence, we can't continue
+        // if no metadata are found.
+        // Once sozo will support package option, users will be able to do `-p` to select
+        // the package directly from the workspace instead of using `--manifest-path`.
+        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
+
         let profile_name =
             ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
 
@@ -126,13 +143,10 @@ impl BuildArgs {
         };
         trace!(pluginManager=?bindgen, "Generating bindings.");
 
-        // Only generate bindgen if a current package is defined with dojo metadata.
-        if let Ok(dojo_metadata) = dojo_metadata_from_workspace(&ws) {
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(bindgen.generate(dojo_metadata.skip_migration))
-                .expect("Error generating bindings");
-        };
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(bindgen.generate(dojo_metadata.skip_migration))
+            .expect("Error generating bindings");
 
         Ok(())
     }

@@ -28,7 +28,7 @@ async fn reregister_models() {
     let target_path =
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
 
-    let default_namespace = get_default_namespace_from_ws(&ws);
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let migration = prepare_migration(
         source_project_dir.clone(),

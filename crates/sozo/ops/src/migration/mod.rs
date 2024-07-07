@@ -78,7 +78,7 @@ where
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
 
-    let default_namespace = get_default_namespace_from_ws(ws);
+    let default_namespace = get_default_namespace_from_ws(ws)?;
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) = utils::load_world_manifests(
