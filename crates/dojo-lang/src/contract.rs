@@ -73,8 +73,10 @@ impl DojoContract {
         }
 
         let contract_tag = naming::get_tag(&contract_namespace, &name);
-        let contract_name_selector = naming::compute_bytearray_hash(&name);
-        let contract_namespace_selector = naming::compute_bytearray_hash(&contract_namespace);
+        let contract_name_hash = naming::compute_bytearray_hash(&name);
+        let contract_namespace_hash = naming::compute_bytearray_hash(&contract_namespace);
+        let contract_selector =
+            naming::compute_selector_from_hash(contract_namespace_hash, contract_name_hash);
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
@@ -165,20 +167,25 @@ impl DojoContract {
                         fn contract_name(self: @ContractState) -> ByteArray {
                             \"$name$\"
                         }
-                        fn selector(self: @ContractState) -> felt252 {
-                            $contract_name_selector$
-                        }
 
                         fn namespace(self: @ContractState) -> ByteArray {
                             \"$contract_namespace$\"
                         }
 
-                        fn namespace_selector(self: @ContractState) -> felt252 {
-                            $contract_namespace_selector$
-                        }
-
                         fn tag(self: @ContractState) -> ByteArray {
                             \"$contract_tag$\"
+                        }
+
+                        fn name_hash(self: @ContractState) -> felt252 {
+                            $contract_name_hash$
+                        }
+
+                        fn namespace_hash(self: @ContractState) -> felt252 {
+                            $contract_namespace_hash$
+                        }
+
+                        fn selector(self: @ContractState) -> felt252 {
+                            $contract_selector$
                         }
                     }
 
@@ -198,18 +205,22 @@ impl DojoContract {
                 ",
                     &UnorderedHashMap::from([
                         ("name".to_string(), RewriteNode::Text(name.to_string())),
-                        (
-                            "contract_name_selector".to_string(),
-                            RewriteNode::Text(contract_name_selector.to_string()),
-                        ),
                         ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                         (
                             "contract_namespace".to_string(),
                             RewriteNode::Text(contract_namespace.clone()),
                         ),
                         (
-                            "contract_namespace_selector".to_string(),
-                            RewriteNode::Text(contract_namespace_selector.to_string()),
+                            "contract_name_hash".to_string(),
+                            RewriteNode::Text(contract_name_hash.to_string()),
+                        ),
+                        (
+                            "contract_namespace_hash".to_string(),
+                            RewriteNode::Text(contract_namespace_hash.to_string()),
+                        ),
+                        (
+                            "contract_selector".to_string(),
+                            RewriteNode::Text(contract_selector.to_string()),
                         ),
                         ("contract_tag".to_string(), RewriteNode::Text(contract_tag)),
                     ]),

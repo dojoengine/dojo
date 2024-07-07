@@ -62,7 +62,7 @@ impl SubscribedModels {
 
         let (namespace, model) =
             keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
-        let selector = naming::compute_model_selector_from_names(namespace, model);
+        let selector = naming::compute_selector_from_names(namespace, model);
 
         let model_packed_size = self
             .metadata
@@ -90,7 +90,7 @@ impl SubscribedModels {
 
         let (namespace, model) =
             keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
-        let selector = naming::compute_model_selector_from_names(namespace, model);
+        let selector = naming::compute_selector_from_names(namespace, model);
 
         let model_packed_size = self
             .metadata
@@ -245,7 +245,7 @@ mod tests {
 
     use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
-    use dojo_world::contracts::naming::compute_model_selector_from_names;
+    use dojo_world::contracts::naming::compute_selector_from_names;
     use parking_lot::RwLock;
     use starknet::macros::felt;
     use torii_grpc::types::ModelKeysClause;
@@ -254,7 +254,7 @@ mod tests {
 
     fn create_dummy_metadata() -> WorldMetadata {
         let components = HashMap::from([(
-            compute_model_selector_from_names("Test", "Position"),
+            compute_selector_from_names("Test", "Position"),
             dojo_types::schema::ModelMetadata {
                 namespace: "Test".into(),
                 name: "Position".into(),
@@ -277,7 +277,7 @@ mod tests {
         let packed_size: u32 = 1;
 
         let mut expected_storage_addresses = compute_all_storage_addresses(
-            compute_model_selector_from_names("Test", "Position"),
+            compute_selector_from_names("Test", "Position"),
             &keys,
             packed_size,
         )

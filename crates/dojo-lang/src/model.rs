@@ -230,7 +230,7 @@ pub fn handle_model_struct(
         _ => (
             RewriteNode::Text(DEFAULT_MODEL_VERSION.to_string()),
             RewriteNode::Text(
-                naming::compute_model_selector_from_hash(model_namespace_hash, model_name_hash)
+                naming::compute_selector_from_hash(model_namespace_hash, model_name_hash)
                     .to_string(),
             ),
         ),
@@ -345,6 +345,16 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
+    fn namespace() -> ByteArray {
+        \"$model_namespace$\"
+    }
+
+    #[inline(always)]
+    fn tag() -> ByteArray {
+        \"$model_tag$\"
+    }
+
+    #[inline(always)]
     fn version() -> u8 {
         $model_version$
     }
@@ -360,18 +370,13 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
-    fn namespace() -> ByteArray {
-        \"$model_namespace$\"
+    fn name_hash() -> felt252 {
+        $model_name_hash$
     }
 
     #[inline(always)]
-    fn namespace_selector() -> felt252 {
+    fn namespace_hash() -> felt252 {
         $model_namespace_hash$
-    }
-
-    #[inline(always)]
-    fn tag() -> ByteArray {
-        \"$model_tag$\"
     }
     
     #[inline(always)]
@@ -431,30 +436,34 @@ mod $contract_name$ {
 
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
-        fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<$type_name$>::selector()
-        }
-
         fn name(self: @ContractState) -> ByteArray {
            dojo::model::Model::<$type_name$>::name()
         }
 
-        fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<$type_name$>::version()
-        }
-        
         fn namespace(self: @ContractState) -> ByteArray {
            dojo::model::Model::<$type_name$>::namespace()
-        }
-
-        fn namespace_selector(self: @ContractState) -> felt252 {
-            dojo::model::Model::<$type_name$>::namespace_selector()
         }
 
         fn tag(self: @ContractState) -> ByteArray {
             dojo::model::Model::<$type_name$>::tag()
         }
-        
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<$type_name$>::version()
+        }
+
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<$type_name$>::selector()
+        }
+
+        fn name_hash(self: @ContractState) -> felt252 {
+            dojo::model::Model::<$type_name$>::name_hash()
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::model::Model::<$type_name$>::namespace_hash()
+        }
+
         fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<$type_name$>::size()
         }
@@ -488,6 +497,7 @@ mod $contract_name$ {
                 ("model_version".to_string(), model_version),
                 ("model_selector".to_string(), model_selector),
                 ("model_namespace".to_string(), RewriteNode::Text(model_namespace.clone())),
+                ("model_name_hash".to_string(), RewriteNode::Text(model_name_hash.to_string())),
                 (
                     "model_namespace_hash".to_string(),
                     RewriteNode::Text(model_namespace_hash.to_string()),

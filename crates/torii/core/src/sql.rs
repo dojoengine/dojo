@@ -6,7 +6,7 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::naming::compute_model_selector_from_names;
+use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
@@ -105,7 +105,7 @@ impl Sql {
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
-        let selector = compute_model_selector_from_names(namespace, &model.name());
+        let selector = compute_selector_from_names(namespace, &model.name());
 
         let insert_models =
             "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
@@ -165,8 +165,7 @@ impl Sql {
         let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
 
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let model_id =
-            format!("{:#x}", compute_model_selector_from_names(model_namespace, model_name));
+        let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
 
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
@@ -225,8 +224,7 @@ impl Sql {
         let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
 
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let model_id =
-            format!("{:#x}", compute_model_selector_from_names(model_namespace, model_name));
+        let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
 
         self.query_queue.enqueue(
             "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \

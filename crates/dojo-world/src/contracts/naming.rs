@@ -51,7 +51,7 @@ pub fn get_filename_from_tag(tag: &str) -> String {
         return tag.to_string();
     }
 
-    let mut selector = format!("{:x}", compute_model_selector_from_tag(tag));
+    let mut selector = format!("{:x}", compute_selector_from_tag(tag));
     selector.truncate(SELECTOR_CHUNK_SIZE);
 
     format!("{tag}{TAG_SEPARATOR}{selector}")
@@ -62,19 +62,16 @@ pub fn compute_bytearray_hash(namespace: &str) -> Felt {
     poseidon_hash_many(&ByteArray::cairo_serialize(&ba))
 }
 
-pub fn compute_model_selector_from_tag(tag: &str) -> Felt {
+pub fn compute_selector_from_tag(tag: &str) -> Felt {
     let (namespace, name) = split_tag(tag).unwrap();
-    compute_model_selector_from_names(&namespace, &name)
+    compute_selector_from_names(&namespace, &name)
 }
 
-pub fn compute_model_selector_from_names(namespace: &str, model_name: &str) -> Felt {
-    compute_model_selector_from_hash(
-        compute_bytearray_hash(namespace),
-        compute_bytearray_hash(model_name),
-    )
+pub fn compute_selector_from_names(namespace: &str, name: &str) -> Felt {
+    compute_selector_from_hash(compute_bytearray_hash(namespace), compute_bytearray_hash(name))
 }
 
-pub fn compute_model_selector_from_hash(namespace_hash: Felt, model_hash: Felt) -> Felt {
+pub fn compute_selector_from_hash(namespace_hash: Felt, model_hash: Felt) -> Felt {
     poseidon_hash_many(&[namespace_hash, model_hash])
 }
 
@@ -125,8 +122,8 @@ mod tests {
     }
 
     #[test]
-    fn test_compute_model_selector_from_tag_success() {
-        let selector = compute_model_selector_from_tag("namespace-model");
+    fn test_compute_selector_from_tag_success() {
+        let selector = compute_selector_from_tag("namespace-model");
         assert_eq!(
             selector,
             Felt::from_hex("0x6cfe11a346c1bb31de8f454d65880454952e22d9adc2374fe67734196e0cbcb")
@@ -135,8 +132,8 @@ mod tests {
     }
 
     #[test]
-    fn test_compute_model_selector_from_names_success() {
-        let selector = compute_model_selector_from_names("namespace", "model");
+    fn test_compute_selector_from_names_success() {
+        let selector = compute_selector_from_names("namespace", "model");
         assert_eq!(
             selector,
             Felt::from_hex("0x6cfe11a346c1bb31de8f454d65880454952e22d9adc2374fe67734196e0cbcb")

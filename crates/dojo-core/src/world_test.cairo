@@ -260,7 +260,7 @@ trait IMetadataOnly<T> {
     fn selector(self: @T) -> felt252;
     fn name(self: @T) -> ByteArray;
     fn namespace(self: @T) -> ByteArray;
-    fn namespace_selector(self: @T) -> felt252;
+    fn namespace_hash(self: @T) -> felt252;
 }
 
 #[starknet::contract]
@@ -278,7 +278,7 @@ mod resource_metadata_malicious {
             "dojo"
         }
 
-        fn namespace_selector(self: @ContractState) -> felt252 {
+        fn namespace_hash(self: @ContractState) -> felt252 {
             dojo::utils::hash(@Self::namespace(self))
         }
 
@@ -1493,7 +1493,7 @@ fn test_write_model_for_namespace_owner() {
     let contract = starknet::contract_address_const::<0xdeadbeef>();
 
     // the caller account is a model namespace owner
-    world.grant_owner(account, dojo::model::Model::<Foo>::namespace_selector());
+    world.grant_owner(account, dojo::model::Model::<Foo>::namespace_hash());
     starknet::testing::set_account_contract_address(account);
     starknet::testing::set_contract_address(contract);
 
@@ -1524,7 +1524,7 @@ fn test_write_model_for_namespace_writer() {
     let account = starknet::contract_address_const::<0xb0b>();
     let contract = starknet::contract_address_const::<0xdeadbeef>();
 
-    world.grant_writer(dojo::model::Model::<Foo>::namespace_selector(), contract);
+    world.grant_writer(dojo::model::Model::<Foo>::namespace_hash(), contract);
 
     // the account does not own anything
     starknet::testing::set_account_contract_address(account);
@@ -1557,7 +1557,7 @@ fn test_write_namespace_for_namespace_owner() {
     let account = starknet::contract_address_const::<0xb0b>();
     let contract = starknet::contract_address_const::<0xdeadbeef>();
 
-    world.grant_owner(account, dojo::model::Model::<Foo>::namespace_selector());
+    world.grant_owner(account, dojo::model::Model::<Foo>::namespace_hash());
 
     // the account owns the Foo model namespace so it should be able to deploy
     // and register the model.
@@ -1574,7 +1574,7 @@ fn test_write_namespace_for_namespace_writer() {
     let account = starknet::contract_address_const::<0xb0b>();
     let contract = starknet::contract_address_const::<0xdeadbeef>();
 
-    world.grant_writer(dojo::model::Model::<Foo>::namespace_selector(), account);
+    world.grant_writer(dojo::model::Model::<Foo>::namespace_hash(), account);
 
     // the account has write access to the Foo model namespace so it should be able
     // to deploy and register the model.

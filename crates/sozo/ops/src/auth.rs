@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelError;
 use dojo_world::contracts::naming::{
-    compute_bytearray_hash, compute_model_selector_from_tag, ensure_namespace,
+    compute_bytearray_hash, compute_selector_from_tag, ensure_namespace,
 };
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
@@ -294,7 +294,7 @@ where
                 _ => {}
             };
 
-            compute_model_selector_from_tag(&tag)
+            compute_selector_from_tag(&tag)
         }
         ResourceType::Namespace(name) => compute_bytearray_hash(name),
     };

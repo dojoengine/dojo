@@ -175,7 +175,7 @@ impl Client {
     /// the RPC.
     pub async fn model(&self, keys: &ModelKeysClause) -> Result<Option<Ty>, Error> {
         let (namespace, model) = keys.model.split_once('-').unwrap();
-        let model_selector = naming::compute_model_selector_from_names(namespace, model);
+        let model_selector = naming::compute_selector_from_names(namespace, model);
         let Some(mut schema) =
             self.metadata.read().model(&model_selector).map(|m| m.schema.clone())
         else {
@@ -289,7 +289,7 @@ impl Client {
         let model_reader = self.world_reader.model_reader(namespace, model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(
-            naming::compute_model_selector_from_names(namespace, model),
+            naming::compute_selector_from_names(namespace, model),
             keys,
             values,
         )?;

@@ -139,7 +139,7 @@ mod tests {
 
     use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
-    use dojo_world::contracts::naming::compute_model_selector_from_names;
+    use dojo_world::contracts::naming::compute_selector_from_names;
     use parking_lot::RwLock;
     use starknet::macros::felt;
 
@@ -147,7 +147,7 @@ mod tests {
 
     fn create_dummy_metadata() -> WorldMetadata {
         let models = HashMap::from([(
-            compute_model_selector_from_names("Test", "Position"),
+            compute_selector_from_names("Test", "Position"),
             dojo_types::schema::ModelMetadata {
                 namespace: "Test".into(),
                 name: "Position".into(),
@@ -175,7 +175,7 @@ mod tests {
 
         assert!(storage.storage.read().is_empty(), "storage must be empty initially");
 
-        let model_selector = compute_model_selector_from_names("Test", "Position");
+        let model_selector = compute_selector_from_names("Test", "Position");
 
         let model = storage.metadata.read().model(&model_selector).cloned().unwrap();
         let expected_storage_addresses =
