@@ -10,6 +10,7 @@ use chrono::Utc;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
+use dojo_world::contracts::naming::compute_model_selector_from_names;
 use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
@@ -225,8 +226,10 @@ impl<P: Provider + Sync> Relay<P> {
                             };
 
                             // select only identity field, if doesn't exist, empty string
-                            let query =
-                                format!("SELECT external_identity FROM {} WHERE id = ?", ty.name());
+                            let query = format!(
+                                "SELECT external_identity FROM [{}] WHERE id = ?",
+                                ty.name()
+                            );
                             let entity_identity: Option<String> = match sqlx::query_scalar(&query)
                                 .bind(format!("{:#x}", poseidon_hash_many(&keys)))
                                 .fetch_optional(&mut *pool)
@@ -620,33 +623,33 @@ async fn validate_message(
     db: &Sql,
     message: &IndexMap<String, PrimitiveType>,
 ) -> Result<Ty, Error> {
-    let model_name = if let Some(model_name) = message.get("model") {
+    let (selector, model) = if let Some(model_name) = message.get("model") {
         if let PrimitiveType::String(model_name) = model_name {
-            model_name
+            let (namespace, name) = model_name.split_once('-').ok_or_else(|| {
+                Error::InvalidMessageError(
+                    "Model name is not in the format namespace-model".to_string(),
+                )
+            })?;
+
+            (compute_model_selector_from_names(namespace, name), model_name)
         } else {
             return Err(Error::InvalidMessageError("Model name is not a string".to_string()));
         }
     } else {
         return Err(Error::InvalidMessageError("Model name is missing".to_string()));
     };
-    let model_selector = get_selector_from_name(model_name).map_err(|e| {
-        Error::InvalidMessageError(format!("Failed to get selector from model name: {}", e))
-    })?;
 
     let mut ty = db
-        .model(&format!("{:#x}", model_selector))
+        .model(selector)
         .await
-        .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model_name, e)))?
+        .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model, e)))?
         .schema()
         .await
         .map_err(|e| {
-            Error::InvalidMessageError(format!(
-                "Failed to get schema for model {}: {}",
-                model_name, e
-            ))
+            Error::InvalidMessageError(format!("Failed to get schema for model {}: {}", model, e))
         })?;
 
-    if let Some(object) = message.get(model_name) {
+    if let Some(object) = message.get(model) {
         parse_value_to_ty(object, &mut ty)?;
     } else {
         return Err(Error::InvalidMessageError("Model is missing".to_string()));

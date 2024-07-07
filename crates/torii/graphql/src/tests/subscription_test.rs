@@ -7,15 +7,16 @@ mod tests {
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abi::model::Layout;
+    use dojo_world::contracts::naming::compute_model_selector_from_names;
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::{Event, Felt};
-    use starknet::core::utils::get_selector_from_name;
     use starknet_crypto::poseidon_hash_many;
     use tokio::sync::mpsc;
     use torii_core::sql::Sql;
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
+    use crate::utils;
 
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
@@ -24,17 +25,20 @@ mod tests {
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
+        let namespace = "types_test".to_string();
         let model_name = "Record".to_string();
         let key = vec![Felt::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let block_timestamp = 1710754478_u64;
+        let type_name = utils::type_name_from_names(&namespace, &model_name);
+
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
                 "models" : [{
-                    "__typename": model_name,
+                    "__typename": type_name,
                         "depth": "Zero",
                         "record_id": 0,
                         "typeU16": 1,
@@ -54,7 +58,7 @@ mod tests {
             // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: model_name,
+                    name: utils::struct_name_from_names(&namespace, &model_name),
                     children: vec![
                         Member {
                             name: "depth".to_string(),
@@ -120,7 +124,7 @@ mod tests {
                     keys
                     models {
                         __typename
-                        ... on Record {
+                        ... on types_test_Record {
                             depth
                             record_id
                             typeU16
@@ -147,17 +151,20 @@ mod tests {
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
+        let namespace = "types_test".to_string();
         let model_name = "Record".to_string();
         let key = vec![Felt::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let block_timestamp = 1710754478_u64;
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        let type_name = utils::type_name_from_names(&namespace, &model_name);
+
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
                 "models" : [{
-                    "__typename": model_name,
+                    "__typename": type_name,
                         "depth": "Zero",
                         "record_id": 0,
                         "type_felt": format!("{:#x}", Felt::from(1u128)),
@@ -174,7 +181,7 @@ mod tests {
             // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: model_name,
+                    name: utils::struct_name_from_names(&namespace, &model_name),
                     children: vec![
                         Member {
                             name: "depth".to_string(),
@@ -225,7 +232,7 @@ mod tests {
                     keys
                     models {
                         __typename
-                        ... on Record {
+                        ... on types_test_Record {
                             depth
                             record_id
                             type_felt
@@ -247,14 +254,16 @@ mod tests {
     async fn test_model_subscription(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         // 0. Preprocess model value
+        let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
+        let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
         let class_hash = Felt::TWO;
         let contract_address = Felt::THREE;
         let block_timestamp: u64 = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
-         "modelRegistered": { "id": model_id, "name":model_name }
+            "modelRegistered": { "id": model_id, "name": model_name }
         });
+
         let (tx, mut rx) = mpsc::channel(7);
 
         tokio::spawn(async move {
@@ -270,6 +279,7 @@ mod tests {
                 }],
             });
             db.register_model(
+                &namespace,
                 model,
                 Layout::Fixed(vec![]),
                 class_hash,
@@ -308,13 +318,14 @@ mod tests {
     async fn test_model_subscription_with_id(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         // 0. Preprocess model value
+        let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
+        let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
         let class_hash = Felt::TWO;
         let contract_address = Felt::THREE;
         let block_timestamp: u64 = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
-         "modelRegistered": { "id": model_id, "name":model_name }
+         "modelRegistered": { "id": model_id, "name": model_name }
         });
         let (tx, mut rx) = mpsc::channel(7);
 
@@ -331,6 +342,7 @@ mod tests {
                 }],
             });
             db.register_model(
+                &namespace,
                 model,
                 Layout::Fixed(vec![]),
                 class_hash,

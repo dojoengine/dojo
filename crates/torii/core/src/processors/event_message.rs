@@ -47,7 +47,7 @@ where
         event: &Event,
     ) -> Result<(), Error> {
         // silently ignore if the model is not found
-        let model = match db.model(&format!("{:#x}", event.keys[MODEL_INDEX])).await {
+        let model = match db.model(event.keys[MODEL_INDEX]).await {
             Ok(model) => model,
             Err(_) => return Ok(()),
         };

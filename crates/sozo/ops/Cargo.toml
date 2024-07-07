@@ -30,6 +30,7 @@ dojo-lang.workspace = true
 dojo-types.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 futures.workspace = true
+itertools.workspace = true
 num-bigint = "0.4.6"
 num-traits.workspace = true
 rpassword.workspace = true
@@ -53,3 +54,4 @@ assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ] }
 katana-runner.workspace = true
+tee = "0.1.0"

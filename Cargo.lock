@@ -5097,6 +5097,7 @@ name = "dojo-lang"
 version = "0.7.3"
 dependencies = [
  "anyhow",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.3.0)",
  "cairo-lang-compiler 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-debug 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
  "cairo-lang-defs 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
@@ -5128,6 +5129,7 @@ dependencies = [
  "num-traits 0.2.19",
  "once_cell",
  "pretty_assertions",
+ "regex",
  "salsa",
  "scarb",
  "semver 1.0.23",
@@ -5136,6 +5138,7 @@ dependencies = [
  "serde_with 2.3.3",
  "smol_str",
  "starknet 0.11.0",
+ "starknet-crypto 0.7.1",
  "test-log",
  "thiserror",
  "toml 0.8.14",
@@ -5260,6 +5263,7 @@ dependencies = [
  "topological-sort",
  "tracing",
  "url",
+ "walkdir",
 ]
 
 [[package]]
@@ -13431,6 +13435,7 @@ dependencies = [
  "dojo-world",
  "futures",
  "ipfs-api-backend-hyper",
+ "itertools 0.12.1",
  "katana-runner",
  "num-bigint",
  "num-traits 0.2.19",
@@ -13444,6 +13449,7 @@ dependencies = [
  "smol_str",
  "starknet 0.11.0",
  "starknet-crypto 0.7.1",
+ "tee",
  "thiserror",
  "tokio",
  "toml 0.8.14",
@@ -14423,6 +14429,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "tee"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37c12559dba7383625faaff75be24becf35bfc885044375bcab931111799a3da"
+
+[[package]]
 name = "tempfile"
 version = "3.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15050,6 +15062,7 @@ dependencies = [
  "dojo-test-utils",
  "dojo-types",
  "dojo-world",
+ "katana-runner",
  "lazy_static",
  "regex",
  "scarb",
@@ -15088,6 +15101,7 @@ dependencies = [
  "futures-util",
  "hex",
  "hyper 0.14.29",
+ "katana-runner",
  "num-traits 0.2.19",
  "parking_lot 0.12.3",
  "prost 0.11.9",
@@ -15133,6 +15147,7 @@ dependencies = [
  "dojo-world",
  "futures",
  "indexmap 2.2.6",
+ "katana-runner",
  "libp2p",
  "libp2p-webrtc",
  "libp2p-webrtc-websys",

@@ -30,13 +30,14 @@ rand.workspace = true
 serde_json.workspace = true
 tower.workspace = true
 tracing.workspace = true
+dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 
 [dev-dependencies]
 camino.workspace = true
 dojo-test-utils.workspace = true
-dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 scarb.workspace = true
 sozo-ops.workspace = true
+katana-runner.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true

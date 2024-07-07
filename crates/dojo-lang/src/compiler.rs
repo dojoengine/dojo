@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fs;
 use std::io::Write;
 use std::iter::zip;
 use std::ops::DerefMut;
@@ -6,7 +7,7 @@ use std::ops::DerefMut;
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
+use cairo_lang_defs::ids::{ModuleId, ModuleItemId, TopLevelLanguageElementId};
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_formatter::format_string;
@@ -17,17 +18,20 @@ use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_starknet_classes::abi;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_utils::UpcastMut;
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
+use dojo_world::contracts::naming;
 use dojo_world::manifest::{
     AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
-    ABIS_DIR, BASE_CONTRACT_NAME, BASE_DIR, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
-    WORLD_CONTRACT_NAME,
+    ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
+    MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
+use dojo_world::metadata::get_default_namespace_from_ws;
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
 use scarb::core::{PackageName, TargetKind, Workspace};
+use scarb::flock::Filesystem;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
@@ -36,12 +40,10 @@ use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
 use crate::inline_macros::utils::{SYSTEM_READS, SYSTEM_WRITES};
-use crate::plugin::{ComputedValuesAuxData, DojoAuxData};
+use crate::plugin::{ComputedValuesAuxData, DojoAuxData, Model};
 use crate::semantics::utils::find_module_rw;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
-
-pub const SOURCES_DIR: &str = "src";
 
 pub(crate) const LOG_TARGET: &str = "dojo_lang::compiler";
 
@@ -84,7 +86,8 @@ impl Compiler for DojoCompiler {
     ) -> Result<()> {
         let props: Props = unit.main_component().target_props()?;
         let target_dir = unit.target_dir(ws);
-        let sources_dir = target_dir.child(Utf8Path::new(SOURCES_DIR));
+
+        let default_namespace = get_default_namespace_from_ws(ws);
 
         let compiler_config = build_compiler_config(&unit, ws);
 
@@ -111,44 +114,30 @@ impl Compiler for DojoCompiler {
             compile_prepared_db(db, &contracts, compiler_config)?
         };
 
-        // (contract name, class hash)
-        let mut compiled_classes: HashMap<SmolStr, (Felt, Option<abi::Contract>)> = HashMap::new();
+        let mut compiled_classes: HashMap<String, (Felt, ContractClass)> = HashMap::new();
 
         for (decl, class) in zip(contracts, classes) {
-            let contract_full_path = decl.module_id().full_path(db.upcast_mut());
-
-            // save expanded contract source file
-            if let Ok(file_id) = db.module_main_file(decl.module_id()) {
-                if let Some(file_content) = db.file_content(file_id) {
-                    let src_file_name = format!("{contract_full_path}.cairo").replace("::", "_");
-
-                    let mut file =
-                        sources_dir.open_rw(src_file_name.clone(), "source file", ws.config())?;
-                    file.write(format_string(db, file_content.to_string()).as_bytes())
-                        .with_context(|| {
-                            format!("failed to serialize contract source: {contract_full_path}")
-                        })?;
-                } else {
-                    return Err(anyhow!("failed to get source file content: {contract_full_path}"));
-                }
-            } else {
-                return Err(anyhow!("failed to get source file: {contract_full_path}"));
-            }
-
-            // save JSON artifact file
-            let file_name = format!("{contract_full_path}.json");
-            let mut file = target_dir.open_rw(file_name.clone(), "class file", ws.config())?;
-            serde_json::to_writer_pretty(file.deref_mut(), &class).with_context(|| {
-                format!("failed to serialize contract artifact: {contract_full_path}")
-            })?;
+            // note that the qualified path is in snake case while
+            // the `full_path()` method of StructId uses the original struct name case.
+            // (see in `get_dojo_model_artifacts`)
+            let qualified_path = decl.module_id().full_path(db.upcast_mut());
 
             let class_hash = compute_class_hash_of_contract_class(&class).with_context(|| {
-                format!("problem computing class hash for contract `{contract_full_path}`")
+                format!("problem computing class hash for contract `{}`", qualified_path.clone())
             })?;
-            compiled_classes.insert(contract_full_path.into(), (class_hash, class.abi));
+
+            compiled_classes.insert(qualified_path, (class_hash, class));
         }
 
-        update_manifest(db, ws, &main_crate_ids, compiled_classes, props.build_external_contracts)?;
+        update_files(
+            db,
+            ws,
+            &target_dir,
+            &main_crate_ids,
+            compiled_classes,
+            props.build_external_contracts,
+            &default_namespace,
+        )?;
         Ok(())
     }
 }
@@ -201,8 +190,8 @@ fn find_project_contracts(
 
 pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     [
-        ContractSelector(BASE_CONTRACT_NAME.to_string()),
-        ContractSelector(WORLD_CONTRACT_NAME.to_string()),
+        ContractSelector(BASE_QUALIFIED_PATH.to_string()),
+        ContractSelector(WORLD_QUALIFIED_PATH.to_string()),
     ]
     .iter()
     .map(|selector| selector.package().into())
@@ -223,12 +212,14 @@ pub fn collect_external_crate_ids(
         .collect::<Vec<_>>()
 }
 
-fn update_manifest(
+fn update_files(
     db: &RootDatabase,
     ws: &Workspace<'_>,
+    target_dir: &Filesystem,
     crate_ids: &[CrateId],
-    compiled_artifacts: HashMap<SmolStr, (Felt, Option<abi::Contract>)>,
+    compiled_artifacts: HashMap<String, (Felt, ContractClass)>,
     external_contracts: Option<Vec<ContractSelector>>,
+    default_namespace: &str,
 ) -> anyhow::Result<()> {
     let profile_name =
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
@@ -239,40 +230,40 @@ fn update_manifest(
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
-        artifacts: &'a HashMap<SmolStr, (Felt, Option<abi::Contract>)>,
-        artifact_name: &str,
-    ) -> anyhow::Result<&'a (Felt, Option<abi::Contract>)> {
-        artifacts.get(artifact_name).context(format!(
-            "Contract `{artifact_name}` not found. Did you include `dojo` as a dependency?",
+        artifacts: &'a HashMap<String, (Felt, ContractClass)>,
+        qualified_artifact_path: &str,
+    ) -> anyhow::Result<&'a (Felt, ContractClass)> {
+        artifacts.get(qualified_artifact_path).context(format!(
+            "Contract `{qualified_artifact_path}` not found. Did you include `dojo` as a \
+             dependency?",
         ))
     }
 
     let mut crate_ids = crate_ids.to_vec();
 
-    let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
-    write_manifest_and_abi(
-        &relative_manifests_dir,
-        &relative_abis_dir,
-        &manifest_dir,
-        &mut Manifest::new(
-            // abi path will be written by `write_manifest`
-            Class { class_hash: *hash, abi: None, original_class_hash: *hash },
-            WORLD_CONTRACT_NAME.into(),
-        ),
-        abi,
-    )?;
-
-    let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
-    write_manifest_and_abi(
-        &relative_manifests_dir,
-        &relative_abis_dir,
-        &manifest_dir,
-        &mut Manifest::new(
-            Class { class_hash: *hash, abi: None, original_class_hash: *hash },
-            BASE_CONTRACT_NAME.into(),
-        ),
-        &None,
-    )?;
+    for (qualified_path, tag) in
+        [(WORLD_QUALIFIED_PATH, WORLD_CONTRACT_TAG), (BASE_QUALIFIED_PATH, BASE_CONTRACT_TAG)]
+    {
+        let (hash, class) = get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
+        let filename = naming::get_filename_from_tag(tag);
+        write_manifest_and_abi(
+            &relative_manifests_dir,
+            &relative_abis_dir,
+            &manifest_dir,
+            &mut Manifest::new(
+                // abi path will be written by `write_manifest`
+                Class {
+                    class_hash: *hash,
+                    abi: None,
+                    original_class_hash: *hash,
+                    tag: tag.to_string(),
+                },
+                filename.clone(),
+            ),
+            &class.abi,
+        )?;
+        save_json_artifact_file(ws, target_dir, class, &filename, tag)?;
+    }
 
     let mut models = BTreeMap::new();
     let mut contracts = BTreeMap::new();
@@ -292,23 +283,29 @@ fn update_manifest(
                 .filter_map(|info| info.as_ref().map(|i| &i.aux_data))
                 .filter_map(|aux_data| aux_data.as_ref().map(|aux_data| aux_data.0.as_any()))
             {
-                if let Some(aux_data) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
+                if let Some(aux_data) = aux_data.downcast_ref::<ComputedValuesAuxData>() {
+                    get_dojo_computed_values(db, module_id, aux_data, &mut computed);
+                } else if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
+                    for system in &dojo_aux_data.systems {
+                        contracts.extend(get_dojo_contract_artifacts(
+                            db,
+                            module_id,
+                            &naming::get_tag(&system.namespace, &system.name),
+                            &compiled_artifacts,
+                        )?);
+                    }
+
+                    models.extend(get_dojo_model_artifacts(
+                        db,
+                        &dojo_aux_data.models,
+                        *module_id,
+                        &compiled_artifacts,
+                    )?);
+                } else if let Some(aux_data) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
                     contracts.extend(get_dojo_contract_artifacts(
                         db,
                         module_id,
-                        aux_data,
-                        &compiled_artifacts,
-                    )?);
-                }
-                if let Some(aux_data) = aux_data.downcast_ref::<ComputedValuesAuxData>() {
-                    get_dojo_computed_values(db, module_id, aux_data, &mut computed);
-                }
-
-                if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
-                    models.extend(get_dojo_model_artifacts(
-                        db,
-                        dojo_aux_data,
-                        *module_id,
+                        &naming::get_tag(default_namespace, &aux_data.contract_name),
                         &compiled_artifacts,
                     )?);
                 }
@@ -316,9 +313,13 @@ fn update_manifest(
         }
     }
 
+    // `get_dojo_computed_values()` uses the module name as contract name to build the `computed`
+    // variable. That means, the namespace of the contract is not taken into account,
+    // but should be retrieved from the dojo::contract attribute.
     computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
-        let contract_data =
-            contracts.get_mut(&contract).expect("Error: Computed value contract doesn't exist.");
+        let contract_data = contracts
+            .get_mut(&contract.to_string())
+            .expect("Error: Computed value contract doesn't exist.");
         contract_data.0.inner.computed = computed_value_entrypoint;
     });
 
@@ -326,24 +327,49 @@ fn update_manifest(
         contracts.remove(model.0.as_str());
     }
 
-    for (_, (manifest, abi)) in contracts.iter_mut() {
+    let contracts_dir = target_dir.child(CONTRACTS_DIR);
+    if !contracts.is_empty() && !contracts_dir.exists() {
+        fs::create_dir_all(contracts_dir.path_unchecked())?;
+    }
+
+    for (_, (manifest, class, module_id)) in contracts.iter_mut() {
         write_manifest_and_abi(
             &relative_manifests_dir.join(CONTRACTS_DIR),
             &relative_abis_dir.join(CONTRACTS_DIR),
             &manifest_dir,
             manifest,
-            abi,
+            &class.abi,
         )?;
+
+        let filename = naming::get_filename_from_tag(&manifest.inner.tag);
+        save_expanded_source_file(
+            ws,
+            *module_id,
+            db,
+            &contracts_dir,
+            &filename,
+            &manifest.inner.tag,
+        )?;
+        save_json_artifact_file(ws, &contracts_dir, class, &filename, &manifest.inner.tag)?;
     }
 
-    for (_, (manifest, abi)) in models.iter_mut() {
+    let models_dir = target_dir.child(MODELS_DIR);
+    if !models.is_empty() && !models_dir.exists() {
+        fs::create_dir_all(models_dir.path_unchecked())?;
+    }
+
+    for (_, (manifest, class, module_id)) in models.iter_mut() {
         write_manifest_and_abi(
             &relative_manifests_dir.join(MODELS_DIR),
             &relative_abis_dir.join(MODELS_DIR),
             &manifest_dir,
             manifest,
-            abi,
+            &class.abi,
         )?;
+
+        let filename = naming::get_filename_from_tag(&manifest.inner.tag);
+        save_expanded_source_file(ws, *module_id, db, &models_dir, &filename, &manifest.inner.tag)?;
+        save_json_artifact_file(ws, &models_dir, class, &filename, &manifest.inner.tag)?;
     }
 
     Ok(())
@@ -354,42 +380,42 @@ fn update_manifest(
 #[allow(clippy::type_complexity)]
 fn get_dojo_model_artifacts(
     db: &RootDatabase,
-    aux_data: &DojoAuxData,
+    aux_data: &Vec<Model>,
     module_id: ModuleId,
-    compiled_classes: &HashMap<SmolStr, (Felt, Option<abi::Contract>)>,
-) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, Option<abi::Contract>)>> {
-    let mut models = HashMap::with_capacity(aux_data.models.len());
+    compiled_classes: &HashMap<String, (Felt, ContractClass)>,
+) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, ContractClass, ModuleId)>> {
+    let mut models = HashMap::with_capacity(aux_data.len());
 
-    let module_name = module_id.full_path(db);
-    let module_name = module_name.as_str();
-
-    for model in &aux_data.models {
-        if let Ok(Some(ModuleItemId::Struct(_))) =
+    for model in aux_data {
+        if let Ok(Some(ModuleItemId::Struct(struct_id))) =
             db.module_item_by_name(module_id, model.name.clone().into())
         {
-            let model_contract_name = model.name.to_case(Case::Snake);
-            let model_full_name = format!("{module_name}::{}", &model_contract_name);
+            // The `struct_id` full_path() method uses the original struct name case while
+            // snake case was used to build `compiled_classes` in `compile()`.
+            let qualified_path = struct_id.full_path(db).to_case(Case::Snake);
+            let compiled_class = compiled_classes.get(&qualified_path).cloned();
+            let tag = naming::get_tag(&model.namespace, &model.name);
 
-            let compiled_class = compiled_classes.get(model_full_name.as_str()).cloned();
-
-            if let Some((class_hash, abi)) = compiled_class {
+            if let Some((class_hash, class)) = compiled_class {
                 models.insert(
-                    model_full_name.clone(),
+                    qualified_path.clone(),
                     (
                         Manifest::new(
                             DojoModel {
+                                tag: tag.clone(),
                                 class_hash,
                                 abi: None,
                                 members: model.members.clone(),
                                 original_class_hash: class_hash,
                             },
-                            model_full_name.into(),
+                            naming::get_filename_from_tag(&tag),
                         ),
-                        abi,
+                        class,
+                        module_id,
                     ),
                 );
             } else {
-                println!("Model {} not found in target.", model_full_name.clone());
+                println!("Model {} not found in target.", tag.clone());
             }
         }
     }
@@ -414,7 +440,7 @@ fn get_dojo_computed_values(
         computed_vals.push(ComputedValueEntrypoint {
             contract: module_name,
             entrypoint: aux_data.entrypoint.clone(),
-            model: aux_data.model.clone(),
+            tag: aux_data.tag.clone(),
         })
     }
 }
@@ -423,21 +449,19 @@ fn get_dojo_computed_values(
 fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
-    aux_data: &StarkNetContractAuxData,
-    compiled_classes: &HashMap<SmolStr, (Felt, Option<abi::Contract>)>,
-) -> anyhow::Result<HashMap<SmolStr, (Manifest<DojoContract>, Option<abi::Contract>)>> {
-    let contract_name = &aux_data.contract_name;
-
+    tag: &str,
+    compiled_classes: &HashMap<String, (Felt, ContractClass)>,
+) -> anyhow::Result<HashMap<String, (Manifest<DojoContract>, ContractClass, ModuleId)>> {
     let mut result = HashMap::new();
 
-    if !matches!(contract_name.as_ref(), "world" | "resource_metadata" | "base") {
-        let module_name: SmolStr = module_id.full_path(db).into();
+    if !matches!(naming::get_name_from_tag(tag).as_str(), "world" | "resource_metadata" | "base") {
+        let qualified_path = module_id.full_path(db).to_string();
 
-        if let Some((class_hash, abi)) = compiled_classes.get(&module_name as &str) {
+        if let Some((class_hash, class)) = compiled_classes.get(&qualified_path) {
             let reads = SYSTEM_READS
                 .lock()
                 .unwrap()
-                .get(&module_name as &str)
+                .get(&qualified_path as &str)   // should use tag instead of qualified_path
                 .map_or_else(Vec::new, |models| {
                     models.clone().into_iter().collect::<BTreeSet<_>>().into_iter().collect()
                 });
@@ -445,21 +469,22 @@ fn get_dojo_contract_artifacts(
             let writes = SYSTEM_WRITES
                 .lock()
                 .unwrap()
-                .get(&module_name as &str)
+                .get(&qualified_path as &str)   // should use tag instead of qualified_path
                 .map_or_else(Vec::new, |write_ops| find_module_rw(db, module_id, write_ops));
 
             let manifest = Manifest::new(
                 DojoContract {
+                    tag: tag.to_string(),
                     writes,
                     reads,
                     class_hash: *class_hash,
                     original_class_hash: *class_hash,
                     ..Default::default()
                 },
-                module_name.clone(),
+                naming::get_filename_from_tag(tag),
             );
 
-            result.insert(module_name, (manifest, abi.clone()));
+            result.insert(qualified_path.to_string(), (manifest, class.clone(), *module_id));
         }
     }
 
@@ -476,10 +501,10 @@ fn write_manifest_and_abi<T>(
 where
     T: Serialize + DeserializeOwned + ManifestMethods,
 {
-    let name = manifest.name.to_string().replace("::", "_");
-
-    let relative_manifest_path = relative_manifest_dir.join(name.clone()).with_extension("toml");
-    let relative_abi_path = relative_abis_dir.join(name.clone()).with_extension("json");
+    let relative_manifest_path =
+        relative_manifest_dir.join(manifest.manifest_name.clone()).with_extension("toml");
+    let relative_abi_path =
+        relative_abis_dir.join(manifest.manifest_name.clone()).with_extension("json");
 
     if abi.is_some() {
         manifest.inner.set_abi(Some(AbiFormat::Path(relative_abi_path.clone())));
@@ -512,5 +537,45 @@ where
         std::fs::write(full_abi_path.clone(), abi_json)
             .unwrap_or_else(|_| panic!("Unable to write abi file to path: {full_abi_path}"));
     }
+    Ok(())
+}
+
+fn save_expanded_source_file(
+    ws: &Workspace<'_>,
+    module_id: ModuleId,
+    db: &RootDatabase,
+    contract_dir: &Filesystem,
+    contract_basename: &str,
+    contract_tag: &str,
+) -> anyhow::Result<()> {
+    if let Ok(file_id) = db.module_main_file(module_id) {
+        if let Some(file_content) = db.file_content(file_id) {
+            let src_file_name = format!("{contract_basename}.cairo");
+
+            let mut file =
+                contract_dir.open_rw(src_file_name.clone(), "source file", ws.config())?;
+            file.write(format_string(db, file_content.to_string()).as_bytes())
+                .with_context(|| format!("failed to serialize contract source: {contract_tag}"))?;
+        } else {
+            return Err(anyhow!("failed to get source file content: {contract_tag}"));
+        }
+    } else {
+        return Err(anyhow!("failed to get source file: {contract_tag}"));
+    }
+
+    Ok(())
+}
+
+fn save_json_artifact_file(
+    ws: &Workspace<'_>,
+    contract_dir: &Filesystem,
+    contract_class: &ContractClass,
+    contract_basename: &str,
+    contract_tag: &str,
+) -> anyhow::Result<()> {
+    let mut file =
+        contract_dir.open_rw(format!("{contract_basename}.json"), "class file", ws.config())?;
+    serde_json::to_writer_pretty(file.deref_mut(), &contract_class)
+        .with_context(|| format!("failed to serialize contract artifact: {contract_tag}"))?;
     Ok(())
 }

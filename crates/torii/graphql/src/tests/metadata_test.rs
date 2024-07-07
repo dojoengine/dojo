@@ -56,12 +56,16 @@ mod tests {
   [world]
   name = "example"
   description = "example world"
+  seed = "example"
+  namespace = "example"
   cover_uri = "file://example_cover.png"
   website = "https://dojoengine.org"
   socials.x = "https://x.com/dojostarknet"
           "#,
         )
         .unwrap();
+        // TODO: we may want to store here the namespace and the seed. Check the
+        // implementation to actually add those to the metadata table.
         let world_metadata = project_to_world_metadata(project_metadata.world);
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))

@@ -3,6 +3,7 @@ use std::time::Duration;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 
@@ -12,6 +13,7 @@ use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
 use crate::migration::{Declarable, Deployable, TxnConfig};
+use crate::utils::TransactionExt;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
@@ -19,7 +21,11 @@ async fn test_world_contract_reader() {
     let config = compiler::copy_tmp_config(
         &Utf8PathBuf::from("../../examples/spawn-and-move"),
         &Utf8PathBuf::from("../dojo-core"),
+        Profile::DEV,
     );
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let default_namespace = ws.current_package().unwrap().id.name.to_string();
 
     let manifest_dir = config.manifest_path().parent().unwrap();
     let target_dir = manifest_dir.join("target").join("dev");
@@ -38,6 +44,7 @@ async fn test_world_contract_reader() {
         &manifest_dir.to_path_buf(),
         &target_dir.to_path_buf(),
         dojo_metadata.skip_migration,
+        &default_namespace,
     )
     .await;
 
@@ -49,6 +56,7 @@ pub async fn deploy_world(
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
     skip_migration: Option<Vec<String>>,
+    default_namespace: &str,
 ) -> Felt {
     // Dev profile is used by default for testing:
     let profile_name = "dev";
@@ -59,18 +67,17 @@ pub async fn deploy_world(
     .unwrap();
 
     if let Some(skip_manifests) = skip_migration {
-        manifest.remove_items(skip_manifests);
+        manifest.remove_tags(skip_manifests);
     }
 
-    let overlay_manifest = OverlayManifest::load_from_path(
-        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(OVERLAYS_DIR),
-    )
-    .unwrap();
-
-    manifest.merge(overlay_manifest);
+    let overlay_dir = manifest_dir.join(OVERLAYS_DIR).join(profile_name);
+    if overlay_dir.exists() {
+        let overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &manifest).unwrap();
+        manifest.merge(overlay_manifest);
+    }
 
     let mut world = WorldDiff::compute(manifest.clone(), None);
-    world.update_order().unwrap();
+    world.update_order(default_namespace).unwrap();
 
     let account = sequencer.account(0);
 
@@ -79,10 +86,7 @@ pub async fn deploy_world(
     strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
 
     let base_class_hash =
-        strategy.base.unwrap().declare(&account, &TxnConfig::default()).await.unwrap().class_hash;
-
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
+        strategy.base.unwrap().declare(&account, &TxnConfig::init_wait()).await.unwrap().class_hash;
 
     let world_address = strategy
         .world
@@ -91,7 +95,7 @@ pub async fn deploy_world(
             manifest.clone().world.inner.class_hash,
             vec![base_class_hash],
             &account,
-            &TxnConfig::default(),
+            &TxnConfig::init_wait(),
         )
         .await
         .unwrap()
@@ -99,24 +103,28 @@ pub async fn deploy_world(
 
     let mut declare_output = vec![];
     for model in strategy.models {
-        let res = model.declare(&account, &TxnConfig::default()).await.unwrap();
+        let res = model.declare(&account, &TxnConfig::init_wait()).await.unwrap();
         declare_output.push(res);
     }
 
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
-
     let world = WorldContract::new(world_address, &account);
+
+    world
+        .register_namespace(&cainome::cairo_serde::ByteArray::from_string("dojo_examples").unwrap())
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    // Wondering why the `init_wait` is not enough and causes a nonce error.
+    // May be to a delay to create the block as we are in instant mining.
+    tokio::time::sleep(Duration::from_millis(2000)).await;
 
     let calls = declare_output
         .iter()
         .map(|o| world.register_model_getcall(&o.class_hash.into()))
         .collect::<Vec<_>>();
 
-    let _ = account.execute_v1(calls).send().await.unwrap();
-
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    let _ = account.execute_v1(calls).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
 
     for contract in strategy.contracts {
         let declare_res = contract.declare(&account, &TxnConfig::default()).await.unwrap();
@@ -126,15 +134,12 @@ pub async fn deploy_world(
                 declare_res.class_hash,
                 base_class_hash,
                 &account,
-                &TxnConfig::default(),
+                &TxnConfig::init_wait(),
                 &contract.diff.init_calldata,
             )
             .await
             .unwrap();
     }
-
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
 
     world_address
 }

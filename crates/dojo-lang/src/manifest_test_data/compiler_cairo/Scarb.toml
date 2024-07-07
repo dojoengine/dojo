@@ -18,6 +18,8 @@ build-external-contracts = [  ]
 [tool.dojo.world]
 description = "Cairo compiler features"
 name = "compiler_cairo_features"
+seed = "compiler_cairo_features"
+namespace = "ccf"
 
 [tool.dojo.env]
 rpc_url = "http://localhost:5050/"

@@ -11,6 +11,7 @@ mod test {
     use crypto_bigint::U256;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+    use katana_runner::KatanaRunner;
     use serde_json::Number;
     use starknet::core::types::Felt;
     #[cfg(target_arch = "wasm32")]
@@ -270,9 +271,6 @@ mod test {
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
         use std::time::Duration;
 
-        use dojo_test_utils::sequencer::{
-            get_default_test_starknet_config, SequencerConfig, TestSequencer,
-        };
         use dojo_types::schema::{Member, Struct, Ty};
         use dojo_world::contracts::abi::model::Layout;
         use indexmap::IndexMap;
@@ -300,17 +298,17 @@ mod test {
         let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
         sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-        let sequencer =
-            TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())
-                .await;
+        let sequencer = KatanaRunner::new().expect("Failed to create Katana sequencer");
+
         let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
 
-        let account = sequencer.raw_account();
+        let account = sequencer.account_data(0);
 
         let mut db = Sql::new(pool.clone(), Felt::from_bytes_be(&[0; 32])).await?;
 
         // Register the model of our Message
         db.register_model(
+            "types_test",
             Ty::Struct(Struct {
                 name: "Message".to_string(),
                 children: vec![
@@ -358,7 +356,7 @@ mod test {
                             r#type: "shortstring".to_string(),
                         }),
                         Field::SimpleType(SimpleField {
-                            name: "Message".to_string(),
+                            name: "types_test-Message".to_string(),
                             r#type: "Model".to_string(),
                         }),
                     ],
@@ -399,23 +397,21 @@ mod test {
                 ),
             ]),
             "OffchainMessage",
-            Domain::new("Message", "1", "0x0", Some("1")),
+            Domain::new("types_test-Message", "1", "0x0", Some("1")),
             IndexMap::new(),
         );
 
         typed_data.message.insert(
             "model".to_string(),
-            crate::typed_data::PrimitiveType::String("Message".to_string()),
+            crate::typed_data::PrimitiveType::String("types_test-Message".to_string()),
         );
         typed_data.message.insert(
-            "Message".to_string(),
+            "types_test-Message".to_string(),
             crate::typed_data::PrimitiveType::Object(
                 vec![
                     (
                         "identity".to_string(),
-                        crate::typed_data::PrimitiveType::String(
-                            account.account_address.to_string(),
-                        ),
+                        crate::typed_data::PrimitiveType::String(account.address.to_string()),
                     ),
                     (
                         "message".to_string(),
@@ -427,9 +423,11 @@ mod test {
             ),
         );
 
-        let message_hash = typed_data.encode(account.account_address).unwrap();
+        let message_hash = typed_data.encode(account.address).unwrap();
         let signature =
-            SigningKey::from_secret_scalar(account.private_key).sign(&message_hash).unwrap();
+            SigningKey::from_secret_scalar(account.private_key.clone().unwrap().secret_scalar())
+                .sign(&message_hash)
+                .unwrap();
 
         client
             .command_sender

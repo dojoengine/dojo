@@ -9,8 +9,11 @@ use starknet::signers::LocalWallet;
 use super::setup;
 use crate::{call, utils};
 
-const CONTRACT_NAME: &str = "dojo_examples::actions::actions";
-const ENTRYPOINT: &str = "tile_terrain";
+const CONTRACT_TAG: &str = "dojo_examples-actions";
+const ENTRYPOINT: &str = "get_player_position";
+
+// TODO: we should work on a lazy static init for the runner for all the call tests,
+// as the state will not change, we only read and check the result.
 
 #[tokio::test]
 async fn call_with_bad_address() {
@@ -65,7 +68,7 @@ async fn call_with_bad_entrypoint() {
     assert!(
         call::call(
             world_reader,
-            CONTRACT_NAME.to_string(),
+            CONTRACT_TAG.to_string(),
             "BadEntryPoint".to_string(),
             vec![Felt::ZERO, Felt::ZERO],
             None
@@ -84,9 +87,15 @@ async fn call_with_bad_calldata() {
     let world_reader = WorldContractReader::new(world.address, provider);
 
     assert!(
-        call::call(world_reader, CONTRACT_NAME.to_string(), ENTRYPOINT.to_string(), vec![], None)
-            .await
-            .is_err()
+        call::call(
+            world_reader,
+            CONTRACT_TAG.to_string(),
+            ENTRYPOINT.to_string(),
+            vec![Felt::ZERO],
+            None
+        )
+        .await
+        .is_err()
     );
 }
 
@@ -98,17 +107,11 @@ async fn call_with_contract_name() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
-    assert!(
-        call::call(
-            world_reader,
-            CONTRACT_NAME.to_string(),
-            ENTRYPOINT.to_string(),
-            vec![Felt::ZERO, Felt::ZERO],
-            None,
-        )
-        .await
-        .is_ok()
-    );
+    let r =
+        call::call(world_reader, CONTRACT_TAG.to_string(), ENTRYPOINT.to_string(), vec![], None)
+            .await;
+
+    assert!(r.is_ok());
 }
 
 #[tokio::test]
@@ -121,7 +124,7 @@ async fn call_with_contract_address() {
 
     let contract_address = utils::get_contract_address::<
         SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    >(&world, CONTRACT_NAME.to_string())
+    >(&world, CONTRACT_TAG.to_string())
     .await
     .unwrap();
 
@@ -130,7 +133,7 @@ async fn call_with_contract_address() {
             world_reader,
             format!("{:#x}", contract_address),
             ENTRYPOINT.to_string(),
-            vec![Felt::ZERO, Felt::ZERO],
+            vec![],
             None,
         )
         .await

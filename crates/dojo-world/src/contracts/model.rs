@@ -8,12 +8,13 @@ use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::core::types::Felt;
 use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
-    CairoShortStringToFeltError, NonAsciiNameError, ParseCairoShortStringError,
+    cairo_short_string_to_felt, parse_cairo_short_string, CairoShortStringToFeltError,
+    NonAsciiNameError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
 
 use super::abi::world::Layout;
+use super::naming;
 use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
@@ -46,15 +47,16 @@ pub enum ModelError {
     Packing(#[from] PackingError),
     #[error(transparent)]
     Cainome(#[from] CainomeError),
+    #[error("{0}")]
+    TagError(String),
 }
 
 // TODO: to update to match with new model interface
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
-    // TODO: kept for compatibility but should be removed
-    // because it returns the model name hash and not the model name itself.
-    fn name(&self) -> String;
+    fn namespace(&self) -> &str;
+    fn name(&self) -> &str;
     fn selector(&self) -> Felt;
     fn class_hash(&self) -> Felt;
     fn contract_address(&self) -> Felt;
@@ -65,8 +67,12 @@ pub trait ModelReader<E> {
 }
 
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
-    /// The name of the model
-    name: Felt,
+    /// Namespace of the model
+    namespace: String,
+    /// Name of the model
+    name: String,
+    /// The selector of the model
+    selector: Felt,
     /// The class hash of the model
     class_hash: Felt,
     /// The contract address of the model
@@ -82,13 +88,14 @@ where
     P: Provider + Sync + Send,
 {
     pub async fn new(
+        namespace: &str,
         name: &str,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        let name = get_selector_from_name(name)?;
+        let model_selector = naming::compute_model_selector_from_names(namespace, name);
 
         let (class_hash, contract_address) =
-            world.model(&name).block_id(world.block_id).call().await?;
+            world.model(&model_selector).block_id(world.block_id).call().await?;
 
         // World Cairo contract won't raise an error in case of unknown/unregistered
         // model so raise an error here in case of zero address.
@@ -99,10 +106,12 @@ where
         let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
 
         Ok(Self {
+            namespace: namespace.into(),
+            name: name.into(),
             world_reader: world,
             class_hash: class_hash.into(),
             contract_address: contract_address.into(),
-            name,
+            selector: model_selector,
             model_reader,
         })
     }
@@ -137,12 +146,16 @@ impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
 where
     P: Provider + Sync + Send,
 {
-    fn name(&self) -> String {
-        self.name.to_string()
+    fn namespace(&self) -> &str {
+        &self.namespace
+    }
+
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn selector(&self) -> Felt {
-        self.name
+        self.selector
     }
 
     fn class_hash(&self) -> Felt {

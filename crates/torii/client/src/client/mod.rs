@@ -9,11 +9,10 @@ use std::sync::Arc;
 use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
-use dojo_world::contracts::WorldContractReader;
+use dojo_world::contracts::{naming, WorldContractReader};
 use futures::lock::Mutex;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::types::Felt;
-use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::sync::RwLock as AsyncRwLock;
@@ -175,27 +174,28 @@ impl Client {
     /// If the requested model is not among the synced models, it will attempt to fetch it from
     /// the RPC.
     pub async fn model(&self, keys: &ModelKeysClause) -> Result<Option<Ty>, Error> {
-        let Some(mut schema) = self.metadata.read().model(&keys.model).map(|m| m.schema.clone())
+        let (namespace, model) = keys.model.split_once('-').unwrap();
+        let model_selector = naming::compute_model_selector_from_names(namespace, model);
+        let Some(mut schema) =
+            self.metadata.read().model(&model_selector).map(|m| m.schema.clone())
         else {
             return Ok(None);
         };
 
         if !self.subscribed_models.is_synced(keys) {
-            let model = self.world_reader.model_reader(&keys.model).await?;
+            let model = self.world_reader.model_reader(namespace, model).await?;
             return Ok(Some(model.entity(&keys.keys).await?));
         }
 
-        let Ok(Some(raw_values)) = self.storage.get_model_storage(
-            cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
-            &keys.keys,
-        ) else {
+        let Ok(Some(raw_values)) = self.storage.get_model_storage(model_selector, &keys.keys)
+        else {
             return Ok(Some(schema));
         };
 
         let layout = self
             .metadata
             .read()
-            .model(&keys.model)
+            .model(&model_selector)
             .map(|m| m.layout.clone())
             .expect("qed; layout should exist");
 
@@ -230,7 +230,8 @@ impl Client {
     /// NOTE: This will establish a new subscription stream with the server.
     pub async fn add_models_to_sync(&self, models_keys: Vec<ModelKeysClause>) -> Result<(), Error> {
         for keys in &models_keys {
-            self.initiate_model(&keys.model, keys.keys.clone()).await?;
+            let (namespace, model) = keys.model.split_once('-').unwrap();
+            self.initiate_model(namespace, model, keys.keys.clone()).await?;
         }
 
         self.subscribed_models.add_models(models_keys)?;
@@ -279,11 +280,16 @@ impl Client {
         Ok(stream)
     }
 
-    async fn initiate_model(&self, model: &str, keys: Vec<Felt>) -> Result<(), Error> {
-        let model_reader = self.world_reader.model_reader(model).await?;
+    async fn initiate_model(
+        &self,
+        namespace: &str,
+        model: &str,
+        keys: Vec<Felt>,
+    ) -> Result<(), Error> {
+        let model_reader = self.world_reader.model_reader(namespace, model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(
-            cairo_short_string_to_felt(model).map_err(ParseError::CairoShortStringToFelt)?,
+            naming::compute_model_selector_from_names(namespace, model),
             keys,
             values,
         )?;

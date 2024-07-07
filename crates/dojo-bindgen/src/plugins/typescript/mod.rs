@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
+use dojo_world::contracts::naming;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -264,7 +265,7 @@ type {} = ",
                 }
 
                 // first index is our model struct
-                if token.type_name() == model.name {
+                if token.type_name() == naming::get_name_from_tag(&model.tag) {
                     models_structs.push(token.to_composite().unwrap().clone());
                 }
 
@@ -378,12 +379,10 @@ export function defineContractComponents(world: World) {
         )
     }
 
-    // Formats a contract file path into a pretty contract name
-    // eg. dojo_examples::actions::actions.json -> Actions
-    fn formatted_contract_name(contract_file_name: &str) -> String {
-        let contract_name =
-            contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
-        contract_name.to_string()
+    // Formats a contract tag into a pretty contract name
+    // eg. dojo_examples-actions -> Actions
+    fn formatted_contract_name(tag: &str) -> String {
+        naming::capitalize(&naming::get_name_from_tag(tag))
     }
 
     // Handles a contract definition and its underlying systems
@@ -430,10 +429,10 @@ export function defineContractComponents(world: World) {
         }};
     }}
 ",
-                contract.qualified_path,
+                contract.tag,
                 // capitalize contract name
-                TypescriptPlugin::formatted_contract_name(&contract.qualified_path),
-                TypescriptPlugin::formatted_contract_name(&contract.qualified_path),
+                TypescriptPlugin::formatted_contract_name(&contract.tag),
+                TypescriptPlugin::formatted_contract_name(&contract.tag),
                 systems,
                 contract
                     .systems
@@ -453,8 +452,8 @@ export function defineContractComponents(world: World) {
             .map(|c| {
                 format!(
                     "{}: {}()",
-                    TypescriptPlugin::formatted_contract_name(&c.qualified_path),
-                    TypescriptPlugin::formatted_contract_name(&c.qualified_path)
+                    TypescriptPlugin::formatted_contract_name(&c.tag),
+                    TypescriptPlugin::formatted_contract_name(&c.tag)
                 )
             })
             .collect::<Vec<String>>()

@@ -16,12 +16,12 @@ pub mod system;
 pub struct WorldMetadata {
     pub world_address: Felt,
     pub world_class_hash: Felt,
-    pub models: HashMap<String, ModelMetadata>,
+    pub models: HashMap<Felt, ModelMetadata>,
 }
 
 impl WorldMetadata {
     /// Retrieves the metadata of a model.
-    pub fn model(&self, name: impl AsRef<str>) -> Option<&ModelMetadata> {
-        self.models.get(name.as_ref())
+    pub fn model(&self, model: &Felt) -> Option<&ModelMetadata> {
+        self.models.get(model)
     }
 }

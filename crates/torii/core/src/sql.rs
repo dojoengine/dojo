@@ -6,11 +6,11 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
+use dojo_world::contracts::naming::compute_model_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
-use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -96,6 +96,7 @@ impl Sql {
     #[allow(clippy::too_many_arguments)]
     pub async fn register_model(
         &mut self,
+        namespace: &str,
         model: Ty,
         layout: Layout,
         class_hash: Felt,
@@ -104,16 +105,19 @@ impl Sql {
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
+        let selector = compute_model_selector_from_names(namespace, &model.name());
+
         let insert_models =
-            "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
-             unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
-             UPDATE SET contract_address=EXCLUDED.contract_address, \
+            "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
+             packed_size, unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON \
+             CONFLICT(id) DO UPDATE SET contract_address=EXCLUDED.contract_address, \
              class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
              packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
              executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             // this is temporary until the model hash is precomputed
-            .bind(&format!("{:#x}", &get_selector_from_name(&model.name())?))
+            .bind(&format!("{:#x}", selector))
+            .bind(namespace)
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
             .bind(format!("{contract_address:#x}"))
@@ -126,8 +130,9 @@ impl Sql {
 
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
+            selector,
             &model,
-            vec![model.name()],
+            vec![format!("{}-{}", namespace, model.name())],
             &mut model_idx,
             block_timestamp,
             &mut 0,
@@ -156,14 +161,17 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
+        let namespaced_name = entity.name();
+        let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
+
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        let model_id =
+            format!("{:#x}", compute_model_selector_from_names(model_namespace, model_name));
+
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
-            vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
-            ],
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         );
 
         let keys_str = felts_sql_string(&keys);
@@ -181,7 +189,7 @@ impl Sql {
 
         entity_updated.updated_model = Some(entity.clone());
 
-        let path = vec![entity.name()];
+        let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
             path,
             event_id,
@@ -213,14 +221,17 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
+        let namespaced_name = entity.name();
+        let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
+
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        let model_id =
+            format!("{:#x}", compute_model_selector_from_names(model_namespace, model_name));
+
         self.query_queue.enqueue(
             "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
-            vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
-            ],
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         );
 
         let keys_str = felts_sql_string(&keys);
@@ -238,7 +249,7 @@ impl Sql {
 
         event_message_updated.updated_model = Some(entity.clone());
 
-        let path = vec![entity.name()];
+        let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
             path,
             event_id,
@@ -317,10 +328,12 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn model(&self, model: &str) -> Result<ModelSQLReader> {
-        match ModelSQLReader::new(model, self.pool.clone()).await {
+    pub async fn model(&self, selector: Felt) -> Result<ModelSQLReader> {
+        match ModelSQLReader::new(selector, self.pool.clone()).await {
             Ok(reader) => Ok(reader),
-            Err(e) => Err(anyhow::anyhow!("Failed to get model from db for selector {model}: {e}")),
+            Err(e) => {
+                Err(anyhow::anyhow!("Failed to get model from db for selector {selector:#x}: {e}"))
+            }
         }
     }
 
@@ -423,8 +436,10 @@ impl Sql {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn build_register_queries_recursive(
         &mut self,
+        selector: Felt,
         model: &Ty,
         path: Vec<String>,
         model_idx: &mut i64,
@@ -440,6 +455,7 @@ impl Sql {
         }
 
         self.build_model_query(
+            selector,
             path.clone(),
             model,
             *model_idx,
@@ -459,6 +475,7 @@ impl Sql {
             path_clone.push(pathname.to_string());
 
             self.build_register_queries_recursive(
+                selector,
                 member,
                 path_clone,
                 &mut (*model_idx + 1),
@@ -770,8 +787,10 @@ impl Sql {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn build_model_query(
         &mut self,
+        selector: Felt,
         path: Vec<String>,
         model: &Ty,
         model_idx: i64,
@@ -802,7 +821,7 @@ impl Sql {
                 create_table_query
                     .push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
             } else if let Ty::Enum(e) = &ty {
@@ -821,7 +840,7 @@ impl Sql {
                 create_table_query.push_str(if array_idx > 0 { ", " } else { "NOT NULL, " });
 
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
 
@@ -836,7 +855,7 @@ impl Sql {
             } else if let Ty::ByteArray(_) = &ty {
                 create_table_query.push_str(&format!("external_{name} TEXT, "));
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
             }
@@ -859,10 +878,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(member_idx as i64),
                         Argument::String(name),
@@ -888,10 +904,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),
                         Argument::String(format!("_{}", idx)),
@@ -918,10 +931,7 @@ impl Sql {
                 let arguments = vec![
                     Argument::String(table_id.clone()),
                     // TEMP: this is temporary until the model hash is precomputed
-                    Argument::String(format!(
-                        "{:#x}",
-                        get_selector_from_name(&path[0].clone()).unwrap()
-                    )),
+                    Argument::String(format!("{:#x}", selector)),
                     Argument::Int(model_idx),
                     Argument::Int(0),
                     Argument::String("data".to_string()),
@@ -960,10 +970,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),
                         Argument::String(child.name.clone()),

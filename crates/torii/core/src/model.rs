@@ -10,14 +10,17 @@ use dojo_world::contracts::model::ModelReader;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
-use starknet::core::utils::get_selector_from_name;
 
 use super::error::{self, Error};
 use crate::error::{ParseError, QueryError};
 
 pub struct ModelSQLReader {
+    /// Namespace of the model
+    namespace: String,
     /// The name of the model
     name: String,
+    /// The selector of the model
+    selector: Felt,
     /// The class hash of the model
     class_hash: Felt,
     /// The contract address of the model
@@ -29,8 +32,9 @@ pub struct ModelSQLReader {
 }
 
 impl ModelSQLReader {
-    pub async fn new(name: &str, pool: Pool<Sqlite>) -> Result<Self, Error> {
-        let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
+    pub async fn new(selector: Felt, pool: Pool<Sqlite>) -> Result<Self, Error> {
+        let (namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout): (
+            String,
             String,
             String,
             String,
@@ -38,10 +42,10 @@ impl ModelSQLReader {
             u32,
             String,
         ) = sqlx::query_as(
-            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
-             models WHERE id = ?",
+            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
+             layout FROM models WHERE id = ?",
         )
-        .bind(name)
+        .bind(format!("{:#x}", selector))
         .fetch_one(&pool)
         .await?;
 
@@ -51,20 +55,33 @@ impl ModelSQLReader {
 
         let layout = serde_json::from_str(&layout).map_err(error::ParseError::FromJsonStr)?;
 
-        Ok(Self { name, class_hash, contract_address, pool, packed_size, unpacked_size, layout })
+        Ok(Self {
+            namespace,
+            name,
+            selector,
+            class_hash,
+            contract_address,
+            pool,
+            packed_size,
+            unpacked_size,
+            layout,
+        })
     }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl ModelReader<Error> for ModelSQLReader {
-    fn name(&self) -> String {
-        self.name.to_string()
+    fn namespace(&self) -> &str {
+        &self.namespace
+    }
+
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn selector(&self) -> Felt {
-        // this should never fail
-        get_selector_from_name(&self.name).unwrap()
+        self.selector
     }
 
     fn class_hash(&self) -> Felt {
@@ -76,19 +93,15 @@ impl ModelReader<Error> for ModelSQLReader {
     }
 
     async fn schema(&self) -> Result<Ty, Error> {
-        // this is temporary until the hash for the model name is precomputed
-        let model_selector =
-            get_selector_from_name(&self.name).map_err(error::ParseError::NonAsciiName)?;
-
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
             "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
              model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
         )
-        .bind(format!("{:#x}", model_selector))
+        .bind(format!("{:#x}", self.selector))
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(parse_sql_model_members(&self.name, &model_members))
+        Ok(parse_sql_model_members(&self.namespace, &self.name, &model_members))
     }
 
     async fn packed_size(&self) -> Result<u32, Error> {
@@ -120,7 +133,11 @@ pub struct SqlModelMember {
 // assume that the model members are sorted by model_idx and member_idx
 // `id` is the type id of the model member
 /// A helper function to parse the model members from sql table to `Ty`
-pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]) -> Ty {
+pub fn parse_sql_model_members(
+    namespace: &str,
+    model: &str,
+    model_members_all: &[SqlModelMember],
+) -> Ty {
     fn parse_sql_member(member: &SqlModelMember, model_members_all: &[SqlModelMember]) -> Ty {
         match member.type_enum.as_str() {
             "Primitive" => Ty::Primitive(member.r#type.parse().unwrap()),
@@ -192,10 +209,10 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
     }
 
     Ty::Struct(Struct {
-        name: model.into(),
+        name: format!("{}-{}", namespace, model),
         children: model_members_all
             .iter()
-            .filter(|m| m.id == model)
+            .filter(|m| m.id == format!("{}-{}", namespace, model))
             .map(|m| Member {
                 key: m.key,
                 name: m.name.to_owned(),
@@ -208,7 +225,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
 
 /// Creates a query that fetches all models and their nested data.
 pub fn build_sql_query(
-    model_schemas: &Vec<Ty>,
+    schemas: &Vec<Ty>,
     entities_table: &str,
     entity_relation_column: &str,
     where_clause: Option<&str>,
@@ -227,7 +244,7 @@ pub fn build_sql_query(
                 // struct can be the main entrypoint to our model schema
                 // so we dont format the table name if the path is empty
                 let table_name =
-                    if path.is_empty() { s.name.clone() } else { format!("{}${}", path, name) };
+                    if path.is_empty() { name.to_string() } else { format!("{}${}", path, name) };
 
                 for child in &s.children {
                     parse_ty(
@@ -296,14 +313,14 @@ pub fn build_sql_query(
                     is_typed = true;
                 }
 
-                selections.push(format!("{}.external_{} AS \"{}.{}\"", path, name, path, name));
+                selections.push(format!("[{path}].external_{name} AS \"{path}.{name}\""));
                 if is_typed {
                     tables.push(table_name);
                 }
             }
             _ => {
                 // alias selected columns to avoid conflicts in `JOIN`
-                selections.push(format!("{}.external_{} AS \"{}.{}\"", path, name, path, name));
+                selections.push(format!("[{path}].external_{name} AS \"{path}.{name}\""));
             }
         }
     }
@@ -311,14 +328,13 @@ pub fn build_sql_query(
     let mut global_selections = Vec::new();
     let mut global_tables = Vec::new();
 
-    let mut arrays_queries = HashMap::new();
+    let mut arrays_queries: HashMap<String, (Vec<String>, Vec<String>)> = HashMap::new();
 
-    for ty in model_schemas {
-        let schema = ty.as_struct().expect("schema should be struct");
+    for model in schemas {
         parse_ty(
             "",
-            &schema.name,
-            ty,
+            &model.name(),
+            model,
             &mut global_selections,
             &mut global_tables,
             &mut arrays_queries,
@@ -334,7 +350,7 @@ pub fn build_sql_query(
     let join_clause = global_tables
         .into_iter()
         .map(|table| {
-            format!(" JOIN {table} ON {entities_table}.id = {table}.{entity_relation_column}")
+            format!(" JOIN [{table}] ON {entities_table}.id = [{table}].{entity_relation_column}")
         })
         .collect::<Vec<_>>()
         .join(" ");
@@ -353,12 +369,13 @@ pub fn build_sql_query(
                 .map(|(idx, table)| {
                     if idx == 0 {
                         format!(
-                            " JOIN {table} ON {entities_table}.id = \
-                             {table}.{entity_relation_column}"
+                            " JOIN [{table}] ON {entities_table}.id = \
+                             [{table}].{entity_relation_column}"
                         )
                     } else {
                         format!(
-                            " JOIN {table} ON {table}.full_array_id = {prev_table}.full_array_id",
+                            " JOIN [{table}] ON [{table}].full_array_id = \
+                             [{prev_table}].full_array_id",
                             prev_table = tables[idx - 1]
                         )
                     }
@@ -535,7 +552,7 @@ mod tests {
     fn parse_simple_model_members_to_ty() {
         let model_members = vec![
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "x".into(),
                 r#type: "u256".into(),
                 key: false,
@@ -545,7 +562,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "y".into(),
                 r#type: "u256".into(),
                 key: false,
@@ -555,7 +572,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig".into(),
+                id: "Test-PlayerConfig".into(),
                 name: "name".into(),
                 r#type: "ByteArray".into(),
                 key: false,
@@ -567,7 +584,7 @@ mod tests {
         ];
 
         let expected_position = Ty::Struct(Struct {
-            name: "Position".into(),
+            name: "Test-Position".into(),
             children: vec![
                 dojo_types::schema::Member {
                     name: "x".into(),
@@ -583,7 +600,7 @@ mod tests {
         });
 
         let expected_player_config = Ty::Struct(Struct {
-            name: "PlayerConfig".into(),
+            name: "Test-PlayerConfig".into(),
             children: vec![dojo_types::schema::Member {
                 name: "name".into(),
                 key: false,
@@ -591,15 +608,18 @@ mod tests {
             }],
         });
 
-        assert_eq!(parse_sql_model_members("Position", &model_members), expected_position);
-        assert_eq!(parse_sql_model_members("PlayerConfig", &model_members), expected_player_config);
+        assert_eq!(parse_sql_model_members("Test", "Position", &model_members), expected_position);
+        assert_eq!(
+            parse_sql_model_members("Test", "PlayerConfig", &model_members),
+            expected_player_config
+        );
     }
 
     #[test]
     fn parse_complex_model_members_to_ty() {
         let model_members = vec![
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "name".into(),
                 r#type: "felt252".into(),
                 key: false,
@@ -609,7 +629,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "age".into(),
                 r#type: "u8".into(),
                 key: false,
@@ -619,7 +639,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position".into(),
+                id: "Test-Position".into(),
                 name: "vec".into(),
                 r#type: "Vec2".into(),
                 key: false,
@@ -629,7 +649,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position$vec".into(),
+                id: "Test-Position$vec".into(),
                 name: "x".into(),
                 r#type: "u256".into(),
                 key: false,
@@ -639,7 +659,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "Position$vec".into(),
+                id: "Test-Position$vec".into(),
                 name: "y".into(),
                 r#type: "u256".into(),
                 key: false,
@@ -649,7 +669,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig".into(),
+                id: "Test-PlayerConfig".into(),
                 name: "favorite_item".into(),
                 r#type: "Option<u32>".into(),
                 key: false,
@@ -659,7 +679,7 @@ mod tests {
                 enum_options: Some("None,Some".into()),
             },
             SqlModelMember {
-                id: "PlayerConfig".into(),
+                id: "Test-PlayerConfig".into(),
                 name: "items".into(),
                 r#type: "Array<PlayerItem>".into(),
                 key: false,
@@ -669,7 +689,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$items".into(),
+                id: "Test-PlayerConfig$items".into(),
                 name: "data".into(),
                 r#type: "PlayerItem".into(),
                 key: false,
@@ -679,7 +699,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$items$data".into(),
+                id: "Test-PlayerConfig$items$data".into(),
                 name: "item_id".into(),
                 r#type: "u32".into(),
                 key: false,
@@ -689,7 +709,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$items$data".into(),
+                id: "Test-PlayerConfig$items$data".into(),
                 name: "quantity".into(),
                 r#type: "u32".into(),
                 key: false,
@@ -699,7 +719,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$favorite_item".into(),
+                id: "Test-PlayerConfig$favorite_item".into(),
                 name: "Some".into(),
                 r#type: "u32".into(),
                 key: false,
@@ -709,7 +729,7 @@ mod tests {
                 enum_options: None,
             },
             SqlModelMember {
-                id: "PlayerConfig$favorite_item".into(),
+                id: "Test-PlayerConfig$favorite_item".into(),
                 name: "option".into(),
                 r#type: "Option<u32>".into(),
                 key: false,
@@ -721,7 +741,7 @@ mod tests {
         ];
 
         let expected_position = Ty::Struct(Struct {
-            name: "Position".into(),
+            name: "Test-Position".into(),
             children: vec![
                 dojo_types::schema::Member {
                     name: "name".into(),
@@ -756,7 +776,7 @@ mod tests {
         });
 
         let expected_player_config = Ty::Struct(Struct {
-            name: "PlayerConfig".into(),
+            name: "Test-PlayerConfig".into(),
             children: vec![
                 dojo_types::schema::Member {
                     name: "favorite_item".into(),
@@ -795,14 +815,17 @@ mod tests {
             ],
         });
 
-        assert_eq!(parse_sql_model_members("Position", &model_members), expected_position);
-        assert_eq!(parse_sql_model_members("PlayerConfig", &model_members), expected_player_config);
+        assert_eq!(parse_sql_model_members("Test", "Position", &model_members), expected_position);
+        assert_eq!(
+            parse_sql_model_members("Test", "PlayerConfig", &model_members),
+            expected_player_config
+        );
     }
 
     #[test]
     fn parse_model_members_with_enum_to_ty() {
         let model_members = vec![SqlModelMember {
-            id: "Moves".into(),
+            id: "Test-Moves".into(),
             name: "direction".into(),
             r#type: "Direction".into(),
             key: false,
@@ -813,7 +836,7 @@ mod tests {
         }];
 
         let expected_ty = Ty::Struct(Struct {
-            name: "Moves".into(),
+            name: "Test-Moves".into(),
             children: vec![dojo_types::schema::Member {
                 name: "direction".into(),
                 key: false,
@@ -830,13 +853,13 @@ mod tests {
             }],
         });
 
-        assert_eq!(parse_sql_model_members("Moves", &model_members), expected_ty);
+        assert_eq!(parse_sql_model_members("Test", "Moves", &model_members), expected_ty);
     }
 
     #[test]
     fn struct_ty_to_query() {
         let position = Ty::Struct(Struct {
-            name: "Position".into(),
+            name: "Test-Position".into(),
             children: vec![
                 dojo_types::schema::Member {
                     name: "player".into(),
@@ -898,7 +921,7 @@ mod tests {
         });
 
         let player_config = Ty::Struct(Struct {
-            name: "PlayerConfig".into(),
+            name: "Test-PlayerConfig".into(),
             children: vec![
                 dojo_types::schema::Member {
                     name: "favorite_item".into(),
@@ -942,14 +965,16 @@ mod tests {
                 .unwrap();
 
         let expected_query =
-            "SELECT entities.id, entities.keys, Position.external_player AS \"Position.player\", \
-             Position$vec.external_x AS \"Position$vec.x\", Position$vec.external_y AS \
-             \"Position$vec.y\", PlayerConfig$favorite_item.external_Some AS \
-             \"PlayerConfig$favorite_item.Some\", PlayerConfig.external_favorite_item AS \
-             \"PlayerConfig.favorite_item\" FROM entities JOIN Position$vec ON entities.id = \
-             Position$vec.entity_id  JOIN Position ON entities.id = Position.entity_id  JOIN \
-             PlayerConfig$favorite_item ON entities.id = PlayerConfig$favorite_item.entity_id  \
-             JOIN PlayerConfig ON entities.id = PlayerConfig.entity_id";
+            "SELECT entities.id, entities.keys, [Test-Position].external_player AS \
+             \"Test-Position.player\", [Test-Position$vec].external_x AS \"Test-Position$vec.x\", \
+             [Test-Position$vec].external_y AS \"Test-Position$vec.y\", \
+             [Test-PlayerConfig$favorite_item].external_Some AS \
+             \"Test-PlayerConfig$favorite_item.Some\", [Test-PlayerConfig].external_favorite_item \
+             AS \"Test-PlayerConfig.favorite_item\" FROM entities JOIN [Test-Position$vec] ON \
+             entities.id = [Test-Position$vec].entity_id  JOIN [Test-Position] ON entities.id = \
+             [Test-Position].entity_id  JOIN [Test-PlayerConfig$favorite_item] ON entities.id = \
+             [Test-PlayerConfig$favorite_item].entity_id  JOIN [Test-PlayerConfig] ON entities.id \
+             = [Test-PlayerConfig].entity_id";
         // todo: completely tests arrays
         assert_eq!(query.0, expected_query);
     }

@@ -30,6 +30,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 dojo-test-utils.workspace = true
+katana-runner.workspace = true
 tempfile.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

@@ -3,6 +3,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
+use anyhow::Result;
 use futures::FutureExt;
 use starknet::accounts::{
     AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,

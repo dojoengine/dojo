@@ -45,4 +45,6 @@ pub enum QueryError {
     ModelNotFound(String),
     #[error("exceeds sqlite `JOIN` limit (64)")]
     SqliteJoinLimit,
+    #[error("invalid namespaced model: {0}")]
+    InvalidNamespacedModel(String),
 }

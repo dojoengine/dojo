@@ -3,9 +3,10 @@ mod utils;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::metadata::{dojo_metadata_from_workspace, get_default_namespace_from_ws};
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use starknet::accounts::Account;
@@ -17,7 +18,7 @@ async fn reregister_models() {
     let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
     let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
 
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
@@ -27,9 +28,15 @@ async fn reregister_models() {
     let target_path =
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
 
-    let migration =
-        prepare_migration(source_project_dir.clone(), target_path, dojo_metadata.skip_migration)
-            .unwrap();
+    let default_namespace = get_default_namespace_from_ws(&ws);
+
+    let migration = prepare_migration(
+        source_project_dir.clone(),
+        target_path,
+        dojo_metadata.skip_migration,
+        &default_namespace,
+    )
+    .unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
@@ -44,7 +51,7 @@ async fn reregister_models() {
     let rpc_url = &sequencer.url().to_string();
 
     let moves_model =
-        migration.models.iter().find(|m| m.diff.name == "dojo_examples::models::moves").unwrap();
+        migration.models.iter().find(|m| m.diff.tag == "dojo_examples-Moves").unwrap();
     let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local_class_hash);
     let args_vec = [
         "register",

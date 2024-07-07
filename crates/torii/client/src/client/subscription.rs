@@ -5,15 +5,15 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use dojo_types::WorldMetadata;
+use dojo_world::contracts::naming;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::{Mutex, RwLock};
 use starknet::core::types::{Felt, StateDiff, StateUpdate};
-use starknet::core::utils::cairo_short_string_to_felt;
 use torii_grpc::client::ModelDiffsStreaming;
 use torii_grpc::types::ModelKeysClause;
 
-use crate::client::error::{Error, ParseError};
+use crate::client::error::Error;
 use crate::client::storage::ModelStorage;
 use crate::utils::compute_all_storage_addresses;
 
@@ -60,19 +60,20 @@ impl SubscribedModels {
             return Ok(());
         }
 
+        let (namespace, model) =
+            keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
+        let selector = naming::compute_model_selector_from_names(namespace, model);
+
         let model_packed_size = self
             .metadata
             .read()
             .models
-            .get(&keys.model)
+            .get(&selector)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(keys.model.clone()))?;
+            .ok_or(Error::UnknownModel(selector))?;
 
-        let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
-            &keys.keys,
-            model_packed_size,
-        );
+        let storage_addresses =
+            compute_all_storage_addresses(selector, &keys.keys, model_packed_size);
 
         let storage_lock = &mut self.subscribed_storage_addresses.write();
         storage_addresses.into_iter().for_each(|address| {
@@ -87,19 +88,20 @@ impl SubscribedModels {
             return Ok(());
         }
 
+        let (namespace, model) =
+            keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
+        let selector = naming::compute_model_selector_from_names(namespace, model);
+
         let model_packed_size = self
             .metadata
             .read()
             .models
-            .get(&keys.model)
+            .get(&selector)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(keys.model.clone()))?;
+            .ok_or(Error::UnknownModel(selector))?;
 
-        let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
-            &keys.keys,
-            model_packed_size,
-        );
+        let storage_addresses =
+            compute_all_storage_addresses(selector, &keys.keys, model_packed_size);
 
         let storage_lock = &mut self.subscribed_storage_addresses.write();
         storage_addresses.iter().for_each(|address| {
@@ -243,8 +245,8 @@ mod tests {
 
     use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
+    use dojo_world::contracts::naming::compute_model_selector_from_names;
     use parking_lot::RwLock;
-    use starknet::core::utils::cairo_short_string_to_felt;
     use starknet::macros::felt;
     use torii_grpc::types::ModelKeysClause;
 
@@ -252,8 +254,9 @@ mod tests {
 
     fn create_dummy_metadata() -> WorldMetadata {
         let components = HashMap::from([(
-            "Position".into(),
+            compute_model_selector_from_names("Test", "Position"),
             dojo_types::schema::ModelMetadata {
+                namespace: "Test".into(),
                 name: "Position".into(),
                 class_hash: felt!("1"),
                 contract_address: felt!("2"),
@@ -269,12 +272,12 @@ mod tests {
 
     #[test]
     fn add_and_remove_subscribed_model() {
-        let model_name = String::from("Position");
+        let model_name = String::from("Test-Position");
         let keys = vec![felt!("0x12345")];
         let packed_size: u32 = 1;
 
         let mut expected_storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&model_name).unwrap(),
+            compute_model_selector_from_names("Test", "Position"),
             &keys,
             packed_size,
         )

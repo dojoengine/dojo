@@ -11,7 +11,8 @@ pub type DeclareOutput = DeclareTransactionResult;
 /// Represents differences between a local and remote contract.
 #[derive(Debug, Default, Clone)]
 pub struct ContractDiff {
-    pub name: String,
+    // The tag is used to identify the corresponding artifact produced by the compiler.
+    pub tag: String,
     pub local_class_hash: Felt,
     pub original_class_hash: Felt,
     pub base_class_hash: Felt,
@@ -31,7 +32,7 @@ impl StateDiff for ContractDiff {
 
 impl Display for ContractDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}:", self.name)?;
+        writeln!(f, "{}:", self.tag)?;
         writeln!(f, "   Local Class Hash: {:#x}", self.local_class_hash)?;
         writeln!(f, "   Original Class Hash: {:#x}", self.original_class_hash)?;
         writeln!(f, "   Base Class Hash: {:#x}", self.base_class_hash)?;

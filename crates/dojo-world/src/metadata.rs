@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use scarb::core::{ManifestMetadata, Workspace};
@@ -10,7 +10,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
 
-use crate::manifest::{BaseManifest, WORLD_CONTRACT_NAME};
+use crate::contracts::naming;
+use crate::manifest::{BaseManifest, CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 
 #[cfg(test)]
 #[path = "metadata_test.rs"]
@@ -23,17 +24,15 @@ pub const IPFS_PASSWORD: &str = "12290b883db9138a8ae3363b6739d220";
 // copy constants from dojo-lang to avoid circular dependency
 pub const MANIFESTS_DIR: &str = "manifests";
 pub const ABIS_DIR: &str = "abis";
-pub const SOURCES_DIR: &str = "src";
 pub const BASE_DIR: &str = "base";
 
-fn build_artifact_from_name(
-    source_dir: &Utf8PathBuf,
+fn build_artifact_from_filename(
     abi_dir: &Utf8PathBuf,
-    element_name: &str,
+    source_dir: &Utf8PathBuf,
+    filename: &str,
 ) -> ArtifactMetadata {
-    let sanitized_name = element_name.replace("::", "_");
-    let abi_file = abi_dir.join(format!("{sanitized_name}.json"));
-    let src_file = source_dir.join(format!("{sanitized_name}.cairo"));
+    let abi_file = abi_dir.join(format!("{filename}.json"));
+    let src_file = source_dir.join(format!("{filename}.cairo"));
 
     ArtifactMetadata {
         abi: if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None },
@@ -45,6 +44,21 @@ fn build_artifact_from_name(
     }
 }
 
+/// Get the default namespace from the workspace.
+///
+/// # Arguments
+///
+/// * `ws`: the workspace.
+///
+/// # Returns
+///
+/// A [`String`] object containing the namespace.
+pub fn get_default_namespace_from_ws(ws: &Workspace<'_>) -> String {
+    let metadata = dojo_metadata_from_workspace(ws)
+        .expect("Namespace key is already checked by the parsing of the Scarb.toml file.");
+    metadata.world.namespace
+}
+
 /// Build world metadata with data read from the project configuration.
 ///
 /// # Arguments
@@ -54,27 +68,17 @@ fn build_artifact_from_name(
 /// # Returns
 ///
 /// A [`WorldMetadata`] object initialized with project metadata.
-pub fn project_to_world_metadata(project_metadata: Option<ProjectWorldMetadata>) -> WorldMetadata {
-    if let Some(m) = project_metadata {
-        WorldMetadata {
-            name: m.name,
-            description: m.description,
-            cover_uri: m.cover_uri,
-            icon_uri: m.icon_uri,
-            website: m.website,
-            socials: m.socials,
-            ..Default::default()
-        }
-    } else {
-        WorldMetadata {
-            name: None,
-            description: None,
-            cover_uri: None,
-            icon_uri: None,
-            website: None,
-            socials: None,
-            ..Default::default()
-        }
+pub fn project_to_world_metadata(m: ProjectWorldMetadata) -> WorldMetadata {
+    WorldMetadata {
+        name: m.name,
+        description: m.description,
+        cover_uri: m.cover_uri,
+        icon_uri: m.icon_uri,
+        website: m.website,
+        socials: m.socials,
+        seed: m.seed,
+        namespace: m.namespace,
+        ..Default::default()
     }
 }
 
@@ -85,21 +89,24 @@ pub fn project_to_world_metadata(project_metadata: Option<ProjectWorldMetadata>)
 ///
 /// # Returns
 /// A [`DojoMetadata`] object containing all Dojo metadata.
-pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> {
+pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> {
     let profile = ws.config().profile();
 
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
     let manifest_dir = manifest_dir.join(MANIFESTS_DIR).join(profile.as_str());
-    let target_dir = ws.target_dir().path_existent().unwrap();
-    let sources_dir = target_dir.join(profile.as_str()).join(SOURCES_DIR);
-    let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
+    let abi_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
+    let source_dir = ws.target_dir().path_existent().unwrap();
+    let source_dir = source_dir.join(profile.as_str());
 
     let project_metadata = if let Ok(current_package) = ws.current_package() {
-        current_package.manifest.metadata.dojo()
+        current_package.manifest.metadata.dojo()?
     } else {
         // On workspaces, dojo metadata are not accessible because if no current package is defined
         // (being the only package or using --package).
-        return None;
+        return Err(anyhow!(
+            "No current package with dojo metadata found, this subcommand is not yet support for \
+             workspaces."
+        ));
     };
 
     let mut dojo_metadata = DojoMetadata {
@@ -108,7 +115,11 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
         ..Default::default()
     };
 
-    let world_artifact = build_artifact_from_name(&sources_dir, &abis_dir, WORLD_CONTRACT_NAME);
+    let world_artifact = build_artifact_from_filename(
+        &abi_dir,
+        &source_dir,
+        &naming::get_filename_from_tag(WORLD_CONTRACT_TAG),
+    );
 
     // inialize Dojo world metadata with world metadata coming from project configuration
     dojo_metadata.world = project_to_world_metadata(project_metadata.world);
@@ -118,30 +129,34 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
     if manifest_dir.join(BASE_DIR).exists() {
         if let Ok(manifest) = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)) {
             for model in manifest.models {
-                let name = model.name.to_string();
+                let tag = model.inner.tag.clone();
+                let abi_model_dir = abi_dir.join(MODELS_DIR);
+                let source_model_dir = source_dir.join(MODELS_DIR);
                 dojo_metadata.resources_artifacts.insert(
-                    name.clone(),
+                    tag.clone(),
                     ResourceMetadata {
-                        name: name.clone(),
-                        artifacts: build_artifact_from_name(
-                            &sources_dir,
-                            &abis_dir.join("models"),
-                            &name,
+                        name: tag.clone(),
+                        artifacts: build_artifact_from_filename(
+                            &abi_model_dir,
+                            &source_model_dir,
+                            &naming::get_filename_from_tag(&tag),
                         ),
                     },
                 );
             }
 
             for contract in manifest.contracts {
-                let name = contract.name.to_string();
+                let tag = contract.inner.tag.clone();
+                let abi_contract_dir = abi_dir.join(CONTRACTS_DIR);
+                let source_contract_dir = source_dir.join(CONTRACTS_DIR);
                 dojo_metadata.resources_artifacts.insert(
-                    name.clone(),
+                    tag.clone(),
                     ResourceMetadata {
-                        name: name.clone(),
-                        artifacts: build_artifact_from_name(
-                            &sources_dir,
-                            &abis_dir.join("contracts"),
-                            &name,
+                        name: tag.clone(),
+                        artifacts: build_artifact_from_filename(
+                            &abi_contract_dir,
+                            &source_contract_dir,
+                            &naming::get_filename_from_tag(&tag),
                         ),
                     },
                 );
@@ -149,13 +164,13 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<DojoMetadata> 
         }
     }
 
-    Some(dojo_metadata)
+    Ok(dojo_metadata)
 }
 
 /// Metadata coming from project configuration (Scarb.toml)
 #[derive(Default, Deserialize, Debug, Clone)]
 pub struct ProjectMetadata {
-    pub world: Option<ProjectWorldMetadata>,
+    pub world: ProjectWorldMetadata,
     pub env: Option<Environment>,
     pub skip_migration: Option<Vec<String>>,
 }
@@ -233,6 +248,8 @@ impl Uri {
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectWorldMetadata {
     pub name: Option<String>,
+    pub seed: String,
+    pub namespace: String,
     pub description: Option<String>,
     pub cover_uri: Option<Uri>,
     pub icon_uri: Option<Uri>,
@@ -244,6 +261,8 @@ pub struct ProjectWorldMetadata {
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct WorldMetadata {
     pub name: Option<String>,
+    pub seed: String,
+    pub namespace: String,
     pub description: Option<String>,
     pub cover_uri: Option<Uri>,
     pub icon_uri: Option<Uri>,
@@ -410,16 +429,23 @@ impl DojoMetadata {
 }
 
 trait MetadataExt {
-    fn dojo(&self) -> ProjectMetadata;
+    fn dojo(&self) -> Result<ProjectMetadata>;
 }
 
 impl MetadataExt for ManifestMetadata {
-    fn dojo(&self) -> ProjectMetadata {
-        self.tool_metadata
+    fn dojo(&self) -> Result<ProjectMetadata> {
+        let metadata = self
+            .tool_metadata
             .as_ref()
             .and_then(|e| e.get("dojo"))
-            .cloned()
-            .map(|v| v.try_into::<ProjectMetadata>().unwrap_or_default())
-            .unwrap_or_default()
+            // TODO: see if we can make error more descriptive
+            .ok_or_else(|| anyhow!("Some of the fields in [tool.dojo] are required."))?
+            .clone();
+
+        let project_metadata: ProjectMetadata = metadata
+            .try_into()
+            .with_context(|| "Project metadata (i.e. [tool.dojo]) is not properly configured.")?;
+
+        Ok(project_metadata)
     }
 }

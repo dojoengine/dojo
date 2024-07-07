@@ -1,8 +1,7 @@
 use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
 use dojo_world::manifest::{
-    AbstractManifestError, BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR,
-    OVERLAYS_DIR,
+    AbstractManifestError, BaseManifest, DeploymentManifest, OverlayManifest,
 };
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
@@ -12,9 +11,10 @@ use super::ui::MigrationUi;
 
 /// Loads:
 ///     - `BaseManifest` from filesystem
-///     - `DeployedManifest` from onchain dataa if `world_address` is `Some`
+///     - `DeployedManifest` from onchain data if `world_address` is `Some`
 pub(super) async fn load_world_manifests<A>(
-    profile_dir: &Utf8PathBuf,
+    manifest_dir: &Utf8PathBuf,
+    overlay_dir: &Utf8PathBuf,
     account: A,
     world_address: Option<Felt>,
     ui: &Ui,
@@ -26,16 +26,15 @@ where
 {
     ui.print_step(1, "🌎", "Building World state...");
 
-    let mut local_manifest = BaseManifest::load_from_path(&profile_dir.join(BASE_DIR))
+    let mut local_manifest = BaseManifest::load_from_path(manifest_dir)
         .map_err(|e| anyhow!("Fail to load local manifest file: {e}."))?;
 
     if let Some(skip_manifests) = skip_migration {
-        local_manifest.remove_items(skip_manifests);
+        local_manifest.remove_tags(skip_manifests);
     }
 
-    let overlay_path = profile_dir.join(OVERLAYS_DIR);
-    if overlay_path.exists() {
-        let overlay_manifest = OverlayManifest::load_from_path(&profile_dir.join(OVERLAYS_DIR))
+    if overlay_dir.exists() {
+        let overlay_manifest = OverlayManifest::load_from_path(overlay_dir, &local_manifest)
             .map_err(|e| anyhow!("Fail to load overlay manifest file: {e}."))?;
 
         // merge user defined changes to base manifest

@@ -3,11 +3,8 @@
 //! Manually expand to ensure that dojo-core
 //! does not depend on dojo plugin to be built.
 //!
-use dojo::world::IWorldDispatcherTrait;
-
+use dojo::world::{IWorldDispatcherTrait};
 use dojo::model::Model;
-
-const RESOURCE_METADATA_SELECTOR: felt252 = selector!("ResourceMetadata");
 
 fn initial_address() -> starknet::ContractAddress {
     starknet::contract_address_const::<0>()
@@ -19,7 +16,7 @@ fn initial_class_hash() -> starknet::ClassHash {
     >()
 }
 
-#[derive(Drop, Serde, PartialEq, Clone)]
+#[derive(Drop, Serde, PartialEq, Clone, Debug)]
 struct ResourceMetadata {
     // #[key]
     resource_id: felt252,
@@ -32,7 +29,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
         keys: Span<felt252>,
         layout: dojo::database::introspect::Layout
     ) -> ResourceMetadata {
-        let values = world.entity(RESOURCE_METADATA_SELECTOR, keys, layout);
+        let values = world.entity(Self::selector(), keys, layout);
         let mut serialized = core::array::ArrayTrait::new();
         core::array::serialize_array_helper(keys, ref serialized);
         core::array::serialize_array_helper(values, ref serialized);
@@ -60,12 +57,26 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        RESOURCE_METADATA_SELECTOR
+        poseidon::poseidon_hash_span(
+            array![Self::namespace_selector(), dojo::utils::hash(@Self::name())].span()
+        )
     }
 
     #[inline(always)]
     fn instance_selector(self: @ResourceMetadata) -> felt252 {
         Self::selector()
+    }
+
+    fn namespace() -> ByteArray {
+        "__DOJO__"
+    }
+
+    fn namespace_selector() -> felt252 {
+        dojo::utils::hash(@Self::namespace())
+    }
+
+    fn tag() -> ByteArray {
+        "__DOJO__:ResourceMetadata"
     }
 
     #[inline(always)]
@@ -145,7 +156,6 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
 mod resource_metadata {
     use super::ResourceMetadata;
     use super::ResourceMetadataModel;
-    use super::RESOURCE_METADATA_SELECTOR;
 
     #[storage]
     struct Storage {}
@@ -161,6 +171,10 @@ mod resource_metadata {
 
     fn version(self: @ContractState) -> u8 {
         ResourceMetadataModel::version()
+    }
+
+    fn namespace(self: @ContractState) -> ByteArray {
+        ResourceMetadataModel::namespace()
     }
 
     #[external(v0)]

@@ -1,4 +1,5 @@
 use dojo_world::contracts::model::ModelError;
+use starknet::core::types::Felt;
 use starknet::core::utils::{CairoShortStringToFeltError, ParseCairoShortStringError};
 use torii_grpc::types::schema::SchemaError;
 
@@ -6,8 +7,10 @@ use torii_grpc::types::schema::SchemaError;
 pub enum Error {
     #[error("Subscription service uninitialized")]
     SubscriptionUninitialized,
+    #[error("Invalid model name: {0}. Expected format is \"namespace-model\"")]
+    InvalidModelName(String),
     #[error("Unknown model: {0}")]
-    UnknownModel(String),
+    UnknownModel(Felt),
     #[error("Parsing error: {0}")]
     Parse(#[from] ParseError),
     #[error(transparent)]

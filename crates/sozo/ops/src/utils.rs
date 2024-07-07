@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use bigdecimal::BigDecimal;
-use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::contracts::naming::get_name_from_tag;
+use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::migration::strategy::generate_salt;
 use dojo_world::utils::{execution_status_from_receipt, TransactionWaiter};
 use scarb_ui::Ui;
@@ -15,21 +16,21 @@ use starknet::providers::Provider;
 /// # Arguments
 ///
 /// * `world` - The world's contract connector.
-/// * `name_or_address` - A string with a contract name or a hexadecimal address.
+/// * `tag_or_address` - A string with a contract tag or a hexadecimal address.
 ///
 /// # Returns
 ///
 /// A [`Felt`] with the address of the contract on success.
 pub async fn get_contract_address<A: ConnectedAccount + Sync>(
     world: &WorldContract<A>,
-    name_or_address: String,
+    tag_or_address: String,
 ) -> Result<Felt> {
-    if name_or_address.starts_with("0x") {
-        Felt::from_hex(&name_or_address).map_err(anyhow::Error::from)
+    if tag_or_address.starts_with("0x") {
+        Felt::from_hex(&tag_or_address).map_err(anyhow::Error::from)
     } else {
         let contract_class_hash = world.base().call().await?;
         Ok(starknet::core::utils::get_contract_address(
-            generate_salt(&name_or_address),
+            generate_salt(&get_name_from_tag(&tag_or_address)),
             contract_class_hash.into(),
             &[],
             world.address,
@@ -44,21 +45,21 @@ pub async fn get_contract_address<A: ConnectedAccount + Sync>(
 /// # Arguments
 ///
 /// * `world_reader` - The world contract reader.
-/// * `name_or_address` - A string with a contract name or a hexadecimal address.
+/// * `tag_or_address` - A string with a contract tag or a hexadecimal address.
 ///
 /// # Returns
 ///
 /// A [`Felt`] with the address of the contract on success.
 pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
     world_reader: &WorldContractReader<P>,
-    name_or_address: String,
+    tag_or_address: String,
 ) -> Result<Felt> {
-    if name_or_address.starts_with("0x") {
-        Felt::from_hex(&name_or_address).map_err(anyhow::Error::from)
+    if tag_or_address.starts_with("0x") {
+        Felt::from_hex(&tag_or_address).map_err(anyhow::Error::from)
     } else {
         let contract_class_hash = world_reader.base().call().await?;
         Ok(starknet::core::utils::get_contract_address(
-            generate_salt(&name_or_address),
+            generate_salt(&get_name_from_tag(&tag_or_address)),
             contract_class_hash.into(),
             &[],
             world_reader.address,

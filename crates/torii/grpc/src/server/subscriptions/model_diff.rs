@@ -27,7 +27,7 @@ use crate::types::ModelKeysClause;
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::model_diff";
 
 pub struct ModelMetadata {
-    pub name: Felt,
+    pub selector: Felt,
     pub packed_size: usize,
 }
 
@@ -67,7 +67,7 @@ impl StateDiffManager {
 
                 let base = poseidon_hash_many(&[
                     short_string!("dojo_storage"),
-                    req.model.name,
+                    req.model.selector,
                     poseidon_hash_many(&keys.keys),
                 ]);
 

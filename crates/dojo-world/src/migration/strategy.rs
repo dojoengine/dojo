@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
@@ -12,6 +12,8 @@ use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
+use crate::contracts::naming;
+use crate::manifest::{CONTRACTS_DIR, MODELS_DIR};
 
 #[derive(Debug, Clone)]
 pub enum MigrationMetadata {
@@ -75,7 +77,7 @@ impl MigrationStrategy {
                     match dependency_contract {
                         MigrationMetadata::Contract(c) => {
                             let contract_address = get_contract_address(
-                                generate_salt(&c.name),
+                                generate_salt(&naming::get_name_from_tag(&c.tag)),
                                 c.base_class_hash,
                                 &[],
                                 world_address,
@@ -107,26 +109,11 @@ pub fn prepare_for_migration(
     diff: WorldDiff,
 ) -> Result<MigrationStrategy> {
     let mut metadata = HashMap::new();
-    let entries = fs::read_dir(target_dir).with_context(|| {
-        format!(
-            "Failed trying to read target directory ({target_dir})\nNOTE: build files are profile \
-             specified so make sure to run build command with correct profile. For e.g. `sozo -P \
-             my_profile build`"
-        )
-    })?;
-
     let mut artifact_paths = HashMap::new();
-    for entry in entries.flatten() {
-        let file_name = entry.file_name();
-        let file_name_str = file_name.to_string_lossy();
-        if file_name_str == "manifest.json" || !file_name_str.ends_with(".json") {
-            continue;
-        }
 
-        let name = file_name_str.trim_end_matches(".json").to_string();
-
-        artifact_paths.insert(name, entry.path());
-    }
+    read_artifact_paths(target_dir, &mut artifact_paths)?;
+    read_artifact_paths(&target_dir.join(MODELS_DIR), &mut artifact_paths)?;
+    read_artifact_paths(&target_dir.join(CONTRACTS_DIR), &mut artifact_paths)?;
 
     // We don't need to care if a contract has already been declared or not, because
     // the migration strategy will take care of that.
@@ -155,16 +142,6 @@ pub fn prepare_for_migration(
             Felt::ZERO,
         );
 
-        if let Some(world_address) = world_address {
-            if world_address != generated_world_address {
-                println!("generated_world_address: {:?}", generated_world_address);
-                bail!(
-                    "Calculated world address doesn't match provided world address.\nIf you are \
-                     deploying with custom seed make sure `world_address` is correctly configured \
-                     (or not set) `Scarb.toml`"
-                )
-            }
-        }
         world.contract_address = generated_world_address;
     }
 
@@ -199,7 +176,8 @@ fn evaluate_class_to_migrate(
             Ok(None)
         }
         _ => {
-            let path = find_artifact_path(class.name.as_str(), artifact_paths)?;
+            let path =
+                find_artifact_path(&naming::get_filename_from_tag(&class.tag), artifact_paths)?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
@@ -214,17 +192,18 @@ fn evaluate_contracts_to_migrate(
     let mut comps_to_migrate = vec![];
 
     for c in contracts {
-        metadata.insert(c.name.clone(), MigrationMetadata::Contract(c.clone()));
+        metadata.insert(c.tag.clone(), MigrationMetadata::Contract(c.clone()));
         match c.remote_class_hash {
             Some(remote) if remote == c.local_class_hash && !world_contract_will_migrate => {
                 continue;
             }
             _ => {
-                let path = find_artifact_path(c.name.as_str(), artifact_paths)?;
+                let path =
+                    find_artifact_path(&naming::get_filename_from_tag(&c.tag), artifact_paths)?;
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
-                    salt: generate_salt(&c.name),
+                    salt: generate_salt(&naming::get_name_from_tag(&c.tag)),
                     ..Default::default()
                 });
             }
@@ -243,7 +222,8 @@ fn evaluate_contract_to_migrate(
         || contract.remote_class_hash.is_none()
         || matches!(contract.remote_class_hash, Some(remote_hash) if remote_hash != contract.local_class_hash)
     {
-        let path = find_artifact_path(&contract.name, artifact_paths)?;
+        let path =
+            find_artifact_path(&naming::get_filename_from_tag(&contract.tag), artifact_paths)?;
 
         Ok(Some(ContractMigration {
             diff: contract.clone(),
@@ -256,12 +236,12 @@ fn evaluate_contract_to_migrate(
 }
 
 fn find_artifact_path<'a>(
-    contract_name: &str,
+    artifact_name: &str,
     artifact_paths: &'a HashMap<String, PathBuf>,
 ) -> Result<&'a PathBuf> {
     artifact_paths
-        .get(contract_name)
-        .with_context(|| anyhow!("missing contract artifact for `{}` contract", contract_name))
+        .get(artifact_name)
+        .with_context(|| anyhow!("missing contract artifact for `{}` contract", artifact_name))
 }
 
 pub fn generate_salt(value: &str) -> Felt {
@@ -276,4 +256,30 @@ pub fn generate_salt(value: &str) -> Felt {
             })
             .collect::<Vec<_>>(),
     )
+}
+
+fn read_artifact_paths(
+    input_dir: &Utf8PathBuf,
+    artifact_paths: &mut HashMap<String, PathBuf>,
+) -> Result<()> {
+    let entries = fs::read_dir(input_dir).with_context(|| {
+        format!(
+            "Failed trying to read target directory ({input_dir})\nNOTE: build files are profile \
+             specified so make sure to run build command with correct profile. For e.g. `sozo -P \
+             my_profile build`"
+        )
+    })?;
+
+    for entry in entries.flatten() {
+        let file_name = entry.file_name();
+        let file_name_str = file_name.to_string_lossy();
+        if file_name_str == "manifest.json" || !file_name_str.ends_with(".json") {
+            continue;
+        }
+
+        let artifact_name = file_name_str.trim_end_matches(".json").to_string();
+        artifact_paths.insert(artifact_name, entry.path());
+    }
+
+    Ok(())
 }

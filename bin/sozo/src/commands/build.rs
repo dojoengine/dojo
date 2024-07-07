@@ -127,7 +127,7 @@ impl BuildArgs {
         trace!(pluginManager=?bindgen, "Generating bindings.");
 
         // Only generate bindgen if a current package is defined with dojo metadata.
-        if let Some(dojo_metadata) = dojo_metadata_from_workspace(&ws) {
+        if let Ok(dojo_metadata) = dojo_metadata_from_workspace(&ws) {
             tokio::runtime::Runtime::new()
                 .unwrap()
                 .block_on(bindgen.generate(dojo_metadata.skip_migration))
@@ -184,6 +184,7 @@ mod tests {
     use dojo_test_utils::compiler;
     use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
     use prettytable::{format, Cell, Row, Table};
+    use scarb::compiler::Profile;
     use sozo_ops::statistics::ContractStatistics;
 
     use super::{create_stats_table, BuildArgs, *};
@@ -195,7 +196,7 @@ mod tests {
         let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
         let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
 
-        let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+        let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
 
         let build_args = BuildArgs {
             bindings_output: "generated".to_string(),
