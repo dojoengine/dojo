@@ -549,6 +549,11 @@ impl MacroPlugin for BuiltinDojoPlugin {
             "computed".to_string(),
         ]
     }
+
+    fn declared_derives(&self) -> Vec<String> {
+        vec!["Introspect".to_string(), "IntrospectPacked".to_string()]
+    }
+
 }
 
 pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository);

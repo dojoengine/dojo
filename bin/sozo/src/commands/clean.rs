@@ -45,7 +45,7 @@ impl CleanArgs {
         trace!(ws=?ws, "Workspace read successfully.");
 
         let profile_names = if self.all_profiles {
-            let mut profiles = ws.profile_names().expect("given method never returns an error");
+            let mut profiles = ws.profile_names();
             // currently scarb can return duplicate profiles and since the vector is sorted we can
             // remove duplicates by calling dedup
             profiles.dedup();
