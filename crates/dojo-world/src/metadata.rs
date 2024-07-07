@@ -34,7 +34,6 @@ fn build_artifact_from_filename(
     let abi_file = abi_dir.join(format!("{filename}.json"));
     let src_file = source_dir.join(format!("{filename}.cairo"));
 
-    dbg!(&abi_file, &src_file);
     ArtifactMetadata {
         abi: if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None },
         source: if src_file.exists() {

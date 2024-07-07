@@ -113,6 +113,8 @@ mod tests {
             Profile::DEV,
         );
 
+        println!("path {:?}", config.manifest_path());
+
         let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
 
         let clean_cmd = CleanArgs { full: false, all_profiles: false };
@@ -128,14 +130,14 @@ mod tests {
         let release_manifests_dir = temp_project_dir.join("manifests").join(release_profile_name);
 
         let dev_manifests_base_dir = dev_manifests_dir.join("base");
-        let dev_manifests_abis_base_dir = dev_manifests_dir.join("abis").join("base");
+        let dev_manifests_abis_base_dir = dev_manifests_dir.join("base").join("abis");
         let release_manifests_base_dir = release_manifests_dir.join("base");
-        let release_manifests_abis_base_dir = release_manifests_dir.join("abis").join("base");
+        let release_manifests_abis_base_dir = release_manifests_dir.join("base").join("abis");
 
-        let dev_manifests_abis_depl_dir = dev_manifests_dir.join("abis").join("deployments");
-
-        let dev_manifest_toml = dev_manifests_dir.join("manifest").with_extension("toml");
-        let dev_manifest_json = dev_manifests_dir.join("manifest").with_extension("json");
+        let dev_manifests_depl_dir = dev_manifests_dir.join("deployment");
+        let dev_manifests_abis_depl_dir = dev_manifests_depl_dir.join("abis");
+        let dev_manifest_toml = dev_manifests_depl_dir.join("manifest").with_extension("toml");
+        let dev_manifest_json = dev_manifests_depl_dir.join("manifest").with_extension("json");
 
         assert!(fs::read_dir(target_dev_dir).is_err(), "Expected 'target/dev' to be empty");
         assert!(
