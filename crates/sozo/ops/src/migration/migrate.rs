@@ -9,7 +9,7 @@ use dojo_world::contracts::naming::{
 };
 use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::manifest::{
-    AbiFormat, BaseManifest, DeploymentManifest, DojoContract, DojoModel, Manifest,
+    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoModel, Manifest,
     ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,
     DEPLOYMENT_DIR, MANIFESTS_DIR,
 };
@@ -868,8 +868,15 @@ pub async fn update_manifests_and_abis(
     // local_manifest
     update_manifest_abis(&mut local_manifest, manifest_dir, profile_name).await;
 
-    local_manifest.write_to_path_toml(&deployed_path)?;
-    local_manifest.write_to_path_json(&deployed_path_json, manifest_dir)?;
+    local_manifest
+        .write_to_path_toml(&deployed_path)
+        .with_context(|| "Failed to write toml manifest")?;
+
+    let root_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+
+    local_manifest
+        .write_to_path_json(&deployed_path_json, &root_dir)
+        .with_context(|| "Failed to write json manifest")?;
     ui.print("\n✨ Done.");
 
     Ok(())
@@ -891,7 +898,7 @@ async fn update_manifest_abis(
     {
         let base_relative_path = manifest.inner.abi().unwrap().to_path().unwrap();
 
-        // manifests/dev/base/abis/contract/contract.json -> abis/contract/contract.json
+        // manifests/dev/base/abis/contract/contract.json -> base/abis/contract/contract.json
         let base_relative_path = base_relative_path
             .strip_prefix(Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name))
             .unwrap();
@@ -917,11 +924,15 @@ async fn update_manifest_abis(
 
         fs::copy(full_base_path, full_deployed_path).await.expect("Failed to copy abi file");
 
-        manifest.inner.set_abi(Some(AbiFormat::Path(deployed_relative_path)));
+        manifest.inner.set_abi(Some(AbiFormat::Path(
+            Utf8PathBuf::from(MANIFESTS_DIR).join(profile_name).join(deployed_relative_path),
+        )));
     }
 
     inner_helper::<ManifestWorldContract>(manifest_dir, profile_name, &mut local_manifest.world)
         .await;
+
+    inner_helper::<Class>(manifest_dir, profile_name, &mut local_manifest.base).await;
 
     for contract in local_manifest.contracts.iter_mut() {
         inner_helper::<DojoContract>(manifest_dir, profile_name, contract).await;
