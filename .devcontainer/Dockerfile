@@ -26,7 +26,7 @@ ENV LLVM_SYS_170_PREFIX=/usr/lib/llvm-17
 ENV TABLEGEN_170_PREFIX=/usr/lib/llvm-17
 
 # To allow independent workflow of the container, the rust-toolchain is explicitely given.
-RUN echo "1.79.0" > rust_toolchain_version
+RUN echo "1.76.0" > rust_toolchain_version
 
 # Install cargo-binstall
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
