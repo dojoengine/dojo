@@ -25,6 +25,11 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 #[strum(serialize_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum Primitive {
+    I8(Option<i8>),
+    I16(Option<i16>),
+    I32(Option<i32>),
+    I64(Option<i64>),
+    I128(Option<i128>),
     U8(Option<u8>),
     U16(Option<u16>),
     U32(Option<u32>),
@@ -96,26 +101,36 @@ macro_rules! as_primitive {
 }
 
 impl Primitive {
+    as_primitive!(as_i8, I8, i8);
+    as_primitive!(as_i16, I16, i16);
+    as_primitive!(as_i32, I32, i32);
+    as_primitive!(as_i64, I64, i64);
+    as_primitive!(as_i128, I128, i128);
     as_primitive!(as_u8, U8, u8);
     as_primitive!(as_u16, U16, u16);
     as_primitive!(as_u32, U32, u32);
     as_primitive!(as_u64, U64, u64);
     as_primitive!(as_u128, U128, u128);
     as_primitive!(as_u256, U256, U256);
-    as_primitive!(as_bool, Bool, bool);
     as_primitive!(as_usize, USize, u32);
+    as_primitive!(as_bool, Bool, bool);
     as_primitive!(as_felt252, Felt252, Felt);
     as_primitive!(as_class_hash, ClassHash, Felt);
     as_primitive!(as_contract_address, ContractAddress, Felt);
 
+    set_primitive!(set_i8, I8, i8);
+    set_primitive!(set_i16, I16, i16);
+    set_primitive!(set_i32, I32, i32);
+    set_primitive!(set_i64, I64, i64);
+    set_primitive!(set_i128, I128, i128);
     set_primitive!(set_u8, U8, u8);
     set_primitive!(set_u16, U16, u16);
     set_primitive!(set_u32, U32, u32);
     set_primitive!(set_u64, U64, u64);
     set_primitive!(set_u128, U128, u128);
     set_primitive!(set_u256, U256, U256);
-    set_primitive!(set_bool, Bool, bool);
     set_primitive!(set_usize, USize, u32);
+    set_primitive!(set_bool, Bool, bool);
     set_primitive!(set_felt252, Felt252, Felt);
     set_primitive!(set_class_hash, ClassHash, Felt);
     set_primitive!(set_contract_address, ContractAddress, Felt);
@@ -133,6 +148,11 @@ impl Primitive {
             Primitive::Felt252(_) => 8,
             Primitive::ClassHash(_) => 9,
             Primitive::ContractAddress(_) => 10,
+            Primitive::I8(_) => 11,
+            Primitive::I16(_) => 12,
+            Primitive::I32(_) => 13,
+            Primitive::I64(_) => 14,
+            Primitive::I128(_) => 15,
         }
     }
 
@@ -142,7 +162,12 @@ impl Primitive {
 
     pub fn to_sql_type(&self) -> SqlType {
         match self {
-            Primitive::U8(_)
+            Primitive::I8(_)
+            | Primitive::I16(_)
+            | Primitive::I32(_)
+            | Primitive::I64(_)
+            | Primitive::I128(_)
+            | Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::USize(_)
@@ -165,7 +190,12 @@ impl Primitive {
         }
 
         match self {
-            Primitive::U8(_)
+            Primitive::I8(_)
+            | Primitive::I16(_)
+            | Primitive::I32(_)
+            | Primitive::I64(_)
+            | Primitive::I128(_)
+            | Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::USize(_)
@@ -198,6 +228,46 @@ impl Primitive {
         }
 
         match self {
+            Primitive::I8(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i8>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::I16(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i16().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i16>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::I32(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i32>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::I64(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i64().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i64>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::I128(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_i128().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<i128>(),
+                    value: felt,
+                })?);
+            }
+
             Primitive::U8(ref mut value) => {
                 let felt = felts.remove(0);
                 *value = Some(felt.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
@@ -230,19 +300,6 @@ impl Primitive {
                 })?);
             }
 
-            Primitive::USize(ref mut value) => {
-                let felt = felts.remove(0);
-                *value = Some(felt.to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<u32>(),
-                    value: felt,
-                })?);
-            }
-
-            Primitive::Bool(ref mut value) => {
-                let raw = felts.remove(0);
-                *value = Some(raw == Felt::ONE);
-            }
-
             Primitive::U128(ref mut value) => {
                 let felt = felts.remove(0);
                 *value = Some(felt.to_u128().ok_or_else(|| PrimitiveError::ValueOutOfRange {
@@ -265,6 +322,19 @@ impl Primitive {
                 *value = Some(U256::from_be_bytes(bytes));
             }
 
+            Primitive::USize(ref mut value) => {
+                let felt = felts.remove(0);
+                *value = Some(felt.to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                    r#type: type_name::<u32>(),
+                    value: felt,
+                })?);
+            }
+
+            Primitive::Bool(ref mut value) => {
+                let raw = felts.remove(0);
+                *value = Some(raw == Felt::ONE);
+            }
+
             Primitive::ContractAddress(ref mut value) => {
                 *value = Some(felts.remove(0));
             }
@@ -283,6 +353,21 @@ impl Primitive {
 
     pub fn serialize(&self) -> Result<Vec<Felt>, PrimitiveError> {
         match self {
+            Primitive::I8(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I16(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I32(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I64(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::I128(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U8(value) => value
                 .map(|v| Ok(vec![Felt::from(v)]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
@@ -294,12 +379,6 @@ impl Primitive {
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U64(value) => value
                 .map(|v| Ok(vec![Felt::from(v)]))
-                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
-            Primitive::USize(value) => value
-                .map(|v| Ok(vec![Felt::from(v)]))
-                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
-            Primitive::Bool(value) => value
-                .map(|v| Ok(vec![if v { Felt::ONE } else { Felt::ZERO }]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::U128(value) => value
                 .map(|v| Ok(vec![Felt::from(v)]))
@@ -317,6 +396,12 @@ impl Primitive {
                     let value1 = Felt::from_bytes_be(&value1_array);
                     Ok(vec![value0, value1])
                 })
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::USize(value) => value
+                .map(|v| Ok(vec![Felt::from(v)]))
+                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
+            Primitive::Bool(value) => value
+                .map(|v| Ok(vec![if v { Felt::ONE } else { Felt::ZERO }]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::ContractAddress(value) => {
                 value.map(|v| Ok(vec![v])).unwrap_or(Err(PrimitiveError::MissingFieldElement))
@@ -364,6 +449,21 @@ mod tests {
 
     #[test]
     fn inner_value_getter_setter() {
+        let mut primitive = Primitive::I8(None);
+        primitive.set_i8(Some(-1i8)).unwrap();
+        assert_eq!(primitive.as_i8(), Some(-1i8));
+        let mut primitive = Primitive::I16(None);
+        primitive.set_i16(Some(-1i16)).unwrap();
+        assert_eq!(primitive.as_i16(), Some(-1i16));
+        let mut primitive = Primitive::I32(None);
+        primitive.set_i32(Some(-1i32)).unwrap();
+        assert_eq!(primitive.as_i32(), Some(-1i32));
+        let mut primitive = Primitive::I64(None);
+        primitive.set_i64(Some(-1i64)).unwrap();
+        assert_eq!(primitive.as_i64(), Some(-1i64));
+        let mut primitive = Primitive::I128(None);
+        primitive.set_i128(Some(-1i128)).unwrap();
+        assert_eq!(primitive.as_i128(), Some(-1i128));
         let mut primitive = Primitive::U8(None);
         primitive.set_u8(Some(1u8)).unwrap();
         assert_eq!(primitive.as_u8(), Some(1u8));
