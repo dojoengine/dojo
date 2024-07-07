@@ -109,7 +109,7 @@ impl Service {
             // matches the key pattern of the subscriber.
             match &sub.keys {
                 Some(EntityKeysClause::HashedKeys(hashed_keys)) => {
-                    if !hashed_keys.contains(&hashed) {
+                    if !hashed_keys.is_empty() && !hashed_keys.contains(&hashed) {
                         continue;
                     }
                 }
