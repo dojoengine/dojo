@@ -15,7 +15,8 @@ use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::Config;
-use scarb::ops::{self, FeaturesOpts, FeaturesSelector};
+use scarb::ops;
+use scarb_ui::args::FeaturesSpec;
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
@@ -58,6 +59,10 @@ pub struct TestArgs {
     /// Should we print the resource usage.
     #[arg(long, default_value_t = false)]
     print_resource_usage: bool,
+
+    /// Specify the features to activate.
+    #[command(flatten)]
+    feature: FeaturesSpec,
 }
 
 impl TestArgs {
@@ -71,8 +76,7 @@ impl TestArgs {
         // TODO: Compute all compilation units and remove duplicates, could be unnecessary in future
         // version of Scarb.
 
-        let features_opts =
-            FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+        let features_opts = self.feature.try_into()?;
 
         let mut compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws)?;
         compilation_units.sort_by_key(|unit| unit.main_package_id());
