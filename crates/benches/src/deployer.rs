@@ -5,7 +5,7 @@ use anyhow::{anyhow, bail, Context, Ok, Result};
 use clap::Parser;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
-use dojo_world::manifest::{DeploymentManifest, DEPLOYMENTS_DIR, MANIFESTS_DIR};
+use dojo_world::manifest::{DeploymentManifest, DEPLOYMENT_DIR, MANIFESTS_DIR};
 use futures::executor::block_on;
 use katana_runner::KatanaRunner;
 use scarb::compiler::CompilerRepository;
@@ -97,7 +97,7 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<Felt> {
     let manifest_dir = manifest_path.parent().unwrap();
 
     let manifest = DeploymentManifest::load_from_path(
-        &manifest_dir.join(MANIFESTS_DIR).join("dev").join(DEPLOYMENTS_DIR).with_extension("toml"),
+        &manifest_dir.join(MANIFESTS_DIR).join("dev").join(DEPLOYMENT_DIR).with_extension("toml"),
     )
     .expect("failed to load manifest");
 

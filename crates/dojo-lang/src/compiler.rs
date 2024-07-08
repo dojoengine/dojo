@@ -223,10 +223,12 @@ fn update_files(
 ) -> anyhow::Result<()> {
     let profile_name =
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
-    let profile_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name);
+    let relative_manifest_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name);
 
-    let relative_manifests_dir = Utf8PathBuf::new().join(&profile_dir).join(BASE_DIR);
-    let relative_abis_dir = Utf8PathBuf::new().join(&profile_dir).join(ABIS_DIR).join(BASE_DIR);
+    // relative path to manifests and abi
+    let base_manifests_dir = Utf8PathBuf::new().join(relative_manifest_dir).join(BASE_DIR);
+    let base_abis_dir = Utf8PathBuf::new().join(&base_manifests_dir).join(ABIS_DIR);
+
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
@@ -247,8 +249,8 @@ fn update_files(
         let (hash, class) = get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
         let filename = naming::get_filename_from_tag(tag);
         write_manifest_and_abi(
-            &relative_manifests_dir,
-            &relative_abis_dir,
+            &base_manifests_dir,
+            &base_abis_dir,
             &manifest_dir,
             &mut Manifest::new(
                 // abi path will be written by `write_manifest`
@@ -334,8 +336,8 @@ fn update_files(
 
     for (_, (manifest, class, module_id)) in contracts.iter_mut() {
         write_manifest_and_abi(
-            &relative_manifests_dir.join(CONTRACTS_DIR),
-            &relative_abis_dir.join(CONTRACTS_DIR),
+            &base_manifests_dir.join(CONTRACTS_DIR),
+            &base_abis_dir.join(CONTRACTS_DIR),
             &manifest_dir,
             manifest,
             &class.abi,
@@ -360,8 +362,8 @@ fn update_files(
 
     for (_, (manifest, class, module_id)) in models.iter_mut() {
         write_manifest_and_abi(
-            &relative_manifests_dir.join(MODELS_DIR),
-            &relative_abis_dir.join(MODELS_DIR),
+            &base_manifests_dir.join(MODELS_DIR),
+            &base_abis_dir.join(MODELS_DIR),
             &manifest_dir,
             manifest,
             &class.abi,
