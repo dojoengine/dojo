@@ -81,8 +81,10 @@ impl MigrateArgs {
             None
         };
 
+        let profile_name =
+            ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-        if !manifest_dir.join(MANIFESTS_DIR).exists() {
+        if !manifest_dir.join(MANIFESTS_DIR).join(profile_name).exists() {
             return Err(anyhow!("Build project using `sozo build` first"));
         }
 

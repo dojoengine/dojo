@@ -131,7 +131,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     let manifest_dir = manifest_dir.join(MANIFESTS_DIR).join(profile.as_str());
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(profile.as_str());
-    let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
+    let abis_dir = manifest_dir.join(BASE_DIR).join(ABIS_DIR);
 
     let dojo_metadata =
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");

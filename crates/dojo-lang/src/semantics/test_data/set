@@ -224,6 +224,11 @@ Block(
 )
 
 //! > semantic_diagnostics
+error: Plugin diagnostic: Unknown derive `Model` - a plugin might be missing.
+ --> lib.cairo:3:29
+#[derive(Copy, Drop, Serde, Model)]
+                            ^***^
+
 warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
  --> lib.cairo:9:22
 fn test_func() { let key: felt252 = 0xb0b;
