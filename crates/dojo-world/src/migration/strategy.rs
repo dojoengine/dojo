@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
 
@@ -12,14 +12,22 @@ use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
 use super::MigrationType;
+use crate::contracts::naming;
+use crate::manifest::{CONTRACTS_DIR, MODELS_DIR};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub enum MigrationMetadata {
+    Contract(ContractDiff),
+}
+
+#[derive(Debug, Clone)]
 pub struct MigrationStrategy {
-    pub world_address: Option<FieldElement>,
+    pub world_address: Option<Felt>,
     pub world: Option<ContractMigration>,
     pub base: Option<ClassMigration>,
     pub contracts: Vec<ContractMigration>,
     pub models: Vec<ClassMigration>,
+    pub metadata: HashMap<String, MigrationMetadata>,
 }
 
 #[derive(Debug)]
@@ -29,7 +37,7 @@ pub struct MigrationItemsInfo {
 }
 
 impl MigrationStrategy {
-    pub fn world_address(&self) -> Result<FieldElement> {
+    pub fn world_address(&self) -> Result<Felt> {
         match &self.world {
             Some(c) => Ok(c.contract_address),
             None => self.world_address.ok_or(anyhow!("World address not found")),
@@ -59,36 +67,53 @@ impl MigrationStrategy {
 
         MigrationItemsInfo { new, update }
     }
+
+    pub fn resolve_variable(&mut self, world_address: Felt) -> Result<()> {
+        for contract in self.contracts.iter_mut() {
+            for field in contract.diff.init_calldata.iter_mut() {
+                if let Some(dependency) = field.strip_prefix("$contract_address:") {
+                    let dependency_contract = self.metadata.get(dependency).unwrap();
+
+                    match dependency_contract {
+                        MigrationMetadata::Contract(c) => {
+                            let contract_address = get_contract_address(
+                                generate_salt(&naming::get_name_from_tag(&c.tag)),
+                                c.base_class_hash,
+                                &[],
+                                world_address,
+                            );
+                            *field = contract_address.to_string();
+                        }
+                    }
+                } else if let Some(dependency) = field.strip_prefix("$class_hash:") {
+                    let dependency_contract = self.metadata.get(dependency).unwrap();
+                    match dependency_contract {
+                        MigrationMetadata::Contract(c) => {
+                            *field = c.local_class_hash.to_string();
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// construct migration strategy
 /// evaluate which contracts/classes need to be declared/deployed
 pub fn prepare_for_migration(
-    world_address: Option<FieldElement>,
-    seed: FieldElement,
+    world_address: Option<Felt>,
+    seed: Felt,
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
 ) -> Result<MigrationStrategy> {
-    let entries = fs::read_dir(target_dir).with_context(|| {
-        format!(
-            "Failed trying to read target directory ({target_dir})\nNOTE: build files are profile \
-             specified so make sure to run build command with correct profile. For e.g. `sozo -P \
-             my_profile build`"
-        )
-    })?;
-
+    let mut metadata = HashMap::new();
     let mut artifact_paths = HashMap::new();
-    for entry in entries.flatten() {
-        let file_name = entry.file_name();
-        let file_name_str = file_name.to_string_lossy();
-        if file_name_str == "manifest.json" || !file_name_str.ends_with(".json") {
-            continue;
-        }
 
-        let name = file_name_str.trim_end_matches(".json").to_string();
-
-        artifact_paths.insert(name, entry.path());
-    }
+    read_artifact_paths(target_dir, &mut artifact_paths)?;
+    read_artifact_paths(&target_dir.join(MODELS_DIR), &mut artifact_paths)?;
+    read_artifact_paths(&target_dir.join(CONTRACTS_DIR), &mut artifact_paths)?;
 
     // We don't need to care if a contract has already been declared or not, because
     // the migration strategy will take care of that.
@@ -97,8 +122,12 @@ pub fn prepare_for_migration(
     // else we need to evaluate which contracts need to be migrated.
     let mut world = evaluate_contract_to_migrate(&diff.world, &artifact_paths, false)?;
     let base = evaluate_class_to_migrate(&diff.base, &artifact_paths, world.is_some())?;
-    let contracts =
-        evaluate_contracts_to_migrate(&diff.contracts, &artifact_paths, world.is_some())?;
+    let contracts = evaluate_contracts_to_migrate(
+        &diff.contracts,
+        &artifact_paths,
+        &mut metadata,
+        world.is_some(),
+    )?;
     let models = evaluate_models_to_migrate(&diff.models, &artifact_paths, world.is_some())?;
 
     // If world needs to be migrated, then we expect the `seed` to be provided.
@@ -110,23 +139,13 @@ pub fn prepare_for_migration(
             salt,
             diff.world.original_class_hash,
             &[base.as_ref().unwrap().diff.original_class_hash],
-            FieldElement::ZERO,
+            Felt::ZERO,
         );
 
-        if let Some(world_address) = world_address {
-            if world_address != generated_world_address {
-                println!("generated_world_address: {:?}", generated_world_address);
-                bail!(
-                    "Calculated world address doesn't match provided world address.\nIf you are \
-                     deploying with custom seed make sure `world_address` is correctly configured \
-                     (or not set) `Scarb.toml`"
-                )
-            }
-        }
         world.contract_address = generated_world_address;
     }
 
-    Ok(MigrationStrategy { world_address, world, base, contracts, models })
+    Ok(MigrationStrategy { world_address, world, base, contracts, models, metadata })
 }
 
 fn evaluate_models_to_migrate(
@@ -157,7 +176,8 @@ fn evaluate_class_to_migrate(
             Ok(None)
         }
         _ => {
-            let path = find_artifact_path(class.name.as_str(), artifact_paths)?;
+            let path =
+                find_artifact_path(&naming::get_filename_from_tag(&class.tag), artifact_paths)?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
@@ -166,21 +186,24 @@ fn evaluate_class_to_migrate(
 fn evaluate_contracts_to_migrate(
     contracts: &[ContractDiff],
     artifact_paths: &HashMap<String, PathBuf>,
+    metadata: &mut HashMap<String, MigrationMetadata>,
     world_contract_will_migrate: bool,
 ) -> Result<Vec<ContractMigration>> {
     let mut comps_to_migrate = vec![];
 
     for c in contracts {
+        metadata.insert(c.tag.clone(), MigrationMetadata::Contract(c.clone()));
         match c.remote_class_hash {
             Some(remote) if remote == c.local_class_hash && !world_contract_will_migrate => {
                 continue;
             }
             _ => {
-                let path = find_artifact_path(c.name.as_str(), artifact_paths)?;
+                let path =
+                    find_artifact_path(&naming::get_filename_from_tag(&c.tag), artifact_paths)?;
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
-                    salt: generate_salt(&c.name),
+                    salt: generate_salt(&naming::get_name_from_tag(&c.tag)),
                     ..Default::default()
                 });
             }
@@ -199,7 +222,8 @@ fn evaluate_contract_to_migrate(
         || contract.remote_class_hash.is_none()
         || matches!(contract.remote_class_hash, Some(remote_hash) if remote_hash != contract.local_class_hash)
     {
-        let path = find_artifact_path(&contract.name, artifact_paths)?;
+        let path =
+            find_artifact_path(&naming::get_filename_from_tag(&contract.tag), artifact_paths)?;
 
         Ok(Some(ContractMigration {
             diff: contract.clone(),
@@ -212,15 +236,15 @@ fn evaluate_contract_to_migrate(
 }
 
 fn find_artifact_path<'a>(
-    contract_name: &str,
+    artifact_name: &str,
     artifact_paths: &'a HashMap<String, PathBuf>,
 ) -> Result<&'a PathBuf> {
     artifact_paths
-        .get(contract_name)
-        .with_context(|| anyhow!("missing contract artifact for `{}` contract", contract_name))
+        .get(artifact_name)
+        .with_context(|| anyhow!("missing contract artifact for `{}` contract", artifact_name))
 }
 
-pub fn generate_salt(value: &str) -> FieldElement {
+pub fn generate_salt(value: &str) -> Felt {
     poseidon_hash_many(
         &value
             .chars()
@@ -232,4 +256,30 @@ pub fn generate_salt(value: &str) -> FieldElement {
             })
             .collect::<Vec<_>>(),
     )
+}
+
+fn read_artifact_paths(
+    input_dir: &Utf8PathBuf,
+    artifact_paths: &mut HashMap<String, PathBuf>,
+) -> Result<()> {
+    let entries = fs::read_dir(input_dir).with_context(|| {
+        format!(
+            "Failed trying to read target directory ({input_dir})\nNOTE: build files are profile \
+             specified so make sure to run build command with correct profile. For e.g. `sozo -P \
+             my_profile build`"
+        )
+    })?;
+
+    for entry in entries.flatten() {
+        let file_name = entry.file_name();
+        let file_name_str = file_name.to_string_lossy();
+        if file_name_str == "manifest.json" || !file_name_str.ends_with(".json") {
+            continue;
+        }
+
+        let artifact_name = file_name_str.trim_end_matches(".json").to_string();
+        artifact_paths.insert(artifact_name, entry.path());
+    }
+
+    Ok(())
 }

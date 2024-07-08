@@ -1,16 +1,16 @@
 use std::collections::BTreeMap;
-use std::time::Duration;
 use std::fmt::Debug;
+use std::time::Duration;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockTag, Event, EventFilter, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, PendingTransactionReceipt, Transaction, TransactionReceipt,
+    BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, ReceiptBlock, Transaction, TransactionReceipt,
+    TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
@@ -18,14 +18,14 @@ use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
-#[derive(Debug)]
-pub struct Processors<P: Provider + Sync + Debug> {
+#[allow(missing_debug_implementations)]
+pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
     pub event: Vec<Box<dyn EventProcessor<P>>>,
 }
 
-impl<P: Provider + Sync + Debug> Default for Processors<P> {
+impl<P: Provider + Sync> Default for Processors<P> {
     fn default() -> Self {
         Self { block: vec![], event: vec![], transaction: vec![] }
     }
@@ -52,8 +52,8 @@ impl Default for EngineConfig {
     }
 }
 
-#[derive(Debug)]
-pub struct Engine<P: Provider + Sync + Debug> {
+#[allow(missing_debug_implementations)]
+pub struct Engine<P: Provider + Sync> {
     world: WorldContractReader<P>,
     db: Sql,
     provider: Box<P>,
@@ -68,7 +68,7 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<P: Provider + Sync + Debug> Engine<P> {
+impl<P: Provider + Sync> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: Sql,
@@ -123,8 +123,8 @@ impl<P: Provider + Sync + Debug> Engine<P> {
     pub async fn sync_to_head(
         &mut self,
         from: u64,
-        mut pending_block_tx: Option<FieldElement>,
-    ) -> Result<(u64, Option<FieldElement>)> {
+        mut pending_block_tx: Option<Felt>,
+    ) -> Result<(u64, Option<Felt>)> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         if from < latest_block_number {
@@ -141,8 +141,8 @@ impl<P: Provider + Sync + Debug> Engine<P> {
     pub async fn sync_pending(
         &mut self,
         block_number: u64,
-        mut pending_block_tx: Option<FieldElement>,
-    ) -> Result<Option<FieldElement>> {
+        mut pending_block_tx: Option<Felt>,
+    ) -> Result<Option<Felt>> {
         let block = if let MaybePendingBlockWithTxs::PendingBlock(pending) =
             self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Pending)).await?
         {
@@ -176,11 +176,11 @@ impl<P: Provider + Sync + Debug> Engine<P> {
                 Err(e) => {
                     match e.to_string().as_str() {
                         "TransactionHashNotFound" => {
-                            warn!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processing pending transaction.");
-                            // We failed to fetch the transaction, which might be due to us indexing
-                            // the pending transaction too fast. We will
-                            // fail silently and retry processing the transaction in the next
-                            // iteration.
+                            // We failed to fetch the transaction, which is because
+                            // the transaction might not have been processed fast enough by the
+                            // provider. So we can fail silently and try
+                            // again in the next iteration.
+                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Retrieving pending transaction receipt.");
                             return Ok(pending_block_tx);
                         }
                         _ => {
@@ -209,8 +209,8 @@ impl<P: Provider + Sync + Debug> Engine<P> {
         &mut self,
         from: u64,
         to: u64,
-        pending_block_tx: Option<FieldElement>,
-    ) -> Result<Option<FieldElement>> {
+        pending_block_tx: Option<Felt>,
+    ) -> Result<Option<Felt>> {
         // Process all blocks from current to latest.
         let get_events = |token: Option<String>| {
             self.provider.get_events(
@@ -248,15 +248,20 @@ impl<P: Provider + Sync + Debug> Engine<P> {
                     // receipt Should not/rarely happen. Thus the additional
                     // fetch is acceptable.
                     None => {
-                        match self.provider.get_transaction_receipt(event.transaction_hash).await? {
-                            MaybePendingTransactionReceipt::Receipt(
-                                TransactionReceipt::Invoke(receipt),
-                            ) => receipt.block_number,
-                            MaybePendingTransactionReceipt::Receipt(
-                                TransactionReceipt::L1Handler(receipt),
-                            ) => receipt.block_number,
-                            // If it's a pending transaction, we assume the block number is the
-                            // latest + 1
+                        let TransactionReceiptWithBlockInfo { receipt, block } =
+                            self.provider.get_transaction_receipt(event.transaction_hash).await?;
+
+                        match receipt {
+                            TransactionReceipt::Invoke(_) | TransactionReceipt::L1Handler(_) => {
+                                if let ReceiptBlock::Block { block_number, .. } = block {
+                                    block_number
+                                } else {
+                                    // If the block is pending, we assume the block number is the
+                                    // latest + 1
+                                    to + 1
+                                }
+                            }
+
                             _ => to + 1,
                         }
                     }
@@ -345,25 +350,15 @@ impl<P: Provider + Sync + Debug> Engine<P> {
 
     async fn process_transaction_and_receipt(
         &mut self,
-        transaction_hash: FieldElement,
+        transaction_hash: Felt,
         transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
     ) -> Result<()> {
         let receipt = self.provider.get_transaction_receipt(transaction_hash).await?;
-        let events = match &receipt {
-            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
-                Some(&receipt.events)
-            }
-            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::L1Handler(receipt)) => {
-                Some(&receipt.events)
-            }
-            MaybePendingTransactionReceipt::PendingReceipt(PendingTransactionReceipt::Invoke(
-                receipt,
-            )) => Some(&receipt.events),
-            MaybePendingTransactionReceipt::PendingReceipt(
-                PendingTransactionReceipt::L1Handler(receipt),
-            ) => Some(&receipt.events),
+        let events = match &receipt.receipt {
+            TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
+            TransactionReceipt::L1Handler(receipt) => Some(&receipt.events),
             _ => None,
         };
 
@@ -409,7 +404,7 @@ impl<P: Provider + Sync + Debug> Engine<P> {
         for processor in &self.processors.block {
             processor
                 .process(&mut self.db, self.provider.as_ref(), block_number, block_timestamp)
-                .await?;
+                .await?
         }
         Ok(())
     }
@@ -418,8 +413,8 @@ impl<P: Provider + Sync + Debug> Engine<P> {
         &mut self,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &MaybePendingTransactionReceipt,
-        transaction_hash: FieldElement,
+        transaction_receipt: &TransactionReceiptWithBlockInfo,
+        transaction_hash: Felt,
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
@@ -443,14 +438,14 @@ impl<P: Provider + Sync + Debug> Engine<P> {
         &mut self,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &MaybePendingTransactionReceipt,
+        transaction_receipt: &TransactionReceiptWithBlockInfo,
         event_id: &str,
         event: &Event,
     ) -> Result<()> {
         self.db.store_event(
             event_id,
             event,
-            *transaction_receipt.transaction_hash(),
+            *transaction_receipt.receipt.transaction_hash(),
             block_timestamp,
         );
         for processor in &self.processors.event {
@@ -460,7 +455,7 @@ impl<P: Provider + Sync + Debug> Engine<P> {
                 || get_selector_from_name(&processor.event_key())? == event.keys[0])
                 && processor.validate(event)
             {
-                processor
+                if let Err(e) = processor
                     .process(
                         &self.world,
                         &mut self.db,
@@ -470,7 +465,10 @@ impl<P: Provider + Sync + Debug> Engine<P> {
                         event_id,
                         event,
                     )
-                    .await?;
+                    .await
+                {
+                    error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, "Processing event.");
+                }
             } else {
                 let unprocessed_event = UnprocessedEvent {
                     keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),

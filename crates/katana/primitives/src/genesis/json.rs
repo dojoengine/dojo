@@ -20,10 +20,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{ComputeClassHashError, JsonError};
-use starknet::core::types::FromByteArrayError;
 
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
+};
+#[cfg(feature = "slot")]
+use super::constant::{
+    CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CASM,
+    CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
 };
 use super::constant::{
     DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
@@ -206,9 +210,6 @@ pub enum GenesisJsonError {
     ComputeClassHash(#[from] ComputeClassHashError),
 
     #[error(transparent)]
-    ConversionError(#[from] FromByteArrayError),
-
-    #[error(transparent)]
     SierraCompilation(#[from] StarknetSierraCompilationError),
 
     #[error(transparent)]
@@ -320,6 +321,19 @@ impl TryFrom<GenesisJson> for Genesis {
         let mut class_names: HashMap<String, FieldElement> = HashMap::new();
         let mut classes: HashMap<ClassHash, GenesisClass> = HashMap::new();
 
+        #[cfg(feature = "slot")]
+        // Merely a band aid fix for now.
+        // Adding this by default so that we can support mounting the genesis file from k8s
+        // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
+        classes.insert(
+            CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+            GenesisClass {
+                casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten()?)),
+            },
+        );
+
         for entry in value.classes {
             let GenesisClassJson { class, class_hash, name } = entry;
 
@@ -345,7 +359,7 @@ impl TryFrom<GenesisJson> for Genesis {
 
                     (
                         class_hash,
-                        FieldElement::from_bytes_be(&compiled_hash)?,
+                        FieldElement::from_bytes_be(&compiled_hash),
                         Some(Arc::new(sierra.flatten()?)),
                         Arc::new(CompiledClass::Class(class)),
                     )
@@ -513,9 +527,7 @@ impl TryFrom<GenesisJson> for Genesis {
                         // insert default account class to the classes map
                         e.insert(GenesisClass {
                             casm: Arc::new(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()),
-                            sierra: Some(Arc::new(
-                                DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap(),
-                            )),
+                            sierra: Some(Arc::new(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten()?)),
                             compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                         });
                     }
@@ -662,34 +674,9 @@ fn class_artifact_at_path(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeMap, HashMap};
-    use std::fs::File;
-    use std::io::BufReader;
-    use std::path::PathBuf;
-    use std::str::FromStr;
-
-    use alloy_primitives::U256;
     use starknet::macros::felt;
 
-    use super::{from_base64, GenesisAccountJson, GenesisClassJson, GenesisJson};
-    use crate::block::GasPrices;
-    use crate::genesis::allocation::{
-        DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
-    };
-    use crate::genesis::constant::{
-        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
-        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
-        DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-        DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-        DEFAULT_OZ_ACCOUNT_CONTRACT, DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
-        DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
-        DEFAULT_UDC_ADDRESS,
-    };
-    use crate::genesis::json::{to_base64, ClassNameOrHash};
-    use crate::genesis::{
-        ContractAddress, FeeTokenConfig, Genesis, GenesisAllocation, GenesisClass,
-        UniversalDeployerConfig,
-    };
+    use super::*;
 
     #[test]
     fn deserialize_from_json() {
@@ -925,6 +912,15 @@ mod tests {
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
+            #[cfg(feature = "slot")]
+            (
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap())),
+                },
+            ),
         ]);
 
         let expected_fee_token = FeeTokenConfig {
@@ -1143,6 +1139,15 @@ mod tests {
                     compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                     casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                },
+            ),
+            #[cfg(feature = "slot")]
+            (
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: Arc::new(CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(Arc::new(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap())),
                 },
             ),
         ]);

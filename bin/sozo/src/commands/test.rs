@@ -85,7 +85,7 @@ impl TestArgs {
                 continue;
             };
 
-            let props: Props = unit.target().props()?;
+            let props: Props = unit.main_component().target_props()?;
             let db = build_root_database(&unit)?;
 
             if DiagnosticsReporter::stderr().allow_warnings().check(&db) {
@@ -145,11 +145,13 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
         .components
         .iter()
         .filter(|model| !model.package.id.is_core())
-        .map(|model| (model.cairo_package_name(), model.target.source_root().into()))
+        // NOTE: We're taking the first target of each compilation unit, which should always be the
+        //       main package source root due to the order maintained by scarb.
+        .map(|model| (model.cairo_package_name(), model.targets[0].source_root().into()))
         .collect();
 
     let corelib =
-        unit.core_package_component().map(|c| Directory::Real(c.target.source_root().into()));
+        unit.core_package_component().map(|c| Directory::Real(c.targets[0].source_root().into()));
 
     let crates_config = crates_config_for_compilation_unit(unit);
 

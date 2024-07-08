@@ -7,7 +7,7 @@ use katana_primitives::FieldElement;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::error::katana::KatanaApiError;
 
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
     sequencer: Arc<KatanaSequencer<EF>>,
 }

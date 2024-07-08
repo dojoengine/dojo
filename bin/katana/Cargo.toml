@@ -28,11 +28,13 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
 
+katana-slot-controller = { workspace = true, optional = true }
+
 [dev-dependencies]
 assert_matches.workspace = true
 
 [features]
-default = [ "blockifier", "jemalloc", "messaging" ]
+default = [ "blockifier", "jemalloc", "messaging", "slot" ]
 
 blockifier = [ "katana-executor/blockifier" ]
 # Disable until SIR support Cairo 2.6.3
@@ -40,4 +42,5 @@ blockifier = [ "katana-executor/blockifier" ]
 
 jemalloc = [ "dojo-metrics/jemalloc" ]
 messaging = [ "katana-core/messaging" ]
+slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
 starknet-messaging = [ "katana-core/starknet-messaging", "messaging" ]

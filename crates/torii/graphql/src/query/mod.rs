@@ -94,6 +94,11 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
             if !nested_members.iter().any(|&nested_member| {
                 nested_member.model_id == member.model_id
                     && nested_member.id.ends_with(&member.name)
+                    && nested_member
+                        .id
+                        .split('$')
+                        .collect::<Vec<_>>()
+                        .starts_with(&member.id.split('$').collect::<Vec<_>>())
             }) =>
         {
             TypeData::Simple(TypeRef::named("Enum"))
@@ -114,8 +119,9 @@ fn parse_nested_type(member: &ModelMember, nested_members: &[&ModelMember]) -> T
                 && nested_member
                     .id
                     .split('$')
+                    .take(nested_member.id.split('$').count() - 1)
                     .collect::<Vec<_>>()
-                    .starts_with(&member.id.split('$').collect::<Vec<_>>())
+                    .eq(&member.id.split('$').collect::<Vec<_>>())
             {
                 // if the nested member is an Enum and the member is an Enum, we need to inject the
                 // Enum type in order to have a "option" field in the nested Enum
@@ -139,9 +145,10 @@ fn parse_nested_type(member: &ModelMember, nested_members: &[&ModelMember]) -> T
     // sanitizes the member type string
     // for eg. Position_Array<Vec2> -> Position_ArrayVec2
     // Position_(u8, Vec2) -> Position_u8Vec2
-    let re = Regex::new(r"[, ()<>]").unwrap();
-    let member_type_name = re.replace_all(&member.ty, "");
-    let namespaced = format!("{}_{}", model_name, member_type_name);
+    let re = Regex::new(r"[, ()<>-]").unwrap();
+    let sanitized_model_name = model_name.replace('-', "_");
+    let sanitized_member_type_name = re.replace_all(&member.ty, "");
+    let namespaced = format!("{}_{}", sanitized_model_name, sanitized_member_type_name);
     TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
 

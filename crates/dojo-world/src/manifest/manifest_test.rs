@@ -2,20 +2,28 @@ use std::io::Write;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_test_utils::compiler;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
-use starknet::core::types::{EmittedEvent, FieldElement};
+use starknet::core::types::{EmittedEvent, Felt};
 use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
-use super::{parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel};
+use super::{
+    parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel, OverlayDojoContract,
+    OverlayManifest,
+};
+use crate::contracts::naming::{get_filename_from_tag, get_tag};
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::{parse_models_events, AbstractManifestError, DeploymentManifest, Manifest};
+use crate::manifest::{
+    parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, OverlayClass,
+    OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
+};
+use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]
@@ -34,7 +42,7 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
     );
 
     let rpc = JsonRpcClient::new(mock_transport);
-    let err = DeploymentManifest::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
+    let err = DeploymentManifest::load_from_remote(rpc, Felt::ONE).await.unwrap_err();
 
     match err {
         AbstractManifestError::RemoteWorldNotFound => {
@@ -48,57 +56,39 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
 fn parse_registered_model_events() {
     let expected_models = vec![
         Manifest::new(
-            DojoModel { class_hash: felt!("0x5555"), ..Default::default() },
-            "Model1".into(),
+            DojoModel {
+                tag: get_tag("ns", "modelA"),
+                class_hash: felt!("0x5555"),
+                ..Default::default()
+            },
+            get_filename_from_tag(&get_tag("ns", "modelA")),
         ),
         Manifest::new(
-            DojoModel { class_hash: felt!("0x6666"), ..Default::default() },
-            "Model2".into(),
+            DojoModel {
+                tag: get_tag("ns", "modelB"),
+                class_hash: felt!("0x6666"),
+                ..Default::default()
+            },
+            get_filename_from_tag(&get_tag("ns", "modelB")),
         ),
     ];
 
-    let selector = selector!("ModelRegistered");
-
     let events = vec![
-        EmittedEvent {
-            data: {
-                let mut data =
-                    ByteArray::cairo_serialize(&ByteArray::from_string("Model1").unwrap());
-                data.extend(vec![felt!("0x5555"), felt!("0xbeef"), felt!("0xa1"), felt!("0")]);
-                data
-            },
-            keys: vec![selector],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: {
-                let mut data =
-                    ByteArray::cairo_serialize(&ByteArray::from_string("Model1").unwrap());
-                data.extend(vec![felt!("0xbeef"), felt!("0"), felt!("0xa1"), felt!("0xa1")]);
-                data
-            },
-            keys: vec![selector],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: {
-                let mut data =
-                    ByteArray::cairo_serialize(&ByteArray::from_string("Model2").unwrap());
-                data.extend(vec![felt!("0x6666"), felt!("0"), felt!("0xa3"), felt!("0")]);
-                data
-            },
-            keys: vec![selector],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
+        build_model_registered_event(
+            vec![felt!("0x5555"), felt!("0xbeef"), felt!("0xa1"), felt!("0")],
+            "ns",
+            "modelA",
+        ),
+        build_model_registered_event(
+            vec![felt!("0xbeef"), felt!("0"), felt!("0xa1"), felt!("0xa1")],
+            "ns",
+            "modelA",
+        ),
+        build_model_registered_event(
+            vec![felt!("0x6666"), felt!("0"), felt!("0xa3"), felt!("0")],
+            "ns",
+            "modelB",
+        ),
     ];
 
     let actual_models = parse_models_events(events);
@@ -115,53 +105,35 @@ fn parse_deployed_contracts_events_without_upgrade() {
             DojoContract {
                 class_hash: felt!("0x1"),
                 address: Some(felt!("0x123")),
+                tag: get_tag("ns1", "c1"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns1", "c1")),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x2"),
                 address: Some(felt!("0x456")),
+                tag: get_tag("ns2", "c2"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns2", "c2")),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x3"),
                 address: Some(felt!("0x789")),
+                tag: get_tag("ns3", "c3"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns3", "c3")),
         ),
     ];
 
     let events = vec![
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x1"), felt!("0x123")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x2"), felt!("0x456")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x3"), felt!("0x789")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
+        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1", "c1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2", "c2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3", "c3"),
     ];
 
     let actual_contracts = parse_contracts_events(events, vec![]);
@@ -175,53 +147,35 @@ fn parse_deployed_contracts_events_with_upgrade() {
             DojoContract {
                 class_hash: felt!("0x69"),
                 address: Some(felt!("0x123")),
+                tag: get_tag("ns1", "c1"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns1", "c1")),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x2"),
                 address: Some(felt!("0x456")),
+                tag: get_tag("ns2", "c2"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns2", "c2")),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x88"),
                 address: Some(felt!("0x789")),
+                tag: get_tag("ns3", "c3"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns3", "c3")),
         ),
     ];
 
     let deployed_events = vec![
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x1"), felt!("0x123")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x2"), felt!("0x456")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x3"), felt!("0x789")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
+        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1", "c1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2", "c2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3", "c3"),
     ];
 
     let upgrade_events = vec![
@@ -270,53 +224,35 @@ fn events_without_block_number_arent_parsed() {
             DojoContract {
                 class_hash: felt!("0x66"),
                 address: Some(felt!("0x123")),
+                tag: get_tag("ns1", "c1"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns1", "c1")),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x2"),
                 address: Some(felt!("0x456")),
+                tag: get_tag("ns2", "c2"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns2", "c2")),
         ),
         Manifest::new(
             DojoContract {
                 class_hash: felt!("0x3"),
                 address: Some(felt!("0x789")),
+                tag: get_tag("ns3", "c3"),
                 ..Default::default()
             },
-            "".into(),
+            get_filename_from_tag(&get_tag("ns3", "c3")),
         ),
     ];
 
     let deployed_events = vec![
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x1"), felt!("0x123")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x2"), felt!("0x456")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
-        EmittedEvent {
-            data: vec![felt!("0x0"), felt!("0x3"), felt!("0x789")],
-            keys: vec![],
-            block_hash: Default::default(),
-            from_address: Default::default(),
-            block_number: Default::default(),
-            transaction_hash: Default::default(),
-        },
+        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1", "c1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2", "c2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3", "c3"),
     ];
 
     // only the first upgrade event has a block number and is parsed
@@ -374,28 +310,53 @@ fn fetch_remote_manifest() {
 
     // Build a completely new project in it's own directory.
     let (temp_project_dir, config, _) =
-        compiler::copy_build_project_temp(source_project, dojo_core_path, true);
+        compiler::copy_build_project_temp(source_project, dojo_core_path, true, Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let dojo_metadata =
+        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
     let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
 
-    let world_address = config
-        .tokio_handle()
-        .block_on(async { deploy_world(&runner, &temp_project_dir, &artifacts_path).await });
+    let default_namespace = ws.current_package().unwrap().id.name.to_string();
 
-    let local_manifest = BaseManifest::load_from_path(
+    let world_address = config.tokio_handle().block_on(async {
+        deploy_world(
+            &runner,
+            &temp_project_dir,
+            &artifacts_path,
+            dojo_metadata.skip_migration.clone(),
+            &default_namespace,
+        )
+        .await
+    });
+
+    let mut local_manifest = BaseManifest::load_from_path(
         &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
+
+    if let Some(skip_manifests) = dojo_metadata.skip_migration {
+        local_manifest.remove_tags(skip_manifests);
+    }
+
+    let overlay_dir = temp_project_dir.join(OVERLAYS_DIR).join(profile_name);
+    if overlay_dir.exists() {
+        let overlay_manifest =
+            OverlayManifest::load_from_path(&overlay_dir, &local_manifest).unwrap();
+
+        local_manifest.merge(overlay_manifest);
+    }
 
     let remote_manifest = config.tokio_handle().block_on(async {
         DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
     });
 
-    assert_eq!(local_manifest.models.len(), 5);
-    assert_eq!(local_manifest.contracts.len(), 1);
+    assert_eq!(local_manifest.models.len(), 8);
+    assert_eq!(local_manifest.contracts.len(), 3);
 
-    assert_eq!(remote_manifest.models.len(), 5);
-    assert_eq!(remote_manifest.contracts.len(), 1);
+    assert_eq!(remote_manifest.models.len(), 8);
+    assert_eq!(remote_manifest.contracts.len(), 3);
 
     // compute diff from local and remote manifest
 
@@ -463,4 +424,244 @@ fn test_abi_format_load_abi_string() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(embedded.load_abi_string(&Utf8PathBuf::new()).unwrap(), "[]");
 
     Ok(())
+}
+
+#[test]
+fn overlay_merge_for_contract_and_model_work_as_expected() {
+    let other = OverlayManifest {
+        contracts: vec![
+            OverlayDojoContract { tag: "ns:othercontract1".into(), ..Default::default() },
+            OverlayDojoContract { tag: "ns:othercontract2".into(), ..Default::default() },
+            OverlayDojoContract { tag: "ns:existingcontract".into(), ..Default::default() },
+        ],
+        models: vec![
+            OverlayDojoModel { tag: "ns:othermodel1".into(), ..Default::default() },
+            OverlayDojoModel { tag: "ns:othermodel2".into(), ..Default::default() },
+            OverlayDojoModel { tag: "ns:existingmodel".into(), ..Default::default() },
+        ],
+        ..Default::default()
+    };
+
+    let mut current = OverlayManifest {
+        contracts: vec![
+            OverlayDojoContract { tag: "ns:currentcontract1".into(), ..Default::default() },
+            OverlayDojoContract { tag: "ns:currentcontract2".into(), ..Default::default() },
+            OverlayDojoContract { tag: "ns:existingcontract".into(), ..Default::default() },
+        ],
+        models: vec![
+            OverlayDojoModel { tag: "ns:currentmodel1".into(), ..Default::default() },
+            OverlayDojoModel { tag: "ns:currentmodel2".into(), ..Default::default() },
+            OverlayDojoModel { tag: "ns:existingmodel".into(), ..Default::default() },
+        ],
+        ..Default::default()
+    };
+
+    let expected = OverlayManifest {
+        contracts: vec![
+            OverlayDojoContract { tag: "ns:currentcontract1".into(), ..Default::default() },
+            OverlayDojoContract { tag: "ns:currentcontract2".into(), ..Default::default() },
+            OverlayDojoContract { tag: "ns:existingcontract".into(), ..Default::default() },
+            OverlayDojoContract { tag: "ns:othercontract1".into(), ..Default::default() },
+            OverlayDojoContract { tag: "ns:othercontract2".into(), ..Default::default() },
+        ],
+        models: vec![
+            OverlayDojoModel { tag: "ns:currentmodel1".into(), ..Default::default() },
+            OverlayDojoModel { tag: "ns:currentmodel2".into(), ..Default::default() },
+            OverlayDojoModel { tag: "ns:existingmodel".into(), ..Default::default() },
+            OverlayDojoModel { tag: "ns:othermodel1".into(), ..Default::default() },
+            OverlayDojoModel { tag: "ns:othermodel2".into(), ..Default::default() },
+        ],
+        ..Default::default()
+    };
+
+    current.merge(other);
+
+    assert_eq!(current, expected);
+}
+
+#[test]
+fn overlay_merge_for_world_work_as_expected() {
+    // when other.world is none and current.world is some
+    let other = OverlayManifest { ..Default::default() };
+    let mut current = OverlayManifest {
+        world: Some(OverlayClass { tag: "dojo:world".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    let expected = OverlayManifest {
+        world: Some(OverlayClass { tag: "dojo:world".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    current.merge(other);
+
+    assert_eq!(current, expected);
+
+    // when other.world is some and current.world is none
+    let other = OverlayManifest {
+        world: Some(OverlayClass { tag: "dojo:world".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    let mut current = OverlayManifest { ..Default::default() };
+    let expected = OverlayManifest {
+        world: Some(OverlayClass { tag: "dojo:world".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+
+    current.merge(other);
+    assert_eq!(current, expected);
+
+    // when other.world is some and current.world is some
+    let other = OverlayManifest {
+        world: Some(OverlayClass { tag: "dojo:worldother".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    let mut current = OverlayManifest {
+        world: Some(OverlayClass { tag: "dojo:worldcurrent".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    let expected = OverlayManifest {
+        world: Some(OverlayClass { tag: "dojo:worldcurrent".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+
+    current.merge(other);
+    assert_eq!(current, expected);
+
+    // when other.world is none and current.world is none
+    let other = OverlayManifest { ..Default::default() };
+    let mut current = OverlayManifest { ..Default::default() };
+    let expected = OverlayManifest { ..Default::default() };
+
+    current.merge(other);
+    assert_eq!(current, expected);
+}
+
+#[test]
+fn overlay_merge_for_base_work_as_expected() {
+    // when other.base is none and current.base is some
+    let other = OverlayManifest { ..Default::default() };
+    let mut current = OverlayManifest {
+        base: Some(OverlayClass { tag: "dojo:base".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    let expected = OverlayManifest {
+        base: Some(OverlayClass { tag: "dojo:base".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    current.merge(other);
+
+    assert_eq!(current, expected);
+
+    // when other.base is some and current.base is none
+    let other = OverlayManifest {
+        base: Some(OverlayClass { tag: "dojo:base".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    let mut current = OverlayManifest { ..Default::default() };
+    let expected = OverlayManifest {
+        base: Some(OverlayClass { tag: "dojo:base".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+
+    current.merge(other);
+    assert_eq!(current, expected);
+
+    // when other.base is some and current.base is some
+    let other = OverlayManifest {
+        base: Some(OverlayClass { tag: "dojo:baseother".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    let mut current = OverlayManifest {
+        base: Some(OverlayClass { tag: "dojo:basecurrent".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+    let expected = OverlayManifest {
+        base: Some(OverlayClass { tag: "dojo:basecurrent".to_string(), ..Default::default() }),
+        ..Default::default()
+    };
+
+    current.merge(other);
+    assert_eq!(current, expected);
+
+    // when other.base is none and current.base is none
+    let other = OverlayManifest { ..Default::default() };
+    let mut current = OverlayManifest { ..Default::default() };
+    let expected = OverlayManifest { ..Default::default() };
+
+    current.merge(other);
+    assert_eq!(current, expected);
+}
+
+#[test]
+fn base_manifest_remove_items_work_as_expected() {
+    let contracts = ["ns:c1", "ns:c2", "ns:c3"];
+    let models = ["ns:m1", "ns:m2", "ns:m3"];
+
+    let world = Manifest { manifest_name: "world".into(), inner: Default::default() };
+    let base = Manifest { manifest_name: "dojo-base".to_string(), inner: Default::default() };
+
+    let contracts = contracts
+        .iter()
+        .map(|c| Manifest {
+            manifest_name: c.to_string(),
+            inner: DojoContract { tag: c.to_string(), ..Default::default() },
+        })
+        .collect();
+    let models = models
+        .iter()
+        .map(|c| Manifest {
+            manifest_name: c.to_string(),
+            inner: DojoModel { tag: c.to_string(), ..Default::default() },
+        })
+        .collect();
+
+    let mut base = BaseManifest { contracts, models, world, base };
+
+    base.remove_tags(vec!["ns:c1".to_string(), "ns:c3".to_string(), "ns:m2".to_string()]);
+
+    assert_eq!(base.contracts.len(), 1);
+    assert_eq!(
+        base.contracts.iter().map(|c| c.manifest_name.clone()).collect::<Vec<String>>(),
+        vec!["ns:c2"]
+    );
+
+    assert_eq!(base.models.len(), 2);
+    assert_eq!(
+        base.models.iter().map(|c| c.manifest_name.clone()).collect::<Vec<String>>(),
+        vec!["ns:m1", "ns:m3"]
+    );
+}
+
+fn serialize_bytearray(s: &str) -> Vec<Felt> {
+    let ba = ByteArray::from_string(s).unwrap();
+    ByteArray::cairo_serialize(&ba)
+}
+
+fn build_model_registered_event(values: Vec<Felt>, namespace: &str, model: &str) -> EmittedEvent {
+    let mut data = ByteArray::cairo_serialize(&ByteArray::from_string(model).unwrap());
+    data.extend(ByteArray::cairo_serialize(&ByteArray::from_string(namespace).unwrap()));
+    data.extend(values);
+
+    EmittedEvent {
+        data,
+        keys: vec![selector!("ModelRegistered")],
+        block_hash: Default::default(),
+        from_address: Default::default(),
+        block_number: Default::default(),
+        transaction_hash: Default::default(),
+    }
+}
+
+fn build_deploy_event(values: Vec<Felt>, ns: &str, name: &str) -> EmittedEvent {
+    let mut data = values.to_vec();
+    data.extend(serialize_bytearray(ns).iter());
+    data.extend(serialize_bytearray(name).iter());
+
+    EmittedEvent {
+        data,
+        keys: vec![],
+        block_hash: Default::default(),
+        from_address: Default::default(),
+        block_number: Default::default(),
+        transaction_hash: Default::default(),
+    }
 }

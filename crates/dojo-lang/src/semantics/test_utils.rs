@@ -12,7 +12,7 @@ use cairo_lang_filesystem::db::{
 use cairo_lang_filesystem::ids::{
     CrateId, CrateLongId, Directory, FileKind, FileLongId, VirtualFile,
 };
-use cairo_lang_parser::db::ParserDatabase;
+use cairo_lang_parser::db::{ParserDatabase, ParserGroup};
 use cairo_lang_semantic::db::{SemanticDatabase, SemanticGroup};
 use cairo_lang_semantic::inline_macros::get_default_plugin_suite;
 use cairo_lang_semantic::items::functions::GenericFunctionId;
@@ -28,7 +28,7 @@ use once_cell::sync::Lazy;
 use crate::plugin::dojo_plugin_suite;
 
 #[salsa::database(SemanticDatabase, DefsDatabase, ParserDatabase, SyntaxDatabase, FilesDatabase)]
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct DojoSemanticDatabase {
     storage: salsa::Storage<DojoSemanticDatabase>,
 }
@@ -98,6 +98,11 @@ impl Upcast<dyn DefsGroup> for DojoSemanticDatabase {
 }
 impl Upcast<dyn SemanticGroup> for DojoSemanticDatabase {
     fn upcast(&self) -> &(dyn SemanticGroup + 'static) {
+        self
+    }
+}
+impl Upcast<dyn ParserGroup> for DojoSemanticDatabase {
+    fn upcast(&self) -> &(dyn ParserGroup + 'static) {
         self
     }
 }

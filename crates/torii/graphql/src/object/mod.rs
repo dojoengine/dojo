@@ -26,7 +26,7 @@ use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
 use crate::utils::extract;
 
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub enum ObjectVariant {
     Basic(Box<dyn BasicObject>),
     Resolvable(Box<dyn ResolvableObject>),

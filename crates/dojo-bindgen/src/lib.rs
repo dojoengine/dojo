@@ -5,10 +5,9 @@ use std::path::PathBuf;
 use cainome::parser::tokens::Token;
 use cainome::parser::{AbiParser, TokenizedAbi};
 use camino::Utf8PathBuf;
-use convert_case::{Case, Casing};
 use dojo_world::manifest::BaseManifest;
 pub mod error;
-use error::{BindgenResult, Error};
+use error::BindgenResult;
 
 mod plugins;
 use plugins::typescript::TypescriptPlugin;
@@ -19,10 +18,8 @@ pub use plugins::BuiltinPlugins;
 
 #[derive(Debug, PartialEq)]
 pub struct DojoModel {
-    /// PascalCase name of the model.
-    pub name: String,
-    /// Fully qualified path of the model type in cairo code.
-    pub qualified_path: String,
+    /// model tag.
+    pub tag: String,
     /// List of tokens found in the model contract ABI.
     /// Only structs and enums are currently used.
     pub tokens: TokenizedAbi,
@@ -30,8 +27,8 @@ pub struct DojoModel {
 
 #[derive(Debug, PartialEq)]
 pub struct DojoContract {
-    /// Contract's fully qualified name.
-    pub qualified_path: String,
+    /// Contract tag.
+    pub tag: String,
     /// Full ABI of the contract in case the plugin wants to make extra checks,
     /// or generated other functions than the systems.
     pub tokens: TokenizedAbi,
@@ -73,13 +70,17 @@ pub struct PluginManager {
 
 impl PluginManager {
     /// Generates the bindings for all the given Plugin.
-    pub async fn generate(&self) -> BindgenResult<()> {
+    pub async fn generate(&self, skip_migration: Option<Vec<String>>) -> BindgenResult<()> {
         if self.builtin_plugins.is_empty() && self.plugins.is_empty() {
             return Ok(());
         }
 
-        let data =
-            gather_dojo_data(&self.manifest_path, &self.root_package_name, &self.profile_name)?;
+        let data = gather_dojo_data(
+            &self.manifest_path,
+            &self.root_package_name,
+            &self.profile_name,
+            skip_migration,
+        )?;
 
         for plugin in &self.builtin_plugins {
             // Get the plugin builder from the plugin enum.
@@ -111,10 +112,15 @@ fn gather_dojo_data(
     manifest_path: &Utf8PathBuf,
     root_package_name: &str,
     profile_name: &str,
+    skip_migration: Option<Vec<String>>,
 ) -> BindgenResult<DojoData> {
     let root_dir: Utf8PathBuf = manifest_path.parent().unwrap().into();
     let base_manifest_dir: Utf8PathBuf = root_dir.join("manifests").join(profile_name).join("base");
-    let base_manifest = BaseManifest::load_from_path(&base_manifest_dir)?;
+    let mut base_manifest = BaseManifest::load_from_path(&base_manifest_dir)?;
+
+    if let Some(skip_manifests) = skip_migration {
+        base_manifest.remove_tags(skip_manifests);
+    }
 
     let mut models = HashMap::new();
     let mut contracts = HashMap::new();
@@ -129,6 +135,7 @@ fn gather_dojo_data(
             .load_abi_string(&root_dir)?;
 
         let tokens = AbiParser::tokens_from_abi_string(&abi, &HashMap::new())?;
+        let tag = contract_manifest.inner.tag.clone();
 
         // Identify the systems -> for now only take the functions from the
         // interfaces.
@@ -142,12 +149,7 @@ fn gather_dojo_data(
             }
         }
 
-        let contract_name = contract_manifest.name.to_string();
-
-        contracts.insert(
-            contract_name.clone(),
-            DojoContract { qualified_path: contract_name, tokens, systems },
-        );
+        contracts.insert(tag.clone(), DojoContract { tag, tokens, systems });
     }
 
     for model_manifest in &base_manifest.models {
@@ -160,27 +162,11 @@ fn gather_dojo_data(
             .load_abi_string(&root_dir)?;
 
         let tokens = AbiParser::tokens_from_abi_string(&abi, &HashMap::new())?;
+        let tag = model_manifest.inner.tag.clone();
 
-        let name = model_manifest.name.to_string();
+        let model = DojoModel { tag: tag.clone(), tokens: filter_model_tokens(&tokens) };
 
-        if let Some(model_name) = model_name_from_fully_qualified_path(&name) {
-            let model_pascal_case = model_name.from_case(Case::Snake).to_case(Case::Pascal);
-
-            let model = DojoModel {
-                name: model_pascal_case.clone(),
-                qualified_path: name
-                    .replace(&model_name, &model_pascal_case)
-                    .trim_end_matches(".json")
-                    .to_string(),
-                tokens: filter_model_tokens(&tokens),
-            };
-
-            models.insert(model_pascal_case, model);
-        } else {
-            return Err(Error::Format(format!(
-                "Could not extract model name from file name `{name}`"
-            )));
-        }
+        models.insert(tag.clone(), model);
     }
 
     let world = DojoWorld { name: root_package_name.to_string() };
@@ -225,60 +211,48 @@ fn filter_model_tokens(tokens: &TokenizedAbi) -> TokenizedAbi {
     TokenizedAbi { structs, enums, ..Default::default() }
 }
 
-/// Extracts a model name from the fully qualified path of the model.
-///
-/// # Example
-///
-/// The fully qualified name "dojo_examples::models::position" should return "position".
-///
-/// # Arguments
-///
-/// * `file_name` - Fully qualified model name.
-fn model_name_from_fully_qualified_path(file_name: &str) -> Option<String> {
-    let parts: Vec<&str> = file_name.split("::").collect();
-
-    // TODO: we may want to have inside the manifest the name of the model struct
-    // instead of extracting it from the file's name.
-    parts.last().map(|last_part| last_part.to_string())
-}
-
 #[cfg(test)]
 mod tests {
+    use dojo_test_utils::compiler;
+    use dojo_world::metadata::dojo_metadata_from_workspace;
+    use scarb::compiler::Profile;
+
     use super::*;
 
     #[test]
-    fn model_name_from_fully_qualified_path_ok() {
-        let file_name = "dojo_examples::models::position";
-        assert_eq!(model_name_from_fully_qualified_path(file_name), Some("position".to_string()));
-    }
-
-    #[test]
     fn gather_data_ok() {
-        let data = gather_dojo_data(
-            &Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml"),
-            "dojo_example",
-            "dev",
-        )
-        .unwrap();
+        let manifest_path = Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml");
 
-        assert_eq!(data.models.len(), 5);
+        let config = compiler::copy_tmp_config(
+            &Utf8PathBuf::from("../../examples/spawn-and-move"),
+            &Utf8PathBuf::from("../dojo-core"),
+            Profile::DEV,
+        );
+
+        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+        let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
+            "No current package with dojo metadata found, bindgen is not yet supported for \
+             workspaces.",
+        );
+
+        let data =
+            gather_dojo_data(&manifest_path, "dojo_example", "dev", dojo_metadata.skip_migration)
+                .unwrap();
+
+        assert_eq!(data.models.len(), 8);
 
         assert_eq!(data.world.name, "dojo_example");
 
-        let pos = data.models.get("Position").unwrap();
-        assert_eq!(pos.name, "Position");
-        assert_eq!(pos.qualified_path, "dojo_examples::models::Position");
+        let pos = data.models.get("dojo_examples-Position").unwrap();
+        assert_eq!(pos.tag, "dojo_examples-Position");
 
-        let moves = data.models.get("Moves").unwrap();
-        assert_eq!(moves.name, "Moves");
-        assert_eq!(moves.qualified_path, "dojo_examples::models::Moves");
+        let moves = data.models.get("dojo_examples-Moves").unwrap();
+        assert_eq!(moves.tag, "dojo_examples-Moves");
 
-        let moved = data.models.get("EmoteMessage").unwrap();
-        assert_eq!(moved.name, "EmoteMessage");
-        assert_eq!(moved.qualified_path, "dojo_examples::models::EmoteMessage");
+        let moved = data.models.get("dojo_examples-Message").unwrap();
+        assert_eq!(moved.tag, "dojo_examples-Message");
 
-        let player_config = data.models.get("PlayerConfig").unwrap();
-        assert_eq!(player_config.name, "PlayerConfig");
-        assert_eq!(player_config.qualified_path, "dojo_examples::models::PlayerConfig");
+        let player_config = data.models.get("dojo_examples-PlayerConfig").unwrap();
+        assert_eq!(player_config.tag, "dojo_examples-PlayerConfig");
     }
 }

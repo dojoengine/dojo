@@ -1,10 +1,8 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, MaybePendingTransactionReceipt, Transaction};
+use starknet::core::types::{Event, Felt, Transaction, TransactionReceiptWithBlockInfo};
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
-use std::fmt::Debug;
 
 use crate::sql::Sql;
 
@@ -21,7 +19,7 @@ const NUM_KEYS_INDEX: usize = 1;
 #[async_trait]
 pub trait EventProcessor<P>
 where
-    P: Provider + Sync + Debug,
+    P: Provider + Sync,
 {
     fn event_key(&self) -> String;
 
@@ -38,14 +36,14 @@ where
         db: &mut Sql,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &MaybePendingTransactionReceipt,
+        transaction_receipt: &TransactionReceiptWithBlockInfo,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error>;
 }
 
 #[async_trait]
-pub trait BlockProcessor<P: Provider + Sync + Debug> {
+pub trait BlockProcessor<P: Provider + Sync> {
     fn get_block_number(&self) -> String;
     async fn process(
         &self,
@@ -57,7 +55,7 @@ pub trait BlockProcessor<P: Provider + Sync + Debug> {
 }
 
 #[async_trait]
-pub trait TransactionProcessor<P: Provider + Sync + Debug> {
+pub trait TransactionProcessor<P: Provider + Sync> {
     #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,
@@ -65,8 +63,8 @@ pub trait TransactionProcessor<P: Provider + Sync + Debug> {
         provider: &P,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &MaybePendingTransactionReceipt,
-        transaction_hash: FieldElement,
+        transaction_receipt: &TransactionReceiptWithBlockInfo,
+        transaction_hash: Felt,
         transaction: &Transaction,
     ) -> Result<(), Error>;
 }

@@ -1,36 +1,36 @@
 use anyhow::{anyhow, Result};
+use bigdecimal::BigDecimal;
+use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::migration::strategy::generate_salt;
-use dojo_world::utils::{execution_status_from_maybe_pending_receipt, TransactionWaiter};
+use dojo_world::utils::{execution_status_from_receipt, TransactionWaiter};
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{
-    BlockId, BlockTag, ExecutionResult, FieldElement, InvokeTransactionResult,
-};
+use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
 
 /// Retrieves a contract address from it's name
 /// using the world's data, or parses a hex string into
-/// a [`FieldElement`].
+/// a [`Felt`].
 ///
 /// # Arguments
 ///
 /// * `world` - The world's contract connector.
-/// * `name_or_address` - A string with a contract name or a hexadecimal address.
+/// * `tag_or_address` - A string with a contract tag or a hexadecimal address.
 ///
 /// # Returns
 ///
-/// A [`FieldElement`] with the address of the contract on success.
+/// A [`Felt`] with the address of the contract on success.
 pub async fn get_contract_address<A: ConnectedAccount + Sync>(
     world: &WorldContract<A>,
-    name_or_address: String,
-) -> Result<FieldElement> {
-    if name_or_address.starts_with("0x") {
-        FieldElement::from_hex_be(&name_or_address).map_err(anyhow::Error::from)
+    tag_or_address: String,
+) -> Result<Felt> {
+    if tag_or_address.starts_with("0x") {
+        Felt::from_hex(&tag_or_address).map_err(anyhow::Error::from)
     } else {
         let contract_class_hash = world.base().call().await?;
         Ok(starknet::core::utils::get_contract_address(
-            generate_salt(&name_or_address),
+            generate_salt(&get_name_from_tag(&tag_or_address)),
             contract_class_hash.into(),
             &[],
             world.address,
@@ -40,26 +40,26 @@ pub async fn get_contract_address<A: ConnectedAccount + Sync>(
 
 /// Retrieves a contract address from its name
 /// using a world contract reader, or parses a hex string into
-/// a [`FieldElement`].
+/// a [`Felt`].
 ///
 /// # Arguments
 ///
 /// * `world_reader` - The world contract reader.
-/// * `name_or_address` - A string with a contract name or a hexadecimal address.
+/// * `tag_or_address` - A string with a contract tag or a hexadecimal address.
 ///
 /// # Returns
 ///
-/// A [`FieldElement`] with the address of the contract on success.
+/// A [`Felt`] with the address of the contract on success.
 pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
     world_reader: &WorldContractReader<P>,
-    name_or_address: String,
-) -> Result<FieldElement> {
-    if name_or_address.starts_with("0x") {
-        FieldElement::from_hex_be(&name_or_address).map_err(anyhow::Error::from)
+    tag_or_address: String,
+) -> Result<Felt> {
+    if tag_or_address.starts_with("0x") {
+        Felt::from_hex(&tag_or_address).map_err(anyhow::Error::from)
     } else {
         let contract_class_hash = world_reader.base().call().await?;
         Ok(starknet::core::utils::get_contract_address(
-            generate_salt(&name_or_address),
+            generate_salt(&get_name_from_tag(&tag_or_address)),
             contract_class_hash.into(),
             &[],
             world_reader.address,
@@ -95,7 +95,7 @@ where
         if show_receipt {
             ui.print(format!("Receipt:\n{}", serde_json::to_string_pretty(&receipt)?));
         } else {
-            match execution_status_from_maybe_pending_receipt(&receipt) {
+            match execution_status_from_receipt(&receipt.receipt) {
                 ExecutionResult::Succeeded => {
                     ui.print("Status: OK".to_string());
                 }
@@ -122,7 +122,7 @@ where
 /// The parsed [`BlockId`] on success.
 pub fn parse_block_id(block_str: String) -> Result<BlockId> {
     if block_str.starts_with("0x") {
-        let hash = FieldElement::from_hex_be(&block_str)
+        let hash = Felt::from_hex(&block_str)
             .map_err(|_| anyhow!("Unable to parse block hash: {}", block_str))?;
         Ok(BlockId::Hash(hash))
     } else if block_str.eq("pending") {
@@ -135,4 +135,13 @@ pub fn parse_block_id(block_str: String) -> Result<BlockId> {
             Err(_) => Err(anyhow!("Unable to parse block ID: {}", block_str)),
         }
     }
+}
+
+/// Convert a [`Felt`] into a [`BigDecimal`] with a given number of decimals.
+pub fn felt_to_bigdecimal<F, D>(felt: F, decimals: D) -> BigDecimal
+where
+    F: AsRef<Felt>,
+    D: Into<i64>,
+{
+    BigDecimal::from((felt.as_ref().to_bigint(), decimals.into()))
 }

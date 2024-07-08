@@ -6,46 +6,17 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow.workspace = true
-async-trait.workspace = true
 base64.workspace = true
-camino.workspace = true
-chrono.workspace = true
-clap.workspace = true
-ctrlc = { version = "3.4", features = [ "termination" ] }
-dojo-metrics.workspace = true
-dojo-types = { path = "../../dojo-types" }
-dojo-world = { path = "../../dojo-world" }
-either = "1.9.0"
-futures.workspace = true
 http-body = "0.4.5"
 http.workspace = true
 hyper-reverse-proxy = { git = "https://github.com/tarrencev/hyper-reverse-proxy" }
 hyper.workspace = true
 indexmap.workspace = true
 lazy_static.workspace = true
-scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sqlx.workspace = true
-starknet-crypto.workspace = true
-starknet.workspace = true
-tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
-torii-core = { path = "../core" }
-torii-graphql = { path = "../graphql" }
-torii-grpc = { path = "../grpc", features = [ "server" ] }
 tower-http.workspace = true
 tower.workspace = true
-tracing-subscriber.workspace = true
 tracing.workspace = true
-url.workspace = true
-
-[dev-dependencies]
-camino.workspace = true
-
-[features]
-default = [ "jemalloc", "sqlite" ]
-jemalloc = [ "dojo-metrics/jemalloc" ]
-sqlite = [ "sqlx/sqlite" ]

@@ -6,7 +6,7 @@ use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::contract::AbiEntry;
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 
 use crate::manifest::AbstractManifestError;
 
@@ -36,15 +36,16 @@ pub struct DeploymentManifest {
     pub models: Vec<Manifest<DojoModel>>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayManifest {
     pub world: Option<OverlayClass>,
     pub base: Option<OverlayClass>,
     pub contracts: Vec<OverlayDojoContract>,
+    pub models: Vec<OverlayDojoModel>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Default, Deserialize, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Manifest<T>
 where
@@ -52,7 +53,9 @@ where
 {
     #[serde(flatten)]
     pub inner: T,
-    pub name: SmolStr,
+
+    // name of the manifest which is used as filename
+    pub manifest_name: String,
 }
 
 // Utility methods thats needs to be implemented by manifest types
@@ -60,9 +63,9 @@ pub trait ManifestMethods {
     type OverlayType;
     fn abi(&self) -> Option<&AbiFormat>;
     fn set_abi(&mut self, abi: Option<AbiFormat>);
-    fn class_hash(&self) -> &FieldElement;
-    fn set_class_hash(&mut self, class_hash: FieldElement);
-    fn original_class_hash(&self) -> &FieldElement;
+    fn class_hash(&self) -> &Felt;
+    fn set_class_hash(&mut self, class_hash: Felt);
+    fn original_class_hash(&self) -> &Felt;
 
     /// This method is called when during compilation base manifest file already exists.
     /// Manifest generated during compilation won't contains properties manually updated by users
@@ -74,8 +77,8 @@ impl<T> Manifest<T>
 where
     T: ManifestMethods,
 {
-    pub fn new(inner: T, name: SmolStr) -> Self {
-        Self { inner, name }
+    pub fn new(inner: T, manifest_name: String) -> Self {
+        Self { inner, manifest_name }
     }
 }
 
@@ -85,18 +88,24 @@ where
 #[serde(tag = "kind")]
 pub struct DojoContract {
     #[serde_as(as = "Option<UfeHex>")]
-    pub address: Option<FieldElement>,
+    pub address: Option<Felt>,
     #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
+    pub class_hash: Felt,
     #[serde_as(as = "UfeHex")]
-    pub original_class_hash: FieldElement,
+    pub original_class_hash: Felt,
     // base class hash used to deploy the contract
     #[serde_as(as = "UfeHex")]
-    pub base_class_hash: FieldElement,
+    pub base_class_hash: Felt,
     pub abi: Option<AbiFormat>,
+    #[serde(default)]
     pub reads: Vec<String>,
+    #[serde(default)]
     pub writes: Vec<String>,
+    #[serde(default)]
     pub computed: Vec<ComputedValueEntrypoint>,
+    #[serde(default)]
+    pub init_calldata: Vec<String>,
+    pub tag: String,
 }
 
 /// Represents a declaration of a model.
@@ -107,10 +116,11 @@ pub struct DojoContract {
 pub struct DojoModel {
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
+    pub class_hash: Felt,
     #[serde_as(as = "UfeHex")]
-    pub original_class_hash: FieldElement,
+    pub original_class_hash: Felt,
     pub abi: Option<AbiFormat>,
+    pub tag: String,
 }
 
 #[serde_as]
@@ -119,14 +129,14 @@ pub struct DojoModel {
 #[serde(tag = "kind")]
 pub struct WorldContract {
     #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
+    pub class_hash: Felt,
     #[serde_as(as = "UfeHex")]
-    pub original_class_hash: FieldElement,
+    pub original_class_hash: Felt,
     pub abi: Option<AbiFormat>,
     #[serde_as(as = "Option<UfeHex>")]
-    pub address: Option<FieldElement>,
+    pub address: Option<Felt>,
     #[serde_as(as = "Option<UfeHex>")]
-    pub transaction_hash: Option<FieldElement>,
+    pub transaction_hash: Option<Felt>,
     pub block_number: Option<u64>,
     pub seed: String,
     pub metadata: Option<WorldMetadata>,
@@ -138,28 +148,30 @@ pub struct WorldContract {
 #[serde(tag = "kind")]
 pub struct Class {
     #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
+    pub class_hash: Felt,
     #[serde_as(as = "UfeHex")]
-    pub original_class_hash: FieldElement,
+    pub original_class_hash: Felt,
     pub abi: Option<AbiFormat>,
+    pub tag: String,
 }
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoContract {
-    pub name: SmolStr,
-    pub original_class_hash: Option<FieldElement>,
+    pub tag: String,
+    pub original_class_hash: Option<Felt>,
     pub reads: Option<Vec<String>>,
     pub writes: Option<Vec<String>>,
+    pub init_calldata: Option<Vec<String>>,
 }
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoModel {
-    pub name: SmolStr,
-    pub original_class_hash: Option<FieldElement>,
+    pub tag: String,
+    pub original_class_hash: Option<Felt>,
 }
 
 #[serde_as]
@@ -167,15 +179,15 @@ pub struct OverlayDojoModel {
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayContract {
     pub name: SmolStr,
-    pub original_class_hash: Option<FieldElement>,
+    pub original_class_hash: Option<Felt>,
 }
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayClass {
-    pub name: SmolStr,
-    pub original_class_hash: Option<FieldElement>,
+    pub tag: String,
+    pub original_class_hash: Option<Felt>,
 }
 
 // Types used by manifest
@@ -199,7 +211,7 @@ pub struct ComputedValueEntrypoint {
     // Name of entrypoint to get computed value
     pub entrypoint: SmolStr,
     // Component to compute for
-    pub model: Option<String>,
+    pub tag: Option<String>,
 }
 
 impl From<dojo_types::schema::Member> for Member {

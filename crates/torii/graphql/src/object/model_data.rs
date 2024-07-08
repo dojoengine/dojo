@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use async_graphql::dynamic::{Enum, Field, FieldFuture, InputObject, Object, TypeRef};
 use async_graphql::Value;
 use chrono::{DateTime, Utc};
@@ -18,7 +16,7 @@ use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
-use crate::utils::extract;
+use crate::utils;
 
 #[derive(FromRow, Deserialize, PartialEq, Eq, Debug)]
 pub struct ModelMember {
@@ -67,10 +65,13 @@ impl BasicObject for ModelDataObject {
     }
 
     fn objects(&self) -> Vec<Object> {
+        let mut parts = self.type_name().split('_').collect::<Vec<&str>>();
+        let model = parts.pop().unwrap();
+        let namespace = parts.join("_");
+        let type_name = utils::struct_name_from_names(&namespace, model);
         let mut objects = data_objects_recursion(
-            self.type_name(),
-            self.type_mapping(),
-            vec![self.type_name().to_string()],
+            &TypeData::Nested((TypeRef::named(self.type_name()), self.type_mapping.clone())),
+            &vec![type_name],
         );
 
         // root object requires entity_field association
@@ -100,7 +101,10 @@ impl ResolvableObject for ModelDataObject {
         let mut field = Field::new(self.name().1, TypeRef::named(field_type), move |ctx| {
             let type_mapping = type_mapping.clone();
             let where_mapping = where_mapping.clone();
-            let type_name = type_name.clone();
+            let mut parts = type_name.split('_').collect::<Vec<&str>>();
+            let model = parts.pop().unwrap();
+            let namespace = parts.join("_");
+            let type_name = utils::struct_name_from_names(&namespace, model);
 
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
@@ -143,71 +147,28 @@ impl ResolvableObject for ModelDataObject {
     }
 }
 
-// fn data_objects_recursion(type_data: &TypeData, path_array: Vec<String>) -> Vec<Object> {
-//     let mut objects: Vec<Object> = vec![];
-//     match type_data {
-//         TypeData::Nested((nested_type, nested_mapping)) => {
-//             let mut nested_path = path_array.clone();
-//             nested_path.push(nested_type.to_string());
-//             let nested_objects = nested_mapping.iter().flat_map(|(field_name, type_data)| {
-//                 let mut nested_path = nested_path.clone();
-//                 nested_path.push(field_name.to_string());
-//                 data_objects_recursion(type_data, nested_path)
-//             });
+fn data_objects_recursion(type_data: &TypeData, path_array: &Vec<String>) -> Vec<Object> {
+    let mut objects: Vec<Object> = vec![];
 
-//             objects.extend(nested_objects);
-//             objects.push(object(&nested_type.to_string(), nested_mapping, path_array));
-//         }
-//         TypeData::List(inner) => {
-//             let mut nested_path = path_array.clone();
-//             nested_path.push(inner.type_ref().to_string());
-//             let nested_objects = data_objects_recursion(inner, nested_path);
-
-//             objects.extend(nested_objects);
-//         }
-//         _ => {}
-//     }
-
-//     objects
-// }
-
-fn data_objects_recursion(
-    type_name: &str,
-    type_mapping: &TypeMapping,
-    path_array: Vec<String>,
-) -> Vec<Object> {
-    let mut objects: Vec<Object> = type_mapping
-        .iter()
-        .filter_map(|(field_name, type_data)| {
-            if let TypeData::Nested((nested_type, nested_mapping)) = type_data {
+    match type_data {
+        TypeData::Nested((nested_type, nested_mapping)) => {
+            let nested_objects = nested_mapping.iter().flat_map(|(field_name, type_data)| {
                 let mut nested_path = path_array.clone();
                 nested_path.push(field_name.to_string());
-                let nested_objects =
-                    data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
+                data_objects_recursion(type_data, &nested_path)
+            });
 
-                Some(nested_objects)
-            } else if let TypeData::List(inner) = type_data {
-                if let TypeData::Nested((nested_type, nested_mapping)) = inner.deref() {
-                    let mut nested_path = path_array.clone();
-                    nested_path.push(inner.type_ref().to_string());
-                    let nested_objects = data_objects_recursion(
-                        &nested_type.to_string(),
-                        nested_mapping,
-                        nested_path,
-                    );
+            objects.extend(nested_objects);
+            objects.push(object(&nested_type.to_string(), nested_mapping, path_array.clone()));
+        }
+        TypeData::List(inner) => {
+            let nested_objects = data_objects_recursion(inner, path_array);
 
-                    return Some(nested_objects);
-                }
+            objects.extend(nested_objects);
+        }
+        _ => {}
+    }
 
-                None
-            } else {
-                None
-            }
-        })
-        .flatten()
-        .collect();
-
-    objects.push(object(type_name, type_mapping, path_array));
     objects
 }
 
@@ -235,7 +196,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                             Value::Object(indexmap) => {
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                                 let entity_id =
-                                    extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
+                                    utils::extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
 
                                 // if we already fetched our model data, return it
                                 if let Some(data) = indexmap.get(&field_name) {
@@ -289,7 +250,7 @@ fn entity_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let entity_id = extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
+                    let entity_id = utils::extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
                     let data =
                         fetch_single_row(&mut conn, ENTITY_TABLE, ID_COLUMN, &entity_id).await?;
                     let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;

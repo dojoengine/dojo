@@ -6,14 +6,15 @@ use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeErr
 use dojo_types::packing::{PackingError, ParseError};
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, parse_cairo_short_string,
-    CairoShortStringToFeltError, NonAsciiNameError, ParseCairoShortStringError,
+    cairo_short_string_to_felt, parse_cairo_short_string, CairoShortStringToFeltError,
+    NonAsciiNameError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
 
 use super::abi::world::Layout;
+use super::naming;
 use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
@@ -46,31 +47,37 @@ pub enum ModelError {
     Packing(#[from] PackingError),
     #[error(transparent)]
     Cainome(#[from] CainomeError),
+    #[error("{0}")]
+    TagError(String),
 }
 
 // TODO: to update to match with new model interface
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
-    // TODO: kept for compatibility but should be removed
-    // because it returns the model name hash and not the model name itself.
-    fn name(&self) -> String;
-    fn selector(&self) -> FieldElement;
-    fn class_hash(&self) -> FieldElement;
-    fn contract_address(&self) -> FieldElement;
+    fn namespace(&self) -> &str;
+    fn name(&self) -> &str;
+    fn selector(&self) -> Felt;
+    fn class_hash(&self) -> Felt;
+    fn contract_address(&self) -> Felt;
     async fn schema(&self) -> Result<Ty, E>;
     async fn packed_size(&self) -> Result<u32, E>;
     async fn unpacked_size(&self) -> Result<u32, E>;
     async fn layout(&self) -> Result<abigen::model::Layout, E>;
 }
 
+#[derive(Debug)]
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
-    /// The name of the model
-    name: FieldElement,
+    /// Namespace of the model
+    namespace: String,
+    /// Name of the model
+    name: String,
+    /// The selector of the model
+    selector: Felt,
     /// The class hash of the model
-    class_hash: FieldElement,
+    class_hash: Felt,
     /// The contract address of the model
-    contract_address: FieldElement,
+    contract_address: Felt,
     /// Contract reader of the World that the model is registered to.
     world_reader: &'a WorldContractReader<P>,
     /// Contract reader of the model.
@@ -82,35 +89,35 @@ where
     P: Provider + Sync + Send,
 {
     pub async fn new(
+        namespace: &str,
         name: &str,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        let name = get_selector_from_name(name)?;
+        let model_selector = naming::compute_selector_from_names(namespace, name);
 
         let (class_hash, contract_address) =
-            world.model(&name).block_id(world.block_id).call().await?;
+            world.model(&model_selector).block_id(world.block_id).call().await?;
 
         // World Cairo contract won't raise an error in case of unknown/unregistered
         // model so raise an error here in case of zero address.
-        if contract_address == ContractAddress(FieldElement::ZERO) {
+        if contract_address == ContractAddress(Felt::ZERO) {
             return Err(ModelError::ModelNotFound);
         }
 
         let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
 
         Ok(Self {
+            namespace: namespace.into(),
+            name: name.into(),
             world_reader: world,
             class_hash: class_hash.into(),
             contract_address: contract_address.into(),
-            name,
+            selector: model_selector,
             model_reader,
         })
     }
 
-    pub async fn entity_storage(
-        &self,
-        keys: &[FieldElement],
-    ) -> Result<Vec<FieldElement>, ModelError> {
+    pub async fn entity_storage(&self, keys: &[Felt]) -> Result<Vec<Felt>, ModelError> {
         // As the dojo::database::introspect::Layout type has been pasted
         // in both `model` and `world` ABI by abigen, the compiler sees both types
         // as different even if they are strictly identical.
@@ -122,7 +129,7 @@ where
         Ok(self.world_reader.entity(&self.selector(), &keys.to_vec(), &layout).call().await?)
     }
 
-    pub async fn entity(&self, keys: &[FieldElement]) -> Result<Ty, ModelError> {
+    pub async fn entity(&self, keys: &[Felt]) -> Result<Ty, ModelError> {
         let mut schema = self.schema().await?;
         let values = self.entity_storage(keys).await?;
 
@@ -140,19 +147,23 @@ impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
 where
     P: Provider + Sync + Send,
 {
-    fn name(&self) -> String {
-        self.name.to_string()
+    fn namespace(&self) -> &str {
+        &self.namespace
     }
 
-    fn selector(&self) -> FieldElement {
-        self.name
+    fn name(&self) -> &str {
+        &self.name
     }
 
-    fn class_hash(&self) -> FieldElement {
+    fn selector(&self) -> Felt {
+        self.selector
+    }
+
+    fn class_hash(&self) -> Felt {
         self.class_hash
     }
 
-    fn contract_address(&self) -> FieldElement {
+    fn contract_address(&self) -> Felt {
         self.contract_address
     }
 

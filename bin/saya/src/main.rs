@@ -6,6 +6,9 @@ use tokio::signal::ctrl_c;
 
 mod args;
 
+#[cfg(test)]
+mod tests;
+
 use args::SayaArgs;
 
 #[tokio::main]
@@ -54,7 +57,7 @@ CONFIGURATION
     if let Some(da_config) = &config.data_availability {
         println!(
             r"
-DATA AVAILBILITY
+DATA AVAILABILITY
 ==================
 {da_config}
     ",

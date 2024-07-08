@@ -1,6 +1,8 @@
 use array::{ArrayTrait, SpanTrait};
 use starknet::{ClassHash, ContractAddress, Felt252TryIntoContractAddress, Felt252TryIntoClassHash};
-use dojo::packing::{shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size};
+use dojo::packing::{
+    shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const
+};
 use integer::U256BitAnd;
 use option::OptionTrait;
 use debug::PrintTrait;
@@ -13,6 +15,17 @@ fn test_bit_fpow() {
     assert(
         fpow(
             2, 250
+        ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
+        ''
+    )
+}
+
+
+#[test]
+fn test_bit_pow2_const() {
+    assert(
+        pow2_const(
+            250
         ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
         ''
     )
@@ -335,9 +348,6 @@ fn test_pack_with_offset() {
     pack(ref packed, ref unpacked, 5, ref layout);
 
     assert!(packed.len() == 2, "bad packed length");
-
-    println!("first item: {}", *packed.at(0));
-    println!("second item: {}", *packed.at(1));
 
     assert!(*packed.at(0) == 0x70006, "bad packed first item");
     assert!(*packed.at(1) == 0x0900000000000000000000000000000008, "bad packed second item");

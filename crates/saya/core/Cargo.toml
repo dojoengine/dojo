@@ -16,10 +16,11 @@ saya-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
+bigdecimal.workspace = true
 cairo-proof-parser.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
-dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
+dojo-world = { workspace = true, features = [ "contracts", "manifest", "metadata", "migration" ] }
 flate2.workspace = true
 futures.workspace = true
 itertools.workspace = true
@@ -31,17 +32,20 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 starknet-crypto.workspace = true
-starknet-types-core = { version = "0.0.9", default-features = false, features = [ "curve", "num-traits", "serde" ] }
+starknet-types-core = { version = "0.1.4", default-features = false, features = [ "curve", "num-traits", "serde" ] }
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
-
+once_cell.workspace = true
 # TODO: use features for each possible DA.
-celestia-rpc = "0.1.1"
-celestia-types = "0.1.1"
+celestia-rpc = "0.2.0"
+celestia-types = "0.2.0"
 
 cairo-felt = "0.9.1"
 num-bigint = "0.4.4"
+num-traits = "0.2.18"
+
+prover-sdk = { git = "https://github.com/cartridge-gg/http-prover", rev = "7d00b05" }

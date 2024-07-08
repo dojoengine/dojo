@@ -8,19 +8,40 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.76.0
+  RUST_VERSION: 1.79.0
 
 jobs:
-  test:
-    runs-on: ubuntu-latest-16-cores
-    container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
+  build:
+    runs-on: ubuntu-latest-4-cores
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo build -r --bin katana
-          KATANA_RUNNER_BIN=$(pwd)/target/release/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 10
+          cargo build -r --bin sozo
+          mkdir -p bins
+          cp ./target/release/katana bins/
+          cp ./target/release/sozo bins/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dojo-bins
+          path: bins
+
+  test:
+    needs: ensure-docker
+    runs-on: ubuntu-latest-32-cores
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:ff30e1d
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
+      - run: |
+          chmod +x /tmp/bins/katana
+          KATANA_RUNNER_BIN=/tmp/bins/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
           # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
           # cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
@@ -33,13 +54,16 @@ jobs:
   ensure-wasm:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
+      image: ghcr.io/dojoengine/dojo-dev:ff30e1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
+      - name: Install wasm32 target
+        run: rustup target add wasm32-unknown-unknown
       - run: cargo build -r --target wasm32-unknown-unknown -p torii-client
 
   ensure-windows:
+    needs: ensure-docker
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -53,6 +77,28 @@ jobs:
           repo-token: ${{ secrets.github_token }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
+  # This job is used to ensure the built katana image doesn't depend on any
+  # libraries that don't exist in the base docker image we use for distribution
+  ensure-docker:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm-slim
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+      - run: |
+          chmod +x ./katana
+          ./katana &
+          KATANA_PID=$!
+          sleep 2
+          if ! kill -0 $KATANA_PID; then
+            echo "Katana exited with an error"
+            exit 1
+          fi
+          kill $KATANA_PID
+
   cairofmt:
     runs-on: ubuntu-latest
     steps:
@@ -65,36 +111,48 @@ jobs:
           scarb --manifest-path crates/dojo-core/Scarb.toml fmt --check
 
   dojo-core-test:
+    needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
+      image: ghcr.io/dojoengine/dojo-dev:ff30e1d
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
       - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
+      - run: |
+          chmod +x /tmp/bins/sozo
+          /tmp/bins/sozo --manifest-path crates/dojo-core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
+    needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
+      image: ghcr.io/dojoengine/dojo-dev:ff30e1d
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
       - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin sozo -- --manifest-path examples/spawn-and-move/Scarb.toml test
+      - run: |
+          chmod +x /tmp/bins/sozo
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml test
 
   dojo-world-bindings-check:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
+      image: ghcr.io/dojoengine/dojo-dev:ff30e1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: cargo run --bin dojo-world-abigen -- --check
 
   clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-4-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
+      image: ghcr.io/dojoengine/dojo-dev:ff30e1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -103,7 +161,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
+      image: ghcr.io/dojoengine/dojo-dev:ff30e1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -112,7 +170,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.0-alpha.4
+      image: ghcr.io/dojoengine/dojo-dev:ff30e1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -120,17 +178,21 @@ jobs:
           scripts/docs.sh
 
   test-hurl:
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/download-artifact@v4
         with:
-          toolchain: ${{ env.RUST_VERSION }}
-      - uses: Swatinem/rust-cache@v2
+          name: dojo-bins
+          path: /tmp/bins
+      - uses: actions/checkout@v3
       - run: |
           curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/3.0.0/hurl_3.0.0_amd64.deb
           sudo apt update && sudo apt install ./hurl_3.0.0_amd64.deb
+          chmod +x /tmp/bins/katana
+          chmod +x /tmp/bins/sozo
+          nohup /tmp/bins/katana --accounts 2 --disable-fee &
       - run: |
-          cargo build --bin katana
-          nohup target/debug/katana --accounts 2 --disable-fee &
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml build
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml migrate apply
       - run: hurl --test examples/rpc/**/*.hurl

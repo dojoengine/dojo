@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use clap::Parser;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
-use saya_core::SayaConfig;
+use saya_core::{ProverAccessKey, SayaConfig, StarknetAccountData};
+use starknet::core::utils::cairo_short_string_to_felt;
+use starknet_account::StarknetAccountOptions;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
@@ -16,6 +18,7 @@ use crate::args::proof::ProofOptions;
 
 mod data_availability;
 mod proof;
+mod starknet_account;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -28,11 +31,11 @@ pub struct SayaArgs {
     #[arg(default_value = "http://localhost:5050")]
     pub rpc_url: Url,
 
-    /// Specify the Prover URL.
     #[arg(long)]
-    #[arg(value_name = "PROVER URL")]
-    #[arg(help = "The Prover URL for remote proving.")]
-    pub prover_url: Url,
+    #[arg(value_name = "STORE PROOFS")]
+    #[arg(help = "When enabled all proofs are saved as a file.")]
+    #[arg(default_value_t = false)]
+    pub store_proofs: bool,
 
     /// Enable JSON logging.
     #[arg(long)]
@@ -50,6 +53,10 @@ pub struct SayaArgs {
     #[arg(short, long, default_value = "0")]
     pub start_block: u64,
 
+    #[arg(short, long, default_value = "1")]
+    #[arg(help = "The number of blocks to be merged into a single proof.")]
+    pub batch_size: usize,
+
     #[command(flatten)]
     #[command(next_help_heading = "Data availability options")]
     pub data_availability: DataAvailabilityOptions,
@@ -57,6 +64,10 @@ pub struct SayaArgs {
     #[command(flatten)]
     #[command(next_help_heading = "Choose the proof pipeline configuration")]
     pub proof: ProofOptions,
+
+    #[command(flatten)]
+    #[command(next_help_heading = "Starknet account configuration for settlement")]
+    pub starknet_account: StarknetAccountOptions,
 }
 
 impl SayaArgs {
@@ -81,6 +92,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
     type Error = Box<dyn std::error::Error>;
 
     fn try_from(args: SayaArgs) -> Result<Self, Self::Error> {
+        let skip_publishing_proof = args.data_availability.celestia.skip_publishing_proof;
+
         if let Some(config_file) = args.config_file {
             let file = File::open(config_file).map_err(|_| "Failed to open config file")?;
             let reader = BufReader::new(file);
@@ -117,13 +130,30 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 None => None,
             };
 
+            let starknet_account = StarknetAccountData {
+                starknet_url: args.starknet_account.starknet_url,
+                chain_id: cairo_short_string_to_felt(&args.starknet_account.chain_id)?,
+                signer_address: args.starknet_account.signer_address,
+                signer_key: args.starknet_account.signer_key,
+            };
+
+            let prover_key =
+                ProverAccessKey::from_hex_string(&args.proof.private_key).map_err(|e| {
+                    Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))
+                })?;
+
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
-                prover_url: args.prover_url,
+                prover_url: args.proof.prover_url,
+                prover_key,
+                store_proofs: args.store_proofs,
                 start_block: args.start_block,
+                batch_size: args.batch_size,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
+                skip_publishing_proof,
+                starknet_account,
             })
         }
     }
@@ -131,6 +161,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
 
 #[cfg(test)]
 mod tests {
+    use katana_primitives::felt::FieldElement;
+
     use super::*;
     use crate::args::data_availability::CelestiaOptions;
 
@@ -145,20 +177,30 @@ mod tests {
         let args = SayaArgs {
             config_file: Some(config_file_path.clone()),
             rpc_url: Url::parse("http://localhost:5050").unwrap(),
-            prover_url: Url::parse("http://localhost:5050").unwrap(),
+            store_proofs: true,
             json_log: false,
             start_block: 0,
+            batch_size: 4,
             data_availability: DataAvailabilityOptions {
                 da_chain: None,
                 celestia: CelestiaOptions {
                     celestia_node_url: None,
                     celestia_node_auth_token: None,
                     celestia_namespace: None,
+                    skip_publishing_proof: true,
                 },
             },
             proof: ProofOptions {
                 world_address: Default::default(),
                 fact_registry_address: Default::default(),
+                prover_url: Url::parse("http://localhost:5050").unwrap(),
+                private_key: Default::default(),
+            },
+            starknet_account: StarknetAccountOptions {
+                starknet_url: Url::parse("http://localhost:5030").unwrap(),
+                chain_id: "SN_SEPOLIA".to_string(),
+                signer_address: Default::default(),
+                signer_key: Default::default(),
             },
         };
 
@@ -166,6 +208,13 @@ mod tests {
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
         assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
+        assert_eq!(config.batch_size, 4);
+        assert_eq!(
+            config.prover_key.signing_key_as_hex_string(),
+            "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
+        );
+        assert!(!config.store_proofs);
+        assert!(config.skip_publishing_proof);
         assert_eq!(config.start_block, 0);
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");
@@ -174,5 +223,20 @@ mod tests {
         } else {
             panic!("Expected Celestia config");
         }
+
+        let expected = StarknetAccountData {
+            starknet_url: Url::parse("http://localhost:5030").unwrap(),
+            chain_id: FieldElement::from_hex("0x534e5f5345504f4c4941").unwrap(),
+            signer_address: FieldElement::from_hex(
+                "0x3aa0a12c62a46a200b1a1211e8cd09b520164104e76d79648ca459cf05db94",
+            )
+            .unwrap(),
+            signer_key: FieldElement::from_hex(
+                "0x6b41bfa82e791a8b4e6b3ee058cb25b89714e4a23bd9a1ad6e6ba0bbc0b145b",
+            )
+            .unwrap(),
+        };
+
+        assert_eq!(config.starknet_account, expected);
     }
 }

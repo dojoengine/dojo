@@ -2,12 +2,12 @@
 mod katana_benchmarks {
     use benches::spammer::spam_katana;
     use benches::{deploy, BenchCall};
-    use starknet::core::types::FieldElement;
+    use starknet::core::types::Felt;
 
     #[katana_runner::katana_test(1, true, "../../target/release/katana")]
     async fn katana_heavy_prime_single() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
         let result = spam_katana(
             runner,
@@ -25,7 +25,7 @@ mod katana_benchmarks {
     #[katana_runner::katana_test(100, true, "../../target/release/katana")]
     async fn katana_heavy_prime_100() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
         let result = spam_katana(
             runner,
@@ -43,7 +43,7 @@ mod katana_benchmarks {
     #[katana_runner::katana_test(1000, true, "../../target/release/katana")]
     async fn katana_heavy_prime_1000_a() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
         let result = spam_katana(
             runner,
@@ -61,7 +61,7 @@ mod katana_benchmarks {
     #[katana_runner::katana_test(1000, true, "../../target/release/katana")]
     async fn katana_heavy_prime_1000_b() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
         let result = spam_katana(
             runner,
@@ -79,7 +79,7 @@ mod katana_benchmarks {
     #[katana_runner::katana_test(1000, true, "../../target/release/katana")]
     async fn katana_heavy_prime_1000_c() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
         let result = spam_katana(
             runner,
@@ -97,7 +97,7 @@ mod katana_benchmarks {
     #[katana_runner::katana_test(2000, true, "../../target/release/katana")]
     async fn katana_heavy_prime_2000_a() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
         let result = spam_katana(
             runner,
@@ -115,7 +115,7 @@ mod katana_benchmarks {
     #[katana_runner::katana_test(2000, true, "../../target/release/katana")]
     async fn katana_heavy_prime_2000_b() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
         let result = spam_katana(
             runner,
@@ -133,7 +133,7 @@ mod katana_benchmarks {
     #[katana_runner::katana_test(2000, true, "../../target/release/katana")]
     async fn katana_heavy_prime_2000_c() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
         let result = spam_katana(
             runner,
@@ -151,7 +151,7 @@ mod katana_benchmarks {
     #[katana_runner::katana_test(2000, true, "../../target/release/katana")]
     async fn katana_heavy_multicall_2000() {
         let contract_address = deploy(&runner).await.unwrap();
-        let arg = FieldElement::from_dec_str(&(109u64 * 109u64).to_string()).unwrap();
+        let arg = Felt::from_dec_str(&(109u64 * 109u64).to_string()).unwrap();
         let calls = (0..23).map(|_| BenchCall("is_prime", vec![arg])).collect();
 
         let result = spam_katana(runner, contract_address, calls, 120000, true).await;

@@ -9,22 +9,25 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
+use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
-use starknet::core::utils::get_selector_from_name;
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
+use crate::utils::is_name_valid;
 
 const DEFAULT_MODEL_VERSION: u8 = 1;
 
 const MODEL_VERSION_NAME: &str = "version";
+const MODEL_NAMESPACE: &str = "namespace";
 
 struct ModelParameters {
     version: u8,
+    namespace: Option<String>,
 }
 
 impl Default for ModelParameters {
     fn default() -> ModelParameters {
-        ModelParameters { version: DEFAULT_MODEL_VERSION }
+        ModelParameters { version: DEFAULT_MODEL_VERSION, namespace: Option::None }
     }
 }
 
@@ -73,6 +76,29 @@ fn get_model_version(
     }
 }
 
+/// Get the model namespace from the `Expr` parameter.
+fn get_model_namespace(
+    db: &dyn SyntaxGroup,
+    arg_value: Expr,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+) -> Option<String> {
+    match arg_value {
+        Expr::ShortString(ss) => Some(ss.string_value(db).unwrap()),
+        Expr::String(s) => Some(s.string_value(db).unwrap()),
+        _ => {
+            diagnostics.push(PluginDiagnostic {
+                message: format!(
+                    "The argument '{}' of dojo::model must be a string",
+                    MODEL_NAMESPACE
+                ),
+                stable_ptr: arg_value.stable_ptr().untyped(),
+                severity: Severity::Error,
+            });
+            Option::None
+        }
+    }
+}
+
 /// Get parameters of the dojo::model attribute.
 ///
 /// Note: dojo::model attribute has already been checked so there is one and only one attribute.
@@ -113,6 +139,9 @@ fn get_model_parameters(
                     match arg_name.as_str() {
                         MODEL_VERSION_NAME => {
                             parameters.version = get_model_version(db, arg_value, diagnostics);
+                        }
+                        MODEL_NAMESPACE => {
+                            parameters.namespace = get_model_namespace(db, arg_value, diagnostics);
                         }
                         _ => {
                             diagnostics.push(PluginDiagnostic {
@@ -163,17 +192,47 @@ pub fn handle_model_struct(
     db: &dyn SyntaxGroup,
     aux_data: &mut DojoAuxData,
     struct_ast: ItemStruct,
+    package_id: String,
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
 
     let parameters = get_model_parameters(db, struct_ast.clone(), &mut diagnostics);
 
     let model_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
+    let model_namespace = match parameters.namespace {
+        Option::Some(x) => x,
+        Option::None => package_id,
+    };
+
+    for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
+        if !is_name_valid(value) {
+            return (
+                RewriteNode::empty(),
+                vec![PluginDiagnostic {
+                    stable_ptr: struct_ast.name(db).stable_ptr().0,
+                    message: format!(
+                        "The model {id} '{value}' can only contain characters (a-z/A-Z), numbers \
+                         (0-9) and underscore (_)"
+                    )
+                    .to_string(),
+                    severity: Severity::Error,
+                }],
+            );
+        }
+    }
+
+    let model_tag = naming::get_tag(&model_namespace, &model_name);
+    let model_name_hash = naming::compute_bytearray_hash(&model_name);
+    let model_namespace_hash = naming::compute_bytearray_hash(&model_namespace);
+
     let (model_version, model_selector) = match parameters.version {
         0 => (RewriteNode::Text("0".to_string()), RewriteNode::Text(format!("\"{model_name}\""))),
         _ => (
             RewriteNode::Text(DEFAULT_MODEL_VERSION.to_string()),
-            RewriteNode::Text(get_selector_from_name(model_name.as_str()).unwrap().to_string()),
+            RewriteNode::Text(
+                naming::compute_selector_from_hashes(model_namespace_hash, model_name_hash)
+                    .to_string(),
+            ),
         ),
     };
 
@@ -242,7 +301,11 @@ pub fn handle_model_struct(
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
 
     let name = struct_ast.name(db).text(db);
-    aux_data.models.push(Model { name: name.to_string(), members: members.to_vec() });
+    aux_data.models.push(Model {
+        name: name.to_string(),
+        namespace: model_namespace.clone(),
+        members: members.to_vec(),
+    });
 
     (
         RewriteNode::interpolate_patched(
@@ -250,8 +313,12 @@ pub fn handle_model_struct(
 impl $type_name$Model of dojo::model::Model<$type_name$> {
     fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: \
              dojo::database::introspect::Layout) -> $type_name$ {
-        let values = dojo::world::IWorldDispatcherTrait::entity(world, $model_selector$, keys, \
-             layout);
+        let values = dojo::world::IWorldDispatcherTrait::entity(
+            world,
+            Self::selector(),
+            keys,
+            layout
+        );
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
         // serializing to intermediate array.
@@ -278,6 +345,16 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
+    fn namespace() -> ByteArray {
+        \"$model_namespace$\"
+    }
+
+    #[inline(always)]
+    fn tag() -> ByteArray {
+        \"$model_tag$\"
+    }
+
+    #[inline(always)]
     fn version() -> u8 {
         $model_version$
     }
@@ -292,6 +369,16 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
         Self::selector()
     }
 
+    #[inline(always)]
+    fn name_hash() -> felt252 {
+        $model_name_hash$
+    }
+
+    #[inline(always)]
+    fn namespace_hash() -> felt252 {
+        $model_namespace_hash$
+    }
+    
     #[inline(always)]
     fn keys(self: @$type_name$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
@@ -349,16 +436,32 @@ mod $contract_name$ {
 
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
-        fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<$type_name$>::selector()
-        }
-
         fn name(self: @ContractState) -> ByteArray {
            dojo::model::Model::<$type_name$>::name()
         }
 
+        fn namespace(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<$type_name$>::namespace()
+        }
+
+        fn tag(self: @ContractState) -> ByteArray {
+            dojo::model::Model::<$type_name$>::tag()
+        }
+
         fn version(self: @ContractState) -> u8 {
            dojo::model::Model::<$type_name$>::version()
+        }
+
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<$type_name$>::selector()
+        }
+
+        fn name_hash(self: @ContractState) -> felt252 {
+            dojo::model::Model::<$type_name$>::name_hash()
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::model::Model::<$type_name$>::namespace_hash()
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
@@ -393,6 +496,13 @@ mod $contract_name$ {
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("model_version".to_string(), model_version),
                 ("model_selector".to_string(), model_selector),
+                ("model_namespace".to_string(), RewriteNode::Text(model_namespace.clone())),
+                ("model_name_hash".to_string(), RewriteNode::Text(model_name_hash.to_string())),
+                (
+                    "model_namespace_hash".to_string(),
+                    RewriteNode::Text(model_namespace_hash.to_string()),
+                ),
+                ("model_tag".to_string(), RewriteNode::Text(model_tag.clone())),
             ]),
         ),
         diagnostics,

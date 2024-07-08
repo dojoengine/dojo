@@ -2,7 +2,7 @@ use katana_primitives::trace::{CallInfo, TxExecInfo};
 use katana_primitives::transaction::TxHash;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
-    CallType, EntryPointType, ExecutionResources, OrderedEvent, OrderedMessage,
+    CallType, ComputationResources, EntryPointType, OrderedEvent, OrderedMessage,
 };
 
 #[derive(Debug)]
@@ -42,10 +42,9 @@ impl From<CallInfo> for FunctionInvocation {
 
         let vm_resources = info.execution_resources;
         let get_vm_resource = |name: &str| vm_resources.builtin_instance_counter.get(name).copied();
-
         // TODO: replace execution resources type in primitive CallInfo with an already defined
         // `TxExecutionResources`
-        let execution_resources = ExecutionResources {
+        let execution_resources = ComputationResources {
             steps: vm_resources.n_steps,
             memory_holes: Some(vm_resources.n_memory_holes),
             range_check_builtin_applications: get_vm_resource("range_check_builtin"),

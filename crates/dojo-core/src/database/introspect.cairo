@@ -16,7 +16,7 @@ enum Layout {
     ByteArray,
     // there is one layout per variant.
     // the `selector` field identifies the variant
-    // the `layout` field defines the full variant layout (variant value + optional variant data)
+    // the `layout` defines the variant data (could be empty for variant without data).
     Enum: Span<FieldLayout>,
 }
 
@@ -60,7 +60,6 @@ trait Introspect<T> {
     fn ty() -> Ty;
 }
 
-
 impl Introspect_felt252 of Introspect<felt252> {
     fn size() -> Option<usize> {
         Option::Some(1)
@@ -72,7 +71,6 @@ impl Introspect_felt252 of Introspect<felt252> {
         Ty::Primitive('felt252')
     }
 }
-
 
 impl Introspect_bool of Introspect<bool> {
     fn size() -> Option<usize> {
@@ -182,7 +180,6 @@ impl Introspect_classhash of Introspect<starknet::ClassHash> {
     }
 }
 
-
 impl Introspect_bytearray of Introspect<ByteArray> {
     fn size() -> Option<usize> {
         Option::None
@@ -203,18 +200,10 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
     fn layout() -> Layout {
         Layout::Enum(
             array![
-                FieldLayout {
-                    // Some
-                    selector: 0,
-                    layout: Layout::Tuple(
-                        array![Layout::Fixed(array![8].span()), Introspect::<T>::layout()].span()
-                    )
-                },
-                FieldLayout {
-                    // None
-                    selector: 1,
-                    layout: Layout::Tuple(array![Layout::Fixed(array![8].span())].span())
-                },
+                FieldLayout { // Some
+                 selector: 0, layout: Introspect::<T>::layout() },
+                FieldLayout { // None
+                 selector: 1, layout: Layout::Fixed(array![].span()) },
             ]
                 .span()
         )

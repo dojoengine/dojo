@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use cainome::parser::tokens::{Composite, CompositeType, Function};
+use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
 use convert_case::Casing;
+use dojo_world::contracts::naming;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -17,8 +18,8 @@ impl TypeScriptV2Plugin {
     }
 
     // Maps cairo types to TypeScript defined types
-    fn map_type(type_name: &str) -> String {
-        match type_name {
+    fn map_type(token: &Token) -> String {
+        match token.type_name().as_str() {
             "bool" => "boolean".to_string(),
             "u8" => "number".to_string(),
             "u16" => "number".to_string(),
@@ -28,10 +29,57 @@ impl TypeScriptV2Plugin {
             "u256" => "bigint".to_string(),
             "usize" => "number".to_string(),
             "felt252" => "string".to_string(),
+            "bytes31" => "string".to_string(),
             "ClassHash" => "string".to_string(),
             "ContractAddress" => "string".to_string(),
+            "ByteArray" => "string".to_string(),
+            "array" => {
+                if let Token::Array(array) = token {
+                    format!("{}[]", TypeScriptV2Plugin::map_type(&array.inner))
+                } else {
+                    panic!("Invalid array token: {:?}", token);
+                }
+            }
+            "tuple" => {
+                if let Token::Tuple(tuple) = token {
+                    let inners = tuple
+                        .inners
+                        .iter()
+                        .map(TypeScriptV2Plugin::map_type)
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    format!("[{}]", inners)
+                } else {
+                    panic!("Invalid tuple token: {:?}", token);
+                }
+            }
+            "generic_arg" => {
+                if let Token::GenericArg(generic_arg) = &token {
+                    generic_arg.clone()
+                } else {
+                    panic!("Invalid generic_arg token: {:?}", token);
+                }
+            }
 
-            _ => type_name.to_string(),
+            _ => {
+                let mut type_name = token.type_name();
+
+                if let Token::Composite(composite) = token {
+                    if !composite.generic_args.is_empty() {
+                        type_name += &format!(
+                            "<{}>",
+                            composite
+                                .generic_args
+                                .iter()
+                                .map(|(_, t)| TypeScriptV2Plugin::map_type(t))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                    }
+                }
+
+                type_name
+            }
         }
     }
 
@@ -65,10 +113,15 @@ import {
         let mut result_mapping = Vec::new();
 
         for model in models {
-            query_fields
-                .push(format!("{model_name}: ModelClause<{model_name}>;", model_name = model.name));
+            query_fields.push(format!(
+                "{model_name}: ModelClause<{model_name}>;",
+                model_name = naming::get_name_from_tag(&model.tag)
+            ));
 
-            result_mapping.push(format!("{model_name}: {model_name};", model_name = model.name));
+            result_mapping.push(format!(
+                "{model_name}: {model_name};",
+                model_name = naming::get_name_from_tag(&model.tag)
+            ));
         }
 
         format!(
@@ -116,36 +169,21 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         for model in models {
             let tokens = &model.tokens;
 
-            for token in &tokens.enums {
-                handled_tokens.push(token.to_composite().unwrap().to_owned());
-            }
             for token in &tokens.structs {
-                handled_tokens.push(token.to_composite().unwrap().to_owned());
-            }
-
-            let mut structs = tokens.structs.to_owned();
-            structs.sort_by(|a, b| {
-                if a.to_composite()
-                    .unwrap()
-                    .inners
-                    .iter()
-                    .any(|field| field.token.type_name() == b.type_name())
-                {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Less
+                if handled_tokens.iter().any(|t| t.type_name() == token.type_name()) {
+                    continue;
                 }
-            });
 
-            for token in &structs {
-                out += TypeScriptV2Plugin::format_struct(
-                    token.to_composite().unwrap(),
-                    handled_tokens,
-                )
-                .as_str();
+                handled_tokens.push(token.to_composite().unwrap().to_owned());
+                out += TypeScriptV2Plugin::format_struct(token.to_composite().unwrap()).as_str();
             }
 
             for token in &tokens.enums {
+                if handled_tokens.iter().any(|t| t.type_name() == token.type_name()) {
+                    continue;
+                }
+
+                handled_tokens.push(token.to_composite().unwrap().to_owned());
                 out += TypeScriptV2Plugin::format_enum(token.to_composite().unwrap()).as_str();
             }
 
@@ -205,11 +243,11 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     constructor(contractAddress: string, account?: Account) {{
         super(contractAddress, account);
     }}
-    
+
     {}
 }}
 ",
-                TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
+                TypeScriptV2Plugin::formatted_contract_name(&contract.tag)
                     .to_case(convert_case::Case::Pascal),
                 systems,
             );
@@ -224,7 +262,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             .map(|contract| {
                 format!(
                     "{}Address: string;",
-                    TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
+                    TypeScriptV2Plugin::formatted_contract_name(&contract.tag)
                         .to_case(convert_case::Case::Camel)
                 )
             })
@@ -267,12 +305,10 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                 format!(
                     "{camel_case_name}: {pascal_case_name}Calls;
     {camel_case_name}Address: string;",
-                    camel_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
-                            .to_case(convert_case::Case::Camel),
-                    pascal_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
-                            .to_case(convert_case::Case::Pascal)
+                    camel_case_name = TypeScriptV2Plugin::formatted_contract_name(&contract.tag)
+                        .to_case(convert_case::Case::Camel),
+                    pascal_case_name = TypeScriptV2Plugin::formatted_contract_name(&contract.tag)
+                        .to_case(convert_case::Case::Pascal)
                 )
             })
             .collect::<Vec<String>>()
@@ -292,9 +328,8 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             }}
 
             this.{contract_name}Address = {contract_name}Address;",
-                    contract_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
-                            .to_case(convert_case::Case::Camel)
+                    contract_name = TypeScriptV2Plugin::formatted_contract_name(&contract.tag)
+                        .to_case(convert_case::Case::Camel)
                 )
             })
             .collect::<Vec<String>>()
@@ -305,9 +340,8 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             .map(|contract| {
                 format!(
                     "this.{camel_case_name}Address = params.{camel_case_name}Address;",
-                    camel_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
-                            .to_case(convert_case::Case::Camel),
+                    camel_case_name = TypeScriptV2Plugin::formatted_contract_name(&contract.tag)
+                        .to_case(convert_case::Case::Camel),
                 )
             })
             .collect::<Vec<String>>()
@@ -319,12 +353,10 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                 format!(
                     "this.{camel_case_name} = new \
                      {pascal_case_name}Calls(this.{camel_case_name}Address, this._account);",
-                    camel_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
-                            .to_case(convert_case::Case::Camel),
-                    pascal_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
-                            .to_case(convert_case::Case::Pascal)
+                    camel_case_name = TypeScriptV2Plugin::formatted_contract_name(&contract.tag)
+                        .to_case(convert_case::Case::Camel),
+                    pascal_case_name = TypeScriptV2Plugin::formatted_contract_name(&contract.tag)
+                        .to_case(convert_case::Case::Pascal)
                 )
             })
             .collect::<Vec<String>>()
@@ -417,24 +449,13 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     // Token should be a struct
     // This will be formatted into a TypeScript interface
     // using TypeScript defined types
-    fn format_struct(token: &Composite, handled_tokens: &[Composite]) -> String {
+    fn format_struct(token: &Composite) -> String {
         let mut native_fields: Vec<String> = Vec::new();
 
         for field in &token.inners {
-            let mapped = TypeScriptV2Plugin::map_type(field.token.type_name().as_str());
-            if mapped == field.token.type_name() {
-                let token = handled_tokens
-                    .iter()
-                    .find(|t| t.type_name() == field.token.type_name())
-                    .unwrap_or_else(|| panic!("Token not found: {}", field.token.type_name()));
-                if token.r#type == CompositeType::Enum {
-                    native_fields.push(format!("{}: {};", field.name, mapped));
-                } else {
-                    native_fields.push(format!("{}: {};", field.name, field.token.type_name()));
-                }
-            } else {
-                native_fields.push(format!("{}: {};", field.name, mapped));
-            }
+            let mapped = TypeScriptV2Plugin::map_type(&field.token);
+            format!("{}: {};", field.name, mapped);
+            native_fields.push(format!("{}: {};", field.name, mapped));
         }
 
         format!(
@@ -454,24 +475,40 @@ export interface {name} {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
-        let fields = token
-            .inners
-            .iter()
-            .map(|field| format!("{},", field.name,))
-            .collect::<Vec<String>>()
-            .join("\n    ");
+        let mut name = token.type_name();
+        if !token.generic_args.is_empty() {
+            name += &format!(
+                "<{}>",
+                token.generic_args.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>().join(", ")
+            )
+        }
 
-        format!(
+        let mut result = format!(
             "
 // Type definition for `{}` enum
-export enum {} {{
-    {}
-}}
-",
-            token.type_path,
-            token.type_name(),
-            fields
-        )
+type {} = ",
+            token.type_path, name
+        );
+
+        let mut variants = Vec::new();
+
+        for field in &token.inners {
+            let field_type = TypeScriptV2Plugin::map_type(&field.token).replace("()", "");
+
+            let variant_definition = if field_type.is_empty() {
+                // No associated data
+                format!("{{ type: '{}'; }}", field.name)
+            } else {
+                // With associated data
+                format!("{{ type: '{}'; data: {}; }}", field.name, field_type)
+            };
+
+            variants.push(variant_definition);
+        }
+
+        result += &variants.join(" | ");
+
+        result
     }
 
     // Formats a system into a JS method used by the contract class
@@ -485,10 +522,10 @@ export enum {} {{
                 format!(
                     "{}: {}",
                     arg.0,
-                    if TypeScriptV2Plugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
+                    if TypeScriptV2Plugin::map_type(&arg.1) == arg.1.type_name() {
                         arg.1.type_name()
                     } else {
-                        TypeScriptV2Plugin::map_type(&arg.1.type_name())
+                        TypeScriptV2Plugin::map_type(&arg.1)
                     }
                 )
             })
@@ -539,12 +576,10 @@ export enum {} {{
         )
     }
 
-    // Formats a contract file path into a pretty contract name
-    // eg. dojo_examples::actions::actions.json -> Actions
-    fn formatted_contract_name(contract_file_name: &str) -> String {
-        let contract_name =
-            contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
-        contract_name.to_string()
+    // Formats a contract tag into a pretty contract name
+    // eg. dojo_examples-actions -> Actions
+    fn formatted_contract_name(tag: &str) -> String {
+        naming::capitalize(&naming::get_name_from_tag(tag))
     }
 
     fn generate_code_content(data: &DojoData) -> String {
@@ -593,6 +628,9 @@ mod tests {
     use std::io::Read;
 
     use camino::Utf8PathBuf;
+    use dojo_test_utils::compiler;
+    use dojo_world::metadata::dojo_metadata_from_workspace;
+    use scarb::compiler::Profile;
 
     use super::*;
     use crate::gather_dojo_data;
@@ -609,12 +647,21 @@ mod tests {
         let expected_output_without_header =
             expected_output.lines().skip(1).collect::<Vec<&str>>().join("\n");
 
-        let data = gather_dojo_data(
-            &Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml"),
-            "dojo_examples",
-            "dev",
-        )
-        .unwrap();
+        let manifest_path = Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml");
+        let config = compiler::copy_tmp_config(
+            &Utf8PathBuf::from("../../examples/spawn-and-move"),
+            &Utf8PathBuf::from("../dojo-core"),
+            Profile::DEV,
+        );
+
+        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+        let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
+            "No current package with dojo metadata found, bindgen is not yet support for \
+             workspaces.",
+        );
+        let data =
+            gather_dojo_data(&manifest_path, "dojo_examples", "dev", dojo_metadata.skip_migration)
+                .unwrap();
 
         let actual_output = TypeScriptV2Plugin::generate_code_content(&data);
         let actual_output_without_header =

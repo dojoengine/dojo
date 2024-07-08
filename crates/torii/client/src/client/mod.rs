@@ -9,18 +9,17 @@ use std::sync::Arc;
 use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
-use dojo_world::contracts::WorldContractReader;
+use dojo_world::contracts::{naming, WorldContractReader};
 use futures::lock::Mutex;
 use parking_lot::{RwLock, RwLockReadGuard};
-use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
-use torii_grpc::proto::world::RetrieveEntitiesResponse;
+use torii_grpc::client::{EntityUpdateStreaming, EventUpdateStreaming, ModelDiffsStreaming};
+use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventsResponse};
 use torii_grpc::types::schema::Entity;
-use torii_grpc::types::{KeysClause, Query};
+use torii_grpc::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
 
@@ -56,8 +55,7 @@ impl Client {
         torii_url: String,
         rpc_url: String,
         relay_url: String,
-        world: FieldElement,
-        models_keys: Option<Vec<KeysClause>>,
+        world: Felt,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
@@ -73,23 +71,6 @@ impl Client {
         let rpc_url = url::Url::parse(&rpc_url).map_err(ParseError::Url)?;
         let provider = JsonRpcClient::new(HttpTransport::new(rpc_url));
         let world_reader = WorldContractReader::new(world, provider);
-
-        if let Some(keys) = models_keys {
-            subbed_models.add_models(keys)?;
-
-            // TODO: change this to querying the gRPC url instead
-            let subbed_models = subbed_models.models_keys.read().clone();
-            for keys in subbed_models {
-                let model_reader = world_reader.model_reader(&keys.model).await?;
-                let values = model_reader.entity_storage(&keys.keys).await?;
-
-                client_storage.set_model_storage(
-                    cairo_short_string_to_felt(&keys.model).unwrap(),
-                    keys.keys,
-                    values,
-                )?;
-            }
-        }
 
         Ok(Self {
             world_reader,
@@ -124,7 +105,7 @@ impl Client {
         self.metadata.read()
     }
 
-    pub fn subscribed_models(&self) -> RwLockReadGuard<'_, HashSet<KeysClause>> {
+    pub fn subscribed_models(&self) -> RwLockReadGuard<'_, HashSet<ModelKeysClause>> {
         self.subscribed_models.models_keys.read()
     }
 
@@ -149,23 +130,40 @@ impl Client {
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
+    /// Retrieve raw starknet events matching the keys provided.
+    /// If the keys are empty, it will return all events.
+    pub async fn starknet_events(&self, query: EventQuery) -> Result<Vec<Event>, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let RetrieveEventsResponse { events } = grpc_client.retrieve_events(query).await?;
+        Ok(events.into_iter().map(Event::from).collect::<Vec<Event>>())
+    }
+
     /// A direct stream to grpc subscribe entities
     pub async fn on_entity_updated(
         &self,
-        ids: Vec<FieldElement>,
+        clause: Option<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_entities(ids).await?;
+        let stream = grpc_client.subscribe_entities(clause).await?;
         Ok(stream)
     }
 
     /// A direct stream to grpc subscribe event messages
     pub async fn on_event_message_updated(
         &self,
-        ids: Vec<FieldElement>,
+        clause: Option<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_event_messages(ids).await?;
+        let stream = grpc_client.subscribe_event_messages(clause).await?;
+        Ok(stream)
+    }
+
+    pub async fn on_starknet_event(
+        &self,
+        keys: Option<KeysClause>,
+    ) -> Result<EventUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_events(keys).await?;
         Ok(stream)
     }
 
@@ -176,28 +174,29 @@ impl Client {
     ///
     /// If the requested model is not among the synced models, it will attempt to fetch it from
     /// the RPC.
-    pub async fn model(&self, keys: &KeysClause) -> Result<Option<Ty>, Error> {
-        let Some(mut schema) = self.metadata.read().model(&keys.model).map(|m| m.schema.clone())
+    pub async fn model(&self, keys: &ModelKeysClause) -> Result<Option<Ty>, Error> {
+        let (namespace, model) = keys.model.split_once('-').unwrap();
+        let model_selector = naming::compute_selector_from_names(namespace, model);
+        let Some(mut schema) =
+            self.metadata.read().model(&model_selector).map(|m| m.schema.clone())
         else {
             return Ok(None);
         };
 
         if !self.subscribed_models.is_synced(keys) {
-            let model = self.world_reader.model_reader(&keys.model).await?;
+            let model = self.world_reader.model_reader(namespace, model).await?;
             return Ok(Some(model.entity(&keys.keys).await?));
         }
 
-        let Ok(Some(raw_values)) = self.storage.get_model_storage(
-            cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
-            &keys.keys,
-        ) else {
+        let Ok(Some(raw_values)) = self.storage.get_model_storage(model_selector, &keys.keys)
+        else {
             return Ok(Some(schema));
         };
 
         let layout = self
             .metadata
             .read()
-            .model(&keys.model)
+            .model(&model_selector)
             .map(|m| m.layout.clone())
             .expect("qed; layout should exist");
 
@@ -212,7 +211,7 @@ impl Client {
     /// Initiate the model subscriptions and returns a [SubscriptionService] which when await'ed
     /// will execute the subscription service and starts the syncing process.
     pub async fn start_subscription(&self) -> Result<SubscriptionService, Error> {
-        let models_keys: Vec<KeysClause> =
+        let models_keys: Vec<ModelKeysClause> =
             self.subscribed_models.models_keys.read().clone().into_iter().collect();
         let sub_res_stream = self.initiate_subscription(models_keys).await?;
 
@@ -230,9 +229,10 @@ impl Client {
     /// Adds entities to the list of entities to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn add_models_to_sync(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub async fn add_models_to_sync(&self, models_keys: Vec<ModelKeysClause>) -> Result<(), Error> {
         for keys in &models_keys {
-            self.initiate_model(&keys.model, keys.keys.clone()).await?;
+            let (namespace, model) = keys.model.split_once('-').unwrap();
+            self.initiate_model(namespace, model, keys.keys.clone()).await?;
         }
 
         self.subscribed_models.add_models(models_keys)?;
@@ -251,7 +251,10 @@ impl Client {
     /// Removes models from the list of models to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn remove_models_to_sync(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub async fn remove_models_to_sync(
+        &self,
+        models_keys: Vec<ModelKeysClause>,
+    ) -> Result<(), Error> {
         self.subscribed_models.remove_models(models_keys)?;
 
         let updated_entities =
@@ -271,18 +274,23 @@ impl Client {
 
     async fn initiate_subscription(
         &self,
-        keys: Vec<KeysClause>,
+        keys: Vec<ModelKeysClause>,
     ) -> Result<ModelDiffsStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_model_diffs(keys).await?;
         Ok(stream)
     }
 
-    async fn initiate_model(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
-        let model_reader = self.world_reader.model_reader(model).await?;
+    async fn initiate_model(
+        &self,
+        namespace: &str,
+        model: &str,
+        keys: Vec<Felt>,
+    ) -> Result<(), Error> {
+        let model_reader = self.world_reader.model_reader(namespace, model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(
-            cairo_short_string_to_felt(model).map_err(ParseError::CairoShortStringToFelt)?,
+            naming::compute_selector_from_names(namespace, model),
             keys,
             values,
         )?;

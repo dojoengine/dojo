@@ -1,7 +1,7 @@
 use anyhow::{self, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use num_bigint::BigUint;
-use starknet::core::types::{FieldElement, FromStrError};
+use starknet::core::types::{Felt, FromStrError};
 use starknet::core::utils::cairo_short_string_to_felt;
 
 /// An error that occurs while decoding calldata.
@@ -26,16 +26,16 @@ pub type DecoderResult<T, E = CalldataDecoderError> = Result<T, E>;
 const ITEM_DELIMITER: char = ',';
 const ITEM_PREFIX_DELIMITER: char = ':';
 
-/// A trait for decoding calldata into a vector of FieldElements.
+/// A trait for decoding calldata into a vector of Felts.
 trait CalldataDecoder {
-    fn decode(&self, input: &str) -> DecoderResult<Vec<FieldElement>>;
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>>;
 }
 
-/// Decodes a u256 string into a [`FieldElement`]s array representing
+/// Decodes a u256 string into a [`Felt`]s array representing
 /// a u256 value split into two 128-bit words.
 struct U256CalldataDecoder;
 impl CalldataDecoder for U256CalldataDecoder {
-    fn decode(&self, input: &str) -> DecoderResult<Vec<FieldElement>> {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
         let bigint = if let Some(hex_str) = input.strip_prefix("0x") {
             let unsigned_bytes = if hex_str.len() % 2 == 0 {
                 hex::decode(hex_str)?
@@ -68,46 +68,46 @@ impl CalldataDecoder for U256CalldataDecoder {
         let low = &bigint % &u128_max_plus_1;
 
         // Unwrapping is safe as these are never out of range
-        let high = FieldElement::from_byte_slice_be(&high.to_bytes_be()).unwrap();
-        let low = FieldElement::from_byte_slice_be(&low.to_bytes_be()).unwrap();
+        let high = Felt::from_bytes_be_slice(&high.to_bytes_be());
+        let low = Felt::from_bytes_be_slice(&low.to_bytes_be());
 
         Ok(vec![low, high])
     }
 }
 
-/// Decodes a string (ByteArray) into a [`FieldElement`]s array representing
+/// Decodes a string (ByteArray) into a [`Felt`]s array representing
 /// a serialized Cairo ByteArray.
 struct StrCalldataDecoder;
 impl CalldataDecoder for StrCalldataDecoder {
-    fn decode(&self, input: &str) -> DecoderResult<Vec<FieldElement>> {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
         let ba = ByteArray::from_string(input)?;
         Ok(ByteArray::cairo_serialize(&ba))
     }
 }
 
-/// Decodes a cairo short string into a [`FieldElement`].
+/// Decodes a cairo short string into a [`Felt`].
 struct ShortStrCalldataDecoder;
 impl CalldataDecoder for ShortStrCalldataDecoder {
-    fn decode(&self, input: &str) -> DecoderResult<Vec<FieldElement>> {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
         Ok(vec![cairo_short_string_to_felt(input)?])
     }
 }
 
-/// Decodes a string into a [`FieldElement`], either from hexadecimal or decimal string.
+/// Decodes a string into a [`Felt`], either from hexadecimal or decimal string.
 struct DefaultCalldataDecoder;
 impl CalldataDecoder for DefaultCalldataDecoder {
-    fn decode(&self, input: &str) -> DecoderResult<Vec<FieldElement>> {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
         let felt = if let Some(hex_str) = input.strip_prefix("0x") {
-            FieldElement::from_hex_be(hex_str)?
+            Felt::from_hex(hex_str)?
         } else {
-            FieldElement::from_dec_str(input)?
+            Felt::from_dec_str(input)?
         };
 
         Ok(vec![felt])
     }
 }
 
-/// Decodes a string of calldata items into a vector of FieldElements.
+/// Decodes a string of calldata items into a vector of Felts.
 ///
 /// # Arguments:
 ///
@@ -115,7 +115,7 @@ impl CalldataDecoder for DefaultCalldataDecoder {
 ///   prefixes to indicate the type of the item.
 ///
 /// # Returns
-/// A vector of [`FieldElement`]s.
+/// A vector of [`Felt`]s.
 ///
 /// # Example
 ///
@@ -123,7 +123,7 @@ impl CalldataDecoder for DefaultCalldataDecoder {
 /// let input = "u256:0x1,str:hello,64";
 /// let result = decode_calldata(input).unwrap();
 /// ```
-pub fn decode_calldata(input: &str) -> DecoderResult<Vec<FieldElement>> {
+pub fn decode_calldata(input: &str) -> DecoderResult<Vec<Felt>> {
     let items = input.split(ITEM_DELIMITER);
     let mut calldata = vec![];
 
@@ -134,15 +134,15 @@ pub fn decode_calldata(input: &str) -> DecoderResult<Vec<FieldElement>> {
     Ok(calldata)
 }
 
-/// Decodes a single item of calldata into a vector of FieldElements.
+/// Decodes a single item of calldata into a vector of Felts.
 ///
 /// # Arguments
 ///
 /// * `item` - The item to decode.
 ///
 /// # Returns
-/// A vector of [`FieldElement`]s.
-fn decode_inner(item: &str) -> DecoderResult<Vec<FieldElement>> {
+/// A vector of [`Felt`]s.
+fn decode_inner(item: &str) -> DecoderResult<Vec<Felt>> {
     let item = item.trim();
 
     let felts = if let Some((prefix, value)) = item.split_once(ITEM_PREFIX_DELIMITER) {
@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn test_u256_decoder_hex() {
         let input = "u256:0x1";
-        let expected = vec![FieldElement::ONE, FieldElement::ZERO];
+        let expected = vec![Felt::ONE, Felt::ZERO];
         let result = decode_calldata(input).unwrap();
         assert_eq!(result, expected);
     }

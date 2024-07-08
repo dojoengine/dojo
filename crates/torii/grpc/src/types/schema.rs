@@ -2,8 +2,7 @@ use crypto_bigint::{Encoding, U256};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FromByteSliceError;
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 
 use crate::proto::{self};
 
@@ -13,27 +12,19 @@ pub enum SchemaError {
     MissingExpectedData,
     #[error("Unsupported type")]
     UnsupportedType,
-    #[error(transparent)]
-    SliceError(#[from] FromByteSliceError),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Entity {
-    pub hashed_keys: FieldElement,
-    pub models: Vec<Model>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub struct Model {
-    pub name: String,
-    pub members: Vec<Member>,
+    pub hashed_keys: Felt,
+    pub models: Vec<Struct>,
 }
 
 impl TryFrom<proto::types::Entity> for Entity {
     type Error = SchemaError;
     fn try_from(entity: proto::types::Entity) -> Result<Self, Self::Error> {
         Ok(Self {
-            hashed_keys: FieldElement::from_byte_slice_be(&entity.hashed_keys)?,
+            hashed_keys: Felt::from_bytes_be_slice(&entity.hashed_keys),
             models: entity
                 .models
                 .into_iter()
@@ -43,45 +34,22 @@ impl TryFrom<proto::types::Entity> for Entity {
     }
 }
 
-impl TryFrom<proto::types::Model> for Model {
-    type Error = SchemaError;
-    fn try_from(model: proto::types::Model) -> Result<Self, Self::Error> {
-        Ok(Self {
-            name: model.name,
-            members: model
-                .members
-                .into_iter()
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<_>, _>>()?,
-        })
-    }
-}
-
-impl TryFrom<Ty> for proto::types::Ty {
-    type Error = SchemaError;
-    fn try_from(ty: Ty) -> Result<Self, Self::Error> {
+impl From<Ty> for proto::types::Ty {
+    fn from(ty: Ty) -> Self {
         let ty_type = match ty {
-            Ty::Primitive(primitive) => {
-                Some(proto::types::ty::TyType::Primitive(primitive.try_into()?))
-            }
+            Ty::Primitive(primitive) => Some(proto::types::ty::TyType::Primitive(primitive.into())),
             Ty::Enum(r#enum) => Some(proto::types::ty::TyType::Enum(r#enum.into())),
-            Ty::Struct(r#struct) => Some(proto::types::ty::TyType::Struct(r#struct.try_into()?)),
+            Ty::Struct(r#struct) => Some(proto::types::ty::TyType::Struct(r#struct.into())),
             Ty::Tuple(tuple) => Some(proto::types::ty::TyType::Tuple(proto::types::Array {
-                children: tuple
-                    .into_iter()
-                    .map(TryInto::try_into)
-                    .collect::<Result<Vec<_>, _>>()?,
+                children: tuple.into_iter().map(Into::into).collect::<Vec<_>>(),
             })),
             Ty::Array(array) => Some(proto::types::ty::TyType::Array(proto::types::Array {
-                children: array
-                    .into_iter()
-                    .map(TryInto::try_into)
-                    .collect::<Result<Vec<_>, _>>()?,
+                children: array.into_iter().map(Into::into).collect::<Vec<_>>(),
             })),
             Ty::ByteArray(string) => Some(proto::types::ty::TyType::Bytearray(string)),
         };
 
-        Ok(proto::types::Ty { ty_type })
+        proto::types::Ty { ty_type }
     }
 }
 
@@ -96,36 +64,40 @@ impl TryFrom<proto::types::Member> for Member {
     }
 }
 
-impl TryFrom<Member> for proto::types::Member {
-    type Error = SchemaError;
-    fn try_from(member: Member) -> Result<Self, Self::Error> {
-        Ok(proto::types::Member {
-            name: member.name,
-            ty: Some(member.ty.try_into()?),
-            key: member.key,
-        })
+impl From<Member> for proto::types::Member {
+    fn from(member: Member) -> Self {
+        proto::types::Member { name: member.name, ty: Some(member.ty.into()), key: member.key }
     }
 }
 
-impl From<proto::types::EnumOption> for EnumOption {
-    fn from(option: proto::types::EnumOption) -> Self {
-        EnumOption { name: option.name, ty: Ty::Tuple(vec![]) }
+impl TryFrom<proto::types::EnumOption> for EnumOption {
+    type Error = SchemaError;
+    fn try_from(option: proto::types::EnumOption) -> Result<Self, Self::Error> {
+        Ok(EnumOption {
+            name: option.name,
+            ty: option.ty.ok_or(SchemaError::MissingExpectedData)?.try_into()?,
+        })
     }
 }
 
 impl From<EnumOption> for proto::types::EnumOption {
     fn from(option: EnumOption) -> Self {
-        proto::types::EnumOption { name: option.name, ty: None }
+        proto::types::EnumOption { name: option.name, ty: Some(option.ty.into()) }
     }
 }
 
-impl From<proto::types::Enum> for Enum {
-    fn from(r#enum: proto::types::Enum) -> Self {
-        Enum {
+impl TryFrom<proto::types::Enum> for Enum {
+    type Error = SchemaError;
+    fn try_from(r#enum: proto::types::Enum) -> Result<Self, Self::Error> {
+        Ok(Enum {
             name: r#enum.name.clone(),
             option: Some(r#enum.option as u8),
-            options: r#enum.options.into_iter().map(Into::into).collect::<Vec<_>>(),
-        }
+            options: r#enum
+                .options
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>, _>>()?,
+        })
     }
 }
 
@@ -153,32 +125,12 @@ impl TryFrom<proto::types::Struct> for Struct {
     }
 }
 
-impl TryFrom<Struct> for proto::types::Struct {
-    type Error = SchemaError;
-    fn try_from(r#struct: Struct) -> Result<Self, Self::Error> {
-        Ok(proto::types::Struct {
+impl From<Struct> for proto::types::Struct {
+    fn from(r#struct: Struct) -> Self {
+        proto::types::Struct {
             name: r#struct.name,
-            children: r#struct
-                .children
-                .into_iter()
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<_>, _>>()?,
-        })
-    }
-}
-
-impl TryFrom<Struct> for proto::types::Model {
-    type Error = SchemaError;
-    fn try_from(r#struct: Struct) -> Result<Self, Self::Error> {
-        let r#struct: proto::types::Struct = r#struct.try_into()?;
-
-        Ok(r#struct.into())
-    }
-}
-
-impl From<proto::types::Struct> for proto::types::Model {
-    fn from(r#struct: proto::types::Struct) -> Self {
-        Self { name: r#struct.name, members: r#struct.children }
+            children: r#struct.children.into_iter().map(Into::into).collect::<Vec<_>>(),
+        }
     }
 }
 
@@ -215,10 +167,7 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                     | Some(proto::types::PrimitiveType::Felt252)
                     | Some(proto::types::PrimitiveType::ClassHash)
                     | Some(proto::types::PrimitiveType::ContractAddress) => {
-                        Primitive::Felt252(Some(
-                            FieldElement::from_byte_slice_be(bytes)
-                                .map_err(SchemaError::SliceError)?,
-                        ))
+                        Primitive::Felt252(Some(Felt::from_bytes_be_slice(bytes)))
                     }
                     Some(proto::types::PrimitiveType::U256) => {
                         Primitive::U256(Some(U256::from_be_slice(bytes)))
@@ -235,9 +184,8 @@ impl TryFrom<proto::types::Primitive> for Primitive {
     }
 }
 
-impl TryFrom<Primitive> for proto::types::Primitive {
-    type Error = SchemaError;
-    fn try_from(primitive: Primitive) -> Result<Self, Self::Error> {
+impl From<Primitive> for proto::types::Primitive {
+    fn from(primitive: Primitive) -> Self {
         use proto::types::value::ValueType;
 
         let value_type = match primitive {
@@ -265,10 +213,10 @@ impl TryFrom<Primitive> for proto::types::Primitive {
         }
         .expect("value expected");
 
-        Ok(proto::types::Primitive {
+        proto::types::Primitive {
             value: Some(proto::types::Value { value_type: Some(value_type) }),
             r#type: primitive.to_numeric() as i32,
-        })
+        }
     }
 }
 
@@ -280,7 +228,7 @@ impl TryFrom<proto::types::Ty> for Ty {
                 Ok(Ty::Primitive(primitive.try_into()?))
             }
             proto::types::ty::TyType::Struct(r#struct) => Ok(Ty::Struct(r#struct.try_into()?)),
-            proto::types::ty::TyType::Enum(r#enum) => Ok(Ty::Enum(r#enum.into())),
+            proto::types::ty::TyType::Enum(r#enum) => Ok(Ty::Enum(r#enum.try_into()?)),
             proto::types::ty::TyType::Tuple(array) => Ok(Ty::Tuple(
                 array.children.into_iter().map(TryInto::try_into).collect::<Result<Vec<_>, _>>()?,
             )),

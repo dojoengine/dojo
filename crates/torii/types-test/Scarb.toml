@@ -1,7 +1,7 @@
 [package]
-cairo-version = "2.4.0"
+cairo-version = "=2.6.4"
 name = "types_test"
-version = "0.6.0"
+version = "0.7.3"
 
 [cairo]
 sierra-replace-ids = true
@@ -12,9 +12,11 @@ dojo = { path = "../../dojo-core" }
 [[target.dojo]]
 build-external-contracts = [  ]
 
-#[tool.dojo.world]
-#name = "types-test"
-#description = "Graphql types testing"
+[tool.dojo.world]
+namespace = "types_test"
+seed = "types_test"
+name = "types test"
+description = "Graphql types testing"
 # icon_uri = "file://assets/icon.png"
 # cover_uri = "file://assets/cover.png"
 # website = "https://dojoengine.org"

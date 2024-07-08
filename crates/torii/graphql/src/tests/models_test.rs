@@ -5,7 +5,7 @@ mod tests {
     use anyhow::Result;
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
-    use starknet_crypto::FieldElement;
+    use starknet::core::types::Felt;
 
     use crate::schema::build_schema;
     use crate::tests::{
@@ -16,7 +16,7 @@ mod tests {
         let query = format!(
             r#"
             {{
-                recordSiblingModels {} {{
+                typesTestRecordSiblingModels {} {{
                     totalCount
                     edges {{
                         cursor
@@ -39,14 +39,18 @@ mod tests {
         );
 
         let result = run_graphql_query(schema, &query).await;
-        result.get("recordSiblingModels").ok_or("recordSiblingModels not found").unwrap().clone()
+        result
+            .get("typesTestRecordSiblingModels")
+            .ok_or("typesTestRecordSiblingModels not found")
+            .unwrap()
+            .clone()
     }
 
     async fn subrecord_model_query(schema: &Schema, arg: &str) -> Value {
         let query = format!(
             r#"
             {{
-                subrecordModels {} {{
+                typesTestSubrecordModels {} {{
                     totalCount
                     edges {{
                         cursor
@@ -71,14 +75,18 @@ mod tests {
         );
 
         let result = run_graphql_query(schema, &query).await;
-        result.get("subrecordModels").ok_or("subrecordModels not found").unwrap().clone()
+        result
+            .get("typesTestSubrecordModels")
+            .ok_or("typesTestSubrecordModels not found")
+            .unwrap()
+            .clone()
     }
 
     async fn records_model_query(schema: &Schema, arg: &str) -> Value {
         let query = format!(
             r#"
           {{
-             recordModels {} {{
+             typesTestRecordModels {} {{
               totalCount
               edges {{
                 cursor
@@ -146,7 +154,11 @@ mod tests {
         );
 
         let result = run_graphql_query(schema, &query).await;
-        result.get("recordModels").ok_or("recordModels not found").unwrap().clone()
+        result
+            .get("typesTestRecordModels")
+            .ok_or("typesTestRecordModels not found")
+            .unwrap()
+            .clone()
     }
 
     // End to end test spins up a test sequencer and deploys types-test project, this takes a while
@@ -169,7 +181,7 @@ mod tests {
         let nested_two = record.node.type_nested_two.as_ref().unwrap();
         assert_eq!(connection.total_count, 10);
         assert_eq!(connection.edges.len(), 10);
-        assert_eq!(&record.node.__typename, "Record");
+        assert_eq!(&record.node.__typename, "types_test_Record");
         assert_eq!(entity.keys.clone().unwrap(), vec!["0x0"]);
         assert_eq!(record.node.depth, "Zero");
         assert_eq!(deeply_nested.depth, "One");
@@ -301,9 +313,9 @@ mod tests {
             records_model_query(&schema, "(order: { field: RANDOM_U128, direction: ASC })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record_felt =
-            FieldElement::from_str(&connection.edges.first().unwrap().node.random_u128).unwrap();
+            Felt::from_str(&connection.edges.first().unwrap().node.random_u128).unwrap();
         let last_record_felt =
-            FieldElement::from_str(&connection.edges.last().unwrap().node.random_u128).unwrap();
+            Felt::from_str(&connection.edges.last().unwrap().node.random_u128).unwrap();
         assert_eq!(connection.total_count, 10);
         assert!(first_record_felt <= last_record_felt);
 

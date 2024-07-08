@@ -3,12 +3,14 @@ use dojo_test_utils::compiler;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use starknet::accounts::ConnectedAccount;
 use starknet::macros::felt;
 
 use crate::contracts::model::ModelReader;
 use crate::contracts::world::test::deploy_world;
 use crate::contracts::world::WorldContractReader;
+use crate::metadata::dojo_metadata_from_workspace;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model() {
@@ -19,15 +21,29 @@ async fn test_model() {
     let config = compiler::copy_tmp_config(
         &Utf8PathBuf::from("../../examples/spawn-and-move"),
         &Utf8PathBuf::from("../dojo-core"),
+        Profile::DEV,
     );
 
     let manifest_dir = config.manifest_path().parent().unwrap();
     let target_dir = manifest_dir.join("target").join("dev");
 
-    let world_address = deploy_world(&runner, &manifest_dir.into(), &target_dir).await;
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let dojo_metadata =
+        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
+
+    let default_namespace = ws.current_package().unwrap().id.name.to_string();
+
+    let world_address = deploy_world(
+        &runner,
+        &manifest_dir.into(),
+        &target_dir,
+        dojo_metadata.skip_migration,
+        &default_namespace,
+    )
+    .await;
 
     let world = WorldContractReader::new(world_address, provider);
-    let position = world.model_reader("Position").await.unwrap();
+    let position = world.model_reader("dojo_examples", "Position").await.unwrap();
     let schema = position.schema().await.unwrap();
 
     assert_eq!(
@@ -65,10 +81,10 @@ async fn test_model() {
 
     assert_eq!(
         position.class_hash(),
-        felt!("0x03c3632f38ab3ba550bd3c596e2af55002d43bc76b7b660a3a57b49795307c58")
+        felt!("0x7104c882f56f62ef1f2453319bf6a1f5784b5f33b63b65506c38d62c3e3fd40")
     );
 
-    let moves = world.model_reader("Moves").await.unwrap();
+    let moves = world.model_reader("dojo_examples", "Moves").await.unwrap();
     let schema = moves.schema().await.unwrap();
 
     assert_eq!(

@@ -27,7 +27,7 @@ use fixtures::{
     db_provider, fork_provider, fork_provider_with_spawned_fork_network, in_memory_provider,
     mock_state_updates, provider_with_states,
 };
-use starknet::core::types::FieldElement;
+use katana_primitives::FieldElement;
 
 #[apply(insert_block_cases)]
 fn insert_block_with_in_memory_provider(

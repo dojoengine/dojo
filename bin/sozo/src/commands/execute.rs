@@ -1,5 +1,7 @@
 use anyhow::Result;
 use clap::Args;
+use dojo_world::contracts::naming::ensure_namespace;
+use dojo_world::metadata::get_default_namespace_from_ws;
 use scarb::core::Config;
 use sozo_ops::execute;
 use tracing::trace;
@@ -14,9 +16,10 @@ use crate::utils;
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
 pub struct ExecuteArgs {
-    #[arg(help = "The address of the contract to be executed. Or fully qualified contract name \
-                  (ex: dojo_example::actions::actions")]
-    pub contract: String,
+    #[arg(
+        help = "The address or the tag (ex: dojo_examples:actions) of the contract to be executed."
+    )]
+    pub tag_or_address: String,
 
     #[arg(help = "The name of the entrypoint to be executed.")]
     pub entrypoint: String,
@@ -49,19 +52,28 @@ impl ExecuteArgs {
         trace!(args = ?self);
         let env_metadata = utils::load_metadata_from_config(config)?;
 
+        let tag_or_address = if utils::is_address(&self.tag_or_address) {
+            self.tag_or_address
+        } else {
+            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+            let default_namespace = get_default_namespace_from_ws(&ws)?;
+            ensure_namespace(&self.tag_or_address, &default_namespace)
+        };
+
         config.tokio_handle().block_on(async {
             let world = utils::world_from_env_metadata(
                 self.world,
                 self.account,
                 self.starknet,
                 &env_metadata,
+                config,
             )
-            .await
-            .unwrap();
+            .await?;
+
             let tx_config = self.transaction.into();
 
             trace!(
-                contract=?self.contract,
+                contract=?tag_or_address,
                 entrypoint=self.entrypoint,
                 calldata=?self.calldata,
                 "Executing Execute command."
@@ -75,7 +87,7 @@ impl ExecuteArgs {
 
             execute::execute(
                 &config.ui(),
-                self.contract,
+                tag_or_address,
                 self.entrypoint,
                 calldata,
                 &world,

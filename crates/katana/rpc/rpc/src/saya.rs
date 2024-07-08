@@ -12,7 +12,7 @@ use katana_rpc_types::error::saya::SayaApiError;
 use katana_rpc_types::trace::TxExecutionInfo;
 use katana_tasks::TokioTaskSpawner;
 
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct SayaApi<EF: ExecutorFactory> {
     sequencer: Arc<KatanaSequencer<EF>>,
 }

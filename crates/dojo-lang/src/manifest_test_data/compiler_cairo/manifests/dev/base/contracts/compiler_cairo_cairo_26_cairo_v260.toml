@@ -1,9 +1,0 @@
-kind = "DojoContract"
-class_hash = "0x4bbfcdc8d95ecfa332201e21f615e98b4d12e08f77d176761e32bb34e3bc333"
-original_class_hash = "0x4bbfcdc8d95ecfa332201e21f615e98b4d12e08f77d176761e32bb34e3bc333"
-base_class_hash = "0x0"
-abi = "manifests/dev/abis/base/contracts/compiler_cairo_cairo_26_cairo_v260.json"
-reads = []
-writes = []
-computed = []
-name = "compiler_cairo::cairo_26::cairo_v260"

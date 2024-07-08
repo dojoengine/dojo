@@ -2,6 +2,8 @@ use anyhow::{Context, Result};
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
+use dojo_world::manifest::MANIFESTS_DIR;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
@@ -9,12 +11,20 @@ use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
-#[derive(Debug, Args)]
-pub struct BuildArgs {
-    #[arg(long)]
-    #[arg(help = "Generate Typescript bindings.")]
-    pub typescript: bool,
+use crate::commands::clean::CleanArgs;
 
+const BYTECODE_SIZE_LABEL: &str = "Bytecode size [in felts]\n(Sierra, Casm)";
+const CONTRACT_CLASS_SIZE_LABEL: &str = "Contract Class size [in bytes]\n(Sierra, Casm)";
+
+const CONTRACT_NAME_LABEL: &str = "Contract";
+
+#[derive(Debug, Args, Default)]
+pub struct BuildArgs {
+    // Should we deprecate typescript bindings codegen?
+    // Disabled due to lack of support in dojo.js
+    // #[arg(long)]
+    // #[arg(help = "Generate Typescript bindings.")]
+    // pub typescript: bool,
     #[arg(long)]
     #[arg(help = "Generate Typescript bindings.")]
     pub typescript_v2: bool,
@@ -33,23 +43,55 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+
+        if let Ok(current_package) = ws.current_package() {
+            if current_package.target(&TargetKind::new("dojo")).is_none() {
+                return Err(anyhow::anyhow!(
+                    "No Dojo target found in the {} package. Add [[target.dojo]] to the {} \
+                     manifest to enable Dojo features and compile with sozo.",
+                    current_package.id.to_string(),
+                    current_package.manifest_path()
+                ));
+            }
+        }
+
+        // Namespaces are required to compute contracts/models data. Hence, we can't continue
+        // if no metadata are found.
+        // Once sozo will support package option, users will be able to do `-p` to select
+        // the package directly from the workspace instead of using `--manifest-path`.
+        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
+
+        let profile_name =
+            ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
+
+        // Manifest path is always a file, we can unwrap safely to get the
+        // parent folder.
+        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+
+        let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
+        CleanArgs::clean_manifests(&profile_dir)?;
+
         let features_opts =
             FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
         let compile_info = compile_workspace(
             config,
             CompileOpts {
-                include_targets: vec![],
-                exclude_targets: vec![TargetKind::TEST],
+                include_target_names: vec![],
+                include_target_kinds: vec![],
+                exclude_target_kinds: vec![TargetKind::TEST],
                 features: features_opts,
             },
         )?;
         trace!(?compile_info, "Compiled workspace.");
 
         let mut builtin_plugins = vec![];
-        if self.typescript {
-            builtin_plugins.push(BuiltinPlugins::Typescript);
-        }
+
+        // Disable typescript for now. Due to lack of support and maintenance in dojo.js
+        // if self.typescript {
+        //     builtin_plugins.push(BuiltinPlugins::Typescript);
+        // }
 
         if self.typescript_v2 {
             builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
@@ -61,13 +103,29 @@ impl BuildArgs {
 
         if self.stats {
             let target_dir = &compile_info.target_dir;
-            let contracts_statistics = get_contract_statistics_for_dir(target_dir)
+            let contracts_statistics = get_contract_statistics_for_dir(config.ui(), target_dir)
                 .context("Error getting contracts stats")?;
             trace!(
                 ?contracts_statistics,
                 ?target_dir,
                 "Read contract statistics for target directory."
             );
+
+            let ui = config.ui();
+
+            ui.print(
+                "Bytecode: It is low-level code that constitutes smart contracts and is \
+                 represented by an array of felts.",
+            );
+            ui.print("Bytecode size: It is number of felts in Bytecode.");
+            ui.print(
+                "Contract Class: It serve as the fundamental building blocks of smart contracts.",
+            );
+            ui.print(
+                "Contract Class size: It denotes the file size of the minified JSON \
+                 representation of the contract class.",
+            );
+            ui.print(" ");
 
             let table = create_stats_table(contracts_statistics);
             table.printstd()
@@ -88,33 +146,47 @@ impl BuildArgs {
 
         tokio::runtime::Runtime::new()
             .unwrap()
-            .block_on(bindgen.generate())
+            .block_on(bindgen.generate(dojo_metadata.skip_migration))
             .expect("Error generating bindings");
 
         Ok(())
     }
 }
 
-fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
+fn create_stats_table(mut contracts_statistics: Vec<ContractStatistics>) -> Table {
     let mut table = Table::new();
     table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
 
     // Add table headers
     table.set_titles(Row::new(vec![
-        Cell::new_align("Contract", format::Alignment::CENTER),
-        Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
-        Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
+        Cell::new_align(CONTRACT_NAME_LABEL, format::Alignment::CENTER),
+        Cell::new_align(BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
+        Cell::new_align(CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
     ]));
+
+    // sort contracts in alphabetical order
+    contracts_statistics.sort_by(|a, b| a.contract_name.cmp(&b.contract_name));
 
     for contract_stats in contracts_statistics {
         // Add table rows
         let contract_name = contract_stats.contract_name;
-        let number_felts = contract_stats.number_felts;
-        let file_size = contract_stats.file_size;
+
+        let sierra_bytecode_size = contract_stats.sierra_bytecode_size;
+        let sierra_contract_class_size = contract_stats.sierra_contract_class_size;
+
+        let casm_bytecode_size = contract_stats.casm_bytecode_size;
+        let casm_contract_class_size = contract_stats.casm_contract_class_size;
+
         table.add_row(Row::new(vec![
             Cell::new_align(&contract_name, format::Alignment::LEFT),
-            Cell::new_align(format!("{}", number_felts).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", file_size).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(
+                format!("{}, {}", sierra_bytecode_size, casm_bytecode_size).as_str(),
+                format::Alignment::CENTER,
+            ),
+            Cell::new_align(
+                format!("{}, {}", sierra_contract_class_size, casm_contract_class_size).as_str(),
+                format::Alignment::CENTER,
+            ),
         ]));
     }
 
@@ -127,9 +199,11 @@ mod tests {
     use dojo_test_utils::compiler;
     use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
     use prettytable::{format, Cell, Row, Table};
+    use scarb::compiler::Profile;
     use sozo_ops::statistics::ContractStatistics;
 
-    use super::{create_stats_table, BuildArgs};
+    use super::{create_stats_table, BuildArgs, *};
+    use crate::commands::build::CONTRACT_NAME_LABEL;
 
     // Uncomment once bindings support arrays.
     #[test]
@@ -137,13 +211,13 @@ mod tests {
         let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
         let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
 
-        let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path);
+        let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
 
         let build_args = BuildArgs {
             bindings_output: "generated".to_string(),
-            typescript: false,
+            // typescript: false,
             unity: true,
-            typescript_v2: false,
+            typescript_v2: true,
             stats: true,
         };
         let result = build_args.run(&config);
@@ -156,42 +230,48 @@ mod tests {
         let contracts_statistics = vec![
             ContractStatistics {
                 contract_name: "Test1".to_string(),
-                number_felts: 33,
-                file_size: 33,
+                sierra_bytecode_size: 33,
+                sierra_contract_class_size: 33,
+                casm_bytecode_size: 66,
+                casm_contract_class_size: 66,
             },
             ContractStatistics {
                 contract_name: "Test2".to_string(),
-                number_felts: 43,
-                file_size: 24,
+                sierra_bytecode_size: 43,
+                sierra_contract_class_size: 24,
+                casm_bytecode_size: 86,
+                casm_contract_class_size: 48,
             },
             ContractStatistics {
                 contract_name: "Test3".to_string(),
-                number_felts: 36,
-                file_size: 12,
+                sierra_bytecode_size: 36,
+                sierra_contract_class_size: 12,
+                casm_bytecode_size: 72,
+                casm_contract_class_size: 24,
             },
         ];
 
         let mut expected_table = Table::new();
         expected_table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
         expected_table.set_titles(Row::new(vec![
-            Cell::new_align("Contract", format::Alignment::CENTER),
-            Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
-            Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
+            Cell::new_align(CONTRACT_NAME_LABEL, format::Alignment::CENTER),
+            Cell::new_align(BYTECODE_SIZE_LABEL, format::Alignment::CENTER),
+            Cell::new_align(CONTRACT_CLASS_SIZE_LABEL, format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test1", format::Alignment::LEFT),
-            Cell::new_align(format!("{}", 33).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 33).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}, {}", 33, 66).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 33, 66).as_str(), format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test2", format::Alignment::LEFT),
-            Cell::new_align(format!("{}", 43).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 24).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}, {}", 43, 86).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 24, 48).as_str(), format::Alignment::CENTER),
         ]));
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Test3", format::Alignment::LEFT),
-            Cell::new_align(format!("{}", 36).as_str(), format::Alignment::RIGHT),
-            Cell::new_align(format!("{}", 12).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}, {}", 36, 72).as_str(), format::Alignment::CENTER),
+            Cell::new_align(format!("{}, {}", 12, 24).as_str(), format::Alignment::CENTER),
         ]));
 
         // Act

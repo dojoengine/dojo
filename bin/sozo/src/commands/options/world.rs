@@ -3,28 +3,28 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_world::metadata::Environment;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use tracing::trace;
 
 use super::DOJO_WORLD_ADDRESS_ENV_VAR;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 #[command(next_help_heading = "World options")]
 pub struct WorldOptions {
     #[arg(help = "The address of the World contract.")]
     #[arg(long = "world", env = DOJO_WORLD_ADDRESS_ENV_VAR)]
     #[arg(global = true)]
-    pub world_address: Option<FieldElement>,
+    pub world_address: Option<Felt>,
 }
 
 impl WorldOptions {
-    pub fn address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
+    pub fn address(&self, env_metadata: Option<&Environment>) -> Result<Felt> {
         if let Some(world_address) = self.world_address {
             trace!(?world_address, "Loaded world_address.");
             Ok(world_address)
         } else if let Some(world_address) = env_metadata.and_then(|env| env.world_address()) {
             trace!(world_address, "Loaded world_address from env metadata.");
-            Ok(FieldElement::from_str(world_address)?)
+            Ok(Felt::from_str(world_address)?)
         } else {
             Err(anyhow!(
                 "Could not find World address. Please specify it with --world, environment \
@@ -38,7 +38,7 @@ impl WorldOptions {
 mod tests {
 
     use clap::Parser;
-    use starknet_crypto::FieldElement;
+    use starknet_crypto::Felt;
 
     use super::{WorldOptions, DOJO_WORLD_ADDRESS_ENV_VAR};
 
@@ -53,13 +53,13 @@ mod tests {
         std::env::set_var(DOJO_WORLD_ADDRESS_ENV_VAR, "0x0");
 
         let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.inner.world_address, Some(FieldElement::from_hex_be("0x0").unwrap()));
+        assert_eq!(cmd.inner.world_address, Some(Felt::from_hex("0x0").unwrap()));
     }
 
     #[test]
     fn world_address_from_args() {
         let cmd = Command::parse_from(["sozo", "--world", "0x0"]);
-        assert_eq!(cmd.inner.address(None).unwrap(), FieldElement::from_hex_be("0x0").unwrap());
+        assert_eq!(cmd.inner.address(None).unwrap(), Felt::from_hex("0x0").unwrap());
     }
 
     #[test]
@@ -70,10 +70,7 @@ mod tests {
         };
 
         let cmd = Command::parse_from([""]);
-        assert_eq!(
-            cmd.inner.address(Some(&env_metadata)).unwrap(),
-            FieldElement::from_hex_be("0x0").unwrap()
-        );
+        assert_eq!(cmd.inner.address(Some(&env_metadata)).unwrap(), Felt::from_hex("0x0").unwrap());
     }
 
     #[test]
@@ -84,10 +81,7 @@ mod tests {
         };
 
         let cmd = Command::parse_from(["sozo", "--world", "0x1"]);
-        assert_eq!(
-            cmd.inner.address(Some(&env_metadata)).unwrap(),
-            FieldElement::from_hex_be("0x1").unwrap()
-        );
+        assert_eq!(cmd.inner.address(Some(&env_metadata)).unwrap(), Felt::from_hex("0x1").unwrap());
     }
 
     #[test]

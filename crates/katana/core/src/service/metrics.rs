@@ -6,7 +6,7 @@ pub(crate) struct ServiceMetrics {
     pub(crate) block_producer: BlockProducerMetrics,
 }
 
-#[derive(Metrics, Debug)]
+#[derive(Metrics)]
 #[metrics(scope = "block_producer")]
 pub(crate) struct BlockProducerMetrics {
     /// The amount of L1 gas processed in a block.

@@ -2,17 +2,18 @@ use std::fmt::Display;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 use super::{Declarable, MigrationType, StateDiff};
 
 /// Represents differences between a local and remote class.
 #[derive(Debug, Default, Clone)]
 pub struct ClassDiff {
-    pub name: String,
-    pub local_class_hash: FieldElement,
-    pub original_class_hash: FieldElement,
-    pub remote_class_hash: Option<FieldElement>,
+    // The tag is used to identify the corresponding artifact produced by the compiler.
+    pub tag: String,
+    pub local_class_hash: Felt,
+    pub original_class_hash: Felt,
+    pub remote_class_hash: Option<Felt>,
 }
 
 impl StateDiff for ClassDiff {
@@ -27,7 +28,7 @@ impl StateDiff for ClassDiff {
 
 impl Display for ClassDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}:", self.name)?;
+        writeln!(f, "{}:", self.tag)?;
         writeln!(f, "   Local: {:#x}", self.local_class_hash)?;
 
         if let Some(remote) = self.remote_class_hash {
@@ -38,7 +39,7 @@ impl Display for ClassDiff {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ClassMigration {
     pub diff: ClassDiff,
     pub artifact_path: PathBuf,

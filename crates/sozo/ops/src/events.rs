@@ -2,12 +2,16 @@ use std::collections::{HashMap, VecDeque};
 use std::fs;
 
 use anyhow::{anyhow, Result};
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::MANIFESTS_DIR;
-use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods};
-use starknet::core::types::{BlockId, EventFilter, FieldElement};
+use dojo_world::contracts::naming::get_filename_from_tag;
+use dojo_world::manifest::{
+    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, MANIFESTS_DIR, TARGET_DIR,
+    WORLD_CONTRACT_TAG,
+};
+use starknet::core::types::{BlockId, EventFilter, Felt};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -16,7 +20,7 @@ pub fn get_event_filter(
     from_block: Option<u64>,
     to_block: Option<u64>,
     events: Option<Vec<String>>,
-    world_address: Option<FieldElement>,
+    world_address: Option<Felt>,
 ) -> EventFilter {
     let from_block = from_block.map(BlockId::Number);
     let to_block = to_block.map(BlockId::Number);
@@ -34,15 +38,13 @@ pub async fn parse(
     continuation_token: Option<String>,
     event_filter: EventFilter,
     json: bool,
-    manifest_dir: &Utf8PathBuf,
+    project_dir: &Utf8PathBuf,
     profile_name: &str,
 ) -> Result<()> {
     let events_map = if !json {
-        let deployed_manifest = manifest_dir
-            .join(MANIFESTS_DIR)
-            .join(profile_name)
-            .join("manifest")
-            .with_extension("toml");
+        let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
+        let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
+        let deployed_manifest = manifest_dir.join("manifest").with_extension("toml");
 
         if !deployed_manifest.exists() {
             return Err(anyhow!("Run scarb migrate before running this command"));
@@ -50,7 +52,8 @@ pub async fn parse(
 
         Some(extract_events(
             &DeploymentManifest::load_from_path(&deployed_manifest)?,
-            manifest_dir,
+            &manifest_dir,
+            &target_dir,
         )?)
     } else {
         None
@@ -75,7 +78,8 @@ fn is_event(token: &Token) -> bool {
 
 fn extract_events(
     manifest: &DeploymentManifest,
-    manifest_dir: &Utf8PathBuf,
+    project_dir: &Utf8PathBuf,
+    target_dir: &Utf8PathBuf,
 ) -> Result<HashMap<String, Vec<Token>>> {
     fn process_abi(
         events: &mut HashMap<String, Vec<Token>>,
@@ -103,24 +107,26 @@ fn extract_events(
 
     for contract in &manifest.contracts {
         if let Some(AbiFormat::Path(abi_path)) = contract.inner.abi() {
-            let full_abi_path = manifest_dir.join(abi_path);
+            let full_abi_path = project_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     for model in &manifest.models {
         if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
-            let full_abi_path = manifest_dir.join(abi_path);
+            let full_abi_path = project_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     // Read the world and base ABI from scarb artifacts as the
     // manifest does not include them (at least base is not included).
-    let world_abi_path = manifest_dir.join("target/dev/dojo::world::world.json");
+    let world_abi_path =
+        target_dir.join(format!("{}.json", get_filename_from_tag(WORLD_CONTRACT_TAG)));
     process_abi(&mut events_map, &world_abi_path)?;
 
-    let base_abi_path = manifest_dir.join("target/dev/dojo::base::base.json");
+    let base_abi_path =
+        target_dir.join(format!("{}.json", get_filename_from_tag(BASE_CONTRACT_TAG)));
     process_abi(&mut events_map, &base_abi_path)?;
 
     Ok(events_map)
@@ -144,11 +150,7 @@ fn parse_and_print_events(
     Ok(())
 }
 
-fn parse_core_basic(
-    cb: &CoreBasic,
-    value: &FieldElement,
-    include_felt_string: bool,
-) -> Result<String> {
+fn parse_core_basic(cb: &CoreBasic, value: &Felt, include_felt_string: bool) -> Result<String> {
     match cb.type_name().as_str() {
         "felt252" => {
             let hex = format!("{:#x}", value);
@@ -160,7 +162,7 @@ fn parse_core_basic(
             }
         }
         "bool" => {
-            if *value == FieldElement::ZERO {
+            if *value == Felt::ZERO {
                 Ok("false".to_string())
             } else {
                 Ok("true".to_string())
@@ -199,8 +201,8 @@ fn parse_event(
 
 fn process_inners(
     inners: &[CompositeInner],
-    data: &mut VecDeque<FieldElement>,
-    keys: &mut VecDeque<FieldElement>,
+    data: &mut VecDeque<Felt>,
+    keys: &mut VecDeque<Felt>,
 ) -> Result<String> {
     let mut ret = String::new();
 
@@ -213,6 +215,16 @@ fn process_inners(
 
         let formatted_value = match &inner.token {
             Token::CoreBasic(ref cb) => parse_core_basic(cb, &value, true)?,
+            Token::Composite(c) => {
+                if c.type_path.eq("core::byte_array::ByteArray") {
+                    data.push_front(value);
+                    let bytearray = ByteArray::cairo_deserialize(data.as_mut_slices().0, 0)?;
+                    data.drain(0..ByteArray::cairo_serialized_size(&bytearray));
+                    ByteArray::to_string(&bytearray)?
+                } else {
+                    return Err(anyhow!("Unhandled Composite token"));
+                }
+            }
             Token::Array(ref array) => {
                 let length = value
                     .to_string()
@@ -249,8 +261,7 @@ fn process_inners(
 mod tests {
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
-    use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-    use dojo_world::manifest::BaseManifest;
+    use dojo_world::manifest::{BaseManifest, BASE_DIR, WORLD_QUALIFIED_PATH};
     use starknet::core::types::EmittedEvent;
 
     use super::*;
@@ -258,22 +269,23 @@ mod tests {
     #[test]
     fn extract_events_work_as_expected() {
         let profile_name = "dev";
-        let manifest_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
-        let manifest = BaseManifest::load_from_path(
-            &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
-        )
-        .unwrap()
-        .into();
-        let result = extract_events(&manifest, &manifest_dir).unwrap();
+        let project_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
+        let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
+        println!("manifest_dir {:?}", manifest_dir);
+        let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
+        println!("target dir {:?}", target_dir);
+        let manifest = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)).unwrap().into();
+
+        let result = extract_events(&manifest, &project_dir, &target_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 14);
+        assert_eq!(result.len(), 16);
     }
 
     #[test]
     fn test_core_basic() {
         let composite = Composite {
-            type_path: "dojo::world::world::TestEvent".to_string(),
+            type_path: format!("{WORLD_QUALIFIED_PATH}::TestEvent"),
             inners: vec![
                 CompositeInner {
                     index: 0,
@@ -364,27 +376,28 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("TestEvent".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x5465737431").unwrap(),
-                FieldElement::from(1u8), // bool true
-                FieldElement::from(1u8),
-                FieldElement::from(2u16),
-                FieldElement::from(3u32),
-                FieldElement::from(4u64),
-                FieldElement::from(5u128),
-                FieldElement::from(6usize),
-                FieldElement::from_hex_be("0x54657374").unwrap(),
-                FieldElement::from_hex_be("0x54657374").unwrap(),
+                Felt::from_hex("0x5465737431").unwrap(),
+                Felt::from(1u8), // bool true
+                Felt::from(1u8),
+                Felt::from(2u16),
+                Felt::from(3u32),
+                Felt::from(4u64),
+                Felt::from(5u128),
+                Felt::from(6usize),
+                Felt::from_hex("0x54657374").unwrap(),
+                Felt::from_hex("0x54657374").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").unwrap(),
-            block_hash: FieldElement::from_hex_be("0x456").ok(),
+            from_address: Felt::from_hex("0x123").unwrap(),
+            block_hash: Felt::from_hex("0x456").ok(),
             block_number: Some(1),
-            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
+            transaction_hash: Felt::from_hex("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::TestEvent\nfelt252: 0x5465737431 \
-                               \"Test1\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: \
-                               5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n"
-            .to_string();
+        let expected_output = format!(
+            "Event name: {WORLD_QUALIFIED_PATH}::TestEvent\nfelt252: 0x5465737431 \
+             \"Test1\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: 5\nusize: 6\nclass_hash: \
+             0x54657374\ncontract_address: 0x54657374\n"
+        );
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -397,7 +410,7 @@ mod tests {
     #[test]
     fn test_array() {
         let composite = Composite {
-            type_path: "dojo::world::world::StoreDelRecord".to_string(),
+            type_path: format!("{WORLD_QUALIFIED_PATH}::StoreDelRecord"),
             inners: vec![
                 CompositeInner {
                     index: 0,
@@ -434,21 +447,22 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("StoreDelRecord".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x54657374").unwrap(),
-                FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x5465737431").unwrap(),
-                FieldElement::from_hex_be("0x5465737432").unwrap(),
-                FieldElement::from_hex_be("0x5465737433").unwrap(),
+                Felt::from_hex("0x54657374").unwrap(),
+                Felt::from(3u128),
+                Felt::from_hex("0x5465737431").unwrap(),
+                Felt::from_hex("0x5465737432").unwrap(),
+                Felt::from_hex("0x5465737433").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").unwrap(),
-            block_hash: FieldElement::from_hex_be("0x456").ok(),
+            from_address: Felt::from_hex("0x123").unwrap(),
+            block_hash: Felt::from_hex("0x456").ok(),
             block_number: Some(1),
-            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
+            transaction_hash: Felt::from_hex("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: 0x54657374 \
-                               \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n"
-            .to_string();
+        let expected_output = format!(
+            "Event name: {WORLD_QUALIFIED_PATH}::StoreDelRecord\ntable: 0x54657374 \
+             \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n"
+        );
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -461,7 +475,7 @@ mod tests {
     #[test]
     fn test_custom_event() {
         let composite = Composite {
-            type_path: "dojo::world::world::CustomEvent".to_string(),
+            type_path: format!("{WORLD_QUALIFIED_PATH}::CustomEvent"),
             inners: vec![
                 CompositeInner {
                     index: 0,
@@ -510,19 +524,20 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![
                 starknet_keccak("CustomEvent".as_bytes()),
-                FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x5465737431").unwrap(),
+                Felt::from(3u128),
+                Felt::from_hex("0x5465737431").unwrap(),
             ],
-            data: vec![FieldElement::from(1u128), FieldElement::from(2u128)],
-            from_address: FieldElement::from_hex_be("0x123").unwrap(),
-            block_hash: FieldElement::from_hex_be("0x456").ok(),
+            data: vec![Felt::from(1u128), Felt::from(2u128)],
+            from_address: Felt::from_hex("0x123").unwrap(),
+            block_hash: Felt::from_hex("0x456").ok(),
             block_number: Some(1),
-            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
+            transaction_hash: Felt::from_hex("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: \
-                               0x5465737431 \"Test1\"\ndata_1: 1\ndata_2: 2\n"
-            .to_string();
+        let expected_output = format!(
+            "Event name: {WORLD_QUALIFIED_PATH}::CustomEvent\nkey_1: 3\nkey_2: 0x5465737431 \
+             \"Test1\"\ndata_1: 1\ndata_2: 2\n"
+        );
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -535,7 +550,7 @@ mod tests {
     #[test]
     fn test_zero_felt() {
         let composite = Composite {
-            type_path: "dojo::world::world::StoreDelRecord".to_string(),
+            type_path: format!("{WORLD_QUALIFIED_PATH}::StoreDelRecord"),
             inners: vec![
                 CompositeInner {
                     index: 0,
@@ -572,21 +587,22 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("StoreDelRecord".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x0").unwrap(),
-                FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x0").unwrap(),
-                FieldElement::from_hex_be("0x1").unwrap(),
-                FieldElement::from_hex_be("0x2").unwrap(),
+                Felt::from_hex("0x0").unwrap(),
+                Felt::from(3u128),
+                Felt::from_hex("0x0").unwrap(),
+                Felt::from_hex("0x1").unwrap(),
+                Felt::from_hex("0x2").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").unwrap(),
-            block_hash: FieldElement::from_hex_be("0x456").ok(),
+            from_address: Felt::from_hex("0x123").unwrap(),
+            block_hash: Felt::from_hex("0x456").ok(),
             block_number: Some(1),
-            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
+            transaction_hash: Felt::from_hex("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: 0x0\nkeys: \
-                               [0x0, 0x1, 0x2]\n"
-            .to_string();
+        let expected_output = format!(
+            "Event name: {WORLD_QUALIFIED_PATH}::StoreDelRecord\ntable: 0x0\nkeys: [0x0, 0x1, \
+             0x2]\n"
+        );
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 

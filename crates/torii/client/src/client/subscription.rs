@@ -5,16 +5,15 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use dojo_types::WorldMetadata;
+use dojo_world::contracts::naming;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::{Mutex, RwLock};
-use starknet::core::types::{StateDiff, StateUpdate};
-use starknet::core::utils::cairo_short_string_to_felt;
-use starknet_crypto::FieldElement;
+use starknet::core::types::{Felt, StateDiff, StateUpdate};
 use torii_grpc::client::ModelDiffsStreaming;
-use torii_grpc::types::KeysClause;
+use torii_grpc::types::ModelKeysClause;
 
-use crate::client::error::{Error, ParseError};
+use crate::client::error::Error;
 use crate::client::storage::ModelStorage;
 use crate::utils::compute_all_storage_addresses;
 
@@ -26,13 +25,13 @@ pub enum SubscriptionEvent {
 #[derive(Debug)]
 pub struct SubscribedModels {
     metadata: Arc<RwLock<WorldMetadata>>,
-    pub(crate) models_keys: RwLock<HashSet<KeysClause>>,
+    pub(crate) models_keys: RwLock<HashSet<ModelKeysClause>>,
     /// All the relevant storage addresses derived from the subscribed models
-    pub(crate) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
+    pub(crate) subscribed_storage_addresses: RwLock<HashSet<Felt>>,
 }
 
 impl SubscribedModels {
-    pub(crate) fn is_synced(&self, keys: &KeysClause) -> bool {
+    pub(crate) fn is_synced(&self, keys: &ModelKeysClause) -> bool {
         self.models_keys.read().contains(keys)
     }
 
@@ -44,38 +43,39 @@ impl SubscribedModels {
         }
     }
 
-    pub(crate) fn add_models(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub(crate) fn add_models(&self, models_keys: Vec<ModelKeysClause>) -> Result<(), Error> {
         for keys in models_keys {
             Self::add_model(self, keys)?;
         }
         Ok(())
     }
 
-    pub(crate) fn remove_models(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub(crate) fn remove_models(&self, entities_keys: Vec<ModelKeysClause>) -> Result<(), Error> {
         for keys in entities_keys {
             Self::remove_model(self, keys)?;
         }
         Ok(())
     }
 
-    pub(crate) fn add_model(&self, keys: KeysClause) -> Result<(), Error> {
+    pub(crate) fn add_model(&self, keys: ModelKeysClause) -> Result<(), Error> {
         if !self.models_keys.write().insert(keys.clone()) {
             return Ok(());
         }
+
+        let (namespace, model) =
+            keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
+        let selector = naming::compute_selector_from_names(namespace, model);
 
         let model_packed_size = self
             .metadata
             .read()
             .models
-            .get(&keys.model)
+            .get(&selector)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(keys.model.clone()))?;
+            .ok_or(Error::UnknownModel(selector))?;
 
-        let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
-            &keys.keys,
-            model_packed_size,
-        );
+        let storage_addresses =
+            compute_all_storage_addresses(selector, &keys.keys, model_packed_size);
 
         let storage_lock = &mut self.subscribed_storage_addresses.write();
         storage_addresses.into_iter().for_each(|address| {
@@ -85,24 +85,25 @@ impl SubscribedModels {
         Ok(())
     }
 
-    pub(crate) fn remove_model(&self, keys: KeysClause) -> Result<(), Error> {
+    pub(crate) fn remove_model(&self, keys: ModelKeysClause) -> Result<(), Error> {
         if !self.models_keys.write().remove(&keys) {
             return Ok(());
         }
+
+        let (namespace, model) =
+            keys.model.split_once('-').ok_or(Error::InvalidModelName(keys.model.clone()))?;
+        let selector = naming::compute_selector_from_names(namespace, model);
 
         let model_packed_size = self
             .metadata
             .read()
             .models
-            .get(&keys.model)
+            .get(&selector)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(keys.model.clone()))?;
+            .ok_or(Error::UnknownModel(selector))?;
 
-        let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
-            &keys.keys,
-            model_packed_size,
-        );
+        let storage_addresses =
+            compute_all_storage_addresses(selector, &keys.keys, model_packed_size);
 
         let storage_lock = &mut self.subscribed_storage_addresses.write();
         storage_addresses.iter().for_each(|address| {
@@ -127,7 +128,7 @@ impl SubscriptionClientHandle {
 }
 
 #[must_use = "SubscriptionClient does nothing unless polled"]
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct SubscriptionService {
     req_rcv: Receiver<SubscriptionEvent>,
     /// Model Diff stream by subscription server to receive response
@@ -202,7 +203,7 @@ impl SubscriptionService {
             return;
         };
 
-        let entries: Vec<(FieldElement, FieldElement)> = {
+        let entries: Vec<(Felt, Felt)> = {
             let subscribed_models = self.subscribed_models.subscribed_storage_addresses.read();
             entries
                 .into_iter()
@@ -247,17 +248,18 @@ mod tests {
 
     use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
+    use dojo_world::contracts::naming::compute_selector_from_names;
     use parking_lot::RwLock;
-    use starknet::core::utils::cairo_short_string_to_felt;
     use starknet::macros::felt;
-    use torii_grpc::types::KeysClause;
+    use torii_grpc::types::ModelKeysClause;
 
     use crate::utils::compute_all_storage_addresses;
 
     fn create_dummy_metadata() -> WorldMetadata {
         let components = HashMap::from([(
-            "Position".into(),
+            compute_selector_from_names("Test", "Position"),
             dojo_types::schema::ModelMetadata {
+                namespace: "Test".into(),
                 name: "Position".into(),
                 class_hash: felt!("1"),
                 contract_address: felt!("2"),
@@ -273,12 +275,12 @@ mod tests {
 
     #[test]
     fn add_and_remove_subscribed_model() {
-        let model_name = String::from("Position");
+        let model_name = String::from("Test-Position");
         let keys = vec![felt!("0x12345")];
         let packed_size: u32 = 1;
 
         let mut expected_storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&model_name).unwrap(),
+            compute_selector_from_names("Test", "Position"),
             &keys,
             packed_size,
         )
@@ -286,7 +288,7 @@ mod tests {
 
         let metadata = self::create_dummy_metadata();
 
-        let keys = KeysClause { model: model_name, keys };
+        let keys = ModelKeysClause { model: model_name, keys };
 
         let subscribed_models = super::SubscribedModels::new(Arc::new(RwLock::new(metadata)));
         subscribed_models.add_models(vec![keys.clone()]).expect("able to add model");

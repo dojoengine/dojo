@@ -1,35 +1,28 @@
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
-use dojo_lang::compiler::MANIFESTS_DIR;
+use dojo_world::manifest::MANIFESTS_DIR;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use dojo_world::migration::TxnConfig;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration;
-use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, FieldElement, StarknetError};
+use starknet::accounts::{Account, ConnectedAccount};
+use starknet::core::types::{BlockId, BlockTag, Felt, StarknetError};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
-use starknet::signers::LocalWallet;
 use tracing::trace;
 
-use super::options::account::AccountOptions;
+use super::options::account::{AccountOptions, SozoAccount};
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
+use crate::commands::options::account::WorldAddressOrName;
 
 #[derive(Debug, Args)]
 pub struct MigrateArgs {
     #[command(subcommand)]
     pub command: MigrateCommand,
-
-    #[arg(long, global = true)]
-    #[arg(help = "Name of the World.")]
-    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
-                       contract to avoid address conflicts. If not provided root package's name \
-                       will be used.")]
-    name: Option<String>,
 
     #[command(flatten)]
     world: WorldOptions,
@@ -50,30 +43,54 @@ pub enum MigrateCommand {
         #[command(flatten)]
         transaction: TransactionOptions,
     },
+    #[command(about = "Generate overlays file.")]
+    GenerateOverlays,
 }
 
 impl MigrateArgs {
+    /// Creates a new `MigrateArgs` with the `Apply` command.
+    pub fn new_apply(
+        world: WorldOptions,
+        starknet: StarknetOptions,
+        account: AccountOptions,
+    ) -> Self {
+        Self {
+            command: MigrateCommand::Apply { transaction: TransactionOptions::init_wait() },
+            world,
+            starknet,
+            account,
+        }
+    }
+
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
+
+        // This variant is tested before the match on `self.command` to avoid
+        // having the need to spin up a Katana to generate the files.
+        if let MigrateCommand::GenerateOverlays = self.command {
+            trace!("Generating overlays.");
+            return migration::generate_overlays(&ws);
+        }
 
         let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata_from_workspace(&ws).env().cloned()
+            dojo_metadata.env().cloned()
         } else {
             trace!("Manifest path does not exist.");
             None
         };
 
+        let profile_name =
+            ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-        if !manifest_dir.join(MANIFESTS_DIR).exists() {
+        if !manifest_dir.join(MANIFESTS_DIR).join(profile_name).exists() {
             return Err(anyhow!("Build project using `sozo build` first"));
         }
 
-        let MigrateArgs { name, world, starknet, account, .. } = self;
+        let MigrateArgs { world, starknet, account, .. } = self;
 
-        let name = name.unwrap_or_else(|| {
-            ws.root_package().expect("Root package to be present").id.name.to_string()
-        });
+        let name = dojo_metadata.world.seed;
 
         let (world_address, account, rpc_url) = config.tokio_handle().block_on(async {
             setup_env(&ws, account, starknet, world, &name, env_metadata.as_ref()).await
@@ -81,6 +98,7 @@ impl MigrateArgs {
 
         match self.command {
             MigrateCommand::Plan => config.tokio_handle().block_on(async {
+                trace!(name, "Planning migration.");
                 migration::migrate(
                     &ws,
                     world_address,
@@ -89,6 +107,7 @@ impl MigrateArgs {
                     &name,
                     true,
                     TxnConfig::default(),
+                    dojo_metadata.skip_migration,
                 )
                 .await
             }),
@@ -96,9 +115,19 @@ impl MigrateArgs {
                 trace!(name, "Applying migration.");
                 let txn_config: TxnConfig = transaction.into();
 
-                migration::migrate(&ws, world_address, rpc_url, account, &name, false, txn_config)
-                    .await
+                migration::migrate(
+                    &ws,
+                    world_address,
+                    rpc_url,
+                    account,
+                    &name,
+                    false,
+                    txn_config,
+                    dojo_metadata.skip_migration,
+                )
+                .await
             }),
+            _ => unreachable!("other case handled above."),
         }
     }
 }
@@ -110,11 +139,7 @@ pub async fn setup_env<'a>(
     world: WorldOptions,
     name: &str,
     env: Option<&'a Environment>,
-) -> Result<(
-    Option<FieldElement>,
-    SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    String,
-)> {
+) -> Result<(Option<Felt>, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
     trace!("Setting up environment.");
     let ui = ws.config().ui();
 
@@ -144,8 +169,14 @@ pub async fn setup_env<'a>(
             .with_context(|| "Cannot parse chain_id as string")?;
         trace!(chain_id);
 
-        let mut account = account.account(provider, env).await?;
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+        let account = {
+            // This is mainly for controller account for creating policies.
+            let world_address_or_name = world_address
+                .map(WorldAddressOrName::Address)
+                .unwrap_or(WorldAddressOrName::Name(name.to_string()));
+
+            account.account(provider, world_address_or_name, &starknet, env, ws.config()).await?
+        };
 
         let address = account.address();
 
@@ -190,8 +221,8 @@ fn is_compatible_version(provided_version: &str, expected_version: &str) -> Resu
         .map_err(|e| anyhow!("Failed to parse expected version '{}': {}", expected_version, e))?;
 
     // Specific backward compatibility rule: 0.6 is compatible with 0.7.
-    if (provided_ver.major == 0 && provided_ver.minor == 6)
-        && (expected_ver.major == 0 && expected_ver.minor == 7)
+    if (provided_ver.major == 0 && provided_ver.minor == 7)
+        && (expected_ver.major == 0 && expected_ver.minor == 6)
     {
         return Ok(true);
     }
@@ -224,7 +255,9 @@ mod tests {
 
     #[test]
     fn test_is_compatible_version_specific_backward_compatibility() {
-        assert!(is_compatible_version("0.6.0", "0.7.1").unwrap());
+        let node_version = "0.7.1";
+        let katana_version = "0.6.0";
+        assert!(is_compatible_version(node_version, katana_version).unwrap());
     }
 
     #[test]

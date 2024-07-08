@@ -26,8 +26,10 @@ impl PrintEnvArgs {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         let ui = ws.config().ui();
 
+        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
+
         let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata_from_workspace(&ws).env().cloned()
+            dojo_metadata.env().cloned()
         } else {
             trace!("Manifest path does not exist.");
             None

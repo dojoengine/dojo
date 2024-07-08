@@ -9,7 +9,7 @@ use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
 use katana_executor::ExecutorFactory;
 use katana_primitives::transaction::ExecutableTxWithHash;
-use starknet::core::types::FieldElement;
+use katana_primitives::FieldElement;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
@@ -31,7 +31,7 @@ pub(crate) const LOG_TARGET: &str = "node";
 /// This service is basically an endless future that continuously polls the miner which returns
 /// transactions for the next block, then those transactions are handed off to the [BlockProducer]
 /// to construct a new block.
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct NodeService<EF: ExecutorFactory> {
     /// the pool that holds all transactions
     pub(crate) pool: Arc<TransactionPool>,

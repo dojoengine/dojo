@@ -15,8 +15,6 @@ katana-tasks.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
-cairo-lang-casm = "=2.6.3"
-cairo-lang-starknet = "=2.6.3"
 cairo-vm.workspace = true
 convert_case.workspace = true
 derive_more.workspace = true
@@ -26,6 +24,7 @@ futures.workspace = true
 k256 = { version = "0.13", default-features = false, features = [ "ecdsa", "std" ] }
 lazy_static.workspace = true
 metrics.workspace = true
+num-traits.workspace = true
 parking_lot.workspace = true
 rand = { workspace = true, features = [ "small_rng" ] }
 reqwest.workspace = true
@@ -47,7 +46,6 @@ alloy-network = { version = "0.1.0", default-features = false, optional = true }
 alloy-provider = { version = "0.1.0", default-features = false, optional = true, features = [ "reqwest" ] }
 alloy-rpc-types = { version = "0.1.0", default-features = false, optional = true }
 alloy-signer = { version = "0.1.0", default-features = false, optional = true }
-alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
 alloy-transport = { version = "0.1.0", default-features = false, optional = true }
 
 [dev-dependencies]
@@ -62,7 +60,6 @@ messaging = [
     "alloy-provider",
     "alloy-rpc-types",
     "alloy-signer",
-    "alloy-signer-wallet",
     "alloy-sol-types",
     "alloy-transport",
 ]

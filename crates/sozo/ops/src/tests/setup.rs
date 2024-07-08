@@ -3,9 +3,11 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::world::WorldContract;
+use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::strategy::MigrationStrategy;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
+use scarb::compiler::Profile;
 use scarb::core::{Config, Workspace};
 use scarb::ops;
 use starknet::accounts::SingleOwnerAccount;
@@ -31,7 +33,7 @@ pub fn load_config() -> Config {
     let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move/");
     let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
 
-    compiler::copy_tmp_config(&source_project_dir, &dojo_core_path)
+    compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV)
 }
 
 /// Setups the workspace for the spawn-and-moves project.
@@ -53,11 +55,21 @@ pub fn setup_ws(config: &Config) -> Workspace<'_> {
 ///
 /// A [`MigrationStrategy`] to execute to migrate the full spawn-and-moves project.
 pub fn setup_migration(config: &Config) -> Result<MigrationStrategy> {
+    let ws = setup_ws(config);
+
     let manifest_path = config.manifest_path();
     let base_dir = manifest_path.parent().unwrap();
     let target_dir = format!("{}/target/dev", base_dir);
 
-    prepare_migration_with_world_and_seed(base_dir.into(), target_dir.into(), None, "sozo_test")
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
+
+    prepare_migration_with_world_and_seed(
+        base_dir.into(),
+        target_dir.into(),
+        None,
+        "sozo_test",
+        &default_namespace,
+    )
 }
 
 /// Setups the project by migrating the full spawn-and-moves project.
@@ -76,7 +88,9 @@ pub async fn setup(
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let migration = setup_migration(&config)?;
+    let mut migration = setup_migration(&config)?;
+    let _ =
+        migration.resolve_variable(migration.world_address().expect("world address must exist"));
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));

@@ -1,26 +1,26 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::{fs, io};
 
 use anyhow::Result;
-use cainome::cairo_serde::Error as CainomeError;
+use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError};
 use camino::Utf8PathBuf;
 use serde::de::DeserializeOwned;
-use smol_str::SmolStr;
-use starknet::core::types::{
-    BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, FunctionCall, StarknetError,
-};
+use serde::Serialize;
+use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, Felt, StarknetError};
 use starknet::core::utils::{
-    parse_cairo_short_string, starknet_keccak, CairoShortStringToFeltError,
-    ParseCairoShortStringError,
+    starknet_keccak, CairoShortStringToFeltError, ParseCairoShortStringError,
 };
-use starknet::macros::selector;
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 use toml;
+use toml::Table;
+use tracing::error;
+use walkdir::WalkDir;
 
 use crate::contracts::model::ModelError;
 use crate::contracts::world::WorldEvent;
-use crate::contracts::WorldContractReader;
+use crate::contracts::{naming, WorldContractReader};
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
@@ -34,10 +34,21 @@ pub use types::{
     OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldContract, WorldMetadata,
 };
 
-pub const WORLD_CONTRACT_NAME: &str = "dojo::world::world";
-pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
-pub const RESOURCE_METADATA_CONTRACT_NAME: &str = "dojo::resource_metadata::resource_metadata";
-pub const RESOURCE_METADATA_MODEL_NAME: &str = "0x5265736f757263654d65746164617461";
+pub const WORLD_CONTRACT_TAG: &str = "dojo-world";
+pub const BASE_CONTRACT_TAG: &str = "dojo-base";
+
+pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world";
+pub const BASE_QUALIFIED_PATH: &str = "dojo::base::base";
+
+pub const MANIFESTS_DIR: &str = "manifests";
+pub const DEPLOYMENT_DIR: &str = "deployment";
+pub const TARGET_DIR: &str = "target";
+pub const BASE_DIR: &str = "base";
+pub const OVERLAYS_DIR: &str = "overlays";
+pub const ABIS_DIR: &str = "abis";
+
+pub const CONTRACTS_DIR: &str = "contracts";
+pub const MODELS_DIR: &str = "models";
 
 #[derive(Error, Debug)]
 pub enum AbstractManifestError {
@@ -56,13 +67,21 @@ pub enum AbstractManifestError {
     #[error(transparent)]
     Model(#[from] ModelError),
     #[error(transparent)]
-    TOML(#[from] toml::de::Error),
+    TomlDe(#[from] toml::de::Error),
+    #[error(transparent)]
+    TomlSer(#[from] toml::ser::Error),
     #[error(transparent)]
     IO(#[from] io::Error),
     #[error("Abi couldn't be loaded from path: {0}")]
     AbiError(String),
     #[error(transparent)]
     Json(#[from] serde_json::Error),
+    #[error("Duplicated manifest : {0}")]
+    DuplicatedManifest(String),
+    #[error("{0}")]
+    TagError(String),
+    #[error("{0}")]
+    UnknownTarget(String),
 }
 
 impl From<Manifest<Class>> for Manifest<WorldContract> {
@@ -74,7 +93,7 @@ impl From<Manifest<Class>> for Manifest<WorldContract> {
                 original_class_hash: value.inner.original_class_hash,
                 ..Default::default()
             },
-            value.name,
+            value.manifest_name,
         )
     }
 }
@@ -93,36 +112,43 @@ impl From<BaseManifest> for DeploymentManifest {
 impl BaseManifest {
     /// Load the manifest from a file at the given path.
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
-        let contract_dir = path.join("contracts");
-        let model_dir = path.join("models");
-
         let world: Manifest<Class> = toml::from_str(&fs::read_to_string(
-            path.join(WORLD_CONTRACT_NAME.replace("::", "_")).with_extension("toml"),
+            path.join(naming::get_filename_from_tag(WORLD_CONTRACT_TAG)).with_extension("toml"),
         )?)?;
 
         let base: Manifest<Class> = toml::from_str(&fs::read_to_string(
-            path.join(BASE_CONTRACT_NAME.replace("::", "_")).with_extension("toml"),
+            path.join(naming::get_filename_from_tag(BASE_CONTRACT_TAG)).with_extension("toml"),
         )?)?;
 
-        let contracts = elements_from_path::<DojoContract>(&contract_dir)?;
-        let models = elements_from_path::<DojoModel>(&model_dir)?;
+        let contracts = elements_from_path::<DojoContract>(&path.join(CONTRACTS_DIR))?;
+        let models = elements_from_path::<DojoModel>(&path.join(MODELS_DIR))?;
 
         Ok(Self { world, base, contracts, models })
+    }
+
+    /// Given a list of contract or model tags, remove those from the manifest.
+    pub fn remove_tags(&mut self, tags: Vec<String>) {
+        self.contracts.retain(|contract| !tags.contains(&contract.inner.tag));
+        self.models.retain(|model| !tags.contains(&model.inner.tag));
     }
 
     pub fn merge(&mut self, overlay: OverlayManifest) {
         let mut base_map = HashMap::new();
 
         for contract in self.contracts.iter_mut() {
-            base_map.insert(contract.name.clone(), contract);
+            base_map.insert(contract.inner.tag.clone(), contract);
         }
 
         for contract in overlay.contracts {
-            base_map
-                .get_mut(&contract.name)
-                .expect("qed; overlay contract not found")
-                .inner
-                .merge(contract);
+            if let Some(manifest) = base_map.get_mut(&contract.tag) {
+                manifest.inner.merge(contract);
+            } else {
+                error!(
+                    "OverlayManifest configured for contract \"{}\", but contract is not present \
+                     in BaseManifest.",
+                    contract.tag
+                );
+            }
         }
 
         if let Some(overlay_world) = overlay.world {
@@ -134,32 +160,177 @@ impl BaseManifest {
     }
 }
 
+#[derive(Clone, Debug, Copy)]
+enum ManifestKind {
+    BaseClass,
+    WorldClass,
+    Contract,
+    Model,
+}
+
 impl OverlayManifest {
-    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
-        let mut world: Option<OverlayClass> = None;
+    fn build_kind_from_tags(base_manifest: &BaseManifest) -> HashMap<String, ManifestKind> {
+        let mut kind_from_tags = HashMap::<String, ManifestKind>::new();
 
-        let world_path = path.join(WORLD_CONTRACT_NAME.replace("::", "_")).with_extension("toml");
+        kind_from_tags.insert(WORLD_CONTRACT_TAG.to_string(), ManifestKind::WorldClass);
+        kind_from_tags.insert(BASE_CONTRACT_TAG.to_string(), ManifestKind::BaseClass);
 
-        if world_path.exists() {
-            world = Some(toml::from_str(&fs::read_to_string(world_path)?)?);
+        for model in base_manifest.models.as_slice() {
+            kind_from_tags.insert(model.inner.tag.clone(), ManifestKind::Model);
         }
 
-        let mut base: Option<OverlayClass> = None;
-        let base_path = path.join(BASE_CONTRACT_NAME.replace("::", "_")).with_extension("toml");
-
-        if base_path.exists() {
-            base = Some(toml::from_str(&fs::read_to_string(base_path)?)?);
+        for contract in base_manifest.contracts.as_slice() {
+            kind_from_tags.insert(contract.inner.tag.clone(), ManifestKind::Contract);
         }
 
-        let contract_dir = path.join("contracts");
+        kind_from_tags
+    }
 
-        let contracts = if contract_dir.exists() {
-            overlay_elements_from_path::<OverlayDojoContract>(&contract_dir)?
-        } else {
-            vec![]
+    fn load_overlay(
+        path: &PathBuf,
+        kind: ManifestKind,
+        overlays: &mut OverlayManifest,
+    ) -> Result<(), AbstractManifestError> {
+        match kind {
+            ManifestKind::BaseClass => {
+                let overlay: OverlayClass = toml::from_str(&fs::read_to_string(path)?)?;
+                overlays.base = Some(overlay);
+            }
+            ManifestKind::WorldClass => {
+                let overlay: OverlayClass = toml::from_str(&fs::read_to_string(path)?)?;
+                overlays.world = Some(overlay);
+            }
+            ManifestKind::Model => {
+                let overlay: OverlayDojoModel = toml::from_str(&fs::read_to_string(path)?)?;
+                overlays.models.push(overlay);
+            }
+            ManifestKind::Contract => {
+                let overlay: OverlayDojoContract = toml::from_str(&fs::read_to_string(path)?)?;
+                overlays.contracts.push(overlay);
+            }
         };
 
-        Ok(Self { world, base, contracts })
+        Ok(())
+    }
+
+    pub fn load_from_path(
+        path: &Utf8PathBuf,
+        base_manifest: &BaseManifest,
+    ) -> Result<Self, AbstractManifestError> {
+        fs::create_dir_all(path)?;
+
+        let kind_from_tags = Self::build_kind_from_tags(base_manifest);
+        let mut loaded_tags = HashMap::<String, bool>::new();
+        let mut overlays = OverlayManifest::default();
+
+        for entry in WalkDir::new(path).into_iter() {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(e) => return Err(AbstractManifestError::IO(e.into())),
+            };
+            let file_path = entry.path();
+            let file_name = entry.file_name().to_string_lossy().to_string();
+
+            if !file_name.clone().ends_with(".toml") {
+                continue;
+            }
+
+            // an overlay file must contain a 'tag' key.
+            let toml_data = toml::from_str::<Table>(&fs::read_to_string(file_path)?)?;
+            if !toml_data.contains_key("tag") {
+                return Err(AbstractManifestError::TagError(format!(
+                    "The overlay '{file_name}' must contain the 'tag' key."
+                )));
+            }
+
+            // the tag key must be a string
+            let tag = match toml_data["tag"].as_str() {
+                Some(x) => x.to_string(),
+                None => {
+                    return Err(AbstractManifestError::TagError(format!(
+                        "The tag key of the overlay '{file_name}' must be a string."
+                    )));
+                }
+            };
+
+            // an overlay must target an existing class/model/contract
+            if !kind_from_tags.contains_key(&tag) {
+                return Err(AbstractManifestError::UnknownTarget(format!(
+                    "The tag '{tag}' of the overlay '{file_name}' does not target an existing \
+                     class/model/contract."
+                )));
+            }
+
+            // a same tag cannot be used in multiple overlays.
+            if loaded_tags.contains_key(&tag) {
+                return Err(AbstractManifestError::DuplicatedManifest(format!(
+                    "The tag '{tag}' is used in multiple overlays."
+                )));
+            }
+
+            Self::load_overlay(&file_path.to_path_buf(), kind_from_tags[&tag], &mut overlays)?;
+            loaded_tags.insert(tag, true);
+        }
+
+        Ok(overlays)
+    }
+
+    /// Writes `Self` to overlay manifests folder.
+    ///
+    /// - `world` and `base` manifest are written to root of the folder.
+    /// - `contracts` and `models` are written to their respective directories.
+    pub fn write_to_path_nested(&self, path: &Utf8PathBuf) -> Result<(), AbstractManifestError> {
+        fs::create_dir_all(path)?;
+
+        if let Some(ref world) = self.world {
+            let world = toml::to_string(world)?;
+            let file_name =
+                path.join(naming::get_filename_from_tag(WORLD_CONTRACT_TAG)).with_extension("toml");
+            fs::write(file_name, world)?;
+        }
+
+        if let Some(ref base) = self.base {
+            let base = toml::to_string(base)?;
+            let file_name =
+                path.join(naming::get_filename_from_tag(BASE_CONTRACT_TAG)).with_extension("toml");
+            fs::write(file_name, base)?;
+        }
+
+        overlay_to_path::<OverlayDojoContract>(
+            &path.join(CONTRACTS_DIR),
+            self.contracts.as_slice(),
+            |c| c.tag.clone(),
+        )?;
+        overlay_to_path::<OverlayDojoModel>(&path.join(MODELS_DIR), self.models.as_slice(), |m| {
+            m.tag.clone()
+        })?;
+        Ok(())
+    }
+
+    /// Add missing overlay items from `others` to `self`.
+    /// Note that this method don't override if certain item already exists in `self`.
+    pub fn merge(&mut self, other: OverlayManifest) {
+        if self.world.is_none() {
+            self.world = other.world;
+        }
+
+        if self.base.is_none() {
+            self.base = other.base;
+        }
+
+        for other_contract in other.contracts {
+            let found = self.contracts.iter().find(|c| c.tag == other_contract.tag);
+            if found.is_none() {
+                self.contracts.push(other_contract);
+            }
+        }
+
+        for other_model in other.models {
+            let found = self.models.iter().find(|m| m.tag == other_model.tag);
+            if found.is_none() {
+                self.models.push(other_model);
+            }
+        }
     }
 }
 
@@ -176,9 +347,10 @@ impl DeploymentManifest {
         self.world.inner.seed = previous.world.inner.seed;
 
         self.contracts.iter_mut().for_each(|contract| {
-            let previous_contract = previous.contracts.iter().find(|c| c.name == contract.name);
+            let previous_contract =
+                previous.contracts.iter().find(|c| c.manifest_name == contract.manifest_name);
             if let Some(previous_contract) = previous_contract {
-                if previous_contract.inner.base_class_hash != FieldElement::ZERO {
+                if previous_contract.inner.base_class_hash != Felt::ZERO {
                     contract.inner.base_class_hash = previous_contract.inner.base_class_hash;
                 }
             }
@@ -194,25 +366,25 @@ impl DeploymentManifest {
         Ok(())
     }
 
-    pub fn write_to_path_json(&self, path: &Utf8PathBuf, profile_dir: &Utf8PathBuf) -> Result<()> {
+    pub fn write_to_path_json(&self, path: &Utf8PathBuf, root_dir: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
         // Embedding ABIs into the manifest.
         let mut manifest_with_abis = self.clone();
 
         if let Some(abi_format) = &manifest_with_abis.world.inner.abi {
-            manifest_with_abis.world.inner.abi = Some(abi_format.to_embed(profile_dir)?);
+            manifest_with_abis.world.inner.abi = Some(abi_format.to_embed(root_dir)?);
         }
 
         for contract in &mut manifest_with_abis.contracts {
             if let Some(abi_format) = &contract.inner.abi {
-                contract.inner.abi = Some(abi_format.to_embed(profile_dir)?);
+                contract.inner.abi = Some(abi_format.to_embed(root_dir)?);
             }
         }
 
         for model in &mut manifest_with_abis.models {
             if let Some(abi_format) = &model.inner.abi {
-                model.inner.abi = Some(abi_format.to_embed(profile_dir)?);
+                model.inner.abi = Some(abi_format.to_embed(root_dir)?);
             }
         }
 
@@ -229,7 +401,7 @@ impl DeploymentManifest {
     /// * `world_address` - The address of the remote World contract.
     pub async fn load_from_remote<P>(
         provider: P,
-        world_address: FieldElement,
+        world_address: Felt,
     ) -> Result<Self, AbstractManifestError>
     where
         P: Provider + Send + Sync,
@@ -261,15 +433,16 @@ impl DeploymentManifest {
                     class_hash: world_class_hash,
                     ..Default::default()
                 },
-                WORLD_CONTRACT_NAME.into(),
+                naming::get_filename_from_tag(WORLD_CONTRACT_TAG),
             ),
             base: Manifest::new(
                 Class {
                     class_hash: base_class_hash,
                     abi: None,
                     original_class_hash: base_class_hash,
+                    tag: BASE_CONTRACT_TAG.to_string(),
                 },
-                BASE_CONTRACT_NAME.into(),
+                naming::get_filename_from_tag(BASE_CONTRACT_TAG),
             ),
         })
     }
@@ -288,8 +461,8 @@ impl DeploymentManifest {
 // #[async_trait]
 // impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeploymentManifest {}
 
-async fn get_remote_models_and_contracts<P: Provider>(
-    world: FieldElement,
+async fn get_remote_models_and_contracts<P>(
+    world: Felt,
     provider: P,
 ) -> Result<(Vec<Manifest<DojoModel>>, Vec<Manifest<DojoContract>>), AbstractManifestError>
 where
@@ -332,27 +505,8 @@ where
     let models = parse_models_events(registered_models_events);
     let mut contracts = parse_contracts_events(contract_deployed_events, contract_upgraded_events);
 
-    // fetch contracts name
     for contract in &mut contracts {
-        let name = match provider
-            .call(
-                FunctionCall {
-                    calldata: vec![],
-                    entry_point_selector: selector!("dojo_resource"),
-                    contract_address: contract.inner.address.expect("qed; missing address"),
-                },
-                BlockId::Tag(BlockTag::Latest),
-            )
-            .await
-        {
-            Ok(res) => parse_cairo_short_string(&res[0])?.into(),
-
-            Err(ProviderError::StarknetError(StarknetError::ContractError(_))) => SmolStr::from(""),
-
-            Err(err) => return Err(err.into()),
-        };
-
-        contract.name = name;
+        contract.manifest_name = naming::get_filename_from_tag(&contract.inner.tag);
     }
 
     Ok((models, contracts))
@@ -360,8 +514,8 @@ where
 
 async fn get_events<P: Provider + Send + Sync>(
     provider: P,
-    world: FieldElement,
-    keys: Vec<Vec<FieldElement>>,
+    world: Felt,
+    keys: Vec<Vec<Felt>>,
 ) -> Result<Vec<EmittedEvent>, ProviderError> {
     const DEFAULT_CHUNK_SIZE: u64 = 100;
 
@@ -390,11 +544,9 @@ fn parse_contracts_events(
     deployed: Vec<EmittedEvent>,
     upgraded: Vec<EmittedEvent>,
 ) -> Vec<Manifest<DojoContract>> {
-    fn retain_only_latest_upgrade_events(
-        events: Vec<EmittedEvent>,
-    ) -> HashMap<FieldElement, FieldElement> {
+    fn retain_only_latest_upgrade_events(events: Vec<EmittedEvent>) -> HashMap<Felt, Felt> {
         // addr -> (block_num, class_hash)
-        let mut upgrades: HashMap<FieldElement, (u64, FieldElement)> = HashMap::new();
+        let mut upgrades: HashMap<Felt, (u64, Felt)> = HashMap::new();
 
         events.into_iter().for_each(|event| {
             let mut data = event.data.into_iter();
@@ -432,6 +584,18 @@ fn parse_contracts_events(
             let mut class_hash = data.next().expect("class hash is missing from event");
             let address = data.next().expect("addresss is missing from event");
 
+            let str_data = data.as_slice();
+            let namespace =
+                ByteArray::cairo_deserialize(str_data, 0).expect("namespace is missing from event");
+            let offset = ByteArray::cairo_serialized_size(&namespace);
+            let name =
+                ByteArray::cairo_deserialize(str_data, offset).expect("name is missing from event");
+
+            let tag = naming::get_tag(
+                &namespace.to_string().expect("ASCII encoded namespace"),
+                &name.to_string().expect("ASCII encoded name"),
+            );
+
             if let Some(upgrade) = upgradeds.get(&address) {
                 class_hash = *upgrade;
             }
@@ -441,16 +605,17 @@ fn parse_contracts_events(
                     address: Some(address),
                     class_hash,
                     abi: None,
+                    tag: tag.clone(),
                     ..Default::default()
                 },
-                Default::default(),
+                naming::get_filename_from_tag(&tag),
             )
         })
         .collect()
 }
 
 fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
-    let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
+    let mut models: HashMap<String, Felt> = HashMap::with_capacity(events.len());
 
     for e in events {
         let model_event = match e.try_into() {
@@ -464,40 +629,28 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
             }
         };
 
-        // TODO: Safely unwrap?
-        let model_name = model_event.name.to_string().unwrap();
-        if let Some(current_class_hash) = models.get_mut(&model_name) {
+        let model_name = model_event.name.to_string().expect("ASCII encoded name");
+        let namespace = model_event.namespace.to_string().expect("ASCII encoded namespace");
+        let model_tag = naming::get_tag(&namespace, &model_name);
+
+        if let Some(current_class_hash) = models.get_mut(&model_tag) {
             if current_class_hash == &model_event.prev_class_hash.into() {
                 *current_class_hash = model_event.class_hash.into();
             }
         } else {
-            models.insert(model_name, model_event.class_hash.into());
+            models.insert(model_tag, model_event.class_hash.into());
         }
     }
 
     // TODO: include address of the model in the manifest.
     models
         .into_iter()
-        .map(|(name, class_hash)| Manifest::<DojoModel> {
-            inner: DojoModel { class_hash, abi: None, ..Default::default() },
-            name: name.into(),
+        .map(|(tag, class_hash)| Manifest::<DojoModel> {
+            inner: DojoModel { tag: tag.clone(), class_hash, abi: None, ..Default::default() },
+            manifest_name: naming::get_filename_from_tag(&tag),
         })
         .collect()
 }
-
-// fn elements_to_path<T>(item_dir: &Utf8PathBuf, items: &Vec<Manifest<T>>) -> Result<()>
-// where
-//     T: Serialize + ManifestMethods,
-// {
-//     fs::create_dir_all(item_dir)?;
-//     for item in items {
-//         let item_toml = toml::to_string_pretty(&item)?;
-//         let item_name = item.name.split("::").last().unwrap();
-//         fs::write(item_dir.join(item_name).with_extension("toml"), item_toml)?;
-//     }
-
-//     Ok(())
-// }
 
 fn elements_from_path<T>(path: &Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
 where
@@ -526,24 +679,22 @@ where
     Ok(elements)
 }
 
-fn overlay_elements_from_path<T>(path: &Utf8PathBuf) -> Result<Vec<T>, AbstractManifestError>
+fn overlay_to_path<T>(
+    path: &Utf8PathBuf,
+    elements: &[T],
+    get_tag: fn(&T) -> String,
+) -> Result<(), AbstractManifestError>
 where
-    T: DeserializeOwned,
+    T: Serialize,
 {
-    let mut elements = vec![];
+    fs::create_dir_all(path)?;
 
-    for entry in path.read_dir()? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            let manifest: T = toml::from_str(&fs::read_to_string(path)?)?;
-            elements.push(manifest);
-        } else {
-            continue;
-        }
+    for element in elements {
+        let filename = naming::get_filename_from_tag(&get_tag(element));
+        let path = path.join(filename).with_extension("toml");
+        fs::write(path, toml::to_string(element)?)?;
     }
-
-    Ok(elements)
+    Ok(())
 }
 
 impl ManifestMethods for DojoContract {
@@ -557,19 +708,21 @@ impl ManifestMethods for DojoContract {
         self.abi = abi;
     }
 
-    fn class_hash(&self) -> &FieldElement {
+    fn class_hash(&self) -> &Felt {
         self.class_hash.as_ref()
     }
 
-    fn set_class_hash(&mut self, class_hash: FieldElement) {
+    fn set_class_hash(&mut self, class_hash: Felt) {
         self.class_hash = class_hash;
     }
 
-    fn original_class_hash(&self) -> &FieldElement {
+    fn original_class_hash(&self) -> &Felt {
         self.original_class_hash.as_ref()
     }
 
     fn merge(&mut self, old: Self::OverlayType) {
+        // ignore name and namespace
+
         if let Some(class_hash) = old.original_class_hash {
             self.original_class_hash = class_hash;
         }
@@ -578,6 +731,9 @@ impl ManifestMethods for DojoContract {
         }
         if let Some(writes) = old.writes {
             self.writes = writes;
+        }
+        if let Some(init_calldata) = old.init_calldata {
+            self.init_calldata = init_calldata;
         }
     }
 }
@@ -593,15 +749,15 @@ impl ManifestMethods for DojoModel {
         self.abi = abi;
     }
 
-    fn class_hash(&self) -> &FieldElement {
+    fn class_hash(&self) -> &Felt {
         self.class_hash.as_ref()
     }
 
-    fn set_class_hash(&mut self, class_hash: FieldElement) {
+    fn set_class_hash(&mut self, class_hash: Felt) {
         self.class_hash = class_hash;
     }
 
-    fn original_class_hash(&self) -> &FieldElement {
+    fn original_class_hash(&self) -> &Felt {
         self.original_class_hash.as_ref()
     }
 
@@ -623,15 +779,15 @@ impl ManifestMethods for WorldContract {
         self.abi = abi;
     }
 
-    fn class_hash(&self) -> &FieldElement {
+    fn class_hash(&self) -> &Felt {
         self.class_hash.as_ref()
     }
 
-    fn set_class_hash(&mut self, class_hash: FieldElement) {
+    fn set_class_hash(&mut self, class_hash: Felt) {
         self.class_hash = class_hash;
     }
 
-    fn original_class_hash(&self) -> &FieldElement {
+    fn original_class_hash(&self) -> &Felt {
         self.original_class_hash.as_ref()
     }
 
@@ -653,15 +809,15 @@ impl ManifestMethods for Class {
         self.abi = abi;
     }
 
-    fn class_hash(&self) -> &FieldElement {
+    fn class_hash(&self) -> &Felt {
         self.class_hash.as_ref()
     }
 
-    fn set_class_hash(&mut self, class_hash: FieldElement) {
+    fn set_class_hash(&mut self, class_hash: Felt) {
         self.class_hash = class_hash;
     }
 
-    fn original_class_hash(&self) -> &FieldElement {
+    fn original_class_hash(&self) -> &Felt {
         self.original_class_hash.as_ref()
     }
 

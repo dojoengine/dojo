@@ -6,11 +6,11 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
+use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
-use starknet::core::types::{Event, FieldElement, InvokeTransaction, Transaction};
-use starknet::core::utils::get_selector_from_name;
+use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -31,13 +31,13 @@ mod test;
 
 #[derive(Debug, Clone)]
 pub struct Sql {
-    world_address: FieldElement,
+    world_address: Felt,
     pub pool: Pool<Sqlite>,
     query_queue: QueryQueue,
 }
 
 impl Sql {
-    pub async fn new(pool: Pool<Sqlite>, world_address: FieldElement) -> Result<Self> {
+    pub async fn new(pool: Pool<Sqlite>, world_address: Felt) -> Result<Self> {
         let mut query_queue = QueryQueue::new(pool.clone());
 
         query_queue.enqueue(
@@ -54,7 +54,7 @@ impl Sql {
         Ok(Self { pool, world_address, query_queue })
     }
 
-    pub async fn head(&self) -> Result<(u64, Option<FieldElement>)> {
+    pub async fn head(&self) -> Result<(u64, Option<Felt>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer_query = sqlx::query_as::<_, (i64, Option<String>)>(
             "SELECT head, pending_block_tx FROM indexers WHERE id = ?",
@@ -64,11 +64,11 @@ impl Sql {
         let indexer: (i64, Option<String>) = indexer_query.fetch_one(&mut *conn).await?;
         Ok((
             indexer.0.try_into().expect("doesn't fit in u64"),
-            indexer.1.map(|f| FieldElement::from_str(&f)).transpose()?,
+            indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
         ))
     }
 
-    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<FieldElement>) {
+    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<Felt>) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(self.world_address);
         let pending_block_tx = if let Some(f) = pending_block_tx {
@@ -96,24 +96,28 @@ impl Sql {
     #[allow(clippy::too_many_arguments)]
     pub async fn register_model(
         &mut self,
+        namespace: &str,
         model: Ty,
         layout: Layout,
-        class_hash: FieldElement,
-        contract_address: FieldElement,
+        class_hash: Felt,
+        contract_address: Felt,
         packed_size: u32,
         unpacked_size: u32,
         block_timestamp: u64,
     ) -> Result<()> {
+        let selector = compute_selector_from_names(namespace, &model.name());
+
         let insert_models =
-            "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
-             unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
-             UPDATE SET contract_address=EXCLUDED.contract_address, \
+            "INSERT INTO models (id, namespace, name, class_hash, contract_address, layout, \
+             packed_size, unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON \
+             CONFLICT(id) DO UPDATE SET contract_address=EXCLUDED.contract_address, \
              class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
              packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
              executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             // this is temporary until the model hash is precomputed
-            .bind(&format!("{:#x}", &get_selector_from_name(&model.name())?))
+            .bind(&format!("{:#x}", selector))
+            .bind(namespace)
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
             .bind(format!("{contract_address:#x}"))
@@ -126,12 +130,13 @@ impl Sql {
 
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(
+            selector,
             &model,
-            vec![model.name()],
+            vec![format!("{}-{}", namespace, model.name())],
             &mut model_idx,
             block_timestamp,
-            false,
-            false,
+            &mut 0,
+            &mut 0,
         );
         self.query_queue.execute_all().await?;
 
@@ -156,22 +161,24 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
+        let namespaced_name = entity.name();
+        let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
+
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
+
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
-            vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
-            ],
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         );
 
         let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
                                ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               executed_at=EXCLUDED.executed_at, event_id=EXCLUDED.event_id \
-                               RETURNING *";
-        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
+                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+                               event_id=EXCLUDED.event_id RETURNING *";
+        let mut entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
@@ -179,14 +186,16 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
-        let path = vec![entity.name()];
+        entity_updated.updated_model = Some(entity.clone());
+
+        let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
             path,
             event_id,
             (&entity_id, false),
             &entity,
             block_timestamp,
-            None,
+            &vec![],
         );
         self.query_queue.execute_all().await?;
 
@@ -211,14 +220,16 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
+        let namespaced_name = entity.name();
+        let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
+
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
+
         self.query_queue.enqueue(
             "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
-            vec![
-                Argument::String(entity_id.clone()),
-                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
-            ],
+            vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         );
 
         let keys_str = felts_sql_string(&keys);
@@ -226,7 +237,7 @@ impl Sql {
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                updated_at=CURRENT_TIMESTAMP, event_id=EXCLUDED.event_id RETURNING \
                                *";
-        let event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
+        let mut event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
@@ -234,14 +245,16 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
-        let path = vec![entity.name()];
+        event_message_updated.updated_model = Some(entity.clone());
+
+        let path = vec![namespaced_name];
         self.build_set_entity_queries_recursive(
             path,
             event_id,
             (&entity_id, true),
             &entity,
             block_timestamp,
-            None,
+            &vec![],
         );
         self.query_queue.execute_all().await?;
 
@@ -250,15 +263,25 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn delete_entity(&mut self, keys: Vec<FieldElement>, entity: Ty) -> Result<()> {
+    pub async fn delete_entity(&mut self, keys: Vec<Felt>, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let path = vec![entity.name()];
+        // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
+
+        // delete entity
+        let entity_deleted =
+            sqlx::query_as::<_, EntityUpdated>("DELETE FROM entities WHERE id = ? RETURNING *")
+                .bind(entity_id)
+                .fetch_one(&self.pool)
+                .await?;
+
+        SimpleBroker::publish(entity_deleted);
         Ok(())
     }
 
-    pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str, block_timestamp: u64) {
+    pub fn set_metadata(&mut self, resource: &Felt, uri: &str, block_timestamp: u64) {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
         let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
@@ -273,7 +296,7 @@ impl Sql {
 
     pub async fn update_metadata(
         &mut self,
-        resource: &FieldElement,
+        resource: &Felt,
         uri: &str,
         metadata: &WorldMetadata,
         icon_img: &Option<String>,
@@ -303,12 +326,16 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn model(&self, model: &str) -> Result<ModelSQLReader> {
-        let reader = ModelSQLReader::new(model, self.pool.clone()).await?;
-        Ok(reader)
+    pub async fn model(&self, selector: Felt) -> Result<ModelSQLReader> {
+        match ModelSQLReader::new(selector, self.pool.clone()).await {
+            Ok(reader) => Ok(reader),
+            Err(e) => {
+                Err(anyhow::anyhow!("Failed to get model from db for selector {selector:#x}: {e}"))
+            }
+        }
     }
 
-    pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
+    pub async fn entity(&self, model: String, key: Felt) -> Result<Vec<Felt>> {
         let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ? WHERE id = ?")
             .bind(model)
             .bind(format!("{:#x}", key));
@@ -318,7 +345,7 @@ impl Sql {
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
-    pub async fn entities(&self, model: String) -> Result<Vec<Vec<FieldElement>>> {
+    pub async fn entities(&self, model: String) -> Result<Vec<Vec<Felt>>> {
         let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ?").bind(model);
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let mut rows = query.fetch_all(&mut *conn).await?;
@@ -353,8 +380,8 @@ impl Sql {
                     Argument::FieldElement(l1_handler_transaction.transaction_hash),
                     Argument::FieldElement(l1_handler_transaction.contract_address),
                     Argument::String(felts_sql_string(&l1_handler_transaction.calldata)),
-                    Argument::FieldElement(FieldElement::ZERO), // has no max_fee
-                    Argument::String("".to_string()),           // has no signature
+                    Argument::FieldElement(Felt::ZERO), // has no max_fee
+                    Argument::String("".to_string()),   // has no signature
                     Argument::FieldElement((l1_handler_transaction.nonce).into()),
                 ),
                 _ => return,
@@ -382,7 +409,7 @@ impl Sql {
         &mut self,
         event_id: &str,
         event: &Event,
-        transaction_hash: FieldElement,
+        transaction_hash: Felt,
         block_timestamp: u64,
     ) {
         let id = Argument::String(event_id.to_string());
@@ -407,14 +434,16 @@ impl Sql {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn build_register_queries_recursive(
         &mut self,
+        selector: Felt,
         model: &Ty,
         path: Vec<String>,
         model_idx: &mut i64,
         block_timestamp: u64,
-        is_array: bool,
-        is_parent_array: bool,
+        array_idx: &mut usize,
+        parent_array_idx: &mut usize,
     ) {
         if let Ty::Enum(e) = model {
             if e.options.iter().all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
@@ -424,12 +453,13 @@ impl Sql {
         }
 
         self.build_model_query(
+            selector,
             path.clone(),
             model,
             *model_idx,
             block_timestamp,
-            is_array,
-            is_parent_array,
+            *array_idx,
+            *parent_array_idx,
         );
 
         let mut build_member = |pathname: &str, member: &Ty| {
@@ -443,13 +473,13 @@ impl Sql {
             path_clone.push(pathname.to_string());
 
             self.build_register_queries_recursive(
+                selector,
                 member,
                 path_clone,
                 &mut (*model_idx + 1),
                 block_timestamp,
-                // If the parent is an array, all children are also represented as table arrays
-                if let Ty::Array(_) = member { true } else { is_array },
-                if let Ty::Array(_) = model { true } else { is_parent_array },
+                &mut (*array_idx + if let Ty::Array(_) = member { 1 } else { 0 }),
+                &mut (*parent_array_idx + if let Ty::Array(_) = model { 1 } else { 0 }),
             );
         };
 
@@ -486,12 +516,12 @@ impl Sql {
         entity_id: (&str, bool),
         entity: &Ty,
         block_timestamp: u64,
-        index: Option<i64>,
+        indexes: &Vec<i64>,
     ) {
         let (entity_id, is_event_message) = entity_id;
 
         let update_members =
-            |members: &[Member], query_queue: &mut QueryQueue, index: Option<i64>| {
+            |members: &[Member], query_queue: &mut QueryQueue, indexes: &Vec<i64>| {
                 let table_id = path.join("$");
                 let mut columns = vec![
                     "id".to_string(),
@@ -517,9 +547,19 @@ impl Sql {
                     Argument::String(entity_id.to_string()),
                 ];
 
-                if let Some(idx) = index {
-                    columns.push("idx".to_string());
-                    arguments.push(Argument::Int(idx));
+                if !indexes.is_empty() {
+                    columns.push("full_array_id".to_string());
+                    arguments.push(Argument::String(
+                        std::iter::once(entity_id.to_string())
+                            .chain(indexes.iter().map(|i| i.to_string()))
+                            .collect::<Vec<String>>()
+                            .join(FELT_DELIMITER),
+                    ));
+                }
+
+                for (column_idx, idx) in indexes.iter().enumerate() {
+                    columns.push(format!("idx_{}", column_idx));
+                    arguments.push(Argument::Int(*idx));
                 }
 
                 for member in members.iter() {
@@ -552,7 +592,7 @@ impl Sql {
 
         match entity {
             Ty::Struct(s) => {
-                update_members(&s.children, &mut self.query_queue, index);
+                update_members(&s.children, &mut self.query_queue, indexes);
 
                 for member in s.children.iter() {
                     let mut path_clone = path.clone();
@@ -563,7 +603,7 @@ impl Sql {
                         (entity_id, is_event_message),
                         &member.ty,
                         block_timestamp,
-                        index,
+                        indexes,
                     );
                 }
             }
@@ -584,7 +624,7 @@ impl Sql {
                         Member { name: option.name.clone(), ty: option.ty.clone(), key: false },
                     ],
                     &mut self.query_queue,
-                    index,
+                    indexes,
                 );
 
                 match &option.ty {
@@ -599,7 +639,7 @@ impl Sql {
                             (entity_id, is_event_message),
                             &option.ty,
                             block_timestamp,
-                            index,
+                            indexes,
                         );
                     }
                 }
@@ -616,7 +656,7 @@ impl Sql {
                         .collect::<Vec<Member>>()
                         .as_slice(),
                     &mut self.query_queue,
-                    index,
+                    indexes,
                 );
 
                 for (idx, member) in t.iter().enumerate() {
@@ -628,25 +668,34 @@ impl Sql {
                         (entity_id, is_event_message),
                         member,
                         block_timestamp,
-                        index,
+                        indexes,
                     );
                 }
             }
             Ty::Array(array) => {
-                // delete all previous array elements
-                self.query_queue.enqueue(
-                    format!(
-                        "DELETE FROM [{table_id}] WHERE entity_id = ?",
-                        table_id = path.join("$")
-                    ),
-                    vec![Argument::String(entity_id.to_string())],
-                );
+                // delete all previous array elements with the array indexes
+                let table_id = path.join("$");
+                let mut query =
+                    format!("DELETE FROM [{table_id}] WHERE entity_id = ? ", table_id = table_id);
+                for idx in 0..indexes.len() {
+                    query.push_str(&format!("AND idx_{} = ? ", idx));
+                }
 
+                // flatten indexes with entity id
+                let mut arguments = vec![Argument::String(entity_id.to_string())];
+                arguments.extend(indexes.iter().map(|idx| Argument::Int(*idx)));
+
+                self.query_queue.enqueue(query, arguments);
+
+                // insert the new array elements
                 for (idx, member) in array.iter().enumerate() {
+                    let mut indexes = indexes.clone();
+                    indexes.push(idx as i64);
+
                     update_members(
                         &[Member { name: "data".to_string(), ty: member.clone(), key: false }],
                         &mut self.query_queue,
-                        Some(idx as i64),
+                        &indexes,
                     );
 
                     let mut path_clone = path.clone();
@@ -657,7 +706,7 @@ impl Sql {
                         (entity_id, is_event_message),
                         member,
                         block_timestamp,
-                        Some(idx as i64),
+                        &indexes,
                     );
                 }
             }
@@ -678,34 +727,74 @@ impl Sql {
                 self.query_queue
                     .push_front(statement, vec![Argument::String(entity_id.to_string())]);
                 for member in s.children.iter() {
-                    if let Ty::Struct(_) = &member.ty {
-                        let mut path_clone = path.clone();
-                        path_clone.push(member.name.clone());
-                        self.build_delete_entity_queries_recursive(
-                            path_clone, entity_id, &member.ty,
-                        );
-                    }
+                    let mut path_clone = path.clone();
+                    path_clone.push(member.name.clone());
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &member.ty);
                 }
             }
             Ty::Enum(e) => {
+                if e.options
+                    .iter()
+                    .all(|o| if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false })
+                {
+                    return;
+                }
+
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
                 for child in e.options.iter() {
+                    if let Ty::Tuple(t) = &child.ty {
+                        if t.is_empty() {
+                            continue;
+                        }
+                    }
+
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
                     self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty);
+                }
+            }
+            Ty::Array(array) => {
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
+                for member in array.iter() {
+                    let mut path_clone = path.clone();
+                    path_clone.push("data".to_string());
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
+                }
+            }
+            Ty::Tuple(t) => {
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+
+                for (idx, member) in t.iter().enumerate() {
+                    let mut path_clone = path.clone();
+                    path_clone.push(format!("_{}", idx));
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, member);
                 }
             }
             _ => {}
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn build_model_query(
         &mut self,
+        selector: Felt,
         path: Vec<String>,
         model: &Ty,
         model_idx: i64,
         block_timestamp: u64,
-        is_array: bool,
-        is_parent_array: bool,
+        array_idx: usize,
+        parent_array_idx: usize,
     ) {
         let table_id = path.join("$");
         let mut indices = Vec::new();
@@ -715,8 +804,14 @@ impl Sql {
              entity_id TEXT, event_message_id TEXT, "
         );
 
-        if is_array {
-            create_table_query.push_str("idx INTEGER NOT NULL, ");
+        if array_idx > 0 {
+            // index columns
+            for i in 0..array_idx {
+                create_table_query.push_str(&format!("idx_{i} INTEGER NOT NULL, ", i = i));
+            }
+
+            // full array id column
+            create_table_query.push_str("full_array_id TEXT NOT NULL UNIQUE, ");
         }
 
         let mut build_member = |name: &str, ty: &Ty, options: &mut Option<Argument>| {
@@ -724,7 +819,7 @@ impl Sql {
                 create_table_query
                     .push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
             } else if let Ty::Enum(e) = &ty {
@@ -736,11 +831,14 @@ impl Sql {
                     .join(", ");
 
                 create_table_query.push_str(&format!(
-                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
+                    "external_{name} TEXT CHECK(external_{name} IN ({all_options})) ",
                 ));
 
+                // if we're an array, we could have multiple enum options
+                create_table_query.push_str(if array_idx > 0 { ", " } else { "NOT NULL, " });
+
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
 
@@ -755,7 +853,7 @@ impl Sql {
             } else if let Ty::ByteArray(_) = &ty {
                 create_table_query.push_str(&format!("external_{name} TEXT, "));
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      (external_{name});"
                 ));
             }
@@ -778,10 +876,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(member_idx as i64),
                         Argument::String(name),
@@ -807,10 +902,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),
                         Argument::String(format!("_{}", idx)),
@@ -837,10 +929,7 @@ impl Sql {
                 let arguments = vec![
                     Argument::String(table_id.clone()),
                     // TEMP: this is temporary until the model hash is precomputed
-                    Argument::String(format!(
-                        "{:#x}",
-                        get_selector_from_name(&path[0].clone()).unwrap()
-                    )),
+                    Argument::String(format!("{:#x}", selector)),
                     Argument::Int(model_idx),
                     Argument::Int(0),
                     Argument::String("data".to_string()),
@@ -879,10 +968,7 @@ impl Sql {
                     let arguments = vec![
                         Argument::String(table_id.clone()),
                         // TEMP: this is temporary until the model hash is precomputed
-                        Argument::String(format!(
-                            "{:#x}",
-                            get_selector_from_name(&path[0].clone()).unwrap()
-                        )),
+                        Argument::String(format!("{:#x}", selector)),
                         Argument::Int(model_idx),
                         Argument::Int(idx as i64),
                         Argument::String(child.name.clone()),
@@ -907,24 +993,26 @@ impl Sql {
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
 
-            if is_parent_array && path.len() > 2 {
-                create_table_query.push_str(&format!(
-                    "FOREIGN KEY (id, idx) REFERENCES {parent_table_id} (id, idx) ON DELETE \
-                     CASCADE, "
-                ));
-            } else {
-                create_table_query.push_str(&format!(
-                    "FOREIGN KEY (id) REFERENCES {parent_table_id} (id), ",
-                    parent_table_id = parent_table_id
-                ));
+            create_table_query.push_str("FOREIGN KEY (id");
+            for i in 0..parent_array_idx {
+                create_table_query.push_str(&format!(", idx_{i}", i = i));
             }
+            create_table_query.push_str(&format!(
+                ") REFERENCES [{parent_table_id}] (id",
+                parent_table_id = parent_table_id
+            ));
+            for i in 0..parent_array_idx {
+                create_table_query.push_str(&format!(", idx_{i}", i = i));
+            }
+            create_table_query.push_str(") ON DELETE CASCADE, ");
         };
 
-        if is_array {
-            create_table_query.push_str("PRIMARY KEY (id, idx), ");
-        } else {
-            create_table_query.push_str("PRIMARY KEY (id), ");
+        create_table_query.push_str("PRIMARY KEY (id");
+        for i in 0..array_idx {
+            create_table_query.push_str(&format!(", idx_{i}", i = i));
         }
+        create_table_query.push_str("), ");
+
         create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id), ");
         // create_table_query.push_str("FOREIGN KEY (event_id) REFERENCES events(id), ");
         create_table_query
@@ -944,7 +1032,7 @@ impl Sql {
     }
 }
 
-fn felts_sql_string(felts: &[FieldElement]) -> String {
+fn felts_sql_string(felts: &[Felt]) -> String {
     felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(FELT_DELIMITER)
         + FELT_DELIMITER
 }

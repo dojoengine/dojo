@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::process::Stdio;
 
 use anyhow::{bail, Context};
@@ -5,22 +6,27 @@ use async_trait::async_trait;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::OnceCell;
-use tracing::warn;
+use tracing::trace;
 
-use super::{ProverClient, ProverIdentifier};
+use super::{ProveProgram, ProverClient, ProverIdentifier};
+use crate::prover::loader::prepare_input_cairo0;
+use crate::LOG_TARGET;
+
+const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo0:latest";
 
 #[derive(Debug, Clone)]
 pub struct StoneProver(pub String);
 
-pub async fn prove_stone(input: String) -> anyhow::Result<String> {
+pub async fn prove_stone(input: String, prove_program: ProveProgram) -> anyhow::Result<String> {
     let prover = StoneProver::new().await?;
-    prover.prove(input).await
-}
+    trace!(target: LOG_TARGET, "Proving with cairo0.");
 
-pub async fn local_verify(input: String) -> anyhow::Result<String> {
-    let prover = StoneProver::new().await?;
-    prover.local_verify(input).await?;
-    Ok(String::from("ok"))
+    let input = prepare_input_cairo0(input, prove_program).await?;
+    let input = serde_json::to_string(&input).context("Failed to serialize input")?;
+
+    std::io::Write::write_all(&mut File::create("input.json")?, input.as_bytes())?;
+
+    prover.prove(input).await.context("Failed to prove using the http prover")
 }
 
 #[async_trait]
@@ -35,47 +41,26 @@ impl ProverClient for StoneProver {
 
         run(command, Some(input)).await
     }
-
-    async fn local_verify(&self, proof: String) -> anyhow::Result<()> {
-        let mut command = Command::new("podman");
-        command.arg("run").arg("-i").arg("--rm").arg("verifier");
-
-        run(command, Some(proof)).await?;
-
-        Ok(())
-    }
 }
 
 impl StoneProver {
     async fn new() -> anyhow::Result<StoneProver> {
-        static STONE_PROVER: OnceCell<(anyhow::Result<String>, anyhow::Result<String>)> =
-            OnceCell::const_new();
-
-        let source = "piniom/state-diff-commitment";
-        let verifier = "piniom/verifier:latest";
+        static STONE_PROVER: OnceCell<anyhow::Result<String>> = OnceCell::const_new();
 
         let result = STONE_PROVER
             .get_or_init(|| async {
                 let mut command = Command::new("podman");
-                command.arg("pull").arg(format!("docker.io/{}", source));
+                command.arg("pull").arg(format!("docker.io/{}", PROVER_IMAGE));
 
-                let mut verifier_command = Command::new("podman");
-                verifier_command.arg("pull").arg(format!("docker.io/{}", verifier));
-
-                (
-                    run(command, None).await.context("Failed to pull prover"),
-                    run(verifier_command, None).await.context("Failed to pull prover"),
-                )
+                run(command, None).await.context("Failed to pull prover")
             })
             .await;
 
-        if result.0.is_err() {
+        if result.is_err() {
             bail!("Failed to pull prover");
-        } else if result.1.is_err() {
-            warn!("Failed to pull verifier");
         }
 
-        Ok(StoneProver(source.to_string()))
+        Ok(StoneProver(PROVER_IMAGE.to_string()))
     }
 }
 

@@ -2,7 +2,7 @@ use std::num::ParseIntError;
 
 use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::EnumError;
-use starknet::core::types::{FromByteSliceError, FromStrError};
+use starknet::core::types::FromStrError;
 use starknet::core::utils::{CairoShortStringToFeltError, NonAsciiNameError};
 
 #[derive(Debug, thiserror::Error)]
@@ -28,8 +28,6 @@ pub enum ParseError {
     #[error(transparent)]
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
-    FromByteSliceError(#[from] FromByteSliceError),
-    #[error(transparent)]
     ParseIntError(#[from] ParseIntError),
     #[error(transparent)]
     CairoSerdeError(#[from] cainome::cairo_serde::Error),
@@ -47,4 +45,6 @@ pub enum QueryError {
     ModelNotFound(String),
     #[error("exceeds sqlite `JOIN` limit (64)")]
     SqliteJoinLimit,
+    #[error("invalid namespaced model: {0}")]
+    InvalidNamespacedModel(String),
 }

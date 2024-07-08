@@ -35,6 +35,24 @@ struct WithNestedArrayInTuple {
     arr: (u8, (u16, Array<u128>, u256), u32)
 }
 
+#[derive(Drop, IntrospectPacked)]
+struct Vec3 {
+    x: u32,
+    y: u32,
+    z: u32
+}
+
+#[derive(IntrospectPacked)]
+struct Translation {
+    from: Vec3,
+    to: Vec3
+}
+
+#[derive(Drop, IntrospectPacked)]
+struct StructInnerNotPacked {
+    x: Base
+}
+
 #[derive(Drop, Introspect)]
 enum EnumNoData {
     One,
@@ -43,10 +61,43 @@ enum EnumNoData {
 }
 
 #[derive(Drop, Introspect)]
-enum EnumWithData {
+enum EnumWithSameData {
+    One: u256,
+    Two: u256,
+    Three: u256
+}
+
+#[derive(Drop, Introspect)]
+enum EnumWithSameTupleData {
+    One: (u256, u32),
+    Two: (u256, u32),
+    Three: (u256, u32)
+}
+
+#[derive(Drop, Introspect)]
+enum EnumWithVariousData {
     One: u32,
     Two: (u8, u16),
     Three: Array<u128>,
+}
+
+
+#[derive(Drop, IntrospectPacked)]
+enum EnumPacked {
+    A: u32,
+    B: u32,
+}
+
+#[derive(Drop, IntrospectPacked)]
+enum EnumInnerPacked {
+    A: (EnumPacked, Vec3),
+    B: (EnumPacked, Vec3),
+}
+
+#[derive(Drop, IntrospectPacked)]
+enum EnumInnerNotPacked {
+    A: (EnumPacked, Base),
+    B: (EnumPacked, Base),
 }
 
 #[derive(Drop, Introspect)]
@@ -82,10 +133,8 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
 
         let v = *values.at(i);
         match v {
-            Option::Some(v) => {
-                items.append(field(i.into(), tuple(array![fixed(array![8]), v])));
-            },
-            Option::None => { items.append(field(i.into(), fixed(array![8]))) }
+            Option::Some(v) => { items.append(field(i.into(), v)); },
+            Option::None => { items.append(field(i.into(), fixed(array![]))) }
         }
 
         i += 1;
@@ -144,8 +193,24 @@ fn test_size_with_nested_array_in_tuple() {
 #[test]
 fn test_size_of_enum_without_variant_data() {
     let size = Introspect::<EnumNoData>::size();
-    assert!(size.is_none());
+    assert!(size.is_some());
+    assert!(size.unwrap() == 1);
 }
+
+#[test]
+fn test_size_of_enum_with_same_variant_data() {
+    let size = Introspect::<EnumWithSameData>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 3);
+}
+
+#[test]
+fn test_size_of_enum_with_same_tuple_variant_data() {
+    let size = Introspect::<EnumWithSameTupleData>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 4);
+}
+
 
 #[test]
 fn test_size_of_struct_with_option() {
@@ -155,49 +220,39 @@ fn test_size_of_struct_with_option() {
 
 #[test]
 fn test_size_of_enum_with_variant_data() {
-    let size = Introspect::<EnumWithData>::size();
+    let size = Introspect::<EnumWithVariousData>::size();
     assert!(size.is_none());
 }
 
 #[test]
 fn test_layout_of_enum_without_variant_data() {
     let layout = Introspect::<EnumNoData>::layout();
-    let expected = Layout::Enum(
-        array![
-            // One
-            field(0, tuple(array![fixed(array![8])])),
-            // Two
-            field(1, tuple(array![fixed(array![8])])),
-            // Three
-            field(2, tuple(array![fixed(array![8])])),
-        ]
-            .span()
-    );
+    let expected = _enum(array![ // One
+    Option::None, // Two
+     Option::None, // Three
+     Option::None,]);
 
     assert!(layout == expected);
 }
 
 #[test]
 fn test_layout_of_enum_with_variant_data() {
-    let layout = Introspect::<EnumWithData>::layout();
-    let expected = Layout::Enum(
+    let layout = Introspect::<EnumWithVariousData>::layout();
+    let expected = _enum(
         array![
             // One
-            field(0, tuple(array![fixed(array![8]), fixed(array![32]),])),
+            Option::Some(fixed(array![32])),
             // Two
-            field(
-                1,
-                tuple(array![fixed(array![8]), tuple(array![fixed(array![8]), fixed(array![16]),])])
-            ),
+            Option::Some(tuple(array![fixed(array![8]), fixed(array![16])])),
             // Three
-            field(2, tuple(array![fixed(array![8]), arr(fixed(array![128])),])),
+            Option::Some(arr(fixed(array![128]))),
         ]
-            .span()
     );
 
     assert!(layout == expected);
 }
 
+#[test]
 fn test_layout_of_struct_with_option() {
     let layout = Introspect::<StructWithOption>::layout();
     let expected = Layout::Struct(
@@ -206,4 +261,49 @@ fn test_layout_of_struct_with_option() {
     );
 
     assert!(layout == expected);
+}
+
+#[test]
+fn test_layout_of_packed_struct() {
+    let layout = Introspect::<Vec3>::layout();
+    let expected = Layout::Fixed(array![32, 32, 32].span());
+
+    assert!(layout == expected);
+}
+
+#[test]
+fn test_layout_of_inner_packed_struct() {
+    let layout = Introspect::<Translation>::layout();
+    let expected = Layout::Fixed(array![32, 32, 32, 32, 32, 32].span());
+
+    assert!(layout == expected);
+}
+
+#[test]
+#[should_panic(expected: ("A packed model layout must contain Fixed layouts only.",))]
+fn test_layout_of_not_packed_inner_struct() {
+    let _ = Introspect::<StructInnerNotPacked>::layout();
+}
+
+
+#[test]
+fn test_layout_of_packed_enum() {
+    let layout = Introspect::<EnumPacked>::layout();
+    let expected = Layout::Fixed(array![8, 32].span());
+
+    assert!(layout == expected);
+}
+
+#[test]
+fn test_layout_of_inner_packed_enum() {
+    let layout = Introspect::<EnumInnerPacked>::layout();
+    let expected = Layout::Fixed(array![8, 8, 32, 32, 32, 32].span());
+
+    assert!(layout == expected);
+}
+
+#[test]
+#[should_panic(expected: ("A packed model layout must contain Fixed layouts only.",))]
+fn test_layout_of_not_packed_inner_enum() {
+    let _ = Introspect::<EnumInnerNotPacked>::layout();
 }

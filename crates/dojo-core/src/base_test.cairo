@@ -49,15 +49,23 @@ use contract_upgrade::{IQuantumLeapDispatcher, IQuantumLeapDispatcherTrait};
 
 // Utils
 fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world(array![])
+    spawn_test_world("dojo", array![])
 }
+
+// A test contract needs to be used instead of previously used base contract since.
+// contracts now require a `dojo_init` method which normal base contract doesn't have
+#[dojo::contract]
+mod test_contract {}
 
 #[test]
 #[available_gas(6000000)]
 fn test_upgrade_from_world() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world
+        .deploy_contract(
+            'salt', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     world.upgrade_contract(base_address, new_class_hash);
@@ -74,7 +82,10 @@ fn test_upgrade_from_world() {
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world
+        .deploy_contract(
+            'salt', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
     let new_class_hash: ClassHash = contract_invalid_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     world.upgrade_contract(base_address, new_class_hash);
@@ -86,7 +97,10 @@ fn test_upgrade_from_world_not_world_provider() {
 fn test_upgrade_direct() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world
+        .deploy_contract(
+            'salt', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
@@ -97,6 +111,8 @@ fn test_upgrade_direct() {
 trait IMetadataOnly<T> {
     fn selector(self: @T) -> felt252;
     fn name(self: @T) -> ByteArray;
+    fn namespace(self: @T) -> ByteArray;
+    fn namespace_hash(self: @T) -> felt252;
 }
 
 #[starknet::contract]
@@ -108,7 +124,15 @@ mod invalid_legacy_model {
     impl InvalidModelMetadata of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x742c3d09472a40914dedcbd609788fd547bde613d6c4d4c2f15d41f4e241f25
+            0x1b1edb46931b1a98d8c6ecf2703e8483ec1d85fb75b3e9c061eab383fc8f8f1
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -130,6 +154,14 @@ mod invalid_legacy_model_world {
             0
         }
 
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
+        }
+
         fn name(self: @ContractState) -> ByteArray {
             "invalid_legacy_model"
         }
@@ -144,8 +176,17 @@ mod invalid_model {
     #[abi(embed_v0)]
     impl InvalidModelSelector of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
+            // NOTE: Need to update this value if address changes
             // Pre-computed address of a contract deployed through the world.
-            0x455fe9471cb954574b16581868043841391545b9225af00bf545f9acf923295
+            0x21b19f95ff0f382a069dc7034f95584b300133665ee506789c76ba729e42b66
+        }
+
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -167,6 +208,14 @@ mod invalid_model_world {
             0
         }
 
+        fn namespace(self: @ContractState) -> ByteArray {
+            "dojo"
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::utils::hash(@Self::namespace(self))
+        }
+
         fn name(self: @ContractState) -> ByteArray {
             "invalid_model_world"
         }
@@ -179,12 +228,13 @@ mod invalid_model_world {
 fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract(0, base::TEST_CLASS_HASH.try_into().unwrap());
+    let contract_address = world
+        .deploy_contract(0, test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
 
     // This print allows to know the address of the deployed contract which must be returned
     // by the selector() function of invalid model, to simulate a ACL issue
     // (see register_model function)
-    base_address.print();
+    contract_address.print();
 
     world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());
 }

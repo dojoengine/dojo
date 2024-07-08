@@ -8,17 +8,17 @@ use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
+use starknet::core::types::Felt;
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 
 use crate::utils::handle_transaction_result;
 
 pub async fn model_register<A, P>(
-    models: Vec<FieldElement>,
+    models: Vec<Felt>,
     world: &WorldContract<A>,
     txn_config: TxnConfig,
     world_reader: WorldContractReader<P>,
-    world_address: FieldElement,
+    world_address: Felt,
     config: &Config,
 ) -> Result<()>
 where
@@ -34,20 +34,20 @@ where
         }
     };
 
-    let registered_models_names = manifest.models.iter().map(|m| m.name.as_str());
+    let registered_models = manifest.models.iter().map(|m| m.inner.tag.clone());
     let mut model_class_hashes = HashMap::new();
-    for model_name in registered_models_names {
-        let read_model = world_reader.model_reader(model_name).await?;
+    for model_tag in registered_models {
+        let read_model = world_reader.model_reader_with_tag(&model_tag).await?;
         let class_hash = read_model.class_hash();
-        model_class_hashes.insert(class_hash, model_name);
+        model_class_hashes.insert(class_hash, model_tag);
     }
 
     let mut models_to_register = Vec::new();
     for input_model in models {
-        if let Some(model_name) = model_class_hashes.get(&input_model) {
+        if let Some(model_tag) = model_class_hashes.get(&input_model) {
             config.ui().print(format!(
                 "\"{}\" model already registered with the class hash \"{:#x}\"",
-                model_name, input_model
+                model_tag, input_model
             ));
         } else {
             models_to_register.push(input_model);
@@ -66,7 +66,7 @@ where
 
     let res = world
         .account
-        .execute(calls)
+        .execute_v1(calls)
         .send_with_cfg(&txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;

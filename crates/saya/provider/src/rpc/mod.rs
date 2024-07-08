@@ -15,8 +15,9 @@ use katana_primitives::transaction::TxWithHash;
 use katana_primitives::version::Version;
 use katana_rpc_api::saya::SayaApiClient;
 use katana_rpc_types::trace::TxExecutionInfo;
+use num_traits::ToPrimitive;
 use starknet::core::types::{
-    ContractClass, FieldElement, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
+    ContractClass, Felt, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
 };
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider as StarknetProvider};
@@ -93,8 +94,8 @@ impl Provider for JsonRpcProvider {
                     parent_hash: block.parent_hash,
                     number: block.block_number,
                     gas_prices: GasPrices::new(
-                        block.l1_gas_price.price_in_wei.try_into().unwrap(),
-                        block.l1_gas_price.price_in_fri.try_into().unwrap(),
+                        block.l1_gas_price.price_in_wei.to_u128().unwrap(),
+                        block.l1_gas_price.price_in_fri.to_u128().unwrap(),
                     ),
                     timestamp: block.timestamp,
                     state_root: block.new_root,
@@ -109,7 +110,7 @@ impl Provider for JsonRpcProvider {
     async fn fetch_state_updates(
         &self,
         block_number: BlockNumber,
-    ) -> ProviderResult<(StateUpdatesWithDeclaredClasses, Vec<FieldElement>)> {
+    ) -> ProviderResult<(StateUpdatesWithDeclaredClasses, Vec<Felt>)> {
         let rpc_state_update = match self
             .starknet_provider
             .get_state_update(BlockIdOrTag::Number(block_number))

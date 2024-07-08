@@ -15,7 +15,7 @@ use katana_rpc::{spawn, NodeHandle};
 use katana_rpc_api::ApiKind;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
@@ -23,12 +23,12 @@ use url::Url;
 
 #[derive(Debug)]
 pub struct TestAccount {
-    pub private_key: FieldElement,
-    pub account_address: FieldElement,
+    pub private_key: Felt,
+    pub account_address: Felt,
 }
 
 #[allow(unused)]
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct TestSequencer {
     url: Url,
     handle: NodeHandle,
@@ -87,8 +87,8 @@ impl TestSequencer {
 
         let account = sequencer.backend.config.genesis.accounts().next().unwrap();
         let account = TestAccount {
-            private_key: account.1.private_key().unwrap(),
-            account_address: (*account.0).into(),
+            private_key: Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be()),
+            account_address: Felt::from_bytes_be(&account.0.to_bytes_be()),
         };
 
         TestSequencer { sequencer, account, handle, url }
@@ -99,11 +99,11 @@ impl TestSequencer {
             JsonRpcClient::new(HttpTransport::new(self.url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(self.account.private_key)),
             self.account.account_address,
-            chain_id::TESTNET,
+            chain_id::SEPOLIA,
             ExecutionEncoding::New,
         );
 
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+        account.set_block_id(starknet::core::types::BlockId::Tag(BlockTag::Pending));
 
         account
     }
@@ -119,14 +119,14 @@ impl TestSequencer {
         let accounts: Vec<_> = self.sequencer.backend.config.genesis.accounts().collect::<_>();
 
         let account = accounts[index];
-        let private_key = account.1.private_key().unwrap();
-        let address: FieldElement = (*(account.0)).into();
+        let private_key = Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be());
+        let address: Felt = Felt::from_bytes_be(&account.0.to_bytes_be());
 
         let mut account = SingleOwnerAccount::new(
             JsonRpcClient::new(HttpTransport::new(self.url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
             address,
-            chain_id::TESTNET,
+            chain_id::SEPOLIA,
             ExecutionEncoding::New,
         );
 
@@ -151,7 +151,7 @@ impl TestSequencer {
 pub fn get_default_test_starknet_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
-        env: Environment { chain_id: ChainId::GOERLI, ..Default::default() },
+        env: Environment { chain_id: ChainId::SEPOLIA, ..Default::default() },
         ..Default::default()
     }
 }

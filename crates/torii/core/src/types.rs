@@ -1,28 +1,29 @@
 use core::fmt;
 
 use chrono::{DateTime, Utc};
+use dojo_types::schema::Ty;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SQLFieldElement(pub FieldElement);
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SQLFelt(pub Felt);
 
-impl From<SQLFieldElement> for FieldElement {
-    fn from(field_element: SQLFieldElement) -> Self {
+impl From<SQLFelt> for Felt {
+    fn from(field_element: SQLFelt) -> Self {
         field_element.0
     }
 }
 
-impl TryFrom<String> for SQLFieldElement {
+impl TryFrom<String> for SQLFelt {
     type Error = anyhow::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        Ok(SQLFieldElement(FieldElement::from_hex_be(&value)?))
+        Ok(SQLFelt(Felt::from_hex(&value)?))
     }
 }
 
-impl fmt::LowerHex for SQLFieldElement {
+impl fmt::LowerHex for SQLFelt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
@@ -37,6 +38,9 @@ pub struct Entity {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    // if updated_model is None, then the entity has been deleted
+    #[sqlx(skip)]
+    pub updated_model: Option<Ty>,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -48,12 +52,17 @@ pub struct EventMessage {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+
+    // this should never be None. as a EventMessage cannot be deleted
+    #[sqlx(skip)]
+    pub updated_model: Option<Ty>,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
     pub id: String,
+    pub namespace: String,
     pub name: String,
     pub class_hash: String,
     pub contract_address: String,

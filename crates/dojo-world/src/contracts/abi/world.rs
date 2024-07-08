@@ -202,6 +202,18 @@ abigen!(
       },
       {
         "type": "function",
+        "name": "register_namespace",
+        "inputs": [
+          {
+            "name": "namespace",
+            "type": "core::byte_array::ByteArray"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
         "name": "deploy_contract",
         "inputs": [
           {
@@ -211,6 +223,10 @@ abigen!(
           {
             "name": "class_hash",
             "type": "core::starknet::class_hash::ClassHash"
+          },
+          {
+            "name": "init_calldata",
+            "type": "core::array::Span::<core::felt252>"
           }
         ],
         "outputs": [
@@ -403,7 +419,7 @@ abigen!(
         "name": "is_writer",
         "inputs": [
           {
-            "name": "model",
+            "name": "resource",
             "type": "core::felt252"
           },
           {
@@ -423,7 +439,7 @@ abigen!(
         "name": "grant_writer",
         "inputs": [
           {
-            "name": "model",
+            "name": "resource",
             "type": "core::felt252"
           },
           {
@@ -439,7 +455,7 @@ abigen!(
         "name": "revoke_writer",
         "inputs": [
           {
-            "name": "model",
+            "name": "resource",
             "type": "core::felt252"
           },
           {
@@ -449,6 +465,66 @@ abigen!(
         ],
         "outputs": [],
         "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "can_write_resource",
+        "inputs": [
+          {
+            "name": "resource_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "contract",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "can_write_model",
+        "inputs": [
+          {
+            "name": "model_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "contract",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "can_write_namespace",
+        "inputs": [
+          {
+            "name": "namespace_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "contract",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
       }
     ]
   },
@@ -557,6 +633,10 @@ abigen!(
           {
             "name": "program_output",
             "type": "dojo::interfaces::ProgramOutput"
+          },
+          {
+            "name": "program_hash",
+            "type": "core::felt252"
           }
         ],
         "outputs": [],
@@ -575,7 +655,7 @@ abigen!(
     "items": [
       {
         "type": "function",
-        "name": "set_program_hash",
+        "name": "set_differ_program_hash",
         "inputs": [
           {
             "name": "program_hash",
@@ -587,7 +667,30 @@ abigen!(
       },
       {
         "type": "function",
-        "name": "get_program_hash",
+        "name": "set_merger_program_hash",
+        "inputs": [
+          {
+            "name": "program_hash",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_differ_program_hash",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_merger_program_hash",
         "inputs": [],
         "outputs": [
           {
@@ -667,6 +770,16 @@ abigen!(
         "name": "address",
         "type": "core::starknet::contract_address::ContractAddress",
         "kind": "data"
+      },
+      {
+        "name": "namespace",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "name",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
       }
     ]
   },
@@ -718,11 +831,33 @@ abigen!(
   },
   {
     "type": "event",
+    "name": "dojo::world::world::NamespaceRegistered",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "namespace",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "hash",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
     "name": "dojo::world::world::ModelRegistered",
     "kind": "struct",
     "members": [
       {
         "name": "name",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "namespace",
         "type": "core::byte_array::ByteArray",
         "kind": "data"
       },
@@ -793,7 +928,7 @@ abigen!(
     "kind": "struct",
     "members": [
       {
-        "name": "model",
+        "name": "resource",
         "type": "core::felt252",
         "kind": "data"
       },
@@ -833,7 +968,19 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::config::component::Config::ProgramHashUpdate",
+    "name": "dojo::config::component::Config::DifferProgramHashUpdate",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "program_hash",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::config::component::Config::MergerProgramHashUpdate",
     "kind": "struct",
     "members": [
       {
@@ -861,8 +1008,13 @@ abigen!(
     "kind": "enum",
     "variants": [
       {
-        "name": "ProgramHashUpdate",
-        "type": "dojo::config::component::Config::ProgramHashUpdate",
+        "name": "DifferProgramHashUpdate",
+        "type": "dojo::config::component::Config::DifferProgramHashUpdate",
+        "kind": "nested"
+      },
+      {
+        "name": "MergerProgramHashUpdate",
+        "type": "dojo::config::component::Config::MergerProgramHashUpdate",
         "kind": "nested"
       },
       {
@@ -912,6 +1064,11 @@ abigen!(
       {
         "name": "MetadataUpdate",
         "type": "dojo::world::world::MetadataUpdate",
+        "kind": "nested"
+      },
+      {
+        "name": "NamespaceRegistered",
+        "type": "dojo::world::world::NamespaceRegistered",
         "kind": "nested"
       },
       {

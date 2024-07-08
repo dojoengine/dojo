@@ -11,6 +11,6 @@ pub enum ProviderError {
     BlockNotFound(katana_primitives::block::BlockIdOrTag),
     #[error(transparent)]
     StarknetProvider(#[from] starknet::providers::ProviderError),
-    #[error(transparent)]
-    ValueOutOfRange(#[from] starknet::core::types::ValueOutOfRangeError),
+    #[error("Value out of range")]
+    ValueOutOfRange,
 }

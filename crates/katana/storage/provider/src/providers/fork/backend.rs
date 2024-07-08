@@ -115,6 +115,7 @@ type BackendRequestFuture = BoxFuture<'static, ()>;
 ///
 /// It is responsible for processing [requests](BackendRequest) to fetch data from the remote
 /// provider.
+#[allow(missing_debug_implementations)]
 pub struct Backend<P> {
     /// The Starknet RPC provider that will be used to fetch data from.
     provider: Arc<P>,

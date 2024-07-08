@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 
-#[derive(Serde, Copy, Drop, Introspect)]
+#[derive(Serde, Copy, Drop, Introspect, PartialEq)]
 enum Direction {
     None,
     Left,
@@ -21,21 +21,16 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
-#[derive(Serde, Copy, Drop, Introspect)]
-enum Emote {
-    None,
-    Happy,
-    Sad,
-    Angry,
-    Love,
-}
-
-#[derive(Copy, Drop, Serde)]
+#[derive(Drop, Serde)]
 #[dojo::model]
-struct EmoteMessage {
+struct Message {
     #[key]
     identity: ContractAddress,
-    emote: Emote,
+    #[key]
+    channel: felt252,
+    message: ByteArray,
+    #[key]
+    salt: felt252
 }
 
 #[derive(Copy, Drop, Serde)]
@@ -47,13 +42,25 @@ struct Moves {
     last_direction: Direction
 }
 
-#[derive(Copy, Drop, Serde, Introspect)]
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
+struct MockToken {
+    #[key]
+    account: ContractAddress,
+    amount: u128,
+}
+
+#[derive(Copy, Drop, Serde, IntrospectPacked)]
 struct Vec2 {
     x: u32,
     y: u32
 }
 
-#[derive(Copy, Drop, Serde)]
+// If `Vec2` wasn't packed, the `Position` would be invalid,
+// and a runtime error would be thrown.
+// Any field that is a custom type into a `IntrospectPacked` type
+// must be packed.
+#[derive(Copy, Drop, Serde, IntrospectPacked)]
 #[dojo::model]
 struct Position {
     #[key]
@@ -61,6 +68,8 @@ struct Position {
     vec: Vec2,
 }
 
+// Every field inside a model must derive `Introspect` or `IntrospectPacked`.
+// `IntrospectPacked` can also be used into models that are only using `Introspect`.
 #[derive(Copy, Drop, Serde, Introspect)]
 struct PlayerItem {
     item_id: u32,
@@ -75,6 +84,16 @@ struct PlayerConfig {
     name: ByteArray,
     items: Array<PlayerItem>,
     favorite_item: Option<u32>,
+}
+
+#[derive(Drop, Serde)]
+#[dojo::model]
+struct ServerProfile {
+    #[key]
+    player: ContractAddress,
+    #[key]
+    server_id: u32,
+    name: ByteArray,
 }
 
 trait Vec2Trait {

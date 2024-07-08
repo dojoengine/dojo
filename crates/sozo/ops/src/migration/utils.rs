@@ -1,38 +1,40 @@
 use anyhow::{anyhow, Result};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, OVERLAYS_DIR};
 use dojo_world::manifest::{
     AbstractManifestError, BaseManifest, DeploymentManifest, OverlayManifest,
 };
 use scarb_ui::Ui;
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::providers::Provider;
-use starknet::signers::Signer;
-use starknet_crypto::FieldElement;
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::Felt;
 
 use super::ui::MigrationUi;
 
 /// Loads:
 ///     - `BaseManifest` from filesystem
-///     - `DeployedManifest` from onchain dataa if `world_address` is `Some`
-pub(super) async fn load_world_manifests<P, S>(
-    profile_dir: &Utf8PathBuf,
-    account: &SingleOwnerAccount<P, S>,
-    world_address: Option<FieldElement>,
+///     - `DeployedManifest` from onchain data if `world_address` is `Some`
+pub(super) async fn load_world_manifests<A>(
+    manifest_dir: &Utf8PathBuf,
+    overlay_dir: &Utf8PathBuf,
+    account: A,
+    world_address: Option<Felt>,
     ui: &Ui,
+    skip_migration: Option<Vec<String>>,
 ) -> Result<(BaseManifest, Option<DeploymentManifest>)>
 where
-    P: Provider + Sync + Send,
-    S: Signer + Sync + Send,
+    A: ConnectedAccount + Sync + Send,
+    <A as ConnectedAccount>::Provider: Send,
 {
     ui.print_step(1, "🌎", "Building World state...");
 
-    let mut local_manifest = BaseManifest::load_from_path(&profile_dir.join(BASE_DIR))
+    let mut local_manifest = BaseManifest::load_from_path(manifest_dir)
         .map_err(|e| anyhow!("Fail to load local manifest file: {e}."))?;
 
-    let overlay_path = profile_dir.join(OVERLAYS_DIR);
-    if overlay_path.exists() {
-        let overlay_manifest = OverlayManifest::load_from_path(&profile_dir.join(OVERLAYS_DIR))
+    if let Some(skip_manifests) = skip_migration {
+        local_manifest.remove_tags(skip_manifests);
+    }
+
+    if overlay_dir.exists() {
+        let overlay_manifest = OverlayManifest::load_from_path(overlay_dir, &local_manifest)
             .map_err(|e| anyhow!("Fail to load overlay manifest file: {e}."))?;
 
         // merge user defined changes to base manifest

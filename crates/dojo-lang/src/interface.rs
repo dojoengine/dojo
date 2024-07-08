@@ -5,6 +5,9 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
+use crate::syntax::self_param;
+use crate::syntax::world_param::{self, WorldParamInjectionKind};
+
 #[derive(Debug)]
 pub struct DojoInterface {
     diagnostics: Vec<PluginDiagnostic>,
@@ -38,30 +41,36 @@ impl DojoInterface {
                 })
                 .collect();
 
-            builder.add_modified(RewriteNode::interpolate_patched(
-                "
+            builder.add_modified(RewriteNode::Mapped {
+                node: Box::new(RewriteNode::interpolate_patched(
+                    "
                 #[starknet::interface]
                 trait $name$<TContractState> {
                     $body$
                 }
                 ",
-                &UnorderedHashMap::from([
-                    ("name".to_string(), RewriteNode::Text(name.to_string())),
-                    ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-                ]),
-            ));
+                    &UnorderedHashMap::from([
+                        ("name".to_string(), RewriteNode::Text(name.to_string())),
+                        ("body".to_string(), RewriteNode::new_modified(body_nodes)),
+                    ]),
+                )),
+                origin: trait_ast.as_syntax_node().span_without_trivia(db),
+            });
         } else {
             // empty trait
-            builder.add_modified(RewriteNode::interpolate_patched(
-                "
+            builder.add_modified(RewriteNode::Mapped {
+                node: Box::new(RewriteNode::interpolate_patched(
+                    "
                 #[starknet::interface]
                 trait $name$<TContractState> {}
                 ",
-                &UnorderedHashMap::from([(
-                    "name".to_string(),
-                    RewriteNode::Text(name.to_string()),
-                )]),
-            ));
+                    &UnorderedHashMap::from([(
+                        "name".to_string(),
+                        RewriteNode::Text(name.to_string()),
+                    )]),
+                )),
+                origin: trait_ast.as_syntax_node().span_without_trivia(db),
+            });
         }
 
         let (code, code_mappings) = builder.build();
@@ -78,9 +87,7 @@ impl DojoInterface {
         }
     }
 
-    /// Rewrites parameter list  by adding `self` parameter if missing.
-    ///
-    /// Reports an error in case of `ref self` as systems are supposed to be 100% stateless.
+    /// Rewrites parameter list by adding `self` parameter based on the `world` parameter.
     pub fn rewrite_parameters(
         &mut self,
         db: &dyn SyntaxGroup,
@@ -93,49 +100,38 @@ impl DojoInterface {
             .map(|e| e.as_syntax_node().get_text(db))
             .collect::<Vec<_>>();
 
-        let mut need_to_add_self = true;
-        if !params.is_empty() {
-            let first_param = param_list.elements(db)[0].clone();
-            let param_name = first_param.name(db).text(db).to_string();
+        let is_self_used = self_param::check_parameter(db, &param_list);
 
-            if param_name.eq(&"self".to_string()) {
-                let param_modifiers = first_param
-                    .modifiers(db)
-                    .elements(db)
-                    .iter()
-                    .map(|e| e.as_syntax_node().get_text(db).trim().to_string())
-                    .collect::<Vec<_>>();
+        let world_injection = world_param::parse_world_injection(
+            db,
+            param_list,
+            diagnostic_item,
+            &mut self.diagnostics,
+        );
 
-                let param_type = first_param
-                    .type_clause(db)
-                    .ty(db)
-                    .as_syntax_node()
-                    .get_text(db)
-                    .trim()
-                    .to_string();
+        if is_self_used && world_injection != WorldParamInjectionKind::None {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: diagnostic_item,
+                message: "You cannot use `self` and `world` parameters together.".to_string(),
+                severity: Severity::Error,
+            });
+        }
 
-                if param_modifiers.contains(&"ref".to_string())
-                    && param_type.eq(&"TContractState".to_string())
-                {
-                    self.diagnostics.push(PluginDiagnostic {
-                        stable_ptr: diagnostic_item,
-                        message: "Functions of dojo::interface cannot have `ref self` parameter."
-                            .to_string(),
-                        severity: Severity::Error,
-                    });
-
-                    need_to_add_self = false;
-                }
-
-                if param_type.eq(&"@TContractState".to_string()) {
-                    need_to_add_self = false;
+        match world_injection {
+            WorldParamInjectionKind::None => {
+                if !is_self_used {
+                    params.insert(0, "self: @TContractState".to_string());
                 }
             }
+            WorldParamInjectionKind::View => {
+                params.remove(0);
+                params.insert(0, "self: @TContractState".to_string());
+            }
+            WorldParamInjectionKind::External => {
+                params.remove(0);
+                params.insert(0, "ref self: TContractState".to_string());
+            }
         };
-
-        if need_to_add_self {
-            params.insert(0, "self: @TContractState".to_string());
-        }
 
         params.join(", ")
     }
@@ -146,17 +142,24 @@ impl DojoInterface {
         db: &dyn SyntaxGroup,
         fn_ast: ast::TraitItemFunction,
     ) -> Vec<RewriteNode> {
-        let mut rewritten_fn = RewriteNode::from_ast(&fn_ast);
-        let rewritten_params = rewritten_fn
-            .modify_child(db, ast::TraitItemFunction::INDEX_DECLARATION)
-            .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
-            .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS);
+        let fn_name = fn_ast.declaration(db).name(db).text(db);
+        let return_type =
+            fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
 
-        rewritten_params.set_str(self.rewrite_parameters(
+        let params_str = self.rewrite_parameters(
             db,
             fn_ast.declaration(db).signature(db).parameters(db),
             fn_ast.stable_ptr().untyped(),
-        ));
-        vec![rewritten_fn]
+        );
+
+        let declaration_node = RewriteNode::Mapped {
+            node: Box::new(RewriteNode::Text(format!(
+                "fn {}({}) {};",
+                fn_name, params_str, return_type
+            ))),
+            origin: fn_ast.declaration(db).as_syntax_node().span_without_trivia(db),
+        };
+
+        vec![declaration_node]
     }
 }

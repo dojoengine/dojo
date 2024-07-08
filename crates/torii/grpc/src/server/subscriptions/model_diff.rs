@@ -5,35 +5,37 @@ use std::task::Poll;
 
 use futures_util::future::BoxFuture;
 use futures_util::FutureExt;
+use num_traits::FromPrimitive;
 use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use starknet::core::types::{
-    BlockId, ContractStorageDiffItem, MaybePendingStateUpdate, StateUpdate, StorageEntry,
+    BlockId, ContractStorageDiffItem, Felt, MaybePendingStateUpdate, StateUpdate, StorageEntry,
 };
 use starknet::macros::short_string;
 use starknet::providers::Provider;
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
-use torii_core::error::{Error, ParseError};
+use torii_core::error::Error;
 use tracing::{debug, error, trace};
 
 use super::error::SubscriptionError;
 use crate::proto;
-use crate::types::KeysClause;
+use crate::proto::world::SubscribeModelsResponse;
+use crate::types::ModelKeysClause;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::model_diff";
 
 #[derive(Debug)]
 pub struct ModelMetadata {
-    pub name: FieldElement,
+    pub selector: Felt,
     pub packed_size: usize,
 }
 
 #[derive(Debug)]
 pub struct ModelDiffRequest {
     pub model: ModelMetadata,
-    pub keys: proto::types::KeysClause,
+    pub keys: proto::types::ModelKeysClause,
 }
 
 impl ModelDiffRequest {}
@@ -41,7 +43,7 @@ impl ModelDiffRequest {}
 #[derive(Debug)]
 pub struct ModelDiffSubscriber {
     /// The storage addresses that the subscriber is interested in.
-    storage_addresses: HashSet<FieldElement>,
+    storage_addresses: HashSet<Felt>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeModelsResponse, tonic::Status>>,
 }
@@ -64,26 +66,30 @@ impl StateDiffManager {
         let storage_addresses = reqs
             .into_iter()
             .map(|req| {
-                let keys: KeysClause =
-                    req.keys.try_into().map_err(ParseError::FromByteSliceError)?;
+                let keys: ModelKeysClause = req.keys.into();
 
                 let base = poseidon_hash_many(&[
                     short_string!("dojo_storage"),
-                    req.model.name,
+                    req.model.selector,
                     poseidon_hash_many(&keys.keys),
                 ]);
 
                 let res = (0..req.model.packed_size)
                     .into_par_iter()
-                    .map(|i| base + i.into())
-                    .collect::<Vec<FieldElement>>();
+                    .map(|i| base + Felt::from_usize(i).expect("failed to convert usize to Felt"))
+                    .collect::<Vec<Felt>>();
 
                 Ok(res)
             })
             .collect::<Result<Vec<_>, Error>>()?
             .into_iter()
             .flatten()
-            .collect::<HashSet<FieldElement>>();
+            .collect::<HashSet<Felt>>();
+
+        // NOTE: unlock issue with firefox/safari
+        // initially send empty stream message to return from
+        // initial subscribe call
+        let _ = sender.send(Ok(SubscribeModelsResponse { model_update: None })).await;
 
         self.subscribers
             .write()
@@ -102,9 +108,9 @@ type PublishStateUpdateResult = Result<(), SubscriptionError>;
 type RequestStateUpdateResult = Result<MaybePendingStateUpdate, SubscriptionError>;
 
 #[must_use = "Service does nothing unless polled"]
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct Service<P: Provider> {
-    world_address: FieldElement,
+    world_address: Felt,
     idle_provider: Option<P>,
     block_num_rcv: Receiver<u64>,
     state_update_queue: VecDeque<u64>,
@@ -119,7 +125,7 @@ where
 {
     pub fn new_with_block_rcv(
         block_num_rcv: Receiver<u64>,
-        world_address: FieldElement,
+        world_address: Felt,
         provider: P,
         subs_manager: Arc<StateDiffManager>,
     ) -> Self {
@@ -144,7 +150,7 @@ where
 
     async fn publish_updates(
         subs: Arc<StateDiffManager>,
-        contract_address: FieldElement,
+        contract_address: Felt,
         state_update: StateUpdate,
     ) -> PublishStateUpdateResult {
         let mut closed_stream = Vec::new();

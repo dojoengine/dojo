@@ -1,0 +1,2 @@
+tag = "dojo_examples-others"
+init_calldata = ["$contract_address:dojo_examples-actions", "$class_hash:dojo_examples-actions", "10"]

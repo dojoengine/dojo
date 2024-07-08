@@ -5,18 +5,18 @@ use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::sequencer::KatanaSequencer;
 use katana_core::service::block_producer::BlockProducerMode;
 use katana_executor::ExecutorFactory;
-use katana_primitives::block::BlockHashOrNumber;
+use katana_primitives::block::{BlockHashOrNumber, FinalityStatus};
 use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_types::error::torii::ToriiApiError;
-use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
+use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::TokioTaskSpawner;
 
 const MAX_PAGE_SIZE: usize = 100;
 
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct ToriiApi<EF: ExecutorFactory> {
     sequencer: Arc<KatanaSequencer<EF>>,
 }
@@ -84,7 +84,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                                     .build()
                                     .expect("Receipt should exist for tx")
                                     .expect("Receipt should exist for tx");
-                                (tx, MaybePendingTxReceipt::Receipt(receipt))
+                                (tx, receipt)
                             })
                             .collect::<Vec<_>>();
 
@@ -115,10 +115,12 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                                 res.receipt().map(|rct| {
                                     (
                                         tx.clone(),
-                                        MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                        TxReceiptWithBlockInfo::new(
+                                            ReceiptBlock::Pending,
                                             tx.hash,
+                                            FinalityStatus::AcceptedOnL2,
                                             rct.clone(),
-                                        )),
+                                        ),
                                     )
                                 })
                             })
@@ -153,10 +155,12 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                                 res.receipt().map(|rct| {
                                     (
                                         tx.clone(),
-                                        MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                        TxReceiptWithBlockInfo::new(
+                                            ReceiptBlock::Pending,
                                             tx.hash,
+                                            FinalityStatus::AcceptedOnL2,
                                             rct.clone(),
-                                        )),
+                                        ),
                                     )
                                 })
                             })
@@ -202,10 +206,12 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         .map(|tx_outcome| {
                             (
                                 tx_outcome.tx.clone(),
-                                MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                TxReceiptWithBlockInfo::new(
+                                    ReceiptBlock::Pending,
                                     tx_outcome.tx.hash,
+                                    FinalityStatus::AcceptedOnL2,
                                     tx_outcome.receipt,
-                                )),
+                                ),
                             )
                         })
                         .collect::<Vec<_>>();

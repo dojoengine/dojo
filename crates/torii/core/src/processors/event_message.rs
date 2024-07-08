@@ -2,7 +2,7 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, MaybePendingTransactionReceipt};
+use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
 use starknet::providers::Provider;
 use tracing::info;
 
@@ -42,12 +42,12 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &MaybePendingTransactionReceipt,
+        _transaction_receipt: &TransactionReceiptWithBlockInfo,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
         // silently ignore if the model is not found
-        let model = match db.model(&format!("{:#x}", event.keys[MODEL_INDEX])).await {
+        let model = match db.model(event.keys[MODEL_INDEX]).await {
             Ok(model) => model,
             Err(_) => return Ok(()),
         };

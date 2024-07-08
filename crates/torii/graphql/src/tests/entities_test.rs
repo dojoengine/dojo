@@ -3,7 +3,8 @@ mod tests {
     use anyhow::Result;
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
-    use starknet_crypto::{poseidon_hash_many, FieldElement};
+    use starknet::core::types::Felt;
+    use starknet_crypto::poseidon_hash_many;
 
     use crate::schema::build_schema;
     use crate::tests::{
@@ -38,14 +39,14 @@ mod tests {
         result.get("entities").ok_or("entities not found").unwrap().clone()
     }
 
-    async fn entity_model_query(schema: &Schema, id: &FieldElement) -> Value {
+    async fn entity_model_query(schema: &Schema, id: &Felt) -> Value {
         let query = format!(
             r#"
           {{
             entity (id: "{:#x}") {{
               keys
               models {{
-                ... on Record {{
+                ... on types_test_Record {{
                   __typename
                   depth
                   record_id
@@ -62,12 +63,12 @@ mod tests {
                   random_u8
                   random_u128
                 }}
-                ... on RecordSibling {{
+                ... on types_test_RecordSibling {{
                   __typename
                   record_id
                   random_u8
                 }}
-                ... on Subrecord {{
+                ... on types_test_Subrecord {{
                   __typename
                   record_id
                   subrecord_id
@@ -226,24 +227,24 @@ mod tests {
         assert_eq!(connection.page_info.end_cursor, None);
 
         // entity model union
-        let id = poseidon_hash_many(&[FieldElement::ZERO]);
+        let id = poseidon_hash_many(&[Felt::ZERO]);
         let entity = entity_model_query(&schema, &id).await;
         let models = entity.get("models").ok_or("no models found").unwrap();
 
         // models should contain record & recordsibling
         let record: Record = serde_json::from_value(models[0].clone()).unwrap();
-        assert_eq!(&record.__typename, "Record");
+        assert_eq!(&record.__typename, "types_test_Record");
         assert_eq!(record.record_id, 0);
 
         let record_sibling: RecordSibling = serde_json::from_value(models[1].clone()).unwrap();
-        assert_eq!(&record_sibling.__typename, "RecordSibling");
+        assert_eq!(&record_sibling.__typename, "types_test_RecordSibling");
         assert_eq!(record_sibling.record_id, 0);
 
-        let id = poseidon_hash_many(&[FieldElement::ZERO, FieldElement::ONE]);
+        let id = poseidon_hash_many(&[Felt::ZERO, Felt::ONE]);
         let entity = entity_model_query(&schema, &id).await;
         let models = entity.get("models").ok_or("no models found").unwrap();
         let subrecord: Subrecord = serde_json::from_value(models[0].clone()).unwrap();
-        assert_eq!(&subrecord.__typename, "Subrecord");
+        assert_eq!(&subrecord.__typename, "types_test_Subrecord");
         assert_eq!(subrecord.subrecord_id, 1);
         Ok(())
     }

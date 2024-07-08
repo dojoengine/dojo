@@ -8,7 +8,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::{compile_workspace, CompileInfo};
-use scarb::compiler::{CompilationUnit, CompilerRepository};
+use scarb::compiler::{CompilationUnit, CompilerRepository, Profile};
 use scarb::core::{Config, TargetKind};
 use scarb::ops;
 use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
@@ -20,7 +20,11 @@ use toml::{Table, Value};
 /// # Returns
 ///
 /// A [`Config`] object loaded from the spawn-and-moves Scarb.toml file.
-pub fn copy_tmp_config(source_project_dir: &Utf8PathBuf, dojo_core_path: &Utf8PathBuf) -> Config {
+pub fn copy_tmp_config(
+    source_project_dir: &Utf8PathBuf,
+    dojo_core_path: &Utf8PathBuf,
+    profile: Profile,
+) -> Config {
     let temp_project_dir = Utf8PathBuf::from(
         assert_fs::TempDir::new().unwrap().to_path_buf().to_string_lossy().to_string(),
     );
@@ -30,7 +34,8 @@ pub fn copy_tmp_config(source_project_dir: &Utf8PathBuf, dojo_core_path: &Utf8Pa
     // Copy all the files, including manifests. As we will not re-build, mostly only migrate.
     copy_project_temp(source_project_dir, &temp_project_dir, dojo_core_path, &[]).unwrap();
 
-    build_test_config(&temp_project_path).unwrap_or_else(|c| panic!("Error loading config: {c:?}"))
+    build_test_config(&temp_project_path, profile)
+        .unwrap_or_else(|c| panic!("Error loading config: {c:?}"))
 }
 
 /// Copies a project to a new location, excluding the manifests
@@ -48,6 +53,7 @@ pub fn copy_build_project_temp(
     source_project_path: &str,
     dojo_core_path: &str,
     do_build: bool,
+    profile: Profile,
 ) -> (Utf8PathBuf, Config, Option<CompileInfo>) {
     let source_project_dir = Utf8PathBuf::from(source_project_path).parent().unwrap().to_path_buf();
 
@@ -58,12 +64,13 @@ pub fn copy_build_project_temp(
     let temp_project_path = temp_project_dir.join("Scarb").with_extension("toml").to_string();
 
     let dojo_core_path = Utf8PathBuf::from(dojo_core_path);
-    let ignore_dirs = ["manifests", "target"];
+    // we don't ignore `manifests` because `overylays` are required for successful migration
+    let ignore_dirs = ["target"];
 
     copy_project_temp(&source_project_dir, &temp_project_dir, &dojo_core_path, &ignore_dirs)
         .unwrap();
 
-    let config = build_test_config(&temp_project_path).unwrap();
+    let config = build_test_config(&temp_project_path, profile).unwrap();
 
     let features_opts =
         FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
@@ -73,8 +80,9 @@ pub fn copy_build_project_temp(
             compile_workspace(
                 &config,
                 CompileOpts {
-                    include_targets: vec![],
-                    exclude_targets: vec![TargetKind::TEST],
+                    include_target_names: vec![],
+                    include_target_kinds: vec![],
+                    exclude_target_kinds: vec![TargetKind::TEST],
                     features: features_opts,
                 },
             )
@@ -164,7 +172,7 @@ pub fn copy_project_temp(
 /// # Arguments
 ///
 /// * `path` - The path to the Scarb.toml file to build the config for.
-pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
+pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
@@ -179,12 +187,15 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
         .ui_verbosity(Verbosity::Verbose)
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .compilers(compilers)
+        .profile(profile)
         .cairo_plugins(cairo_plugins.into())
         .build()
 }
 
 pub fn corelib() -> PathBuf {
-    let config = build_test_config("./src/manifest_test_data/spawn-and-move/Scarb.toml").unwrap();
+    let config =
+        build_test_config("./src/manifest_test_data/spawn-and-move/Scarb.toml", Profile::DEV)
+            .unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     let resolve = ops::resolve_workspace(&ws).unwrap();
 
@@ -194,7 +205,9 @@ pub fn corelib() -> PathBuf {
     let compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws).unwrap();
 
     if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
-        unit.core_package_component().expect("should have component").target.source_root().into()
+        unit.core_package_component().expect("should have component").targets[0]
+            .source_root()
+            .into()
     } else {
         panic!("should have cairo compilation unit")
     }

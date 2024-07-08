@@ -4,6 +4,7 @@ pub mod subscriptions;
 #[cfg(test)]
 mod tests;
 
+use std::collections::HashMap;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -12,17 +13,19 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use dojo_types::schema::Ty;
+use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
 };
+use sqlx::prelude::FromRow;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
-use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
+use subscriptions::event::EventManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
@@ -37,7 +40,9 @@ use self::subscriptions::event_message::EventMessageManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
 use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
-use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
+use crate::proto::world::{
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
+};
 use crate::proto::{self};
 use crate::types::ComparisonOperator;
 
@@ -45,17 +50,18 @@ pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
 pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
 
-pub(crate) static EVENTS_MESSAGES_TABLE: &str = "events_messages";
-pub(crate) static EVENTS_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
-pub(crate) static EVENTS_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
+pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
+pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
 
 #[derive(Debug, Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
-    world_address: FieldElement,
+    world_address: Felt,
     model_cache: Arc<ModelCache>,
     entity_manager: Arc<EntityManager>,
     event_message_manager: Arc<EventMessageManager>,
+    event_manager: Arc<EventManager>,
     state_diff_manager: Arc<StateDiffManager>,
 }
 
@@ -63,12 +69,13 @@ impl DojoWorld {
     pub fn new(
         pool: Pool<Sqlite>,
         block_rx: Receiver<u64>,
-        world_address: FieldElement,
+        world_address: Felt,
         provider: Arc<JsonRpcClient<HttpTransport>>,
     ) -> Self {
         let model_cache = Arc::new(ModelCache::new(pool.clone()));
         let entity_manager = Arc::new(EntityManager::default());
         let event_message_manager = Arc::new(EventMessageManager::default());
+        let event_manager = Arc::new(EventManager::default());
         let state_diff_manager = Arc::new(StateDiffManager::default());
 
         tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
@@ -90,12 +97,15 @@ impl DojoWorld {
             Arc::clone(&model_cache),
         ));
 
+        tokio::task::spawn(subscriptions::event::Service::new(Arc::clone(&event_manager)));
+
         Self {
             pool,
             world_address,
             model_cache,
             entity_manager,
             event_message_manager,
+            event_manager,
             state_diff_manager,
         }
     }
@@ -116,23 +126,39 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models: Vec<(String, String, String, String, u32, u32, String)> = sqlx::query_as(
-            "SELECT id, name, class_hash, contract_address, packed_size, unpacked_size, layout \
-             FROM models",
+        #[derive(FromRow)]
+        struct ModelDb {
+            id: String,
+            namespace: String,
+            name: String,
+            class_hash: String,
+            contract_address: String,
+            packed_size: u32,
+            unpacked_size: u32,
+            layout: String,
+        }
+
+        let models: Vec<ModelDb> = sqlx::query_as(
+            "SELECT id, namespace, name, class_hash, contract_address, packed_size, \
+             unpacked_size, layout FROM models",
         )
         .fetch_all(&self.pool)
         .await?;
 
         let mut models_metadata = Vec::with_capacity(models.len());
         for model in models {
-            let schema = self.model_cache.schema(&model.0).await?;
+            let schema = self
+                .model_cache
+                .schema(&Felt::from_str(&model.id).map_err(ParseError::FromStr)?)
+                .await?;
             models_metadata.push(proto::types::ModelMetadata {
-                name: model.1,
-                class_hash: model.2,
-                contract_address: model.3,
-                packed_size: model.4,
-                unpacked_size: model.5,
-                layout: model.6.as_bytes().to_vec(),
+                namespace: model.namespace,
+                name: model.name,
+                class_hash: model.class_hash,
+                contract_address: model.contract_address,
+                packed_size: model.packed_size,
+                unpacked_size: model.unpacked_size,
+                layout: model.layout.as_bytes().to_vec(),
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
@@ -156,8 +182,24 @@ impl DojoWorld {
             ENTITIES_MODEL_RELATION_TABLE,
             ENTITIES_ENTITY_RELATION_COLUMN,
             None,
-            limit,
-            offset,
+            Some(limit),
+            Some(offset),
+        )
+        .await
+    }
+
+    async fn event_messages_all(
+        &self,
+        limit: u32,
+        offset: u32,
+    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
+        self.query_by_hashed_keys(
+            EVENT_MESSAGES_TABLE,
+            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
+            None,
+            Some(limit),
+            Some(offset),
         )
         .await
     }
@@ -182,8 +224,8 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         hashed_keys: Option<proto::types::HashedKeysClause>,
-        limit: u32,
-        offset: u32,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
@@ -191,11 +233,7 @@ impl DojoWorld {
                 let ids = hashed_keys
                     .hashed_keys
                     .iter()
-                    .map(|id| {
-                        Ok(FieldElement::from_byte_slice_be(id)
-                            .map(|id| format!("{table}.id = '{id:#x}'"))
-                            .map_err(ParseError::FromByteSliceError)?)
-                    })
+                    .map(|id| Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id))))
                     .collect::<Result<Vec<_>, Error>>()?;
 
                 format!("WHERE {}", ids.join(" OR "))
@@ -214,8 +252,12 @@ impl DojoWorld {
         // total count of rows without limit and offset
         let total_count: u32 = sqlx::query_scalar(&count_query).fetch_one(&self.pool).await?;
 
+        if total_count == 0 {
+            return Ok((Vec::new(), 0));
+        }
+
         // query to filter with limit and offset
-        let query = format!(
+        let mut query = format!(
             r#"
             SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
@@ -223,39 +265,47 @@ impl DojoWorld {
             {filter_ids}
             GROUP BY {table}.id
             ORDER BY {table}.event_id DESC
-            LIMIT ? OFFSET ?
          "#
         );
+
+        if limit.is_some() {
+            query += " LIMIT ?"
+        }
+
+        if offset.is_some() {
+            query += " OFFSET ?"
+        }
 
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         let mut entities = Vec::with_capacity(db_entities.len());
         for (entity_id, models_str) in db_entities {
-            let model_ids: Vec<&str> = models_str.split(',').collect();
-            let schemas = self.model_cache.schemas(model_ids).await?;
+            let model_ids: Vec<Felt> = models_str
+                .split(',')
+                .map(Felt::from_str)
+                .collect::<Result<_, _>>()
+                .map_err(ParseError::FromStr)?;
+            let schemas = self.model_cache.schemas(&model_ids).await?;
 
-            let entity_query = format!(
-                "{} WHERE {table}.id = ?",
-                build_sql_query(&schemas, table, entity_relation_column)?
-            );
-            let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
+            let (entity_query, arrays_queries) = build_sql_query(
+                &schemas,
+                table,
+                entity_relation_column,
+                Some(&format!("{table}.id = ?")),
+                Some(&format!("{table}.id = ?")),
+            )?;
 
-            let models = schemas
-                .iter()
-                .map(|s| {
-                    let mut struct_ty = s.as_struct().expect("schema should be struct").to_owned();
-                    map_row_to_ty(&s.name(), &mut struct_ty, &row)?;
+            let row =
+                sqlx::query(&entity_query).bind(entity_id.clone()).fetch_one(&self.pool).await?;
+            let mut arrays_rows = HashMap::new();
+            for (name, query) in arrays_queries {
+                let rows =
+                    sqlx::query(&query).bind(entity_id.clone()).fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, rows);
+            }
 
-                    Ok(struct_ty.try_into().unwrap())
-                })
-                .collect::<Result<Vec<_>, Error>>()?;
-
-            let hashed_keys = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
-            entities.push(proto::types::Entity {
-                hashed_keys: hashed_keys.to_bytes_be().to_vec(),
-                models,
-            })
+            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
         }
 
         Ok((entities, total_count))
@@ -266,99 +316,150 @@ impl DojoWorld {
         table: &str,
         model_relation_table: &str,
         entity_relation_column: &str,
-        keys_clause: proto::types::KeysClause,
-        limit: u32,
-        offset: u32,
+        keys_clause: &proto::types::KeysClause,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let keys = keys_clause
-            .keys
-            .iter()
-            .map(|bytes| {
-                if bytes.is_empty() {
-                    return Ok("%".to_string());
-                }
-                Ok(FieldElement::from_byte_slice_be(bytes)
-                    .map(|felt| format!("{:#x}", felt))
-                    .map_err(ParseError::FromByteSliceError)?)
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-        let keys_pattern = keys.join("/") + "/%";
+        let keys_pattern = build_keys_pattern(keys_clause)?;
 
+        // total count of rows that matches keys_pattern without limit and offset
         let count_query = format!(
             r#"
             SELECT count(*)
             FROM {table}
-            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            WHERE {model_relation_table}.model_id = '{:#x}' and {table}.keys LIKE ?
+            {}
         "#,
-            get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
+            if !keys_clause.models.is_empty() {
+                // split the model names to namespace and model
+                let model_ids = keys_clause
+                    .models
+                    .iter()
+                    .map(|model| {
+                        model
+                            .split_once('-')
+                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                // get the model selector from namespace and model and format
+                let model_ids_str = model_ids
+                    .iter()
+                    .map(|(namespace, model)| {
+                        format!("'{:#x}'", compute_selector_from_names(namespace, model))
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",");
+                format!(
+                    r#"
+                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+                WHERE {model_relation_table}.model_id IN ({})
+                AND {table}.keys REGEXP ?
+            "#,
+                    model_ids_str
+                )
+            } else {
+                format!(
+                    r#"
+                WHERE {table}.keys REGEXP ?
+            "#
+                )
+            }
         );
 
-        // total count of rows that matches keys_pattern without limit and offset
         let total_count =
             sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
-        let models_query = format!(
+        if total_count == 0 {
+            return Ok((Vec::new(), 0));
+        }
+
+        let mut models_query = format!(
             r#"
-            SELECT group_concat({model_relation_table}.model_id) as model_ids
+            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            WHERE {table}.keys LIKE ?
+            WHERE {table}.keys REGEXP ?
             GROUP BY {table}.id
-            HAVING INSTR(model_ids, '{:#x}') > 0
-            LIMIT 1
-        "#,
-            get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
+        "#
         );
-        let (models_str,): (String,) =
-            sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
-        let model_ids = models_str.split(',').collect::<Vec<&str>>();
-        let schemas = self.model_cache.schemas(model_ids).await?;
+        if !keys_clause.models.is_empty() {
+            // filter by models
+            models_query += &format!(
+                "HAVING {}",
+                keys_clause
+                    .models
+                    .iter()
+                    .map(|model| {
+                        let (namespace, name) = model
+                            .split_once('-')
+                            .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
+                        let model_id = compute_selector_from_names(namespace, name);
+                        Ok(format!("INSTR(model_ids, '{:#x}') > 0", model_id))
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?
+                    .join(" OR ")
+                    .as_str()
+            );
+        }
 
-        // query to filter with limit and offset
-        let entities_query = format!(
-            "{} WHERE {table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?",
-            build_sql_query(&schemas, table, entity_relation_column)?
-        );
-        let db_entities = sqlx::query(&entities_query)
+        models_query += &format!(" ORDER BY {table}.event_id DESC");
+
+        if limit.is_some() {
+            models_query += " LIMIT ?";
+        }
+        if offset.is_some() {
+            models_query += " OFFSET ?";
+        }
+
+        let db_entities: Vec<(String, String)> = sqlx::query_as(&models_query)
             .bind(&keys_pattern)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
             .await?;
 
-        Ok((
-            db_entities
-                .iter()
-                .map(|row| Self::map_row_to_entity(row, &schemas))
-                .collect::<Result<Vec<_>, Error>>()?,
-            total_count,
-        ))
+        let mut entities = Vec::with_capacity(db_entities.len());
+        for (entity_id, models_strs) in &db_entities {
+            let model_ids: Vec<Felt> = models_strs
+                .split(',')
+                .map(Felt::from_str)
+                .collect::<Result<_, _>>()
+                .map_err(ParseError::FromStr)?;
+            let schemas = self.model_cache.schemas(&model_ids).await?;
+
+            let (entity_query, arrays_queries) = build_sql_query(
+                &schemas,
+                table,
+                entity_relation_column,
+                Some(&format!("{table}.id = ?")),
+                Some(&format!("{table}.id = ?")),
+            )?;
+
+            let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
+            let mut arrays_rows = HashMap::new();
+            for (name, query) in arrays_queries {
+                let rows = sqlx::query(&query).bind(entity_id).fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, rows);
+            }
+
+            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+        }
+
+        Ok((entities, total_count))
     }
 
     pub(crate) async fn events_by_keys(
         &self,
-        keys_clause: proto::types::EventKeysClause,
-        limit: u32,
-        offset: u32,
+        keys_clause: &proto::types::KeysClause,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<Vec<proto::types::Event>, Error> {
-        let keys = keys_clause
-            .keys
-            .iter()
-            .map(|bytes| {
-                if bytes.is_empty() {
-                    return Ok("%".to_string());
-                }
-                Ok(str::from_utf8(bytes).unwrap().to_string())
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-        let keys_pattern = keys.join("/") + "/%";
+        let keys_pattern = build_keys_pattern(keys_clause)?;
 
         let events_query = r#"
             SELECT keys, data, transaction_hash
             FROM events
-            WHERE keys LIKE ?
+            WHERE keys REGEXP ?
             ORDER BY id DESC
             LIMIT ? OFFSET ?
         "#
@@ -380,8 +481,8 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         member_clause: proto::types::MemberClause,
-        _limit: u32,
-        _offset: u32,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
@@ -392,19 +493,12 @@ impl DojoWorld {
             .value_type
             .ok_or(QueryError::MissingParam("value_type".into()))?;
 
-        let comparison_value = match value_type {
-            proto::types::value::ValueType::StringValue(string) => string,
-            proto::types::value::ValueType::IntValue(int) => int.to_string(),
-            proto::types::value::ValueType::UintValue(uint) => uint.to_string(),
-            proto::types::value::ValueType::BoolValue(bool) => {
-                if bool {
-                    "1".to_string()
-                } else {
-                    "0".to_string()
-                }
-            }
-            _ => return Err(QueryError::UnsupportedQuery.into()),
-        };
+        let comparison_value = value_to_string(&value_type)?;
+
+        let (namespace, model) = member_clause
+            .model
+            .split_once('-')
+            .ok_or(QueryError::InvalidNamespacedModel(member_clause.model.clone()))?;
 
         let models_query = format!(
             r#"
@@ -415,25 +509,46 @@ impl DojoWorld {
             HAVING INSTR(model_ids, '{:#x}') > 0
             LIMIT 1
         "#,
-            get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?
+            compute_selector_from_names(namespace, model)
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 
-        let model_ids = models_str.split(',').collect::<Vec<&str>>();
-        let schemas = self.model_cache.schemas(model_ids).await?;
+        let model_ids = models_str
+            .split(',')
+            .map(Felt::from_str)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(ParseError::FromStr)?;
+        let schemas = self.model_cache.schemas(&model_ids).await?;
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
-        let member_query = format!(
-            "{} WHERE {table_name}.{column_name} {comparison_operator} ?",
-            build_sql_query(&schemas, table, entity_relation_column)?
-        );
+        let (entity_query, arrays_queries) = build_sql_query(
+            &schemas,
+            table,
+            entity_relation_column,
+            Some(&format!(
+                "{table_name}.{column_name} {comparison_operator} ? ORDER BY {table}.event_id \
+                 DESC LIMIT ? OFFSET ?"
+            )),
+            None,
+        )?;
 
-        let db_entities =
-            sqlx::query(&member_query).bind(comparison_value).fetch_all(&self.pool).await?;
+        let db_entities = sqlx::query(&entity_query)
+            .bind(comparison_value.clone())
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
+        let mut arrays_rows = HashMap::new();
+        for (name, query) in arrays_queries {
+            let rows =
+                sqlx::query(&query).bind(comparison_value.clone()).fetch_all(&self.pool).await?;
+            arrays_rows.insert(name, rows);
+        }
+
         let entities_collection = db_entities
             .iter()
-            .map(|row| Self::map_row_to_entity(row, &schemas))
+            .map(|row| map_row_to_entity(row, &arrays_rows, schemas.clone()))
             .collect::<Result<Vec<_>, Error>>()?;
         // Since there is not limit and offset, total_count is same as number of entities
         let total_count = entities_collection.len() as u32;
@@ -442,21 +557,172 @@ impl DojoWorld {
 
     async fn query_by_composite(
         &self,
-        _table: &str,
-        _model_relation_table: &str,
-        _entity_relation_column: &str,
-        _composite: proto::types::CompositeClause,
-        _limit: u32,
-        _offset: u32,
+        table: &str,
+        model_relation_table: &str,
+        entity_relation_column: &str,
+        composite: proto::types::CompositeClause,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        // TODO: Implement
-        Err(QueryError::UnsupportedQuery.into())
+        // different types of clauses
+        let mut where_clauses = Vec::new();
+        let mut model_clauses: HashMap<String, Vec<(String, ComparisonOperator, String)>> =
+            HashMap::new();
+        let mut having_clauses = Vec::new();
+
+        // bind valeus for prepared statement
+        let mut bind_values = Vec::new();
+
+        for clause in composite.clauses {
+            match clause.clause_type.unwrap() {
+                ClauseType::HashedKeys(hashed_keys) => {
+                    let ids = hashed_keys
+                        .hashed_keys
+                        .iter()
+                        .map(|id| {
+                            Ok(format!("{table}.id = '{:#x}'", Felt::from_bytes_be_slice(id)))
+                        })
+                        .collect::<Result<Vec<_>, Error>>()?;
+                    where_clauses.push(format!("({})", ids.join(" OR ")));
+                }
+                ClauseType::Keys(keys) => {
+                    let keys_pattern = build_keys_pattern(&keys)?;
+                    where_clauses.push(format!("{table}.keys REGEXP '{keys_pattern}'"));
+                }
+                ClauseType::Member(member) => {
+                    let comparison_operator =
+                        ComparisonOperator::from_repr(member.operator as usize)
+                            .expect("invalid comparison operator");
+                    let value = member.value.unwrap().value_type.unwrap();
+                    let comparison_value = value_to_string(&value)?;
+
+                    let column_name = format!("external_{}", member.member);
+
+                    model_clauses.entry(member.model.clone()).or_default().push((
+                        column_name,
+                        comparison_operator,
+                        comparison_value,
+                    ));
+
+                    let (namespace, model) = member
+                        .model
+                        .split_once('-')
+                        .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
+                    let model_id: Felt = compute_selector_from_names(namespace, model);
+                    having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
+                }
+                _ => return Err(QueryError::UnsupportedQuery.into()),
+            }
+        }
+
+        let mut join_clauses = Vec::new();
+        for (model, clauses) in model_clauses {
+            let model_conditions = clauses
+                .into_iter()
+                .map(|(column, op, value)| {
+                    bind_values.push(value);
+                    format!("[{}].{} {} ?", model, column, op)
+                })
+                .collect::<Vec<_>>()
+                .join(" AND ");
+
+            join_clauses.push(format!(
+                "JOIN [{}] ON [{}].id = [{}].entity_id AND ({})",
+                model, table, model, model_conditions
+            ));
+        }
+
+        let join_clause = join_clauses.join(" ");
+        let where_clause = if !where_clauses.is_empty() {
+            format!("WHERE {}", where_clauses.join(" AND "))
+        } else {
+            String::new()
+        };
+        let having_clause = if !having_clauses.is_empty() {
+            format!("HAVING {}", having_clauses.join(" AND "))
+        } else {
+            String::new()
+        };
+
+        let count_query = format!(
+            r#"
+            SELECT COUNT(DISTINCT [{table}].id)
+            FROM [{table}]
+            {join_clause}
+            {where_clause}
+            "#
+        );
+
+        let mut count_query = sqlx::query_scalar::<_, u32>(&count_query);
+        for value in &bind_values {
+            count_query = count_query.bind(value);
+        }
+
+        let total_count = count_query.fetch_one(&self.pool).await?;
+
+        if total_count == 0 {
+            return Ok((Vec::new(), 0));
+        }
+
+        let query = format!(
+            r#"
+            SELECT [{table}].id, group_concat({model_relation_table}.model_id) as model_ids
+            FROM [{table}]
+            JOIN {model_relation_table} ON [{table}].id = {model_relation_table}.entity_id
+            {join_clause}
+            {where_clause}
+            GROUP BY [{table}].id
+            {having_clause}
+            ORDER BY [{table}].event_id DESC
+            LIMIT ? OFFSET ?
+            "#
+        );
+
+        let mut db_query = sqlx::query_as(&query);
+        for value in bind_values {
+            db_query = db_query.bind(value);
+        }
+        db_query = db_query.bind(limit.unwrap_or(u32::MAX)).bind(offset.unwrap_or(0));
+
+        let db_entities: Vec<(String, String)> = db_query.fetch_all(&self.pool).await?;
+
+        let mut entities = Vec::with_capacity(db_entities.len());
+        for (entity_id, models_str) in &db_entities {
+            let model_ids: Vec<Felt> = models_str
+                .split(',')
+                .map(Felt::from_str)
+                .collect::<Result<_, _>>()
+                .map_err(ParseError::FromStr)?;
+            let schemas = self.model_cache.schemas(&model_ids).await?;
+
+            let (entity_query, arrays_queries) = build_sql_query(
+                &schemas,
+                table,
+                entity_relation_column,
+                Some(&format!("[{table}].id = ?")),
+                Some(&format!("[{table}].id = ?")),
+            )?;
+
+            let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
+            let mut arrays_rows = HashMap::new();
+            for (name, query) in arrays_queries {
+                let rows = sqlx::query(&query).bind(entity_id).fetch_all(&self.pool).await?;
+                arrays_rows.insert(name, rows);
+            }
+
+            entities.push(map_row_to_entity(&row, &arrays_rows, schemas.clone())?);
+        }
+
+        Ok((entities, total_count))
     }
 
-    pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
+    pub async fn model_metadata(
+        &self,
+        namespace: &str,
+        name: &str,
+    ) -> Result<proto::types::ModelMetadata, Error> {
         // selector
-        let model =
-            format!("{:#x}", get_selector_from_name(model).map_err(ParseError::NonAsciiName)?);
+        let model = compute_selector_from_names(namespace, name);
 
         let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
             String,
@@ -466,10 +732,10 @@ impl DojoWorld {
             u32,
             String,
         ) = sqlx::query_as(
-            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
-             models WHERE id = ?",
+            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
+             layout FROM models WHERE id = ?",
         )
-        .bind(&model)
+        .bind(format!("{:#x}", model))
         .fetch_one(&self.pool)
         .await?;
 
@@ -477,6 +743,7 @@ impl DojoWorld {
         let layout = layout.as_bytes().to_vec();
 
         Ok(proto::types::ModelMetadata {
+            namespace: namespace.to_string(),
             name,
             layout,
             class_hash,
@@ -489,20 +756,24 @@ impl DojoWorld {
 
     async fn subscribe_models(
         &self,
-        models_keys: Vec<proto::types::KeysClause>,
+        models_keys: Vec<proto::types::ModelKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
         let mut subs = Vec::with_capacity(models_keys.len());
         for keys in models_keys {
-            let model = cairo_short_string_to_felt(&keys.model)
-                .map_err(ParseError::CairoShortStringToFelt)?;
+            let (namespace, model) = keys
+                .model
+                .split_once('-')
+                .ok_or(QueryError::InvalidNamespacedModel(keys.model.clone()))?;
+
+            let selector = compute_selector_from_names(namespace, model);
 
             let proto::types::ModelMetadata { packed_size, .. } =
-                self.model_metadata(&keys.model).await?;
+                self.model_metadata(namespace, model).await?;
 
             subs.push(ModelDiffRequest {
                 keys,
                 model: subscriptions::model_diff::ModelMetadata {
-                    name: model,
+                    selector,
                     packed_size: packed_size as usize,
                 },
             });
@@ -513,9 +784,9 @@ impl DojoWorld {
 
     async fn subscribe_entities(
         &self,
-        hashed_keys: Vec<FieldElement>,
+        keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(hashed_keys).await
+        self.entity_manager.add_subscriber(keys.map(|keys| keys.into())).await
     }
 
     async fn retrieve_entities(
@@ -539,8 +810,8 @@ impl DojoWorld {
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             Some(hashed_keys),
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -549,17 +820,13 @@ impl DojoWorld {
                             return Err(QueryError::MissingParam("keys".into()).into());
                         }
 
-                        if keys.model.is_empty() {
-                            return Err(QueryError::MissingParam("model".into()).into());
-                        }
-
                         self.query_by_keys(
                             ENTITIES_TABLE,
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
-                            keys,
-                            query.limit,
-                            query.offset,
+                            &keys,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -569,8 +836,8 @@ impl DojoWorld {
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             member,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -580,8 +847,8 @@ impl DojoWorld {
                             ENTITIES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             composite,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -594,9 +861,9 @@ impl DojoWorld {
 
     async fn subscribe_event_messages(
         &self,
-        hashed_keys: Vec<FieldElement>,
+        keys: Option<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.event_message_manager.add_subscriber(hashed_keys).await
+        self.event_message_manager.add_subscriber(keys.map(|keys| keys.into())).await
     }
 
     async fn retrieve_event_messages(
@@ -604,7 +871,7 @@ impl DojoWorld {
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
         let (entities, total_count) = match query.clause {
-            None => self.entities_all(query.limit, query.offset).await?,
+            None => self.event_messages_all(query.limit, query.offset).await?,
             Some(clause) => {
                 let clause_type =
                     clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
@@ -616,12 +883,12 @@ impl DojoWorld {
                         }
 
                         self.query_by_hashed_keys(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             Some(hashed_keys),
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -630,39 +897,35 @@ impl DojoWorld {
                             return Err(QueryError::MissingParam("keys".into()).into());
                         }
 
-                        if keys.model.is_empty() {
-                            return Err(QueryError::MissingParam("model".into()).into());
-                        }
-
                         self.query_by_keys(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
-                            keys,
-                            query.limit,
-                            query.offset,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
+                            &keys,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
                     ClauseType::Member(member) => {
                         self.query_by_member(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
-                            EVENTS_MESSAGES_ENTITY_RELATION_COLUMN,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                             member,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
                     ClauseType::Composite(composite) => {
                         self.query_by_composite(
-                            EVENTS_MESSAGES_TABLE,
-                            EVENTS_MESSAGES_MODEL_RELATION_TABLE,
+                            EVENT_MESSAGES_TABLE,
+                            EVENT_MESSAGES_MODEL_RELATION_TABLE,
                             ENTITIES_ENTITY_RELATION_COLUMN,
                             composite,
-                            query.limit,
-                            query.offset,
+                            Some(query.limit),
+                            Some(query.offset),
                         )
                         .await?
                     }
@@ -675,42 +938,89 @@ impl DojoWorld {
 
     async fn retrieve_events(
         &self,
-        query: proto::types::EventQuery,
+        query: &proto::types::EventQuery,
     ) -> Result<proto::world::RetrieveEventsResponse, Error> {
-        let events = match query.keys {
+        let events = match &query.keys {
             None => self.events_all(query.limit, query.offset).await?,
-            Some(keys) => self.events_by_keys(keys, query.limit, query.offset).await?,
+            Some(keys) => self.events_by_keys(keys, Some(query.limit), Some(query.offset)).await?,
         };
         Ok(RetrieveEventsResponse { events })
     }
 
-    fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
-        let hashed_keys =
-            FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
-        let models = schemas
-            .iter()
-            .map(|schema| {
-                let mut struct_ty = schema.as_struct().expect("schema should be struct").to_owned();
-                map_row_to_ty(&schema.name(), &mut struct_ty, row)?;
-
-                Ok(struct_ty.try_into().unwrap())
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-
-        Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
+    async fn subscribe_events(
+        &self,
+        clause: proto::types::KeysClause,
+    ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
+        self.event_manager.add_subscriber(clause.into()).await
     }
 }
 
-fn process_event_field(data: &str) -> Vec<Vec<u8>> {
-    data.trim_end_matches('/').split('/').map(|s| s.to_owned().into_bytes()).collect()
+fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
+    Ok(data
+        .trim_end_matches('/')
+        .split('/')
+        .map(|d| Felt::from_str(d).map_err(ParseError::FromStr).map(|f| f.to_bytes_be().to_vec()))
+        .collect::<Result<Vec<_>, _>>()?)
 }
 
 fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Event, Error> {
-    let keys = process_event_field(&row.0);
-    let data = process_event_field(&row.1);
-    let transaction_hash = row.2.to_owned().into_bytes();
+    let keys = process_event_field(&row.0)?;
+    let data = process_event_field(&row.1)?;
+    let transaction_hash =
+        Felt::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
 
     Ok(proto::types::Event { keys, data, transaction_hash })
+}
+
+fn map_row_to_entity(
+    row: &SqliteRow,
+    arrays_rows: &HashMap<String, Vec<SqliteRow>>,
+    mut schemas: Vec<Ty>,
+) -> Result<proto::types::Entity, Error> {
+    let hashed_keys = Felt::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+    let models = schemas
+        .iter_mut()
+        .map(|schema| {
+            map_row_to_ty("", &schema.name(), schema, row, arrays_rows)?;
+            Ok(schema.as_struct().unwrap().clone().into())
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
+}
+
+// this builds a sql safe regex pattern to match against for keys
+fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error> {
+    let keys = clause
+        .keys
+        .iter()
+        .map(|bytes| {
+            if bytes.is_empty() {
+                return Ok("0x[0-9a-fA-F]+".to_string());
+            }
+            Ok(format!("{:#x}", Felt::from_bytes_be_slice(bytes)))
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+    let mut keys_pattern = format!("^{}", keys.join("/"));
+
+    if clause.pattern_matching == proto::types::PatternMatching::VariableLen as i32 {
+        keys_pattern += "(/0x[0-9a-fA-F]+)*";
+    }
+    keys_pattern += "/$";
+
+    Ok(keys_pattern)
+}
+
+fn value_to_string(value: &proto::types::value::ValueType) -> Result<String, Error> {
+    match value {
+        proto::types::value::ValueType::StringValue(string) => Ok(string.clone()),
+        proto::types::value::ValueType::IntValue(int) => Ok(int.to_string()),
+        proto::types::value::ValueType::UintValue(uint) => Ok(uint.to_string()),
+        proto::types::value::ValueType::BoolValue(bool) => {
+            Ok(if *bool { "1".to_string() } else { "0".to_string() })
+        }
+        _ => Err(QueryError::UnsupportedQuery.into()),
+    }
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
@@ -718,23 +1028,26 @@ type SubscribeModelsResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeModelsResponse, Status>> + Send>>;
 type SubscribeEntitiesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEntityResponse, Status>> + Send>>;
+type SubscribeEventsResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeEventsResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
     type SubscribeModelsStream = SubscribeModelsResponseStream;
     type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
     type SubscribeEventMessagesStream = SubscribeEntitiesResponseStream;
+    type SubscribeEventsStream = SubscribeEventsResponseStream;
 
     async fn world_metadata(
         &self,
         _request: Request<MetadataRequest>,
     ) -> Result<Response<MetadataResponse>, Status> {
-        let metadata = self.metadata().await.map_err(|e| match e {
+        let metadata = Some(self.metadata().await.map_err(|e| match e {
             Error::Sql(sqlx::Error::RowNotFound) => Status::not_found("World not found"),
             e => Status::internal(e.to_string()),
-        })?;
+        })?);
 
-        Ok(Response::new(MetadataResponse { metadata: Some(metadata) }))
+        Ok(Response::new(MetadataResponse { metadata }))
     }
 
     async fn subscribe_models(
@@ -753,18 +1066,9 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { hashed_keys } = request.into_inner();
-        let hashed_keys = hashed_keys
-            .iter()
-            .map(|id| {
-                FieldElement::from_byte_slice_be(id)
-                    .map_err(|e| Status::invalid_argument(e.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let rx = self
-            .subscribe_entities(hashed_keys)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let SubscribeEntitiesRequest { clause } = request.into_inner();
+        let rx =
+            self.subscribe_entities(clause).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }
@@ -788,16 +1092,9 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { hashed_keys } = request.into_inner();
-        let hashed_keys = hashed_keys
-            .iter()
-            .map(|id| {
-                FieldElement::from_byte_slice_be(id)
-                    .map_err(|e| Status::invalid_argument(e.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let SubscribeEntitiesRequest { clause } = request.into_inner();
         let rx = self
-            .subscribe_event_messages(hashed_keys)
+            .subscribe_event_messages(clause)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -831,9 +1128,20 @@ impl proto::world::world_server::World for DojoWorld {
             .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
         let events =
-            self.retrieve_events(query).await.map_err(|e| Status::internal(e.to_string()))?;
+            self.retrieve_events(&query).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(events))
+    }
+
+    async fn subscribe_events(
+        &self,
+        request: Request<proto::world::SubscribeEventsRequest>,
+    ) -> ServiceResult<Self::SubscribeEventsStream> {
+        let keys = request.into_inner().keys.unwrap_or_default();
+
+        let rx = self.subscribe_events(keys).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEventsStream))
     }
 }
 
@@ -841,7 +1149,7 @@ pub async fn new(
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
     pool: &Pool<Sqlite>,
     block_rx: Receiver<u64>,
-    world_address: FieldElement,
+    world_address: Felt,
     provider: Arc<JsonRpcClient<HttpTransport>>,
 ) -> Result<
     (SocketAddr, impl Future<Output = Result<(), tonic::transport::Error>> + 'static),

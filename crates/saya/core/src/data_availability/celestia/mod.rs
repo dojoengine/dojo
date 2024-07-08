@@ -3,11 +3,11 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use celestia_rpc::{BlobClient, Client};
-use celestia_types::blob::SubmitOptions;
+use celestia_types::blob::GasPrice;
 use celestia_types::nmt::Namespace;
 use celestia_types::Blob;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use url::Url;
 
 use crate::data_availability::error::{DataAvailabilityResult, Error};
@@ -31,7 +31,7 @@ impl Display for CelestiaConfig {
     }
 }
 
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct CelestiaClient {
     client: Client,
     mode: DataAvailabilityMode,
@@ -55,10 +55,7 @@ impl DataAvailabilityClient for CelestiaClient {
         self.mode
     }
 
-    async fn publish_state_diff_felts(
-        &self,
-        state_diff: &[FieldElement],
-    ) -> DataAvailabilityResult<u64> {
+    async fn publish_state_diff_felts(&self, state_diff: &[Felt]) -> DataAvailabilityResult<u64> {
         let bytes: Vec<u8> = state_diff.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
 
         let blob = Blob::new(self.namespace, bytes)?;
@@ -66,7 +63,25 @@ impl DataAvailabilityClient for CelestiaClient {
         // TODO: we may want to use `blob_get` to ensure the state diff has been published
         // correctly.
         self.client
-            .blob_submit(&[blob], SubmitOptions::default())
+            .blob_submit(&[blob], GasPrice::default())
+            .await
+            .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))
+    }
+
+    async fn publish_state_diff_and_proof_felts(
+        &self,
+        state_diff: &[Felt],
+        state_diff_proof: &[Felt],
+    ) -> DataAvailabilityResult<u64> {
+        let bytes: Vec<u8> = state_diff.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
+        let blob = Blob::new(self.namespace, bytes)?;
+
+        let proof_bytes: Vec<u8> =
+            state_diff_proof.iter().flat_map(|fe| fe.to_bytes_be().to_vec()).collect();
+        let proof_blob = Blob::new(self.namespace, proof_bytes)?;
+
+        self.client
+            .blob_submit(&[blob, proof_blob], GasPrice::default())
             .await
             .map_err(|e| Error::Client(format!("Celestia RPC error: {e}")))
     }

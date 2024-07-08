@@ -7,41 +7,45 @@ mod tests {
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abi::model::Layout;
+    use dojo_world::contracts::naming::compute_selector_from_names;
     use serial_test::serial;
     use sqlx::SqlitePool;
-    use starknet::core::types::Event;
-    use starknet::core::utils::get_selector_from_name;
-    use starknet_crypto::{poseidon_hash_many, FieldElement};
+    use starknet::core::types::{Event, Felt};
+    use starknet_crypto::poseidon_hash_many;
     use tokio::sync::mpsc;
     use torii_core::sql::Sql;
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
+    use crate::utils;
 
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
+        let namespace = "types_test".to_string();
         let model_name = "Record".to_string();
-        let key = vec![FieldElement::ONE];
+        let key = vec![Felt::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let block_timestamp = 1710754478_u64;
+        let type_name = utils::type_name_from_names(&namespace, &model_name);
+
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
                 "models" : [{
-                    "__typename": model_name,
+                    "__typename": type_name,
                         "depth": "Zero",
                         "record_id": 0,
                         "typeU16": 1,
                         "type_u64": "0x1",
                         "typeBool": true,
-                        "type_felt": format!("{:#x}", FieldElement::from(1u128)),
-                        "typeContractAddress": format!("{:#x}", FieldElement::ONE)
+                        "type_felt": format!("{:#x}", Felt::from(1u128)),
+                        "typeContractAddress": format!("{:#x}", Felt::ONE)
                 }]
             }
         });
@@ -54,7 +58,7 @@ mod tests {
             // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: model_name,
+                    name: utils::struct_name_from_names(&namespace, &model_name),
                     children: vec![
                         Member {
                             name: "depth".to_string(),
@@ -93,12 +97,12 @@ mod tests {
                         Member {
                             name: "type_felt".to_string(),
                             key: false,
-                            ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
+                            ty: Ty::Primitive(Primitive::Felt252(Some(Felt::from(1u128)))),
                         },
                         Member {
                             name: "typeContractAddress".to_string(),
                             key: true,
-                            ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
+                            ty: Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))),
                         },
                     ],
                 }),
@@ -116,11 +120,11 @@ mod tests {
             &pool,
             r#"subscription {
                 entityUpdated {
-                    id 
+                    id
                     keys
                     models {
                         __typename
-                        ... on Record {
+                        ... on types_test_Record {
                             depth
                             record_id
                             typeU16
@@ -143,25 +147,28 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
+        let namespace = "types_test".to_string();
         let model_name = "Record".to_string();
-        let key = vec![FieldElement::ONE];
+        let key = vec![Felt::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let block_timestamp = 1710754478_u64;
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        let type_name = utils::type_name_from_names(&namespace, &model_name);
+
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
                 "models" : [{
-                    "__typename": model_name,
+                    "__typename": type_name,
                         "depth": "Zero",
                         "record_id": 0,
-                        "type_felt": format!("{:#x}", FieldElement::from(1u128)),
-                        "typeContractAddress": format!("{:#x}", FieldElement::ONE)
+                        "type_felt": format!("{:#x}", Felt::from(1u128)),
+                        "typeContractAddress": format!("{:#x}", Felt::ONE)
                 }]
             }
         });
@@ -174,7 +181,7 @@ mod tests {
             // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: model_name,
+                    name: utils::struct_name_from_names(&namespace, &model_name),
                     children: vec![
                         Member {
                             name: "depth".to_string(),
@@ -198,12 +205,12 @@ mod tests {
                         Member {
                             name: "type_felt".to_string(),
                             key: false,
-                            ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
+                            ty: Ty::Primitive(Primitive::Felt252(Some(Felt::from(1u128)))),
                         },
                         Member {
                             name: "typeContractAddress".to_string(),
                             key: true,
-                            ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
+                            ty: Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))),
                         },
                     ],
                 }),
@@ -221,11 +228,11 @@ mod tests {
             &pool,
             r#"subscription {
                 entityUpdated(id: "0x579e8877c7755365d5ec1ec7d3a94a457eff5d1f40482bbe9729c064cdead2") {
-                    id 
+                    id
                     keys
                     models {
                         __typename
-                        ... on Record {
+                        ... on types_test_Record {
                             depth
                             record_id
                             type_felt
@@ -245,16 +252,18 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_model_subscription(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         // 0. Preprocess model value
+        let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
-        let class_hash = FieldElement::TWO;
-        let contract_address = FieldElement::THREE;
+        let model_id = format!("{:#x}", compute_selector_from_names(&namespace, &model_name));
+        let class_hash = Felt::TWO;
+        let contract_address = Felt::THREE;
         let block_timestamp: u64 = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
-         "modelRegistered": { "id": model_id, "name":model_name }
+            "modelRegistered": { "id": model_id, "name": model_name }
         });
+
         let (tx, mut rx) = mpsc::channel(7);
 
         tokio::spawn(async move {
@@ -270,6 +279,7 @@ mod tests {
                 }],
             });
             db.register_model(
+                &namespace,
                 model,
                 Layout::Fixed(vec![]),
                 class_hash,
@@ -306,15 +316,16 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_model_subscription_with_id(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         // 0. Preprocess model value
+        let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
-        let class_hash = FieldElement::TWO;
-        let contract_address = FieldElement::THREE;
+        let model_id = format!("{:#x}", compute_selector_from_names(&namespace, &model_name));
+        let class_hash = Felt::TWO;
+        let contract_address = Felt::THREE;
         let block_timestamp: u64 = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
-         "modelRegistered": { "id": model_id, "name":model_name }
+         "modelRegistered": { "id": model_id, "name": model_name }
         });
         let (tx, mut rx) = mpsc::channel(7);
 
@@ -331,6 +342,7 @@ mod tests {
                 }],
             });
             db.register_model(
+                &namespace,
                 model,
                 Layout::Fixed(vec![]),
                 class_hash,
@@ -369,7 +381,7 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_event_emitted(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         let block_timestamp: u64 = 1710754478_u64;
         let (tx, mut rx) = mpsc::channel(7);
         tokio::spawn(async move {
@@ -378,17 +390,17 @@ mod tests {
             db.store_event(
                 "0x0",
                 &Event {
-                    from_address: FieldElement::ZERO,
+                    from_address: Felt::ZERO,
                     keys: vec![
-                        FieldElement::from_str("0xdead").unwrap(),
-                        FieldElement::from_str("0xbeef").unwrap(),
+                        Felt::from_str("0xdead").unwrap(),
+                        Felt::from_str("0xbeef").unwrap(),
                     ],
                     data: vec![
-                        FieldElement::from_str("0xc0de").unwrap(),
-                        FieldElement::from_str("0xface").unwrap(),
+                        Felt::from_str("0xc0de").unwrap(),
+                        Felt::from_str("0xface").unwrap(),
                     ],
                 },
-                FieldElement::ZERO,
+                Felt::ZERO,
                 block_timestamp,
             );
 
@@ -407,19 +419,19 @@ mod tests {
                         }}
                     }}
                 "#,
-                FieldElement::from_str("0xbeef").unwrap()
+                Felt::from_str("0xbeef").unwrap()
             ),
         )
         .await;
 
         let expected_value: async_graphql::Value = value!({
          "eventEmitted": { "keys": vec![
-            format!("{:#x}", FieldElement::from_str("0xdead").unwrap()),
-            format!("{:#x}", FieldElement::from_str("0xbeef").unwrap())
+            format!("{:#x}", Felt::from_str("0xdead").unwrap()),
+            format!("{:#x}", Felt::from_str("0xbeef").unwrap())
          ], "data": vec![
-            format!("{:#x}", FieldElement::from_str("0xc0de").unwrap()),
-            format!("{:#x}", FieldElement::from_str("0xface").unwrap())
-         ], "transactionHash": format!("{:#x}", FieldElement::ZERO)}
+            format!("{:#x}", Felt::from_str("0xc0de").unwrap()),
+            format!("{:#x}", Felt::from_str("0xface").unwrap())
+         ], "transactionHash": format!("{:#x}", Felt::ZERO)}
         });
 
         assert_eq!(response_value, expected_value);

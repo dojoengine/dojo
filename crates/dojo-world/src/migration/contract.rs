@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use starknet::core::types::{DeclareTransactionResult, FieldElement};
+use starknet::core::types::{DeclareTransactionResult, Felt};
 
 use super::{Declarable, Deployable, MigrationType, StateDiff, Upgradable};
 
@@ -11,11 +11,13 @@ pub type DeclareOutput = DeclareTransactionResult;
 /// Represents differences between a local and remote contract.
 #[derive(Debug, Default, Clone)]
 pub struct ContractDiff {
-    pub name: String,
-    pub local_class_hash: FieldElement,
-    pub original_class_hash: FieldElement,
-    pub base_class_hash: FieldElement,
-    pub remote_class_hash: Option<FieldElement>,
+    // The tag is used to identify the corresponding artifact produced by the compiler.
+    pub tag: String,
+    pub local_class_hash: Felt,
+    pub original_class_hash: Felt,
+    pub base_class_hash: Felt,
+    pub remote_class_hash: Option<Felt>,
+    pub init_calldata: Vec<String>,
 }
 
 impl StateDiff for ContractDiff {
@@ -30,7 +32,7 @@ impl StateDiff for ContractDiff {
 
 impl Display for ContractDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}:", self.name)?;
+        writeln!(f, "{}:", self.tag)?;
         writeln!(f, "   Local Class Hash: {:#x}", self.local_class_hash)?;
         writeln!(f, "   Original Class Hash: {:#x}", self.original_class_hash)?;
         writeln!(f, "   Base Class Hash: {:#x}", self.base_class_hash)?;
@@ -44,12 +46,12 @@ impl Display for ContractDiff {
 }
 
 // Represents a contract that needs to be migrated to the remote state
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ContractMigration {
-    pub salt: FieldElement,
+    pub salt: Felt,
     pub diff: ContractDiff,
     pub artifact_path: PathBuf,
-    pub contract_address: FieldElement,
+    pub contract_address: Felt,
 }
 
 impl ContractMigration {
@@ -74,7 +76,7 @@ impl Declarable for ContractMigration {
 
 #[async_trait]
 impl Deployable for ContractMigration {
-    fn salt(&self) -> FieldElement {
+    fn salt(&self) -> Felt {
         self.salt
     }
 }

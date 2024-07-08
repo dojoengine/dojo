@@ -7,6 +7,11 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
+#[cfg(feature = "slot")]
+use constant::{
+    CONTROLLER_ACCOUNT_CONTRACT, CONTROLLER_ACCOUNT_CONTRACT_CASM,
+    CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+};
 use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -199,7 +204,7 @@ impl Genesis {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
 
                 fee_token_storage.insert(low_bal_storage_var, low);
                 fee_token_storage.insert(high_bal_storage_var, high);
@@ -217,7 +222,8 @@ impl Genesis {
         fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
         fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into(), total_supply_high);
+        fee_token_storage
+            .insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE, total_supply_high);
 
         states
             .state_updates
@@ -282,6 +288,15 @@ impl Default for Genesis {
                     compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                 },
             ),
+            #[cfg(feature = "slot")]
+            (
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                },
+            ),
         ]);
 
         Self {
@@ -303,16 +318,8 @@ impl Default for Genesis {
 mod tests {
     use std::str::FromStr;
 
+    use allocation::GenesisAccount;
     use starknet::macros::felt;
-    use tests::allocation::GenesisAccount;
-    use tests::constant::{
-        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
-        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
-        DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
-        DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-        DEFAULT_OZ_ACCOUNT_CONTRACT, DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
-        DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
-    };
 
     use super::*;
 
@@ -343,6 +350,15 @@ mod tests {
                     compiled_class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                     casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone().into(),
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
+                },
+            ),
+            #[cfg(feature = "slot")]
+            (
+                CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                GenesisClass {
+                    casm: CONTROLLER_ACCOUNT_CONTRACT_CASM.clone().into(),
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH,
+                    sierra: Some(CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap().into()),
                 },
             ),
         ]);
@@ -434,7 +450,8 @@ mod tests {
         fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
         fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into(), total_supply_high);
+        fee_token_storage
+            .insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE, total_supply_high);
 
         for (address, alloc) in &allocations {
             if let Some(balance) = alloc.balance() {
@@ -446,7 +463,7 @@ mod tests {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
 
                 fee_token_storage.insert(low_bal_storage_var, low);
                 fee_token_storage.insert(high_bal_storage_var, high);
@@ -480,14 +497,27 @@ mod tests {
         assert_eq!(actual_block.header.version, expected_block.header.version);
         assert_eq!(actual_block.body, expected_block.body);
 
-        assert!(
-            actual_state_updates.declared_compiled_classes.len() == 3,
-            "should be 3 casm classes: udc, erc20, oz account"
-        );
-        assert!(
-            actual_state_updates.declared_sierra_classes.len() == 1,
-            "should be only 1 sierra class: oz account"
-        );
+        if cfg!(feature = "slot") {
+            assert!(
+                actual_state_updates.declared_compiled_classes.len() == 4,
+                "should be 4 casm classes: udc, erc20, oz account, controller account"
+            );
+
+            assert!(
+                actual_state_updates.declared_sierra_classes.len() == 2,
+                "should be 2 sierra classes: oz account, controller account"
+            );
+        } else {
+            assert!(
+                actual_state_updates.declared_compiled_classes.len() == 3,
+                "should be 3 casm classes: udc, erc20, oz account"
+            );
+
+            assert!(
+                actual_state_updates.declared_sierra_classes.len() == 1,
+                "should be only 1 sierra class: oz account"
+            );
+        }
 
         assert_eq!(
             actual_state_updates.state_updates.declared_classes.get(&fee_token.class_hash),
@@ -502,7 +532,7 @@ mod tests {
         );
 
         assert!(
-            actual_state_updates.declared_sierra_classes.get(&fee_token.class_hash).is_none(),
+            !actual_state_updates.declared_sierra_classes.contains_key(&fee_token.class_hash),
             "The default fee token class doesnt have a sierra class"
         );
 
@@ -525,7 +555,7 @@ mod tests {
         );
 
         assert!(
-            actual_state_updates.declared_sierra_classes.get(&ud.class_hash).is_none(),
+            !actual_state_updates.declared_sierra_classes.contains_key(&ud.class_hash),
             "The default universal deployer class doesnt have a sierra class"
         );
 
@@ -560,6 +590,34 @@ mod tests {
             Some(&DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
             "The default oz account contract sierra class should be declared"
         );
+
+        #[cfg(feature = "slot")]
+        {
+            assert_eq!(
+                actual_state_updates
+                    .state_updates
+                    .declared_classes
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                "The controller account class should be declared"
+            );
+
+            assert_eq!(
+                actual_state_updates
+                    .declared_compiled_classes
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CONTRACT_CASM.clone()),
+                "The controller account contract casm class should be declared"
+            );
+
+            assert_eq!(
+                actual_state_updates
+                    .declared_sierra_classes
+                    .get(&CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
+                "The controller account contract sierra class should be declared"
+            );
+        }
 
         // check that all contract allocations exist in the state updates
 
@@ -642,7 +700,7 @@ mod tests {
             Some(&total_supply_low)
         );
         assert_eq!(
-            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into())),
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE)),
             Some(&total_supply_high)
         );
 
@@ -664,7 +722,7 @@ mod tests {
                 // the storage address of low u128 of the balance
                 let low_bal_storage_var = bal_base_storage_var;
                 // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                let high_bal_storage_var = bal_base_storage_var + FieldElement::ONE;
 
                 assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
                 assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
@@ -684,7 +742,7 @@ mod tests {
             "total supply must be calculated from allocations balances correctly"
         );
         assert_eq!(
-            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into())),
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + FieldElement::ONE)),
             Some(&actual_total_supply_high),
             "total supply must be calculated from allocations balances correctly"
         );

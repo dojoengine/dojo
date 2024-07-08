@@ -162,6 +162,7 @@ pub trait Messenger {
     ) -> MessengerResult<Vec<Self::MessageHash>>;
 }
 
+#[derive(Debug)]
 pub enum MessengerMode {
     Ethereum(EthereumMessaging),
     #[cfg(feature = "starknet-messaging")]
