@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720408843171,
+  "lastUpdate": 1720412131215,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11215,6 +11215,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 15895076,
             "range": "± 296513",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9256ea5f5ade18800c39c96664049d5a37d86e5",
+          "message": "feat(dojo-bindgen): add namespace to unity bindgen (#2155)",
+          "timestamp": "2024-07-07T22:03:40-06:00",
+          "tree_id": "5ad5d0b6c6921fc4e05ecc774debada95069c8eb",
+          "url": "https://github.com/dojoengine/dojo/commit/f9256ea5f5ade18800c39c96664049d5a37d86e5"
+        },
+        "date": 1720412130393,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15926595,
+            "range": "± 347523",
             "unit": "ns/iter"
           }
         ]
