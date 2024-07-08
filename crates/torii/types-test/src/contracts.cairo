@@ -61,6 +61,11 @@ mod records {
                         Record {
                             record_id,
                             depth: Depth::Zero,
+                            type_i8: record_idx.into(),
+                            type_i16: record_idx.into(),
+                            type_i32: record_idx.into(),
+                            type_i64: record_idx.into(),
+                            type_i128: record_idx.into(),
                             type_u8: record_idx.into(),
                             type_u16: record_idx.into(),
                             type_u32: record_idx.into(),

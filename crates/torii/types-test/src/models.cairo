@@ -7,6 +7,11 @@ struct Record {
     #[key]
     record_id: u32,
     depth: Depth,
+    type_i8: i8,
+    type_i16: i16,
+    type_i32: i32,
+    type_i64: i64,
+    type_i128: i128,
     type_u8: u8,
     type_u16: u16,
     type_u32: u32,
@@ -85,7 +90,6 @@ impl DepthIntoFelt252 of Into<Depth, felt252> {
         }
     }
 }
-
 // takes a long time to deploy, uncomment for now
 // #[derive(Introspect, Copy, Drop, Serde)]
 // #[dojo::model]
@@ -349,3 +353,4 @@ impl DepthIntoFelt252 of Into<Depth, felt252> {
 //     a254: u256,
 //     a255: u256,
 // }
+
