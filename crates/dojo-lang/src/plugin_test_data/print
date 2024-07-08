@@ -113,3 +113,22 @@ Enemy::OtherPlayer(v) => { core::debug::PrintTrait::print('OtherPlayer'); core::
 }
 
 //! > expected_diagnostics
+error: Unknown derive `Print` - a plugin might be missing.
+ --> test_src/lib.cairo:4:10
+#[derive(Print)]
+         ^***^
+
+error: Unknown derive `Print` - a plugin might be missing.
+ --> test_src/lib.cairo:12:10
+#[derive(Print)]
+         ^***^
+
+error: Unknown derive `Print` - a plugin might be missing.
+ --> test_src/lib.cairo:19:10
+#[derive(Print)]
+         ^***^
+
+error: Unknown derive `Print` - a plugin might be missing.
+ --> test_src/lib.cairo:28:10
+#[derive(Print)]
+         ^***^

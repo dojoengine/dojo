@@ -12,6 +12,7 @@
 //! 0x640466ebd2ce505209d3e5c4494b4276ed8f1cde764d757eb48831961f7cdea\"}]],\"address\":\"0.0.0.0:
 //! 5050\",\"seed\":\"0\"}"},"target":"katana::cli"}
 //! ```
+#![allow(dead_code)]
 
 use serde::Deserialize;
 

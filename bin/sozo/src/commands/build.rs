@@ -78,8 +78,9 @@ impl BuildArgs {
         let compile_info = compile_workspace(
             config,
             CompileOpts {
-                include_targets: vec![],
-                exclude_targets: vec![TargetKind::TEST],
+                include_target_names: vec![],
+                include_target_kinds: vec![],
+                exclude_target_kinds: vec![TargetKind::TEST],
                 features: features_opts,
             },
         )?;

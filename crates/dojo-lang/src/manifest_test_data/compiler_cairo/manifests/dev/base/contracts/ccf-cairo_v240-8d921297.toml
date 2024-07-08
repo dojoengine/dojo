@@ -1,6 +1,6 @@
 kind = "DojoContract"
-class_hash = "0x7468fbf6e47eb66fd898a4a68bbe801560fdd42b0d6909ec4f75fb38c613702"
-original_class_hash = "0x7468fbf6e47eb66fd898a4a68bbe801560fdd42b0d6909ec4f75fb38c613702"
+class_hash = "0x1b29f38120f222120acf9b3d66f7015d47c0b11d4e9acdfefa243958c60909d"
+original_class_hash = "0x1b29f38120f222120acf9b3d66f7015d47c0b11d4e9acdfefa243958c60909d"
 base_class_hash = "0x0"
 abi = "manifests/dev/base/abis/contracts/ccf-cairo_v240-8d921297.json"
 reads = []
