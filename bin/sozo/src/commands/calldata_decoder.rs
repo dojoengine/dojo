@@ -1,7 +1,7 @@
 use anyhow::{self, Result};
 use bigdecimal::FromPrimitive;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use num_bigint::{BigInt, BigUint};
+use num_bigint::BigUint;
 use starknet::core::types::{Felt, FromStrError};
 use starknet::core::utils::cairo_short_string_to_felt;
 
@@ -94,6 +94,7 @@ impl CalldataDecoder for ShortStrCalldataDecoder {
     }
 }
 
+/// Decodes a signed integer into a [`Felt`]
 struct SignedIntegerCalldataDecoder;
 impl CalldataDecoder for SignedIntegerCalldataDecoder {
     fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
@@ -261,9 +262,46 @@ mod tests {
     }
 
     #[test]
-    fn test_signed_integer_decoder() {
-        let input = "64";
-        let expected = vec![64_i128.into()];
+    fn test_signed_integer_decoder_i8() {
+        let input = "-64";
+        let signed_i8: i8 = -64;
+        let expected = vec![signed_i8.into()];
+        let result = decode_calldata(input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_signed_integer_decoder_i16() {
+        let input = "-12345";
+        let signed_i16: i16 = -12345;
+        let expected = vec![signed_i16.into()];
+        let result = decode_calldata(input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_signed_integer_decoder_i32() {
+        let input = "-987654321";
+        let signed_i32: i32 = -987654321;
+        let expected = vec![signed_i32.into()];
+        let result = decode_calldata(input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_signed_integer_decoder_i64() {
+        let input = "-1234567890123456789";
+        let signed_i64: i64 = -1234567890123456789;
+        let expected = vec![signed_i64.into()];
+        let result = decode_calldata(input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_signed_integer_decoder_i128() {
+        let input = "-123456789012345678901234567890123456";
+        let signed_i128: i128 = -123456789012345678901234567890123456;
+        let expected = vec![signed_i128.into()];
         let result = decode_calldata(input).unwrap();
         assert_eq!(result, expected);
     }
