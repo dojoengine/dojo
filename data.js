@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720412131215,
+  "lastUpdate": 1720412542398,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11245,6 +11245,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 15926595,
             "range": "± 347523",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7c09e4a0ab62843f133cf99798e334321c31b97d",
+          "message": "fix selector functions for models and contracts (#2156)",
+          "timestamp": "2024-07-07T22:10:34-06:00",
+          "tree_id": "07236d7ee18b46e1b794fd958314266569487d75",
+          "url": "https://github.com/dojoengine/dojo/commit/7c09e4a0ab62843f133cf99798e334321c31b97d"
+        },
+        "date": 1720412541547,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16149372,
+            "range": "± 241967",
             "unit": "ns/iter"
           }
         ]
