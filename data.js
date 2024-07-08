@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720412542398,
+  "lastUpdate": 1720473265511,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11275,6 +11275,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16149372,
             "range": "± 241967",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "94ab39c0bded409aeb6e00e242a403d0421efc8d",
+          "message": "chore: use version sensitive deps from `katana-cairo` + some unused deps clean up (#2163)",
+          "timestamp": "2024-07-09T05:05:48+08:00",
+          "tree_id": "14c82656caa8990b1ada9a11bca8a71da9c978f7",
+          "url": "https://github.com/dojoengine/dojo/commit/94ab39c0bded409aeb6e00e242a403d0421efc8d"
+        },
+        "date": 1720473264914,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16912720,
+            "range": "± 155840",
             "unit": "ns/iter"
           }
         ]
