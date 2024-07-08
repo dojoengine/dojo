@@ -76,7 +76,7 @@ impl DojoContract {
         let contract_name_hash = naming::compute_bytearray_hash(&name);
         let contract_namespace_hash = naming::compute_bytearray_hash(&contract_namespace);
         let contract_selector =
-            naming::compute_selector_from_hash(contract_namespace_hash, contract_name_hash);
+            naming::compute_selector_from_hashes(contract_namespace_hash, contract_name_hash);
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body

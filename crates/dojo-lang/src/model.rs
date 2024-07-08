@@ -230,7 +230,7 @@ pub fn handle_model_struct(
         _ => (
             RewriteNode::Text(DEFAULT_MODEL_VERSION.to_string()),
             RewriteNode::Text(
-                naming::compute_selector_from_hash(model_namespace_hash, model_name_hash)
+                naming::compute_selector_from_hashes(model_namespace_hash, model_name_hash)
                     .to_string(),
             ),
         ),
