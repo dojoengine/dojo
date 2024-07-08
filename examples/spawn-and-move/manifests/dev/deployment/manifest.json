@@ -1,8 +1,8 @@
 {
   "world": {
     "kind": "WorldContract",
-    "class_hash": "0x21341ba6e0d96f909f15c4ed865188afc716563d34593fb443d56cb97ff7b92",
-    "original_class_hash": "0x21341ba6e0d96f909f15c4ed865188afc716563d34593fb443d56cb97ff7b92",
+    "class_hash": "0x210dd8e484e5555dc74a4a600b17878fc108911719b04139309acc874160c51",
+    "original_class_hash": "0x210dd8e484e5555dc74a4a600b17878fc108911719b04139309acc874160c51",
     "abi": [
       {
         "type": "impl",
@@ -1108,8 +1108,8 @@
         ]
       }
     ],
-    "address": "0x6ffdafc135828e1428d94e9587bc36382cdf42a8cd463876b534be20a956397",
-    "transaction_hash": "0x3dd147768d44804d306e22ab63943a7307a160367ff4cbbc9b65870f88850e2",
+    "address": "0x504b804eeac62e68d12dc030e56b8f62cb047950c346e60a974da02795f6aba",
+    "transaction_hash": "0x65168705b42b38a0b9e290dfb079e023fa1960febb9fd7069fce5e369e3b56f",
     "block_number": 3,
     "seed": "dojo_examples",
     "metadata": {
@@ -1129,9 +1129,9 @@
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": "0x5954132061c8ba9fed715a01a2a1064d2d3791ef4c2f6203c790457362abfb5",
-      "class_hash": "0x32f7e90e503b8e7b828a1b5c2d24d97cca86eebb967d03fcad5cd305388f3a6",
-      "original_class_hash": "0x32f7e90e503b8e7b828a1b5c2d24d97cca86eebb967d03fcad5cd305388f3a6",
+      "address": "0x2e85647f570d2a4abdffdd668823702548d20d1d6aaef74b6a4eb9670a32798",
+      "class_hash": "0x647694c15fff8476c82ea146d0dbdbbb17d3425d5ba05a7320e4322f916df1d",
+      "original_class_hash": "0x647694c15fff8476c82ea146d0dbdbbb17d3425d5ba05a7320e4322f916df1d",
       "base_class_hash": "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4",
       "abi": [
         {
@@ -1174,17 +1174,6 @@
             },
             {
               "type": "function",
-              "name": "selector",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::felt252"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
               "name": "namespace",
               "inputs": [],
               "outputs": [
@@ -1196,7 +1185,18 @@
             },
             {
               "type": "function",
-              "name": "namespace_selector",
+              "name": "tag",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
@@ -1207,11 +1207,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "namespace_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "selector",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -1513,9 +1524,9 @@
     },
     {
       "kind": "DojoContract",
-      "address": "0x34fa6c359d9f888d120d761eee8f8391ca4d8fd57ea7baa91b7fd1aabdbc343",
-      "class_hash": "0xbfaafc36111f7cc26ed8616dae151bc891142fef3a35090378262b0fb1bb3e",
-      "original_class_hash": "0xbfaafc36111f7cc26ed8616dae151bc891142fef3a35090378262b0fb1bb3e",
+      "address": "0x6a06eb156f956f1691bce4a4573c97b1a5f08d3bfa65fc25c4ed4b55d3e61a1",
+      "class_hash": "0x97cd4fb3acfe9e6a024589ea34db2fc587586d699ef3732ce627e1771158ef",
+      "original_class_hash": "0x97cd4fb3acfe9e6a024589ea34db2fc587586d699ef3732ce627e1771158ef",
       "base_class_hash": "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4",
       "abi": [
         {
@@ -1558,17 +1569,6 @@
             },
             {
               "type": "function",
-              "name": "selector",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::felt252"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
               "name": "namespace",
               "inputs": [],
               "outputs": [
@@ -1580,7 +1580,18 @@
             },
             {
               "type": "function",
-              "name": "namespace_selector",
+              "name": "tag",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
@@ -1591,11 +1602,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "namespace_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "selector",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -1721,9 +1743,9 @@
     },
     {
       "kind": "DojoContract",
-      "address": "0x6d375b5b8a43fee9ccb152fbb621ac1dae8c18a45f12c44933528908ed0b280",
-      "class_hash": "0x15679777d999d9981b48c2b6d7db0bded1743d20fa037f8ccb61926c421f8c6",
-      "original_class_hash": "0x15679777d999d9981b48c2b6d7db0bded1743d20fa037f8ccb61926c421f8c6",
+      "address": "0x6359537114e0a62c63f52f2fb3c0e6241c9a2fcbd9dc9df221c867662aa31e9",
+      "class_hash": "0x479bfb12dcba5398d77303e7a665fc3fedb16f2d7f9cb1f5d7e2beb3b7e2ba7",
+      "original_class_hash": "0x479bfb12dcba5398d77303e7a665fc3fedb16f2d7f9cb1f5d7e2beb3b7e2ba7",
       "base_class_hash": "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4",
       "abi": [
         {
@@ -1766,17 +1788,6 @@
             },
             {
               "type": "function",
-              "name": "selector",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::felt252"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
               "name": "namespace",
               "inputs": [],
               "outputs": [
@@ -1788,7 +1799,18 @@
             },
             {
               "type": "function",
-              "name": "namespace_selector",
+              "name": "tag",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
@@ -1799,11 +1821,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "namespace_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "selector",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -1965,8 +1998,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x728e99bfb4eb78333f233877df397568a2dd1178fbcef9f1aca871f89c59e2a",
-      "original_class_hash": "0x728e99bfb4eb78333f233877df397568a2dd1178fbcef9f1aca871f89c59e2a",
+      "class_hash": "0x1da39caefeb15d61baa9d1d71f21ed79cf5650aa215b583e7f453c0d7d4ee65",
+      "original_class_hash": "0x1da39caefeb15d61baa9d1d71f21ed79cf5650aa215b583e7f453c0d7d4ee65",
       "abi": [
         {
           "type": "impl",
@@ -2209,18 +2242,29 @@
           "items": [
             {
               "type": "function",
-              "name": "selector",
+              "name": "name",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::felt252"
+                  "type": "core::byte_array::ByteArray"
                 }
               ],
               "state_mutability": "view"
             },
             {
               "type": "function",
-              "name": "name",
+              "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "tag",
               "inputs": [],
               "outputs": [
                 {
@@ -2242,18 +2286,7 @@
             },
             {
               "type": "function",
-              "name": "namespace",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "namespace_selector",
+              "name": "selector",
               "inputs": [],
               "outputs": [
                 {
@@ -2264,11 +2297,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "namespace_hash",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -2394,8 +2438,8 @@
           "key": true
         }
       ],
-      "class_hash": "0x119411fb88153fe44ad11d41b25e865fc52b9bce6ce196b813a5fcf7a42739a",
-      "original_class_hash": "0x119411fb88153fe44ad11d41b25e865fc52b9bce6ce196b813a5fcf7a42739a",
+      "class_hash": "0x572bf6d3cbcd69fd6404a993110c3b84379882587b21b7ad5b2761088cb19c3",
+      "original_class_hash": "0x572bf6d3cbcd69fd6404a993110c3b84379882587b21b7ad5b2761088cb19c3",
       "abi": [
         {
           "type": "impl",
@@ -2638,18 +2682,29 @@
           "items": [
             {
               "type": "function",
-              "name": "selector",
+              "name": "name",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::felt252"
+                  "type": "core::byte_array::ByteArray"
                 }
               ],
               "state_mutability": "view"
             },
             {
               "type": "function",
-              "name": "name",
+              "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "tag",
               "inputs": [],
               "outputs": [
                 {
@@ -2671,18 +2726,7 @@
             },
             {
               "type": "function",
-              "name": "namespace",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "namespace_selector",
+              "name": "selector",
               "inputs": [],
               "outputs": [
                 {
@@ -2693,11 +2737,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "namespace_hash",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -2817,8 +2872,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x50b9989aedf757df9b0a8e235b78d7e185fd4a6cbf05d61da097e19e5cf4efb",
-      "original_class_hash": "0x50b9989aedf757df9b0a8e235b78d7e185fd4a6cbf05d61da097e19e5cf4efb",
+      "class_hash": "0x4463c89586bc5015a7bc97e9e4af123330842b20aa6f6587c795d6d35907a9d",
+      "original_class_hash": "0x4463c89586bc5015a7bc97e9e4af123330842b20aa6f6587c795d6d35907a9d",
       "abi": [
         {
           "type": "impl",
@@ -3061,18 +3116,29 @@
           "items": [
             {
               "type": "function",
-              "name": "selector",
+              "name": "name",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::felt252"
+                  "type": "core::byte_array::ByteArray"
                 }
               ],
               "state_mutability": "view"
             },
             {
               "type": "function",
-              "name": "name",
+              "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "tag",
               "inputs": [],
               "outputs": [
                 {
@@ -3094,18 +3160,7 @@
             },
             {
               "type": "function",
-              "name": "namespace",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "namespace_selector",
+              "name": "selector",
               "inputs": [],
               "outputs": [
                 {
@@ -3116,11 +3171,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "namespace_hash",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -3232,8 +3298,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x3fd5ae468509ca258d45283bddd24dca8f9b09469a56dc0275f0a0f5413a38",
-      "original_class_hash": "0x3fd5ae468509ca258d45283bddd24dca8f9b09469a56dc0275f0a0f5413a38",
+      "class_hash": "0x36b7886db455f41fac4263da9f0d21190bb575c8555bde1c3357486495c0be1",
+      "original_class_hash": "0x36b7886db455f41fac4263da9f0d21190bb575c8555bde1c3357486495c0be1",
       "abi": [
         {
           "type": "impl",
@@ -3476,18 +3542,29 @@
           "items": [
             {
               "type": "function",
-              "name": "selector",
+              "name": "name",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::felt252"
+                  "type": "core::byte_array::ByteArray"
                 }
               ],
               "state_mutability": "view"
             },
             {
               "type": "function",
-              "name": "name",
+              "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "tag",
               "inputs": [],
               "outputs": [
                 {
@@ -3509,18 +3586,7 @@
             },
             {
               "type": "function",
-              "name": "namespace",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "namespace_selector",
+              "name": "selector",
               "inputs": [],
               "outputs": [
                 {
@@ -3531,11 +3597,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "namespace_hash",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -3678,8 +3755,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x2d5c3490b29ddf08728213221a87566a2fa92e58e7ed688a146642a316e718a",
-      "original_class_hash": "0x2d5c3490b29ddf08728213221a87566a2fa92e58e7ed688a146642a316e718a",
+      "class_hash": "0x23ec6500e0f3e8c64c6fb3ee3ed3259d81c0bde627c8c9c1177da098189dd89",
+      "original_class_hash": "0x23ec6500e0f3e8c64c6fb3ee3ed3259d81c0bde627c8c9c1177da098189dd89",
       "abi": [
         {
           "type": "impl",
@@ -3922,18 +3999,29 @@
           "items": [
             {
               "type": "function",
-              "name": "selector",
+              "name": "name",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::felt252"
+                  "type": "core::byte_array::ByteArray"
                 }
               ],
               "state_mutability": "view"
             },
             {
               "type": "function",
-              "name": "name",
+              "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "tag",
               "inputs": [],
               "outputs": [
                 {
@@ -3955,18 +4043,7 @@
             },
             {
               "type": "function",
-              "name": "namespace",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "namespace_selector",
+              "name": "selector",
               "inputs": [],
               "outputs": [
                 {
@@ -3977,11 +4054,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "namespace_hash",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -4133,8 +4221,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x2e51c67a84751e6eac040a1ac757f7131ed3d8cb2979d985ee677b9b81856ec",
-      "original_class_hash": "0x2e51c67a84751e6eac040a1ac757f7131ed3d8cb2979d985ee677b9b81856ec",
+      "class_hash": "0x13f8294fde1c2605e9825782ae293b3bae2291e6cbd20d4ef8878ff044d4b82",
+      "original_class_hash": "0x13f8294fde1c2605e9825782ae293b3bae2291e6cbd20d4ef8878ff044d4b82",
       "abi": [
         {
           "type": "impl",
@@ -4377,18 +4465,29 @@
           "items": [
             {
               "type": "function",
-              "name": "selector",
+              "name": "name",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::felt252"
+                  "type": "core::byte_array::ByteArray"
                 }
               ],
               "state_mutability": "view"
             },
             {
               "type": "function",
-              "name": "name",
+              "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "tag",
               "inputs": [],
               "outputs": [
                 {
@@ -4410,18 +4509,7 @@
             },
             {
               "type": "function",
-              "name": "namespace",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "namespace_selector",
+              "name": "selector",
               "inputs": [],
               "outputs": [
                 {
@@ -4432,11 +4520,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "namespace_hash",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -4570,8 +4669,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x2fd0f7bf2373f0232270ac826f9a5bb206b04687ef7ee07f5ce3f688baf6c13",
-      "original_class_hash": "0x2fd0f7bf2373f0232270ac826f9a5bb206b04687ef7ee07f5ce3f688baf6c13",
+      "class_hash": "0x7104c882f56f62ef1f2453319bf6a1f5784b5f33b63b65506c38d62c3e3fd40",
+      "original_class_hash": "0x7104c882f56f62ef1f2453319bf6a1f5784b5f33b63b65506c38d62c3e3fd40",
       "abi": [
         {
           "type": "impl",
@@ -4814,18 +4913,29 @@
           "items": [
             {
               "type": "function",
-              "name": "selector",
+              "name": "name",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::felt252"
+                  "type": "core::byte_array::ByteArray"
                 }
               ],
               "state_mutability": "view"
             },
             {
               "type": "function",
-              "name": "name",
+              "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "tag",
               "inputs": [],
               "outputs": [
                 {
@@ -4847,18 +4957,7 @@
             },
             {
               "type": "function",
-              "name": "namespace",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "namespace_selector",
+              "name": "selector",
               "inputs": [],
               "outputs": [
                 {
@@ -4869,11 +4968,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "namespace_hash",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"
@@ -5004,8 +5114,8 @@
           "key": false
         }
       ],
-      "class_hash": "0x72d7c4cb46128c15db1993b664bc61043846f51e2bc737a3e9253409cd24f47",
-      "original_class_hash": "0x72d7c4cb46128c15db1993b664bc61043846f51e2bc737a3e9253409cd24f47",
+      "class_hash": "0x48dfe99daae31ced8d121079c148d084311483f047519d2d3fae363f15c7a1f",
+      "original_class_hash": "0x48dfe99daae31ced8d121079c148d084311483f047519d2d3fae363f15c7a1f",
       "abi": [
         {
           "type": "impl",
@@ -5248,18 +5358,29 @@
           "items": [
             {
               "type": "function",
-              "name": "selector",
+              "name": "name",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::felt252"
+                  "type": "core::byte_array::ByteArray"
                 }
               ],
               "state_mutability": "view"
             },
             {
               "type": "function",
-              "name": "name",
+              "name": "namespace",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "tag",
               "inputs": [],
               "outputs": [
                 {
@@ -5281,18 +5402,7 @@
             },
             {
               "type": "function",
-              "name": "namespace",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "namespace_selector",
+              "name": "selector",
               "inputs": [],
               "outputs": [
                 {
@@ -5303,11 +5413,22 @@
             },
             {
               "type": "function",
-              "name": "tag",
+              "name": "name_hash",
               "inputs": [],
               "outputs": [
                 {
-                  "type": "core::byte_array::ByteArray"
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "namespace_hash",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
                 }
               ],
               "state_mutability": "view"

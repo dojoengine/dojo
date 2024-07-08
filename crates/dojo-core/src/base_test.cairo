@@ -112,7 +112,7 @@ trait IMetadataOnly<T> {
     fn selector(self: @T) -> felt252;
     fn name(self: @T) -> ByteArray;
     fn namespace(self: @T) -> ByteArray;
-    fn namespace_selector(self: @T) -> felt252;
+    fn namespace_hash(self: @T) -> felt252;
 }
 
 #[starknet::contract]
@@ -131,7 +131,7 @@ mod invalid_legacy_model {
             "dojo"
         }
 
-        fn namespace_selector(self: @ContractState) -> felt252 {
+        fn namespace_hash(self: @ContractState) -> felt252 {
             dojo::utils::hash(@Self::namespace(self))
         }
 
@@ -158,7 +158,7 @@ mod invalid_legacy_model_world {
             "dojo"
         }
 
-        fn namespace_selector(self: @ContractState) -> felt252 {
+        fn namespace_hash(self: @ContractState) -> felt252 {
             dojo::utils::hash(@Self::namespace(self))
         }
 
@@ -178,14 +178,14 @@ mod invalid_model {
         fn selector(self: @ContractState) -> felt252 {
             // NOTE: Need to update this value if address changes
             // Pre-computed address of a contract deployed through the world.
-            0x1130142d6bff3c9cb891a270922a4c6dbf4c222b675cdc1341905b17341e3ab
+            0x21b19f95ff0f382a069dc7034f95584b300133665ee506789c76ba729e42b66
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
             "dojo"
         }
 
-        fn namespace_selector(self: @ContractState) -> felt252 {
+        fn namespace_hash(self: @ContractState) -> felt252 {
             dojo::utils::hash(@Self::namespace(self))
         }
 
@@ -212,7 +212,7 @@ mod invalid_model_world {
             "dojo"
         }
 
-        fn namespace_selector(self: @ContractState) -> felt252 {
+        fn namespace_hash(self: @ContractState) -> felt252 {
             dojo::utils::hash(@Self::namespace(self))
         }
 

@@ -526,7 +526,7 @@ mod world {
             let caller = get_caller_address();
 
             let salt = self.models_count.read();
-            let (address, name, selector, namespace, namespace_selector) =
+            let (address, name, selector, namespace, namespace_hash) =
                 dojo::model::deploy_and_get_metadata(
                 salt.into(), class_hash
             )
@@ -538,11 +538,9 @@ mod world {
                 starknet::contract_address::ContractAddressZeroable::zero(),
             );
 
+            assert(self._is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
             assert(
-                self._is_namespace_registered(namespace_selector), Errors::NAMESPACE_NOT_REGISTERED
-            );
-            assert(
-                self.can_write_namespace(namespace_selector, get_caller_address()),
+                self.can_write_namespace(namespace_hash, get_caller_address()),
                 Errors::NO_NAMESPACE_WRITE_ACCESS
             );
 
@@ -653,12 +651,10 @@ mod world {
             let dispatcher = IContractDispatcher { contract_address };
             let namespace = dispatcher.namespace();
             let name = dispatcher.contract_name();
-            let namespace_selector = dispatcher.namespace_selector();
+            let namespace_hash = dispatcher.namespace_hash();
+            assert(self._is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
             assert(
-                self._is_namespace_registered(namespace_selector), Errors::NAMESPACE_NOT_REGISTERED
-            );
-            assert(
-                self.can_write_namespace(namespace_selector, get_caller_address()),
+                self.can_write_namespace(namespace_hash, get_caller_address()),
                 Errors::NO_NAMESPACE_WRITE_ACCESS
             );
 
@@ -931,9 +927,9 @@ mod world {
 
         /// Indicates if the provided namespace is already registered
         #[inline(always)]
-        fn _is_namespace_registered(self: @ContractState, namespace_selector: felt252) -> bool {
+        fn _is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
             // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(namespace_selector);
+            let resource: ResourceData = self.resources.read(namespace_hash);
             match resource {
                 ResourceData::Namespace => true,
                 _ => false
@@ -965,7 +961,7 @@ mod world {
                 && !self.is_account_owner(model_id)
                 && !self.is_account_writer(model_id) {
                 let model = IModelDispatcher { contract_address: model_address };
-                self._check_basic_write_access(model.namespace_selector(), contract)
+                self._check_basic_write_access(model.namespace_hash(), contract)
             } else {
                 true
             }

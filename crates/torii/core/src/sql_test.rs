@@ -3,7 +3,7 @@ use std::str::FromStr;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler;
 use dojo_test_utils::migration::prepare_migration;
-use dojo_world::contracts::naming::compute_model_selector_from_names;
+use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::{dojo_metadata_from_workspace, get_default_namespace_from_ws};
 use dojo_world::migration::TxnConfig;
@@ -141,10 +141,7 @@ async fn test_load_from_remote() {
         .await
         .unwrap();
 
-    assert_eq!(
-        id,
-        format!("{:#x}", compute_model_selector_from_names("dojo_examples", "Position"))
-    );
+    assert_eq!(id, format!("{:#x}", compute_selector_from_names("dojo_examples", "Position")));
     assert_eq!(name, "Position");
     assert_eq!(namespace, "dojo_examples");
     assert_eq!(packed_size, 1);
@@ -159,7 +156,7 @@ async fn test_load_from_remote() {
         .await
         .unwrap();
 
-    assert_eq!(id, format!("{:#x}", compute_model_selector_from_names("dojo_examples", "Moves")));
+    assert_eq!(id, format!("{:#x}", compute_selector_from_names("dojo_examples", "Moves")));
     assert_eq!(name, "Moves");
     assert_eq!(namespace, "dojo_examples");
     assert_eq!(packed_size, 0);
@@ -174,10 +171,7 @@ async fn test_load_from_remote() {
         .await
         .unwrap();
 
-    assert_eq!(
-        id,
-        format!("{:#x}", compute_model_selector_from_names("dojo_examples", "PlayerConfig"))
-    );
+    assert_eq!(id, format!("{:#x}", compute_selector_from_names("dojo_examples", "PlayerConfig")));
     assert_eq!(name, "PlayerConfig");
     assert_eq!(namespace, "dojo_examples");
     assert_eq!(packed_size, 0);

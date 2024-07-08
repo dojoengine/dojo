@@ -39,17 +39,6 @@
       },
       {
         "type": "function",
-        "name": "selector",
-        "inputs": [],
-        "outputs": [
-          {
-            "type": "core::felt252"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
         "name": "namespace",
         "inputs": [],
         "outputs": [
@@ -61,7 +50,18 @@
       },
       {
         "type": "function",
-        "name": "namespace_selector",
+        "name": "tag",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::byte_array::ByteArray"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "name_hash",
         "inputs": [],
         "outputs": [
           {
@@ -72,11 +72,22 @@
       },
       {
         "type": "function",
-        "name": "tag",
+        "name": "namespace_hash",
         "inputs": [],
         "outputs": [
           {
-            "type": "core::byte_array::ByteArray"
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "selector",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::felt252"
           }
         ],
         "state_mutability": "view"

@@ -50,6 +50,14 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
         "ResourceMetadata"
     }
 
+    fn namespace() -> ByteArray {
+        "__DOJO__"
+    }
+
+    fn tag() -> ByteArray {
+        "__DOJO__-ResourceMetadata"
+    }
+
     #[inline(always)]
     fn version() -> u8 {
         1
@@ -57,9 +65,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        poseidon::poseidon_hash_span(
-            array![Self::namespace_selector(), dojo::utils::hash(@Self::name())].span()
-        )
+        poseidon::poseidon_hash_span(array![Self::namespace_hash(), Self::name_hash()].span())
     }
 
     #[inline(always)]
@@ -67,16 +73,12 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
         Self::selector()
     }
 
-    fn namespace() -> ByteArray {
-        "__DOJO__"
+    fn name_hash() -> felt252 {
+        dojo::utils::hash(@Self::name())
     }
 
-    fn namespace_selector() -> felt252 {
+    fn namespace_hash() -> felt252 {
         dojo::utils::hash(@Self::namespace())
-    }
-
-    fn tag() -> ByteArray {
-        "__DOJO__:ResourceMetadata"
     }
 
     #[inline(always)]

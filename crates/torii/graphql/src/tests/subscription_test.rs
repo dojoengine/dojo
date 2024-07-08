@@ -7,7 +7,7 @@ mod tests {
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abi::model::Layout;
-    use dojo_world::contracts::naming::compute_model_selector_from_names;
+    use dojo_world::contracts::naming::compute_selector_from_names;
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::{Event, Felt};
@@ -256,7 +256,7 @@ mod tests {
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
+        let model_id = format!("{:#x}", compute_selector_from_names(&namespace, &model_name));
         let class_hash = Felt::TWO;
         let contract_address = Felt::THREE;
         let block_timestamp: u64 = 1710754478_u64;
@@ -320,7 +320,7 @@ mod tests {
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
+        let model_id = format!("{:#x}", compute_selector_from_names(&namespace, &model_name));
         let class_hash = Felt::TWO;
         let contract_address = Felt::THREE;
         let block_timestamp: u64 = 1710754478_u64;

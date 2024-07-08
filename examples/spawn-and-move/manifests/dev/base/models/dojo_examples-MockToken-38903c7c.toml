@@ -1,6 +1,6 @@
 kind = "DojoModel"
-class_hash = "0x50b9989aedf757df9b0a8e235b78d7e185fd4a6cbf05d61da097e19e5cf4efb"
-original_class_hash = "0x50b9989aedf757df9b0a8e235b78d7e185fd4a6cbf05d61da097e19e5cf4efb"
+class_hash = "0x4463c89586bc5015a7bc97e9e4af123330842b20aa6f6587c795d6d35907a9d"
+original_class_hash = "0x4463c89586bc5015a7bc97e9e4af123330842b20aa6f6587c795d6d35907a9d"
 abi = "manifests/dev/base/abis/models/dojo_examples-MockToken-38903c7c.json"
 tag = "dojo_examples-MockToken"
 manifest_name = "dojo_examples-MockToken-38903c7c"

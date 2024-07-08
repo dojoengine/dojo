@@ -157,10 +157,7 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
             .into_iter()
             .map(|component| {
                 Ok((
-                    naming::compute_model_selector_from_names(
-                        &component.namespace,
-                        &component.name,
-                    ),
+                    naming::compute_selector_from_names(&component.namespace, &component.name),
                     component.try_into()?,
                 ))
             })
