@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function, FunctionOutputKind, Token};
-use dojo_world::contracts::naming;
+use dojo_world::contracts::naming::{self, get_namespace_from_tag};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -178,35 +178,38 @@ public abstract record {}() : Enum {{",
     // Token should be a model
     // This will be formatted into a C# class inheriting from ModelInstance
     // Fields are mapped using C# and unity SDK types
-    fn format_model(model: &Composite) -> String {
+    fn format_model(namespace: &str, model: &Composite) -> String {
         let fields = model
             .inners
             .iter()
             .map(|field| {
                 format!(
-                    "[ModelField(\"{}\")]\n    public {} {};",
+                    "[ModelField(\"{}\")]\n        public {} {};",
                     field.name,
                     UnityPlugin::map_type(&field.token),
                     field.name,
                 )
             })
             .collect::<Vec<String>>()
-            .join("\n\n    ");
+            .join("\n\n        ");
 
         format!(
             "
-// Model definition for `{}` model
-public class {} : ModelInstance {{
-    {}
+namespace {namespace} {{
+    // Model definition for `{}` model
+    public class {} : ModelInstance {{
+        {}
 
-    // Start is called before the first frame update
-    void Start() {{
-    }}
-
-    // Update is called once per frame
-    void Update() {{
+        // Start is called before the first frame update
+        void Start() {{
+        }}
+    
+        // Update is called once per frame
+        void Update() {{
+        }}
     }}
 }}
+
         ",
             model.type_path,
             model.type_name(),
@@ -255,7 +258,11 @@ public class {} : ModelInstance {{
 
         out += "\n";
 
-        out += UnityPlugin::format_model(model_struct.expect("model struct not found")).as_str();
+        out += UnityPlugin::format_model(
+            &get_namespace_from_tag(&model.tag),
+            model_struct.expect("model struct not found"),
+        )
+        .as_str();
 
         out
     }
