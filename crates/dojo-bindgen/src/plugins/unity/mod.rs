@@ -258,7 +258,11 @@ namespace {namespace} {{
 
         out += "\n";
 
-        out += UnityPlugin::format_model(&get_namespace_from_tag(&model.tag), model_struct.expect("model struct not found")).as_str();
+        out += UnityPlugin::format_model(
+            &get_namespace_from_tag(&model.tag),
+            model_struct.expect("model struct not found"),
+        )
+        .as_str();
 
         out
     }
