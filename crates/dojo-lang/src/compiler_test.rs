@@ -17,8 +17,9 @@ fn test_compiler_cairo_features() {
     let compile_info = scarb_internal::compile_workspace(
         &config,
         CompileOpts {
-            include_targets: vec![],
-            exclude_targets: vec![TargetKind::TEST],
+            include_target_names: vec![],
+            include_target_kinds: vec![],
+            exclude_target_kinds: vec![TargetKind::TEST],
             features: features_opts,
         },
     )

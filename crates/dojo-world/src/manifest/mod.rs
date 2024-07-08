@@ -41,10 +41,10 @@ pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world";
 pub const BASE_QUALIFIED_PATH: &str = "dojo::base::base";
 
 pub const MANIFESTS_DIR: &str = "manifests";
+pub const DEPLOYMENT_DIR: &str = "deployment";
 pub const TARGET_DIR: &str = "target";
 pub const BASE_DIR: &str = "base";
 pub const OVERLAYS_DIR: &str = "overlays";
-pub const DEPLOYMENTS_DIR: &str = "deployments";
 pub const ABIS_DIR: &str = "abis";
 
 pub const CONTRACTS_DIR: &str = "contracts";
@@ -366,25 +366,25 @@ impl DeploymentManifest {
         Ok(())
     }
 
-    pub fn write_to_path_json(&self, path: &Utf8PathBuf, profile_dir: &Utf8PathBuf) -> Result<()> {
+    pub fn write_to_path_json(&self, path: &Utf8PathBuf, root_dir: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
         // Embedding ABIs into the manifest.
         let mut manifest_with_abis = self.clone();
 
         if let Some(abi_format) = &manifest_with_abis.world.inner.abi {
-            manifest_with_abis.world.inner.abi = Some(abi_format.to_embed(profile_dir)?);
+            manifest_with_abis.world.inner.abi = Some(abi_format.to_embed(root_dir)?);
         }
 
         for contract in &mut manifest_with_abis.contracts {
             if let Some(abi_format) = &contract.inner.abi {
-                contract.inner.abi = Some(abi_format.to_embed(profile_dir)?);
+                contract.inner.abi = Some(abi_format.to_embed(root_dir)?);
             }
         }
 
         for model in &mut manifest_with_abis.models {
             if let Some(abi_format) = &model.inner.abi {
-                model.inner.abi = Some(abi_format.to_embed(profile_dir)?);
+                model.inner.abi = Some(abi_format.to_embed(root_dir)?);
             }
         }
 

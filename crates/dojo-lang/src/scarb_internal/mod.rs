@@ -93,10 +93,10 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
 
     let compilation_units = scarb::ops::generate_compilation_units(&resolve, &features_opts, &ws)?
         .into_iter()
-        .filter(|cu| !opts.exclude_targets.contains(&cu.main_component().target_kind()))
+        .filter(|cu| !opts.exclude_target_kinds.contains(&cu.main_component().target_kind()))
         .filter(|cu| {
-            opts.include_targets.is_empty()
-                || opts.include_targets.contains(&cu.main_component().target_kind())
+            opts.include_target_kinds.is_empty()
+                || opts.include_target_kinds.contains(&cu.main_component().target_kind())
         })
         .filter(|cu| packages.contains(&cu.main_package_id()))
         .collect::<Vec<_>>();

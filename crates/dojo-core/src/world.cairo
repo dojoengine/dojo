@@ -92,7 +92,7 @@ mod world {
         contract_address_const, get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
         syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult,
-        SyscallResultTrait, SyscallResultTraitImpl
+        SyscallResultTrait, SyscallResultTraitImpl, storage::Map,
     };
 
     use dojo::database;
@@ -227,12 +227,12 @@ mod world {
         contract_base: ClassHash,
         nonce: usize,
         models_count: usize,
-        resources: LegacyMap::<felt252, ResourceData>,
-        owners: LegacyMap::<(felt252, ContractAddress), bool>,
-        writers: LegacyMap::<(felt252, ContractAddress), bool>,
+        resources: Map::<felt252, ResourceData>,
+        owners: Map::<(felt252, ContractAddress), bool>,
+        writers: Map::<(felt252, ContractAddress), bool>,
         #[substorage(v0)]
         config: Config::Storage,
-        initialized_contract: LegacyMap::<felt252, bool>,
+        initialized_contract: Map::<felt252, bool>,
     }
 
     #[derive(Drop, starknet::Store, Default, Debug)]

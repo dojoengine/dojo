@@ -53,8 +53,8 @@ pub enum Commands {
     Init(InitArgs),
     #[command(about = "Remove generated artifacts, manifests and abis")]
     Clean(CleanArgs),
-    #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
-                       update the world")]
+    #[command(about = "Run a migration, declaring and deploying contracts as necessary to update \
+                       the world")]
     Migrate(Box<MigrateArgs>),
     #[command(about = "Developer mode: watcher for building and migration")]
     Dev(DevArgs),

@@ -104,12 +104,12 @@ fn compile_dojo_core() {
         file,
         r#"
 [package]
-cairo-version = "2.4.0"
+cairo-version = "=2.6.4"
 name = "dojo"
-version = "0.4.4"
+version = "0.7.3"
 
 [dependencies]
-starknet = "2.4.0"
+starknet = "=2.6.4"
 
 [[target.starknet-contract]]
 sierra = true
@@ -129,8 +129,9 @@ sierra = true
     scarb::ops::compile(
         packages,
         CompileOpts {
-            include_targets: vec![],
-            exclude_targets: vec![TargetKind::TEST],
+            include_target_names: vec![],
+            include_target_kinds: vec![],
+            exclude_target_kinds: vec![TargetKind::TEST],
             features: features_opts,
         },
         &ws,
