@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720408036575,
+  "lastUpdate": 1720408843171,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11185,6 +11185,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16293657,
             "range": "± 80147",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "617fafba19d1f2f7cdc1a135bbcfdc4372db7a9c",
+          "message": "feat: bump cairo and scarb to latest nightly (#2152)\n\n* bump cairo and scarb to latest nightly\r\n\r\n* fix: fmt + clippy\r\n\r\n* fix: fix cairo test and update devcontainer rust version\r\n\r\n* fix: revert devcontainer to be done in an other PR\r\n\r\n* ci: update devcontainer\r\n\r\n* fix: fmt with new toolchain version\r\n\r\n* fix: remove dedup profiles as fixed in Scarb",
+          "timestamp": "2024-07-07T21:09:27-06:00",
+          "tree_id": "ca3606848dcd10d9c6fa62ed487292bfe614a2db",
+          "url": "https://github.com/dojoengine/dojo/commit/617fafba19d1f2f7cdc1a135bbcfdc4372db7a9c"
+        },
+        "date": 1720408842493,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15895076,
+            "range": "± 296513",
             "unit": "ns/iter"
           }
         ]
