@@ -7,6 +7,7 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+katana-cairo = { workspace = true }
 katana-primitives = { workspace = true }
 
 anyhow.workspace = true
@@ -19,7 +20,6 @@ thiserror.workspace = true
 
 cairo-vm.workspace = true
 roaring = { version = "0.10.3", features = [ "serde" ] }
-starknet_api.workspace = true
 
 # codecs
 [dependencies.postcard]
@@ -34,7 +34,7 @@ package = "reth-libmdbx"
 rev = "b34b0d3"
 
 [dev-dependencies]
-cairo-lang-starknet.workspace = true
+# cairo-lang-starknet.workspace = true
 criterion.workspace = true
 starknet.workspace = true
 tempfile.workspace = true

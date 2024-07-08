@@ -14,25 +14,19 @@ katana-provider.workspace = true
 katana-tasks.workspace = true
 
 anyhow.workspace = true
-async-trait.workspace = true
+async-trait = { workspace = true, optional = true }
 cairo-vm.workspace = true
-convert_case.workspace = true
 derive_more.workspace = true
 dojo-metrics.workspace = true
-flate2.workspace = true
 futures.workspace = true
-k256 = { version = "0.13", default-features = false, features = [ "ecdsa", "std" ] }
 lazy_static.workspace = true
 metrics.workspace = true
 num-traits.workspace = true
 parking_lot.workspace = true
-rand = { workspace = true, features = [ "small_rng" ] }
-reqwest.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-serde_with.workspace = true
+reqwest = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 starknet.workspace = true
-starknet_api.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
@@ -45,7 +39,6 @@ alloy-contract = { version = "0.1.0", default-features = false, optional = true 
 alloy-network = { version = "0.1.0", default-features = false, optional = true }
 alloy-provider = { version = "0.1.0", default-features = false, optional = true, features = [ "reqwest" ] }
 alloy-rpc-types = { version = "0.1.0", default-features = false, optional = true }
-alloy-signer = { version = "0.1.0", default-features = false, optional = true }
 alloy-transport = { version = "0.1.0", default-features = false, optional = true }
 
 [dev-dependencies]
@@ -59,8 +52,11 @@ messaging = [
     "alloy-network",
     "alloy-provider",
     "alloy-rpc-types",
-    "alloy-signer",
     "alloy-sol-types",
     "alloy-transport",
+    "async-trait",
+    "reqwest",
+    "serde",
+    "serde_json",
 ]
 starknet-messaging = [  ]

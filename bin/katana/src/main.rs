@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
 use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
