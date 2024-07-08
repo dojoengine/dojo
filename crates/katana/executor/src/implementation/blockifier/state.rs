@@ -4,6 +4,8 @@ use std::sync::Arc;
 use blockifier::state::cached_state::{self, GlobalContractCache};
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
+use katana_cairo::starknet_api::core::{ClassHash, CompiledClassHash, Nonce};
+use katana_cairo::starknet_api::state::StorageKey;
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
 use katana_primitives::FieldElement;
 use katana_provider::error::ProviderError;
@@ -11,8 +13,6 @@ use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use starknet_api::core::{ClassHash, CompiledClassHash, Nonce};
-use starknet_api::state::StorageKey;
 
 use super::utils::{self, to_felt, to_stark_felt};
 use super::CACHE_SIZE;
@@ -26,8 +26,8 @@ impl<T> StateDb for T where T: StateProvider + StateReader {}
 impl<'a> StateReader for StateProviderDb<'a> {
     fn get_class_hash_at(
         &mut self,
-        contract_address: starknet_api::core::ContractAddress,
-    ) -> StateResult<starknet_api::core::ClassHash> {
+        contract_address: katana_cairo::starknet_api::core::ContractAddress,
+    ) -> StateResult<katana_cairo::starknet_api::core::ClassHash> {
         self.0
             .class_hash_of_contract(utils::to_address(contract_address))
             .map(|v| ClassHash(to_stark_felt(v.unwrap_or_default())))
@@ -36,8 +36,8 @@ impl<'a> StateReader for StateProviderDb<'a> {
 
     fn get_compiled_class_hash(
         &mut self,
-        class_hash: starknet_api::core::ClassHash,
-    ) -> StateResult<starknet_api::core::CompiledClassHash> {
+        class_hash: katana_cairo::starknet_api::core::ClassHash,
+    ) -> StateResult<katana_cairo::starknet_api::core::CompiledClassHash> {
         if let Some(hash) = self
             .0
             .compiled_class_hash_of_class_hash(to_felt(class_hash.0))
@@ -69,8 +69,8 @@ impl<'a> StateReader for StateProviderDb<'a> {
 
     fn get_nonce_at(
         &mut self,
-        contract_address: starknet_api::core::ContractAddress,
-    ) -> StateResult<starknet_api::core::Nonce> {
+        contract_address: katana_cairo::starknet_api::core::ContractAddress,
+    ) -> StateResult<katana_cairo::starknet_api::core::Nonce> {
         self.0
             .nonce(utils::to_address(contract_address))
             .map(|n| Nonce(to_stark_felt(n.unwrap_or_default())))
@@ -79,9 +79,9 @@ impl<'a> StateReader for StateProviderDb<'a> {
 
     fn get_storage_at(
         &mut self,
-        contract_address: starknet_api::core::ContractAddress,
-        key: starknet_api::state::StorageKey,
-    ) -> StateResult<starknet_api::hash::StarkFelt> {
+        contract_address: katana_cairo::starknet_api::core::ContractAddress,
+        key: katana_cairo::starknet_api::state::StorageKey,
+    ) -> StateResult<katana_cairo::starknet_api::hash::StarkFelt> {
         self.0
             .storage(utils::to_address(contract_address), to_felt(*key.0.key()))
             .map(|v| to_stark_felt(v.unwrap_or_default()))
@@ -215,7 +215,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
 impl<S: StateDb> StateReader for CachedState<S> {
     fn get_class_hash_at(
         &mut self,
-        contract_address: starknet_api::core::ContractAddress,
+        contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<ClassHash> {
         self.write().inner.get_class_hash_at(contract_address)
     }
@@ -233,16 +233,16 @@ impl<S: StateDb> StateReader for CachedState<S> {
 
     fn get_nonce_at(
         &mut self,
-        contract_address: starknet_api::core::ContractAddress,
+        contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<Nonce> {
         self.write().inner.get_nonce_at(contract_address)
     }
 
     fn get_storage_at(
         &mut self,
-        contract_address: starknet_api::core::ContractAddress,
+        contract_address: katana_cairo::starknet_api::core::ContractAddress,
         key: StorageKey,
-    ) -> StateResult<starknet_api::hash::StarkFelt> {
+    ) -> StateResult<katana_cairo::starknet_api::hash::StarkFelt> {
         self.write().inner.get_storage_at(contract_address, key)
     }
 }
@@ -251,6 +251,9 @@ impl<S: StateDb> StateReader for CachedState<S> {
 mod tests {
 
     use blockifier::state::state_api::{State, StateReader};
+    use katana_cairo::starknet_api::core::PatriciaKey;
+    use katana_cairo::starknet_api::hash::StarkHash;
+    use katana_cairo::starknet_api::patricia_key;
     use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::genesis::constant::{
@@ -263,9 +266,6 @@ mod tests {
     use katana_provider::traits::contract::ContractClassWriter;
     use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
     use starknet::macros::felt;
-    use starknet_api::core::PatriciaKey;
-    use starknet_api::hash::StarkHash;
-    use starknet_api::patricia_key;
 
     use super::{CachedState, *};
     use crate::StateProviderDb;

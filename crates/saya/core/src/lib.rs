@@ -1,5 +1,7 @@
 //! Saya core library.
 
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 

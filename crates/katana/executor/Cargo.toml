@@ -11,15 +11,10 @@ katana-primitives.workspace = true
 katana-provider.workspace = true
 
 convert_case.workspace = true
-futures.workspace = true
 parking_lot.workspace = true
-serde_json.workspace = true
-starknet.workspace = true
-starknet_api.workspace = true
+starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
-
-alloy-primitives.workspace = true
 
 # blockifier deps
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "57c11586", features = [ "testing" ], optional = true }
@@ -32,6 +27,7 @@ katana-cairo = { workspace = true, optional = true }
 # starknet-types-core = { version = "0.0.9", optional = true }
 
 [dev-dependencies]
+alloy-primitives.workspace = true
 anyhow.workspace = true
 katana-cairo.workspace = true
 katana-provider = { workspace = true, features = [ "test-utils" ] }
@@ -46,7 +42,7 @@ criterion.workspace = true
 pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 [features]
-blockifier = [ "dep:blockifier", "dep:katana-cairo" ]
+blockifier = [ "dep:blockifier", "dep:katana-cairo", "dep:starknet" ]
 default = [ "blockifier" ]
 # native = [ "sir", "sir/cairo-native" ]
 # sir = [ "dep:sir", "dep:starknet-types-core" ]
