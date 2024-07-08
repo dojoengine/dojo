@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720360084609,
+  "lastUpdate": 1720406166394,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11125,6 +11125,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16422313,
             "range": "± 204390",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f5514d2a5be8d5aa127772e56f55fc336b389b5",
+          "message": "refactor: update manifest structure (#2153)\n\n* update manifest structure\r\n\r\n* fix abi path in manifest\r\n\r\n* fix test\r\n\r\n* fix: fix typo and remove dbg\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-07T20:24:19-06:00",
+          "tree_id": "1f4852a632e01c718456b11936749f7b7f556584",
+          "url": "https://github.com/dojoengine/dojo/commit/7f5514d2a5be8d5aa127772e56f55fc336b389b5"
+        },
+        "date": 1720406165586,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16445496,
+            "range": "± 242020",
             "unit": "ns/iter"
           }
         ]
