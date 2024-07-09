@@ -160,7 +160,8 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
 
-    let db = Sql::new(pool.clone(), args.world_address).await?;
+    let class_hash = world.base().call().await?;
+    let db = Sql::new(pool.clone(), args.world_address, class_hash.into()).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),

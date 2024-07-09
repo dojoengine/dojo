@@ -95,7 +95,9 @@ async fn test_entities_queries() {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let db = Sql::new(pool.clone(), world_address).await.unwrap();
+    let db = Sql::new(pool.clone(), world_address, world.base().call().await.unwrap().into())
+        .await
+        .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(

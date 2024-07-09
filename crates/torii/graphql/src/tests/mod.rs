@@ -303,7 +303,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     migration.resolve_variable(migration.world.clone().unwrap().contract_address).unwrap();
 
-    let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
+    let db = Sql::new(pool.clone(), migration.world_address().unwrap(), Felt::ZERO).await.unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
