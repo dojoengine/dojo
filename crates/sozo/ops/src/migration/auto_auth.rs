@@ -10,7 +10,7 @@ use starknet::accounts::ConnectedAccount;
 
 use super::ui::MigrationUi;
 use super::MigrationOutput;
-use crate::auth::{grant_writer, ResourceType, ResourceWriter};
+use crate::auth::{grant_writer, ResourceWriter};
 
 pub async fn auto_authorize<A>(
     ws: &Workspace<'_>,
@@ -27,7 +27,7 @@ where
     let ui = ws.config().ui();
 
     ui.print(" ");
-    ui.print_step(6, "🖋️", "Authorizing Models to Systems (based on overlay)...");
+    ui.print_step(6, "🖋️", "Authorizing systems based on overlay...");
     ui.print(" ");
     let new_writers = compute_writers(&ui, local_manifest, migration_output)?;
     grant_writer(&ui, world, new_writers, *txn_config, default_namespace).await
@@ -43,24 +43,31 @@ pub fn compute_writers(
 
     // From all the contracts that were migrated successfully.
     for migrated_contract in migration_output.contracts.iter().flatten() {
-        // Find that contract from local_manifest based on its name.
+        // Find that contract from local_manifest based on its tag.
         let contract = local_contracts
             .iter()
             .find(|c| migrated_contract.tag == c.inner.tag)
             .expect("we know this contract exists");
 
-        ui.print_sub(format!(
-            "Authorizing {} for Models: {:?}",
-            contract.inner.tag, contract.inner.writes
-        ));
+        // TODO: we may add support for `owns`?
 
-        // Read all the models that its supposed to write and collect them in a Vec<ResourceWriter>
-        // so we can call `grant_writer` on all of them.
-        for model_tag in &contract.inner.writes {
-            let resource = ResourceType::from_str(format!("model:{model_tag}").as_str())?;
-            let tag_or_address = format!("{:#x}", migrated_contract.contract_address);
+        if !contract.inner.writes.is_empty() {
+            ui.print_sub(format!(
+                "Authorizing {} for resources: {:?}",
+                contract.inner.tag, contract.inner.writes
+            ));
+        }
 
-            res.push(ResourceWriter { resource, tag_or_address });
+        for tag_with_prefix in &contract.inner.writes {
+            let resource_type = if tag_with_prefix.contains(':') {
+                tag_with_prefix.to_string()
+            } else {
+                // Default to model if no prefix was given.
+                format!("m:{}", tag_with_prefix)
+            };
+
+            let resource = format!("{},{}", resource_type, migrated_contract.contract_address);
+            res.push(ResourceWriter::from_str(&resource)?);
         }
     }
 
