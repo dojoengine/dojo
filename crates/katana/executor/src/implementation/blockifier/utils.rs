@@ -108,7 +108,7 @@ pub fn transact<S: StateReader>(
             info.transaction_receipt.fee
         };
 
-        let consts = block_context.versioned_constants();
+        // let consts = block_context.versioned_constants();
         // let gas_consumed = calculate_tx_gas_vector(&info.actual_resources, consts)?.l1_gas;
         let gas_consumed = info.transaction_receipt.gas.l1_gas;
 
@@ -590,11 +590,11 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
     let calldata = call.call.calldata.0.as_ref().clone();
     let retdata = call.execution.retdata.0;
 
-    let execution_resources = trace::ExecutionResources {
-        n_steps: call.resources.n_steps as u64,
-        n_memory_holes: call.resources.n_memory_holes as u64,
-        builtin_instance_counter: call.resources.builtin_instance_counter,
-    };
+    // let execution_resources = trace::ExecutionResources {
+    //     n_steps: call.resources.n_steps,
+    //     n_memory_holes: call.resources.n_memory_holes as u64,
+    //     builtin_instance_counter: call.resources.builtin_instance_counter,
+    // };
 
     let CallExecution { events, l2_to_l1_messages, .. } = call.execution;
 
@@ -627,7 +627,7 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
         entry_point_type,
         calldata,
         retdata,
-        execution_resources,
+        execution_resources: call.resources,
         events,
         l2_to_l1_messages: l1_msg,
         storage_read_values,
