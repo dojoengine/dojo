@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720473265511,
+  "lastUpdate": 1720489229592,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11305,6 +11305,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16912720,
             "range": "± 155840",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "g4titan1@gmail.com",
+            "name": "アレーク",
+            "username": "g4titanx"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "37cceadd77263bc660d9835e4a59c1fb3a5fa752",
+          "message": "added missing_debug_implementations lint (#2016)\n\n* added missing_debug_implementations lint\r\n\r\n* added debug trait to trait bounds\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-08T19:31:31-06:00",
+          "tree_id": "1e3f7e417c9694a6a324f7323f09fe5ed7505365",
+          "url": "https://github.com/dojoengine/dojo/commit/37cceadd77263bc660d9835e4a59c1fb3a5fa752"
+        },
+        "date": 1720489228805,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16815767,
+            "range": "± 78265",
             "unit": "ns/iter"
           }
         ]
