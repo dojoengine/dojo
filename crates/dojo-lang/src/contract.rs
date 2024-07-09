@@ -109,7 +109,7 @@ impl DojoContract {
 
                         if fn_name == DOJO_INIT_FN {
                             has_init = true;
-                            return system.handle_init_fn(db, &fn_ast);
+                            return system.handle_init_fn(db, fn_ast);
                         }
                     }
 
