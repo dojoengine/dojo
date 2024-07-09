@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use blockifier::state::cached_state::{self, GlobalContractCache};
+use blockifier::state::cached_state::{self};
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
 use katana_cairo::starknet_api::core::{ClassHash, CompiledClassHash, Nonce};
@@ -25,7 +25,7 @@ impl<T> StateDb for T where T: StateProvider + StateReader {}
 
 impl<'a> StateReader for StateProviderDb<'a> {
     fn get_class_hash_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<katana_cairo::starknet_api::core::ClassHash> {
         self.0
@@ -35,7 +35,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
     }
 
     fn get_compiled_class_hash(
-        &mut self,
+        &self,
         class_hash: katana_cairo::starknet_api::core::ClassHash,
     ) -> StateResult<katana_cairo::starknet_api::core::CompiledClassHash> {
         if let Some(hash) = self
@@ -50,7 +50,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
     }
 
     fn get_compiled_contract_class(
-        &mut self,
+        &self,
         class_hash: ClassHash,
     ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
         if let Some(class) =
@@ -66,7 +66,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
     }
 
     fn get_nonce_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<katana_cairo::starknet_api::core::Nonce> {
         self.0
@@ -76,7 +76,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
     }
 
     fn get_storage_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
         key: katana_cairo::starknet_api::state::StorageKey,
     ) -> StateResult<katana_cairo::starknet_api::hash::StarkHash> {
@@ -107,8 +107,7 @@ pub(super) struct CachedStateInner<S: StateReader> {
 impl<S: StateDb> CachedState<S> {
     pub(super) fn new(state: S) -> Self {
         let declared_classes = HashMap::new();
-        let cached_state =
-            cached_state::CachedState::new(state, GlobalContractCache::new(CACHE_SIZE));
+        let cached_state = cached_state::CachedState::new(state);
         let inner = CachedStateInner { inner: cached_state, declared_classes };
         Self(Arc::new(RwLock::new(inner)))
     }
@@ -213,32 +212,32 @@ impl<S: StateDb> StateProvider for CachedState<S> {
 
 impl<S: StateDb> StateReader for CachedState<S> {
     fn get_class_hash_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<ClassHash> {
         self.write().inner.get_class_hash_at(contract_address)
     }
 
-    fn get_compiled_class_hash(&mut self, class_hash: ClassHash) -> StateResult<CompiledClassHash> {
+    fn get_compiled_class_hash(&self, class_hash: ClassHash) -> StateResult<CompiledClassHash> {
         self.write().inner.get_compiled_class_hash(class_hash)
     }
 
     fn get_compiled_contract_class(
-        &mut self,
+        &self,
         class_hash: ClassHash,
     ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
         self.write().inner.get_compiled_contract_class(class_hash)
     }
 
     fn get_nonce_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<Nonce> {
         self.write().inner.get_nonce_at(contract_address)
     }
 
     fn get_storage_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
         key: StorageKey,
     ) -> StateResult<katana_cairo::starknet_api::hash::StarkHash> {

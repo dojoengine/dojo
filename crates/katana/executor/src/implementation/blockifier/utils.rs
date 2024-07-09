@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap};
 use std::num::NonZeroU128;
 use std::sync::Arc;
@@ -44,6 +45,7 @@ use katana_cairo::starknet_api::transaction::{
     InvokeTransaction as ApiInvokeTransaction, PaymasterData, Resource, ResourceBounds,
     ResourceBoundsMapping, Tip, TransactionHash, TransactionSignature, TransactionVersion,
 };
+use katana_primitives::chain::NamedChainId;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -184,13 +186,13 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                     tx: ApiInvokeTransaction::V1(
                         katana_cairo::starknet_api::transaction::InvokeTransactionV1 {
                             max_fee: Fee(tx.max_fee),
-                            nonce: Nonce(to_stark_felt(tx.nonce)),
+                            nonce: Nonce(tx.nonce),
                             sender_address: to_blk_address(tx.sender_address),
                             signature: TransactionSignature(signature),
                             calldata: Calldata(Arc::new(calldata)),
                         },
                     ),
-                    tx_hash: TransactionHash(to_stark_felt(hash)),
+                    tx_hash: TransactionHash(hash),
                     only_query: false,
                 }))
             }
@@ -208,7 +210,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                     tx: ApiInvokeTransaction::V3(
                         katana_cairo::starknet_api::transaction::InvokeTransactionV3 {
                             tip: Tip(tx.tip),
-                            nonce: Nonce(to_stark_felt(tx.nonce)),
+                            nonce: Nonce(tx.nonce),
                             sender_address: to_blk_address(tx.sender_address),
                             signature: TransactionSignature(signature),
                             calldata: Calldata(Arc::new(calldata)),
@@ -219,7 +221,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                             resource_bounds: to_api_resource_bounds(tx.resource_bounds),
                         },
                     ),
-                    tx_hash: TransactionHash(to_stark_felt(hash)),
+                    tx_hash: TransactionHash(hash),
                     only_query: false,
                 }))
             }
@@ -229,7 +231,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
             DeployAccountTx::V1(tx) => {
                 let calldata = tx.constructor_calldata;
                 let signature = tx.signature;
-                let salt = ContractAddressSalt(to_stark_felt(tx.contract_address_salt));
+                let salt = ContractAddressSalt(tx.contract_address_salt);
 
                 Transaction::AccountTransaction(AccountTransaction::DeployAccount(
                     DeployAccountTransaction {
@@ -385,7 +387,7 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     versioned_constants.invoke_tx_max_n_steps = cfg_env.invoke_tx_max_n_steps;
     versioned_constants.vm_resource_fee_cost = cfg_env.vm_resource_fee_cost.clone().into();
 
-    BlockContext::new(&block_info, &chain_info, &versioned_constants, Default::default())
+    BlockContext::new(block_info, chain_info, versioned_constants, Default::default())
 }
 
 pub(super) fn state_update_from_cached_state<S: StateDb>(
@@ -424,18 +426,15 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
                 katana_primitives::contract::Nonce,
             >>();
 
-    let storage_updates = state_diff
-        .storage
-        .into_iter()
-        .map(|(entry, value)| {
-            let entries = entries.into_iter().map(|(k, v)| (*k.0.key(), v)).collect::<HashMap<
+    let storage_updates =
+        state_diff.storage.into_iter().fold(HashMap::new(), |mut storage, ((addr, key), value)| {
+            let entry: &mut HashMap<
                 katana_primitives::contract::StorageKey,
                 katana_primitives::contract::StorageValue,
-            >>();
-
-            (to_address(addr), entries)
-        })
-        .collect::<HashMap<katana_primitives::contract::ContractAddress, _>>();
+            > = storage.entry(to_address(addr)).or_default();
+            entry.insert(*key.0.key(), value);
+            storage
+        });
 
     let contract_updates =
         state_diff
@@ -511,10 +510,12 @@ pub fn to_address(address: ContractAddress) -> katana_primitives::contract::Cont
 
 pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
     match chain_id {
-        katana_primitives::chain::ChainId::Named(named) => ChainId::Other(named.name().to_string()),
+        katana_primitives::chain::ChainId::Named(NamedChainId::Mainnet) => ChainId::Mainnet,
+        katana_primitives::chain::ChainId::Named(NamedChainId::Sepolia) => ChainId::Sepolia,
+        katana_primitives::chain::ChainId::Named(named) => ChainId::Other(named.to_string()),
         katana_primitives::chain::ChainId::Id(id) => {
             let id = parse_cairo_short_string(&id).expect("valid cairo string");
-            ChainId(id)
+            ChainId::Other(id)
         }
     }
 }
