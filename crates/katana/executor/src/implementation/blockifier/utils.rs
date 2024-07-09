@@ -14,6 +14,8 @@ use blockifier::execution::contract_class::{
     ClassInfo, ContractClass, ContractClassV0, ContractClassV1,
 };
 use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
+use blockifier::fee::fee_utils::get_fee_by_gas_vector;
+use blockifier::state::cached_state;
 // use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_gas_vector};
 // use blockifier::state::cached_state::{self, GlobalContractCache};
 use blockifier::state::state_api::{State, StateReader};
@@ -93,14 +95,22 @@ pub fn transact<S: StateReader>(
         // where the fee is skipped and thus not charged for the transaction (e.g. when the
         // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
         // these cases, we still want to calculate the fee.
-        let overall_fee = if info.actual_fee == Fee(0) {
-            calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?.0
+        let fee = if info.transaction_receipt.fee == Fee(0) {
+            // calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?.0
+
+            // reference: blockifier::fee::actual_cost
+            get_fee_by_gas_vector(
+                &block_context.block_info(),
+                info.transaction_receipt.gas,
+                &fee_type,
+            )
         } else {
-            info.actual_fee.0
+            info.transaction_receipt.fee
         };
 
         let consts = block_context.versioned_constants();
-        let gas_consumed = calculate_tx_gas_vector(&info.actual_resources, consts)?.l1_gas;
+        // let gas_consumed = calculate_tx_gas_vector(&info.actual_resources, consts)?.l1_gas;
+        let gas_consumed = info.transaction_receipt.gas.l1_gas;
 
         let (unit, gas_price) = match fee_type {
             FeeType::Eth => {
@@ -111,9 +121,10 @@ pub fn transact<S: StateReader>(
             }
         };
 
-        let fee = TxFeeInfo { gas_consumed, gas_price: gas_price.into(), unit, overall_fee };
+        let fee_info =
+            TxFeeInfo { gas_consumed, gas_price: gas_price.into(), unit, overall_fee: fee.0 };
 
-        Ok((info, fee))
+        Ok((info, fee_info))
     }
 
     match transact_inner(state, block_context, simulation_flags, to_executor_tx(tx.clone())) {
@@ -135,7 +146,7 @@ pub fn call<S: StateReader>(
     block_context: &BlockContext,
     initial_gas: u128,
 ) -> Result<Vec<FieldElement>, ExecutionError> {
-    let mut state = cached_state::CachedState::new(state, GlobalContractCache::new(CACHE_SIZE));
+    let mut state = cached_state::CachedState::new(state);
 
     let call = CallEntryPoint {
         initial_gas: initial_gas as u64,
@@ -579,11 +590,10 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
     let calldata = call.call.calldata.0.as_ref().clone();
     let retdata = call.execution.retdata.0;
 
-    let builtin_counter = call.resources.builtin_instance_counter;
     let execution_resources = trace::ExecutionResources {
         n_steps: call.resources.n_steps as u64,
         n_memory_holes: call.resources.n_memory_holes as u64,
-        builtin_instance_counter: builtin_counter.into_iter().map(|(k, v)| (k, v as u64)).collect(),
+        builtin_instance_counter: call.resources.builtin_instance_counter,
     };
 
     let CallExecution { events, l2_to_l1_messages, .. } = call.execution;

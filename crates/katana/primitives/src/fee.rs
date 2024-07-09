@@ -13,3 +13,8 @@ pub struct TxFeeInfo {
     /// The type of fee used to pay for the transaction, depending on the transaction type.
     pub unit: PriceUnit,
 }
+
+// pub struct GasVector {
+//     pub l1_gas: u128,
+//     pub l1_data_gas: u128,
+// }

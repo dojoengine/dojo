@@ -12,10 +12,10 @@ use katana_provider::error::ProviderError;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use super::utils::{self};
-use super::CACHE_SIZE;
+// use super::CACHE_SIZE;
 use crate::StateProviderDb;
 
 /// A helper trait to enforce that a type must implement both [StateProvider] and [StateReader].
@@ -88,7 +88,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
 }
 
 #[derive(Debug)]
-pub(super) struct CachedState<S: StateDb>(pub(super) Arc<RwLock<CachedStateInner<S>>>);
+pub(super) struct CachedState<S: StateDb>(pub(super) Arc<Mutex<CachedStateInner<S>>>);
 
 impl<S: StateDb> Clone for CachedState<S> {
     fn clone(&self) -> Self {
@@ -109,16 +109,16 @@ impl<S: StateDb> CachedState<S> {
         let declared_classes = HashMap::new();
         let cached_state = cached_state::CachedState::new(state);
         let inner = CachedStateInner { inner: cached_state, declared_classes };
-        Self(Arc::new(RwLock::new(inner)))
+        Self(Arc::new(Mutex::new(inner)))
     }
 
-    pub(super) fn read(&self) -> RwLockReadGuard<'_, CachedStateInner<S>> {
-        self.0.read()
-    }
+    // pub(super) fn read(&self) -> RwLockReadGuard<'_, CachedStateInner<S>> {
+    //     self.0.read()
+    // }
 
-    pub(super) fn write(&self) -> RwLockWriteGuard<'_, CachedStateInner<S>> {
-        self.0.write()
-    }
+    // pub(super) fn write(&self) -> RwLockWriteGuard<'_, CachedStateInner<S>> {
+    //     self.0.write()
+    // }
 }
 
 impl<S: StateDb> ContractClassProvider for CachedState<S> {
@@ -167,11 +167,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         };
 
         let hash = hash.0;
-        if hash == FieldElement::ZERO {
-            Ok(None)
-        } else {
-            Ok(Some(hash))
-        }
+        if hash == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash)) }
     }
 
     fn nonce(

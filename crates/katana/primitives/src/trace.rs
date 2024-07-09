@@ -5,6 +5,9 @@ use crate::contract::ContractAddress;
 use crate::event::OrderedEvent;
 use crate::message::OrderedL2ToL1Message;
 use crate::FieldElement;
+use katana_cairo::cairo_vm::vm;
+
+pub type ExecutionResources = vm::runners::cairo_runner::ExecutionResources;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -24,13 +27,13 @@ pub struct TxExecInfo {
     pub revert_error: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ExecutionResources {
-    pub n_steps: u64,
-    pub n_memory_holes: u64,
-    pub builtin_instance_counter: HashMap<String, u64>,
-}
+// #[derive(Debug, Clone, PartialEq, Eq, Default)]
+// #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+// pub struct ExecutionResources {
+//     pub n_steps: u64,
+//     pub n_memory_holes: u64,
+//     pub builtin_instance_counter: HashMap<BuiltinName, u64>,
+// }
 
 /// The call type.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

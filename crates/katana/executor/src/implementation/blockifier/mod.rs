@@ -4,9 +4,9 @@ pub mod utils;
 
 use std::num::NonZeroU128;
 
-use blockifier::block::{BlockInfo, GasPrices};
+use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::BlockContext;
-use blockifier::state::cached_state::{self, GlobalContractCache, MutRefState};
+use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
 use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
@@ -111,8 +111,8 @@ impl<'a> StarknetVMProcessor<'a> {
         // TODO: @kariy, not sure here if we should add some functions to alter it
         // instead of cloning. Or did I miss a function?
         // https://github.com/starkware-libs/blockifier/blob/a6200402ab635d8a8e175f7f135be5914c960007/crates/blockifier/src/context.rs#L23
-        let versioned_constants = self.block_context.versioned_constants();
-        let chain_info = self.block_context.chain_info();
+        let versioned_constants = self.block_context.versioned_constants().clone();
+        let chain_info = self.block_context.chain_info().clone();
         let block_info = BlockInfo {
             block_number: number,
             block_timestamp: timestamp,
@@ -127,7 +127,7 @@ impl<'a> StarknetVMProcessor<'a> {
         };
 
         self.block_context =
-            BlockContext::new_unchecked(&block_info, chain_info, versioned_constants);
+            BlockContext::new(block_info, chain_info, versioned_constants, Default::default());
     }
 
     fn simulate_with<F, T>(
@@ -141,10 +141,7 @@ impl<'a> StarknetVMProcessor<'a> {
     {
         let block_context = &self.block_context;
         let state = &mut self.state.0.write().inner;
-        let mut state = cached_state::CachedState::new(
-            MutRefState::new(state),
-            GlobalContractCache::new(CACHE_SIZE),
-        );
+        let mut state = cached_state::CachedState::new(MutRefState::new(state));
 
         let mut results = Vec::with_capacity(transactions.len());
         for exec_tx in transactions {
@@ -187,7 +184,8 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
             match &res {
                 ExecutionResult::Success { receipt, trace } => {
                     self.stats.l1_gas_used += receipt.fee().gas_consumed;
-                    self.stats.cairo_steps_used += receipt.resources_used().steps as u128;
+                    self.stats.cairo_steps_used +=
+                        receipt.resources_used().vm_resources.n_steps as u128;
 
                     if let Some(reason) = receipt.revert_reason() {
                         info!(target: LOG_TARGET, %reason, "Transaction reverted.");
