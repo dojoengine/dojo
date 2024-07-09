@@ -75,7 +75,11 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 
@@ -93,7 +97,11 @@ impl GeneratedFileAuxData for ComputedValuesAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 
@@ -112,17 +120,23 @@ impl BuiltinDojoPlugin {
         db: &dyn SyntaxGroup,
         module_ast: ast::ItemModule,
         package_id: String,
+        metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
-            return DojoContract::from_module(db, &module_ast, package_id);
+            return DojoContract::from_module(db, &module_ast, package_id, metadata);
         }
 
         PluginResult::default()
     }
 
-    fn handle_trait(&self, db: &dyn SyntaxGroup, trait_ast: ast::ItemTrait) -> PluginResult {
+    fn handle_trait(
+        &self,
+        db: &dyn SyntaxGroup,
+        trait_ast: ast::ItemTrait,
+        metadata: &MacroPluginMetadata<'_>,
+    ) -> PluginResult {
         if trait_ast.has_attr(db, DOJO_INTERFACE_ATTR) {
-            return DojoInterface::from_trait(db, trait_ast);
+            return DojoInterface::from_trait(db, trait_ast, metadata);
         }
 
         PluginResult::default()
@@ -330,13 +344,11 @@ fn get_additional_derive_attrs_for_model(derive_attr_names: &[String]) -> Vec<St
 }
 
 impl MacroPlugin for BuiltinDojoPlugin {
-    // New metadata field: <https://github.com/starkware-libs/cairo/blob/60340c801125b25baaaddce64dd89c6c1524b59d/crates/cairo-lang-defs/src/plugin.rs#L81>
-    // Not used for now, but it contains a key-value BTreeSet. TBD what we can do with this.
     fn generate_code(
         &self,
         db: &dyn SyntaxGroup,
         item_ast: ast::ModuleItem,
-        _metadata: &MacroPluginMetadata<'_>,
+        metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         let package_id = match get_package_id(db) {
             Option::Some(x) => x,
@@ -356,8 +368,10 @@ impl MacroPlugin for BuiltinDojoPlugin {
         };
 
         match item_ast {
-            ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast, package_id),
-            ast::ModuleItem::Trait(trait_ast) => self.handle_trait(db, trait_ast),
+            ast::ModuleItem::Module(module_ast) => {
+                self.handle_mod(db, module_ast, package_id, metadata)
+            }
+            ast::ModuleItem::Trait(trait_ast) => self.handle_trait(db, trait_ast, metadata),
             ast::ModuleItem::Enum(enum_ast) => {
                 let aux_data = DojoAuxData::default();
                 let mut rewrite_nodes = vec![];
