@@ -34,6 +34,7 @@ use crate::traits::transaction::{
 };
 use crate::ProviderResult;
 
+#[derive(Debug)]
 pub struct InMemoryProvider {
     storage: RwLock<CacheDb<()>>,
     state: Arc<InMemoryStateDb>,

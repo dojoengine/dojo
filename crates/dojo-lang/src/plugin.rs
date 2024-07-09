@@ -555,6 +555,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
     }
 }
 
+#[derive(Debug)]
 pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository);
 
 impl Default for CairoPluginRepository {

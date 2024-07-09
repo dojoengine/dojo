@@ -223,6 +223,7 @@ impl Ty {
     }
 }
 
+#[derive(Debug)]
 pub struct TyIter<'a> {
     stack: Vec<&'a Ty>,
 }

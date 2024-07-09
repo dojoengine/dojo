@@ -9,6 +9,7 @@ use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
 use crate::{DojoContract, DojoData, DojoModel};
 
+#[derive(Debug)]
 pub struct UnityPlugin {}
 
 impl UnityPlugin {

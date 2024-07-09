@@ -88,6 +88,7 @@ where
 }
 
 /// Saya.
+#[allow(missing_debug_implementations)]
 pub struct Saya {
     /// The main Saya configuration.
     config: SayaConfig,

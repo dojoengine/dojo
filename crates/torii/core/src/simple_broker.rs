@@ -12,6 +12,7 @@ use slab::Slab;
 
 static SUBSCRIBERS: Lazy<Mutex<HashMap<TypeId, Box<dyn Any + Send>>>> = Lazy::new(Default::default);
 
+#[derive(Debug)]
 pub struct Senders<T>(pub Slab<UnboundedSender<T>>);
 
 struct BrokerStream<T: Sync + Send + Clone + 'static>(usize, UnboundedReceiver<T>);
@@ -42,6 +43,7 @@ impl<T: Sync + Send + Clone + 'static> Stream for BrokerStream<T> {
     }
 }
 
+#[derive(Debug)]
 /// A simple broker based on memory
 pub struct SimpleBroker<T>(PhantomData<T>);
 

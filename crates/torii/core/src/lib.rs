@@ -15,7 +15,7 @@ pub mod types;
 pub mod utils;
 
 #[allow(dead_code)]
-#[derive(FromRow, Deserialize)]
+#[derive(FromRow, Deserialize, Debug)]
 pub struct World {
     #[sqlx(try_from = "String")]
     world_address: SQLFelt,

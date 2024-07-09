@@ -32,6 +32,7 @@ pub struct ModelMember {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug)]
 pub struct ModelDataObject {
     pub name: String,
     pub plural_name: String,

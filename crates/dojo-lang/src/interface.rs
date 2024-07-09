@@ -8,6 +8,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use crate::syntax::self_param;
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 
+#[derive(Debug)]
 pub struct DojoInterface {
     diagnostics: Vec<PluginDiagnostic>,
 }

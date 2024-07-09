@@ -31,6 +31,7 @@ use crate::client::subscription::{
 
 // TODO: remove reliance on RPC
 #[allow(unused)]
+#[derive(Debug)]
 pub struct Client {
     /// Metadata of the World that the client is connected to.
     metadata: Arc<RwLock<WorldMetadata>>,

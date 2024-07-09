@@ -45,6 +45,7 @@ sol! {
     }
 }
 
+#[derive(Debug)]
 pub struct EthereumMessaging {
     provider: Arc<ReqwestProvider<Ethereum>>,
     messaging_contract_address: Address,

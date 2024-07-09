@@ -17,10 +17,12 @@ use crate::client::error::Error;
 use crate::client::storage::ModelStorage;
 use crate::utils::compute_all_storage_addresses;
 
+#[derive(Debug)]
 pub enum SubscriptionEvent {
     UpdateSubsciptionStream(ModelDiffsStreaming),
 }
 
+#[derive(Debug)]
 pub struct SubscribedModels {
     metadata: Arc<RwLock<WorldMetadata>>,
     pub(crate) models_keys: RwLock<HashSet<ModelKeysClause>>,
@@ -126,6 +128,7 @@ impl SubscriptionClientHandle {
 }
 
 #[must_use = "SubscriptionClient does nothing unless polled"]
+#[allow(missing_debug_implementations)]
 pub struct SubscriptionService {
     req_rcv: Receiver<SubscriptionEvent>,
     /// Model Diff stream by subscription server to receive response

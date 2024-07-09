@@ -10,6 +10,7 @@ use crate::traits::contract::ContractClassProvider;
 use crate::traits::state::StateProvider;
 use crate::ProviderResult;
 
+#[derive(Debug)]
 pub struct StateSnapshot<Db> {
     // because the classes are shared between snapshots, when trying to fetch check the compiled
     // hash first and then the sierra class to ensure the class should be present in the snapshot.
@@ -23,6 +24,7 @@ const MIN_HISTORY_LIMIT: usize = 10;
 /// Represents the complete state of a single block.
 ///
 /// It should store at N - 1 states, where N is the latest block number.
+#[derive(Debug)]
 pub struct HistoricalStates {
     /// The states at a certain block based on the block number
     states: HashMap<BlockNumber, Arc<dyn StateProvider>>,
@@ -165,6 +167,7 @@ impl ContractClassProvider for InMemorySnapshot {
     }
 }
 
+#[derive(Debug)]
 pub(super) struct LatestStateProvider(pub(super) Arc<InMemoryStateDb>);
 
 impl StateProvider for LatestStateProvider {

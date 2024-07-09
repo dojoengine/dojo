@@ -34,6 +34,7 @@ pub trait Database:
     + 'static
     + Send
     + Sync
+    + core::fmt::Debug
 {
 }
 
@@ -54,9 +55,11 @@ impl<T> Database for T where
         + 'static
         + Send
         + Sync
+        + core::fmt::Debug
 {
 }
 
+#[derive(Debug)]
 pub struct Blockchain {
     inner: BlockchainProvider<Box<dyn Database>>,
 }

@@ -28,11 +28,13 @@ struct Behaviour {
     ping: ping::Behaviour,
 }
 
+#[derive(Debug)]
 pub struct RelayClient {
     pub command_sender: CommandSender,
     pub event_loop: Arc<Mutex<EventLoop>>,
 }
 
+#[allow(missing_debug_implementations)]
 pub struct EventLoop {
     swarm: Swarm<Behaviour>,
     command_receiver: UnboundedReceiver<Command>,
@@ -145,6 +147,7 @@ impl RelayClient {
     }
 }
 
+#[derive(Debug)]
 pub struct CommandSender {
     sender: UnboundedSender<Command>,
 }

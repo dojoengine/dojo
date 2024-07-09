@@ -23,11 +23,12 @@ use crate::utils::is_name_valid;
 const DOJO_INIT_FN: &str = "dojo_init";
 const CONTRACT_NAMESPACE: &str = "namespace";
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ContractParameters {
     namespace: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,

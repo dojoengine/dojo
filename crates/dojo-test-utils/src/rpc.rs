@@ -8,6 +8,7 @@ use serde_json::Value;
 use starknet::providers::jsonrpc::{JsonRpcMethod, JsonRpcResponse, JsonRpcTransport};
 use thiserror::Error;
 
+#[derive(Debug)]
 pub struct MockJsonRpcTransport {
     responses: HashMap<(String, String), String>,
 }

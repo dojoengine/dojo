@@ -18,12 +18,13 @@ type SierraClassesMap = HashMap<ClassHash, FlattenedSierraClass>;
 type CompiledClassesMap = HashMap<ClassHash, CompiledClass>;
 type CompiledClassHashesMap = HashMap<ClassHash, CompiledClassHash>;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct SharedContractClasses {
     pub(crate) sierra_classes: RwLock<SierraClassesMap>,
     pub(crate) compiled_classes: RwLock<CompiledClassesMap>,
 }
 
+#[derive(Debug)]
 pub struct CacheSnapshotWithoutClasses<Db> {
     pub(crate) db: Db,
     pub(crate) storage: ContractStorageMap,
@@ -31,6 +32,7 @@ pub struct CacheSnapshotWithoutClasses<Db> {
     pub(crate) compiled_class_hashes: CompiledClassHashesMap,
 }
 
+#[derive(Debug)]
 pub struct CacheStateDb<Db> {
     pub(crate) db: Db,
     pub(crate) storage: RwLock<ContractStorageMap>,
@@ -69,6 +71,7 @@ impl<Db> CacheStateDb<Db> {
     }
 }
 
+#[derive(Debug)]
 pub struct CacheDb<Db> {
     pub(crate) db: Db,
     pub(crate) block_headers: HashMap<BlockNumber, Header>,

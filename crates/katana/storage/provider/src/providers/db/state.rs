@@ -99,6 +99,7 @@ impl ContractClassWriter for DbProvider {
 }
 
 /// A state provider that provides the latest states from the database.
+#[derive(Debug)]
 pub(super) struct LatestStateProvider(mdbx::tx::TxRO);
 
 impl LatestStateProvider {
@@ -156,6 +157,7 @@ impl StateProvider for LatestStateProvider {
 }
 
 /// A historical state provider.
+#[derive(Debug)]
 pub(super) struct HistoricalStateProvider {
     /// The database transaction used to read the database.
     tx: mdbx::tx::TxRO,

@@ -14,6 +14,7 @@ use starknet::core::types::Felt;
 use super::error::{self, Error};
 use crate::error::{ParseError, QueryError};
 
+#[derive(Debug)]
 pub struct ModelSQLReader {
     /// Namespace of the model
     namespace: String,

@@ -89,6 +89,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
     }
 }
 
+#[derive(Debug)]
 pub(super) struct CachedState<S: StateDb>(pub(super) Arc<RwLock<CachedStateInner<S>>>);
 
 impl<S: StateDb> Clone for CachedState<S> {

@@ -27,6 +27,7 @@ use crate::types::{EntityKeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
 
+#[derive(Debug)]
 pub struct EntitiesSubscriber {
     /// Entity ids that the subscriber is interested in
     keys: Option<EntityKeysClause>,
@@ -34,7 +35,7 @@ pub struct EntitiesSubscriber {
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EntityManager {
     subscribers: RwLock<HashMap<usize, EntitiesSubscriber>>,
 }
@@ -63,6 +64,7 @@ impl EntityManager {
 }
 
 #[must_use = "Service does nothing unless polled"]
+#[allow(missing_debug_implementations)]
 pub struct Service {
     pool: Pool<Sqlite>,
     subs_manager: Arc<EntityManager>,

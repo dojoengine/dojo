@@ -102,6 +102,7 @@ impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
     }
 }
 
+#[derive(Debug)]
 pub(super) struct LatestStateProvider(pub(super) Arc<ForkedStateDb>);
 
 impl StateProvider for LatestStateProvider {

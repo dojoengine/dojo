@@ -16,6 +16,7 @@ pub type StorageValue = Felt;
 
 /// An in-memory storage for storing the component values of entities.
 // TODO: check if we can use sql db instead.
+#[derive(Debug)]
 pub struct ModelStorage {
     metadata: Arc<RwLock<WorldMetadata>>,
     storage: RwLock<HashMap<StorageKey, StorageValue>>,

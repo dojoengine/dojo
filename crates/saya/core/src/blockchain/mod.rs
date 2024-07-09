@@ -62,6 +62,7 @@ impl<T> Database for T where
 }
 
 /// Represents the whole blockchain fetched from Katana.
+#[allow(missing_debug_implementations)]
 pub struct Blockchain {
     inner: BlockchainProvider<Box<dyn Database>>,
 }

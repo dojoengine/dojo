@@ -13,13 +13,13 @@ use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct StoreSetRecordProcessor;
 
 #[async_trait]
 impl<P> EventProcessor<P> for StoreSetRecordProcessor
 where
-    P: Provider + Send + Sync,
+    P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
         "StoreSetRecord".to_string()

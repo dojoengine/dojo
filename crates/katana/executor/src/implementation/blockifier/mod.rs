@@ -71,6 +71,7 @@ impl ExecutorFactory for BlockifierFactory {
     }
 }
 
+#[derive(Debug)]
 pub struct StarknetVMProcessor<'a> {
     block_context: BlockContext,
     state: CachedState<StateProviderDb<'a>>,

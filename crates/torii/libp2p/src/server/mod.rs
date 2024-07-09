@@ -44,6 +44,7 @@ pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
+#[allow(missing_debug_implementations)]
 pub struct Behaviour {
     relay: relay::Behaviour,
     ping: ping::Behaviour,
@@ -51,6 +52,7 @@ pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
 }
 
+#[allow(missing_debug_implementations)]
 pub struct Relay<P: Provider + Sync> {
     swarm: Swarm<Behaviour>,
     db: Sql,

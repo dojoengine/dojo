@@ -31,6 +31,7 @@ impl Display for CelestiaConfig {
     }
 }
 
+#[allow(missing_debug_implementations)]
 pub struct CelestiaClient {
     client: Client,
     mode: DataAvailabilityMode,
