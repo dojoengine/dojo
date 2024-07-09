@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::num::NonZeroU128;
 use std::sync::Arc;
 
-use blockifier::block::{BlockInfo, GasPrices};
+// use blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
@@ -12,8 +12,8 @@ use blockifier::execution::contract_class::{
     ClassInfo, ContractClass, ContractClassV0, ContractClassV1,
 };
 use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
-use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_gas_vector};
-use blockifier::state::cached_state::{self, GlobalContractCache};
+// use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_gas_vector};
+// use blockifier::state::cached_state::{self, GlobalContractCache};
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::objects::{
@@ -34,7 +34,7 @@ use katana_cairo::starknet_api::core::{
 };
 use katana_cairo::starknet_api::data_availability::DataAvailabilityMode;
 use katana_cairo::starknet_api::deprecated_contract_class::EntryPointType;
-use katana_cairo::starknet_api::hash::StarkFelt;
+// use katana_cairo::starknet_api::hash::StarkFelt;
 use katana_cairo::starknet_api::transaction::{
     AccountDeploymentData, Calldata, ContractAddressSalt,
     DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2,
@@ -137,8 +137,8 @@ pub fn call<S: StateReader>(
     let call = CallEntryPoint {
         initial_gas: initial_gas as u64,
         storage_address: to_blk_address(request.contract_address),
-        entry_point_selector: core::EntryPointSelector(to_stark_felt(request.entry_point_selector)),
-        calldata: Calldata(Arc::new(request.calldata.into_iter().map(to_stark_felt).collect())),
+        entry_point_selector: core::EntryPointSelector(request.entry_point_selector),
+        calldata: Calldata(Arc::new(request.calldata)),
         ..Default::default()
     };
 
@@ -167,9 +167,7 @@ pub fn call<S: StateReader>(
         .expect("shouldn't fail"),
     )?;
 
-    let retdata = res.execution.retdata.0;
-    let retdata = retdata.into_iter().map(to_felt).collect::<Vec<FieldElement>>();
-    Ok(retdata)
+    Ok(res.execution.retdata.0)
 }
 
 fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
@@ -346,22 +344,17 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
             Transaction::AccountTransaction(AccountTransaction::Declare(tx))
         }
 
-        ExecutableTx::L1Handler(tx) => {
-            let calldata = tx.calldata.into_iter().map(to_stark_felt).collect();
-            Transaction::L1HandlerTransaction(L1HandlerTransaction {
-                paid_fee_on_l1: Fee(tx.paid_fee_on_l1),
-                tx: katana_cairo::starknet_api::transaction::L1HandlerTransaction {
-                    nonce: core::Nonce(to_stark_felt(tx.nonce)),
-                    calldata: Calldata(Arc::new(calldata)),
-                    version: TransactionVersion(1u128.into()),
-                    contract_address: to_blk_address(tx.contract_address),
-                    entry_point_selector: core::EntryPointSelector(to_stark_felt(
-                        tx.entry_point_selector,
-                    )),
-                },
-                tx_hash: TransactionHash(to_stark_felt(hash)),
-            })
-        }
+        ExecutableTx::L1Handler(tx) => Transaction::L1HandlerTransaction(L1HandlerTransaction {
+            paid_fee_on_l1: Fee(tx.paid_fee_on_l1),
+            tx: katana_cairo::starknet_api::transaction::L1HandlerTransaction {
+                nonce: core::Nonce(tx.nonce),
+                calldata: Calldata(Arc::new(tx.calldata)),
+                version: TransactionVersion(1u128.into()),
+                contract_address: to_blk_address(tx.contract_address),
+                entry_point_selector: core::EntryPointSelector(tx.entry_point_selector),
+            },
+            tx_hash: TransactionHash(hash),
+        }),
     }
 }
 
@@ -419,7 +412,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
     > = HashMap::new();
 
     for (class_hash, _) in &state_diff.class_hash_to_compiled_class_hash {
-        let hash = to_felt(class_hash.0);
+        let hash = class_hash.0;
         let class = state.class(hash).unwrap().expect("must exist if declared");
 
         if let CompiledClass::Class(_) = class {
@@ -434,7 +427,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_diff
             .address_to_nonce
             .into_iter()
-            .map(|(key, value)| (to_address(key), to_felt(value.0)))
+            .map(|(key, value)| (to_address(key), value.0))
             .collect::<HashMap<
                 katana_primitives::contract::ContractAddress,
                 katana_primitives::contract::Nonce,
@@ -444,10 +437,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         .storage_updates
         .into_iter()
         .map(|(addr, entries)| {
-            let entries = entries
-                .into_iter()
-                .map(|(k, v)| (to_felt(*k.0.key()), to_felt(v)))
-                .collect::<HashMap<
+            let entries = entries.into_iter().map(|(k, v)| (*k.0.key(), v)).collect::<HashMap<
                 katana_primitives::contract::StorageKey,
                 katana_primitives::contract::StorageValue,
             >>();
@@ -460,7 +450,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_diff
             .address_to_class_hash
             .into_iter()
-            .map(|(key, value)| (to_address(key), to_felt(value.0)))
+            .map(|(key, value)| (to_address(key), value.0))
             .collect::<HashMap<
                 katana_primitives::contract::ContractAddress,
                 katana_primitives::class::ClassHash,
@@ -470,7 +460,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_diff
             .class_hash_to_compiled_class_hash
             .into_iter()
-            .map(|(key, value)| (to_felt(key.0), to_felt(value.0)))
+            .map(|(key, value)| (key.0, value.0))
             .collect::<HashMap<
                 katana_primitives::class::ClassHash,
                 katana_primitives::class::CompiledClassHash,
@@ -521,16 +511,16 @@ fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
 }
 
 pub fn to_blk_address(address: katana_primitives::contract::ContractAddress) -> ContractAddress {
-    to_stark_felt(address.0).try_into().expect("valid address")
+    address.0.try_into().expect("valid address")
 }
 
 pub fn to_address(address: ContractAddress) -> katana_primitives::contract::ContractAddress {
-    katana_primitives::contract::ContractAddress(to_felt(*address.0.key()))
+    katana_primitives::contract::ContractAddress(*address.0.key())
 }
 
 pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
     match chain_id {
-        katana_primitives::chain::ChainId::Named(named) => ChainId(named.name().to_string()),
+        katana_primitives::chain::ChainId::Named(named) => ChainId::Other(named.name().to_string()),
         katana_primitives::chain::ChainId::Id(id) => {
             let id = parse_cairo_short_string(&id).expect("valid cairo string");
             ChainId(id)
@@ -568,9 +558,7 @@ fn starknet_api_ethaddr_to_felt(
     let mut bytes = [0u8; 32];
     // Padding H160 with zeros to 32 bytes (big endian)
     bytes[12..32].copy_from_slice(value.0.as_bytes());
-    let stark_felt = katana_cairo::starknet_api::hash::StarkFelt::new(bytes)
-        .expect("valid slice for stark felt");
-    to_felt(stark_felt)
+    FieldElement::from_bytes_be(&bytes)
 }
 
 pub fn to_exec_info(exec_info: TransactionExecutionInfo) -> TxExecInfo {
@@ -578,9 +566,10 @@ pub fn to_exec_info(exec_info: TransactionExecutionInfo) -> TxExecInfo {
         validate_call_info: exec_info.validate_call_info.map(to_call_info),
         execute_call_info: exec_info.execute_call_info.map(to_call_info),
         fee_transfer_call_info: exec_info.fee_transfer_call_info.map(to_call_info),
-        actual_fee: exec_info.actual_fee.0,
+        actual_fee: exec_info.transaction_receipt.fee.0,
         actual_resources: exec_info
-            .actual_resources
+            .transaction_receipt
+            .resources
             .0
             .into_iter()
             .map(|(k, v)| (k, v as u64))
@@ -593,10 +582,10 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
     let contract_address = to_address(call.call.storage_address);
     let caller_address = to_address(call.call.caller_address);
     let code_address = call.call.code_address.map(to_address);
-    let class_hash = call.call.class_hash.map(|a| to_felt(a.0));
-    let entry_point_selector = to_felt(call.call.entry_point_selector.0);
-    let calldata = call.call.calldata.0.iter().map(|f| to_felt(*f)).collect();
-    let retdata = call.execution.retdata.0.into_iter().map(to_felt).collect();
+    let class_hash = call.call.class_hash.map(|a| a.0);
+    let entry_point_selector = call.call.entry_point_selector.0;
+    let calldata = call.call.calldata.0.as_ref().clone();
+    let retdata = call.execution.retdata.0;
 
     let builtin_counter = call.resources.builtin_instance_counter;
     let execution_resources = trace::ExecutionResources {
@@ -622,8 +611,8 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
         EntryPointType::Constructor => trace::EntryPointType::Constructor,
     };
 
-    let storage_read_values = call.storage_read_values.into_iter().map(to_felt).collect();
-    let storg_keys = call.accessed_storage_keys.into_iter().map(|k| to_felt(*k.0.key())).collect();
+    let storage_read_values = call.storage_read_values;
+    let storg_keys = call.accessed_storage_keys.into_iter().map(|k| *k.0.key()).collect();
     let inner_calls = call.inner_calls.into_iter().map(to_call_info).collect();
 
     trace::CallInfo {
@@ -650,8 +639,8 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
 fn to_ordered_event(e: OrderedEvent) -> event::OrderedEvent {
     event::OrderedEvent {
         order: e.order as u64,
-        keys: e.event.keys.iter().map(|f| to_felt(f.0)).collect(),
-        data: e.event.data.0.into_iter().map(to_felt).collect(),
+        data: e.event.data.0,
+        keys: e.event.keys.iter().map(|f| f.0).collect(),
     }
 }
 
@@ -660,17 +649,9 @@ fn to_l2_l1_messages(
     from_address: katana_primitives::contract::ContractAddress,
 ) -> message::OrderedL2ToL1Message {
     let order = m.order as u64;
+    let payload = m.message.payload.0;
     let to_address = starknet_api_ethaddr_to_felt(m.message.to_address);
-    let payload = m.message.payload.0.into_iter().map(to_felt).collect();
     message::OrderedL2ToL1Message { order, from_address, to_address, payload }
-}
-
-pub fn to_stark_felt(value: FieldElement) -> StarkFelt {
-    StarkFelt::new(value.to_bytes_be()).expect("can convert from field element")
-}
-
-pub fn to_felt(value: StarkFelt) -> FieldElement {
-    FieldElement::from_bytes_be_slice(value.bytes())
 }
 
 #[cfg(test)]

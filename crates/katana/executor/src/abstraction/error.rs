@@ -52,7 +52,12 @@ pub enum ExecutionError {
     ExecutionFailed { reason: String },
 
     #[error("transaction validation error: {0}")]
-    TransactionValidationFailed(Box<ExecutionError>),
+    TransactionValidationFailed {
+        error: Box<ExecutionError>,
+        class_hash: ClassHash,
+        storage_address: ContractAddress,
+        selector: FieldElement,
+    },
 
     #[error("transaction reverted: {revert_error}")]
     TransactionReverted { revert_error: String },
