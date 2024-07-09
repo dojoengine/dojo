@@ -31,7 +31,7 @@ pub struct ExecuteArgs {
                   - u256: A 256-bit unsigned integer.
                   - sstr: A cairo short string.
                   - str: A cairo string (ByteArray).
-                  - -: A signed integer.
+                  - int: A signed integer.
                   - no prefix: A cairo felt or any type that fit into one felt.")]
     pub calldata: Option<String>,
 

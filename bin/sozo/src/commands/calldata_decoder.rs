@@ -1,5 +1,4 @@
 use anyhow::{self, Result};
-use bigdecimal::FromPrimitive;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use num_bigint::BigUint;
 use starknet::core::types::{Felt, FromStrError};
@@ -98,21 +97,10 @@ impl CalldataDecoder for ShortStrCalldataDecoder {
 struct SignedIntegerCalldataDecoder;
 impl CalldataDecoder for SignedIntegerCalldataDecoder {
     fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
-        match input.parse::<i128>() {
-            Ok(value) if value <= i8::MAX as i128 && value >= i8::MIN as i128 => {
-                Ok(vec![Felt::from_i8(value as i8).expect("Invalid numeric string")])
-            }
-            Ok(value) if value <= i16::MAX as i128 && value >= i16::MIN as i128 => {
-                Ok(vec![Felt::from_i16(value as i16).expect("Invalid numeric string")])
-            }
-            Ok(value) if value <= i32::MAX as i128 && value >= i32::MIN as i128 => {
-                Ok(vec![Felt::from_i32(value as i32).expect("Invalid numeric string")])
-            }
-            Ok(value) if value <= i64::MAX as i128 && value >= i64::MIN as i128 => {
-                Ok(vec![Felt::from_i64(value as i64).expect("Invalid numeric string")])
-            }
-            Ok(value) => Ok(vec![Felt::from_i128(value).expect("Invalid numeric string")]),
-            Err(_) => Err(CalldataDecoderError::ParseError("Invalid numeric string".to_string())),
+        if let Ok(value) = input.parse::<i128>() {
+            Ok(vec![value.into()])
+        } else {
+            Err(CalldataDecoderError::ParseError("Invalid numeric string".to_string()))
         }
     }
 }
@@ -174,7 +162,7 @@ fn decode_inner(item: &str) -> DecoderResult<Vec<Felt>> {
             "u256" => U256CalldataDecoder.decode(value)?,
             "str" => StrCalldataDecoder.decode(value)?,
             "sstr" => ShortStrCalldataDecoder.decode(value)?,
-            "-" => SignedIntegerCalldataDecoder.decode(value)?,
+            "int" => SignedIntegerCalldataDecoder.decode(value)?,
             _ => DefaultCalldataDecoder.decode(item)?,
         }
     } else {
