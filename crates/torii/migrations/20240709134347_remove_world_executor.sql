@@ -4,7 +4,7 @@
 CREATE TABLE worlds_new (
     id TEXT PRIMARY KEY NOT NULL,
     world_address TEXT NOT NULL,
-    world_class_hash TEXT,
+    world_class_hash TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
