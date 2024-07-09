@@ -14,8 +14,8 @@ use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
-use scarb::core::Config;
-use scarb::ops;
+use scarb::core::{Config, TargetKind};
+use scarb::ops::{self, CompileOpts};
 use scarb_ui::args::FeaturesSpec;
 use tracing::trace;
 
@@ -59,10 +59,9 @@ pub struct TestArgs {
     /// Should we print the resource usage.
     #[arg(long, default_value_t = false)]
     print_resource_usage: bool,
-
     /// Specify the features to activate.
     #[command(flatten)]
-    feature: FeaturesSpec,
+    features: FeaturesSpec,
 }
 
 impl TestArgs {
@@ -73,14 +72,22 @@ impl TestArgs {
         });
 
         let resolve = ops::resolve_workspace(&ws)?;
-        // TODO: Compute all compilation units and remove duplicates, could be unnecessary in future
-        // version of Scarb.
 
-        let features_opts = self.feature.try_into()?;
+        let opts = CompileOpts {
+            include_target_kinds: vec![TargetKind::TEST],
+            exclude_target_kinds: vec![],
+            include_target_names: vec![],
+            features: self.features.try_into()?,
+        };
 
-        let mut compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws)?;
-        compilation_units.sort_by_key(|unit| unit.main_package_id());
-        compilation_units.dedup_by_key(|unit| unit.main_package_id());
+        let compilation_units = ops::generate_compilation_units(&resolve, &opts.features, &ws)?
+            .into_iter()
+            .filter(|cu| !opts.exclude_target_kinds.contains(&cu.main_component().target_kind()))
+            .filter(|cu| {
+                opts.include_target_kinds.is_empty()
+                    || opts.include_target_kinds.contains(&cu.main_component().target_kind())
+            })
+            .collect::<Vec<_>>();
 
         for unit in compilation_units {
             let unit = if let CompilationUnit::Cairo(unit) = unit {
