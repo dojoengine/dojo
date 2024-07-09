@@ -1850,9 +1850,8 @@ dependencies = [
 
 [[package]]
 name = "blockifier"
-version = "0.8.0-rc.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59eec80446f00e2c27d2a45166c6d09323021cf0543c1789250c95568143bb00"
+version = "0.8.0-dev.2"
+source = "git+https://github.com/dojoengine/blockifier?rev=f0ca000a#f0ca000ac49606deedb1f9ae415a61f277c6d73a"
 dependencies = [
  "anyhow",
  "ark-ec",

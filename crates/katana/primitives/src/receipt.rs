@@ -192,7 +192,7 @@ impl Receipt {
 //     pub segment_arena_builtin: Option<u64>,
 // }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TxResources {
     pub vm_resources: ExecutionResources,
