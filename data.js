@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720535596047,
+  "lastUpdate": 1720548436270,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11365,6 +11365,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16703511,
             "range": "± 101064",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bbb355e1ff27289d77200e04e05e47f88bcddaf5",
+          "message": "fix(compiler): use provided metadata to support feature flags (#2167)\n\n* fix: use metadata available to compiler\r\n\r\n* fix formatting",
+          "timestamp": "2024-07-09T11:58:31-06:00",
+          "tree_id": "df8e33120f3f525658c831d917da93bceeec7a2a",
+          "url": "https://github.com/dojoengine/dojo/commit/bbb355e1ff27289d77200e04e05e47f88bcddaf5"
+        },
+        "date": 1720548435589,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16765725,
+            "range": "± 211798",
             "unit": "ns/iter"
           }
         ]
