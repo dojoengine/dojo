@@ -296,18 +296,6 @@
         ],
         "outputs": [],
         "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "call_something",
-        "inputs": [
-          {
-            "name": "something_address",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [],
-        "state_mutability": "view"
       }
     ]
   },
