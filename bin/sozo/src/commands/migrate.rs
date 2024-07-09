@@ -43,8 +43,6 @@ pub enum MigrateCommand {
         #[command(flatten)]
         transaction: TransactionOptions,
     },
-    #[command(about = "Generate overlays file.")]
-    GenerateOverlays,
 }
 
 impl MigrateArgs {
@@ -66,13 +64,6 @@ impl MigrateArgs {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
-
-        // This variant is tested before the match on `self.command` to avoid
-        // having the need to spin up a Katana to generate the files.
-        if let MigrateCommand::GenerateOverlays = self.command {
-            trace!("Generating overlays.");
-            return migration::generate_overlays(&ws);
-        }
 
         let env_metadata = if config.manifest_path().exists() {
             dojo_metadata.env().cloned()
@@ -127,7 +118,6 @@ impl MigrateArgs {
                 )
                 .await
             }),
-            _ => unreachable!("other case handled above."),
         }
     }
 }

@@ -1,12 +1,8 @@
-use std::fs;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, Result};
 use dojo_world::contracts::WorldContract;
-use dojo_world::manifest::{
-    BaseManifest, OverlayClass, OverlayDojoContract, OverlayDojoModel, OverlayManifest,
-    BASE_CONTRACT_TAG, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_TAG,
-};
+use dojo_world::manifest::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
@@ -230,79 +226,4 @@ enum ContractDeploymentOutput {
 #[allow(dead_code)]
 enum ContractUpgradeOutput {
     Output(UpgradeOutput),
-}
-
-pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
-    let profile_name =
-        ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
-
-    // its path to a file so `parent` should never return `None`
-    let root_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-    let manifest_base_dir = root_dir.join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR);
-    let overlay_dir = root_dir.join(OVERLAYS_DIR).join(&profile_name);
-
-    let base_manifest = BaseManifest::load_from_path(&manifest_base_dir)?;
-
-    let mut default_overlay = OverlayManifest {
-        world: Some(OverlayClass {
-            tag: WORLD_CONTRACT_TAG.to_string(),
-            original_class_hash: None,
-        }),
-        base: Some(OverlayClass { tag: BASE_CONTRACT_TAG.to_string(), original_class_hash: None }),
-        contracts: base_manifest
-            .contracts
-            .iter()
-            .map(|c| OverlayDojoContract { tag: c.inner.tag.clone(), ..Default::default() })
-            .collect::<Vec<_>>(),
-        models: base_manifest
-            .models
-            .iter()
-            .map(|m| OverlayDojoModel { tag: m.inner.tag.clone(), ..Default::default() })
-            .collect::<Vec<_>>(),
-    };
-
-    if overlay_dir.exists() {
-        // read existing OverlayManifest from path
-        let overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &base_manifest)
-            .with_context(|| "Failed to load OverlayManifest from path.")?;
-
-        // merge them to get OverlayManifest which contains all the contracts and models from base
-        // manifests
-        remove_duplicates(&mut default_overlay, &overlay_manifest);
-    }
-
-    fs::create_dir_all(&overlay_dir)?;
-    default_overlay
-        .write_to_path(&overlay_dir)
-        .with_context(|| "Failed to write OverlayManifest to path.")?;
-
-    Ok(())
-}
-
-/// Removes all the manifests present in `current` from `default` (based on tags).
-/// So we only write the overlay files which user hasn't already created.
-fn remove_duplicates(default: &mut OverlayManifest, current: &OverlayManifest) {
-    if current.world.is_some() {
-        default.world = None;
-    }
-
-    if current.base.is_some() {
-        default.base = None;
-    }
-
-    for contract in &current.contracts {
-        let tag = &contract.tag;
-        let position = current.contracts.iter().position(|c| &c.tag == tag);
-        if let Some(position) = position {
-            default.contracts.remove(position);
-        }
-    }
-
-    for model in &current.models {
-        let tag = &model.tag;
-        let position = current.models.iter().position(|c| &c.tag == tag);
-        if let Some(position) = position {
-            default.models.remove(position);
-        }
-    }
 }
