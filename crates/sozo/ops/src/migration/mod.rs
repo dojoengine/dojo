@@ -243,7 +243,7 @@ pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
 
     let base_manifest = BaseManifest::load_from_path(&manifest_base_dir)?;
 
-    let default_overlay = OverlayManifest {
+    let mut default_overlay = OverlayManifest {
         world: Some(OverlayClass {
             tag: WORLD_CONTRACT_TAG.to_string(),
             original_class_hash: None,
@@ -263,27 +263,46 @@ pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
 
     if overlay_dir.exists() {
         // read existing OverlayManifest from path
-        let mut overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &base_manifest)
+        let overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &base_manifest)
             .with_context(|| "Failed to load OverlayManifest from path.")?;
 
         // merge them to get OverlayManifest which contains all the contracts and models from base
         // manifests
-        overlay_manifest.merge(default_overlay);
-
-        // to avoid duplicated overlay manifests, existing overlays must be removed before being
-        // rewritten by `overlay_manifest.write_to_path_nested()`
-        fs::remove_dir_all(&overlay_dir)?;
-        fs::create_dir_all(&overlay_dir)?;
-
-        overlay_manifest
-            .write_to_path_nested(&overlay_dir)
-            .with_context(|| "Failed to write OverlayManifest to path.")?;
-    } else {
-        fs::create_dir_all(&overlay_dir)?;
-        default_overlay
-            .write_to_path_nested(&overlay_dir)
-            .with_context(|| "Failed to write OverlayManifest to path.")?;
+        remove_duplicates(&mut default_overlay, &overlay_manifest);
     }
 
+    fs::create_dir_all(&overlay_dir)?;
+    default_overlay
+        .write_to_path(&overlay_dir)
+        .with_context(|| "Failed to write OverlayManifest to path.")?;
+
     Ok(())
+}
+
+/// Removes all the manifests present in `current` from `default` (based on tags).
+/// So we only write the overlay files which user hasn't already created.
+fn remove_duplicates(default: &mut OverlayManifest, current: &OverlayManifest) {
+    if current.world.is_some() {
+        default.world = None;
+    }
+
+    if current.base.is_some() {
+        default.base = None;
+    }
+
+    for contract in &current.contracts {
+        let tag = &contract.tag;
+        let position = current.contracts.iter().position(|c| &c.tag == tag);
+        if let Some(position) = position {
+            default.contracts.remove(position);
+        }
+    }
+
+    for model in &current.models {
+        let tag = &model.tag;
+        let position = current.models.iter().position(|c| &c.tag == tag);
+        if let Some(position) = position {
+            default.models.remove(position);
+        }
+    }
 }
