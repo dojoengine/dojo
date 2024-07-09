@@ -111,7 +111,7 @@ impl CalldataDecoder for SignedIntegerCalldataDecoder {
             Ok(value) if value <= i64::MAX as i128 && value >= i64::MIN as i128 => {
                 Ok(vec![Felt::from_i64(value as i64).expect("Invalid numeric string")])
             }
-            Ok(value) => Ok(vec![Felt::from_i128(value as i128).expect("Invalid numeric string")]),
+            Ok(value) => Ok(vec![Felt::from_i128(value).expect("Invalid numeric string")]),
             Err(_) => Err(CalldataDecoderError::ParseError("Invalid numeric string".to_string())),
         }
     }
