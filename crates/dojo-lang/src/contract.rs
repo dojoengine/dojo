@@ -40,7 +40,7 @@ impl DojoContract {
     pub fn from_module(
         db: &dyn SyntaxGroup,
         module_ast: &ast::ItemModule,
-        package_id: String,
+        default_namespace: String,
         metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         let name = module_ast.name(db).text(db);
@@ -56,7 +56,7 @@ impl DojoContract {
 
         let contract_namespace = match parameters.namespace {
             Some(x) => x.to_string(),
-            None => package_id,
+            None => default_namespace,
         };
 
         for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {

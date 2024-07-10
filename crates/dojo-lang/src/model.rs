@@ -192,17 +192,14 @@ pub fn handle_model_struct(
     db: &dyn SyntaxGroup,
     aux_data: &mut DojoAuxData,
     struct_ast: ItemStruct,
-    package_id: String,
+    default_namespace: String,
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
 
     let parameters = get_model_parameters(db, struct_ast.clone(), &mut diagnostics);
 
     let model_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
-    let model_namespace = match parameters.namespace {
-        Option::Some(x) => x,
-        Option::None => package_id,
-    };
+    let model_namespace = parameters.namespace.unwrap_or(default_namespace);
 
     for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
         if !is_name_valid(value) {

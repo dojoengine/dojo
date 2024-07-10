@@ -10,16 +10,18 @@ pub fn is_name_valid(name: &str) -> bool {
     Regex::new(r"^[a-zA-Z0-9_]+$").unwrap().is_match(name)
 }
 
-// parse the configuration file of the first crate to extract
-// the main package Id (so the name field of the package section of the Scarb.toml file)
-// TODO: Ask to Scarb team to expose this package Id information with the new macro system.
-pub fn get_package_id(db: &dyn SyntaxGroup) -> Option<String> {
+// Parses the configuration file of the first crate to extract the default namespace.
+// TODO: Ask to Scarb team to expose this information with the new macro system.
+pub fn get_default_namespace(db: &dyn SyntaxGroup) -> Option<String> {
     let crates = db.crates();
 
     if crates.is_empty() {
         return Option::None;
     }
 
+    // Crates[0] is always the root crate that triggered the build origin.
+    // In case of a library, crates[0] refers to the lib itself if compiled directly,
+    // or the crate using the library otherwise.
     let configuration = match db.crate_config(crates[0]) {
         Option::Some(cfg) => cfg,
         Option::None => return Option::None,
@@ -36,10 +38,14 @@ pub fn get_package_id(db: &dyn SyntaxGroup) -> Option<String> {
             Err(_) => return Option::None,
         };
 
-        if config.contains_key("package")
-            && config["package"].as_table().unwrap().contains_key("name")
+        if config.contains_key("tool")
+            && config["tool"].as_table().unwrap().contains_key("dojo")
+            && config["tool"]["dojo"].as_table().unwrap().contains_key("world")
+            && config["tool"]["dojo"]["world"].as_table().unwrap().contains_key("namespace")
         {
-            return Some(config["package"]["name"].as_str().unwrap().to_string());
+            return Some(
+                config["tool"]["dojo"]["world"]["namespace"].as_str().unwrap().to_string(),
+            );
         };
     }
 

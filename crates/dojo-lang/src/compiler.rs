@@ -169,15 +169,18 @@ fn find_project_contracts(
             .map(|selector| selector.package().into())
             .unique()
             .map(|package_name: SmolStr| {
+                debug!(target: LOG_TARGET, %package_name, "Looking for internal crates.");
                 db.upcast_mut().intern_crate(CrateLongId::Real(package_name))
             })
             .collect::<Vec<_>>();
+
         find_contracts(db, crate_ids.as_ref())
             .into_iter()
             .filter(|decl| {
                 external_contracts.iter().any(|selector| {
                     let contract_path = decl.module_id().full_path(db.upcast());
-                    contract_path == selector.full_path()
+                    // Snake case is used to ensure we match the `compile()` output.
+                    contract_path == selector.full_path().to_case(Case::Snake)
                 })
             })
             .collect::<Vec<ContractDeclaration>>()
