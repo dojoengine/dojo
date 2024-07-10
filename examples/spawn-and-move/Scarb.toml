@@ -16,7 +16,7 @@ dojo = { path = "../../crates/dojo-core" }
 build-external-contracts = [  ]
 
 [features]
-default = []
+default = ["something"]
 something = []
 
 # `dev` profile

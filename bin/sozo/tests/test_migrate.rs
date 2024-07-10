@@ -39,11 +39,13 @@ async fn migrate_dry_run() {
     ];
 
     let assert = get_snapbox().args(args_vec.iter()).assert().success();
-    let output = format!("{:?}", assert.get_output());
+    let output = format!("{:#?}", assert.get_output());
+
+    dbg!("{}", &output);
 
     assert!(output.contains("Migration Strategy"));
     assert!(output.contains("# Base Contract"));
     assert!(output.contains("# Models (8)"));
     assert!(output.contains("# World"));
-    assert!(output.contains("# Contracts (3)"));
+    assert!(output.contains("# Contracts (4)"));
 }
