@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720632277864,
+  "lastUpdate": 1720632306732,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11455,6 +11455,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16753862,
             "range": "± 273693",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6683f0fa7d542be22558f03db4435d7c04b2ca21",
+          "message": "fix(sozo): remove generate overlay command (#2168)\n\n* update `generate-overlays` subcommand for new changes\r\n\r\n* fix formatting\r\n\r\n* fix: remove generate overlay command\r\n\r\n* fix: remove oldly generated files\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-10T11:16:11-06:00",
+          "tree_id": "8dc1a6bd5c4c8238e131225cf9ff4f12aedb06e8",
+          "url": "https://github.com/dojoengine/dojo/commit/6683f0fa7d542be22558f03db4435d7c04b2ca21"
+        },
+        "date": 1720632305437,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16840822,
+            "range": "± 77642",
             "unit": "ns/iter"
           }
         ]
