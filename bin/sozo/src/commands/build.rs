@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use clap::Args;
+use clap::{Args, Parser};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use dojo_world::manifest::MANIFESTS_DIR;
@@ -7,7 +7,8 @@ use dojo_world::metadata::dojo_metadata_from_workspace;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
-use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
+use scarb::ops::CompileOpts;
+use scarb_ui::args::FeaturesSpec;
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
@@ -18,7 +19,7 @@ const CONTRACT_CLASS_SIZE_LABEL: &str = "Contract Class size [in bytes]\n(Sierra
 
 const CONTRACT_NAME_LABEL: &str = "Contract";
 
-#[derive(Debug, Args, Default)]
+#[derive(Debug, Args)]
 pub struct BuildArgs {
     // Should we deprecate typescript bindings codegen?
     // Disabled due to lack of support in dojo.js
@@ -39,6 +40,10 @@ pub struct BuildArgs {
 
     #[arg(long, help = "Display statistics about the compiled contracts")]
     pub stats: bool,
+
+    /// Specify the features to activate.
+    #[command(flatten)]
+    pub features: FeaturesSpec,
 }
 
 impl BuildArgs {
@@ -71,9 +76,7 @@ impl BuildArgs {
 
         let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
         CleanArgs::clean_manifests(&profile_dir)?;
-
-        let features_opts =
-            FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
+        let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
 
         let compile_info = compile_workspace(
             config,
@@ -81,8 +84,9 @@ impl BuildArgs {
                 include_target_names: vec![],
                 include_target_kinds: vec![],
                 exclude_target_kinds: vec![TargetKind::TEST],
-                features: features_opts,
+                features: self.features.try_into()?,
             },
+            packages,
         )?;
         trace!(?compile_info, "Compiled workspace.");
 
@@ -153,6 +157,21 @@ impl BuildArgs {
     }
 }
 
+impl Default for BuildArgs {
+    fn default() -> Self {
+        // use the clap defaults
+        let features = FeaturesSpec::parse_from([""]);
+
+        Self {
+            features,
+            typescript_v2: false,
+            unity: false,
+            bindings_output: "bindings".to_string(),
+            stats: false,
+        }
+    }
+}
+
 fn create_stats_table(mut contracts_statistics: Vec<ContractStatistics>) -> Table {
     let mut table = Table::new();
     table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
@@ -219,6 +238,7 @@ mod tests {
             unity: true,
             typescript_v2: true,
             stats: true,
+            ..Default::default()
         };
         let result = build_args.run(&config);
         assert!(result.is_ok());
