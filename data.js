@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720632306732,
+  "lastUpdate": 1720636499755,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11485,6 +11485,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16840822,
             "range": "± 77642",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4b69971883ab99165ba53cd86c9703105da06d86",
+          "message": "fix(sozo): ensure overlays can support any resource type (#2169)\n\n* fix: ensure overlays can support any resource type\r\n\r\n* fix: use contract tag instead of decimal string of the address\r\n\r\n* fix: remove todo",
+          "timestamp": "2024-07-10T12:26:06-06:00",
+          "tree_id": "f843cc2ead1efdbfb8bbfb525f7cbbebd217a89e",
+          "url": "https://github.com/dojoengine/dojo/commit/4b69971883ab99165ba53cd86c9703105da06d86"
+        },
+        "date": 1720636499099,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16842484,
+            "range": "± 241314",
             "unit": "ns/iter"
           }
         ]
