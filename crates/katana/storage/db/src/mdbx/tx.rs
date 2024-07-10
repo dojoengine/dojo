@@ -10,7 +10,7 @@ use super::cursor::Cursor;
 use crate::abstraction::{DbTx, DbTxMut};
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
-use crate::tables::{Table, Tables, NUM_TABLES};
+use crate::tables::{DupSort, Table, Tables, NUM_TABLES};
 use crate::utils::decode_one;
 
 /// Alias for read-only transaction.
@@ -51,8 +51,16 @@ impl<K: TransactionKind> Tx<K> {
 
 impl<K: TransactionKind> DbTx for Tx<K> {
     type Cursor<T: Table> = Cursor<K, T>;
+    type DupCursor<T: DupSort> = Self::Cursor<T>;
 
     fn cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
+        self.inner
+            .cursor_with_dbi(self.get_dbi::<T>()?)
+            .map(Cursor::new)
+            .map_err(DatabaseError::CreateCursor)
+    }
+
+    fn cursor_dup<T: DupSort>(&self) -> Result<Cursor<K, T>, DatabaseError> {
         self.inner
             .cursor_with_dbi(self.get_dbi::<T>()?)
             .map(Cursor::new)
@@ -86,9 +94,17 @@ impl<K: TransactionKind> DbTx for Tx<K> {
 
 impl DbTxMut for Tx<RW> {
     type Cursor<T: Table> = Cursor<RW, T>;
+    type DupCursor<T: DupSort> = <Self as DbTxMut>::Cursor<T>;
 
     fn cursor_mut<T: Table>(&self) -> Result<<Self as DbTxMut>::Cursor<T>, DatabaseError> {
         DbTx::cursor(self)
+    }
+
+    fn cursor_dup_mut<T: DupSort>(&self) -> Result<<Self as DbTxMut>::DupCursor<T>, DatabaseError> {
+        self.inner
+            .cursor_with_dbi(self.get_dbi::<T>()?)
+            .map(Cursor::new)
+            .map_err(DatabaseError::CreateCursor)
     }
 
     fn put<T: Table>(&self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
