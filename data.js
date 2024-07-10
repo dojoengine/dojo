@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720624116869,
+  "lastUpdate": 1720632277864,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11425,6 +11425,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17073210,
             "range": "± 556855",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0f4c0896d3723e2d44cc861e8c35d9ed5d06c7c8",
+          "message": "fix: use `merge-strategy` instead of copying profile (#2170)",
+          "timestamp": "2024-07-10T11:15:54-06:00",
+          "tree_id": "e5a491c9d072a315c1c13a6be2beb2746a7dcc9a",
+          "url": "https://github.com/dojoengine/dojo/commit/0f4c0896d3723e2d44cc861e8c35d9ed5d06c7c8"
+        },
+        "date": 1720632277160,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16753862,
+            "range": "± 273693",
             "unit": "ns/iter"
           }
         ]
