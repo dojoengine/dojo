@@ -279,7 +279,7 @@ impl OverlayManifest {
     ///
     /// - `world` and `base` manifest are written to root of the folder.
     /// - `contracts` and `models` are written to their respective directories.
-    pub fn write_to_path_nested(&self, path: &Utf8PathBuf) -> Result<(), AbstractManifestError> {
+    pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<(), AbstractManifestError> {
         fs::create_dir_all(path)?;
 
         if let Some(ref world) = self.world {
@@ -296,14 +296,8 @@ impl OverlayManifest {
             fs::write(file_name, base)?;
         }
 
-        overlay_to_path::<OverlayDojoContract>(
-            &path.join(CONTRACTS_DIR),
-            self.contracts.as_slice(),
-            |c| c.tag.clone(),
-        )?;
-        overlay_to_path::<OverlayDojoModel>(&path.join(MODELS_DIR), self.models.as_slice(), |m| {
-            m.tag.clone()
-        })?;
+        overlay_to_path::<OverlayDojoContract>(path, self.contracts.as_slice(), |c| c.tag.clone())?;
+        overlay_to_path::<OverlayDojoModel>(path, self.models.as_slice(), |m| m.tag.clone())?;
         Ok(())
     }
 
