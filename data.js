@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720548436270,
+  "lastUpdate": 1720624116869,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11395,6 +11395,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16765725,
             "range": "± 211798",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f319acc27dde8b7ae37e5a1385cbd9075e2c8c6f",
+          "message": "feat(sozo): support for `feature` flags (#2112)\n\n* fix: use metadata available to compiler\r\n\r\n* fix formatting\r\n\r\n* fix formatting\r\n\r\n* fix: use metadata available to compiler\r\n\r\n* add featurespec to test arguments\r\n\r\n* fix: ensure test command use test target\r\n\r\n* fix: fmt and clippy\r\n\r\n* wip: rebuild tests\r\n\r\n* enable `something` by default and update test\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-10T08:59:47-06:00",
+          "tree_id": "7f06cc41f2b1631d4cced82ffdaf26fc6e9f9c77",
+          "url": "https://github.com/dojoengine/dojo/commit/f319acc27dde8b7ae37e5a1385cbd9075e2c8c6f"
+        },
+        "date": 1720624116166,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17073210,
+            "range": "± 556855",
             "unit": "ns/iter"
           }
         ]
