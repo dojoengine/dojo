@@ -73,7 +73,9 @@ pub enum ProviderError {
 
     /// Error when a contract nonce change entry is not found but the block number of when the
     /// change happen exists in the nonce change list.
-    #[error("Missing contract nonce change entry for contract {contract_address} at block {block}")]
+    #[error(
+        "Missing contract nonce change entry for contract {contract_address} at block {block}"
+    )]
     MissingContractNonceChangeEntry {
         /// The block number of when the change happen.
         block: BlockNumber,
