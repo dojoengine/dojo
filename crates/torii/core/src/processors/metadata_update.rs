@@ -21,13 +21,13 @@ const MAX_RETRY: u8 = 3;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::metadata_update";
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MetadataUpdateProcessor;
 
 #[async_trait]
 impl<P> EventProcessor<P> for MetadataUpdateProcessor
 where
-    P: Provider + Send + Sync,
+    P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
         "MetadataUpdate".to_string()

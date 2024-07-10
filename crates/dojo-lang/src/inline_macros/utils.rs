@@ -12,6 +12,7 @@ lazy_static::lazy_static! {
     pub static ref SYSTEM_READS: Mutex<HashMap<ModuleName, Vec<String>>> = Default::default();
 }
 
+#[derive(Debug)]
 pub enum SystemRWOpRecord {
     StructCtor(ExprStructCtorCall),
     Path(ExprPath),

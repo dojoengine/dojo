@@ -6,6 +6,7 @@ use crate::constants::{PAGE_INFO_NAMES, PAGE_INFO_TYPE_NAME};
 use crate::mapping::PAGE_INFO_TYPE_MAPPING;
 use crate::object::{BasicObject, TypeMapping};
 
+#[derive(Debug)]
 pub struct PageInfoObject;
 
 impl BasicObject for PageInfoObject {

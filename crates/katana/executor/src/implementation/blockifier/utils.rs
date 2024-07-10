@@ -28,6 +28,21 @@ use blockifier::transaction::transactions::{
 use blockifier::versioned_constants::VersionedConstants;
 use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
 use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
+use katana_cairo::starknet_api::core::{
+    self, ChainId, ClassHash, CompiledClassHash, ContractAddress, Nonce,
+};
+use katana_cairo::starknet_api::data_availability::DataAvailabilityMode;
+use katana_cairo::starknet_api::deprecated_contract_class::EntryPointType;
+use katana_cairo::starknet_api::hash::StarkFelt;
+use katana_cairo::starknet_api::transaction::{
+    AccountDeploymentData, Calldata, ContractAddressSalt,
+    DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2,
+    DeclareTransactionV3, DeployAccountTransaction as ApiDeployAccountTransaction,
+    DeployAccountTransactionV1, DeployAccountTransactionV3, Fee,
+    InvokeTransaction as ApiInvokeTransaction, PaymasterData, Resource, ResourceBounds,
+    ResourceBoundsMapping, Tip, TransactionHash, TransactionSignature, TransactionVersion,
+};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -39,19 +54,6 @@ use katana_primitives::{class, event, message, trace, FieldElement};
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::types::PriceUnit;
 use starknet::core::utils::parse_cairo_short_string;
-use starknet_api::block::{BlockNumber, BlockTimestamp};
-use starknet_api::core::{self, ChainId, ClassHash, CompiledClassHash, ContractAddress, Nonce};
-use starknet_api::data_availability::DataAvailabilityMode;
-use starknet_api::deprecated_contract_class::EntryPointType;
-use starknet_api::hash::StarkFelt;
-use starknet_api::transaction::{
-    AccountDeploymentData, Calldata, ContractAddressSalt,
-    DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2,
-    DeclareTransactionV3, DeployAccountTransaction as ApiDeployAccountTransaction,
-    DeployAccountTransactionV1, DeployAccountTransactionV3, Fee,
-    InvokeTransaction as ApiInvokeTransaction, PaymasterData, Resource, ResourceBounds,
-    ResourceBoundsMapping, Tip, TransactionHash, TransactionSignature, TransactionVersion,
-};
 
 use super::state::{CachedState, StateDb};
 use super::CACHE_SIZE;
@@ -180,13 +182,15 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                 let signature = tx.signature.into_iter().map(to_stark_felt).collect();
 
                 Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
-                    tx: ApiInvokeTransaction::V1(starknet_api::transaction::InvokeTransactionV1 {
-                        max_fee: Fee(tx.max_fee),
-                        nonce: Nonce(to_stark_felt(tx.nonce)),
-                        sender_address: to_blk_address(tx.sender_address),
-                        signature: TransactionSignature(signature),
-                        calldata: Calldata(Arc::new(calldata)),
-                    }),
+                    tx: ApiInvokeTransaction::V1(
+                        katana_cairo::starknet_api::transaction::InvokeTransactionV1 {
+                            max_fee: Fee(tx.max_fee),
+                            nonce: Nonce(to_stark_felt(tx.nonce)),
+                            sender_address: to_blk_address(tx.sender_address),
+                            signature: TransactionSignature(signature),
+                            calldata: Calldata(Arc::new(calldata)),
+                        },
+                    ),
                     tx_hash: TransactionHash(to_stark_felt(hash)),
                     only_query: false,
                 }))
@@ -203,18 +207,20 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                 let nonce_data_availability_mode = to_api_da_mode(tx.nonce_data_availability_mode);
 
                 Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
-                    tx: ApiInvokeTransaction::V3(starknet_api::transaction::InvokeTransactionV3 {
-                        tip: Tip(tx.tip),
-                        nonce: Nonce(to_stark_felt(tx.nonce)),
-                        sender_address: to_blk_address(tx.sender_address),
-                        signature: TransactionSignature(signature),
-                        calldata: Calldata(Arc::new(calldata)),
-                        paymaster_data: PaymasterData(paymaster_data),
-                        account_deployment_data: AccountDeploymentData(account_deploy_data),
-                        fee_data_availability_mode,
-                        nonce_data_availability_mode,
-                        resource_bounds: to_api_resource_bounds(tx.resource_bounds),
-                    }),
+                    tx: ApiInvokeTransaction::V3(
+                        katana_cairo::starknet_api::transaction::InvokeTransactionV3 {
+                            tip: Tip(tx.tip),
+                            nonce: Nonce(to_stark_felt(tx.nonce)),
+                            sender_address: to_blk_address(tx.sender_address),
+                            signature: TransactionSignature(signature),
+                            calldata: Calldata(Arc::new(calldata)),
+                            paymaster_data: PaymasterData(paymaster_data),
+                            account_deployment_data: AccountDeploymentData(account_deploy_data),
+                            fee_data_availability_mode,
+                            nonce_data_availability_mode,
+                            resource_bounds: to_api_resource_bounds(tx.resource_bounds),
+                        },
+                    ),
                     tx_hash: TransactionHash(to_stark_felt(hash)),
                     only_query: false,
                 }))
@@ -344,7 +350,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
             let calldata = tx.calldata.into_iter().map(to_stark_felt).collect();
             Transaction::L1HandlerTransaction(L1HandlerTransaction {
                 paid_fee_on_l1: Fee(tx.paid_fee_on_l1),
-                tx: starknet_api::transaction::L1HandlerTransaction {
+                tx: katana_cairo::starknet_api::transaction::L1HandlerTransaction {
                     nonce: core::Nonce(to_stark_felt(tx.nonce)),
                     calldata: Calldata(Arc::new(calldata)),
                     version: TransactionVersion(1u128.into()),
@@ -556,11 +562,14 @@ pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> 
 }
 
 /// TODO: remove this function once starknet api 0.8.0 is supported.
-fn starknet_api_ethaddr_to_felt(value: starknet_api::core::EthAddress) -> FieldElement {
+fn starknet_api_ethaddr_to_felt(
+    value: katana_cairo::starknet_api::core::EthAddress,
+) -> FieldElement {
     let mut bytes = [0u8; 32];
     // Padding H160 with zeros to 32 bytes (big endian)
     bytes[12..32].copy_from_slice(value.0.as_bytes());
-    let stark_felt = starknet_api::hash::StarkFelt::new(bytes).expect("valid slice for stark felt");
+    let stark_felt = katana_cairo::starknet_api::hash::StarkFelt::new(bytes)
+        .expect("valid slice for stark felt");
     to_felt(stark_felt)
 }
 
@@ -670,12 +679,12 @@ mod tests {
     use std::collections::HashSet;
 
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+    use katana_cairo::starknet_api::core::EntryPointSelector;
+    use katana_cairo::starknet_api::hash::StarkFelt;
+    use katana_cairo::starknet_api::stark_felt;
+    use katana_cairo::starknet_api::transaction::{EventContent, EventData, EventKey};
     use katana_primitives::chain::{ChainId, NamedChainId};
     use katana_primitives::felt::FieldElement;
-    use starknet_api::core::EntryPointSelector;
-    use starknet_api::hash::StarkFelt;
-    use starknet_api::stark_felt;
-    use starknet_api::transaction::{EventContent, EventData, EventKey};
 
     use super::*;
     use crate::implementation::blockifier::utils;

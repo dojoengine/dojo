@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
-    DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+    DynGeneratedFileAuxData, MacroPluginMetadata, PluginDiagnostic, PluginGeneratedFile,
+    PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
+use cairo_lang_plugins::plugins::HasItemsInCfgEx;
 use cairo_lang_syntax::node::ast::{
     ArgClause, Expr, MaybeModuleBody, OptionArgListParenthesized, OptionReturnTypeClause,
 };
@@ -23,11 +25,12 @@ use crate::utils::is_name_valid;
 const DOJO_INIT_FN: &str = "dojo_init";
 const CONTRACT_NAMESPACE: &str = "namespace";
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ContractParameters {
     namespace: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,
@@ -38,6 +41,7 @@ impl DojoContract {
         db: &dyn SyntaxGroup,
         module_ast: &ast::ItemModule,
         package_id: String,
+        metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         let name = module_ast.name(db).text(db);
 
@@ -80,28 +84,26 @@ impl DojoContract {
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
-                .items(db)
-                .elements(db)
-                .iter()
+                .iter_items_in_cfg(db, metadata.cfg_set)
                 .flat_map(|el| {
-                    if let ast::ModuleItem::Enum(enum_ast) = el {
+                    if let ast::ModuleItem::Enum(ref enum_ast) = el {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
                             has_event = true;
                             return system.merge_event(db, enum_ast.clone());
                         }
-                    } else if let ast::ModuleItem::Struct(struct_ast) = el {
+                    } else if let ast::ModuleItem::Struct(ref struct_ast) = el {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
                             has_storage = true;
                             return system.merge_storage(db, struct_ast.clone());
                         }
-                    } else if let ast::ModuleItem::Impl(impl_ast) = el {
+                    } else if let ast::ModuleItem::Impl(ref impl_ast) = el {
                         // If an implementation is not targetting the ContractState,
                         // the auto injection of self and world is not applied.
                         let trait_path = impl_ast.trait_path(db).node.get_text(db);
                         if trait_path.contains("<ContractState>") {
-                            return system.rewrite_impl(db, impl_ast.clone());
+                            return system.rewrite_impl(db, impl_ast.clone(), metadata);
                         }
-                    } else if let ast::ModuleItem::FreeFunction(fn_ast) = el {
+                    } else if let ast::ModuleItem::FreeFunction(ref fn_ast) = el {
                         let fn_decl = fn_ast.declaration(db);
                         let fn_name = fn_decl.name(db).text(db);
 
@@ -552,7 +554,12 @@ impl DojoContract {
     }
 
     /// Rewrites all the functions of a Impl block.
-    fn rewrite_impl(&mut self, db: &dyn SyntaxGroup, impl_ast: ast::ItemImpl) -> Vec<RewriteNode> {
+    fn rewrite_impl(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        impl_ast: ast::ItemImpl,
+        metadata: &MacroPluginMetadata<'_>,
+    ) -> Vec<RewriteNode> {
         let generate_attrs = impl_ast.attributes(db).query_attr(db, "generate_trait");
         let has_generate_trait = !generate_attrs.is_empty();
 
@@ -569,11 +576,9 @@ impl DojoContract {
             };
 
             let body_nodes: Vec<_> = body
-                .items(db)
-                .elements(db)
-                .iter()
+                .iter_items_in_cfg(db, metadata.cfg_set)
                 .flat_map(|el| {
-                    if let ast::ImplItem::Function(fn_ast) = el {
+                    if let ast::ImplItem::Function(ref fn_ast) = el {
                         return self.rewrite_function(db, fn_ast.clone(), has_generate_trait);
                     }
                     vec![RewriteNode::Copied(el.as_syntax_node())]

@@ -4,6 +4,7 @@ use async_graphql::Name;
 use crate::object::BasicObject;
 use crate::types::{GraphqlType, TypeData, TypeMapping};
 
+#[derive(Debug)]
 pub struct EdgeObject {
     pub name: String,
     pub type_name: String,

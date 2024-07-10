@@ -1,6 +1,9 @@
 use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
-use cairo_lang_defs::plugin::{PluginDiagnostic, PluginGeneratedFile, PluginResult};
+use cairo_lang_defs::plugin::{
+    MacroPluginMetadata, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+};
 use cairo_lang_diagnostics::Severity;
+use cairo_lang_plugins::plugins::HasItemsInCfgEx;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
@@ -8,23 +11,26 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use crate::syntax::self_param;
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 
+#[derive(Debug)]
 pub struct DojoInterface {
     diagnostics: Vec<PluginDiagnostic>,
 }
 
 impl DojoInterface {
-    pub fn from_trait(db: &dyn SyntaxGroup, trait_ast: ast::ItemTrait) -> PluginResult {
+    pub fn from_trait(
+        db: &dyn SyntaxGroup,
+        trait_ast: ast::ItemTrait,
+        metadata: &MacroPluginMetadata<'_>,
+    ) -> PluginResult {
         let name = trait_ast.name(db).text(db);
         let mut system = DojoInterface { diagnostics: vec![] };
         let mut builder = PatchBuilder::new(db, &trait_ast);
 
         if let ast::MaybeTraitBody::Some(body) = trait_ast.body(db) {
             let body_nodes: Vec<_> = body
-                .items(db)
-                .elements(db)
-                .iter()
+                .iter_items_in_cfg(db, metadata.cfg_set)
                 .flat_map(|el| {
-                    if let ast::TraitItem::Function(fn_ast) = el {
+                    if let ast::TraitItem::Function(ref fn_ast) = el {
                         return system.rewrite_function(db, fn_ast.clone());
                     }
 

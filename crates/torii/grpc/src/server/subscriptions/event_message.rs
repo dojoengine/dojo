@@ -26,6 +26,7 @@ use crate::server::map_row_to_entity;
 use crate::types::{EntityKeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
+#[derive(Debug)]
 pub struct EventMessagesSubscriber {
     /// Entity keys that the subscriber is interested in
     keys: Option<EntityKeysClause>,
@@ -33,7 +34,7 @@ pub struct EventMessagesSubscriber {
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EventMessageManager {
     subscribers: RwLock<HashMap<usize, EventMessagesSubscriber>>,
 }
@@ -62,6 +63,7 @@ impl EventMessageManager {
 }
 
 #[must_use = "Service does nothing unless polled"]
+#[allow(missing_debug_implementations)]
 pub struct Service {
     pool: Pool<Sqlite>,
     subs_manager: Arc<EventMessageManager>,

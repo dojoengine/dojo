@@ -5,6 +5,7 @@ use crate::constants::{ORDER_ASC, ORDER_DESC, ORDER_DIR_TYPE_NAME};
 use crate::object::TypeMapping;
 use crate::query::order::{Direction, Order};
 
+#[derive(Debug)]
 pub struct OrderInputObject {
     pub type_name: String,
     pub type_mapping: TypeMapping,

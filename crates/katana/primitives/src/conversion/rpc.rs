@@ -4,6 +4,9 @@ use std::mem;
 
 use anyhow::{Context, Result};
 use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
+use katana_cairo::starknet_api::deprecated_contract_class::{
+    ContractClassAbiEntry, EntryPoint, EntryPointType, TypedParameter,
+};
 use serde::Deserialize;
 use serde_json::json;
 use serde_with::serde_as;
@@ -18,9 +21,6 @@ use starknet::core::types::{
     LegacyContractEntryPoint, LegacyEntryPointsByType, LegacyEventAbiEntry, LegacyEventAbiType,
     LegacyFunctionAbiEntry, LegacyFunctionAbiType, LegacyStructAbiEntry, LegacyStructAbiType,
     LegacyStructMember, LegacyTypedParameter,
-};
-use starknet_api::deprecated_contract_class::{
-    ContractClassAbiEntry, EntryPoint, EntryPointType, TypedParameter,
 };
 
 use crate::class::{
@@ -202,7 +202,7 @@ fn rpc_to_cairo_contract_class(
 }
 
 fn compress_legacy_program_data(
-    legacy_program: starknet_api::deprecated_contract_class::Program,
+    legacy_program: katana_cairo::starknet_api::deprecated_contract_class::Program,
 ) -> Result<Vec<u8>, io::Error> {
     let bytes = serde_json::to_vec(&legacy_program)?;
 

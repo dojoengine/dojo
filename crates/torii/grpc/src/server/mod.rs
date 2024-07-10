@@ -54,7 +54,7 @@ pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
 pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
     world_address: Felt,

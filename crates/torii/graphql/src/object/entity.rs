@@ -20,6 +20,8 @@ use crate::object::{resolve_many, resolve_one};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
 use crate::utils;
+
+#[derive(Debug)]
 pub struct EntityObject;
 
 impl BasicObject for EntityObject {

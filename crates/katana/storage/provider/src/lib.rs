@@ -38,6 +38,7 @@ pub type ProviderResult<T> = Result<T, error::ProviderError>;
 ///
 /// Serves as the main entrypoint for interacting with the storage storage. Every read/write
 /// operation is done through this provider.
+#[derive(Debug)]
 pub struct BlockchainProvider<Db> {
     provider: Db,
 }

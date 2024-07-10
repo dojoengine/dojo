@@ -47,6 +47,7 @@ pub struct SequencerConfig {
     pub messaging: Option<MessagingConfig>,
 }
 
+#[allow(missing_debug_implementations)]
 pub struct KatanaSequencer<EF: ExecutorFactory> {
     pub config: SequencerConfig,
     pub pool: Arc<TransactionPool>,

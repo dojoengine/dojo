@@ -43,6 +43,7 @@ use starknet::core::types::{
     TransactionExecutionStatus, TransactionStatus, TransactionTrace,
 };
 
+#[allow(missing_debug_implementations)]
 pub struct StarknetApi<EF: ExecutorFactory> {
     inner: Arc<StarknetApiInner<EF>>,
 }

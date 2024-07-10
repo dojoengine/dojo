@@ -38,6 +38,7 @@ use crate::traits::transaction::{
 };
 use crate::ProviderResult;
 
+#[derive(Debug)]
 pub struct ForkedProvider {
     // TODO: insert `ForkedBackend` into `CacheDb`
     storage: RwLock<CacheDb<()>>,

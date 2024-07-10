@@ -8,7 +8,7 @@ use tokio::time::sleep;
 
 use crate::KatanaRunner;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TimedLog<T> {
     timestamp: String,
     level: String,
@@ -16,7 +16,7 @@ pub struct TimedLog<T> {
     target: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
     message: String,
 }

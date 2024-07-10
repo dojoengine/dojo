@@ -66,6 +66,7 @@ pub trait ModelReader<E> {
     async fn layout(&self) -> Result<abigen::model::Layout, E>;
 }
 
+#[derive(Debug)]
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
     /// Namespace of the model
     namespace: String,

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -17,7 +18,7 @@ use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
-
+#[allow(missing_debug_implementations)]
 pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
@@ -51,6 +52,7 @@ impl Default for EngineConfig {
     }
 }
 
+#[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Sync> {
     world: WorldContractReader<P>,
     db: Sql,

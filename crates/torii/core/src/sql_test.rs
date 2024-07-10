@@ -33,7 +33,7 @@ pub async fn bootstrap_engine<P>(
     provider: P,
 ) -> Result<Engine<P>, Box<dyn std::error::Error>>
 where
-    P: Provider + Send + Sync,
+    P: Provider + Send + Sync + core::fmt::Debug,
 {
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(

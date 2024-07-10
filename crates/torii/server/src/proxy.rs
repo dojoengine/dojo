@@ -51,6 +51,7 @@ lazy_static::lazy_static! {
     };
 }
 
+#[derive(Debug)]
 pub struct Proxy {
     addr: SocketAddr,
     allowed_origins: Option<Vec<String>>,

@@ -13,7 +13,8 @@ pub type SierraClass = starknet::core::types::contract::SierraClass;
 pub type FlattenedSierraClass = starknet::core::types::FlattenedSierraClass;
 
 /// Deprecated legacy (Cairo 0) CASM class
-pub type DeprecatedCompiledClass = ::starknet_api::deprecated_contract_class::ContractClass;
+pub type DeprecatedCompiledClass =
+    ::katana_cairo::starknet_api::deprecated_contract_class::ContractClass;
 
 /// Represents an executable Sierra program.
 #[derive(Debug, Clone, Eq, PartialEq)]
