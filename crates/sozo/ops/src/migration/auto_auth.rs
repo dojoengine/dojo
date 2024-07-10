@@ -49,8 +49,6 @@ pub fn compute_writers(
             .find(|c| migrated_contract.tag == c.inner.tag)
             .expect("we know this contract exists");
 
-        // TODO: we may add support for `owns`?
-
         if !contract.inner.writes.is_empty() {
             ui.print_sub(format!(
                 "Authorizing {} for resources: {:?}",
