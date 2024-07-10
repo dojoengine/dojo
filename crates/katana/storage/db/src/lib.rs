@@ -5,6 +5,7 @@ use std::path::Path;
 
 use anyhow::{anyhow, Context};
 
+pub mod abstraction;
 pub mod codecs;
 pub mod error;
 pub mod mdbx;

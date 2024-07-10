@@ -7,9 +7,11 @@ pub mod tx;
 
 use std::path::Path;
 
+pub use libmdbx;
 use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW};
 
 use self::tx::Tx;
+use crate::abstraction::DbTx;
 use crate::error::DatabaseError;
 use crate::tables::{TableType, Tables};
 use crate::utils;
@@ -142,8 +144,8 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
+    use crate::abstraction::{DbCursor, DbCursorMut, DbDupSortCursor, DbTxMut, Walker};
     use crate::codecs::Encode;
-    use crate::mdbx::cursor::Walker;
     use crate::mdbx::test_utils::create_test_db;
     use crate::models::storage::StorageEntry;
     use crate::tables::{BlockHashes, ContractInfo, ContractStorage, Headers, Table};

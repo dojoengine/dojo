@@ -1,3 +1,4 @@
+use katana_db::abstraction::{DbCursorMut, DbDupSortCursor, DbTx, DbTxMut};
 use katana_db::mdbx::{self};
 use katana_db::models::contract::ContractInfoChangeList;
 use katana_db::models::list::BlockList;
