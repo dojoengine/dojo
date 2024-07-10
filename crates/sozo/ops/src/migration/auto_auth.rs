@@ -66,7 +66,7 @@ pub fn compute_writers(
                 format!("m:{}", tag_with_prefix)
             };
 
-            let resource = format!("{},{}", resource_type, migrated_contract.contract_address);
+            let resource = format!("{},{}", resource_type, migrated_contract.tag);
             res.push(ResourceWriter::from_str(&resource)?);
         }
     }
