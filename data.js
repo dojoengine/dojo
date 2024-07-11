@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720658054494,
+  "lastUpdate": 1720724273741,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11545,6 +11545,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16862950,
             "range": "± 200225",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "600cfca8039a4b86700eee49b50c1448b5112397",
+          "message": "refactor(katana-db): main database trait (#2173)\n\nTaken from Reth's database API: <https://github.com/paradigmxyz/reth/blob/main/crates/storage/db-api/src/database.rs>",
+          "timestamp": "2024-07-12T02:48:48+08:00",
+          "tree_id": "8553242b5597d292b0b6ee1ee40c346063ba0a2e",
+          "url": "https://github.com/dojoengine/dojo/commit/600cfca8039a4b86700eee49b50c1448b5112397"
+        },
+        "date": 1720724272562,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17074973,
+            "range": "± 354753",
             "unit": "ns/iter"
           }
         ]
