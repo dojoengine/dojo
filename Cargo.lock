@@ -4963,6 +4963,7 @@ dependencies = [
  "ipfs-api-backend-hyper",
  "katana-runner",
  "num-traits 0.2.19",
+ "regex",
  "scarb",
  "serde",
  "serde_json",

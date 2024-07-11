@@ -26,7 +26,7 @@ use dojo_world::manifest::{
     ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
     MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
-use dojo_world::metadata::get_default_namespace_from_ws;
+use dojo_world::metadata::get_namespace_config_from_ws;
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
@@ -88,8 +88,6 @@ impl Compiler for DojoCompiler {
         let props: Props = unit.main_component().target_props()?;
         let target_dir = unit.target_dir(ws);
 
-        let default_namespace = get_default_namespace_from_ws(ws)?;
-
         let compiler_config = build_compiler_config(&unit, ws);
 
         let mut main_crate_ids = collect_main_crate_ids(&unit, db);
@@ -137,7 +135,6 @@ impl Compiler for DojoCompiler {
             &main_crate_ids,
             compiled_classes,
             props.build_external_contracts,
-            &default_namespace,
         )?;
         Ok(())
     }
@@ -223,8 +220,9 @@ fn update_files(
     crate_ids: &[CrateId],
     compiled_artifacts: HashMap<String, (Felt, ContractClass)>,
     external_contracts: Option<Vec<ContractSelector>>,
-    default_namespace: &str,
 ) -> anyhow::Result<()> {
+    let namespace_config = get_namespace_config_from_ws(ws)?;
+
     let profile_name =
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
     let relative_manifest_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name);
@@ -247,6 +245,7 @@ fn update_files(
 
     let mut crate_ids = crate_ids.to_vec();
 
+    // World and base contracts from Dojo core.
     for (qualified_path, tag) in
         [(WORLD_QUALIFIED_PATH, WORLD_CONTRACT_TAG), (BASE_QUALIFIED_PATH, BASE_CONTRACT_TAG)]
     {
@@ -311,7 +310,7 @@ fn update_files(
                     contracts.extend(get_dojo_contract_artifacts(
                         db,
                         module_id,
-                        &naming::get_tag(default_namespace, &aux_data.contract_name),
+                        &naming::get_tag(&namespace_config.default, &aux_data.contract_name),
                         &compiled_artifacts,
                     )?);
                 }

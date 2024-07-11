@@ -1,0 +1,26 @@
+kind = "DojoModel"
+class_hash = "0x34e17c9bad7ccfa7286e07ed3a9af0b2922c7ee77a4889a1c59d0a6dd7aeacc"
+original_class_hash = "0x34e17c9bad7ccfa7286e07ed3a9af0b2922c7ee77a4889a1c59d0a6dd7aeacc"
+abi = "manifests/release/base/abis/models/dojo_examples_foes-RiverSkale-39535c12.json"
+tag = "dojo_examples_foes-RiverSkale"
+manifest_name = "dojo_examples_foes-RiverSkale-39535c12"
+
+[[members]]
+name = "id"
+type = "u32"
+key = true
+
+[[members]]
+name = "health"
+type = "u32"
+key = false
+
+[[members]]
+name = "armor"
+type = "u32"
+key = false
+
+[[members]]
+name = "attack"
+type = "u32"
+key = false

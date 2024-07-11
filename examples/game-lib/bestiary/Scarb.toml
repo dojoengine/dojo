@@ -13,4 +13,4 @@ dojo.workspace = true
 [tool.dojo.world]
 name = "bestiary"
 seed = "bestiary"
-namespace = "bestiary"
+namespace = { default = "bestiary" }

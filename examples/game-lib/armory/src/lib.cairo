@@ -1,5 +1,5 @@
 #[derive(Drop, Serde)]
-#[dojo::model]
+#[dojo::model(namespace: "armory")]
 struct Flatbow {
     #[key]
     id: u32,

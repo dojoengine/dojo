@@ -355,32 +355,32 @@ mod ctxnamed {
 }
 
 //! > expected_diagnostics
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:1:1
 #[dojo::contract(namespace: "My@Namespace")]
 ^******************************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:11:1
 #[dojo::contract(namespace: 'my_namespace')]
 ^******************************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:21:1
 #[dojo::contract(namespace: "my_namespace")]
 ^******************************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:28:1
 #[dojo::contract]
 ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:38:1
 #[dojo::contract]
 ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:52:1
 #[starknet::component]
 ^********************^
@@ -390,7 +390,7 @@ error: Unsupported attribute.
 #[starknet::component]
 ^********************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:58:1
 #[starknet::component]
 ^********************^
@@ -400,17 +400,17 @@ error: Unsupported attribute.
 #[starknet::component]
 ^********************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:64:1
 #[dojo::contract]
 ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:85:1
 #[dojo::interface]
 ^****************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:88:1
 #[dojo::interface]
 ^****************^
@@ -420,82 +420,82 @@ error: Unsupported attribute.
     #[my_attr]
     ^********^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:96:1
 #[dojo::interface]
 ^****************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:109:1
 #[dojo::interface]
 ^****************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:124:1
 #[dojo::contract]
 ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:171:1
 #[dojo::contract]
 ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:222:1
 #[dojo::contract]
 ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:239:1
 #[dojo::contract]
 ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:3:5
     use traits::Into;
     ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:4:5
     use dojo::world::Context;
     ^***********************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:6:5
     fn execute(ctx: Context, name: felt252) {
     ^***************************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:13:5
     use traits::Into;
     ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:14:5
     use dojo::world::Context;
     ^***********************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:16:5
     fn execute(ctx: Context, name: felt252) {
     ^***************************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:23:5
     fn execute(value: felt252) -> felt252 {
     ^*************************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:30:5
     use traits::Into;
     ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:31:5
     use dojo::world::Context;
     ^***********************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:33:5
     fn execute(ctx2: Context, name: felt252) {
     ^****************************************^
@@ -505,7 +505,7 @@ error: Unknown derive `starknet::Event` - a plugin might be missing.
     #[derive(Drop, starknet::Event)]
                    ^*************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:40:5
     #[event]
     ^******^
@@ -520,22 +520,22 @@ error: Unknown derive `starknet::Event` - a plugin might be missing.
     #[derive(Drop, starknet::Event)]
                    ^*************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:46:5
     #[derive(Drop, starknet::Event)]
     ^******************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:40:1
     #[event]
 ^**********^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:45:1
 
 ^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:54:5
     #[storage]
     ^********^
@@ -545,7 +545,7 @@ error: Unsupported attribute.
     #[storage]
     ^********^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:60:5
     #[storage]
     ^********^
@@ -555,7 +555,7 @@ error: Unsupported attribute.
     #[storage]
     ^********^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:66:5
     component!(path: testcomponent1, storage: testcomponent1_storage, event: testcomponent1_event);
     ^*********************************************************************************************^
@@ -565,7 +565,7 @@ error: Unknown inline item macro: 'component'.
     component!(path: testcomponent1, storage: testcomponent1_storage, event: testcomponent1_event);
     ^*********************************************************************************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:67:5
     component!(path: testcomponent2, storage: testcomponent2_storage, event: testcomponent2_event);
     ^*********************************************************************************************^
@@ -575,7 +575,7 @@ error: Unknown inline item macro: 'component'.
     component!(path: testcomponent2, storage: testcomponent2_storage, event: testcomponent2_event);
     ^*********************************************************************************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:69:5
     #[storage]
     ^********^
@@ -600,7 +600,7 @@ error: Unknown derive `starknet::Event` - a plugin might be missing.
     #[derive(Drop, starknet::Event)]
                    ^*************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:77:5
     #[event]
     ^******^
@@ -615,12 +615,12 @@ error: Unsupported attribute.
         #[flat]
         ^*****^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:76:1
 
 ^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:126:5
     #[abi(embed_v0)]
     ^**************^
@@ -635,22 +635,22 @@ error: Generated trait must have generic args matching the impl's generic params
     impl InternalImplBad of InternalUtils<ContractState> {
                             ^**************************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:163:5
     #[generate_trait]
     ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:163:5
     #[generate_trait]
     ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:173:5
     #[derive(Drop)]
     ^*************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:178:5
     #[abi(embed_v0)]
     ^**************^
@@ -660,22 +660,22 @@ error: Unsupported attribute.
     #[abi(embed_v0)]
     ^**************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:213:5
     #[generate_trait]
     ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:173:1
     #[derive(Drop)]
 ^*****************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:213:5
     #[generate_trait]
     ^***************^
 
-error: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
  --> test_src/lib.cairo:224:5
     fn dojo_init(
     ^***********^

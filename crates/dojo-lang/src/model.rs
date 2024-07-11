@@ -11,9 +11,9 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
+use dojo_world::metadata::{is_name_valid, NamespaceConfig};
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
-use crate::utils::is_name_valid;
 
 const DEFAULT_MODEL_VERSION: u8 = 1;
 
@@ -192,14 +192,18 @@ pub fn handle_model_struct(
     db: &dyn SyntaxGroup,
     aux_data: &mut DojoAuxData,
     struct_ast: ItemStruct,
-    default_namespace: String,
+    namespace_config: &NamespaceConfig,
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
 
     let parameters = get_model_parameters(db, struct_ast.clone(), &mut diagnostics);
 
     let model_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
-    let model_namespace = parameters.namespace.unwrap_or(default_namespace);
+    let unmapped_namespace = parameters.namespace.unwrap_or(namespace_config.default.clone());
+
+    // Maps namespace from the tag to ensure higher precision on matching namespace mappings.
+    let model_namespace =
+        namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &model_name));
 
     for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
         if !is_name_valid(value) {
@@ -208,8 +212,8 @@ pub fn handle_model_struct(
                 vec![PluginDiagnostic {
                     stable_ptr: struct_ast.name(db).stable_ptr().0,
                     message: format!(
-                        "The model {id} '{value}' can only contain characters (a-z/A-Z), numbers \
-                         (0-9) and underscore (_)"
+                        "The {id} '{value}' can only contain characters (a-z/A-Z), digits (0-9) \
+                         and underscore (_)."
                     )
                     .to_string(),
                     severity: Severity::Error,
@@ -297,9 +301,8 @@ pub fn handle_model_struct(
     let serialized_values: Vec<_> =
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
 
-    let name = struct_ast.name(db).text(db);
     aux_data.models.push(Model {
-        name: name.to_string(),
+        name: model_name.clone(),
         namespace: model_namespace.clone(),
         members: members.to_vec(),
     });
@@ -486,7 +489,7 @@ mod $contract_name$ {
 }
 ",
             &UnorderedHashMap::from([
-                ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
+                ("contract_name".to_string(), RewriteNode::Text(model_name.to_case(Case::Snake))),
                 ("type_name".to_string(), RewriteNode::Text(model_name)),
                 ("namespace".to_string(), RewriteNode::Text("namespace".to_string())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),

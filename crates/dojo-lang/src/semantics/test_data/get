@@ -29,37 +29,37 @@ Missing(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:1:1
 use array::ArrayTrait;
 ^********************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:2:1
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 ^*********************************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:4:1
 #[derive(Copy, Drop, Serde, Introspect)]
 ^**************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:10:1
 fn test_func() { let key: felt252 = 0xb0b;
 ^****************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^
@@ -112,37 +112,37 @@ Missing(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:1:1
 use array::ArrayTrait;
 ^********************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:2:1
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 ^*********************************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:4:1
 #[derive(Copy, Drop, Serde, Introspect)]
 ^**************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:10:1
 fn test_func() { let key: felt252 = 0xb0b;
 ^****************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^
@@ -321,37 +321,37 @@ Block(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:1:1
 use array::ArrayTrait;
 ^********************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:2:1
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 ^*********************************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:4:1
 #[derive(Copy, Drop, Serde, Introspect)]
 ^**************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:10:1
 fn test_func() { let key: felt252 = 0xb0b;
 ^****************************************^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^
 
-error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpJ5NYH6/registry/std/43cf361d9/core/src").
  --> lib.cairo:3:1
 
 ^

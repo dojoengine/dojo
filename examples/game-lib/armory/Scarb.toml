@@ -13,4 +13,4 @@ dojo.workspace = true
 [tool.dojo.world]
 name = "armory"
 seed = "armory"
-namespace = "armory"
+namespace = { default = "armory" }

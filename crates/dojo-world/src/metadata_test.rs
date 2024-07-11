@@ -10,8 +10,8 @@ use url::Url;
 use crate::contracts::naming::{get_filename_from_tag, TAG_SEPARATOR};
 use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 use crate::metadata::{
-    dojo_metadata_from_workspace, ArtifactMetadata, ProjectMetadata, Uri, WorldMetadata, ABIS_DIR,
-    BASE_DIR, MANIFESTS_DIR,
+    dojo_metadata_from_workspace, ArtifactMetadata, NamespaceConfig, ProjectMetadata, Uri,
+    WorldMetadata, ABIS_DIR, BASE_DIR, MANIFESTS_DIR,
 };
 
 #[test]
@@ -67,13 +67,13 @@ namespace = "dojo_examples"
     assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
     assert_eq!(world.seed, String::from("dojo_examples"));
-    assert_eq!(world.namespace, String::from("dojo_examples"));
+    assert_eq!(world.namespace, NamespaceConfig::new("dojo_examples"));
 }
 
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
     let meta = WorldMetadata {
-        namespace: "dojo_examples".to_string(),
+        namespace: NamespaceConfig::new("dojo_examples"),
         name: Some("Test World".to_string()),
         seed: String::from("dojo_examples"),
         description: Some("A world used for testing".to_string()),

@@ -1,5 +1,5 @@
 #[derive(Drop, Serde)]
-#[dojo::model]
+#[dojo::model(namespace: "bestiary")]
 struct RiverSkale {
     #[key]
     id: u32,
