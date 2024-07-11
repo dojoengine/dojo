@@ -54,10 +54,7 @@ impl DojoContract {
         let mut has_storage = false;
         let mut has_init = false;
 
-        let contract_namespace = match parameters.namespace {
-            Some(x) => x.to_string(),
-            None => default_namespace,
-        };
+        let contract_namespace = parameters.namespace.unwrap_or(default_namespace);
 
         for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {
             if !is_name_valid(value) {
