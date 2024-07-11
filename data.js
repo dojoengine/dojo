@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720636499755,
+  "lastUpdate": 1720658054494,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11515,6 +11515,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16842484,
             "range": "± 241314",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f8776ba535ebf5567c616132e167f7b0e9d7d406",
+          "message": "refactor(katana-db): database transaction abstractions (#2171)",
+          "timestamp": "2024-07-11T08:24:19+08:00",
+          "tree_id": "def7a92aecfae2cdc631df0f939454508d43ba6c",
+          "url": "https://github.com/dojoengine/dojo/commit/f8776ba535ebf5567c616132e167f7b0e9d7d406"
+        },
+        "date": 1720658053153,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16862950,
+            "range": "± 200225",
             "unit": "ns/iter"
           }
         ]
