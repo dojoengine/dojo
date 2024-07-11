@@ -38,15 +38,15 @@ pub fn get_default_namespace(db: &dyn SyntaxGroup) -> Option<String> {
             Err(_) => return Option::None,
         };
 
-        if config.contains_key("tool")
-            && config["tool"].as_table().unwrap().contains_key("dojo")
-            && config["tool"]["dojo"].as_table().unwrap().contains_key("world")
-            && config["tool"]["dojo"]["world"].as_table().unwrap().contains_key("namespace")
-        {
-            return Some(
-                config["tool"]["dojo"]["world"]["namespace"].as_str().unwrap().to_string(),
-            );
-        };
+        if let Some(tool) = config.get("tool").and_then(|t| t.as_table()) {
+            if let Some(dojo) = tool.get("dojo").and_then(|d| d.as_table()) {
+                if let Some(world) = dojo.get("world").and_then(|w| w.as_table()) {
+                    if let Some(namespace) = world.get("namespace").and_then(|n| n.as_str()) {
+                        return Some(namespace.to_string());
+                    }
+                }
+            }
+        }
     }
 
     Option::None
