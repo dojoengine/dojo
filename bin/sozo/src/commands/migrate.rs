@@ -88,36 +88,42 @@ impl MigrateArgs {
         })?;
 
         match self.command {
-            MigrateCommand::Plan => config.tokio_handle().block_on(async {
-                trace!(name, "Planning migration.");
-                migration::migrate(
-                    &ws,
-                    world_address,
-                    rpc_url,
-                    account,
-                    &name,
-                    true,
-                    TxnConfig::default(),
-                    dojo_metadata.skip_migration,
-                )
-                .await
-            }),
-            MigrateCommand::Apply { transaction } => config.tokio_handle().block_on(async {
-                trace!(name, "Applying migration.");
-                let txn_config: TxnConfig = transaction.into();
+            MigrateCommand::Plan => config
+                .tokio_handle()
+                .block_on(async {
+                    trace!(name, "Planning migration.");
+                    migration::migrate(
+                        &ws,
+                        world_address,
+                        rpc_url,
+                        account,
+                        &name,
+                        true,
+                        TxnConfig::default(),
+                        dojo_metadata.skip_migration,
+                    )
+                    .await
+                })
+                .map(|_| ()),
+            MigrateCommand::Apply { transaction } => config
+                .tokio_handle()
+                .block_on(async {
+                    trace!(name, "Applying migration.");
+                    let txn_config: TxnConfig = transaction.into();
 
-                migration::migrate(
-                    &ws,
-                    world_address,
-                    rpc_url,
-                    account,
-                    &name,
-                    false,
-                    txn_config,
-                    dojo_metadata.skip_migration,
-                )
-                .await
-            }),
+                    migration::migrate(
+                        &ws,
+                        world_address,
+                        rpc_url,
+                        account,
+                        &name,
+                        false,
+                        txn_config,
+                        dojo_metadata.skip_migration,
+                    )
+                    .await
+                })
+                .map(|_| ()),
         }
     }
 }

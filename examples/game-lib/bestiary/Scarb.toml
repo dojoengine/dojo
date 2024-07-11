@@ -1,0 +1,16 @@
+[package]
+name = "bestiary"
+version = "0.1.0"
+description = "Some scary foes to fight."
+
+[dependencies]
+dojo.workspace = true
+
+[lib]
+
+[[target.dojo]]
+
+[tool.dojo.world]
+name = "bestiary"
+seed = "bestiary"
+namespace = "bestiary"

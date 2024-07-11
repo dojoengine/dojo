@@ -1,0 +1,26 @@
+kind = "DojoModel"
+class_hash = "0x9efdf4d850ee4e4f837ff4f4b472739589a3aed34d22d1efa18ee743480ef7"
+original_class_hash = "0x9efdf4d850ee4e4f837ff4f4b472739589a3aed34d22d1efa18ee743480ef7"
+abi = "manifests/dev/base/abis/models/bestiary-RiverSkale-1bce2040.json"
+tag = "bestiary-RiverSkale"
+manifest_name = "bestiary-RiverSkale-1bce2040"
+
+[[members]]
+name = "id"
+type = "u32"
+key = true
+
+[[members]]
+name = "health"
+type = "u32"
+key = false
+
+[[members]]
+name = "armor"
+type = "u32"
+key = false
+
+[[members]]
+name = "attack"
+type = "u32"
+key = false

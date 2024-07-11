@@ -627,8 +627,7 @@ mod tests {
     use std::fs;
     use std::io::Read;
 
-    use camino::Utf8PathBuf;
-    use dojo_test_utils::compiler;
+    use dojo_test_utils::compiler::CompilerTestSetup;
     use dojo_world::metadata::dojo_metadata_from_workspace;
     use scarb::compiler::Profile;
 
@@ -647,21 +646,21 @@ mod tests {
         let expected_output_without_header =
             expected_output.lines().skip(1).collect::<Vec<&str>>().join("\n");
 
-        let manifest_path = Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml");
-        let config = compiler::copy_tmp_config(
-            &Utf8PathBuf::from("../../examples/spawn-and-move"),
-            &Utf8PathBuf::from("../dojo-core"),
-            Profile::DEV,
-        );
+        let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
         let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
             "No current package with dojo metadata found, bindgen is not yet support for \
              workspaces.",
         );
-        let data =
-            gather_dojo_data(&manifest_path, "dojo_examples", "dev", dojo_metadata.skip_migration)
-                .unwrap();
+        let data = gather_dojo_data(
+            &config.manifest_path().to_path_buf(),
+            "dojo_examples",
+            "dev",
+            dojo_metadata.skip_migration,
+        )
+        .unwrap();
 
         let actual_output = TypeScriptV2Plugin::generate_code_content(&data);
         let actual_output_without_header =

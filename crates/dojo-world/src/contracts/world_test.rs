@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
 use starknet::accounts::{Account, ConnectedAccount};
@@ -18,11 +18,10 @@ use crate::utils::TransactionExt;
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
     let runner = KatanaRunner::new().expect("Fail to set runner");
-    let config = compiler::copy_tmp_config(
-        &Utf8PathBuf::from("../../examples/spawn-and-move"),
-        &Utf8PathBuf::from("../dojo-core"),
-        Profile::DEV,
-    );
+
+    let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
 
     let default_namespace = ws.current_package().unwrap().id.name.to_string();

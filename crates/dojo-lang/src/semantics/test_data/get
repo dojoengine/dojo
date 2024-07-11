@@ -29,6 +29,41 @@ Missing(
 )
 
 //! > semantic_diagnostics
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:1:1
+use array::ArrayTrait;
+^********************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:2:1
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+^*********************************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:4:1
+#[derive(Copy, Drop, Serde, Introspect)]
+^**************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:10:1
+fn test_func() { let key: felt252 = 0xb0b;
+^****************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
 error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
  --> lib.cairo:12:1
 get!()
@@ -77,6 +112,41 @@ Missing(
 )
 
 //! > semantic_diagnostics
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:1:1
+use array::ArrayTrait;
+^********************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:2:1
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+^*********************************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:4:1
+#[derive(Copy, Drop, Serde, Introspect)]
+^**************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:10:1
+fn test_func() { let key: felt252 = 0xb0b;
+^****************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
 error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
  --> lib.cairo:12:1
 get!(world)
@@ -251,6 +321,41 @@ Block(
 )
 
 //! > semantic_diagnostics
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:1:1
+use array::ArrayTrait;
+^********************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:2:1
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+^*********************************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:4:1
+#[derive(Copy, Drop, Serde, Introspect)]
+^**************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:10:1
+fn test_func() { let key: felt252 = 0xb0b;
+^****************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+
+^
+
 error: Trait has no implementation in context: dojo::model::Model::<test::Health>.
  --> lib.cairo:12:1
 get!(world, key, (Health))

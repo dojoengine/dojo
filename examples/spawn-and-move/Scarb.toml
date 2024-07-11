@@ -11,13 +11,18 @@ sierra-replace-ids = true
 
 [dependencies]
 dojo = { path = "../../crates/dojo-core" }
+armory = { path = "../game-lib/armory" }
+bestiary = { path = "../game-lib/bestiary" }
 
 [[target.dojo]]
-build-external-contracts = [  ]
+build-external-contracts = [
+    "armory::Flatbow",
+    "bestiary::RiverSkale",
+]
 
 [features]
-default = ["something"]
-something = []
+default = ["dungeon"]
+dungeon = []
 
 # `dev` profile
 

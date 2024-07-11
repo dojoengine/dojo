@@ -299,15 +299,15 @@
       },
       {
         "type": "function",
-        "name": "call_something",
+        "name": "enter_dungeon",
         "inputs": [
           {
-            "name": "something_address",
+            "name": "dungeon_address",
             "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
         "outputs": [],
-        "state_mutability": "view"
+        "state_mutability": "external"
       }
     ]
   },

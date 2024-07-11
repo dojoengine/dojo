@@ -91,7 +91,7 @@ impl CleanArgs {
 // which are normally built by the `build.rs` of `dojo-test-utils`.
 #[cfg(test)]
 mod tests {
-    use dojo_test_utils::compiler;
+    use dojo_test_utils::compiler::CompilerTestSetup;
     use dojo_world::manifest::DEPLOYMENT_DIR;
     use dojo_world::metadata::ABIS_DIR;
     use scarb::compiler::Profile;
@@ -100,16 +100,8 @@ mod tests {
 
     #[test]
     fn default_clean_works() {
-        let source_project = "../../examples/spawn-and-move";
-        let dojo_core_path = "../../crates/dojo-core";
-
-        let config = compiler::copy_tmp_config(
-            &Utf8PathBuf::from(source_project),
-            &Utf8PathBuf::from(dojo_core_path),
-            Profile::DEV,
-        );
-
-        println!("path {:?}", config.manifest_path());
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
         let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
 
@@ -180,14 +172,9 @@ mod tests {
 
     #[test]
     fn all_profile_clean_works() {
-        let source_project = "../../examples/spawn-and-move";
-        let dojo_core_path = "../../crates/dojo-core";
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
 
-        let config = compiler::copy_tmp_config(
-            &Utf8PathBuf::from(source_project),
-            &Utf8PathBuf::from(dojo_core_path),
-            Profile::DEV,
-        );
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
         let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
 

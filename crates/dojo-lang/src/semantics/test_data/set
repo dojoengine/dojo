@@ -18,6 +18,11 @@ Missing(
 )
 
 //! > semantic_diagnostics
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:1:1
+fn test_func() {  {
+^*****************^
+
 error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
  --> lib.cairo:2:6
 set!()
@@ -45,6 +50,11 @@ Missing(
 )
 
 //! > semantic_diagnostics
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:1:1
+fn test_func() {  {
+^*****************^
+
 error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
  --> lib.cairo:2:6
 set!(world)
@@ -224,10 +234,40 @@ Block(
 )
 
 //! > semantic_diagnostics
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:1:1
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+^*********************************************************^
+
 error: Plugin diagnostic: Unknown derive `Model` - a plugin might be missing.
  --> lib.cairo:3:29
 #[derive(Copy, Drop, Serde, Model)]
                             ^***^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:3:1
+#[derive(Copy, Drop, Serde, Model)]
+^*********************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:9:1
+fn test_func() { let key: felt252 = 0xb0b;
+^****************************************^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:2:1
+
+^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:2:1
+
+^
+
+error: Plugin diagnostic: Unable to find the default namespace. Be sure to have a 'tool.dojo.world.namespace' field in your Scarb.toml file.
+ --> lib.cairo:2:1
+
+^
 
 warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
  --> lib.cairo:9:22
