@@ -100,7 +100,7 @@ async fn test_entities_queries() {
         pool.clone(),
         world_address,
         provider
-            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), world_address)
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
             .await
             .unwrap()
             .into(),

@@ -129,7 +129,7 @@ async fn test_load_from_remote() {
         pool.clone(),
         world_address,
         provider
-            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), world_address)
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
             .await
             .unwrap()
             .into(),
@@ -317,7 +317,7 @@ async fn test_load_from_remote_del() {
         pool.clone(),
         world_address,
         provider
-            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), world_address)
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
             .await
             .unwrap()
             .into(),

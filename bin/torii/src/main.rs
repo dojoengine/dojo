@@ -161,7 +161,7 @@ async fn main() -> anyhow::Result<()> {
     let world = WorldContractReader::new(args.world_address, &provider);
 
     let class_hash =
-        provider.get_class_hash_at(BlockId::Tag(BlockTag::Latest), args.world_address).await?;
+        provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), args.world_address).await?;
     let db = Sql::new(pool.clone(), args.world_address, class_hash).await?;
     let processors = Processors {
         event: vec![
