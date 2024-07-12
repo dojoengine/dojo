@@ -99,11 +99,7 @@ async fn test_entities_queries() {
     let db = Sql::new(
         pool.clone(),
         world_address,
-        provider
-            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
-            .await
-            .unwrap()
-            .into(),
+        provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address).await.unwrap(),
     )
     .await
     .unwrap();

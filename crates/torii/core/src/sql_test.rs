@@ -128,11 +128,7 @@ async fn test_load_from_remote() {
     let mut db = Sql::new(
         pool.clone(),
         world_address,
-        provider
-            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
-            .await
-            .unwrap()
-            .into(),
+        provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address).await.unwrap(),
     )
     .await
     .unwrap();
@@ -316,11 +312,7 @@ async fn test_load_from_remote_del() {
     let mut db = Sql::new(
         pool.clone(),
         world_address,
-        provider
-            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
-            .await
-            .unwrap()
-            .into(),
+        provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address).await.unwrap(),
     )
     .await
     .unwrap();
