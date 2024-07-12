@@ -77,12 +77,12 @@ enum Enemy {
 }
 
 //! > expected_diagnostics
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:1:1
 use serde::Serde;
 ^***************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:2:1
 use debug::PrintTrait;
 ^********************^
@@ -92,7 +92,7 @@ error: Unknown derive `Print` - a plugin might be missing.
 #[derive(Print)]
          ^***^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:4:1
 #[derive(Print)]
 ^**************^
@@ -102,12 +102,12 @@ error: Unknown derive `Print` - a plugin might be missing.
 #[derive(Print)]
          ^***^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:12:1
 #[derive(Print)]
 ^**************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:17:1
 use starknet::ContractAddress;
 ^****************************^
@@ -117,7 +117,7 @@ error: Unknown derive `Print` - a plugin might be missing.
 #[derive(Print)]
          ^***^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:19:1
 #[derive(Print)]
 ^**************^
@@ -127,7 +127,7 @@ error: Unknown derive `Print` - a plugin might be missing.
 #[derive(Print)]
          ^***^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:28:1
 #[derive(Print)]
 ^**************^

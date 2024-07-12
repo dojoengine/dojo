@@ -108,11 +108,19 @@ pub async fn deploy_world(
 
     let world = WorldContract::new(world_address, &account);
 
-    world
-        .register_namespace(&cainome::cairo_serde::ByteArray::from_string("dojo_examples").unwrap())
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
+    let calls = vec![
+        world.register_namespace_getcall(
+            &cainome::cairo_serde::ByteArray::from_string("dojo_examples").unwrap(),
+        ),
+        world.register_namespace_getcall(
+            &cainome::cairo_serde::ByteArray::from_string("dojo_examples_foes").unwrap(),
+        ),
+        world.register_namespace_getcall(
+            &cainome::cairo_serde::ByteArray::from_string("dojo_examples_weapons").unwrap(),
+        ),
+    ];
+
+    let _ = account.execute_v1(calls).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
 
     // Wondering why the `init_wait` is not enough and causes a nonce error.
     // May be to a delay to create the block as we are in instant mining.

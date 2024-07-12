@@ -34,7 +34,7 @@ icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
 socials.x = "https://x.com/dojostarknet"
 seed = "dojo_examples"
-namespace = "dojo_examples"
+namespace = { default = "dojo_examples" }
         "#,
     )
     .unwrap();
@@ -106,7 +106,7 @@ world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697
 name = "example"
 description = "example world"
 seed = "dojo_examples"
-namespace = "dojo_examples"
+namespace = { default = "dojo_examples" }
 cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"

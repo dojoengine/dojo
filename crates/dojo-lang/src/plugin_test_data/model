@@ -314,112 +314,112 @@ struct ModelWithTupleNoPrimitives {
 }
 
 //! > expected_diagnostics
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:1:1
 #[dojo::model(version: 0)]
 ^************************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:9:1
 #[dojo::model(version: 0, version: 0)]
 ^************************************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:16:1
 #[dojo::model(version: hello)]
 ^****************************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:23:1
 #[dojo::model(version)]
 ^*********************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:30:1
 #[dojo::model(my_arg: 1)]
 ^***********************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:37:1
 #[dojo::model(my_arg)]
 ^********************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:44:1
 #[dojo::model(version: 2)]
 ^************************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:51:1
 #[dojo::model(version: 0)]
 ^************************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:58:1
 #[dojo::model(namespace: 'MyNamespace')]
 ^**************************************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:65:1
 #[dojo::model(namespace: 'my_namespace')]
 ^***************************************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:72:1
 #[dojo::model(namespace: "my_namespace")]
 ^***************************************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:79:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:86:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:91:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:97:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:103:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:112:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:115:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:123:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:131:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:139:1
 #[dojo::model]
 ^************^
 
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid: Real("test_src").
+error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
  --> test_src/lib.cairo:147:1
 #[dojo::model]
 ^************^

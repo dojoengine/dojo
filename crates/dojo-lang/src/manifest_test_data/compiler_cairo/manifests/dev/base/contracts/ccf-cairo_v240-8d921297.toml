@@ -1,0 +1,11 @@
+kind = "DojoContract"
+class_hash = "0x1b29f38120f222120acf9b3d66f7015d47c0b11d4e9acdfefa243958c60909d"
+original_class_hash = "0x1b29f38120f222120acf9b3d66f7015d47c0b11d4e9acdfefa243958c60909d"
+base_class_hash = "0x0"
+abi = "manifests/dev/base/abis/contracts/ccf-cairo_v240-8d921297.json"
+reads = []
+writes = []
+computed = []
+init_calldata = []
+tag = "ccf-cairo_v240"
+manifest_name = "ccf-cairo_v240-8d921297"
