@@ -65,6 +65,8 @@ pub fn get_namespace_config(db: &dyn SyntaxGroup) -> Result<NamespaceConfig> {
     }
 
     Err(anyhow::anyhow!(
-        "Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.",
+        "Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. \
+         {:?}",
+        configuration.root
     ))
 }

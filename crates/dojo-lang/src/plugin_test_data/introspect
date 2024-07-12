@@ -511,8 +511,7 @@ enum EnumPackableWithInnerPacked {
 enum EnumNotPackable1 {
     a: u8,
     b: u256,
-}
-impl Vec2Copy of core::traits::Copy::<Vec2>;
+}impl Vec2Copy of core::traits::Copy::<Vec2>;
 impl Vec2Drop of core::traits::Drop::<Vec2>;
 impl Vec2Serde of core::serde::Serde::<Vec2> {
     fn serialize(self: @Vec2, ref output: core::array::Array<felt252>) {
@@ -524,6 +523,52 @@ impl Vec2Serde of core::serde::Serde::<Vec2> {
             x: core::serde::Serde::deserialize(ref serialized)?,
             y: core::serde::Serde::deserialize(ref serialized)?,
         })
+    }
+}
+
+impl Vec2Introspect<> of dojo::database::introspect::Introspect<Vec2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
+                    layout: dojo::database::introspect::Introspect::<u32
+>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'Vec2',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u32>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u32>::ty()
+        }
+
+                ].span()
+            }
+        )
     }
 }
 impl PlainEnumSerde of core::serde::Serde::<PlainEnum> {
@@ -546,6 +591,43 @@ impl PlainEnumSerde of core::serde::Serde::<PlainEnum> {
 }
 impl PlainEnumCopy of core::traits::Copy::<PlainEnum>;
 impl PlainEnumDrop of core::traits::Drop::<PlainEnum>;
+
+impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Layout::Fixed(array![].span())
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Layout::Fixed(array![].span())
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'PlainEnum',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Ty::Tuple(array![].span())),
+('Right', dojo::database::introspect::Ty::Tuple(array![].span()))
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
     fn serialize(self: @EnumWithPrimitive, ref output: core::array::Array<felt252>) {
         match self {
@@ -566,6 +648,43 @@ impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
 }
 impl EnumWithPrimitiveCopy of core::traits::Copy::<EnumWithPrimitive>;
 impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
+
+impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumWithPrimitive<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithPrimitive',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Introspect::<u32>::ty()),
+('Right', dojo::database::introspect::Introspect::<u32>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumWithStructSerde of core::serde::Serde::<EnumWithStruct> {
     fn serialize(self: @EnumWithStruct, ref output: core::array::Array<felt252>) {
         match self {
@@ -586,6 +705,52 @@ impl EnumWithStructSerde of core::serde::Serde::<EnumWithStruct> {
 }
 impl EnumWithStructCopy of core::traits::Copy::<EnumWithStruct>;
 impl EnumWithStructDrop of core::traits::Drop::<EnumWithStruct>;
+
+impl EnumWithStructIntrospect<> of dojo::database::introspect::Introspect<EnumWithStruct<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                ];
+
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithStruct',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Introspect::<Vec2>::ty()),
+('Right', dojo::database::introspect::Introspect::<Vec2>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumWithSimpleArraySerde of core::serde::Serde::<EnumWithSimpleArray> {
     fn serialize(self: @EnumWithSimpleArray, ref output: core::array::Array<felt252>) {
         match self {
@@ -606,6 +771,51 @@ impl EnumWithSimpleArraySerde of core::serde::Serde::<EnumWithSimpleArray> {
 }
 impl EnumWithSimpleArrayCopy of core::traits::Copy::<EnumWithSimpleArray>;
 impl EnumWithSimpleArrayDrop of core::traits::Drop::<EnumWithSimpleArray>;
+
+impl EnumWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect<EnumWithSimpleArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Introspect::<Array<u32>>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Introspect::<Array<u32>>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithSimpleArray',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Introspect::<u32>::ty()
+                ].span()
+            )),
+('Right', dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Introspect::<u32>::ty()
+                ].span()
+            ))
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumWithByteArraySerde of core::serde::Serde::<EnumWithByteArray> {
     fn serialize(self: @EnumWithByteArray, ref output: core::array::Array<felt252>) {
         match self {
@@ -626,6 +836,43 @@ impl EnumWithByteArraySerde of core::serde::Serde::<EnumWithByteArray> {
 }
 impl EnumWithByteArrayCopy of core::traits::Copy::<EnumWithByteArray>;
 impl EnumWithByteArrayDrop of core::traits::Drop::<EnumWithByteArray>;
+
+impl EnumWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<EnumWithByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithByteArray',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Ty::ByteArray),
+('Right', dojo::database::introspect::Ty::ByteArray)
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumWithSimpleTupleSerde of core::serde::Serde::<EnumWithSimpleTuple> {
     fn serialize(self: @EnumWithSimpleTuple, ref output: core::array::Array<felt252>) {
         match self {
@@ -646,6 +893,63 @@ impl EnumWithSimpleTupleSerde of core::serde::Serde::<EnumWithSimpleTuple> {
 }
 impl EnumWithSimpleTupleCopy of core::traits::Copy::<EnumWithSimpleTuple>;
 impl EnumWithSimpleTupleDrop of core::traits::Drop::<EnumWithSimpleTuple>;
+
+impl EnumWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<EnumWithSimpleTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<u256>::layout()
+            ].span()
+        )
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<u256>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithSimpleTuple',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<u256>::ty()
+            ].span()
+        )),
+('Right', dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<u256>::ty()
+            ].span()
+        ))
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumWithComplexTupleSerde of core::serde::Serde::<EnumWithComplexTuple> {
     fn serialize(self: @EnumWithComplexTuple, ref output: core::array::Array<felt252>) {
         match self {
@@ -666,6 +970,72 @@ impl EnumWithComplexTupleSerde of core::serde::Serde::<EnumWithComplexTuple> {
 }
 impl EnumWithComplexTupleCopy of core::traits::Copy::<EnumWithComplexTuple>;
 impl EnumWithComplexTupleDrop of core::traits::Drop::<EnumWithComplexTuple>;
+
+impl EnumWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<EnumWithComplexTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(2)
+                ];
+
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<Vec2>::layout()
+            ].span()
+        )
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<Vec2>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithComplexTuple',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<Vec2>::ty()
+            ].span()
+        )),
+('Right', dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<Vec2>::ty()
+            ].span()
+        ))
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
     fn serialize(self: @EnumWithPrimitive, ref output: core::array::Array<felt252>) {
         match self {
@@ -686,6 +1056,43 @@ impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
 }
 impl EnumWithPrimitiveCopy of core::traits::Copy::<EnumWithPrimitive>;
 impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
+
+impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumWithPrimitive<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithPrimitive',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Introspect::<u32>::ty()),
+('Right', dojo::database::introspect::Introspect::<u32>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumCustomSerde of core::serde::Serde::<EnumCustom> {
     fn serialize(self: @EnumCustom, ref output: core::array::Array<felt252>) {
         match self {
@@ -706,6 +1113,52 @@ impl EnumCustomSerde of core::serde::Serde::<EnumCustom> {
 }
 impl EnumCustomCopy of core::traits::Copy::<EnumCustom>;
 impl EnumCustomDrop of core::traits::Drop::<EnumCustom>;
+
+impl EnumCustomIntrospect<> of dojo::database::introspect::Introspect<EnumCustom<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                ];
+
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumCustom',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Introspect::<Vec2>::ty()),
+('Right', dojo::database::introspect::Introspect::<Vec2>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumTupleMixSerde of core::serde::Serde::<EnumTupleMix> {
     fn serialize(self: @EnumTupleMix, ref output: core::array::Array<felt252>) {
         match self {
@@ -726,6 +1179,77 @@ impl EnumTupleMixSerde of core::serde::Serde::<EnumTupleMix> {
 }
 impl EnumTupleMixCopy of core::traits::Copy::<EnumTupleMix>;
 impl EnumTupleMixDrop of core::traits::Drop::<EnumTupleMix>;
+
+impl EnumTupleMixIntrospect<> of dojo::database::introspect::Introspect<EnumTupleMix<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
+dojo::database::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(2)
+                ];
+
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::layout(),
+dojo::database::introspect::Introspect::<u64>::layout(),
+dojo::database::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        )
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::layout(),
+dojo::database::introspect::Introspect::<u64>::layout(),
+dojo::database::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumTupleMix',
+                attrs: array![].span(),
+                children: array![
+                ('Left', dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::ty(),
+dojo::database::introspect::Introspect::<u64>::ty(),
+dojo::database::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        )),
+('Right', dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::ty(),
+dojo::database::introspect::Introspect::<u64>::ty(),
+dojo::database::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        ))
+
+                ].span()
+            }
+        )
+    }
+}
 impl EnumWithDifferentVariantDataSerde of core::serde::Serde::<EnumWithDifferentVariantData> {
     fn serialize(self: @EnumWithDifferentVariantData, ref output: core::array::Array<felt252>) {
         match self {
@@ -748,28 +1272,839 @@ impl EnumWithDifferentVariantDataSerde of core::serde::Serde::<EnumWithDifferent
 }
 impl EnumWithDifferentVariantDataCopy of core::traits::Copy::<EnumWithDifferentVariantData>;
 impl EnumWithDifferentVariantDataDrop of core::traits::Drop::<EnumWithDifferentVariantData>;
+
+impl EnumWithDifferentVariantDataIntrospect<> of dojo::database::introspect::Introspect<EnumWithDifferentVariantData<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Layout::Fixed(array![].span())
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 1,
+                    layout: dojo::database::introspect::Introspect::<u32>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 2,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::layout(),
+dojo::database::introspect::Introspect::<u64>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithDifferentVariantData',
+                attrs: array![].span(),
+                children: array![
+                ('One', dojo::database::introspect::Ty::Tuple(array![].span())),
+('Two', dojo::database::introspect::Introspect::<u32>::ty()),
+('Three', dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::ty(),
+dojo::database::introspect::Introspect::<u64>::ty()
+            ].span()
+        ))
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithPrimitivesCopy of core::traits::Copy::<StructWithPrimitives>;
 impl StructWithPrimitivesDrop of core::traits::Drop::<StructWithPrimitives>;
+
+impl StructWithPrimitivesIntrospect<> of dojo::database::introspect::Introspect<StructWithPrimitives<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Introspect::<u16>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithPrimitives',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u16>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithStructCopy of core::traits::Copy::<StructWithStruct>;
 impl StructWithStructDrop of core::traits::Drop::<StructWithStruct>;
+
+impl StructWithStructIntrospect<> of dojo::database::introspect::Introspect<StructWithStruct<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                ];
+
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithStruct',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<Vec2>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithSimpleArrayCopy of core::traits::Copy::<StructWithSimpleArray>;
 impl StructWithSimpleArrayDrop of core::traits::Drop::<StructWithSimpleArray>;
+
+impl StructWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect<StructWithSimpleArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Introspect::<Array<u32>>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithSimpleArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Introspect::<u32>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithByteArrayCopy of core::traits::Copy::<StructWithByteArray>;
 impl StructWithByteArrayDrop of core::traits::Drop::<StructWithByteArray>;
+
+impl StructWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<StructWithByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Introspect::<ByteArray>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithByteArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::ByteArray
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithComplexArrayCopy of core::traits::Copy::<StructWithComplexArray>;
 impl StructWithComplexArrayDrop of core::traits::Drop::<StructWithComplexArray>;
+
+impl StructWithComplexArrayIntrospect<> of dojo::database::introspect::Introspect<StructWithComplexArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Introspect::<Array<Vec2>>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithComplexArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Introspect::<Vec2>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithSimpleTupleCopy of core::traits::Copy::<StructWithSimpleTuple>;
 impl StructWithSimpleTupleDrop of core::traits::Drop::<StructWithSimpleTuple>;
+
+impl StructWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<StructWithSimpleTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<u256>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithSimpleTuple',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<u256>::ty()
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithComplexTupleCopy of core::traits::Copy::<StructWithComplexTuple>;
 impl StructWithComplexTupleDrop of core::traits::Drop::<StructWithComplexTuple>;
+
+impl StructWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<StructWithComplexTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
+dojo::database::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(2)
+                ];
+
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<Vec2>::layout(),
+dojo::database::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithComplexTuple',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<Vec2>::ty(),
+dojo::database::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithNestedArraysCopy of core::traits::Copy::<StructWithNestedArrays>;
 impl StructWithNestedArraysDrop of core::traits::Drop::<StructWithNestedArrays>;
+
+impl StructWithNestedArraysIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedArrays<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::Introspect::<Array<Vec2>>::layout()
+                ].span()
+            )
+                ].span()
+            )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithNestedArrays',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Introspect::<Vec2>::ty()
+                ].span()
+            )
+                ].span()
+            )
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithNestedTuplesCopy of core::traits::Copy::<StructWithNestedTuples>;
 impl StructWithNestedTuplesDrop of core::traits::Drop::<StructWithNestedTuples>;
+
+impl StructWithNestedTuplesIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedTuples<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<Vec2>::size(),
+dojo::database::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(3)
+                ];
+
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<u32>::layout()
+            ].span()
+        ),
+dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::layout(),
+dojo::database::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        )
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithNestedTuples',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<u32>::ty()
+            ].span()
+        ),
+dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::ty(),
+dojo::database::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        )
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithNestedTuplesAndByteArrayCopy of core::traits::Copy::<StructWithNestedTuplesAndByteArray>;
 impl StructWithNestedTuplesAndByteArrayDrop of core::traits::Drop::<StructWithNestedTuplesAndByteArray>;
+
+impl StructWithNestedTuplesAndByteArrayIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedTuplesAndByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<u32>::layout()
+            ].span()
+        ),
+dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::layout(),
+dojo::database::introspect::Introspect::<ByteArray>::layout()
+            ].span()
+        )
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithNestedTuplesAndByteArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<u32>::ty()
+            ].span()
+        ),
+dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::ty(),
+dojo::database::introspect::Ty::ByteArray
+            ].span()
+        )
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithNestedEverythingCopy of core::traits::Copy::<StructWithNestedEverything>;
 impl StructWithNestedEverythingDrop of core::traits::Drop::<StructWithNestedEverything>;
+
+impl StructWithNestedEverythingIntrospect<> of dojo::database::introspect::Introspect<StructWithNestedEverything<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 387461982739864353524563589639770327077359184971688375275386807599796929637,
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                    selector: 564613130574576288414461160574656432422962213642984413874723251824844509768,
+                    layout: dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::layout(),
+dojo::database::introspect::Introspect::<u32>::layout()
+            ].span()
+        ),
+dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::layout(),
+dojo::database::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        ),
+dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Layout::Array(
+                array![
+                    dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u32>::layout(),
+dojo::database::introspect::Introspect::<Vec2>::layout()
+            ].span()
+        )
+                ].span()
+            ),
+dojo::database::introspect::Introspect::<EnumCustom>::layout()
+            ].span()
+        ),
+dojo::database::introspect::Layout::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u16>::layout()
+            ].span()
+        )
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithNestedEverything',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::database::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'before',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'after',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<u32>::ty()
+            ].span()
+        ),
+dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<Vec2>::ty(),
+dojo::database::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        ),
+dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u32>::ty(),
+dojo::database::introspect::Introspect::<Vec2>::ty()
+            ].span()
+        )
+                ].span()
+            ),
+dojo::database::introspect::Introspect::<EnumCustom>::ty()
+            ].span()
+        ),
+dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u16>::ty()
+            ].span()
+        )
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl GenericStructCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<GenericStruct<T>>;
 impl GenericStructDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<GenericStruct<T>>;
 impl GenericStructSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<GenericStruct<T>> {
@@ -782,6 +2117,42 @@ impl GenericStructSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> o
         })
     }
 }
+
+impl GenericStructIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<GenericStruct<T>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::database::introspect::Introspect::<T>::size()
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 1246920879054256875300693562709339669009726288543267794550465531256469553289,
+                    layout: dojo::database::introspect::Introspect::<T>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'GenericStruct',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 't',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<T>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
 impl StructWithBadOptionCopy of core::traits::Copy::<StructWithBadOption>;
 impl StructWithBadOptionDrop of core::traits::Drop::<StructWithBadOption>;
 impl StructWithBadOptionSerde of core::serde::Serde::<StructWithBadOption> {
@@ -792,6 +2163,43 @@ impl StructWithBadOptionSerde of core::serde::Serde::<StructWithBadOption> {
         core::option::Option::Some(StructWithBadOption {
             x: core::serde::Serde::deserialize(ref serialized)?,
         })
+    }
+}
+
+impl StructWithBadOptionIntrospect<> of dojo::database::introspect::Introspect<StructWithBadOption<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::database::introspect::Introspect::<Option<(u8, u16)>>::size()
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::database::introspect::Introspect::<Option<(u8, u16)>
+>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructWithBadOption',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<Option<(u8, u16)>>::ty()
+        }
+
+                ].span()
+            }
+        )
     }
 }
 impl EnumWithBadOptionCopy of core::traits::Copy::<EnumWithBadOption>;
@@ -813,543 +2221,721 @@ impl EnumWithBadOptionSerde of core::serde::Serde::<EnumWithBadOption> {
     }
 }
 
+impl EnumWithBadOptionIntrospect<> of dojo::database::introspect::Introspect<EnumWithBadOption<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<Option<(u8, u16)>>::size(),
+Option::Some(1)
+                ];
+
+                if dojo::database::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            dojo::database::introspect::FieldLayout {
+                    selector: 0,
+                    layout: dojo::database::introspect::Introspect::<Option<(u8, u16)>>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithBadOption',
+                attrs: array![].span(),
+                children: array![
+                ('first', dojo::database::introspect::Introspect::<Option<(u8, u16)>>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspect<EnumIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumIncompatibleAttrs',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+        
+impl EnumIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspect<EnumIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+                array![
+                8
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumIncompatibleAttrs',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspect<StructIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructIncompatibleAttrs',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+        
+impl StructIncompatibleAttrsIntrospect<> of dojo::database::introspect::Introspect<StructIncompatibleAttrs<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructIncompatibleAttrs',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introspect<StructIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructIncompatibleAttrs2',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+        
+impl StructIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introspect<StructIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructIncompatibleAttrs2',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introspect<EnumIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Enum(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumIncompatibleAttrs2',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+        
+impl EnumIncompatibleAttrs2Introspect<> of dojo::database::introspect::Introspect<EnumIncompatibleAttrs2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+                array![
+                8
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumIncompatibleAttrs2',
+                attrs: array![].span(),
+                children: array![
+                
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructPacked1Introspect<> of dojo::database::introspect::Introspect<StructPacked1<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+            array![
+            8
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructPacked1',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructPacked2Introspect<> of dojo::database::introspect::Introspect<StructPacked2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(3)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+            array![
+            8,128,128
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructPacked2',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u256>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructPacked3Introspect<> of dojo::database::introspect::Introspect<StructPacked3<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+            array![
+            128,128,8,32
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructPacked3',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u256>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u8>::ty(),
+dojo::database::introspect::Introspect::<u32>::ty()
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructNotPackable1Introspect<> of dojo::database::introspect::Introspect<StructNotPackable1<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+            array![
+            8,ERROR
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructNotPackable1',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Ty::Array(
+                array![
+                dojo::database::introspect::Introspect::<u32>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl StructPackableWithInnerPackedIntrospect<> of dojo::database::introspect::Introspect<StructPackableWithInnerPacked<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<StructPacked1>::size(),
+Option::Some(1)
+                ];
+
+                
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        let mut layouts = array![
+            dojo::database::introspect::Layout::Fixed(array![8].span()),
+dojo::database::introspect::Introspect::<StructPacked1>::layout()
+        ];
+        let mut merged_layout = ArrayTrait::<u8>::new();
+
+        loop {
+            match ArrayTrait::pop_front(ref layouts) {
+                Option::Some(mut layout) => {
+                    match layout {
+                        dojo::database::introspect::Layout::Fixed(mut l) => {
+                            loop {
+                                match SpanTrait::pop_front(ref l) {
+                                    Option::Some(x) => merged_layout.append(*x),
+                                    Option::None(_) => { break; }
+                                };
+                            };
+                        },
+                        _ => panic!("A packed model layout must contain Fixed layouts only."),
+                    };
+                },
+                Option::None(_) => { break; }
+            };
+        };
+
+        dojo::database::introspect::Layout::Fixed(merged_layout.span())
+        
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
+                name: 'StructPackableWithInnerPacked',
+                attrs: array![].span(),
+                children: array![
+                dojo::database::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<u8>::ty()
+        },
+dojo::database::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::database::introspect::Introspect::<StructPacked1>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumPacked1Introspect<> of dojo::database::introspect::Introspect<EnumPacked1<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+                array![
+                8
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumPacked1',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::database::introspect::Ty::Tuple(array![].span())),
+('b', dojo::database::introspect::Ty::Tuple(array![].span())),
+('c', dojo::database::introspect::Ty::Tuple(array![].span()))
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumPacked2Introspect<> of dojo::database::introspect::Introspect<EnumPacked2<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+                array![
+                8,8
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumPacked2',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::database::introspect::Introspect::<u8>::ty()),
+('b', dojo::database::introspect::Introspect::<u8>::ty()),
+('c', dojo::database::introspect::Introspect::<u8>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumPacked3Introspect<> of dojo::database::introspect::Introspect<EnumPacked3<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(3)
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Fixed(
+                array![
+                8,128,128
+                ].span()
+            )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumPacked3',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::database::introspect::Ty::Tuple(
+            array![
+            dojo::database::introspect::Introspect::<u128>::ty(),
+dojo::database::introspect::Introspect::<u128>::ty()
+            ].span()
+        )),
+('b', dojo::database::introspect::Introspect::<u256>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumPackableWithInnerPackedIntrospect<> of dojo::database::introspect::Introspect<EnumPackableWithInnerPacked<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::database::introspect::Introspect::<StructPacked1>::size(),
+Option::Some(1)
+                ];
+
+                
+                Option::Some(dojo::database::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        let mut layouts = array![
+            dojo::database::introspect::Layout::Fixed(array![8].span()),
+dojo::database::introspect::Introspect::<StructPacked1>::layout()
+        ];
+        let mut merged_layout = ArrayTrait::<u8>::new();
+
+        loop {
+            match ArrayTrait::pop_front(ref layouts) {
+                Option::Some(mut layout) => {
+                    match layout {
+                        dojo::database::introspect::Layout::Fixed(mut l) => {
+                            loop {
+                                match SpanTrait::pop_front(ref l) {
+                                    Option::Some(x) => merged_layout.append(*x),
+                                    Option::None(_) => { break; }
+                                };
+                            };
+                        },
+                        _ => panic!("A packed model layout must contain Fixed layouts only."),
+                    };
+                },
+                Option::None(_) => { break; }
+            };
+        };
+
+        dojo::database::introspect::Layout::Fixed(merged_layout.span())
+        
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumPackableWithInnerPacked',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::database::introspect::Introspect::<StructPacked1>::ty()),
+('b', dojo::database::introspect::Introspect::<StructPacked1>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl EnumNotPackable1Introspect<> of dojo::database::introspect::Introspect<EnumNotPackable1<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::database::introspect::Layout {
+        ERROR
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumNotPackable1',
+                attrs: array![].span(),
+                children: array![
+                ('a', dojo::database::introspect::Introspect::<u8>::ty()),
+('b', dojo::database::introspect::Introspect::<u256>::ty())
+
+                ].span()
+            }
+        )
+    }
+}
+
 //! > expected_diagnostics
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:1:1
-use core::serde::Serde;
-^*********************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:3:1
-#[derive(Copy, Drop, Serde, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:9:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:15:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:21:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:27:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:33:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:39:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:45:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:51:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:57:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:63:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:69:1
-#[derive(Serde, Copy, Drop, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:76:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:84:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:92:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:100:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:108:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:116:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:124:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:132:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:140:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:148:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:156:1
-#[derive(Copy, Drop, Introspect)]
-^*******************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:164:1
-#[derive(Copy, Drop, Serde, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:169:1
-#[derive(Copy, Drop, Serde, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:174:1
-#[derive(Copy, Drop, Serde, Introspect)]
-^**************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:179:1
-#[derive(Introspect, IntrospectPacked)]
-^*************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:182:1
-#[derive(Introspect, IntrospectPacked)]
-^*************************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:185:1
-#[derive(Introspect)]
-^*******************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:189:1
-#[derive(Introspect)]
-^*******************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:193:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:198:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:204:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:210:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:216:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:222:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:229:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:236:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:243:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:249:1
-#[derive(IntrospectPacked)]
-^*************************^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:2:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:2:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:2:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:8:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:8:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:8:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:14:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:14:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:14:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:20:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:20:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:20:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:26:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:26:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:26:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:32:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:32:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:32:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:38:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:38:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:38:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:44:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:44:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:44:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:50:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:50:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:50:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:56:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:56:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:56:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:62:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:62:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:62:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:68:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:68:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:68:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:75:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:75:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:83:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:83:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:91:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:91:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:99:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:99:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:107:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:107:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:115:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:115:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:123:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:123:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:131:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:131:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:139:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:139:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:147:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:147:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:155:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:155:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:163:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:163:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:163:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:168:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:168:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:168:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:173:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:173:1
-
-^
-
-error: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.
- --> test_src/lib.cairo:173:1
-
-^
+error: Option<T> cannot be used with tuples. Prefer using a struct.
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7Umie1/src/lib.cairo:171:6
+    x: Option<(u8, u16)>
+     ^*****************^
+
+error: Option<T> cannot be used with tuples. Prefer using a struct.
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7Umie1/src/lib.cairo:176:10
+    first: Option<(u8, u16)>,
+         ^*****************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7Umie1/src/lib.cairo:180:6
+enum EnumIncompatibleAttrs {}
+     ^*******************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7Umie1/src/lib.cairo:183:8
+struct StructIncompatibleAttrs {}
+       ^*********************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7Umie1/src/lib.cairo:187:8
+struct StructIncompatibleAttrs2 {}
+       ^**********************^
+
+error: Introspect and IntrospectPacked attributes cannot be used at a same time.
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7Umie1/src/lib.cairo:191:6
+enum EnumIncompatibleAttrs2 {}
+     ^********************^
+
+error: Array field cannot be packed.
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7Umie1/src/lib.cairo:213:6
+    y: Array<u32>
+     ^**********^
+
+error: To be packed, all variants must have fixed layout of same size.
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7Umie1/src/lib.cairo:250:6
+enum EnumNotPackable1 {
+     ^**************^

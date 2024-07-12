@@ -4812,6 +4812,7 @@ name = "dojo-lang"
 version = "1.0.0-alpha.0"
 dependencies = [
  "anyhow",
+ "assert_fs",
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.3.0)",
  "cairo-lang-compiler 2.6.4",
  "cairo-lang-debug 2.6.4",
