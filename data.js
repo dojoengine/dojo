@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720724273741,
+  "lastUpdate": 1720808010198,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11575,6 +11575,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17074973,
             "range": "± 354753",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd576ae2a30402c828b7edebf287920feb9fea8c",
+          "message": "refactor(torii): remove executor from world table & write class hash (#2166)\n\n* refactor(torii): remove executor from world table & write class hash\r\n\r\n* refactor: world class hash column NOT NULL\r\n\r\n* fmt\r\n\r\n* refactor: use correct world class hash\r\n\r\n* chore: remove clippy\r\n\r\n* fix: fmt\r\n\r\n* fmt\r\n\r\n* refactor: latets to pending tag\r\n\r\n* fix: fix typo and clippy\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-12T12:04:09-06:00",
+          "tree_id": "df02b35962756073f34f089d259550f0cae74aac",
+          "url": "https://github.com/dojoengine/dojo/commit/dd576ae2a30402c828b7edebf287920feb9fea8c"
+        },
+        "date": 1720808009338,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16974326,
+            "range": "± 170009",
             "unit": "ns/iter"
           }
         ]
