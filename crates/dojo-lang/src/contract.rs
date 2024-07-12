@@ -24,10 +24,12 @@ use crate::syntax::{self_param, utils as syntax_utils};
 
 const DOJO_INIT_FN: &str = "dojo_init";
 const CONTRACT_NAMESPACE: &str = "namespace";
+const CONTRACT_NOMAPPING: &str = "nomapping";
 
 #[derive(Debug, Clone, Default)]
 pub struct ContractParameters {
     namespace: Option<String>,
+    nomapping: bool,
 }
 
 #[derive(Debug)]
@@ -56,9 +58,13 @@ impl DojoContract {
 
         let unmapped_namespace = parameters.namespace.unwrap_or(namespace_config.default.clone());
 
-        // Maps namespace from the tag to ensure higher precision on matching namespace mappings.
-        let contract_namespace =
-            namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &name));
+        let contract_namespace = if parameters.nomapping {
+            unmapped_namespace
+        } else {
+            // Maps namespace from the tag to ensure higher precision on matching namespace
+            // mappings.
+            namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &name))
+        };
 
         for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {
             if !is_name_valid(value) {
@@ -666,6 +672,9 @@ fn get_parameters(
                         CONTRACT_NAMESPACE => {
                             parameters.namespace =
                                 get_contract_namespace(db, arg_value, diagnostics);
+                        }
+                        CONTRACT_NOMAPPING => {
+                            parameters.nomapping = true;
                         }
                         _ => {
                             diagnostics.push(PluginDiagnostic {

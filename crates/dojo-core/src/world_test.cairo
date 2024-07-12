@@ -45,7 +45,7 @@ struct Foo {
 }
 
 #[derive(Copy, Drop, Serde)]
-#[dojo::model(namespace: "another_namespace")]
+#[dojo::model(namespace: "another_namespace", nomapping: true)]
 struct Buzz {
     #[key]
     caller: ContractAddress,
@@ -940,7 +940,7 @@ trait IDojoInit<ContractState> {
 #[dojo::contract]
 mod test_contract {}
 
-#[dojo::contract(namespace: "buzz_namespace")]
+#[dojo::contract(namespace: "buzz_namespace", nomapping: true)]
 mod buzz_contract {}
 
 #[test]

@@ -19,15 +19,21 @@ const DEFAULT_MODEL_VERSION: u8 = 1;
 
 const MODEL_VERSION_NAME: &str = "version";
 const MODEL_NAMESPACE: &str = "namespace";
+const MODEL_NOMAPPING: &str = "nomapping";
 
 struct ModelParameters {
     version: u8,
     namespace: Option<String>,
+    nomapping: bool,
 }
 
 impl Default for ModelParameters {
     fn default() -> ModelParameters {
-        ModelParameters { version: DEFAULT_MODEL_VERSION, namespace: Option::None }
+        ModelParameters {
+            version: DEFAULT_MODEL_VERSION,
+            namespace: Option::None,
+            nomapping: false,
+        }
     }
 }
 
@@ -143,6 +149,9 @@ fn get_model_parameters(
                         MODEL_NAMESPACE => {
                             parameters.namespace = get_model_namespace(db, arg_value, diagnostics);
                         }
+                        MODEL_NOMAPPING => {
+                            parameters.nomapping = true;
+                        }
                         _ => {
                             diagnostics.push(PluginDiagnostic {
                                 message: format!(
@@ -201,9 +210,12 @@ pub fn handle_model_struct(
     let model_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
     let unmapped_namespace = parameters.namespace.unwrap_or(namespace_config.default.clone());
 
-    // Maps namespace from the tag to ensure higher precision on matching namespace mappings.
-    let model_namespace =
-        namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &model_name));
+    let model_namespace = if parameters.nomapping {
+        unmapped_namespace
+    } else {
+        // Maps namespace from the tag to ensure higher precision on matching namespace mappings.
+        namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &model_name))
+    };
 
     for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
         if !is_name_valid(value) {
