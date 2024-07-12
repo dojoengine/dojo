@@ -20,9 +20,9 @@ use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
-use starknet::core::types::Felt;
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -160,7 +160,8 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
 
-    let class_hash = world.base().call().await?;
+    let class_hash =
+        provider.get_class_hash_at(BlockId::Tag(BlockTag::Latest), args.world_address).await?;
     let db = Sql::new(pool.clone(), args.world_address, class_hash.into()).await?;
     let processors = Processors {
         event: vec![

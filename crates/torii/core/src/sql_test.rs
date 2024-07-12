@@ -125,9 +125,17 @@ async fn test_load_from_remote() {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let mut db = Sql::new(pool.clone(), world_address, world.base().call().await.unwrap().into())
-        .await
-        .unwrap();
+    let mut db = Sql::new(
+        pool.clone(),
+        world_address,
+        provider
+            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), world_address)
+            .await
+            .unwrap()
+            .into(),
+    )
+    .await
+    .unwrap();
     let _ = bootstrap_engine(world, db.clone(), &provider).await;
 
     let _block_timestamp = 1710754478_u64;
@@ -305,9 +313,17 @@ async fn test_load_from_remote_del() {
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    let mut db = Sql::new(pool.clone(), world_address, world.base().call().await.unwrap().into())
-        .await
-        .unwrap();
+    let mut db = Sql::new(
+        pool.clone(),
+        world_address,
+        provider
+            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), world_address)
+            .await
+            .unwrap()
+            .into(),
+    )
+    .await
+    .unwrap();
     let _ = bootstrap_engine(world, db.clone(), &provider).await;
 
     assert_eq!(count_table("dojo_examples-PlayerConfig", &pool).await, 0);
