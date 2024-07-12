@@ -162,7 +162,7 @@ async fn main() -> anyhow::Result<()> {
 
     let class_hash =
         provider.get_class_hash_at(BlockId::Tag(BlockTag::Latest), args.world_address).await?;
-    let db = Sql::new(pool.clone(), args.world_address, class_hash.into()).await?;
+    let db = Sql::new(pool.clone(), args.world_address, class_hash).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
