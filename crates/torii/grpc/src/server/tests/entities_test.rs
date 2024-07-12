@@ -14,9 +14,10 @@ use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -95,7 +96,13 @@ async fn test_entities_queries() {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let db = Sql::new(pool.clone(), world_address).await.unwrap();
+    let db = Sql::new(
+        pool.clone(),
+        world_address,
+        provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address).await.unwrap(),
+    )
+    .await
+    .unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
