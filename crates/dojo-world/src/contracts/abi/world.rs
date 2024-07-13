@@ -190,6 +190,22 @@ abigen!(
       },
       {
         "type": "function",
+        "name": "contract",
+        "inputs": [
+          {
+            "name": "selector",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
         "name": "register_model",
         "inputs": [
           {
@@ -241,8 +257,8 @@ abigen!(
         "name": "upgrade_contract",
         "inputs": [
           {
-            "name": "address",
-            "type": "core::starknet::contract_address::ContractAddress"
+            "name": "selector",
+            "type": "core::felt252"
           },
           {
             "name": "class_hash",

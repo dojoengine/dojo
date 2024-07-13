@@ -1,6 +1,6 @@
 kind = "Class"
-class_hash = "0x210dd8e484e5555dc74a4a600b17878fc108911719b04139309acc874160c51"
-original_class_hash = "0x210dd8e484e5555dc74a4a600b17878fc108911719b04139309acc874160c51"
+class_hash = "0x25f8aa71a18dff4615cf3bb7231014f58500b69c6d746d8e26d8ddae739cdb8"
+original_class_hash = "0x25f8aa71a18dff4615cf3bb7231014f58500b69c6d746d8e26d8ddae739cdb8"
 abi = "manifests/dev/base/abis/dojo-world.json"
 tag = "dojo-world"
 manifest_name = "dojo-world"
