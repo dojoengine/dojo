@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use cairo_lang_defs::db::{DefsDatabase, DefsGroup};
@@ -97,16 +98,19 @@ pub fn test_expand_plugin_inner(
 
     let cairo_code = &inputs["cairo_code"];
 
-    // Create a temporary directory for the test
-    let tmp_dir = assert_fs::TempDir::new().unwrap();
-    println!("tmp_dir: {tmp_dir:?}");
-    let tmp_path = tmp_dir.path();
+    // The path as to remain the same, because diagnostics contains the path
+    // of the file. Which can cause error when checked without CAIRO_FIX=1.
+    let tmp_dir = PathBuf::from("/tmp/plugin_test");
+    let _ = std::fs::create_dir_all(&tmp_dir);
+    let tmp_path = tmp_dir.as_path();
 
     // Create Scarb.toml file
     let scarb_toml_path = tmp_path.join("Scarb.toml");
-    std::fs::write(
-        scarb_toml_path,
-        r#"
+    // Only write if the file doesn't exist.
+    if !scarb_toml_path.exists() {
+        std::fs::write(
+            scarb_toml_path,
+            r#"
 [package]
 cairo-version = "=2.6.4"
 name = "test_package"
@@ -121,16 +125,20 @@ sierra-replace-ids = true
 namespace = { default = "test_package" }
 seed = "test_package"
 "#,
-    )
-    .expect("Failed to write Scarb.toml");
+        )
+        .expect("Failed to write Scarb.toml");
+    }
 
     // Create src directory
     let src_dir = tmp_path.join("src");
-    std::fs::create_dir(&src_dir).expect("Failed to create src directory");
+    let _ = std::fs::create_dir(&src_dir);
 
     // Create lib.cairo file
     let lib_cairo_path = src_dir.join("lib.cairo");
-    std::fs::write(lib_cairo_path, cairo_code).expect("Failed to write lib.cairo");
+
+    if !lib_cairo_path.exists() {
+        std::fs::write(lib_cairo_path, cairo_code).expect("Failed to write lib.cairo");
+    }
 
     let crate_id = db.intern_crate(CrateLongId::Real("test".into()));
     let root = Directory::Real(src_dir.to_path_buf());

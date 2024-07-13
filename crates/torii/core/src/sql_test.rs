@@ -10,7 +10,7 @@ use scarb::compiler::Profile;
 use sozo_ops::migration;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call, ConnectedAccount};
-use starknet::core::types::Felt;
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
@@ -101,10 +101,21 @@ async fn test_load_from_remote() {
 
     TransactionWaiter::new(tx.transaction_hash, &account.provider()).await.unwrap();
 
-    let world_address = migration_output.world_address;
-    let world = WorldContractReader::new(world_address, account.provider());
-    let mut db = Sql::new(pool.clone(), world_address).await.unwrap();
-    let _ = bootstrap_engine(world, db.clone(), account.provider()).await;
+    let world_reader = WorldContractReader::new(migration_output.world_address, account.provider());
+
+    let mut db = Sql::new(
+        pool.clone(),
+        world_reader.address,
+        account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_reader.address)
+            .await
+            .unwrap(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
@@ -260,10 +271,21 @@ async fn test_load_from_remote_del() {
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    let world_address = migration_output.world_address;
-    let mut db = Sql::new(pool.clone(), world_address).await.unwrap();
-    let world = WorldContractReader::new(world_address, account.provider());
-    let _ = bootstrap_engine(world, db.clone(), account.provider()).await;
+    let world_reader = WorldContractReader::new(migration_output.world_address, account.provider());
+
+    let mut db = Sql::new(
+        pool.clone(),
+        world_reader.address,
+        account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_reader.address)
+            .await
+            .unwrap(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
 
     assert_eq!(count_table("dojo_examples-PlayerConfig", &pool).await, 0);
     assert_eq!(count_table("dojo_examples-PlayerConfig$favorite_item", &pool).await, 0);

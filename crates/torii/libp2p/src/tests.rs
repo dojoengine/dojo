@@ -304,7 +304,7 @@ mod test {
 
         let account = sequencer.account_data(0);
 
-        let mut db = Sql::new(pool.clone(), Felt::from_bytes_be(&[0; 32])).await?;
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, Felt::ZERO).await?;
 
         // Register the model of our Message
         db.register_model(

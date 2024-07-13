@@ -1,4 +1,6 @@
-use katana_db::mdbx::{self};
+use core::fmt;
+
+use katana_db::abstraction::{Database, DbCursorMut, DbDupSortCursor, DbTx, DbTxMut};
 use katana_db::models::contract::ContractInfoChangeList;
 use katana_db::models::list::BlockList;
 use katana_db::models::storage::{ContractStorageKey, StorageEntry};
@@ -15,7 +17,7 @@ use crate::traits::contract::{ContractClassProvider, ContractClassWriter};
 use crate::traits::state::{StateProvider, StateWriter};
 use crate::ProviderResult;
 
-impl StateWriter for DbProvider {
+impl<Db: Database> StateWriter for DbProvider<Db> {
     fn set_nonce(&self, address: ContractAddress, nonce: Nonce) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
             let value = if let Some(info) = db_tx.get::<tables::ContractInfo>(address)? {
@@ -35,7 +37,7 @@ impl StateWriter for DbProvider {
         storage_value: StorageValue,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            let mut cursor = db_tx.cursor::<tables::ContractStorage>()?;
+            let mut cursor = db_tx.cursor_dup_mut::<tables::ContractStorage>()?;
             let entry = cursor.seek_by_key_subkey(address, storage_key)?;
 
             match entry {
@@ -100,15 +102,18 @@ impl ContractClassWriter for DbProvider {
 
 /// A state provider that provides the latest states from the database.
 #[derive(Debug)]
-pub(super) struct LatestStateProvider(mdbx::tx::TxRO);
+pub(super) struct LatestStateProvider<Tx: DbTx>(Tx);
 
-impl LatestStateProvider {
-    pub fn new(tx: mdbx::tx::TxRO) -> Self {
+impl<Tx: DbTx> LatestStateProvider<Tx> {
+    pub fn new(tx: Tx) -> Self {
         Self(tx)
     }
 }
 
-impl ContractClassProvider for LatestStateProvider {
+impl<Tx> ContractClassProvider for LatestStateProvider<Tx>
+where
+    Tx: DbTx + Send + Sync,
+{
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         let class = self.0.get::<tables::CompiledClasses>(hash)?;
         Ok(class)
@@ -128,7 +133,10 @@ impl ContractClassProvider for LatestStateProvider {
     }
 }
 
-impl StateProvider for LatestStateProvider {
+impl<Tx> StateProvider for LatestStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         let info = self.0.get::<tables::ContractInfo>(address)?;
         Ok(info.map(|info| info.nonce))
@@ -147,7 +155,7 @@ impl StateProvider for LatestStateProvider {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> ProviderResult<Option<StorageValue>> {
-        let mut cursor = self.0.cursor::<tables::ContractStorage>()?;
+        let mut cursor = self.0.cursor_dup::<tables::ContractStorage>()?;
         let entry = cursor.seek_by_key_subkey(address, storage_key)?;
         match entry {
             Some(entry) if entry.key == storage_key => Ok(Some(entry.value)),
@@ -158,20 +166,23 @@ impl StateProvider for LatestStateProvider {
 
 /// A historical state provider.
 #[derive(Debug)]
-pub(super) struct HistoricalStateProvider {
+pub(super) struct HistoricalStateProvider<Tx: DbTx + fmt::Debug> {
     /// The database transaction used to read the database.
-    tx: mdbx::tx::TxRO,
+    tx: Tx,
     /// The block number of the state.
     block_number: u64,
 }
 
-impl HistoricalStateProvider {
-    pub fn new(tx: mdbx::tx::TxRO, block_number: u64) -> Self {
+impl<Tx: DbTx + fmt::Debug> HistoricalStateProvider<Tx> {
+    pub fn new(tx: Tx, block_number: u64) -> Self {
         Self { tx, block_number }
     }
 }
 
-impl ContractClassProvider for HistoricalStateProvider {
+impl<Tx> ContractClassProvider for HistoricalStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
@@ -206,14 +217,17 @@ impl ContractClassProvider for HistoricalStateProvider {
     }
 }
 
-impl StateProvider for HistoricalStateProvider {
+impl<Tx> StateProvider for HistoricalStateProvider<Tx>
+where
+    Tx: DbTx + fmt::Debug + Send + Sync,
+{
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         let change_list = self.tx.get::<tables::ContractInfoChangeSet>(address)?;
 
         if let Some(num) = change_list
             .and_then(|entry| recent_change_from_block(self.block_number, &entry.nonce_change_list))
         {
-            let mut cursor = self.tx.cursor::<tables::NonceChangeHistory>()?;
+            let mut cursor = self.tx.cursor_dup::<tables::NonceChangeHistory>()?;
             let entry = cursor.seek_by_key_subkey(num, address)?.ok_or(
                 ProviderError::MissingContractNonceChangeEntry {
                     block: num,
@@ -239,7 +253,7 @@ impl StateProvider for HistoricalStateProvider {
         if let Some(num) = change_list
             .and_then(|entry| recent_change_from_block(self.block_number, &entry.class_change_list))
         {
-            let mut cursor = self.tx.cursor::<tables::ClassChangeHistory>()?;
+            let mut cursor = self.tx.cursor_dup::<tables::ClassChangeHistory>()?;
             let entry = cursor.seek_by_key_subkey(num, address)?.ok_or(
                 ProviderError::MissingContractClassChangeEntry {
                     block: num,
@@ -266,7 +280,7 @@ impl StateProvider for HistoricalStateProvider {
         if let Some(num) =
             block_list.and_then(|list| recent_change_from_block(self.block_number, &list))
         {
-            let mut cursor = self.tx.cursor::<tables::StorageChangeHistory>()?;
+            let mut cursor = self.tx.cursor_dup::<tables::StorageChangeHistory>()?;
             let entry = cursor.seek_by_key_subkey(num, key)?.ok_or(
                 ProviderError::MissingStorageChangeEntry {
                     block: num,

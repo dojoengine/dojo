@@ -356,112 +356,112 @@ mod ctxnamed {
 
 //! > expected_diagnostics
 error: Anything other than functions is not supported in a dojo::interface
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:90:5
+ --> /tmp/plugin_test/src/lib.cairo:90:5
     const ONE: u8;
     ^************^
 
 error: World parameter must be the first parameter.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:111:5
+ --> /tmp/plugin_test/src/lib.cairo:111:5
     fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252;
     ^***********************************************************************************^
 
 error: World parameter must be the first parameter.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:112:5
+ --> /tmp/plugin_test/src/lib.cairo:112:5
     fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;
     ^*********************************************************************************************^
 
 error: You cannot use `self` and `world` parameters together.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:113:5
+ --> /tmp/plugin_test/src/lib.cairo:113:5
     fn do_with_self_and_world_inv(world: @IWorldDispatcher, self: @ContractState) -> felt252;
     ^***************************************************************************************^
 
 error: You cannot use `self` and `world` parameters together.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:114:5
+ --> /tmp/plugin_test/src/lib.cairo:114:5
     fn do_with_ref_self_and_world_inv(
     ^********************************^
 
 error: World parameter must be the first parameter.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:121:5
+ --> /tmp/plugin_test/src/lib.cairo:121:5
     fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252;
     ^****************************************************************************^
 
 error: World parameter must be the first parameter.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:128:9
+ --> /tmp/plugin_test/src/lib.cairo:128:9
         fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252 {
         ^************************************************************************************^
 
 error: World parameter must be the first parameter.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:132:9
+ --> /tmp/plugin_test/src/lib.cairo:132:9
         fn do_with_ref_self_and_world(
         ^****************************^
 
 error: You cannot use `self` and `world` parameters together.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:138:9
+ --> /tmp/plugin_test/src/lib.cairo:138:9
         fn do_with_self_and_world_inv(world: @IWorldDispatcher, self: @ContractState) -> felt252 {
         ^****************************************************************************************^
 
 error: You cannot use `self` and `world` parameters together.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:142:9
+ --> /tmp/plugin_test/src/lib.cairo:142:9
         fn do_with_ref_self_and_world_inv(
         ^********************************^
 
 error: World parameter must be the first parameter.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:158:9
+ --> /tmp/plugin_test/src/lib.cairo:158:9
         fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252 {
         ^*****************************************************************************^
 
 error: You cannot use `world` and `#[generate_trait]` together. Use `self` instead.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:165:9
+ --> /tmp/plugin_test/src/lib.cairo:165:9
         fn bad_func_using_generate(world: @IWorldDispatcher) -> felt252 {
         ^***************************************************************^
 
 error: World parameter must be a snapshot if `ref` is not used.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:224:5
+ --> /tmp/plugin_test/src/lib.cairo:224:5
     fn dojo_init(
     ^***********^
 
 error: `starknet::interface` function first parameter must be a reference to the trait's generic parameter or a snapshot of it.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:105:5
+ --> /tmp/plugin_test/src/lib.cairo:105:5
     fn do_with_self(self: @ContractState) -> felt252;
     ^**********************************************^
 
 error: `starknet::interface` function first parameter must be a reference to the trait's generic parameter or a snapshot of it.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:106:5
+ --> /tmp/plugin_test/src/lib.cairo:106:5
     fn do_with_ref_self(ref self: ContractState) -> felt252;
     ^*****************************************************^
 
 error: `starknet::interface` function first parameter must be a reference to the trait's generic parameter or a snapshot of it.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:111:5
+ --> /tmp/plugin_test/src/lib.cairo:111:5
     fn do_with_self_and_world(self: @ContractState, world: @IWorldDispatcher) -> felt252;
     ^**********************************************************************************^
 
 error: `starknet::interface` function first parameter must be a reference to the trait's generic parameter or a snapshot of it.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:112:5
+ --> /tmp/plugin_test/src/lib.cairo:112:5
     fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;
     ^********************************************************************************************^
 
 error: `starknet::interface` functions don't support `ref` parameters other than the first one.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:112:5
+ --> /tmp/plugin_test/src/lib.cairo:112:5
     fn do_with_ref_self_and_world(ref self: ContractState, ref world: IWorldDispatcher) -> felt252;
     ^********************************************************************************************^
 
 error: `starknet::interface` functions don't support `ref` parameters other than the first one.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:114:5
+ --> /tmp/plugin_test/src/lib.cairo:114:5
     fn do_with_ref_self_and_world_inv(
     ^********************************^
 
 error: `starknet::interface` functions don't support `ref` parameters other than the first one.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:117:5
+ --> /tmp/plugin_test/src/lib.cairo:117:5
     fn do_with_several_world_dispatchers(
     ^***********************************^
 
 error: `starknet::interface` functions don't support `ref` parameters other than the first one.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:121:5
+ --> /tmp/plugin_test/src/lib.cairo:121:5
     fn do_with_world_not_first(vec: Vec2, ref world: IWorldDispatcher) -> felt252;
     ^***************************************************************************^
 
 error: Generated trait must have generic args matching the impl's generic params.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpIWICKl/src/lib.cairo:163:5
+ --> /tmp/plugin_test/src/lib.cairo:163:5
     #[generate_trait]
     ^***************^
 
