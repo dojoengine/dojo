@@ -44,8 +44,9 @@ trait IWorld<T> {
     fn revoke_writer(ref self: T, resource: felt252, contract: ContractAddress);
 
     fn can_write_resource(self: @T, resource_id: felt252, contract: ContractAddress) -> bool;
-    fn can_write_model(self: @T, model_id: felt252, contract: ContractAddress) -> bool;
-    fn can_write_namespace(self: @T, namespace_id: felt252, contract: ContractAddress) -> bool;
+    fn can_write_model(self: @T, selector: felt252, contract: ContractAddress) -> bool;
+    fn can_write_contract(self: @T, selector: felt252, contract: ContractAddress) -> bool;
+    fn can_write_namespace(self: @T, selector: felt252, contract: ContractAddress) -> bool;
 }
 
 #[starknet::interface]
@@ -241,6 +242,7 @@ mod world {
         Model: (ClassHash, ContractAddress),
         Contract: (ClassHash, ContractAddress),
         Namespace,
+        World,
         #[default]
         None,
     }
@@ -260,9 +262,7 @@ mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
 
-        self
-            .resources
-            .write(WORLD, ResourceData::Contract((0.try_into().unwrap(), 0.try_into().unwrap())));
+        self.resources.write(WORLD, ResourceData::World);
         self
             .resources
             .write(
@@ -462,8 +462,10 @@ mod world {
             match resource {
                 ResourceData::Model((_, model_address)) => self
                     ._check_model_write_access(resource_id, model_address, contract),
-                ResourceData::Namespace |
-                ResourceData::Contract => self._check_basic_write_access(resource_id, contract),
+                ResourceData::Contract((_, contract_address)) => self
+                    ._check_contract_write_access(resource_id, contract_address, contract),
+                ResourceData::Namespace => self._check_basic_write_access(resource_id, contract),
+                ResourceData::World => self._check_basic_write_access(WORLD, contract),
                 ResourceData::None => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
@@ -476,20 +478,46 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model_id` - The model selector.
+        /// * `selector` - The model selector.
         /// * `contract` - The name of the contract.
         ///
         /// # Returns
         ///
         /// * `bool` - True if the contract can write to the model, false otherwise
         fn can_write_model(
-            self: @ContractState, model_id: felt252, contract: ContractAddress
+            self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
             // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(model_id);
+            let resource: ResourceData = self.resources.read(selector);
             match resource {
                 ResourceData::Model((_, model_address)) => self
-                    ._check_model_write_access(model_id, model_address, contract),
+                    ._check_model_write_access(selector, model_address, contract),
+                _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+            }
+        }
+
+        /// Checks if the provided contract can write to the contract.
+        /// It panics if the resource selector is not a contract.
+        /// 
+        /// Note: Contrary to `is_writer`, this function checks if the contract is a write/owner of the contract,
+        /// OR a write/owner of the namespace.
+        ///
+        /// # Arguments
+        ///
+        /// * `selector` - The contract selector.
+        /// * `contract` - The name of the contract.
+        ///
+        /// # Returns
+        ///
+        /// * `bool` - True if the contract can write to the model, false otherwise
+        fn can_write_contract(
+            self: @ContractState, selector: felt252, contract: ContractAddress
+        ) -> bool {
+            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
+            let resource: ResourceData = self.resources.read(selector);
+            match resource {
+                ResourceData::Contract((_, contract_address)) => self
+                    ._check_contract_write_access(selector, contract_address, contract),
                 _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
@@ -502,19 +530,19 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `namespace_id` - The namespace selector.
+        /// * `selector` - The namespace selector.
         /// * `contract` - The name of the contract.
         ///
         /// # Returns
         ///
         /// * `bool` - True if the contract can write to the namespace, false otherwise
         fn can_write_namespace(
-            self: @ContractState, namespace_id: felt252, contract: ContractAddress
+            self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
             // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(namespace_id);
+            let resource: ResourceData = self.resources.read(selector);
             match resource {
-                ResourceData::Namespace => self._check_basic_write_access(namespace_id, contract),
+                ResourceData::Namespace => self._check_basic_write_access(selector, contract),
                 _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
@@ -961,7 +989,7 @@ mod world {
         /// - the calling account has the owner and/or writer role for the model namespace.
         /// 
         /// # Arguments
-        ///  * `model_id` - the model selector to check.
+        ///  * `model_selector` - the model selector to check.
         ///  * `model_address` - the model contract address.
         ///  * `contract` - the calling contract.
         /// 
@@ -970,15 +998,46 @@ mod world {
         /// 
         fn _check_model_write_access(
             self: @ContractState,
-            model_id: felt252,
+            model_selector: felt252,
             model_address: ContractAddress,
             contract: ContractAddress
         ) -> bool {
-            if !self.is_writer(model_id, contract)
-                && !self.is_account_owner(model_id)
-                && !self.is_account_writer(model_id) {
+            if !self.is_writer(model_selector, contract)
+                && !self.is_account_owner(model_selector)
+                && !self.is_account_writer(model_selector) {
                 let model = IModelDispatcher { contract_address: model_address };
                 self._check_basic_write_access(model.namespace_hash(), contract)
+            } else {
+                true
+            }
+        }
+
+        /// Check contract write access.
+        /// That means, check if:
+        /// - the calling contract has the writer role for the contract OR,
+        /// - the calling account has the owner and/or writer role for the contract OR,
+        /// - the calling contract has the writer role for the contract namespace OR
+        /// - the calling account has the owner and/or writer role for the model namespace.
+        /// 
+        /// # Arguments
+        ///  * `contract_selector` - the contract selector to check.
+        ///  * `contract_address` - the contract contract address.
+        ///  * `contract` - the calling contract.
+        /// 
+        /// # Returns
+        ///  `true` if the write access is allowed, false otherwise.
+        /// 
+        fn _check_contract_write_access(
+            self: @ContractState,
+            contract_selector: felt252,
+            contract_address: ContractAddress,
+            contract: ContractAddress
+        ) -> bool {
+            if !self.is_writer(contract_selector, contract)
+                && !self.is_account_owner(contract_selector)
+                && !self.is_account_writer(contract_selector) {
+                let dispatcher = IContractDispatcher { contract_address };
+                self._check_basic_write_access(dispatcher.namespace_hash(), contract)
             } else {
                 true
             }

@@ -507,7 +507,27 @@ abigen!(
         "name": "can_write_model",
         "inputs": [
           {
-            "name": "model_id",
+            "name": "selector",
+            "type": "core::felt252"
+          },
+          {
+            "name": "contract",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "can_write_contract",
+        "inputs": [
+          {
+            "name": "selector",
             "type": "core::felt252"
           },
           {
@@ -527,7 +547,7 @@ abigen!(
         "name": "can_write_namespace",
         "inputs": [
           {
-            "name": "namespace_id",
+            "name": "selector",
             "type": "core::felt252"
           },
           {

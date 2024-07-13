@@ -1,8 +1,8 @@
 {
   "world": {
     "kind": "WorldContract",
-    "class_hash": "0x25f8aa71a18dff4615cf3bb7231014f58500b69c6d746d8e26d8ddae739cdb8",
-    "original_class_hash": "0x25f8aa71a18dff4615cf3bb7231014f58500b69c6d746d8e26d8ddae739cdb8",
+    "class_hash": "0xa2a68c8a36082692ff56aece7e4e14dfa533b7c565c749ae8045000e1bf381",
+    "original_class_hash": "0xa2a68c8a36082692ff56aece7e4e14dfa533b7c565c749ae8045000e1bf381",
     "abi": [
       {
         "type": "impl",
@@ -506,7 +506,27 @@
             "name": "can_write_model",
             "inputs": [
               {
-                "name": "model_id",
+                "name": "selector",
+                "type": "core::felt252"
+              },
+              {
+                "name": "contract",
+                "type": "core::starknet::contract_address::ContractAddress"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::bool"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "can_write_contract",
+            "inputs": [
+              {
+                "name": "selector",
                 "type": "core::felt252"
               },
               {
@@ -526,7 +546,7 @@
             "name": "can_write_namespace",
             "inputs": [
               {
-                "name": "namespace_id",
+                "name": "selector",
                 "type": "core::felt252"
               },
               {
@@ -1124,8 +1144,8 @@
         ]
       }
     ],
-    "address": "0x70049a301d80957caf359bc84171911ae8132cdb43405163754c154e9c37f26",
-    "transaction_hash": "0x63339a79058617ccb845d7cc70e6d40c851fb1f740dfe267e929df10dc71180",
+    "address": "0x221d9c1ca42fe008cd124d38d5987d5bd3751adf43bec52d1fbb41288203cd5",
+    "transaction_hash": "0x1de80bae5a65c23715b7ca20ecc775b6bb62a844d8569acf91ff2d3b93f1c9c",
     "block_number": 3,
     "seed": "dojo_examples",
     "metadata": {
@@ -1145,7 +1165,7 @@
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": "0x2b924027af667457a3438958f2b9a58adbe10b9dc2aa0eba7638ac59367c822",
+      "address": "0x64839f1b5e1958354ee257bbd7c07e0403ff6098145a92ddb9b093fc35662c4",
       "class_hash": "0x2c975b0d681861edd6caad5fbc0b42dc3e8b034b6c0b0a7628fb3a7bedf1e8d",
       "original_class_hash": "0x2c975b0d681861edd6caad5fbc0b42dc3e8b034b6c0b0a7628fb3a7bedf1e8d",
       "base_class_hash": "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4",
@@ -1552,7 +1572,7 @@
     },
     {
       "kind": "DojoContract",
-      "address": "0x5279a43866827e5d4bb4bb6f358ab5020c1b29e0ea62de65a80a1d3557bd77f",
+      "address": "0x5c4e7bb5f60d58c22c96aba611cb2f53462dcd59f7ade5d1675be5f8c20226b",
       "class_hash": "0x14b3096b82a761f63dd47277c2b5ac18925dea43586418483939a2f1f57f674",
       "original_class_hash": "0x14b3096b82a761f63dd47277c2b5ac18925dea43586418483939a2f1f57f674",
       "base_class_hash": "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4",
@@ -1789,7 +1809,7 @@
     },
     {
       "kind": "DojoContract",
-      "address": "0x306dcf2361031881a2d42185bd522e85bb313baa0603953f7c75010760f792c",
+      "address": "0x4b1371f328d8d86f6007f4ee8bd7d8a2f1c9f482531266b2df294dc55044d20",
       "class_hash": "0x97cd4fb3acfe9e6a024589ea34db2fc587586d699ef3732ce627e1771158ef",
       "original_class_hash": "0x97cd4fb3acfe9e6a024589ea34db2fc587586d699ef3732ce627e1771158ef",
       "base_class_hash": "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4",
@@ -2008,7 +2028,7 @@
     },
     {
       "kind": "DojoContract",
-      "address": "0x6dca4b6ed01bd16984a04ca71e1725ad617323a4089367ff9c020369785b3b",
+      "address": "0x3ba8ab3546affa46b8094e7822459537c6e348af82fb3f35a32f42f820f3bfe",
       "class_hash": "0x479bfb12dcba5398d77303e7a665fc3fedb16f2d7f9cb1f5d7e2beb3b7e2ba7",
       "original_class_hash": "0x479bfb12dcba5398d77303e7a665fc3fedb16f2d7f9cb1f5d7e2beb3b7e2ba7",
       "base_class_hash": "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4",
