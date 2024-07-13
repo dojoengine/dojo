@@ -64,9 +64,10 @@ pub fn get_namespace_config(db: &dyn SyntaxGroup) -> Result<NamespaceConfig> {
         }
     }
 
+    // For debugging, adding the configuration.root can help to inspect the
+    // crate path and it's content. But it must not be used otherwise, as it
+    // can be a different path due to tmp dirs being used.
     Err(anyhow::anyhow!(
-        "Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. \
-         {:?}",
-        configuration.root
+        "Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid.",
     ))
 }

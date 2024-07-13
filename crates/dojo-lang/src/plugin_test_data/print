@@ -113,21 +113,21 @@ Enemy::OtherPlayer(v) => { core::debug::PrintTrait::print('OtherPlayer'); core::
 
 //! > expected_diagnostics
 error: Unknown derive `Print` - a plugin might be missing.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7o69VE/src/lib.cairo:4:10
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpeCk3PZ/src/lib.cairo:4:10
 #[derive(Print)]
          ^***^
 
 error: Unknown derive `Print` - a plugin might be missing.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7o69VE/src/lib.cairo:12:10
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpeCk3PZ/src/lib.cairo:12:10
 #[derive(Print)]
          ^***^
 
 error: Unknown derive `Print` - a plugin might be missing.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7o69VE/src/lib.cairo:19:10
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpeCk3PZ/src/lib.cairo:19:10
 #[derive(Print)]
          ^***^
 
 error: Unknown derive `Print` - a plugin might be missing.
- --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmp7o69VE/src/lib.cairo:28:10
+ --> /var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmpeCk3PZ/src/lib.cairo:28:10
 #[derive(Print)]
          ^***^
