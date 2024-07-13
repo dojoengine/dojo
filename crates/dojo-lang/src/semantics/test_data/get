@@ -29,41 +29,6 @@ Missing(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:1:1
-use array::ArrayTrait;
-^********************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:2:1
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-^*********************************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:4:1
-#[derive(Copy, Drop, Serde, Introspect)]
-^**************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:10:1
-fn test_func() { let key: felt252 = 0xb0b;
-^****************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
 error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
  --> lib.cairo:12:1
 get!()
@@ -112,41 +77,6 @@ Missing(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:1:1
-use array::ArrayTrait;
-^********************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:2:1
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-^*********************************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:4:1
-#[derive(Copy, Drop, Serde, Introspect)]
-^**************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:10:1
-fn test_func() { let key: felt252 = 0xb0b;
-^****************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
 error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
  --> lib.cairo:12:1
 get!(world)
@@ -321,41 +251,6 @@ Block(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:1:1
-use array::ArrayTrait;
-^********************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:2:1
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-^*********************************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:4:1
-#[derive(Copy, Drop, Serde, Introspect)]
-^**************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:10:1
-fn test_func() { let key: felt252 = 0xb0b;
-^****************************************^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
-error: Plugin diagnostic: Namespace configuration expected at tool.dojo.world.namespace, but not found or invalid. Real("/var/folders/3j/41jlhmds1yvc3z3m5_sgch6w0000gn/T/.tmppLGAlA/registry/std/43cf361d9/core/src")
- --> lib.cairo:3:1
-
-^
-
 error: Trait has no implementation in context: dojo::model::Model::<test::Health>.
  --> lib.cairo:12:1
 get!(world, key, (Health))

@@ -7,8 +7,8 @@ use smol_str::SmolStr;
 pub mod delete;
 pub mod emit;
 pub mod get;
-pub mod set;
 pub mod selector_from_tag;
+pub mod set;
 pub mod utils;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;

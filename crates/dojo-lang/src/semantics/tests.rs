@@ -16,6 +16,8 @@ test_file_test!(
         get: "get",
 
         set: "set",
+
+        selector_from_tag: "selector_from_tag",
     },
     test_semantics
 );

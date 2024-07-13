@@ -45,7 +45,8 @@ impl InlineMacroExprPlugin for SelectorFromTagMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: syntax.stable_ptr().untyped(),
-                    message: "Invalid tag. Tag must be in the format of `namespace-name`.".to_string(),
+                    message: "Invalid tag. Tag must be in the format of `namespace-name`."
+                        .to_string(),
                     severity: Severity::Error,
                 }],
             };

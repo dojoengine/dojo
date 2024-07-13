@@ -52,13 +52,15 @@ impl DojoSemanticDatabase {
         db.set_inline_macro_plugins(suite.inline_macro_plugins.into());
         db.set_analyzer_plugins(suite.analyzer_plugins);
 
-        init_dev_corelib(&mut db, corelib());
         let dojo_path = Utf8PathBuf::from_path_buf("../../crates/dojo-core/src".into()).unwrap();
         let dojo_path: PathBuf = dojo_path.canonicalize_utf8().unwrap().into();
         let core_crate = db.intern_crate(CrateLongId::Real("dojo".into()));
         let core_root_dir = Directory::Real(dojo_path);
 
+        // Ensure the crate[0] is dojo, to enable parsing of the Scarb.toml.
         db.set_crate_config(core_crate, Some(CrateConfiguration::default_for_root(core_root_dir)));
+
+        init_dev_corelib(&mut db, corelib());
 
         db
     }
