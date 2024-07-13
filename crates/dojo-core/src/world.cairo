@@ -8,12 +8,13 @@ trait IWorld<T> {
     fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
     fn model(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
+    fn contract(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
     fn register_namespace(ref self: T, namespace: ByteArray);
     fn deploy_contract(
         ref self: T, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>
     ) -> ContractAddress;
-    fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
+    fn upgrade_contract(ref self: T, selector: felt252, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
@@ -238,7 +239,7 @@ mod world {
     #[derive(Drop, starknet::Store, Default, Debug)]
     enum ResourceData {
         Model: (ClassHash, ContractAddress),
-        Contract,
+        Contract: (ClassHash, ContractAddress),
         Namespace,
         #[default]
         None,
@@ -259,7 +260,9 @@ mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
 
-        self.resources.write(WORLD, ResourceData::Contract);
+        self
+            .resources
+            .write(WORLD, ResourceData::Contract((0.try_into().unwrap(), 0.try_into().unwrap())));
         self
             .resources
             .write(
@@ -623,6 +626,15 @@ mod world {
             }
         }
 
+        fn contract(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
+            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
+            let resource: ResourceData = self.resources.read(selector);
+            match resource {
+                ResourceData::Contract(c) => c,
+                _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+            }
+        }
+
         /// Deploys a contract associated with the world.
         ///
         /// # Arguments
@@ -658,17 +670,19 @@ mod world {
                 Errors::NO_NAMESPACE_WRITE_ACCESS
             );
 
-            if self.initialized_contract.read(contract_address.into()) {
+            let selector = dispatcher.selector();
+
+            if self.initialized_contract.read(selector) {
                 panic!("Contract has already been initialized");
             } else {
                 starknet::call_contract_syscall(contract_address, DOJO_INIT_SELECTOR, init_calldata)
                     .unwrap_syscall();
-                self.initialized_contract.write(contract_address.into(), true);
+                self.initialized_contract.write(selector, true);
             }
 
-            self.owners.write((contract_address.into(), get_caller_address()), true);
+            self.owners.write((selector, get_caller_address()), true);
 
-            self.resources.write(contract_address.into(), ResourceData::Contract);
+            self.resources.write(selector, ResourceData::Contract((class_hash, contract_address)));
 
             EventEmitter::emit(
                 ref self,
@@ -682,18 +696,21 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `address` - The contract address of the contract to upgrade.
+        /// * `selector` - The selector of the contract to upgrade.
         /// * `class_hash` - The class hash of the contract.
         ///
         /// # Returns
         ///
         /// * `ClassHash` - The new class hash of the contract.
         fn upgrade_contract(
-            ref self: ContractState, address: ContractAddress, class_hash: ClassHash
+            ref self: ContractState, selector: felt252, class_hash: ClassHash
         ) -> ClassHash {
-            assert(self.is_account_owner(address.into()), Errors::NOT_OWNER);
-            IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
-            EventEmitter::emit(ref self, ContractUpgraded { class_hash, address });
+            assert(self.is_account_owner(selector), Errors::NOT_OWNER);
+            let (_, contract_address) = self.contract(selector);
+            IUpgradeableDispatcher { contract_address }.upgrade(class_hash);
+            EventEmitter::emit(
+                ref self, ContractUpgraded { class_hash, address: contract_address }
+            );
             class_hash
         }
 

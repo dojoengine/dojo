@@ -425,6 +425,23 @@ use core::debug::PrintTrait;
 
 #[test]
 #[available_gas(6000000)]
+fn test_contract_getter() {
+    let world = deploy_world();
+
+    let _ = world
+        .deploy_contract(
+            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
+        );
+
+    let (class_hash, _) = world.contract(selector_from_tag!("dojo-test_contract"));
+    assert(
+        class_hash == test_contract::TEST_CLASS_HASH.try_into().unwrap(),
+        'invalid contract class hash'
+    );
+}
+
+#[test]
+#[available_gas(6000000)]
 fn test_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());

@@ -68,7 +68,8 @@ fn test_upgrade_from_world() {
         );
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
-    world.upgrade_contract(base_address, new_class_hash);
+    let selector = selector_from_tag!("dojo-test_contract");
+    world.upgrade_contract(selector, new_class_hash);
 
     let quantum_dispatcher = IQuantumLeapDispatcher { contract_address: base_address };
     assert(quantum_dispatcher.plz_more_tps() == 'daddy', 'quantum leap failed');
@@ -82,13 +83,14 @@ fn test_upgrade_from_world() {
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
 
-    let base_address = world
+    let _ = world
         .deploy_contract(
             'salt', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
         );
     let new_class_hash: ClassHash = contract_invalid_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
-    world.upgrade_contract(base_address, new_class_hash);
+    let selector = selector_from_tag!("dojo-test_contract");
+    world.upgrade_contract(selector, new_class_hash);
 }
 
 #[test]
@@ -176,9 +178,9 @@ mod invalid_model {
     #[abi(embed_v0)]
     impl InvalidModelSelector of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
-            // NOTE: Need to update this value if address changes
-            // Pre-computed address of a contract deployed through the world.
-            0x21b19f95ff0f382a069dc7034f95584b300133665ee506789c76ba729e42b66
+            // Use the resource identifier of the contract deployed through the world
+            // instead of the address.
+            selector_from_tag!("dojo-test_contract")
         }
 
         fn namespace(self: @ContractState) -> ByteArray {
@@ -228,13 +230,8 @@ mod invalid_model_world {
 fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
-    let contract_address = world
+    let _ = world
         .deploy_contract(0, test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
-
-    // This print allows to know the address of the deployed contract which must be returned
-    // by the selector() function of invalid model, to simulate a ACL issue
-    // (see register_model function)
-    contract_address.print();
 
     world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());
 }
