@@ -7,6 +7,8 @@ use starknet::core::types::Felt;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
+use super::primitive_conversion::try_from_felt;
+
 #[derive(
     AsRefStr,
     Display,
@@ -230,41 +232,36 @@ impl Primitive {
         match self {
             Primitive::I8(ref mut value) => {
                 let felt = felts.remove(0);
-                *value = Some(felt.to_i8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<i8>(),
-                    value: felt,
+                *value = Some(try_from_felt::<i8>(felt).map_err(|_| {
+                    PrimitiveError::ValueOutOfRange { r#type: type_name::<i8>(), value: felt }
                 })?);
             }
 
             Primitive::I16(ref mut value) => {
                 let felt = felts.remove(0);
-                *value = Some(felt.to_i16().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<i16>(),
-                    value: felt,
+                *value = Some(try_from_felt::<i16>(felt).map_err(|_| {
+                    PrimitiveError::ValueOutOfRange { r#type: type_name::<i16>(), value: felt }
                 })?);
             }
 
             Primitive::I32(ref mut value) => {
                 let felt = felts.remove(0);
-                *value = Some(felt.to_i32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<i32>(),
-                    value: felt,
+                *value = Some(try_from_felt::<i32>(felt).map_err(|_| {
+                    PrimitiveError::ValueOutOfRange { r#type: type_name::<i32>(), value: felt }
                 })?);
             }
 
             Primitive::I64(ref mut value) => {
                 let felt = felts.remove(0);
-                *value = Some(felt.to_i64().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<i64>(),
-                    value: felt,
+                *value = Some(try_from_felt::<i64>(felt).map_err(|_| {
+                    PrimitiveError::ValueOutOfRange { r#type: type_name::<i64>(), value: felt }
                 })?);
             }
 
             Primitive::I128(ref mut value) => {
                 let felt = felts.remove(0);
-                *value = Some(felt.to_i128().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<i128>(),
-                    value: felt,
+                *value = Some(try_from_felt::<i128>(felt).map_err(|_| {
+                    PrimitiveError::ValueOutOfRange { r#type: type_name::<i128>(), value: felt }
                 })?);
             }
 
@@ -425,6 +422,8 @@ mod tests {
 
     use super::Primitive;
 
+    use super::try_from_felt;
+
     #[test]
     fn test_u256() {
         let primitive = Primitive::U256(Some(U256::from_be_hex(
@@ -497,5 +496,33 @@ mod tests {
         let mut primitive = Primitive::ContractAddress(None);
         primitive.set_contract_address(Some(Felt::from(1u128))).unwrap();
         assert_eq!(primitive.as_contract_address(), Some(Felt::from(1u128)));
+    }
+
+    #[test]
+    fn test_try_from_felt() {
+        let i_8: i8 = -64;
+        let felt = Felt::from(i_8);
+        let signed_integer = try_from_felt::<i8>(felt).unwrap();
+        assert_eq!(i_8, signed_integer);
+
+        let i_16: i16 = -14293;
+        let felt = Felt::from(i_16);
+        let signed_integer = try_from_felt::<i16>(felt).unwrap();
+        assert_eq!(i_16, signed_integer);
+
+        let i_32: i32 = -194875;
+        let felt = Felt::from(i_32);
+        let signed_integer = try_from_felt::<i32>(felt).unwrap();
+        assert_eq!(i_32, signed_integer);
+
+        let i_64: i64 = -3147483648;
+        let felt = Felt::from(i_64);
+        let signed_integer = try_from_felt::<i64>(felt).unwrap();
+        assert_eq!(i_64, signed_integer);
+
+        let i_128: i128 = -170141183460469231731687303715884105728;
+        let felt = Felt::from(i_128);
+        let signed_integer = try_from_felt::<i128>(felt).unwrap();
+        assert_eq!(i_128, signed_integer);
     }
 }

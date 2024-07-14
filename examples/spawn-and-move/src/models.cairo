@@ -74,6 +74,7 @@ struct Position {
 struct PlayerItem {
     item_id: u32,
     quantity: u32,
+    score: i32,
 }
 
 #[derive(Drop, Serde)]

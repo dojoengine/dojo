@@ -7,6 +7,7 @@ use starknet::core::types::Felt;
 pub mod event;
 pub mod packing;
 pub mod primitive;
+pub mod primitive_conversion;
 pub mod schema;
 pub mod storage;
 pub mod system;
