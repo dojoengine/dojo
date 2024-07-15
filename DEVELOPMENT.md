@@ -6,7 +6,7 @@ This guide outlines the steps to set up a development environment for Dojo. If y
 
 - [Rust](https://github.com/rust-lang/rust)
 - [Cairo](https://github.com/starkware-libs/cairo)
-- [Protobuf](https://github.com/protocolbuffers/protobuf)
+- [Protoc](https://github.com/protocolbuffers/protobuf)
 
 ## Setup
 

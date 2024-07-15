@@ -1,7 +1,7 @@
 kind = "DojoModel"
 class_hash = "0x34e17c9bad7ccfa7286e07ed3a9af0b2922c7ee77a4889a1c59d0a6dd7aeacc"
 original_class_hash = "0x34e17c9bad7ccfa7286e07ed3a9af0b2922c7ee77a4889a1c59d0a6dd7aeacc"
-abi = "manifests/dev/base/abis/models/dojo_examples_foes-RiverSkale-39535c12.json"
+abi = 'manifests\dev\base\abis\models\dojo_examples_foes-RiverSkale-39535c12.json'
 tag = "dojo_examples_foes-RiverSkale"
 manifest_name = "dojo_examples_foes-RiverSkale-39535c12"
 
