@@ -1,11 +1,5 @@
 //! Blockchain fetched from Katana.
-use std::collections::HashMap;
 
-use katana_cairo::cairo_vm::vm::runners::builtin_runner::{
-    BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
-    OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
-    SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
-};
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_provider::providers::in_memory::InMemoryProvider;
@@ -135,19 +129,4 @@ impl Blockchain {
 
         Ok(provider.insert_block_with_states_and_receipts(block, states, receipts, vec![])?)
     }
-}
-
-fn _get_default_vm_resource_fee_cost() -> HashMap<String, f64> {
-    HashMap::from([
-        (String::from("n_steps"), 1_f64),
-        (HASH_BUILTIN_NAME.to_string(), 1_f64),
-        (RANGE_CHECK_BUILTIN_NAME.to_string(), 1_f64),
-        (SIGNATURE_BUILTIN_NAME.to_string(), 1_f64),
-        (BITWISE_BUILTIN_NAME.to_string(), 1_f64),
-        (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
-        (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
-        (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
-        (KECCAK_BUILTIN_NAME.to_string(), 1_f64),
-        (SEGMENT_ARENA_BUILTIN_NAME.to_string(), 1_f64),
-    ])
 }

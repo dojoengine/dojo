@@ -1,10 +1,3 @@
-use std::collections::HashMap;
-
-use katana_cairo::cairo_vm::vm::runners::builtin_runner::{
-    BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
-    OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
-    SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
-};
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{BlockEnv, CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
@@ -48,19 +41,4 @@ pub fn envs() -> (BlockEnv, CfgEnv) {
     };
 
     (block, cfg)
-}
-
-fn vm_resource_fee_cost() -> HashMap<String, f64> {
-    HashMap::from([
-        (String::from("n_steps"), 1_f64),
-        (HASH_BUILTIN_NAME.to_string(), 1_f64),
-        (RANGE_CHECK_BUILTIN_NAME.to_string(), 1_f64),
-        (SIGNATURE_BUILTIN_NAME.to_string(), 1_f64),
-        (BITWISE_BUILTIN_NAME.to_string(), 1_f64),
-        (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
-        (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
-        (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
-        (KECCAK_BUILTIN_NAME.to_string(), 1_f64),
-        (SEGMENT_ARENA_BUILTIN_NAME.to_string(), 1_f64),
-    ])
 }
