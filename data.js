@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1720808010198,
+  "lastUpdate": 1721019094725,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11605,6 +11605,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16974326,
             "range": "± 170009",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "307653bd777f05ec3cc329a23188c5edfbcdc92e",
+          "message": "feat: add support for model from other libraries (#2172)\n\n* fix: ensure models from dependencies inherite the current package namespace\r\n\r\n* feat: add new game-lib with workspace and adjust test\r\n\r\n* fix: add missing namespace for testing dojo core\r\n\r\n* fix: use unwrap_or instead of match\r\n\r\n* fix: use and_then instead of nested tests\r\n\r\n* fix: change namespace config as a struct in the scarb manifest\r\n\r\n* fix: fix tests\r\n\r\n* fix: ensure starknet and dojo plugin are correctly injected in plugin test\r\n\r\n* feat: add nomapping argument to dojo model and contract attributes\r\n\r\n* fix: change contract identification with selector + contract registry\r\n\r\n* feat: add selector_from_tag macro and fix semantic tests\r\n\r\n* fix: rebuild tests with new world address\r\n\r\n* feat: add write permission check from contract selector\r\n\r\n* fix: fix metadata upload with contract selector instead of address\r\n\r\n* fix: fix plugin tests",
+          "timestamp": "2024-07-14T22:42:44-06:00",
+          "tree_id": "c7a5c65d78c003bc01ba673b1d2fb69a87ccc6fc",
+          "url": "https://github.com/dojoengine/dojo/commit/307653bd777f05ec3cc329a23188c5edfbcdc92e"
+        },
+        "date": 1721019093912,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16966086,
+            "range": "± 310264",
             "unit": "ns/iter"
           }
         ]
