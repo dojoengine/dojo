@@ -4,7 +4,7 @@ use convert_case::{Case, Casing};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{
     DeclareTxReceipt, DeployAccountTxReceipt, Event, InvokeTxReceipt, L1HandlerTxReceipt,
-    MessageToL1, Receipt, TxExecutionResources,
+    MessageToL1, Receipt, TxResources,
 };
 use katana_primitives::trace::{CallInfo, TxExecInfo};
 use katana_primitives::transaction::TxRef;

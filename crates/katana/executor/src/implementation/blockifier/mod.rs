@@ -140,7 +140,7 @@ impl<'a> StarknetVMProcessor<'a> {
         F: FnMut(&mut dyn StateReader, (TxWithHash, ExecutionResult)) -> T,
     {
         let block_context = &self.block_context;
-        let state = &mut self.state.0.write().inner;
+        let state = &mut self.state.0.lock().inner;
         let mut state = cached_state::CachedState::new(MutRefState::new(state));
 
         let mut results = Vec::with_capacity(transactions.len());
@@ -167,7 +167,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     ) -> ExecutorResult<()> {
         let block_context = &self.block_context;
         let flags = &self.simulation_flags;
-        let mut state = self.state.write();
+        let mut state = self.state.0.lock();
 
         for exec_tx in transactions {
             // Collect class artifacts if its a declare tx
@@ -278,7 +278,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
 
     fn call(&self, call: EntryPointCall) -> Result<Vec<FieldElement>, ExecutionError> {
         let block_context = &self.block_context;
-        let mut state = self.state.0.write();
+        let mut state = self.state.0.lock();
         let state = MutRefState::new(&mut state.inner);
         let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
         Ok(retdata)

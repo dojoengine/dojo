@@ -12,7 +12,7 @@ use katana_provider::error::ProviderError;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
-use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::Mutex;
 
 use super::utils::{self};
 // use super::CACHE_SIZE;
@@ -126,7 +126,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<CompiledClass>> {
-        let state = self.read();
+        let state = self.0.lock();
         if let Some((class, _)) = state.declared_classes.get(&hash) {
             Ok(Some(class.clone()))
         } else {
@@ -138,7 +138,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<katana_primitives::class::CompiledClassHash>> {
-        let Ok(hash) = self.write().inner.get_compiled_class_hash(ClassHash(hash)) else {
+        let Ok(hash) = self.0.lock().inner.get_compiled_class_hash(ClassHash(hash)) else {
             return Ok(None);
         };
         Ok(Some(hash.0))
@@ -148,7 +148,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<FlattenedSierraClass>> {
-        let state = self.read();
+        let state = self.0.lock();
         if let Some((_, sierra)) = state.declared_classes.get(&hash) {
             Ok(sierra.clone())
         } else {
@@ -162,12 +162,16 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         &self,
         address: katana_primitives::contract::ContractAddress,
     ) -> ProviderResult<Option<katana_primitives::class::ClassHash>> {
-        let Ok(hash) = self.write().inner.get_class_hash_at(utils::to_blk_address(address)) else {
+        let Ok(hash) = self.0.lock().inner.get_class_hash_at(utils::to_blk_address(address)) else {
             return Ok(None);
         };
 
         let hash = hash.0;
-        if hash == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash)) }
+        if hash == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash))
+        }
     }
 
     fn nonce(
@@ -179,7 +183,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         }
 
-        match self.0.write().inner.get_nonce_at(utils::to_blk_address(address)) {
+        match self.0.lock().inner.get_nonce_at(utils::to_blk_address(address)) {
             Ok(nonce) => Ok(Some(nonce.0)),
             Err(e) => Err(ProviderError::Other(e.to_string())),
         }
@@ -199,7 +203,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         let key =
             StorageKey(storage_key.try_into().expect("storage key is not a valid field element"));
 
-        match self.write().inner.get_storage_at(address, key) {
+        match self.0.lock().inner.get_storage_at(address, key) {
             Ok(value) => Ok(Some(value)),
             Err(e) => Err(ProviderError::Other(e.to_string())),
         }
@@ -211,25 +215,25 @@ impl<S: StateDb> StateReader for CachedState<S> {
         &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<ClassHash> {
-        self.write().inner.get_class_hash_at(contract_address)
+        self.0.lock().inner.get_class_hash_at(contract_address)
     }
 
     fn get_compiled_class_hash(&self, class_hash: ClassHash) -> StateResult<CompiledClassHash> {
-        self.write().inner.get_compiled_class_hash(class_hash)
+        self.0.lock().inner.get_compiled_class_hash(class_hash)
     }
 
     fn get_compiled_contract_class(
         &self,
         class_hash: ClassHash,
     ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
-        self.write().inner.get_compiled_contract_class(class_hash)
+        self.0.lock().inner.get_compiled_contract_class(class_hash)
     }
 
     fn get_nonce_at(
         &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<Nonce> {
-        self.write().inner.get_nonce_at(contract_address)
+        self.0.lock().inner.get_nonce_at(contract_address)
     }
 
     fn get_storage_at(
@@ -237,7 +241,7 @@ impl<S: StateDb> StateReader for CachedState<S> {
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
         key: StorageKey,
     ) -> StateResult<katana_cairo::starknet_api::hash::StarkHash> {
-        self.write().inner.get_storage_at(contract_address, key)
+        self.0.lock().inner.get_storage_at(contract_address, key)
     }
 }
 

@@ -406,7 +406,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
 ) -> StateUpdatesWithDeclaredClasses {
     use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
 
-    let state_diff = state.0.write().inner.to_state_diff().unwrap();
+    let state_diff = state.0.lock().inner.to_state_diff().unwrap();
 
     let mut declared_compiled_classes: HashMap<katana_primitives::class::ClassHash, CompiledClass> =
         HashMap::new();
