@@ -778,7 +778,8 @@ mod tests {
         };
 
         let expected_storage_read_values = call.storage_read_values.clone();
-        let expected_storage_keys: HashSet<FieldElement> = call.accessed_storage_keys.clone();
+        let expected_storage_keys: HashSet<FieldElement> =
+            call.accessed_storage_keys.iter().map(|v| *v.key()).collect();
         let expected_inner_calls: Vec<_> =
             call.inner_calls.clone().into_iter().map(to_call_info).collect();
 
