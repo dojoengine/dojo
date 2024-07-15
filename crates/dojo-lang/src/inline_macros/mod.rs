@@ -7,6 +7,7 @@ use smol_str::SmolStr;
 pub mod delete;
 pub mod emit;
 pub mod get;
+pub mod selector_from_tag;
 pub mod set;
 pub mod utils;
 

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -14,6 +15,58 @@ use scarb::ops;
 use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use scarb_ui::Verbosity;
 use toml::{Table, Value};
+
+#[derive(Debug)]
+pub struct CompilerTestSetup {
+    pub dir: Utf8PathBuf,
+    pub dojo_core: Utf8PathBuf,
+    pub manifests: HashMap<String, Utf8PathBuf>,
+}
+
+impl CompilerTestSetup {
+    pub fn from_examples(dojo_core: &str, example_path: &str) -> CompilerTestSetup {
+        let example_path = Utf8PathBuf::from(example_path);
+
+        let packages: Vec<Utf8PathBuf> =
+            vec![example_path.join("spawn-and-move"), example_path.join("game-lib")];
+
+        let package_refs: Vec<&str> = packages.iter().map(|p| p.as_str()).collect();
+
+        Self::from_paths(dojo_core, &package_refs)
+    }
+
+    pub fn from_paths(dojo_core: &str, packages: &[&str]) -> CompilerTestSetup {
+        let dojo_core = Utf8PathBuf::from(dojo_core);
+        let packages: Vec<Utf8PathBuf> = packages.iter().map(Utf8PathBuf::from).collect();
+
+        let tmp_dir = Utf8PathBuf::from(
+            assert_fs::TempDir::new().unwrap().to_path_buf().to_string_lossy().to_string(),
+        );
+
+        let mut manifests = HashMap::new();
+
+        for package_source in &packages {
+            let package_name = package_source.file_name().unwrap();
+            let package_tmp = tmp_dir.join(package_name);
+            fs::create_dir_all(&package_tmp).unwrap();
+
+            let package_manifest = package_tmp.join("Scarb.toml");
+
+            manifests.insert(package_name.to_string(), package_manifest);
+
+            copy_project_temp(package_source, &package_tmp, &dojo_core, &[]).unwrap();
+        }
+
+        CompilerTestSetup { dir: tmp_dir, dojo_core, manifests }
+    }
+
+    pub fn build_test_config(&self, package_name: &str, profile: Profile) -> Config {
+        let manifest = self.manifests.get(package_name).unwrap();
+
+        build_test_config(manifest.as_ref(), profile)
+            .unwrap_or_else(|c| panic!("Error loading config: {c:?}"))
+    }
+}
 
 /// Copies a project into a temporary directory and loads a config from the copied project.
 ///
@@ -120,11 +173,11 @@ pub fn copy_project_temp(
         if path.is_dir() {
             let dir_name = match entry.file_name().into_string() {
                 Ok(name) => name,
-                Err(_) => continue, // Skip directories/files with non-UTF8 names
+                Err(_) => continue, // Skip non UTF8 dirs.
             };
 
             if ignore_dirs.contains(&dir_name.as_str()) {
-                continue; // Skip ignored directories
+                continue;
             }
 
             copy_project_temp(
@@ -149,7 +202,11 @@ pub fn copy_project_temp(
 
                 let mut table = contents.parse::<Table>().expect("Failed to parse Scab.toml");
 
-                let dojo = table["dependencies"]["dojo"].as_table_mut().unwrap();
+                let dojo = if table.contains_key("workspace") {
+                    table["workspace"]["dependencies"]["dojo"].as_table_mut().unwrap()
+                } else {
+                    table["dependencies"]["dojo"].as_table_mut().unwrap()
+                };
 
                 if dojo.contains_key("path") {
                     dojo["path"] = Value::String(
@@ -176,6 +233,7 @@ pub fn copy_project_temp(
 /// # Arguments
 ///
 /// * `path` - The path to the Scarb.toml file to build the config for.
+/// * `profile` - The profile to use for the config.
 pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();

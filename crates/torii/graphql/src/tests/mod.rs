@@ -2,29 +2,23 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
-use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
-use dojo_test_utils::migration::prepare_migration;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::WorldContractReader;
-use dojo_world::metadata::{dojo_metadata_from_workspace, get_default_namespace_from_ws};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
-use scarb::ops;
 use serde::Deserialize;
 use serde_json::Value;
-use sozo_ops::migration::execute_strategy;
+use sozo_ops::migration;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
-use starknet::accounts::{Account, Call};
+use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{Felt, InvokeTransactionResult};
 use starknet::macros::selector;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -279,44 +273,30 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-    let source_project_dir = Utf8PathBuf::from("../types-test");
-    let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
+    let setup = CompilerTestSetup::from_paths("../../dojo-core", &["../types-test"]);
+    let config = setup.build_test_config("types-test", Profile::DEV);
 
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
-
-    let ws = ops::read_workspace(config.manifest_path(), &config)
-        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let dojo_metadata =
-        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
-
-    let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
-
-    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
-
-    let mut migration = prepare_migration(
-        source_project_dir,
-        target_path,
-        dojo_metadata.skip_migration,
-        &default_namespace,
-    )
-    .unwrap();
-
-    migration.resolve_variable(migration.world.clone().unwrap().contract_address).unwrap();
-
-    let db = Sql::new(pool.clone(), migration.world_address().unwrap(), Felt::ZERO).await.unwrap();
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
-
     let account = sequencer.account(0);
 
-    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
-
-    let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
-
-    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+    let migration_output = migration::migrate(
+        &ws,
+        None,
+        sequencer.url().to_string(),
+        &account,
+        "types_test",
+        false,
+        TxnConfig::init_wait(),
+        None,
+    )
+    .await
+    .unwrap()
+    .unwrap();
 
     //  Execute `create` and insert 11 records into storage
-    let records_contract = output
+    let records_contract = migration_output
         .contracts
         .iter()
         .find(|contract| contract.as_ref().unwrap().tag.eq("types_test-records"))
@@ -334,7 +314,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         .await
         .unwrap();
 
-    TransactionWaiter::new(transaction_hash, &provider).await?;
+    TransactionWaiter::new(transaction_hash, &account.provider()).await?;
 
     // Execute `delete` and delete Record with id 20
     let InvokeTransactionResult { transaction_hash } = account
@@ -347,13 +327,17 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         .await
         .unwrap();
 
-    TransactionWaiter::new(transaction_hash, &provider).await?;
+    TransactionWaiter::new(transaction_hash, &account.provider()).await?;
+
+    let world = WorldContractReader::new(migration_output.world_address, account.provider());
+
+    let db = Sql::new(pool.clone(), migration_output.world_address, Felt::ZERO).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
         db,
-        &provider,
+        account.provider(),
         Processors {
             event: vec![
                 Box::new(RegisterModelProcessor),

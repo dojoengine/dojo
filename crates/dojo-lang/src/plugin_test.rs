@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use cairo_lang_defs::db::{DefsDatabase, DefsGroup};
@@ -7,10 +8,11 @@ use cairo_lang_filesystem::cfg::CfgSet;
 use cairo_lang_filesystem::db::{
     init_files_group, AsFilesGroupMut, CrateConfiguration, FilesDatabase, FilesGroup, FilesGroupEx,
 };
-use cairo_lang_filesystem::ids::{CrateLongId, Directory, FileLongId};
+use cairo_lang_filesystem::ids::{CrateLongId, Directory};
 use cairo_lang_parser::db::ParserDatabase;
 use cairo_lang_plugins::get_base_plugins;
 use cairo_lang_plugins::test_utils::expand_module_text;
+use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_syntax::node::db::{SyntaxDatabase, SyntaxGroup};
 use cairo_lang_test_utils::parse_test_file::TestRunnerResult;
 use cairo_lang_test_utils::verify_diagnostics_expectation;
@@ -35,7 +37,11 @@ pub fn test_expand_plugin(
     inputs: &OrderedHashMap<String, String>,
     args: &OrderedHashMap<String, String>,
 ) -> TestRunnerResult {
-    test_expand_plugin_inner(inputs, args, &[Arc::new(BuiltinDojoPlugin)])
+    test_expand_plugin_inner(
+        inputs,
+        args,
+        &[Arc::new(BuiltinDojoPlugin), Arc::new(StarkNetPlugin::default())],
+    )
 }
 
 #[salsa::database(DefsDatabase, ParserDatabase, SyntaxDatabase, FilesDatabase)]
@@ -92,15 +98,52 @@ pub fn test_expand_plugin_inner(
 
     let cairo_code = &inputs["cairo_code"];
 
+    // The path as to remain the same, because diagnostics contains the path
+    // of the file. Which can cause error when checked without CAIRO_FIX=1.
+    let tmp_dir = PathBuf::from("/tmp/plugin_test");
+    let _ = std::fs::create_dir_all(&tmp_dir);
+    let tmp_path = tmp_dir.as_path();
+
+    // Create Scarb.toml file
+    let scarb_toml_path = tmp_path.join("Scarb.toml");
+    // Only write if the file doesn't exist.
+    if !scarb_toml_path.exists() {
+        std::fs::write(
+            scarb_toml_path,
+            r#"
+[package]
+cairo-version = "=2.6.4"
+name = "test_package"
+version = "0.7.3"
+
+[cairo]
+sierra-replace-ids = true
+
+[[target.dojo]]
+
+[tool.dojo.world]
+namespace = { default = "test_package" }
+seed = "test_package"
+"#,
+        )
+        .expect("Failed to write Scarb.toml");
+    }
+
+    // Create src directory
+    let src_dir = tmp_path.join("src");
+    let _ = std::fs::create_dir(&src_dir);
+
+    // Create lib.cairo file
+    let lib_cairo_path = src_dir.join("lib.cairo");
+
+    if !lib_cairo_path.exists() {
+        std::fs::write(lib_cairo_path, cairo_code).expect("Failed to write lib.cairo");
+    }
+
     let crate_id = db.intern_crate(CrateLongId::Real("test".into()));
-    let root = Directory::Real("test_src".into());
+    let root = Directory::Real(src_dir.to_path_buf());
 
     db.set_crate_config(crate_id, Some(CrateConfiguration::default_for_root(root)));
-
-    // Main module file.
-    let file_id = db.intern_file(FileLongId::OnDisk("test_src/lib.cairo".into()));
-    db.as_files_group_mut()
-        .override_file_content(file_id, Some(Arc::new(format!("{cairo_code}\n"))));
 
     let mut diagnostic_items = vec![];
     let expanded_module =

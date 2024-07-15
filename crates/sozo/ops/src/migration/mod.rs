@@ -54,7 +54,7 @@ pub async fn migrate<A>(
     dry_run: bool,
     txn_config: TxnConfig,
     skip_manifests: Option<Vec<String>>,
-) -> Result<()>
+) -> Result<Option<MigrationOutput>>
 where
     A: ConnectedAccount + Sync + Send,
     A::Provider: Send,
@@ -116,7 +116,7 @@ where
 
     if total_diffs == 0 {
         ui.print("\n✨ No changes to be made. Remote World is already up to date!");
-        return Ok(());
+        return Ok(None);
     }
 
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
@@ -137,6 +137,8 @@ where
             name,
         )
         .await?;
+
+        Ok(None)
     } else {
         // Migrate according to the diff.
         let migration_output = match apply_diff(ws, &account, txn_config, &mut strategy).await {
@@ -171,13 +173,13 @@ where
 
         let account = Arc::new(account);
         let world = WorldContract::new(world_address, account.clone());
-        if let Some(migration_output) = migration_output {
+        if let Some(migration_output) = &migration_output {
             match auto_authorize(
                 ws,
                 &world,
                 &txn_config,
                 &local_manifest,
-                &migration_output,
+                migration_output,
                 &default_namespace,
             )
             .await
@@ -195,9 +197,9 @@ where
                 upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
             }
         }
-    };
 
-    Ok(())
+        Ok(migration_output)
+    }
 }
 
 fn get_world_address(

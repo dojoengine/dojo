@@ -16,18 +16,20 @@ use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNod
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 use dojo_world::contracts::naming;
+use dojo_world::metadata::{is_name_valid, NamespaceConfig};
 
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 use crate::syntax::{self_param, utils as syntax_utils};
-use crate::utils::is_name_valid;
 
 const DOJO_INIT_FN: &str = "dojo_init";
 const CONTRACT_NAMESPACE: &str = "namespace";
+const CONTRACT_NOMAPPING: &str = "nomapping";
 
 #[derive(Debug, Clone, Default)]
 pub struct ContractParameters {
     namespace: Option<String>,
+    nomapping: bool,
 }
 
 #[derive(Debug)]
@@ -40,7 +42,7 @@ impl DojoContract {
     pub fn from_module(
         db: &dyn SyntaxGroup,
         module_ast: &ast::ItemModule,
-        package_id: String,
+        namespace_config: &NamespaceConfig,
         metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         let name = module_ast.name(db).text(db);
@@ -54,9 +56,14 @@ impl DojoContract {
         let mut has_storage = false;
         let mut has_init = false;
 
-        let contract_namespace = match parameters.namespace {
-            Some(x) => x.to_string(),
-            None => package_id,
+        let unmapped_namespace = parameters.namespace.unwrap_or(namespace_config.default.clone());
+
+        let contract_namespace = if parameters.nomapping {
+            unmapped_namespace
+        } else {
+            // Maps namespace from the tag to ensure higher precision on matching namespace
+            // mappings.
+            namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &name))
         };
 
         for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {
@@ -67,7 +74,7 @@ impl DojoContract {
                         stable_ptr: module_ast.stable_ptr().0,
                         message: format!(
                             "The contract {id} '{value}' can only contain characters (a-z/A-Z), \
-                             numbers (0-9) and underscore (_)"
+                             digits (0-9) and underscore (_)."
                         ),
                         severity: Severity::Error,
                     }],
@@ -665,6 +672,9 @@ fn get_parameters(
                         CONTRACT_NAMESPACE => {
                             parameters.namespace =
                                 get_contract_namespace(db, arg_value, diagnostics);
+                        }
+                        CONTRACT_NOMAPPING => {
+                            parameters.nomapping = true;
                         }
                         _ => {
                             diagnostics.push(PluginDiagnostic {

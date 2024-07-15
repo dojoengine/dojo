@@ -128,16 +128,16 @@
   },
   {
     "type": "impl",
-    "name": "ISomethingImpl",
-    "interface_name": "dojo_examples::something::ISomething"
+    "name": "IDungeonImpl",
+    "interface_name": "dojo_examples::dungeon::IDungeon"
   },
   {
     "type": "interface",
-    "name": "dojo_examples::something::ISomething",
+    "name": "dojo_examples::dungeon::IDungeon",
     "items": [
       {
         "type": "function",
-        "name": "something",
+        "name": "enter",
         "inputs": [],
         "outputs": [],
         "state_mutability": "view"
@@ -147,11 +147,11 @@
   {
     "type": "impl",
     "name": "IDojoInitImpl",
-    "interface_name": "dojo_examples::something::something::IDojoInit"
+    "interface_name": "dojo_examples::dungeon::dungeon::IDojoInit"
   },
   {
     "type": "interface",
-    "name": "dojo_examples::something::something::IDojoInit",
+    "name": "dojo_examples::dungeon::dungeon::IDojoInit",
     "items": [
       {
         "type": "function",
@@ -211,7 +211,7 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::something::something::Event",
+    "name": "dojo_examples::dungeon::dungeon::Event",
     "kind": "enum",
     "variants": [
       {

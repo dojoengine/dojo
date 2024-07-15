@@ -1,8 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::metadata::{dojo_metadata_from_workspace, get_default_namespace_from_ws};
@@ -38,11 +37,8 @@ async fn test_entities_queries() {
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-    let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move");
-    let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
-
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
-    println!("config path {:?}", config.manifest_path());
+    let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));

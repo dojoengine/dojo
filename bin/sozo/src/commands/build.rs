@@ -214,8 +214,7 @@ fn create_stats_table(mut contracts_statistics: Vec<ContractStatistics>) -> Tabl
 
 #[cfg(test)]
 mod tests {
-    use camino::Utf8PathBuf;
-    use dojo_test_utils::compiler;
+    use dojo_test_utils::compiler::CompilerTestSetup;
     use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
     use prettytable::{format, Cell, Row, Table};
     use scarb::compiler::Profile;
@@ -227,10 +226,9 @@ mod tests {
     // Uncomment once bindings support arrays.
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {
-        let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
-        let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
 
-        let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
         let build_args = BuildArgs {
             bindings_output: "generated".to_string(),
