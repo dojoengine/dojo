@@ -9,7 +9,6 @@ use clap_complete::{generate, Shell};
 use console::Style;
 use dojo_metrics::{metrics_process, prometheus_exporter};
 use katana_core::constants::MAX_RECURSION_DEPTH;
-use katana_core::env::get_default_vm_resource_fee_cost;
 use katana_core::sequencer::KatanaSequencer;
 use katana_executor::SimulationFlag;
 use katana_primitives::class::ClassHash;
@@ -49,7 +48,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cfg_env = CfgEnv {
         chain_id: starknet_config.env.chain_id,
-        vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
         invoke_tx_max_n_steps: starknet_config.env.invoke_max_steps,
         validate_max_n_steps: starknet_config.env.validate_max_steps,
         max_recursion_depth: MAX_RECURSION_DEPTH,

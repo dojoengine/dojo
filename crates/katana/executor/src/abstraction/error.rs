@@ -9,8 +9,8 @@ pub enum ExecutorError {}
 /// Errors that can occur during the transaction execution.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum ExecutionError {
-    #[error("contract constructor execution error: {0}")]
-    ConstructorExecutionFailed(Box<ExecutionError>),
+    #[error("contract constructor execution error: {reason}")]
+    ConstructorExecutionFailed { reason: String },
 
     #[error("class with hash {0:#x} is already declared")]
     ClassAlreadyDeclared(ClassHash),
@@ -51,13 +51,8 @@ pub enum ExecutionError {
     #[error("entry point execution error: {reason}")]
     ExecutionFailed { reason: String },
 
-    #[error("transaction validation error: {0}")]
-    TransactionValidationFailed {
-        error: Box<ExecutionError>,
-        class_hash: ClassHash,
-        storage_address: ContractAddress,
-        selector: FieldElement,
-    },
+    #[error("transaction validation error: {reason}")]
+    TransactionValidationFailed { reason: String },
 
     #[error("transaction reverted: {revert_error}")]
     TransactionReverted { revert_error: String },

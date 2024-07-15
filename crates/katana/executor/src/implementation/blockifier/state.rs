@@ -249,9 +249,6 @@ impl<S: StateDb> StateReader for CachedState<S> {
 mod tests {
 
     use blockifier::state::state_api::{State, StateReader};
-    use katana_cairo::starknet_api::core::PatriciaKey;
-    use katana_cairo::starknet_api::hash::StarkHash;
-    use katana_cairo::starknet_api::patricia_key;
     use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::genesis::constant::{
@@ -303,7 +300,7 @@ mod tests {
     #[test]
     fn can_fetch_from_inner_state_provider() -> anyhow::Result<()> {
         let state = state_provider();
-        let mut cached_state = CachedState::new(StateProviderDb(state));
+        let cached_state = CachedState::new(StateProviderDb(state));
 
         let address = ContractAddress::from(felt!("0x67"));
         let legacy_class_hash = felt!("0x111");
@@ -316,13 +313,13 @@ mod tests {
             .get_storage_at(api_address, StorageKey(storage_key.try_into().unwrap()))?;
         let actual_compiled_hash = cached_state.get_compiled_class_hash(actual_class_hash)?;
         let actual_class = cached_state.get_compiled_contract_class(actual_class_hash)?;
-        let actual_legacy_class = cached_state
-            .get_compiled_contract_class(ClassHash(to_stark_felt(legacy_class_hash)))?;
+        let actual_legacy_class =
+            cached_state.get_compiled_contract_class(ClassHash(legacy_class_hash))?;
 
-        assert_eq!(actual_nonce.0, to_stark_felt(felt!("0x7")));
-        assert_eq!(actual_storage_value, to_stark_felt(felt!("0x2")));
-        assert_eq!(actual_class_hash.0, to_stark_felt(felt!("0x123")));
-        assert_eq!(actual_compiled_hash.0, to_stark_felt(felt!("0x456")));
+        assert_eq!(actual_nonce.0, felt!("0x7"));
+        assert_eq!(actual_storage_value, felt!("0x2"));
+        assert_eq!(actual_class_hash.0, felt!("0x123"));
+        assert_eq!(actual_compiled_hash.0, felt!("0x456"));
         assert_eq!(
             actual_class,
             utils::to_class(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()).unwrap().contract_class()
@@ -378,21 +375,20 @@ mod tests {
 
         // insert some data to the cached state
         {
-            let lock = &mut cached_state.0.write();
+            let lock = &mut cached_state.0.lock();
             let blk_state = &mut lock.inner;
 
             let address = utils::to_blk_address(new_address);
             let storage_key = StorageKey(new_storage_key.try_into().unwrap());
-            let storage_value = utils::to_stark_felt(new_storage_value);
-            let class_hash = ClassHash(utils::to_stark_felt(new_class_hash));
+            let storage_value = new_storage_value;
+            let class_hash = ClassHash(new_class_hash);
             let class =
                 utils::to_class(new_compiled_sierra_class.clone()).unwrap().contract_class();
-            let compiled_hash = CompiledClassHash(utils::to_stark_felt(new_compiled_hash));
-            let legacy_class_hash = ClassHash(utils::to_stark_felt(new_legacy_class_hash));
+            let compiled_hash = CompiledClassHash(new_compiled_hash);
+            let legacy_class_hash = ClassHash(new_legacy_class_hash);
             let legacy_class =
                 utils::to_class(DEFAULT_LEGACY_UDC_CASM.clone()).unwrap().contract_class();
-            let legacy_compiled_hash =
-                CompiledClassHash(utils::to_stark_felt(new_legacy_compiled_hash));
+            let legacy_compiled_hash = CompiledClassHash(new_legacy_compiled_hash);
 
             blk_state.increment_nonce(address)?;
             blk_state.set_class_hash_at(address, legacy_class_hash)?;
@@ -490,11 +486,11 @@ mod tests {
 
         let sp = db.latest()?;
 
-        let mut cached_state = CachedState::new(StateProviderDb(sp));
+        let cached_state = CachedState::new(StateProviderDb(sp));
 
         let api_address = utils::to_blk_address(address);
         let api_storage_key = StorageKey(storage_key.try_into().unwrap());
-        let api_class_hash = ClassHash(utils::to_stark_felt(class_hash));
+        let api_class_hash = ClassHash(class_hash);
 
         let actual_nonce =
             cached_state.get_nonce_at(api_address).expect("should return default value");

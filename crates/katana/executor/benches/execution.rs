@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use blockifier::state::cached_state::{CachedState, GlobalContractCache};
+use blockifier::state::cached_state::CachedState;
 use criterion::measurement::WallTime;
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkGroup, Criterion};
 use katana_executor::{SimulationFlag, StateProviderDb};
@@ -45,10 +45,7 @@ fn blockifier(
             || {
                 // setup state
                 let state = provider.latest().expect("failed to get latest state");
-
-                // setup blockifier cached state
-                let contract_cache = GlobalContractCache::new(100);
-                let state = CachedState::new(StateProviderDb::from(state), contract_cache);
+                let state = CachedState::new(StateProviderDb::from(state));
 
                 (state, &block_context, execution_flags, tx.clone())
             },

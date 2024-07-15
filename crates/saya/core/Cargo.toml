@@ -10,13 +10,14 @@ version.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 katana-rpc-types.workspace = true
+katana-cairo.workspace = true
 saya-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
 bigdecimal.workspace = true
 cairo-proof-parser.workspace = true
-cairo-vm.workspace = true
+# cairo-vm.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "manifest", "metadata", "migration" ] }
 futures.workspace = true
 itertools.workspace = true

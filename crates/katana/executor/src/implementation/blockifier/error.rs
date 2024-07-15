@@ -15,14 +15,14 @@ impl From<TransactionExecutionError> for ExecutionError {
                 Self::ClassAlreadyDeclared(class_hash.0)
             }
             TransactionExecutionError::ValidateTransactionError { error, .. } => {
-                Self::TransactionValidationFailed(Box::new(Self::from(error)))
+                Self::TransactionValidationFailed { reason: error.to_string() }
             }
             TransactionExecutionError::StateError(e) => Self::from(e),
             TransactionExecutionError::TransactionPreValidationError(e) => Self::from(e),
             TransactionExecutionError::TransactionFeeError(e) => Self::from(e),
             TransactionExecutionError::ExecutionError { error, .. } => Self::from(error),
             TransactionExecutionError::ContractConstructorExecutionFailed(e) => {
-                Self::ConstructorExecutionFailed(Box::new(Self::from(e)))
+                Self::ConstructorExecutionFailed { reason: e.to_string() }
             }
             e => Self::Other(e.to_string()),
         }

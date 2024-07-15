@@ -26,12 +26,6 @@ use crate::{
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
 
-// TODO: @kariy Which value should be considered here? I took the default
-// value from the previous implementation.
-// Previous: https://github.com/dojoengine/blockifier/blob/7459891173b64b148a7ce870c0b1d5907af15b8d/crates/blockifier/src/state/cached_state.rs#L731
-// New code: https://github.com/starkware-libs/blockifier/blob/a6200402ab635d8a8e175f7f135be5914c960007/crates/blockifier/src/state/global_cache.rs#L17C11-L17C46
-pub(crate) const CACHE_SIZE: usize = 100;
-
 #[derive(Debug)]
 pub struct BlockifierFactory {
     cfg: CfgEnv,

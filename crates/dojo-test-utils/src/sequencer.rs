@@ -3,7 +3,6 @@ use std::sync::Arc;
 use jsonrpsee::core::Error;
 pub use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::MAX_RECURSION_DEPTH;
-use katana_core::env::get_default_vm_resource_fee_cost;
 use katana_core::sequencer::KatanaSequencer;
 pub use katana_core::sequencer::SequencerConfig;
 use katana_executor::implementation::blockifier::BlockifierFactory;
@@ -40,7 +39,6 @@ impl TestSequencer {
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
         let cfg_env = CfgEnv {
             chain_id: starknet_config.env.chain_id,
-            vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
             invoke_tx_max_n_steps: starknet_config.env.invoke_max_steps,
             validate_max_n_steps: starknet_config.env.validate_max_steps,
             max_recursion_depth: MAX_RECURSION_DEPTH,

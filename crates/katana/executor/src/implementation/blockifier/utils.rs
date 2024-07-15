@@ -1,10 +1,8 @@
-use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap};
 use std::num::NonZeroU128;
 use std::sync::Arc;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
-// use blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
@@ -16,9 +14,7 @@ use blockifier::execution::contract_class::{
 use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
 use blockifier::state::cached_state;
-// use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_gas_vector};
-// use blockifier::state::cached_state::{self, GlobalContractCache};
-use blockifier::state::state_api::{State, StateReader};
+use blockifier::state::state_api::StateReader;
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::objects::{
     DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo,
@@ -38,7 +34,6 @@ use katana_cairo::starknet_api::core::{
 };
 use katana_cairo::starknet_api::data_availability::DataAvailabilityMode;
 use katana_cairo::starknet_api::deprecated_contract_class::EntryPointType;
-// use katana_cairo::starknet_api::hash::StarkFelt;
 use katana_cairo::starknet_api::transaction::{
     AccountDeploymentData, Calldata, ContractAddressSalt,
     DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2,
@@ -51,7 +46,8 @@ use katana_primitives::chain::NamedChainId;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-use katana_primitives::trace::TxExecInfo;
+use katana_primitives::trace::TxResources;
+use katana_primitives::trace::{L1Gas, TxExecInfo};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
@@ -61,7 +57,6 @@ use starknet::core::types::PriceUnit;
 use starknet::core::utils::parse_cairo_short_string;
 
 use super::state::{CachedState, StateDb};
-use super::CACHE_SIZE;
 use crate::abstraction::{EntryPointCall, SimulationFlag};
 use crate::utils::build_receipt;
 use crate::{ExecutionError, ExecutionResult};
@@ -96,9 +91,6 @@ pub fn transact<S: StateReader>(
         // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
         // these cases, we still want to calculate the fee.
         let fee = if info.transaction_receipt.fee == Fee(0) {
-            // calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?.0
-
-            // reference: blockifier::fee::actual_cost
             get_fee_by_gas_vector(
                 &block_context.block_info(),
                 info.transaction_receipt.gas,
@@ -108,8 +100,6 @@ pub fn transact<S: StateReader>(
             info.transaction_receipt.fee
         };
 
-        // let consts = block_context.versioned_constants();
-        // let gas_consumed = calculate_tx_gas_vector(&info.actual_resources, consts)?.l1_gas;
         let gas_consumed = info.transaction_receipt.gas.l1_gas;
 
         let (unit, gas_price) = match fee_type {
@@ -396,7 +386,6 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     versioned_constants.max_recursion_depth = cfg_env.max_recursion_depth;
     versioned_constants.validate_max_n_steps = cfg_env.validate_max_n_steps;
     versioned_constants.invoke_tx_max_n_steps = cfg_env.invoke_tx_max_n_steps;
-    versioned_constants.vm_resource_fee_cost = cfg_env.vm_resource_fee_cost.clone().into();
 
     BlockContext::new(block_info, chain_info, versioned_constants, Default::default())
 }
@@ -570,14 +559,19 @@ pub fn to_exec_info(exec_info: TransactionExecutionInfo) -> TxExecInfo {
         execute_call_info: exec_info.execute_call_info.map(to_call_info),
         fee_transfer_call_info: exec_info.fee_transfer_call_info.map(to_call_info),
         actual_fee: exec_info.transaction_receipt.fee.0,
-        actual_resources: exec_info
-            .transaction_receipt
-            .resources
-            .0
-            .into_iter()
-            .map(|(k, v)| (k, v as u64))
-            .collect(),
         revert_error: exec_info.revert_error.clone(),
+        actual_resources: TxResources {
+            vm_resources: exec_info.transaction_receipt.resources.vm_resources,
+            n_reverted_steps: exec_info.transaction_receipt.resources.n_reverted_steps,
+            data_availability: L1Gas {
+                l1_gas: exec_info.transaction_receipt.da_gas.l1_data_gas,
+                l1_data_gas: exec_info.transaction_receipt.da_gas.l1_data_gas,
+            },
+            total_gas_consumed: L1Gas {
+                l1_gas: exec_info.transaction_receipt.gas.l1_data_gas,
+                l1_data_gas: exec_info.transaction_receipt.gas.l1_data_gas,
+            },
+        },
     }
 }
 
@@ -663,36 +657,11 @@ mod tests {
 
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_cairo::starknet_api::core::EntryPointSelector;
-    use katana_cairo::starknet_api::hash::StarkFelt;
-    use katana_cairo::starknet_api::stark_felt;
     use katana_cairo::starknet_api::transaction::{EventContent, EventData, EventKey};
     use katana_primitives::chain::{ChainId, NamedChainId};
     use katana_primitives::felt::FieldElement;
 
     use super::*;
-    use crate::implementation::blockifier::utils;
-
-    #[test]
-    fn test_to_stark_felt() {
-        let field_element = FieldElement::from_hex("0x1234567890abcdef").unwrap();
-        let stark_felt = to_stark_felt(field_element);
-        assert_eq!(stark_felt, StarkFelt::try_from("0x1234567890abcdef").unwrap());
-    }
-
-    #[test]
-    fn test_to_felt() {
-        let stark_felt = StarkFelt::try_from("0xabcdef1234567890").unwrap();
-        let field_element = to_felt(stark_felt);
-        assert_eq!(field_element, FieldElement::from_hex("0xabcdef1234567890").unwrap());
-    }
-
-    #[test]
-    fn test_roundtrip_felt_conversion() {
-        let original_felt = FieldElement::from_hex("0x123456789abcdef0").unwrap();
-        let stark_felt = to_stark_felt(original_felt);
-        let roundtrip_felt = to_felt(stark_felt);
-        assert_eq!(original_felt, roundtrip_felt);
-    }
 
     #[test]
     fn convert_chain_id() {
@@ -775,12 +744,10 @@ mod tests {
         let expected_contract_address = to_address(call.call.storage_address);
         let expected_caller_address = to_address(call.call.caller_address);
         let expected_code_address = call.call.code_address.map(to_address);
-        let expected_class_hash = call.call.class_hash.map(|c| to_felt(c.0));
-        let expected_entry_point_selector = to_felt(call.call.entry_point_selector.0);
-        let expected_calldata: Vec<FieldElement> =
-            call.call.calldata.0.iter().map(|f| to_felt(*f)).collect();
-        let expected_retdata: Vec<FieldElement> =
-            call.execution.retdata.0.iter().map(|f| to_felt(*f)).collect();
+        let expected_class_hash = call.call.class_hash;
+        let expected_entry_point_selector = call.call.entry_point_selector.0;
+        let expected_calldata = call.call.calldata.0.clone();
+        let expected_retdata = call.execution.retdata.0.clone();
 
         let builtin_counter = call.resources.builtin_instance_counter.clone();
         let expected_execution_resources = trace::ExecutionResources {
@@ -810,10 +777,8 @@ mod tests {
             EntryPointType::Constructor => trace::EntryPointType::Constructor,
         };
 
-        let expected_storage_read_values: Vec<FieldElement> =
-            call.storage_read_values.iter().map(|v| utils::to_felt(*v)).collect();
-        let expected_storage_keys: HashSet<FieldElement> =
-            call.accessed_storage_keys.iter().map(|k| utils::to_felt(*k.0.key())).collect();
+        let expected_storage_read_values = call.storage_read_values.clone();
+        let expected_storage_keys: HashSet<FieldElement> = call.accessed_storage_keys.clone();
         let expected_inner_calls: Vec<_> =
             call.inner_calls.clone().into_iter().map(to_call_info).collect();
 

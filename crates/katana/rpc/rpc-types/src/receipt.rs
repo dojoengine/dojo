@@ -1,6 +1,7 @@
+use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::fee::TxFeeInfo;
-use katana_primitives::receipt::{MessageToL1, Receipt, TxExecutionResources};
+use katana_primitives::receipt::{MessageToL1, Receipt};
 use katana_primitives::transaction::TxHash;
 use serde::{Deserialize, Serialize};
 pub use starknet::core::types::ReceiptBlock;
@@ -10,6 +11,8 @@ use starknet::core::types::{
     InvokeTransactionReceipt, L1HandlerTransactionReceipt, TransactionFinalityStatus,
     TransactionReceipt, TransactionReceiptWithBlockInfo,
 };
+
+use crate::utils::get_builtin_instance_count;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -156,23 +159,50 @@ impl From<katana_primitives::receipt::Event> for Event {
 
 struct ExecutionResources(starknet::core::types::ExecutionResources);
 
-impl From<TxExecutionResources> for ExecutionResources {
-    fn from(value: TxExecutionResources) -> Self {
+impl From<katana_primitives::trace::TxResources> for ExecutionResources {
+    fn from(value: katana_primitives::trace::TxResources) -> Self {
         ExecutionResources(starknet::core::types::ExecutionResources {
             computation_resources: ComputationResources {
-                steps: value.steps,
-                memory_holes: value.memory_holes,
-                ec_op_builtin_applications: value.ec_op_builtin,
-                ecdsa_builtin_applications: value.ecdsa_builtin,
-                keccak_builtin_applications: value.keccak_builtin,
-                bitwise_builtin_applications: value.bitwise_builtin,
-                pedersen_builtin_applications: value.pedersen_builtin,
-                poseidon_builtin_applications: value.poseidon_builtin,
-                range_check_builtin_applications: value.range_check_builtin,
-                segment_arena_builtin: value.segment_arena_builtin,
+                steps: value.vm_resources.n_steps as u64,
+                memory_holes: Some(value.vm_resources.n_memory_holes as u64),
+                ec_op_builtin_applications: get_builtin_instance_count(
+                    &value.vm_resources,
+                    BuiltinName::ec_op,
+                ),
+                ecdsa_builtin_applications: get_builtin_instance_count(
+                    &value.vm_resources,
+                    BuiltinName::ecdsa,
+                ),
+                keccak_builtin_applications: get_builtin_instance_count(
+                    &value.vm_resources,
+                    BuiltinName::keccak,
+                ),
+                bitwise_builtin_applications: get_builtin_instance_count(
+                    &value.vm_resources,
+                    BuiltinName::bitwise,
+                ),
+                pedersen_builtin_applications: get_builtin_instance_count(
+                    &value.vm_resources,
+                    BuiltinName::pedersen,
+                ),
+                poseidon_builtin_applications: get_builtin_instance_count(
+                    &value.vm_resources,
+                    BuiltinName::poseidon,
+                ),
+                range_check_builtin_applications: get_builtin_instance_count(
+                    &value.vm_resources,
+                    BuiltinName::range_check,
+                ),
+                segment_arena_builtin: get_builtin_instance_count(
+                    &value.vm_resources,
+                    BuiltinName::segment_arena,
+                ),
             },
             data_resources: DataResources {
-                data_availability: DataAvailabilityResources { l1_data_gas: 0, l1_gas: 0 },
+                data_availability: DataAvailabilityResources {
+                    l1_gas: value.data_availability.l1_gas as u64,
+                    l1_data_gas: value.data_availability.l1_data_gas as u64,
+                },
             },
         })
     }

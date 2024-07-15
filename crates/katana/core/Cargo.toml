@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+katana-cairo.workspace = true
 katana-db.workspace = true
 katana-executor.workspace = true
 katana-primitives.workspace = true
@@ -15,7 +16,6 @@ katana-tasks.workspace = true
 
 anyhow.workspace = true
 async-trait = { workspace = true, optional = true }
-cairo-vm.workspace = true
 derive_more.workspace = true
 dojo-metrics.workspace = true
 futures.workspace = true

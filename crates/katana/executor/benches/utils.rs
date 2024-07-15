@@ -40,7 +40,6 @@ pub fn envs() -> (BlockEnv, CfgEnv) {
         max_recursion_depth: 100,
         validate_max_n_steps: 4_000_000,
         invoke_tx_max_n_steps: 4_000_000,
-        vm_resource_fee_cost: vm_resource_fee_cost(),
         fee_token_addresses: FeeTokenAddressses {
             eth: DEFAULT_FEE_TOKEN_ADDRESS,
             strk: DEFAULT_FEE_TOKEN_ADDRESS,
