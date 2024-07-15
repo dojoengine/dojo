@@ -1,3 +1,8 @@
+// This is a partial implementation of https://github.com/starknet-io/types-rs/pull/74
+// and is required because signed integers are not coverted from Felt correctly with the
+// current implementation
+// TODO: remove when https://github.com/starknet-io/types-rs/pull/74 is merged.
+
 use core::convert::TryInto;
 use starknet::core::types::Felt;
 
@@ -55,4 +60,38 @@ impl_from_felt!(i128);
 
 pub fn try_from_felt<T: FromFelt>(value: Felt) -> Result<T, PrimitiveFromFeltError> {
     T::try_from_felt(value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::try_from_felt;
+    use starknet::core::types::Felt;
+
+    #[test]
+    fn test_try_from_felt() {
+        let i_8: i8 = -64;
+        let felt = Felt::from(i_8);
+        let signed_integer = try_from_felt::<i8>(felt).unwrap();
+        assert_eq!(i_8, signed_integer);
+
+        let i_16: i16 = -14293;
+        let felt = Felt::from(i_16);
+        let signed_integer = try_from_felt::<i16>(felt).unwrap();
+        assert_eq!(i_16, signed_integer);
+
+        let i_32: i32 = -194875;
+        let felt = Felt::from(i_32);
+        let signed_integer = try_from_felt::<i32>(felt).unwrap();
+        assert_eq!(i_32, signed_integer);
+
+        let i_64: i64 = -3147483648;
+        let felt = Felt::from(i_64);
+        let signed_integer = try_from_felt::<i64>(felt).unwrap();
+        assert_eq!(i_64, signed_integer);
+
+        let i_128: i128 = -170141183460469231731687303715884105728;
+        let felt = Felt::from(i_128);
+        let signed_integer = try_from_felt::<i128>(felt).unwrap();
+        assert_eq!(i_128, signed_integer);
+    }
 }
