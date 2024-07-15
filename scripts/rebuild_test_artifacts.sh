@@ -9,15 +9,7 @@
 
 # Cleanup
 rm -rf examples/spawn-and-move/target
-rm -rf examples/spawn-and-move/manifests/dev/abis
-rm -rf examples/spawn-and-move/manifests/dev/base
-rm -rf examples/spawn-and-move/manifests/dev/manifest.json
-rm -rf examples/spawn-and-move/manifests/dev/manifest.toml
-
-rm -rf examples/spawn-and-move/manifests/release/abis
-rm -rf examples/spawn-and-move/manifests/release/base
-rm -rf examples/spawn-and-move/manifests/release/manifest.json
-rm -rf examples/spawn-and-move/manifests/release/manifest.toml
+rm -rf examples/spawn-and-move/manifests/
 
 rm -rf crates/torii/types-test/target
 rm -rf crates/torii/types-test/manifests

@@ -7,9 +7,11 @@ pub mod tx;
 
 use std::path::Path;
 
+pub use libmdbx;
 use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW};
 
 use self::tx::Tx;
+use crate::abstraction::{Database, DbTx};
 use crate::error::DatabaseError;
 use crate::tables::{TableType, Tables};
 use crate::utils;
@@ -86,16 +88,6 @@ impl DbEnv {
         Ok(())
     }
 
-    /// Begin a read-only transaction.
-    pub fn tx(&self) -> Result<Tx<RO>, DatabaseError> {
-        Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
-    }
-
-    /// Begin a read-write transaction.
-    pub fn tx_mut(&self) -> Result<Tx<RW>, DatabaseError> {
-        Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
-    }
-
     /// Takes a function and passes a read-write transaction into it, making sure it's always
     /// committed in the end of the execution.
     pub fn update<T, F>(&self, f: F) -> Result<T, DatabaseError>
@@ -106,6 +98,19 @@ impl DbEnv {
         let res = f(&tx);
         tx.commit()?;
         Ok(res)
+    }
+}
+
+impl Database for DbEnv {
+    type Tx = Tx<RO>;
+    type TxMut = Tx<RW>;
+
+    fn tx(&self) -> Result<Self::Tx, DatabaseError> {
+        Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
+    }
+
+    fn tx_mut(&self) -> Result<Self::TxMut, DatabaseError> {
+        Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
     }
 }
 
@@ -142,8 +147,8 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
+    use crate::abstraction::{DbCursor, DbCursorMut, DbDupSortCursor, DbTxMut, Walker};
     use crate::codecs::Encode;
-    use crate::mdbx::cursor::Walker;
     use crate::mdbx::test_utils::create_test_db;
     use crate::models::storage::StorageEntry;
     use crate::tables::{BlockHashes, ContractInfo, ContractStorage, Headers, Table};

@@ -13,7 +13,7 @@ dojo = { path = "../../dojo-core" }
 build-external-contracts = [  ]
 
 [tool.dojo.world]
-namespace = "types_test"
+namespace = { default = "types_test" }
 seed = "types_test"
 name = "types test"
 description = "Graphql types testing"

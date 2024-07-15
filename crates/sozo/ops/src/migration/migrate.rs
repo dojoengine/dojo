@@ -5,7 +5,7 @@ use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
 use dojo_world::contracts::abi::world;
 use dojo_world::contracts::naming::{
-    compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
+    self, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
 };
 use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::manifest::{
@@ -359,7 +359,7 @@ where
             if let Some(m) = dojo_metadata.resources_artifacts.get(&contract.tag) {
                 ipfs.push(upload_on_ipfs_and_create_resource(
                     &ui,
-                    contract.contract_address,
+                    naming::compute_selector_from_tag(&contract.tag),
                     m.clone(),
                 ));
             }

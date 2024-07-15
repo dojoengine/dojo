@@ -1,7 +1,6 @@
 mod utils;
 
-use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
 use starknet::accounts::Account;
@@ -10,10 +9,8 @@ use utils::snapbox::get_snapbox;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_dry_run() {
-    let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
-    let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
-
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
+    let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
@@ -39,9 +36,13 @@ async fn migrate_dry_run() {
     ];
 
     let assert = get_snapbox().args(args_vec.iter()).assert().success();
-    assert!(format!("{:?}", assert.get_output()).contains("Migration Strategy"));
-    assert!(format!("{:?}", assert.get_output()).contains("# Base Contract"));
-    assert!(format!("{:?}", assert.get_output()).contains("# Models (8)"));
-    assert!(format!("{:?}", assert.get_output()).contains("# World"));
-    assert!(format!("{:?}", assert.get_output()).contains("# Contracts (3)"));
+    let output = format!("{:#?}", assert.get_output());
+
+    dbg!("{}", &output);
+
+    assert!(output.contains("Migration Strategy"));
+    assert!(output.contains("# Base Contract"));
+    assert!(output.contains("# Models (10)"));
+    assert!(output.contains("# World"));
+    assert!(output.contains("# Contracts (4)"));
 }

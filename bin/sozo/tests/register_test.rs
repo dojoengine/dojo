@@ -1,7 +1,6 @@
 mod utils;
 
-use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_world::metadata::{dojo_metadata_from_workspace, get_default_namespace_from_ws};
 use dojo_world::migration::TxnConfig;
@@ -15,10 +14,8 @@ use utils::snapbox::get_snapbox;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn reregister_models() {
-    let source_project_dir = Utf8PathBuf::from("../../examples/spawn-and-move/");
-    let dojo_core_path = Utf8PathBuf::from("../../crates/dojo-core");
-
-    let config = compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV);
+    let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
@@ -31,7 +28,7 @@ async fn reregister_models() {
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let migration = prepare_migration(
-        source_project_dir.clone(),
+        config.manifest_path().parent().unwrap().into(),
         target_path,
         dojo_metadata.skip_migration,
         &default_namespace,

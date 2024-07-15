@@ -1,0 +1,86 @@
+//! > Test ok
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+selector_from_tag!("dojo-test_contract")
+
+//! > expected
+Literal(
+    ExprLiteral {
+        value: 2368393732245529956313345237151518608283468650081902115301417183793437311044,
+        ty: core::felt252,
+    },
+)
+
+//! > semantic_diagnostics
+
+//! > ==========================================================================
+
+//! > Test no params
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+selector_from_tag!()
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "selector_from_tag!("tag")"
+ --> lib.cairo:2:1
+selector_from_tag!()
+^******************^
+
+//! > ==========================================================================
+
+//! > Test invalid tag
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+selector_from_tag!("invalid tag")
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid tag. Tag must be in the format of `namespace-name`.
+ --> lib.cairo:2:1
+selector_from_tag!("invalid tag")
+^*******************************^
+
+//! > ==========================================================================
+
+//! > Test wrong param
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+selector_from_tag!("name", "namespace")
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "selector_from_tag!("tag")"
+ --> lib.cairo:2:1
+selector_from_tag!("name", "namespace")
+^*************************************^

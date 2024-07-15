@@ -29,6 +29,17 @@ pub fn get_tag(namespace: &str, name: &str) -> String {
     format!("{namespace}{TAG_SEPARATOR}{name}")
 }
 
+pub fn is_valid_tag(tag: &str) -> bool {
+    let (namespace, name) = match split_tag(tag) {
+        Ok((nm, n)) => (nm, n),
+        Err(_) => return false,
+    };
+
+    let re = regex::Regex::new(r"^[a-zA-Z0-9_]+$").unwrap();
+
+    re.is_match(&namespace) && re.is_match(&name)
+}
+
 /// Get the namespace and the name of a world element from its tag.
 pub fn split_tag(tag: &str) -> Result<(String, String)> {
     let parts: Vec<&str> = tag.split(TAG_SEPARATOR).collect();
@@ -139,5 +150,21 @@ mod tests {
             Felt::from_hex("0x6cfe11a346c1bb31de8f454d65880454952e22d9adc2374fe67734196e0cbcb")
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn test_is_valid_tag_success() {
+        assert!(is_valid_tag("namespace-model"));
+        assert!(is_valid_tag("dojo-world"));
+        assert!(is_valid_tag("dojo_examples-base_test"));
+    }
+
+    #[test]
+    fn test_is_valid_tag_failure() {
+        assert!(!is_valid_tag("invalid tag"));
+        assert!(!is_valid_tag("invalid@tag"));
+        assert!(!is_valid_tag("invalid-"));
+        assert!(!is_valid_tag("-invalid"));
+        assert!(!is_valid_tag(""));
     }
 }

@@ -7,3 +7,8 @@ version = "0.7.3"
 [dependencies]
 dojo_plugin = { git = "https://github.com/dojoengine/dojo", tag = "v0.7.3" }
 starknet = "=2.6.4"
+
+# Dojo core is tested with sozo, hence we need a namespace for the test
+# command to work.
+[tool.dojo.world]
+namespace = { default = "dojo" }

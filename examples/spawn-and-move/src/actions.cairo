@@ -8,6 +8,8 @@ trait IActions {
     fn get_player_position(world: @IWorldDispatcher) -> Position;
     fn reset_player_config(ref world: IWorldDispatcher);
     fn set_player_server_profile(ref world: IWorldDispatcher, server_id: u32, name: ByteArray);
+    #[cfg(feature: 'dungeon')]
+    fn enter_dungeon(ref world: IWorldDispatcher, dungeon_address: starknet::ContractAddress);
 }
 
 #[dojo::interface]
@@ -26,6 +28,15 @@ mod actions {
         Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile
     };
     use dojo_examples::utils::next_position;
+
+    // Featues can be used on modules, structs, trait and `use`. Not inside
+    // a function.
+    #[cfg(feature: 'dungeon')]
+    use dojo_examples::dungeon::{IDungeonDispatcher, IDungeonDispatcherTrait};
+    #[cfg(feature: 'dungeon')]
+    use armory::Flatbow;
+    #[cfg(feature: 'dungeon')]
+    use bestiary::RiverSkale;
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
@@ -122,6 +133,16 @@ mod actions {
         fn get_player_position(world: @IWorldDispatcher) -> Position {
             let player = get_caller_address();
             get!(world, player, (Position))
+        }
+
+        #[cfg(feature: 'dungeon')]
+        fn enter_dungeon(ref world: IWorldDispatcher, dungeon_address: ContractAddress) {
+            let flatbow = Flatbow { id: 1, atk_speek: 2, range: 1 };
+            let river_skale = RiverSkale { id: 1, health: 5, armor: 3, attack: 2 };
+
+            set!(world, (flatbow, river_skale));
+
+            IDungeonDispatcher { contract_address: dungeon_address }.enter();
         }
     }
 

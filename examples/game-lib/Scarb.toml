@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "armory",
+    "bestiary"
+]
+
+[workspace.package]
+version = "0.1.0"
+description = "Example game library for Dojo"
+
+[workspace.dependencies]
+dojo = { path = "../../crates/dojo-core/" }

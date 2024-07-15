@@ -2,7 +2,7 @@ use std::io::Write;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
@@ -304,18 +304,15 @@ fn fetch_remote_manifest() {
     let account = runner.account(0);
     let provider = account.provider();
 
-    let source_project = "../../examples/spawn-and-move/Scarb.toml";
-    let dojo_core_path = "../dojo-core";
-    let profile_name = "dev";
-
-    // Build a completely new project in it's own directory.
-    let (temp_project_dir, config, _) =
-        compiler::copy_build_project_temp(source_project, dojo_core_path, true, Profile::DEV);
+    let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+    let profile_name = Profile::DEV.to_string();
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
     let dojo_metadata =
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
+    let temp_project_dir = config.manifest_path().parent().unwrap();
     let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
 
     let default_namespace = ws.current_package().unwrap().id.name.to_string();
@@ -323,8 +320,8 @@ fn fetch_remote_manifest() {
     let world_address = config.tokio_handle().block_on(async {
         deploy_world(
             &runner,
-            &temp_project_dir,
-            &artifacts_path,
+            &temp_project_dir.to_path_buf(),
+            &artifacts_path.to_path_buf(),
             dojo_metadata.skip_migration.clone(),
             &default_namespace,
         )
@@ -332,7 +329,7 @@ fn fetch_remote_manifest() {
     });
 
     let mut local_manifest = BaseManifest::load_from_path(
-        &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+        &temp_project_dir.join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
 
@@ -340,7 +337,7 @@ fn fetch_remote_manifest() {
         local_manifest.remove_tags(skip_manifests);
     }
 
-    let overlay_dir = temp_project_dir.join(OVERLAYS_DIR).join(profile_name);
+    let overlay_dir = temp_project_dir.join(OVERLAYS_DIR).join(&profile_name);
     if overlay_dir.exists() {
         let overlay_manifest =
             OverlayManifest::load_from_path(&overlay_dir, &local_manifest).unwrap();
@@ -352,11 +349,11 @@ fn fetch_remote_manifest() {
         DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
     });
 
-    assert_eq!(local_manifest.models.len(), 8);
-    assert_eq!(local_manifest.contracts.len(), 3);
+    assert_eq!(local_manifest.models.len(), 10);
+    assert_eq!(local_manifest.contracts.len(), 4);
 
-    assert_eq!(remote_manifest.models.len(), 8);
-    assert_eq!(remote_manifest.contracts.len(), 3);
+    assert_eq!(remote_manifest.models.len(), 10);
+    assert_eq!(remote_manifest.contracts.len(), 4);
 
     // compute diff from local and remote manifest
 

@@ -7,9 +7,10 @@ use libmdbx::{TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
+use crate::abstraction::{DbTx, DbTxMut};
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
-use crate::tables::{Table, Tables, NUM_TABLES};
+use crate::tables::{DupSort, Table, Tables, NUM_TABLES};
 use crate::utils::decode_one;
 
 /// Alias for read-only transaction.
@@ -34,15 +35,6 @@ impl<K: TransactionKind> Tx<K> {
         Self { inner, db_handles: Default::default() }
     }
 
-    /// Creates a cursor to iterate over a table items.
-    pub fn cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
-        self.inner
-            .cursor_with_dbi(self.get_dbi::<T>()?)
-            .map(Cursor::new)
-            .map_err(DatabaseError::CreateCursor)
-    }
-
-    /// Gets a table database handle if it exists, otherwise creates it.
     pub fn get_dbi<T: Table>(&self) -> Result<DBI, DatabaseError> {
         let mut handles = self.db_handles.write();
         let table = Tables::from_str(T::NAME).expect("requested table should be part of `Tables`.");
@@ -55,9 +47,27 @@ impl<K: TransactionKind> Tx<K> {
 
         Ok(dbi_handle.expect("is some; qed"))
     }
+}
 
-    /// Gets a value from a table using the given key.
-    pub fn get<T: Table>(&self, key: T::Key) -> Result<Option<<T as Table>::Value>, DatabaseError> {
+impl<K: TransactionKind> DbTx for Tx<K> {
+    type Cursor<T: Table> = Cursor<K, T>;
+    type DupCursor<T: DupSort> = Self::Cursor<T>;
+
+    fn cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
+        self.inner
+            .cursor_with_dbi(self.get_dbi::<T>()?)
+            .map(Cursor::new)
+            .map_err(DatabaseError::CreateCursor)
+    }
+
+    fn cursor_dup<T: DupSort>(&self) -> Result<Cursor<K, T>, DatabaseError> {
+        self.inner
+            .cursor_with_dbi(self.get_dbi::<T>()?)
+            .map(Cursor::new)
+            .map_err(DatabaseError::CreateCursor)
+    }
+
+    fn get<T: Table>(&self, key: T::Key) -> Result<Option<<T as Table>::Value>, DatabaseError> {
         let key = Encode::encode(key);
         self.inner
             .get(self.get_dbi::<T>()?, key.as_ref())
@@ -66,40 +76,45 @@ impl<K: TransactionKind> Tx<K> {
             .transpose()
     }
 
-    /// Returns number of entries in the table using cheap DB stats invocation.
-    pub fn entries<T: Table>(&self) -> Result<usize, DatabaseError> {
+    fn entries<T: Table>(&self) -> Result<usize, DatabaseError> {
         self.inner
             .db_stat_with_dbi(self.get_dbi::<T>()?)
             .map(|stat| stat.entries())
             .map_err(DatabaseError::Stat)
     }
 
-    /// Commits the transaction.
-    pub fn commit(self) -> Result<bool, DatabaseError> {
+    fn commit(self) -> Result<bool, DatabaseError> {
         self.inner.commit().map_err(DatabaseError::Commit)
+    }
+
+    fn abort(self) {
+        drop(self.inner)
     }
 }
 
-impl Tx<RW> {
-    /// Inserts an item into a database.
-    ///
-    /// This function stores key/data pairs in the database. The default behavior is to enter the
-    /// new key/data pair, replacing any previously existing key if duplicates are disallowed, or
-    /// adding a duplicate data item if duplicates are allowed (DatabaseFlags::DUP_SORT).
-    pub fn put<T: Table>(&self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
+impl DbTxMut for Tx<RW> {
+    type Cursor<T: Table> = Cursor<RW, T>;
+    type DupCursor<T: DupSort> = <Self as DbTxMut>::Cursor<T>;
+
+    fn cursor_mut<T: Table>(&self) -> Result<<Self as DbTxMut>::Cursor<T>, DatabaseError> {
+        DbTx::cursor(self)
+    }
+
+    fn cursor_dup_mut<T: DupSort>(&self) -> Result<<Self as DbTxMut>::DupCursor<T>, DatabaseError> {
+        self.inner
+            .cursor_with_dbi(self.get_dbi::<T>()?)
+            .map(Cursor::new)
+            .map_err(DatabaseError::CreateCursor)
+    }
+
+    fn put<T: Table>(&self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
         let key = key.encode();
         let value = value.compress();
         self.inner.put(self.get_dbi::<T>()?, key, value, WriteFlags::UPSERT).unwrap();
         Ok(())
     }
 
-    /// Delete items from a database, removing the key/data pair if it exists.
-    ///
-    /// If the data parameter is [Some] only the matching data item will be deleted. Otherwise, if
-    /// data parameter is [None], any/all value(s) for specified key will be deleted.
-    ///
-    /// Returns `true` if the key/value pair was present.
-    pub fn delete<T: Table>(
+    fn delete<T: Table>(
         &self,
         key: T::Key,
         value: Option<T::Value>,
@@ -109,13 +124,7 @@ impl Tx<RW> {
         self.inner.del(self.get_dbi::<T>()?, key.encode(), value).map_err(DatabaseError::Delete)
     }
 
-    /// Clears all entries in the given database. This will emtpy the database.
-    pub fn clear<T: Table>(&self) -> Result<(), DatabaseError> {
+    fn clear<T: Table>(&self) -> Result<(), DatabaseError> {
         self.inner.clear_db(self.get_dbi::<T>()?).map_err(DatabaseError::Clear)
-    }
-
-    /// Aborts the transaction.
-    pub fn abort(self) {
-        drop(self.inner)
     }
 }

@@ -8,10 +8,6 @@ message WorldMetadata {
     string world_address = 1;
     // The hex-encoded class hash of the world.
     string world_class_hash = 2;
-    // The hex-encoded address of the executor.
-    string executor_address = 3;
-    // The hex-encoded class hash of the executor.
-    string executor_class_hash = 4;
     // A list of metadata for all registered components in the world. 
     repeated ModelMetadata models = 5;
 }

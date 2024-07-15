@@ -1,12 +1,8 @@
-use std::fs;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, Result};
 use dojo_world::contracts::WorldContract;
-use dojo_world::manifest::{
-    BaseManifest, OverlayClass, OverlayDojoContract, OverlayDojoModel, OverlayManifest,
-    BASE_CONTRACT_TAG, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR, WORLD_CONTRACT_TAG,
-};
+use dojo_world::manifest::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
@@ -58,7 +54,7 @@ pub async fn migrate<A>(
     dry_run: bool,
     txn_config: TxnConfig,
     skip_manifests: Option<Vec<String>>,
-) -> Result<()>
+) -> Result<Option<MigrationOutput>>
 where
     A: ConnectedAccount + Sync + Send,
     A::Provider: Send,
@@ -120,7 +116,7 @@ where
 
     if total_diffs == 0 {
         ui.print("\n✨ No changes to be made. Remote World is already up to date!");
-        return Ok(());
+        return Ok(None);
     }
 
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
@@ -141,6 +137,8 @@ where
             name,
         )
         .await?;
+
+        Ok(None)
     } else {
         // Migrate according to the diff.
         let migration_output = match apply_diff(ws, &account, txn_config, &mut strategy).await {
@@ -175,13 +173,13 @@ where
 
         let account = Arc::new(account);
         let world = WorldContract::new(world_address, account.clone());
-        if let Some(migration_output) = migration_output {
+        if let Some(migration_output) = &migration_output {
             match auto_authorize(
                 ws,
                 &world,
                 &txn_config,
                 &local_manifest,
-                &migration_output,
+                migration_output,
                 &default_namespace,
             )
             .await
@@ -199,9 +197,9 @@ where
                 upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
             }
         }
-    };
 
-    Ok(())
+        Ok(migration_output)
+    }
 }
 
 fn get_world_address(
@@ -230,60 +228,4 @@ enum ContractDeploymentOutput {
 #[allow(dead_code)]
 enum ContractUpgradeOutput {
     Output(UpgradeOutput),
-}
-
-pub fn generate_overlays(ws: &Workspace<'_>) -> Result<()> {
-    let profile_name =
-        ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
-
-    // its path to a file so `parent` should never return `None`
-    let root_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-    let manifest_base_dir = root_dir.join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR);
-    let overlay_dir = root_dir.join(OVERLAYS_DIR).join(&profile_name);
-
-    let base_manifest = BaseManifest::load_from_path(&manifest_base_dir)?;
-
-    let default_overlay = OverlayManifest {
-        world: Some(OverlayClass {
-            tag: WORLD_CONTRACT_TAG.to_string(),
-            original_class_hash: None,
-        }),
-        base: Some(OverlayClass { tag: BASE_CONTRACT_TAG.to_string(), original_class_hash: None }),
-        contracts: base_manifest
-            .contracts
-            .iter()
-            .map(|c| OverlayDojoContract { tag: c.inner.tag.clone(), ..Default::default() })
-            .collect::<Vec<_>>(),
-        models: base_manifest
-            .models
-            .iter()
-            .map(|m| OverlayDojoModel { tag: m.inner.tag.clone(), ..Default::default() })
-            .collect::<Vec<_>>(),
-    };
-
-    if overlay_dir.exists() {
-        // read existing OverlayManifest from path
-        let mut overlay_manifest = OverlayManifest::load_from_path(&overlay_dir, &base_manifest)
-            .with_context(|| "Failed to load OverlayManifest from path.")?;
-
-        // merge them to get OverlayManifest which contains all the contracts and models from base
-        // manifests
-        overlay_manifest.merge(default_overlay);
-
-        // to avoid duplicated overlay manifests, existing overlays must be removed before being
-        // rewritten by `overlay_manifest.write_to_path_nested()`
-        fs::remove_dir_all(&overlay_dir)?;
-        fs::create_dir_all(&overlay_dir)?;
-
-        overlay_manifest
-            .write_to_path_nested(&overlay_dir)
-            .with_context(|| "Failed to write OverlayManifest to path.")?;
-    } else {
-        fs::create_dir_all(&overlay_dir)?;
-        default_overlay
-            .write_to_path_nested(&overlay_dir)
-            .with_context(|| "Failed to write OverlayManifest to path.")?;
-    }
-
-    Ok(())
 }

@@ -37,7 +37,11 @@ pub struct Sql {
 }
 
 impl Sql {
-    pub async fn new(pool: Pool<Sqlite>, world_address: Felt) -> Result<Self> {
+    pub async fn new(
+        pool: Pool<Sqlite>,
+        world_address: Felt,
+        world_class_hash: Felt,
+    ) -> Result<Self> {
         let mut query_queue = QueryQueue::new(pool.clone());
 
         query_queue.enqueue(
@@ -45,8 +49,12 @@ impl Sql {
             vec![Argument::FieldElement(world_address), Argument::Int(0)],
         );
         query_queue.enqueue(
-            "INSERT OR IGNORE INTO worlds (id, world_address) VALUES (?, ?)",
-            vec![Argument::FieldElement(world_address), Argument::FieldElement(world_address)],
+            "INSERT OR IGNORE INTO worlds (id, world_address, world_class_hash) VALUES (?, ?, ?)",
+            vec![
+                Argument::FieldElement(world_address),
+                Argument::FieldElement(world_address),
+                Argument::FieldElement(world_class_hash),
+            ],
         );
 
         query_queue.execute_all().await?;

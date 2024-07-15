@@ -43,8 +43,6 @@ pub enum MigrateCommand {
         #[command(flatten)]
         transaction: TransactionOptions,
     },
-    #[command(about = "Generate overlays file.")]
-    GenerateOverlays,
 }
 
 impl MigrateArgs {
@@ -66,13 +64,6 @@ impl MigrateArgs {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
-
-        // This variant is tested before the match on `self.command` to avoid
-        // having the need to spin up a Katana to generate the files.
-        if let MigrateCommand::GenerateOverlays = self.command {
-            trace!("Generating overlays.");
-            return migration::generate_overlays(&ws);
-        }
 
         let env_metadata = if config.manifest_path().exists() {
             dojo_metadata.env().cloned()
@@ -97,37 +88,42 @@ impl MigrateArgs {
         })?;
 
         match self.command {
-            MigrateCommand::Plan => config.tokio_handle().block_on(async {
-                trace!(name, "Planning migration.");
-                migration::migrate(
-                    &ws,
-                    world_address,
-                    rpc_url,
-                    account,
-                    &name,
-                    true,
-                    TxnConfig::default(),
-                    dojo_metadata.skip_migration,
-                )
-                .await
-            }),
-            MigrateCommand::Apply { transaction } => config.tokio_handle().block_on(async {
-                trace!(name, "Applying migration.");
-                let txn_config: TxnConfig = transaction.into();
+            MigrateCommand::Plan => config
+                .tokio_handle()
+                .block_on(async {
+                    trace!(name, "Planning migration.");
+                    migration::migrate(
+                        &ws,
+                        world_address,
+                        rpc_url,
+                        account,
+                        &name,
+                        true,
+                        TxnConfig::default(),
+                        dojo_metadata.skip_migration,
+                    )
+                    .await
+                })
+                .map(|_| ()),
+            MigrateCommand::Apply { transaction } => config
+                .tokio_handle()
+                .block_on(async {
+                    trace!(name, "Applying migration.");
+                    let txn_config: TxnConfig = transaction.into();
 
-                migration::migrate(
-                    &ws,
-                    world_address,
-                    rpc_url,
-                    account,
-                    &name,
-                    false,
-                    txn_config,
-                    dojo_metadata.skip_migration,
-                )
-                .await
-            }),
-            _ => unreachable!("other case handled above."),
+                    migration::migrate(
+                        &ws,
+                        world_address,
+                        rpc_url,
+                        account,
+                        &name,
+                        false,
+                        txn_config,
+                        dojo_metadata.skip_migration,
+                    )
+                    .await
+                })
+                .map(|_| ()),
         }
     }
 }
