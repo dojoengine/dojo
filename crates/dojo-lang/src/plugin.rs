@@ -18,6 +18,7 @@ use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_types::system::Dependency;
 use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
+use dojo_world::metadata::NamespaceConfig;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
 use scarb::core::{PackageId, PackageName, SourceId};
@@ -30,12 +31,13 @@ use crate::event::handle_event_struct;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
+use crate::inline_macros::selector_from_tag::SelectorFromTagMacro;
 use crate::inline_macros::set::SetMacro;
 use crate::interface::DojoInterface;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
-use crate::utils::get_package_id;
+use crate::utils::get_namespace_config;
 
 pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
@@ -111,18 +113,24 @@ impl BuiltinDojoPlugin {
         &self,
         db: &dyn SyntaxGroup,
         module_ast: ast::ItemModule,
-        package_id: String,
+        namespace_config: &NamespaceConfig,
+        metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
-            return DojoContract::from_module(db, &module_ast, package_id);
+            return DojoContract::from_module(db, &module_ast, namespace_config, metadata);
         }
 
         PluginResult::default()
     }
 
-    fn handle_trait(&self, db: &dyn SyntaxGroup, trait_ast: ast::ItemTrait) -> PluginResult {
+    fn handle_trait(
+        &self,
+        db: &dyn SyntaxGroup,
+        trait_ast: ast::ItemTrait,
+        metadata: &MacroPluginMetadata<'_>,
+    ) -> PluginResult {
         if trait_ast.has_attr(db, DOJO_INTERFACE_ATTR) {
-            return DojoInterface::from_trait(db, trait_ast);
+            return DojoInterface::from_trait(db, trait_ast, metadata);
         }
 
         PluginResult::default()
@@ -144,7 +152,7 @@ impl BuiltinDojoPlugin {
         &self,
         db: &dyn SyntaxGroup,
         fn_ast: ast::FunctionWithBody,
-        package_id: String,
+        namespace_config: &NamespaceConfig,
     ) -> PluginResult {
         let attrs = fn_ast.attributes(db).query_attr(db, "computed");
         if attrs.is_empty() {
@@ -171,7 +179,7 @@ impl BuiltinDojoPlugin {
         let mut tag = None;
         if args.len() == 1 {
             let model_name = args[0].text(db);
-            tag = Some(naming::get_tag(&model_name, &package_id));
+            tag = Some(naming::get_tag(&model_name, &namespace_config.default));
 
             let model_type_node = param_els[1].type_clause(db).ty(db);
             if let ast::Expr::Path(model_type_path) = model_type_node {
@@ -257,7 +265,8 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<DeleteMacro>()
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
-        .add_inline_macro_plugin::<EmitMacro>();
+        .add_inline_macro_plugin::<EmitMacro>()
+        .add_inline_macro_plugin::<SelectorFromTagMacro>();
 
     suite
 }
@@ -330,24 +339,20 @@ fn get_additional_derive_attrs_for_model(derive_attr_names: &[String]) -> Vec<St
 }
 
 impl MacroPlugin for BuiltinDojoPlugin {
-    // New metadata field: <https://github.com/starkware-libs/cairo/blob/60340c801125b25baaaddce64dd89c6c1524b59d/crates/cairo-lang-defs/src/plugin.rs#L81>
-    // Not used for now, but it contains a key-value BTreeSet. TBD what we can do with this.
     fn generate_code(
         &self,
         db: &dyn SyntaxGroup,
         item_ast: ast::ModuleItem,
-        _metadata: &MacroPluginMetadata<'_>,
+        metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
-        let package_id = match get_package_id(db) {
-            Option::Some(x) => x,
-            Option::None => {
+        let namespace_config = match get_namespace_config(db) {
+            Ok(config) => config,
+            Err(e) => {
                 return PluginResult {
                     code: Option::None,
                     diagnostics: vec![PluginDiagnostic {
                         stable_ptr: item_ast.stable_ptr().0,
-                        message: "Unable to find the package ID. Be sure to have a 'package.name' \
-                                  field in your Scarb.toml file."
-                            .into(),
+                        message: format!("{e}"),
                         severity: Severity::Error,
                     }],
                     remove_original_item: false,
@@ -356,8 +361,10 @@ impl MacroPlugin for BuiltinDojoPlugin {
         };
 
         match item_ast {
-            ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast, package_id),
-            ast::ModuleItem::Trait(trait_ast) => self.handle_trait(db, trait_ast),
+            ast::ModuleItem::Module(module_ast) => {
+                self.handle_mod(db, module_ast, &namespace_config, metadata)
+            }
+            ast::ModuleItem::Trait(trait_ast) => self.handle_trait(db, trait_ast, metadata),
             ast::ModuleItem::Enum(enum_ast) => {
                 let aux_data = DojoAuxData::default();
                 let mut rewrite_nodes = vec![];
@@ -495,8 +502,12 @@ impl MacroPlugin for BuiltinDojoPlugin {
 
                 match model_attrs.len().cmp(&1) {
                     Ordering::Equal => {
-                        let (model_rewrite_nodes, model_diagnostics) =
-                            handle_model_struct(db, &mut aux_data, struct_ast.clone(), package_id);
+                        let (model_rewrite_nodes, model_diagnostics) = handle_model_struct(
+                            db,
+                            &mut aux_data,
+                            struct_ast.clone(),
+                            &namespace_config,
+                        );
                         rewrite_nodes.push(model_rewrite_nodes);
                         diagnostics.extend(model_diagnostics);
                     }
@@ -534,7 +545,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     remove_original_item: false,
                 }
             }
-            ast::ModuleItem::FreeFunction(fn_ast) => self.handle_fn(db, fn_ast, package_id),
+            ast::ModuleItem::FreeFunction(fn_ast) => self.handle_fn(db, fn_ast, &namespace_config),
             _ => PluginResult::default(),
         }
     }
@@ -549,8 +560,13 @@ impl MacroPlugin for BuiltinDojoPlugin {
             "computed".to_string(),
         ]
     }
+
+    fn declared_derives(&self) -> Vec<String> {
+        vec!["Introspect".to_string(), "IntrospectPacked".to_string()]
+    }
 }
 
+#[derive(Debug)]
 pub struct CairoPluginRepository(scarb::compiler::plugin::CairoPluginRepository);
 
 impl Default for CairoPluginRepository {

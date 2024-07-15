@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
 use starknet::accounts::{Account, ConnectedAccount};
@@ -18,11 +18,10 @@ use crate::utils::TransactionExt;
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
     let runner = KatanaRunner::new().expect("Fail to set runner");
-    let config = compiler::copy_tmp_config(
-        &Utf8PathBuf::from("../../examples/spawn-and-move"),
-        &Utf8PathBuf::from("../dojo-core"),
-        Profile::DEV,
-    );
+
+    let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
 
     let default_namespace = ws.current_package().unwrap().id.name.to_string();
@@ -109,11 +108,19 @@ pub async fn deploy_world(
 
     let world = WorldContract::new(world_address, &account);
 
-    world
-        .register_namespace(&cainome::cairo_serde::ByteArray::from_string("dojo_examples").unwrap())
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
+    let calls = vec![
+        world.register_namespace_getcall(
+            &cainome::cairo_serde::ByteArray::from_string("dojo_examples").unwrap(),
+        ),
+        world.register_namespace_getcall(
+            &cainome::cairo_serde::ByteArray::from_string("dojo_examples_foes").unwrap(),
+        ),
+        world.register_namespace_getcall(
+            &cainome::cairo_serde::ByteArray::from_string("dojo_examples_weapons").unwrap(),
+        ),
+    ];
+
+    let _ = account.execute_v1(calls).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
 
     // Wondering why the `init_wait` is not enough and causes a nonce error.
     // May be to a delay to create the block as we are in instant mining.

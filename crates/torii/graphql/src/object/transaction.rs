@@ -7,6 +7,7 @@ use crate::constants::{
 use crate::mapping::TRANSACTION_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 
+#[derive(Debug)]
 pub struct TransactionObject;
 
 impl BasicObject for TransactionObject {

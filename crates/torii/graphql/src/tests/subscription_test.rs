@@ -7,7 +7,7 @@ mod tests {
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use dojo_world::contracts::abi::model::Layout;
-    use dojo_world::contracts::naming::compute_model_selector_from_names;
+    use dojo_world::contracts::naming::compute_selector_from_names;
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::{Event, Felt};
@@ -21,7 +21,7 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, Felt::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -147,7 +147,7 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, Felt::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
         // 0. Preprocess expected entity value
@@ -252,11 +252,11 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_model_subscription(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, Felt::ZERO).await.unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
+        let model_id = format!("{:#x}", compute_selector_from_names(&namespace, &model_name));
         let class_hash = Felt::TWO;
         let contract_address = Felt::THREE;
         let block_timestamp: u64 = 1710754478_u64;
@@ -316,11 +316,11 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_model_subscription_with_id(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, Felt::ZERO).await.unwrap();
         // 0. Preprocess model value
         let namespace = "types_test".to_string();
         let model_name = "Subrecord".to_string();
-        let model_id = format!("{:#x}", compute_model_selector_from_names(&namespace, &model_name));
+        let model_id = format!("{:#x}", compute_selector_from_names(&namespace, &model_name));
         let class_hash = Felt::TWO;
         let contract_address = Felt::THREE;
         let block_timestamp: u64 = 1710754478_u64;
@@ -381,7 +381,7 @@ mod tests {
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
     async fn test_event_emitted(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO, Felt::ZERO).await.unwrap();
         let block_timestamp: u64 = 1710754478_u64;
         let (tx, mut rx) = mpsc::channel(7);
         tokio::spawn(async move {

@@ -4,7 +4,7 @@ use std::str;
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
-use dojo_world::contracts::naming::compute_model_selector_from_tag;
+use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
     BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
@@ -324,7 +324,7 @@ async fn migrate_with_metadata() {
     // .await;
     // check model metadata
     //     for m in migration.models {
-    // let selector = compute_model_selector_from_tag(&m.diff.tag);
+    // let selector = compute_selector_from_tag(&m.diff.tag);
     // check_artifact_metadata(&client, &world_reader, selector, &m.diff.tag, &dojo_metadata)
     // .await;
     // }
@@ -391,7 +391,7 @@ async fn migrate_with_auto_authorize() {
         let contract = manifest.contracts.iter().find(|a| a.inner.tag == c.diff.tag).unwrap();
 
         for model in &contract.inner.writes {
-            let model_selector = compute_model_selector_from_tag(model);
+            let model_selector = compute_selector_from_tag(model);
             let contract_address = ContractAddress(contract_address);
             let is_writer =
                 world_reader.is_writer(&model_selector, &contract_address).call().await.unwrap();

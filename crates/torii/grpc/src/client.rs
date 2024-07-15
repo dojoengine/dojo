@@ -29,6 +29,7 @@ pub enum Error {
     Schema(#[from] schema::SchemaError),
 }
 
+#[derive(Debug)]
 /// A lightweight wrapper around the grpc client.
 pub struct WorldClient {
     _world_address: Felt,
@@ -186,6 +187,7 @@ type ModelDiffMappedStream = MapOk<
     Box<dyn Fn(SubscribeModelsResponse) -> StateUpdate + Send>,
 >;
 
+#[derive(Debug)]
 pub struct ModelDiffsStreaming(ModelDiffMappedStream);
 
 impl Stream for ModelDiffsStreaming {
@@ -203,6 +205,7 @@ type EntityMappedStream = MapOk<
     Box<dyn Fn(SubscribeEntityResponse) -> Entity + Send>,
 >;
 
+#[derive(Debug)]
 pub struct EntityUpdateStreaming(EntityMappedStream);
 
 impl Stream for EntityUpdateStreaming {
@@ -220,6 +223,7 @@ type EventMappedStream = MapOk<
     Box<dyn Fn(SubscribeEventsResponse) -> Event + Send>,
 >;
 
+#[derive(Debug)]
 pub struct EventUpdateStreaming(EventMappedStream);
 
 impl Stream for EventUpdateStreaming {

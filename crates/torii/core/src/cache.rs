@@ -8,6 +8,7 @@ use tokio::sync::RwLock;
 use crate::error::{Error, QueryError};
 use crate::model::{parse_sql_model_members, SqlModelMember};
 
+#[derive(Debug)]
 pub struct ModelCache {
     pool: SqlitePool,
     cache: RwLock<HashMap<Felt, Ty>>,

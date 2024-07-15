@@ -13,7 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use dojo_types::schema::Ty;
-use dojo_world::contracts::naming::compute_model_selector_from_names;
+use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
@@ -54,7 +54,7 @@ pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
 pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
     world_address: Felt,
@@ -113,14 +113,8 @@ impl DojoWorld {
 
 impl DojoWorld {
     pub async fn metadata(&self) -> Result<proto::types::WorldMetadata, Error> {
-        let (world_address, world_class_hash, executor_address, executor_class_hash): (
-            String,
-            String,
-            String,
-            String,
-        ) = sqlx::query_as(&format!(
-            "SELECT world_address, world_class_hash, executor_address, executor_class_hash FROM \
-             worlds WHERE id = '{:#x}'",
+        let (world_address, world_class_hash): (String, String) = sqlx::query_as(&format!(
+            "SELECT world_address, world_class_hash FROM worlds WHERE id = '{:#x}'",
             self.world_address
         ))
         .fetch_one(&self.pool)
@@ -163,13 +157,7 @@ impl DojoWorld {
             });
         }
 
-        Ok(proto::types::WorldMetadata {
-            world_address,
-            world_class_hash,
-            executor_address,
-            executor_class_hash,
-            models: models_metadata,
-        })
+        Ok(proto::types::WorldMetadata { world_address, world_class_hash, models: models_metadata })
     }
 
     async fn entities_all(
@@ -344,7 +332,7 @@ impl DojoWorld {
                 let model_ids_str = model_ids
                     .iter()
                     .map(|(namespace, model)| {
-                        format!("'{:#x}'", compute_model_selector_from_names(namespace, model))
+                        format!("'{:#x}'", compute_selector_from_names(namespace, model))
                     })
                     .collect::<Vec<_>>()
                     .join(",");
@@ -393,7 +381,7 @@ impl DojoWorld {
                         let (namespace, name) = model
                             .split_once('-')
                             .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
-                        let model_id = compute_model_selector_from_names(namespace, name);
+                        let model_id = compute_selector_from_names(namespace, name);
                         Ok(format!("INSTR(model_ids, '{:#x}') > 0", model_id))
                     })
                     .collect::<Result<Vec<_>, Error>>()?
@@ -509,7 +497,7 @@ impl DojoWorld {
             HAVING INSTR(model_ids, '{:#x}') > 0
             LIMIT 1
         "#,
-            compute_model_selector_from_names(namespace, model)
+            compute_selector_from_names(namespace, model)
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 
@@ -608,7 +596,7 @@ impl DojoWorld {
                         .model
                         .split_once('-')
                         .ok_or(QueryError::InvalidNamespacedModel(member.model.clone()))?;
-                    let model_id: Felt = compute_model_selector_from_names(namespace, model);
+                    let model_id: Felt = compute_selector_from_names(namespace, model);
                     having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
                 }
                 _ => return Err(QueryError::UnsupportedQuery.into()),
@@ -722,7 +710,7 @@ impl DojoWorld {
         name: &str,
     ) -> Result<proto::types::ModelMetadata, Error> {
         // selector
-        let model = compute_model_selector_from_names(namespace, name);
+        let model = compute_selector_from_names(namespace, name);
 
         let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
             String,
@@ -765,7 +753,7 @@ impl DojoWorld {
                 .split_once('-')
                 .ok_or(QueryError::InvalidNamespacedModel(keys.model.clone()))?;
 
-            let selector = compute_model_selector_from_names(namespace, model);
+            let selector = compute_selector_from_names(namespace, model);
 
             let proto::types::ModelMetadata { packed_size, .. } =
                 self.model_metadata(namespace, model).await?;

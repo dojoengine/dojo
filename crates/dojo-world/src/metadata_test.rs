@@ -10,8 +10,8 @@ use url::Url;
 use crate::contracts::naming::{get_filename_from_tag, TAG_SEPARATOR};
 use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 use crate::metadata::{
-    dojo_metadata_from_workspace, ArtifactMetadata, ProjectMetadata, Uri, WorldMetadata, ABIS_DIR,
-    BASE_DIR, MANIFESTS_DIR,
+    dojo_metadata_from_workspace, ArtifactMetadata, NamespaceConfig, ProjectMetadata, Uri,
+    WorldMetadata, ABIS_DIR, BASE_DIR, MANIFESTS_DIR,
 };
 
 #[test]
@@ -34,7 +34,7 @@ icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
 socials.x = "https://x.com/dojostarknet"
 seed = "dojo_examples"
-namespace = "dojo_examples"
+namespace = { default = "dojo_examples" }
         "#,
     )
     .unwrap();
@@ -67,13 +67,13 @@ namespace = "dojo_examples"
     assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
     assert_eq!(world.seed, String::from("dojo_examples"));
-    assert_eq!(world.namespace, String::from("dojo_examples"));
+    assert_eq!(world.namespace, NamespaceConfig::new("dojo_examples"));
 }
 
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
     let meta = WorldMetadata {
-        namespace: "dojo_examples".to_string(),
+        namespace: NamespaceConfig::new("dojo_examples"),
         name: Some("Test World".to_string()),
         seed: String::from("dojo_examples"),
         description: Some("A world used for testing".to_string()),
@@ -106,7 +106,7 @@ world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697
 name = "example"
 description = "example world"
 seed = "dojo_examples"
-namespace = "dojo_examples"
+namespace = { default = "dojo_examples" }
 cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
@@ -131,7 +131,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     let manifest_dir = manifest_dir.join(MANIFESTS_DIR).join(profile.as_str());
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(profile.as_str());
-    let abis_dir = manifest_dir.join(ABIS_DIR).join(BASE_DIR);
+    let abis_dir = manifest_dir.join(BASE_DIR).join(ABIS_DIR);
 
     let dojo_metadata =
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");

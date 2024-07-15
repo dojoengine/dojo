@@ -2,6 +2,20 @@
 version = 1
 
 [[package]]
+name = "armory"
+version = "0.1.0"
+dependencies = [
+ "dojo",
+]
+
+[[package]]
+name = "bestiary"
+version = "0.1.0"
+dependencies = [
+ "dojo",
+]
+
+[[package]]
 name = "dojo"
 version = "0.7.3"
 dependencies = [
@@ -12,10 +26,12 @@ dependencies = [
 name = "dojo_examples"
 version = "0.7.3"
 dependencies = [
+ "armory",
+ "bestiary",
  "dojo",
 ]
 
 [[package]]
 name = "dojo_plugin"
-version = "0.4.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.7.2#3da5cad9fdd39b81551e0668015d88262e6c5fc4"
+version = "0.7.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.7.3#e8539d5b199efbd51c89c75da32f6592de5d9262"

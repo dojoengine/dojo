@@ -33,6 +33,7 @@ pub enum ProverIdentifier {
     Http(Arc<HttpProverParams>),
 }
 
+#[derive(Debug)]
 pub enum ProveProgram {
     Differ,
     Merger,

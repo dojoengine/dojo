@@ -11,23 +11,29 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
+use dojo_world::metadata::{is_name_valid, NamespaceConfig};
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
-use crate::utils::is_name_valid;
 
 const DEFAULT_MODEL_VERSION: u8 = 1;
 
 const MODEL_VERSION_NAME: &str = "version";
 const MODEL_NAMESPACE: &str = "namespace";
+const MODEL_NOMAPPING: &str = "nomapping";
 
 struct ModelParameters {
     version: u8,
     namespace: Option<String>,
+    nomapping: bool,
 }
 
 impl Default for ModelParameters {
     fn default() -> ModelParameters {
-        ModelParameters { version: DEFAULT_MODEL_VERSION, namespace: Option::None }
+        ModelParameters {
+            version: DEFAULT_MODEL_VERSION,
+            namespace: Option::None,
+            nomapping: false,
+        }
     }
 }
 
@@ -143,6 +149,9 @@ fn get_model_parameters(
                         MODEL_NAMESPACE => {
                             parameters.namespace = get_model_namespace(db, arg_value, diagnostics);
                         }
+                        MODEL_NOMAPPING => {
+                            parameters.nomapping = true;
+                        }
                         _ => {
                             diagnostics.push(PluginDiagnostic {
                                 message: format!(
@@ -192,16 +201,20 @@ pub fn handle_model_struct(
     db: &dyn SyntaxGroup,
     aux_data: &mut DojoAuxData,
     struct_ast: ItemStruct,
-    package_id: String,
+    namespace_config: &NamespaceConfig,
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
 
     let parameters = get_model_parameters(db, struct_ast.clone(), &mut diagnostics);
 
     let model_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
-    let model_namespace = match parameters.namespace {
-        Option::Some(x) => x,
-        Option::None => package_id,
+    let unmapped_namespace = parameters.namespace.unwrap_or(namespace_config.default.clone());
+
+    let model_namespace = if parameters.nomapping {
+        unmapped_namespace
+    } else {
+        // Maps namespace from the tag to ensure higher precision on matching namespace mappings.
+        namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &model_name))
     };
 
     for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
@@ -211,8 +224,8 @@ pub fn handle_model_struct(
                 vec![PluginDiagnostic {
                     stable_ptr: struct_ast.name(db).stable_ptr().0,
                     message: format!(
-                        "The model {id} '{value}' can only contain characters (a-z/A-Z), numbers \
-                         (0-9) and underscore (_)"
+                        "The {id} '{value}' can only contain characters (a-z/A-Z), digits (0-9) \
+                         and underscore (_)."
                     )
                     .to_string(),
                     severity: Severity::Error,
@@ -230,7 +243,7 @@ pub fn handle_model_struct(
         _ => (
             RewriteNode::Text(DEFAULT_MODEL_VERSION.to_string()),
             RewriteNode::Text(
-                naming::compute_model_selector_from_hash(model_namespace_hash, model_name_hash)
+                naming::compute_selector_from_hashes(model_namespace_hash, model_name_hash)
                     .to_string(),
             ),
         ),
@@ -300,9 +313,8 @@ pub fn handle_model_struct(
     let serialized_values: Vec<_> =
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
 
-    let name = struct_ast.name(db).text(db);
     aux_data.models.push(Model {
-        name: name.to_string(),
+        name: model_name.clone(),
         namespace: model_namespace.clone(),
         members: members.to_vec(),
     });
@@ -345,6 +357,16 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
+    fn namespace() -> ByteArray {
+        \"$model_namespace$\"
+    }
+
+    #[inline(always)]
+    fn tag() -> ByteArray {
+        \"$model_tag$\"
+    }
+
+    #[inline(always)]
     fn version() -> u8 {
         $model_version$
     }
@@ -360,18 +382,13 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
-    fn namespace() -> ByteArray {
-        \"$model_namespace$\"
+    fn name_hash() -> felt252 {
+        $model_name_hash$
     }
 
     #[inline(always)]
-    fn namespace_selector() -> felt252 {
+    fn namespace_hash() -> felt252 {
         $model_namespace_hash$
-    }
-
-    #[inline(always)]
-    fn tag() -> ByteArray {
-        \"$model_tag$\"
     }
     
     #[inline(always)]
@@ -431,30 +448,34 @@ mod $contract_name$ {
 
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
-        fn selector(self: @ContractState) -> felt252 {
-           dojo::model::Model::<$type_name$>::selector()
-        }
-
         fn name(self: @ContractState) -> ByteArray {
            dojo::model::Model::<$type_name$>::name()
         }
 
-        fn version(self: @ContractState) -> u8 {
-           dojo::model::Model::<$type_name$>::version()
-        }
-        
         fn namespace(self: @ContractState) -> ByteArray {
            dojo::model::Model::<$type_name$>::namespace()
-        }
-
-        fn namespace_selector(self: @ContractState) -> felt252 {
-            dojo::model::Model::<$type_name$>::namespace_selector()
         }
 
         fn tag(self: @ContractState) -> ByteArray {
             dojo::model::Model::<$type_name$>::tag()
         }
-        
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<$type_name$>::version()
+        }
+
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<$type_name$>::selector()
+        }
+
+        fn name_hash(self: @ContractState) -> felt252 {
+            dojo::model::Model::<$type_name$>::name_hash()
+        }
+
+        fn namespace_hash(self: @ContractState) -> felt252 {
+            dojo::model::Model::<$type_name$>::namespace_hash()
+        }
+
         fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<$type_name$>::size()
         }
@@ -480,7 +501,7 @@ mod $contract_name$ {
 }
 ",
             &UnorderedHashMap::from([
-                ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
+                ("contract_name".to_string(), RewriteNode::Text(model_name.to_case(Case::Snake))),
                 ("type_name".to_string(), RewriteNode::Text(model_name)),
                 ("namespace".to_string(), RewriteNode::Text("namespace".to_string())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
@@ -488,6 +509,7 @@ mod $contract_name$ {
                 ("model_version".to_string(), model_version),
                 ("model_selector".to_string(), model_selector),
                 ("model_namespace".to_string(), RewriteNode::Text(model_namespace.clone())),
+                ("model_name_hash".to_string(), RewriteNode::Text(model_name_hash.to_string())),
                 (
                     "model_namespace_hash".to_string(),
                     RewriteNode::Text(model_namespace_hash.to_string()),

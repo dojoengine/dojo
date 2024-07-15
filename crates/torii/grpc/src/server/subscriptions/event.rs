@@ -23,6 +23,7 @@ use crate::types::{KeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event";
 
+#[derive(Debug)]
 pub struct EventSubscriber {
     /// Event keys that the subscriber is interested in
     keys: KeysClause,
@@ -30,7 +31,7 @@ pub struct EventSubscriber {
     sender: Sender<Result<proto::world::SubscribeEventsResponse, tonic::Status>>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EventManager {
     subscribers: RwLock<HashMap<usize, EventSubscriber>>,
 }
@@ -59,6 +60,7 @@ impl EventManager {
 }
 
 #[must_use = "Service does nothing unless polled"]
+#[allow(missing_debug_implementations)]
 pub struct Service {
     subs_manager: Arc<EventManager>,
     simple_broker: Pin<Box<dyn Stream<Item = Event> + Send>>,

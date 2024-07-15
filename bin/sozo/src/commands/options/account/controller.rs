@@ -21,6 +21,8 @@ use url::Url;
 
 use super::WorldAddressOrName;
 
+// This type comes from account_sdk, which doesn't derive Debug.
+#[allow(missing_debug_implementations)]
 pub type ControllerSessionAccount<P> = SessionAccount<P, SigningKey, SigningKey>;
 
 /// Create a new Catridge Controller account based on session key.

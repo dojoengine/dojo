@@ -1,5 +1,7 @@
 //! Saya core library.
 
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
@@ -86,6 +88,7 @@ where
 }
 
 /// Saya.
+#[allow(missing_debug_implementations)]
 pub struct Saya {
     /// The main Saya configuration.
     config: SayaConfig,

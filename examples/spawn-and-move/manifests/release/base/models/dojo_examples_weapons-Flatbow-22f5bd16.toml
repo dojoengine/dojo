@@ -1,0 +1,21 @@
+kind = "DojoModel"
+class_hash = "0x672ce1913b025af73d80030f0e7e8d5fa4debe9b011cf0a39a27514cac4a3b5"
+original_class_hash = "0x672ce1913b025af73d80030f0e7e8d5fa4debe9b011cf0a39a27514cac4a3b5"
+abi = "manifests/release/base/abis/models/dojo_examples_weapons-Flatbow-22f5bd16.json"
+tag = "dojo_examples_weapons-Flatbow"
+manifest_name = "dojo_examples_weapons-Flatbow-22f5bd16"
+
+[[members]]
+name = "id"
+type = "u32"
+key = true
+
+[[members]]
+name = "atk_speek"
+type = "u32"
+key = false
+
+[[members]]
+name = "range"
+type = "u32"
+key = false

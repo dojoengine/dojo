@@ -11,7 +11,7 @@ use starknet::signers::LocalWallet;
 use tokio::sync::OnceCell;
 
 pub type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct BenchCall(pub &'static str, pub Vec<Felt>);
 
 // Because no calls are actually executed in the benchmark, we can use the same nonce for all of

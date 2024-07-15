@@ -28,6 +28,7 @@ use once_cell::sync::Lazy;
 use crate::plugin::dojo_plugin_suite;
 
 #[salsa::database(SemanticDatabase, DefsDatabase, ParserDatabase, SyntaxDatabase, FilesDatabase)]
+#[allow(missing_debug_implementations)]
 pub struct DojoSemanticDatabase {
     storage: salsa::Storage<DojoSemanticDatabase>,
 }
@@ -51,13 +52,15 @@ impl DojoSemanticDatabase {
         db.set_inline_macro_plugins(suite.inline_macro_plugins.into());
         db.set_analyzer_plugins(suite.analyzer_plugins);
 
-        init_dev_corelib(&mut db, corelib());
         let dojo_path = Utf8PathBuf::from_path_buf("../../crates/dojo-core/src".into()).unwrap();
         let dojo_path: PathBuf = dojo_path.canonicalize_utf8().unwrap().into();
         let core_crate = db.intern_crate(CrateLongId::Real("dojo".into()));
         let core_root_dir = Directory::Real(dojo_path);
 
+        // Ensure the crate[0] is dojo, to enable parsing of the Scarb.toml.
         db.set_crate_config(core_crate, Some(CrateConfiguration::default_for_root(core_root_dir)));
+
+        init_dev_corelib(&mut db, corelib());
 
         db
     }
@@ -106,6 +109,7 @@ impl Upcast<dyn ParserGroup> for DojoSemanticDatabase {
     }
 }
 
+#[derive(Debug)]
 pub struct WithStringDiagnostics<T> {
     value: T,
     diagnostics: String,
@@ -129,6 +133,7 @@ impl<T> WithStringDiagnostics<T> {
 }
 
 /// Helper struct for the return value of [setup_test_module].
+#[derive(Debug)]
 pub struct TestModule {
     pub crate_id: CrateId,
     pub module_id: ModuleId,
@@ -172,6 +177,7 @@ pub fn setup_test_module(
 }
 
 /// Helper struct for the return value of [setup_test_function].
+#[derive(Debug)]
 pub struct TestFunction {
     pub module_id: ModuleId,
     pub function_id: FunctionWithBodyId,
@@ -219,6 +225,7 @@ pub fn setup_test_function(
 }
 
 /// Helper struct for the return value of [setup_test_expr] and [setup_test_block].
+#[derive(Debug)]
 pub struct TestExpr {
     pub module_id: ModuleId,
     pub function_id: FunctionWithBodyId,

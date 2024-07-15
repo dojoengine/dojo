@@ -2,8 +2,8 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet_classes::contract_class::ContractClass;
+use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
+use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
 use katana_primitives::conversion::rpc::CompiledClass;
 use starknet::accounts::Call;
 use starknet::core::types::contract::SierraClass;

@@ -26,7 +26,7 @@ use dojo_world::manifest::{
     ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
     MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
-use dojo_world::metadata::get_default_namespace_from_ws;
+use dojo_world::metadata::get_namespace_config_from_ws;
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
@@ -51,6 +51,7 @@ pub(crate) const LOG_TARGET: &str = "dojo_lang::compiler";
 #[path = "compiler_test.rs"]
 mod test;
 
+#[derive(Debug)]
 pub struct DojoCompiler;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -86,8 +87,6 @@ impl Compiler for DojoCompiler {
     ) -> Result<()> {
         let props: Props = unit.main_component().target_props()?;
         let target_dir = unit.target_dir(ws);
-
-        let default_namespace = get_default_namespace_from_ws(ws)?;
 
         let compiler_config = build_compiler_config(&unit, ws);
 
@@ -136,7 +135,6 @@ impl Compiler for DojoCompiler {
             &main_crate_ids,
             compiled_classes,
             props.build_external_contracts,
-            &default_namespace,
         )?;
         Ok(())
     }
@@ -168,15 +166,18 @@ fn find_project_contracts(
             .map(|selector| selector.package().into())
             .unique()
             .map(|package_name: SmolStr| {
+                debug!(target: LOG_TARGET, %package_name, "Looking for internal crates.");
                 db.upcast_mut().intern_crate(CrateLongId::Real(package_name))
             })
             .collect::<Vec<_>>();
+
         find_contracts(db, crate_ids.as_ref())
             .into_iter()
             .filter(|decl| {
                 external_contracts.iter().any(|selector| {
                     let contract_path = decl.module_id().full_path(db.upcast());
-                    contract_path == selector.full_path()
+                    // Snake case is used to ensure we match the `compile()` output.
+                    contract_path == selector.full_path().to_case(Case::Snake)
                 })
             })
             .collect::<Vec<ContractDeclaration>>()
@@ -219,14 +220,17 @@ fn update_files(
     crate_ids: &[CrateId],
     compiled_artifacts: HashMap<String, (Felt, ContractClass)>,
     external_contracts: Option<Vec<ContractSelector>>,
-    default_namespace: &str,
 ) -> anyhow::Result<()> {
+    let namespace_config = get_namespace_config_from_ws(ws)?;
+
     let profile_name =
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
-    let profile_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name);
+    let relative_manifest_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name);
 
-    let relative_manifests_dir = Utf8PathBuf::new().join(&profile_dir).join(BASE_DIR);
-    let relative_abis_dir = Utf8PathBuf::new().join(&profile_dir).join(ABIS_DIR).join(BASE_DIR);
+    // relative path to manifests and abi
+    let base_manifests_dir = Utf8PathBuf::new().join(relative_manifest_dir).join(BASE_DIR);
+    let base_abis_dir = Utf8PathBuf::new().join(&base_manifests_dir).join(ABIS_DIR);
+
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
@@ -241,14 +245,15 @@ fn update_files(
 
     let mut crate_ids = crate_ids.to_vec();
 
+    // World and base contracts from Dojo core.
     for (qualified_path, tag) in
         [(WORLD_QUALIFIED_PATH, WORLD_CONTRACT_TAG), (BASE_QUALIFIED_PATH, BASE_CONTRACT_TAG)]
     {
         let (hash, class) = get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
         let filename = naming::get_filename_from_tag(tag);
         write_manifest_and_abi(
-            &relative_manifests_dir,
-            &relative_abis_dir,
+            &base_manifests_dir,
+            &base_abis_dir,
             &manifest_dir,
             &mut Manifest::new(
                 // abi path will be written by `write_manifest`
@@ -305,7 +310,7 @@ fn update_files(
                     contracts.extend(get_dojo_contract_artifacts(
                         db,
                         module_id,
-                        &naming::get_tag(default_namespace, &aux_data.contract_name),
+                        &naming::get_tag(&namespace_config.default, &aux_data.contract_name),
                         &compiled_artifacts,
                     )?);
                 }
@@ -334,8 +339,8 @@ fn update_files(
 
     for (_, (manifest, class, module_id)) in contracts.iter_mut() {
         write_manifest_and_abi(
-            &relative_manifests_dir.join(CONTRACTS_DIR),
-            &relative_abis_dir.join(CONTRACTS_DIR),
+            &base_manifests_dir.join(CONTRACTS_DIR),
+            &base_abis_dir.join(CONTRACTS_DIR),
             &manifest_dir,
             manifest,
             &class.abi,
@@ -360,8 +365,8 @@ fn update_files(
 
     for (_, (manifest, class, module_id)) in models.iter_mut() {
         write_manifest_and_abi(
-            &relative_manifests_dir.join(MODELS_DIR),
-            &relative_abis_dir.join(MODELS_DIR),
+            &base_manifests_dir.join(MODELS_DIR),
+            &base_abis_dir.join(MODELS_DIR),
             &manifest_dir,
             manifest,
             &class.abi,

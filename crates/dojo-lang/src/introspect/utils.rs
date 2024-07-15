@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct TypeIntrospection(pub usize, pub Vec<usize>);
 
 // Provides type introspection information for primitive types

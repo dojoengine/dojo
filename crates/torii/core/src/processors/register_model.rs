@@ -12,13 +12,13 @@ use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_model";
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct RegisterModelProcessor;
 
 #[async_trait]
 impl<P> EventProcessor<P> for RegisterModelProcessor
 where
-    P: Provider + Send + Sync,
+    P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
         "ModelRegistered".to_string()

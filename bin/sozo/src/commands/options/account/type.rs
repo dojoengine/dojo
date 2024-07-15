@@ -31,6 +31,7 @@ pub enum SozoAccountSignError {
 #[must_use]
 #[non_exhaustive]
 #[derive(derive_more::From)]
+#[allow(missing_debug_implementations)]
 pub enum SozoAccount<P>
 where
     P: Send,

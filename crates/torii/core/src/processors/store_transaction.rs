@@ -6,11 +6,11 @@ use starknet::providers::Provider;
 use super::TransactionProcessor;
 use crate::sql::Sql;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct StoreTransactionProcessor;
 
 #[async_trait]
-impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
+impl<P: Provider + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTransactionProcessor {
     async fn process(
         &self,
         db: &mut Sql,

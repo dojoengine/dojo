@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
-    DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
+    DynGeneratedFileAuxData, MacroPluginMetadata, PluginDiagnostic, PluginGeneratedFile,
+    PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
+use cairo_lang_plugins::plugins::HasItemsInCfgEx;
 use cairo_lang_syntax::node::ast::{
     ArgClause, Expr, MaybeModuleBody, OptionArgListParenthesized, OptionReturnTypeClause,
 };
@@ -14,20 +16,23 @@ use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNod
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
 use dojo_world::contracts::naming;
+use dojo_world::metadata::{is_name_valid, NamespaceConfig};
 
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 use crate::syntax::{self_param, utils as syntax_utils};
-use crate::utils::is_name_valid;
 
 const DOJO_INIT_FN: &str = "dojo_init";
 const CONTRACT_NAMESPACE: &str = "namespace";
+const CONTRACT_NOMAPPING: &str = "nomapping";
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ContractParameters {
     namespace: Option<String>,
+    nomapping: bool,
 }
 
+#[derive(Debug)]
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,
@@ -37,7 +42,8 @@ impl DojoContract {
     pub fn from_module(
         db: &dyn SyntaxGroup,
         module_ast: &ast::ItemModule,
-        package_id: String,
+        namespace_config: &NamespaceConfig,
+        metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         let name = module_ast.name(db).text(db);
 
@@ -50,9 +56,14 @@ impl DojoContract {
         let mut has_storage = false;
         let mut has_init = false;
 
-        let contract_namespace = match parameters.namespace {
-            Some(x) => x.to_string(),
-            None => package_id,
+        let unmapped_namespace = parameters.namespace.unwrap_or(namespace_config.default.clone());
+
+        let contract_namespace = if parameters.nomapping {
+            unmapped_namespace
+        } else {
+            // Maps namespace from the tag to ensure higher precision on matching namespace
+            // mappings.
+            namespace_config.get_mapping(&naming::get_tag(&unmapped_namespace, &name))
         };
 
         for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {
@@ -63,7 +74,7 @@ impl DojoContract {
                         stable_ptr: module_ast.stable_ptr().0,
                         message: format!(
                             "The contract {id} '{value}' can only contain characters (a-z/A-Z), \
-                             numbers (0-9) and underscore (_)"
+                             digits (0-9) and underscore (_)."
                         ),
                         severity: Severity::Error,
                     }],
@@ -73,33 +84,33 @@ impl DojoContract {
         }
 
         let contract_tag = naming::get_tag(&contract_namespace, &name);
-        let contract_name_selector = naming::compute_bytearray_hash(&name);
-        let contract_namespace_selector = naming::compute_bytearray_hash(&contract_namespace);
+        let contract_name_hash = naming::compute_bytearray_hash(&name);
+        let contract_namespace_hash = naming::compute_bytearray_hash(&contract_namespace);
+        let contract_selector =
+            naming::compute_selector_from_hashes(contract_namespace_hash, contract_name_hash);
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
-                .items(db)
-                .elements(db)
-                .iter()
+                .iter_items_in_cfg(db, metadata.cfg_set)
                 .flat_map(|el| {
-                    if let ast::ModuleItem::Enum(enum_ast) = el {
+                    if let ast::ModuleItem::Enum(ref enum_ast) = el {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
                             has_event = true;
                             return system.merge_event(db, enum_ast.clone());
                         }
-                    } else if let ast::ModuleItem::Struct(struct_ast) = el {
+                    } else if let ast::ModuleItem::Struct(ref struct_ast) = el {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
                             has_storage = true;
                             return system.merge_storage(db, struct_ast.clone());
                         }
-                    } else if let ast::ModuleItem::Impl(impl_ast) = el {
+                    } else if let ast::ModuleItem::Impl(ref impl_ast) = el {
                         // If an implementation is not targetting the ContractState,
                         // the auto injection of self and world is not applied.
                         let trait_path = impl_ast.trait_path(db).node.get_text(db);
                         if trait_path.contains("<ContractState>") {
-                            return system.rewrite_impl(db, impl_ast.clone());
+                            return system.rewrite_impl(db, impl_ast.clone(), metadata);
                         }
-                    } else if let ast::ModuleItem::FreeFunction(fn_ast) = el {
+                    } else if let ast::ModuleItem::FreeFunction(ref fn_ast) = el {
                         let fn_decl = fn_ast.declaration(db);
                         let fn_name = fn_decl.name(db).text(db);
 
@@ -165,20 +176,25 @@ impl DojoContract {
                         fn contract_name(self: @ContractState) -> ByteArray {
                             \"$name$\"
                         }
-                        fn selector(self: @ContractState) -> felt252 {
-                            $contract_name_selector$
-                        }
 
                         fn namespace(self: @ContractState) -> ByteArray {
                             \"$contract_namespace$\"
                         }
 
-                        fn namespace_selector(self: @ContractState) -> felt252 {
-                            $contract_namespace_selector$
-                        }
-
                         fn tag(self: @ContractState) -> ByteArray {
                             \"$contract_tag$\"
+                        }
+
+                        fn name_hash(self: @ContractState) -> felt252 {
+                            $contract_name_hash$
+                        }
+
+                        fn namespace_hash(self: @ContractState) -> felt252 {
+                            $contract_namespace_hash$
+                        }
+
+                        fn selector(self: @ContractState) -> felt252 {
+                            $contract_selector$
                         }
                     }
 
@@ -198,18 +214,22 @@ impl DojoContract {
                 ",
                     &UnorderedHashMap::from([
                         ("name".to_string(), RewriteNode::Text(name.to_string())),
-                        (
-                            "contract_name_selector".to_string(),
-                            RewriteNode::Text(contract_name_selector.to_string()),
-                        ),
                         ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                         (
                             "contract_namespace".to_string(),
                             RewriteNode::Text(contract_namespace.clone()),
                         ),
                         (
-                            "contract_namespace_selector".to_string(),
-                            RewriteNode::Text(contract_namespace_selector.to_string()),
+                            "contract_name_hash".to_string(),
+                            RewriteNode::Text(contract_name_hash.to_string()),
+                        ),
+                        (
+                            "contract_namespace_hash".to_string(),
+                            RewriteNode::Text(contract_namespace_hash.to_string()),
+                        ),
+                        (
+                            "contract_selector".to_string(),
+                            RewriteNode::Text(contract_selector.to_string()),
                         ),
                         ("contract_tag".to_string(), RewriteNode::Text(contract_tag)),
                     ]),
@@ -541,7 +561,12 @@ impl DojoContract {
     }
 
     /// Rewrites all the functions of a Impl block.
-    fn rewrite_impl(&mut self, db: &dyn SyntaxGroup, impl_ast: ast::ItemImpl) -> Vec<RewriteNode> {
+    fn rewrite_impl(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        impl_ast: ast::ItemImpl,
+        metadata: &MacroPluginMetadata<'_>,
+    ) -> Vec<RewriteNode> {
         let generate_attrs = impl_ast.attributes(db).query_attr(db, "generate_trait");
         let has_generate_trait = !generate_attrs.is_empty();
 
@@ -558,11 +583,9 @@ impl DojoContract {
             };
 
             let body_nodes: Vec<_> = body
-                .items(db)
-                .elements(db)
-                .iter()
+                .iter_items_in_cfg(db, metadata.cfg_set)
                 .flat_map(|el| {
-                    if let ast::ImplItem::Function(fn_ast) = el {
+                    if let ast::ImplItem::Function(ref fn_ast) = el {
                         return self.rewrite_function(db, fn_ast.clone(), has_generate_trait);
                     }
                     vec![RewriteNode::Copied(el.as_syntax_node())]
@@ -649,6 +672,9 @@ fn get_parameters(
                         CONTRACT_NAMESPACE => {
                             parameters.namespace =
                                 get_contract_namespace(db, arg_value, diagnostics);
+                        }
+                        CONTRACT_NOMAPPING => {
+                            parameters.nomapping = true;
                         }
                         _ => {
                             diagnostics.push(PluginDiagnostic {

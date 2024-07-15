@@ -14,7 +14,7 @@ use crate::LOG_TARGET;
 
 const PROVER_IMAGE: &str = "neotheprogramist/stone-cairo0:latest";
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct StoneProver(pub String);
 
 pub async fn prove_stone(input: String, prove_program: ProveProgram) -> anyhow::Result<String> {

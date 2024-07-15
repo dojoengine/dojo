@@ -31,6 +31,7 @@ pub(crate) const LOG_TARGET: &str = "node";
 /// This service is basically an endless future that continuously polls the miner which returns
 /// transactions for the next block, then those transactions are handed off to the [BlockProducer]
 /// to construct a new block.
+#[allow(missing_debug_implementations)]
 pub struct NodeService<EF: ExecutorFactory> {
     /// the pool that holds all transactions
     pub(crate) pool: Arc<TransactionPool>,
@@ -120,6 +121,7 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
 }
 
 /// The type which takes the transaction from the pool and feeds them to the block producer.
+#[derive(Debug)]
 pub struct TransactionMiner {
     /// stores whether there are pending transacions (if known)
     has_pending_txs: Option<bool>,

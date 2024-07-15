@@ -66,6 +66,7 @@ impl ExecutorFactory for NativeExecutorFactory {
     }
 }
 
+#[derive(Debug)]
 pub struct StarknetVMProcessor<'a> {
     block_context: BlockContext,
     state: CachedState<StateProviderDb<'a>, PermanentContractClassCache>,

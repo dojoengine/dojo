@@ -1,6 +1,5 @@
 use anyhow::Result;
-use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::metadata::get_default_namespace_from_ws;
@@ -28,12 +27,8 @@ use crate::migration;
 ///
 /// A [`Config`] object loaded from the spawn-and-moves Scarb.toml file.
 pub fn load_config() -> Config {
-    // To avoid race conditions with other tests, all the project files
-    // are copied to ensure safe parallel execution.
-    let source_project_dir = Utf8PathBuf::from("../../../examples/spawn-and-move/");
-    let dojo_core_path = Utf8PathBuf::from("../../dojo-core");
-
-    compiler::copy_tmp_config(&source_project_dir, &dojo_core_path, Profile::DEV)
+    let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
+    setup.build_test_config("spawn-and-move", Profile::DEV)
 }
 
 /// Setups the workspace for the spawn-and-moves project.

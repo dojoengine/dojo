@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use starknet::core::types::Felt;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SQLFelt(pub Felt);
 
 impl From<SQLFelt> for Felt {

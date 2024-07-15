@@ -1,5 +1,4 @@
-use camino::Utf8PathBuf;
-use dojo_test_utils::compiler;
+use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use katana_runner::KatanaRunner;
@@ -18,11 +17,8 @@ async fn test_model() {
     let account = runner.account(0);
     let provider = account.provider();
 
-    let config = compiler::copy_tmp_config(
-        &Utf8PathBuf::from("../../examples/spawn-and-move"),
-        &Utf8PathBuf::from("../dojo-core"),
-        Profile::DEV,
-    );
+    let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let manifest_dir = config.manifest_path().parent().unwrap();
     let target_dir = manifest_dir.join("target").join("dev");
@@ -81,7 +77,7 @@ async fn test_model() {
 
     assert_eq!(
         position.class_hash(),
-        felt!("0x059e57c16c3bc8c59a768a342496837275e399509366640620a0682826275a34")
+        felt!("0x7104c882f56f62ef1f2453319bf6a1f5784b5f33b63b65506c38d62c3e3fd40")
     );
 
     let moves = world.model_reader("dojo_examples", "Moves").await.unwrap();

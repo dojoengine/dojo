@@ -66,6 +66,7 @@ pub trait ModelReader<E> {
     async fn layout(&self) -> Result<abigen::model::Layout, E>;
 }
 
+#[derive(Debug)]
 pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
     /// Namespace of the model
     namespace: String,
@@ -92,7 +93,7 @@ where
         name: &str,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        let model_selector = naming::compute_model_selector_from_names(namespace, name);
+        let model_selector = naming::compute_selector_from_names(namespace, name);
 
         let (class_hash, contract_address) =
             world.model(&model_selector).block_id(world.block_id).call().await?;

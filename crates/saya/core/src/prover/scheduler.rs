@@ -22,6 +22,7 @@ pub enum ProvingState {
 }
 type ProvingStateWithBlock = (u64, ProvingState);
 
+#[allow(missing_debug_implementations)]
 pub struct Scheduler {
     root_task: BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>>,
     free_differs: Vec<oneshot::Sender<ProgramInput>>,

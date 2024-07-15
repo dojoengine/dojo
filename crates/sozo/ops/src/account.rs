@@ -31,7 +31,7 @@ pub type ClassHash = Felt;
 pub const DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash =
     felt!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c");
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct AccountConfig {
     pub version: u64,
     pub variant: AccountVariant,
@@ -58,14 +58,14 @@ impl AccountConfig {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AccountVariant {
     OpenZeppelin(OzAccountConfig),
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OzAccountConfig {
     pub version: u64,
     #[serde_as(as = "UfeHex")]
@@ -74,7 +74,7 @@ pub struct OzAccountConfig {
     pub legacy: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum DeploymentStatus {
     Undeployed(UndeployedStatus),
@@ -98,7 +98,7 @@ impl DeploymentStatus {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UndeployedStatus {
     #[serde_as(as = "UfeHex")]
     pub class_hash: Felt,
@@ -107,7 +107,7 @@ pub struct UndeployedStatus {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DeployedStatus {
     #[serde_as(as = "UfeHex")]
     pub class_hash: Felt,

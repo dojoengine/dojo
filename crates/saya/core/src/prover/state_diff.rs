@@ -1,6 +1,7 @@
 use katana_primitives::state::StateUpdates;
 use starknet::core::types::Felt;
 
+#[derive(Debug)]
 pub struct ProvedStateDiff {
     pub genesis_state_hash: Felt,
     pub prev_state_hash: Felt,

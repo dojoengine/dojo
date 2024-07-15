@@ -10,4 +10,4 @@ pub mod lang {
     };
 }
 
-pub use cairo_vm;
+pub use {cairo_vm, starknet_api};

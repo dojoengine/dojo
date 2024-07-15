@@ -213,7 +213,7 @@ fn filter_model_tokens(tokens: &TokenizedAbi) -> TokenizedAbi {
 
 #[cfg(test)]
 mod tests {
-    use dojo_test_utils::compiler;
+    use dojo_test_utils::compiler::CompilerTestSetup;
     use dojo_world::metadata::dojo_metadata_from_workspace;
     use scarb::compiler::Profile;
 
@@ -221,13 +221,8 @@ mod tests {
 
     #[test]
     fn gather_data_ok() {
-        let manifest_path = Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml");
-
-        let config = compiler::copy_tmp_config(
-            &Utf8PathBuf::from("../../examples/spawn-and-move"),
-            &Utf8PathBuf::from("../dojo-core"),
-            Profile::DEV,
-        );
+        let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
         let dojo_metadata = dojo_metadata_from_workspace(&ws).expect(
@@ -235,11 +230,15 @@ mod tests {
              workspaces.",
         );
 
-        let data =
-            gather_dojo_data(&manifest_path, "dojo_example", "dev", dojo_metadata.skip_migration)
-                .unwrap();
+        let data = gather_dojo_data(
+            &config.manifest_path().to_path_buf(),
+            "dojo_example",
+            "dev",
+            dojo_metadata.skip_migration,
+        )
+        .unwrap();
 
-        assert_eq!(data.models.len(), 8);
+        assert_eq!(data.models.len(), 10);
 
         assert_eq!(data.world.name, "dojo_example");
 

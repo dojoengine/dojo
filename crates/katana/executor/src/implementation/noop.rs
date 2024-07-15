@@ -118,6 +118,7 @@ impl<'a> BlockExecutor<'a> for NoopExecutor {
     }
 }
 
+#[derive(Debug)]
 struct NoopStateProvider;
 
 impl ContractClassProvider for NoopStateProvider {

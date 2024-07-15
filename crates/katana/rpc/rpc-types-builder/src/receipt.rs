@@ -5,6 +5,7 @@ use katana_provider::traits::transaction::{
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 
 /// A builder for building RPC transaction receipt types.
+#[derive(Debug)]
 pub struct ReceiptBuilder<P> {
     provider: P,
     transaction_hash: TxHash,

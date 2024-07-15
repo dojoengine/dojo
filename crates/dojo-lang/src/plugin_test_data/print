@@ -75,7 +75,6 @@ enum Enemy {
     Bot: felt252,
     OtherPlayer: ContractAddress,
 }
-
 #[cfg(test)]
 impl PositionStructPrintImpl of core::debug::PrintTrait<Position> {
     fn print(self: Position) {
@@ -113,3 +112,22 @@ Enemy::OtherPlayer(v) => { core::debug::PrintTrait::print('OtherPlayer'); core::
 }
 
 //! > expected_diagnostics
+error: Unknown derive `Print` - a plugin might be missing.
+ --> /tmp/plugin_test/src/lib.cairo:4:10
+#[derive(Print)]
+         ^***^
+
+error: Unknown derive `Print` - a plugin might be missing.
+ --> /tmp/plugin_test/src/lib.cairo:12:10
+#[derive(Print)]
+         ^***^
+
+error: Unknown derive `Print` - a plugin might be missing.
+ --> /tmp/plugin_test/src/lib.cairo:19:10
+#[derive(Print)]
+         ^***^
+
+error: Unknown derive `Print` - a plugin might be missing.
+ --> /tmp/plugin_test/src/lib.cairo:28:10
+#[derive(Print)]
+         ^***^

@@ -7,8 +7,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-katana-db.workspace = true
-katana-executor.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 katana-rpc-types.workspace = true
@@ -19,22 +17,14 @@ async-trait.workspace = true
 bigdecimal.workspace = true
 cairo-proof-parser.workspace = true
 cairo-vm.workspace = true
-convert_case.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "manifest", "metadata", "migration" ] }
-flate2.workspace = true
 futures.workspace = true
 itertools.workspace = true
-lazy_static.workspace = true
-parking_lot.workspace = true
-rand = { workspace = true, features = [ "small_rng" ] }
-reqwest = { workspace = true, features = [ "rustls-tls" ] }
 serde.workspace = true
 serde_json.workspace = true
-serde_with.workspace = true
 starknet-crypto.workspace = true
 starknet-types-core = { version = "0.1.4", default-features = false, features = [ "curve", "num-traits", "serde" ] }
 starknet.workspace = true
-starknet_api.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true

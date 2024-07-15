@@ -19,6 +19,7 @@ use crate::types::{TypeMapping, ValueMapping};
 pub mod content;
 pub mod social;
 
+#[derive(Debug)]
 pub struct MetadataObject;
 
 impl MetadataObject {

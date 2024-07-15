@@ -7,6 +7,7 @@ use katana_provider::ProviderResult;
 use katana_rpc_types::state_update::{StateDiff, StateUpdate};
 
 /// A builder for building RPC state update type.
+#[derive(Debug)]
 pub struct StateUpdateBuilder<P> {
     provider: P,
     block_id: BlockHashOrNumber,

@@ -59,6 +59,7 @@ pub enum TransactionWaitingError {
 /// let receipt = TransactionWaiter::new(tx_hash, &provider).with_tx_status(TransactionFinalityStatus::AcceptedOnL2).await.unwrap();
 /// ```
 #[must_use = "TransactionWaiter does nothing unless polled"]
+#[allow(missing_debug_implementations)]
 pub struct TransactionWaiter<'a, P: Provider> {
     /// The hash of the transaction to wait for.
     tx_hash: Felt,

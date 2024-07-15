@@ -12,6 +12,7 @@ use crate::object::TypeMapping;
 use crate::query::filter::{parse_filter, Comparator, Filter, FilterValue};
 use crate::types::TypeData;
 
+#[derive(Debug)]
 pub struct WhereInputObject {
     pub type_name: String,
     pub type_mapping: TypeMapping,

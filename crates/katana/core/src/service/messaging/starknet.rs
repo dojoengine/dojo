@@ -29,6 +29,7 @@ const EXE_MAGIC: Felt = felt!("0x455845");
 
 pub const HASH_EXEC: Felt = felt!("0xee");
 
+#[derive(Debug)]
 pub struct StarknetMessaging {
     chain_id: Felt,
     provider: AnyProvider,
