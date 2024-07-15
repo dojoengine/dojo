@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -27,17 +27,11 @@ use crate::types::{EntityKeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
 
-#[derive(Debug)]
-pub struct EntitiesSubscriber {
-    /// Entity ids that the subscriber is interested in
-    keys: Option<EntityKeysClause>,
-    /// The channel to send the response back to the subscriber.
-    sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
-}
+pub(crate) type EntitiesSubscriber = Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>;
 
 #[derive(Debug, Default)]
 pub struct EntityManager {
-    subscribers: RwLock<HashMap<usize, EntitiesSubscriber>>,
+    subscribers: RwLock<BTreeMap<Option<EntityKeysClause>, EntitiesSubscriber>>,
 }
 
 impl EntityManager {
@@ -45,7 +39,6 @@ impl EntityManager {
         &self,
         keys: Option<EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
 
         // NOTE: unlock issue with firefox/safari
@@ -53,7 +46,7 @@ impl EntityManager {
         // initial subscribe call
         let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
 
-        self.subscribers.write().await.insert(id, EntitiesSubscriber { keys, sender });
+        self.subscribers.write().await.insert(keys, sender);
 
         Ok(receiver)
     }

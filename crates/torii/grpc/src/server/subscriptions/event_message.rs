@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -25,18 +25,13 @@ use crate::proto::world::SubscribeEntityResponse;
 use crate::server::map_row_to_entity;
 use crate::types::{EntityKeysClause, PatternMatching};
 
+use super::entity::EntitiesSubscriber;
+
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
-#[derive(Debug)]
-pub struct EventMessagesSubscriber {
-    /// Entity keys that the subscriber is interested in
-    keys: Option<EntityKeysClause>,
-    /// The channel to send the response back to the subscriber.
-    sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
-}
 
 #[derive(Debug, Default)]
 pub struct EventMessageManager {
-    subscribers: RwLock<HashMap<usize, EventMessagesSubscriber>>,
+    subscribers: RwLock<BTreeMap<Option<EntityKeysClause>, EntitiesSubscriber>>,
 }
 
 impl EventMessageManager {
@@ -44,7 +39,6 @@ impl EventMessageManager {
         &self,
         keys: Option<EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
 
         // NOTE: unlock issue with firefox/safari
@@ -52,7 +46,7 @@ impl EventMessageManager {
         // initial subscribe call
         let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
 
-        self.subscribers.write().await.insert(id, EventMessagesSubscriber { keys, sender });
+        self.subscribers.write().await.insert(keys, EventMessagesSubscriber { keys, sender });
 
         Ok(receiver)
     }
