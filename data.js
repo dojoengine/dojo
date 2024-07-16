@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721099307684,
+  "lastUpdate": 1721099336858,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11665,6 +11665,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17054125,
             "range": "± 191937",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9485d3f859f69c94c551890eebc615d0b3ba5a47",
+          "message": "fix cairo file metadata for contracts and models (#2175)",
+          "timestamp": "2024-07-15T21:00:20-06:00",
+          "tree_id": "9e11149c6ce3f060ff4b0c93fa16be39309314ae",
+          "url": "https://github.com/dojoengine/dojo/commit/9485d3f859f69c94c551890eebc615d0b3ba5a47"
+        },
+        "date": 1721099336232,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16974183,
+            "range": "± 171938",
             "unit": "ns/iter"
           }
         ]
