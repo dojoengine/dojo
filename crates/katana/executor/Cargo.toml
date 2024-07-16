@@ -17,8 +17,6 @@ tracing.workspace = true
 
 # blockifier deps
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f0ca000a", features = [ "testing" ], optional = true }
-# blockifier = { path = "../../../../blockifier/crates/blockifier", features = [ "testing" ], optional = true }
-# blockifier = { version = "0.8.0-dev.1", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
 
 # Disable SIR for now until they support Cairo 2.6.3
