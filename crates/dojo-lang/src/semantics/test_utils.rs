@@ -144,8 +144,8 @@ pub fn setup_test_crate(db: &dyn SemanticGroup, content: &str) -> CrateId {
     let file_id = db.intern_file(FileLongId::Virtual(VirtualFile {
         parent: None,
         name: "lib.cairo".into(),
-        content: Arc::new(content.into()),
-        code_mappings: Default::default(),
+        content: content.into(),
+        code_mappings: Arc::new([]),
         kind: FileKind::Module,
     }));
 
