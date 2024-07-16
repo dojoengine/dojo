@@ -91,7 +91,7 @@ pub fn transact<S: StateReader>(
         // these cases, we still want to calculate the fee.
         let fee = if info.transaction_receipt.fee == Fee(0) {
             get_fee_by_gas_vector(
-                &block_context.block_info(),
+                block_context.block_info(),
                 info.transaction_receipt.gas,
                 &fee_type,
             )
@@ -403,7 +403,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         FlattenedSierraClass,
     > = HashMap::new();
 
-    for (class_hash, _) in &state_diff.compiled_class_hashes {
+    for class_hash in state_diff.compiled_class_hashes.keys() {
         let hash = class_hash.0;
         let class = state.class(hash).unwrap().expect("must exist if declared");
 
