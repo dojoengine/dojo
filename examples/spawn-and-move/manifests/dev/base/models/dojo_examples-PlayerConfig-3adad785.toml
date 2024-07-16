@@ -1,6 +1,6 @@
 kind = "DojoModel"
-class_hash = "0x13f8294fde1c2605e9825782ae293b3bae2291e6cbd20d4ef8878ff044d4b82"
-original_class_hash = "0x13f8294fde1c2605e9825782ae293b3bae2291e6cbd20d4ef8878ff044d4b82"
+class_hash = "0x16141fdae16b43c612d705795e8993ebacd06edb4ec582041b15b6878d65de7"
+original_class_hash = "0x16141fdae16b43c612d705795e8993ebacd06edb4ec582041b15b6878d65de7"
 abi = "manifests/dev/base/abis/models/dojo_examples-PlayerConfig-3adad785.json"
 tag = "dojo_examples-PlayerConfig"
 manifest_name = "dojo_examples-PlayerConfig-3adad785"

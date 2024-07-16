@@ -63,6 +63,8 @@ pub enum PrimitiveError {
     CairoSerde(#[from] cainome::cairo_serde::Error),
     #[error(transparent)]
     FromUtf8Error(#[from] std::string::FromUtf8Error),
+    #[error(transparent)]
+    FeltFromFeltError(#[from] crate::primitive_conversion::PrimitiveFromFeltError),
 }
 
 #[derive(AsRefStr, Debug, Display, EnumString, PartialEq)]
@@ -192,12 +194,13 @@ impl Primitive {
         }
 
         match self {
-            Primitive::I8(_)
-            | Primitive::I16(_)
-            | Primitive::I32(_)
-            | Primitive::I64(_)
-            | Primitive::I128(_)
-            | Primitive::U8(_)
+            Primitive::I8(_) => Ok(format!("{}", try_from_felt::<i8>(value[0])?)),
+            Primitive::I16(_) => Ok(format!("{}", try_from_felt::<i16>(value[0])?)),
+            Primitive::I32(_) => Ok(format!("{}", try_from_felt::<i32>(value[0])?)),
+            Primitive::I64(_) => Ok(format!("{}", try_from_felt::<i64>(value[0])?)),
+            Primitive::I128(_) => Ok(format!("{}", try_from_felt::<i128>(value[0])?)),
+
+            Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::USize(_)

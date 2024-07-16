@@ -4,6 +4,7 @@
 // TODO: remove when https://github.com/starknet-io/types-rs/pull/74 is merged.
 
 use core::convert::TryInto;
+
 use starknet::core::types::Felt;
 
 #[derive(Debug, Copy, Clone)]
@@ -12,6 +13,12 @@ pub struct PrimitiveFromFeltError;
 impl core::fmt::Display for PrimitiveFromFeltError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "Failed to convert `Felt` into primitive type")
+    }
+}
+
+impl std::error::Error for PrimitiveFromFeltError {
+    fn description(&self) -> &str {
+        "Failed to convert `Felt` into primitive type"
     }
 }
 
@@ -64,8 +71,9 @@ pub fn try_from_felt<T: FromFelt>(value: Felt) -> Result<T, PrimitiveFromFeltErr
 
 #[cfg(test)]
 mod tests {
-    use super::try_from_felt;
     use starknet::core::types::Felt;
+
+    use super::try_from_felt;
 
     #[test]
     fn test_try_from_felt() {
