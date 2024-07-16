@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721146721238,
+  "lastUpdate": 1721150339215,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11755,6 +11755,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17430522,
             "range": "± 329440",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "e87da4a3a0c21d76c658abeead14d82b9cc3f85d",
+          "message": "ci: fix the rust version for release",
+          "timestamp": "2024-07-16T11:09:30-06:00",
+          "tree_id": "375afea5d2d592dcf4700b6e6afb677c43471395",
+          "url": "https://github.com/dojoengine/dojo/commit/e87da4a3a0c21d76c658abeead14d82b9cc3f85d"
+        },
+        "date": 1721150337917,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17436533,
+            "range": "± 411040",
             "unit": "ns/iter"
           }
         ]
