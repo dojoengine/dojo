@@ -498,4 +498,37 @@ mod tests {
         primitive.set_contract_address(Some(Felt::from(1u128))).unwrap();
         assert_eq!(primitive.as_contract_address(), Some(Felt::from(1u128)));
     }
+
+    #[test]
+    fn test_primitive_deserialization() {
+        let test_cases = vec![
+            (vec![Felt::from(-42i8)], Primitive::I8(Some(-42))),
+            (vec![Felt::from(-1000i16)], Primitive::I16(Some(-1000))),
+            (vec![Felt::from(-100000i32)], Primitive::I32(Some(-100000))),
+            (vec![Felt::from(-1000000000i64)], Primitive::I64(Some(-1000000000))),
+            (
+                vec![Felt::from(-1000000000000000000i128)],
+                Primitive::I128(Some(-1000000000000000000)),
+            ),
+            (vec![Felt::from(42u8)], Primitive::U8(Some(42))),
+            (vec![Felt::from(1000u16)], Primitive::U16(Some(1000))),
+            (vec![Felt::from(100000u32)], Primitive::U32(Some(100000))),
+            (vec![Felt::from(1000000000u64)], Primitive::U64(Some(1000000000))),
+            (vec![Felt::from(1000000000000000000u128)], Primitive::U128(Some(1000000000000000000))),
+            (vec![Felt::from(42u32)], Primitive::USize(Some(42))),
+            (vec![Felt::from(1u8)], Primitive::Bool(Some(true))),
+            (vec![Felt::from(123456789u128)], Primitive::Felt252(Some(Felt::from(123456789)))),
+            (vec![Felt::from(987654321u128)], Primitive::ClassHash(Some(Felt::from(987654321)))),
+            (
+                vec![Felt::from(123456789u128)],
+                Primitive::ContractAddress(Some(Felt::from(123456789))),
+            ),
+        ];
+
+        for (serialized, expected) in test_cases {
+            let mut to_deser = expected;
+            to_deser.deserialize(&mut serialized.clone()).unwrap();
+            assert_eq!(to_deser, expected);
+        }
+    }
 }

@@ -317,4 +317,12 @@ mod tests {
         let result = decode_calldata(input).unwrap();
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn test_invalid_signed_integer_decoder() {
+        let input = "-12345abc";
+        let decoder = SignedIntegerCalldataDecoder;
+        let result = decoder.decode(input);
+        assert!(result.is_err());
+    }
 }

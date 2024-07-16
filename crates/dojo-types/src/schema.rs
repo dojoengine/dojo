@@ -55,8 +55,15 @@ impl Ty {
             Ty::Primitive(c) => c.to_string(),
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.replace(
-                'T',
-                &e.options.iter().map(|o| o.ty.name().replace("()", "")).unique().join(""),
+                "<T>",
+                &e.options
+                    .iter()
+                    .map(|o| {
+                        let t = o.ty.name().replace("()", "");
+                        format!("<{}>", t)
+                    })
+                    .unique()
+                    .join(""),
             ),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
             Ty::Array(ty) => format!("Array<{}>", ty[0].name()),
@@ -451,4 +458,147 @@ fn format_member(m: &Member) -> String {
     }
 
     str
+}
+
+#[cfg(test)]
+mod tests {
+    use crypto_bigint::U256;
+    use starknet::core::types::Felt;
+
+    use super::*;
+    use crate::primitive::Primitive;
+
+    #[test]
+    fn test_format_member() {
+        let test_cases = vec![
+            (
+                Member {
+                    name: "i8_field".to_string(),
+                    ty: Ty::Primitive(Primitive::I8(Some(-42))),
+                    key: false,
+                },
+                "  i8_field: i8 = -42",
+            ),
+            (
+                Member {
+                    name: "i16_field".to_string(),
+                    ty: Ty::Primitive(Primitive::I16(Some(-1000))),
+                    key: false,
+                },
+                "  i16_field: i16 = -1000",
+            ),
+            (
+                Member {
+                    name: "i32_field".to_string(),
+                    ty: Ty::Primitive(Primitive::I32(Some(-100000))),
+                    key: false,
+                },
+                "  i32_field: i32 = -100000",
+            ),
+            (
+                Member {
+                    name: "i64_field".to_string(),
+                    ty: Ty::Primitive(Primitive::I64(Some(-1000000000))),
+                    key: false,
+                },
+                "  i64_field: i64 = -1000000000",
+            ),
+            (
+                Member {
+                    name: "i128_field".to_string(),
+                    ty: Ty::Primitive(Primitive::I128(Some(-1000000000000000000))),
+                    key: false,
+                },
+                "  i128_field: i128 = -1000000000000000000",
+            ),
+            (
+                Member {
+                    name: "u8_field".to_string(),
+                    ty: Ty::Primitive(Primitive::U8(Some(255))),
+                    key: false,
+                },
+                "  u8_field: u8 = 255",
+            ),
+            (
+                Member {
+                    name: "u16_field".to_string(),
+                    ty: Ty::Primitive(Primitive::U16(Some(65535))),
+                    key: false,
+                },
+                "  u16_field: u16 = 65535",
+            ),
+            (
+                Member {
+                    name: "u32_field".to_string(),
+                    ty: Ty::Primitive(Primitive::U32(Some(4294967295))),
+                    key: false,
+                },
+                "  u32_field: u32 = 4294967295",
+            ),
+            (
+                Member {
+                    name: "u64_field".to_string(),
+                    ty: Ty::Primitive(Primitive::U64(Some(18446744073709551615))),
+                    key: false,
+                },
+                "  u64_field: u64 = 18446744073709551615",
+            ),
+            (
+                Member {
+                    name: "u128_field".to_string(),
+                    ty: Ty::Primitive(Primitive::U128(Some(
+                        340282366920938463463374607431768211455,
+                    ))),
+                    key: false,
+                },
+                "  u128_field: u128 = 340282366920938463463374607431768211455",
+            ),
+            (
+                Member {
+                    name: "u256_field".to_string(),
+                    ty: Ty::Primitive(Primitive::U256(Some(U256::from_u128(123456789_u128)))),
+                    key: false,
+                },
+                "  u256_field: u256 = \
+                 00000000000000000000000000000000000000000000000000000000075BCD15",
+            ),
+            (
+                Member {
+                    name: "bool_field".to_string(),
+                    ty: Ty::Primitive(Primitive::Bool(Some(true))),
+                    key: false,
+                },
+                "  bool_field: bool = true",
+            ),
+            (
+                Member {
+                    name: "felt252_field".to_string(),
+                    ty: Ty::Primitive(Primitive::Felt252(Some(
+                        Felt::from_hex("0x123abc").unwrap(),
+                    ))),
+                    key: false,
+                },
+                "  felt252_field: felt252 = 0x123abc",
+            ),
+            (
+                Member {
+                    name: "enum_field".to_string(),
+                    ty: Ty::Enum(Enum {
+                        name: "TestEnum".to_string(),
+                        option: Some(1),
+                        options: vec![
+                            EnumOption { name: "OptionA".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "OptionB".to_string(), ty: Ty::Tuple(vec![]) },
+                        ],
+                    }),
+                    key: false,
+                },
+                "  enum_field: TestEnum = OptionB",
+            ),
+        ];
+
+        for (member, expected) in test_cases {
+            assert_eq!(format_member(&member), expected);
+        }
+    }
 }
