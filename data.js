@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721019094725,
+  "lastUpdate": 1721099307684,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11635,6 +11635,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16966086,
             "range": "± 310264",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "79169e5e631fe060210f117b7abd51adc010bfd9",
+          "message": "feat(core): model get/set functions (#2159)\n\n* Handle get()/set() get_field_name()/set_field_name() functions\r\n\r\n* fix: ensure torii delete is accepting the entity_id\r\n\r\n* feat: add support into Torii for StoreUpdateRecord\r\n\r\n* fix: fix tests\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-15T20:59:36-06:00",
+          "tree_id": "6352dbe3477bdb24134378f3859cbe3e84869acf",
+          "url": "https://github.com/dojoengine/dojo/commit/79169e5e631fe060210f117b7abd51adc010bfd9"
+        },
+        "date": 1721099306965,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17054125,
+            "range": "± 191937",
             "unit": "ns/iter"
           }
         ]
