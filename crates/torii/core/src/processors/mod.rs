@@ -12,9 +12,11 @@ pub mod register_model;
 pub mod store_del_record;
 pub mod store_set_record;
 pub mod store_transaction;
+pub mod store_update_record;
 
 const MODEL_INDEX: usize = 0;
 const NUM_KEYS_INDEX: usize = 1;
+const ENTITY_ID_INDEX: usize = 1;
 
 #[async_trait]
 pub trait EventProcessor<P>

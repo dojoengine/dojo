@@ -1,10 +1,32 @@
-use dojo::world::IWorldDispatcher;
+use dojo::world::{IWorldDispatcher, ModelIndex};
 use starknet::SyscallResult;
 
+/// Trait that is implemented at Cairo level for each struct that is a model.
+trait ModelEntity<T> {
+    fn id(self: @T) -> felt252;
+    fn values(self: @T) -> Span<felt252>;
+    fn from_values(entity_id: felt252, values: Span<felt252>) -> T;
+    fn get(world: IWorldDispatcher, entity_id: felt252) -> T;
+    fn update(self: @T, world: IWorldDispatcher);
+    fn delete(self: @T, world: IWorldDispatcher);
+    fn get_member(
+        world: IWorldDispatcher, entity_id: felt252, member_id: felt252,
+    ) -> Span<felt252>;
+    fn set_member(self: @T, world: IWorldDispatcher, member_id: felt252, values: Span<felt252>,);
+}
+
 trait Model<T> {
-    fn entity(
-        world: IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout
-    ) -> T;
+    fn get(world: IWorldDispatcher, keys: Span<felt252>) -> T;
+    // Note: `get` is implemented with a generated trait because it takes
+    // the list of model keys as separated parameters.
+    fn set(self: @T, world: IWorldDispatcher);
+    fn delete(self: @T, world: IWorldDispatcher);
+
+    fn get_member(
+        world: IWorldDispatcher, keys: Span<felt252>, member_id: felt252,
+    ) -> Span<felt252>;
+
+    fn set_member(self: @T, world: IWorldDispatcher, member_id: felt252, values: Span<felt252>,);
 
     /// Returns the name of the model as it was written in Cairo code.
     fn name() -> ByteArray;
@@ -25,6 +47,7 @@ trait Model<T> {
     fn name_hash() -> felt252;
     fn namespace_hash() -> felt252;
 
+    fn entity_id(self: @T) -> felt252;
     fn keys(self: @T) -> Span<felt252>;
     fn values(self: @T) -> Span<felt252>;
     fn layout() -> dojo::database::introspect::Layout;

@@ -109,9 +109,7 @@ impl InlineMacroExprPlugin for GetMacro {
 
             builder.add_str(&format!(
                 "\n
-                let __{model}_layout__ = dojo::model::Model::<{model}>::layout();
-                let __{model}: {model} = dojo::model::Model::entity({}, __get_macro_keys__, \
-                 __{model}_layout__);\n",
+                let __{model}: {model} = dojo::model::Model::get({}, __get_macro_keys__);\n",
                 world.as_syntax_node().get_text(db),
             ));
         }

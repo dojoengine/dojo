@@ -6,6 +6,8 @@ trait IActions {
     fn move(ref world: IWorldDispatcher, direction: Direction);
     fn set_player_config(ref world: IWorldDispatcher, name: ByteArray);
     fn get_player_position(world: @IWorldDispatcher) -> Position;
+    fn update_player_name(ref world: IWorldDispatcher, name: ByteArray);
+    fn update_player_name_value(ref world: IWorldDispatcher, name: ByteArray);
     fn reset_player_config(ref world: IWorldDispatcher);
     fn set_player_server_profile(ref world: IWorldDispatcher, server_id: u32, name: ByteArray);
     #[cfg(feature: 'dungeon')]
@@ -25,7 +27,8 @@ mod actions {
 
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{
-        Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile
+        Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile, PositionTrait,
+        MovesTrait, MovesEntityTrait, PlayerConfigTrait, PlayerConfigEntityTrait
     };
     use dojo_examples::utils::next_position;
 
@@ -84,11 +87,28 @@ mod actions {
 
         fn move(ref world: IWorldDispatcher, direction: Direction) {
             let player = get_caller_address();
-            let (mut position, mut moves) = get!(world, player, (Position, Moves));
+
+            // instead of using the `get!` macro, you can directly use
+            // the <ModelName>Trait::get method
+            let mut position = PositionTrait::get(world, player);
+
+            // you can also get entity values by entity ID with the `<ModelName>EntityTrait` trait.
+            // Note that it returns a `<ModelName>Entity` struct which contains
+            // model values and the entity ID.
+            let move_id = MovesTrait::entity_id_from_keys(player);
+            let mut moves = MovesEntityTrait::get(world, move_id);
+
             moves.remaining -= 1;
             moves.last_direction = direction;
             let next = next_position(position, direction);
-            set!(world, (moves, next));
+
+            // instead of using the `set!` macro, you can directly use
+            // the <ModelName>Trait::set method
+            next.set(world);
+
+            // you can also update entity values by entity ID with the `<ModelName>EntityTrait` trait.
+            moves.update(world);
+
             emit!(world, (Moved { player, direction }));
         }
 
@@ -108,9 +128,11 @@ mod actions {
         fn reset_player_config(ref world: IWorldDispatcher) {
             let player = get_caller_address();
 
-            let (position, moves, config) = get!(world, player, (Position, Moves, PlayerConfig));
+            let (position, moves) = get!(world, player, (Position, Moves));
+            let config = PlayerConfigTrait::get(world, player);
 
-            delete!(world, (position, moves, config));
+            delete!(world, (position, moves));
+            config.delete(world);
 
             let (position, moves, config) = get!(world, player, (Position, Moves, PlayerConfig));
 
@@ -144,6 +166,26 @@ mod actions {
             set!(world, (flatbow, river_skale));
 
             IDungeonDispatcher { contract_address: dungeon_address }.enter();
+        }
+
+        fn update_player_name(ref world: IWorldDispatcher, name: ByteArray) {
+            let player = get_caller_address();
+            let config = PlayerConfigTrait::get(world, player);
+            config.set_name(world, name.clone());
+
+            let new_name = PlayerConfigTrait::get_name(world, player);
+            assert(new_name == name, 'unable to change name');
+        }
+
+        fn update_player_name_value(ref world: IWorldDispatcher, name: ByteArray) {
+            let player = get_caller_address();
+            let config_id = PlayerConfigTrait::entity_id_from_keys(player);
+
+            let config = PlayerConfigEntityTrait::get(world, config_id);
+            config.set_name(world, name.clone());
+
+            let new_name = PlayerConfigEntityTrait::get_name(world, config_id);
+            assert(new_name == name, 'unable to change name');
         }
     }
 
@@ -197,6 +239,12 @@ mod tests {
         // System calls
         actions_system.spawn();
         let initial_moves = get!(world, caller, Moves);
+        let initial_position = get!(world, caller, Position);
+
+        assert(
+            initial_position.vec.x == 10 && initial_position.vec.y == 10, 'wrong initial position'
+        );
+
         actions_system.move(Direction::Right(()));
 
         let moves = get!(world, caller, Moves);
@@ -206,7 +254,7 @@ mod tests {
         assert(moves.last_direction.into() == right_dir_felt, 'last direction is wrong');
 
         let new_position = get!(world, caller, Position);
-        assert(new_position.vec.x == 11, 'position x is wrong');
-        assert(new_position.vec.y == 10, 'position y is wrong');
+        assert(new_position.vec.x == initial_position.vec.x + 1, 'position x is wrong');
+        assert(new_position.vec.y == initial_position.vec.y, 'position y is wrong');
     }
 }

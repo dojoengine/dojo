@@ -553,7 +553,25 @@ fn save_expanded_source_file(
     contract_basename: &str,
     contract_tag: &str,
 ) -> anyhow::Result<()> {
-    if let Ok(file_id) = db.module_main_file(module_id) {
+    if let Ok(files) = db.module_files(module_id) {
+        let contract_name = naming::get_name_from_tag(contract_tag);
+
+        // search among all the module files (real and virtual), the one named with
+        // the contract/model name. This is the file containing the Cairo code generated
+        // from Dojo plugins.
+        let res = files.iter().filter(|f| f.file_name(db).eq(&contract_name)).collect::<Vec<_>>();
+
+        let file_id = if res.is_empty() {
+            // if there is no virtual file with the name of the contract/model, just use the main
+            // module file
+            match db.module_main_file(module_id) {
+                Ok(f) => f,
+                Err(_) => return Err(anyhow!("failed to get source file: {contract_tag}")),
+            }
+        } else {
+            *res[0]
+        };
+
         if let Some(file_content) = db.file_content(file_id) {
             let src_file_name = format!("{contract_basename}.cairo");
 

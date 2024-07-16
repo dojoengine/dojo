@@ -297,6 +297,81 @@ async fn test_load_from_remote_del() {
     db.execute().await.unwrap();
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_entity_keys() {
+    let options =
+        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let account = sequencer.account(0);
+
+    let migration_output = migration::migrate(
+        &ws,
+        None,
+        sequencer.url().to_string(),
+        &account,
+        "dojo_examples",
+        false,
+        TxnConfig::init_wait(),
+        None,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+
+    // spawn
+    account
+        .execute_v1(vec![Call {
+            to: migration_output
+                .contracts
+                .first()
+                .expect("shouldn't be empty")
+                .as_ref()
+                .expect("should be deployed")
+                .contract_address,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+    let world_reader = WorldContractReader::new(migration_output.world_address, account.provider());
+
+    let mut db = Sql::new(
+        pool.clone(),
+        world_reader.address,
+        account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_reader.address)
+            .await
+            .unwrap(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
+
+    let keys = db.get_entity_keys_def("dojo_examples-Moves").await.unwrap();
+    assert_eq!(keys, vec![("player".to_string(), "ContractAddress".to_string()),]);
+
+    let entity_id = poseidon_hash_many(&[account.address()]);
+
+    let keys = db.get_entity_keys(entity_id, "dojo_examples-Moves").await.unwrap();
+    assert_eq!(keys, vec![account.address()]);
+
+    db.execute().await.unwrap();
+}
+
 /// Count the number of rows in a table.
 ///
 /// # Arguments

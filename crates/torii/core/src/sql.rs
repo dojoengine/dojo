@@ -9,7 +9,7 @@ use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 
@@ -271,8 +271,8 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn delete_entity(&mut self, keys: Vec<Felt>, entity: Ty) -> Result<()> {
-        let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+    pub async fn delete_entity(&mut self, entity_id: Felt, entity: Ty) -> Result<()> {
+        let entity_id = format!("{:#x}", entity_id);
         let path = vec![entity.name()];
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
@@ -341,6 +341,46 @@ impl Sql {
                 Err(anyhow::anyhow!("Failed to get model from db for selector {selector:#x}: {e}"))
             }
         }
+    }
+
+    /// Retrieves the keys definition for a given model.
+    /// The key definition is currently implemented as (`name`, `type`).
+    pub async fn get_entity_keys_def(&self, model_tag: &str) -> Result<Vec<(String, String)>> {
+        let query = sqlx::query_as::<_, (String, String)>(
+            "SELECT name, type FROM model_members WHERE id = ? AND key = true",
+        )
+        .bind(model_tag);
+
+        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
+        let rows: Vec<(String, String)> = query.fetch_all(&mut *conn).await?;
+        Ok(rows.iter().map(|(name, ty)| (name.to_string(), ty.to_string())).collect())
+    }
+
+    /// Retrieves the keys for a given entity.
+    /// The keys are returned in the same order as the keys definition.
+    pub async fn get_entity_keys(&self, entity_id: Felt, model_tag: &str) -> Result<Vec<Felt>> {
+        let entity_id = format!("{:#x}", entity_id);
+        let keys_def = self.get_entity_keys_def(model_tag).await?;
+
+        let keys_names =
+            keys_def.iter().map(|(name, _)| format!("external_{}", name)).collect::<Vec<String>>();
+
+        let sql = format!("SELECT {} FROM [{}] WHERE id = ?", keys_names.join(", "), model_tag);
+        let query = sqlx::query(sql.as_str()).bind(entity_id);
+
+        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
+
+        let mut keys: Vec<Felt> = vec![];
+        let result = query.fetch_all(&mut *conn).await?;
+
+        for row in result {
+            for (i, _) in row.columns().iter().enumerate() {
+                let value: String = row.try_get(i)?;
+                keys.push(Felt::from_hex(&value)?);
+            }
+        }
+
+        Ok(keys)
     }
 
     pub async fn entity(&self, model: String, key: Felt) -> Result<Vec<Felt>> {

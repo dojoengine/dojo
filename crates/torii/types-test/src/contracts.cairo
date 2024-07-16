@@ -10,7 +10,7 @@ trait IRecords {
 mod records {
     use starknet::{ContractAddress, get_caller_address};
     use types_test::models::{
-        Record, RecordSibling, Subrecord, Nested, NestedMore, NestedMost, Depth
+        Record, RecordTrait, RecordSibling, RecordSiblingTrait, Subrecord, SubrecordTrait, Nested, NestedMore, NestedMost, Depth
     };
     use types_test::{seed, random};
     use super::IRecords;
