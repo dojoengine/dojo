@@ -31,14 +31,15 @@ pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_m
 
 #[derive(Debug, Default)]
 pub struct EventMessageManager {
-    subscribers: RwLock<BTreeMap<Vec<EntityKeysClause>, Vec<EntitiesSubscriber>>>,
+    subscribers: RwLock<HashMap<Vec<EntityKeysClause>, EntitiesSubscriber>>,
 }
 
 impl EventMessageManager {
     pub async fn add_subscriber(
         &self,
-        keys: Vec<EntityKeysClause>,
+        clauses: Vec<EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
+        let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
 
         // NOTE: unlock issue with firefox/safari
@@ -46,7 +47,7 @@ impl EventMessageManager {
         // initial subscribe call
         let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
 
-        self.subscribers.write().await.insert(keys, EventMessagesSubscriber { keys, sender });
+        self.subscribers.write().await.insert(keys, EntitiesSubscriber { clauses, sender });
 
         Ok(receiver)
     }
@@ -95,14 +96,14 @@ impl Service {
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;
 
-        for (clauses, sub) in subs.subscribers.read().await.iter() {
+        for (idx, sub) in subs.subscribers.read().await.iter() {
             // Check if the subscriber is interested in this entity
             // If we have a clause of hashed keys, then check that the id of the entity
             // is in the list of hashed keys.
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-            if !clauses.iter().any(|clause| match &sub.keys {
+            if !sub.clauses.iter().any(|clause| match clause {
                 Some(EntityKeysClause::HashedKeys(hashed_keys)) => {
                     return hashed_keys.is_empty() || hashed_keys.contains(&hashed);
                 }
