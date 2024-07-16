@@ -772,9 +772,9 @@ impl DojoWorld {
 
     async fn subscribe_entities(
         &self,
-        keys: Option<proto::types::EntityKeysClause>,
+        keys: Vec<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(keys.map(|keys| keys.into())).await
+        self.entity_manager.add_subscriber(keys.iter().map(|keys| keys.into())).await
     }
 
     async fn retrieve_entities(
@@ -849,9 +849,9 @@ impl DojoWorld {
 
     async fn subscribe_event_messages(
         &self,
-        keys: Option<proto::types::EntityKeysClause>,
+        clauses: Vec<proto::types::EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.event_message_manager.add_subscriber(keys.map(|keys| keys.into())).await
+        self.event_message_manager.add_subscriber(keys.iter().map(|keys| keys.into())).await
     }
 
     async fn retrieve_event_messages(
@@ -1054,11 +1054,24 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { clause } = request.into_inner();
+        let SubscribeEntitiesRequest { clauses } = request.into_inner();
         let rx =
-            self.subscribe_entities(clause).await.map_err(|e| Status::internal(e.to_string()))?;
+            self.subscribe_entities(clauses).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
+    }
+
+    asybnc fn update_entities_subscription(
+        &self,
+        request: Request<UpdateEntitiesSubscriptionRequest>,
+    ) -> ServiceResult<UpdateEntitiesSubscriptionResponse> {
+        let UpdateEntitiesSubscriptionRequest { clauses } = request.into_inner();
+        self.entity_manager
+            .update_subscriber(clauses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(UpdateEntitiesSubscriptionResponse {}))
     }
 
     async fn retrieve_entities(
@@ -1080,9 +1093,9 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { clause } = request.into_inner();
+        let SubscribeEntitiesRequest { clauses } = request.into_inner();
         let rx = self
-            .subscribe_event_messages(clause)
+            .subscribe_event_messages(clauses)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
