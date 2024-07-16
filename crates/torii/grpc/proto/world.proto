@@ -61,6 +61,7 @@ message SubscribeEventMessagesRequest {
 
 message SubscribeEntityResponse {
     types.Entity entity = 1;
+    uint64 subscription_id = 2;
 }
 
 message RetrieveEntitiesRequest {
