@@ -1,11 +1,6 @@
 pub mod transaction;
 
 use alloy_primitives::U256;
-// use katana_cairo::cairo_vm::vm::runners::builtin_runner::{
-//     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
-//     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
-//     SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
-// };
 use katana_executor::implementation::noop::NoopExecutorFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_primitives::block::{

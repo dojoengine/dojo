@@ -229,9 +229,6 @@ account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "199d8
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
 
 [patch.crates-io]
-# cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-# cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-
 alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
 alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
 alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "4655f8e4372ecc0b056e83abbc60c3912902ee64" }
