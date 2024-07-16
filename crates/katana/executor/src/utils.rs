@@ -1,4 +1,3 @@
-use blockifier::transaction::objects::ExecutionResourcesTraits;
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{
     DeclareTxReceipt, DeployAccountTxReceipt, Event, InvokeTxReceipt, L1HandlerTxReceipt,
@@ -14,12 +13,13 @@ pub fn log_resources(resources: &TxResources) {
     let mut mapped_strings = Vec::new();
 
     for (builtin, count) in &resources.vm_resources.builtin_instance_counter {
-        mapped_strings.push(format!("{}: {}", builtin, count));
+        mapped_strings.push(format!("{builtin}: {count}"));
     }
 
     // Sort the strings alphabetically
     mapped_strings.sort();
-    mapped_strings.insert(0, format!("Total steps: {}", resources.vm_resources.total_n_steps()));
+    mapped_strings.insert(0, format!("steps: {}", resources.vm_resources.n_steps));
+    mapped_strings.insert(1, format!("memory holes: {}", resources.vm_resources.n_memory_holes));
 
     trace!(target: LOG_TARGET, usage = mapped_strings.join(" | "), "Transaction resource usage.");
 }

@@ -135,7 +135,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         sierra_class: Some(sierra),
                         transaction: DeclareTx::V2(DeclareTxV2 {
                             nonce: FieldElement::ONE,
-                            max_fee: 1503400000000000,
+                            max_fee: 27092100000000000,
                             chain_id,
                             signature: vec![],
                             sender_address,

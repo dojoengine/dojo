@@ -111,14 +111,6 @@ impl<S: StateDb> CachedState<S> {
         let inner = CachedStateInner { inner: cached_state, declared_classes };
         Self(Arc::new(Mutex::new(inner)))
     }
-
-    // pub(super) fn read(&self) -> RwLockReadGuard<'_, CachedStateInner<S>> {
-    //     self.0.read()
-    // }
-
-    // pub(super) fn write(&self) -> RwLockWriteGuard<'_, CachedStateInner<S>> {
-    //     self.0.write()
-    // }
 }
 
 impl<S: StateDb> ContractClassProvider for CachedState<S> {
@@ -141,7 +133,12 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         let Ok(hash) = self.0.lock().inner.get_compiled_class_hash(ClassHash(hash)) else {
             return Ok(None);
         };
-        Ok(Some(hash.0))
+
+        if hash.0 == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 
     fn sierra_class(
@@ -166,8 +163,11 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        let hash = hash.0;
-        if hash == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash)) }
+        if hash.0 == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 
     fn nonce(
