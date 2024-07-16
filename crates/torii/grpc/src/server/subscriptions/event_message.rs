@@ -20,12 +20,11 @@ use torii_core::sql::FELT_DELIMITER;
 use torii_core::types::EventMessage;
 use tracing::{error, trace};
 
+use super::entity::EntitiesSubscriber;
 use crate::proto;
 use crate::proto::world::SubscribeEntityResponse;
 use crate::server::map_row_to_entity;
 use crate::types::{EntityKeysClause, PatternMatching};
-
-use super::entity::EntitiesSubscriber;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
 

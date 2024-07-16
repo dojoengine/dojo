@@ -17,7 +17,6 @@ use torii_core::error::{Error, ParseError};
 use torii_core::model::build_sql_query;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
-
 use torii_core::types::Entity;
 use tracing::{error, trace};
 
