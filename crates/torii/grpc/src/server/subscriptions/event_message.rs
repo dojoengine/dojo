@@ -31,13 +31,13 @@ pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_m
 
 #[derive(Debug, Default)]
 pub struct EventMessageManager {
-    subscribers: RwLock<BTreeMap<Option<EntityKeysClause>, EntitiesSubscriber>>,
+    subscribers: RwLock<BTreeMap<Vec<EntityKeysClause>, Vec<EntitiesSubscriber>>>,
 }
 
 impl EventMessageManager {
     pub async fn add_subscriber(
         &self,
-        keys: Option<EntityKeysClause>,
+        keys: Vec<EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let (sender, receiver) = channel(1);
 
@@ -95,18 +95,17 @@ impl Service {
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;
 
-        for (idx, sub) in subs.subscribers.read().await.iter() {
+        for (clauses, sub) in subs.subscribers.read().await.iter() {
             // Check if the subscriber is interested in this entity
             // If we have a clause of hashed keys, then check that the id of the entity
             // is in the list of hashed keys.
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-            match &sub.keys {
+
+            clauses.iter().any(|clause| match clause {
                 Some(EntityKeysClause::HashedKeys(hashed_keys)) => {
-                    if !hashed_keys.is_empty() && !hashed_keys.contains(&hashed) {
-                        continue;
-                    }
+                    return hashed_keys.is_empty() || hashed_keys.contains(&hashed);
                 }
                 Some(EntityKeysClause::Keys(clause)) => {
                     // if we have a model clause, then we need to check that the entity
@@ -115,8 +114,8 @@ impl Service {
                         let name = updated_model.name();
                         let (namespace, name) = name.split_once('-').unwrap();
 
-                        if !clause.models.is_empty()
-                            && !clause.models.iter().any(|clause_model| {
+                        return clause.models.is_empty()
+                            || clause.models.iter().any(|clause_model| {
                                 let (clause_namespace, clause_model) =
                                     clause_model.split_once('-').unwrap();
                                 // if both namespace and model are empty, we should match all.
@@ -130,10 +129,7 @@ impl Service {
                                     && (clause_model.is_empty()
                                         || clause_model == name
                                         || clause_model == "*")
-                            })
-                        {
-                            continue;
-                        }
+                            });
                     }
 
                     // if the key pattern doesnt match our subscribers key pattern, skip
@@ -141,7 +137,7 @@ impl Service {
                     if clause.pattern_matching == PatternMatching::FixedLen
                         && keys.len() != clause.keys.len()
                     {
-                        continue;
+                        return false;
                     }
 
                     if !keys.iter().enumerate().all(|(idx, key)| {
@@ -165,7 +161,8 @@ impl Service {
                 }
                 // if None, then we are interested in all entities
                 None => {}
-            }
+            })
+            
 
             // publish all updates if ids is empty or only ids that are subscribed to
             let models_query = r#"

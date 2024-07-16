@@ -33,6 +33,7 @@ pub enum Clause {
 pub enum EntityKeysClause {
     HashedKeys(Vec<Felt>),
     Keys(KeysClause),
+    
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]

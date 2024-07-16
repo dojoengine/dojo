@@ -31,7 +31,7 @@ pub(crate) type EntitiesSubscriber = Sender<Result<proto::world::SubscribeEntity
 
 #[derive(Debug, Default)]
 pub struct EntityManager {
-    subscribers: RwLock<BTreeMap<Option<EntityKeysClause>, EntitiesSubscriber>>,
+    subscribers: RwLock<BTreeMap<Vec<EntityKeysClause>, Vec<EntitiesSubscriber>>>,
 }
 
 impl EntityManager {
@@ -95,14 +95,14 @@ impl Service {
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;
 
-        for (idx, sub) in subs.subscribers.read().await.iter() {
+        for (clause, subs) in subs.subscribers.read().await.iter() {
             // Check if the subscriber is interested in this entity
             // If we have a clause of hashed keys, then check that the id of the entity
             // is in the list of hashed keys.
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-            match &sub.keys {
+            match clause {
                 Some(EntityKeysClause::HashedKeys(hashed_keys)) => {
                     if !hashed_keys.is_empty() && !hashed_keys.contains(&hashed) {
                         continue;
