@@ -5,7 +5,7 @@ name = "dojo"
 version = "0.7.3"
 
 [dependencies]
-dojo_plugin = { git = "https://github.com/dojoengine/dojo", tag = "v0.7.3" }
+dojo_plugin = { git = "https://github.com/dojoengine/dojo", branch = "bump-cairo-2.7" }
 starknet = "=2.7.0-rc.3"
 
 # Dojo core is tested with sozo, hence we need a namespace for the test

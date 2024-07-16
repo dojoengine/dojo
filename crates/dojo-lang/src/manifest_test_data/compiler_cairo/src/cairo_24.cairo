@@ -52,6 +52,7 @@ mod cairo_v240 {
 
         let first = MyStruct { a: 1, b: 2 };
         let second = MyStruct { a: 1, b: 2 };
-        assert_eq!(first, second, "{:?},{:?} should be equal", first, second);
+        assert!(first == second, "should be equal");
+        //assert_eq!(first, second, "{:?},{:?} should be equal", first, second);
     }
 }
