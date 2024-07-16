@@ -173,6 +173,11 @@ fn get_name_from_schema(schema: &dojo_types::schema::Ty) -> String {
         dojo_types::schema::Ty::Struct(s) => s.name.clone(),
         dojo_types::schema::Ty::Enum(e) => e.name.clone(),
         dojo_types::schema::Ty::Primitive(p) => match p {
+            dojo_types::primitive::Primitive::I8(_) => "i8".to_string(),
+            dojo_types::primitive::Primitive::I16(_) => "i16".to_string(),
+            dojo_types::primitive::Primitive::I32(_) => "i32".to_string(),
+            dojo_types::primitive::Primitive::I64(_) => "i64".to_string(),
+            dojo_types::primitive::Primitive::I128(_) => "i128".to_string(),
             dojo_types::primitive::Primitive::U8(_) => "u8".to_string(),
             dojo_types::primitive::Primitive::U16(_) => "u16".to_string(),
             dojo_types::primitive::Primitive::U32(_) => "u32".to_string(),

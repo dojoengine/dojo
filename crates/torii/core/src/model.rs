@@ -428,13 +428,31 @@ pub fn map_row_to_ty(
     match ty {
         Ty::Primitive(primitive) => {
             match &primitive {
-                Primitive::Bool(_) => {
-                    let value = row.try_get::<bool, &str>(&column_name)?;
-                    primitive.set_bool(Some(value))?;
+                Primitive::I8(_) => {
+                    let value = row.try_get::<i8, &str>(&column_name)?;
+                    primitive.set_i8(Some(value))?;
                 }
-                Primitive::USize(_) => {
-                    let value = row.try_get::<u32, &str>(&column_name)?;
-                    primitive.set_usize(Some(value))?;
+                Primitive::I16(_) => {
+                    let value = row.try_get::<i16, &str>(&column_name)?;
+                    primitive.set_i16(Some(value))?;
+                }
+                Primitive::I32(_) => {
+                    let value = row.try_get::<i32, &str>(&column_name)?;
+                    primitive.set_i32(Some(value))?;
+                }
+                Primitive::I64(_) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let hex_str = value.trim_start_matches("0x");
+                    primitive.set_i64(Some(
+                        i64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                    ))?;
+                }
+                Primitive::I128(_) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    let hex_str = value.trim_start_matches("0x");
+                    primitive.set_i128(Some(
+                        i128::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                    ))?;
                 }
                 Primitive::U8(_) => {
                     let value = row.try_get::<u8, &str>(&column_name)?;
@@ -466,6 +484,14 @@ pub fn map_row_to_ty(
                     let value = row.try_get::<String, &str>(&column_name)?;
                     let hex_str = value.trim_start_matches("0x");
                     primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
+                }
+                Primitive::USize(_) => {
+                    let value = row.try_get::<u32, &str>(&column_name)?;
+                    primitive.set_usize(Some(value))?;
+                }
+                Primitive::Bool(_) => {
+                    let value = row.try_get::<bool, &str>(&column_name)?;
+                    primitive.set_bool(Some(value))?;
                 }
                 Primitive::Felt252(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
