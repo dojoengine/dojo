@@ -115,8 +115,10 @@ impl WorldClient {
             .map(|res| res.into_inner())?;
 
         Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
-            Some(entity) => entity.try_into().expect("must able to serialize"),
-            None => Entity { hashed_keys: Felt::ZERO, models: vec![] },
+            Some(entity) => {
+                (res.subscription_id, entity.try_into().expect("must able to serialize"))
+            }
+            None => (res.subscription_id, Entity { hashed_keys: Felt::ZERO, models: vec![] }),
         }))))
     }
 
@@ -153,8 +155,10 @@ impl WorldClient {
             .map(|res| res.into_inner())?;
 
         Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
-            Some(entity) => entity.try_into().expect("must able to serialize"),
-            None => Entity { hashed_keys: Felt::ZERO, models: vec![] },
+            Some(entity) => {
+                (res.subscription_id, entity.try_into().expect("must able to serialize"))
+            }
+            None => (res.subscription_id, Entity { hashed_keys: Felt::ZERO, models: vec![] }),
         }))))
     }
 
@@ -239,7 +243,7 @@ impl Stream for ModelDiffsStreaming {
 
 type EntityMappedStream = MapOk<
     tonic::Streaming<SubscribeEntityResponse>,
-    Box<dyn Fn(SubscribeEntityResponse) -> Entity + Send>,
+    Box<dyn Fn(SubscribeEntityResponse) -> (u64, Entity) + Send>,
 >;
 
 #[derive(Debug)]
