@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721099336858,
+  "lastUpdate": 1721146034395,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11695,6 +11695,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16974183,
             "range": "± 171938",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ejembioche50@gmail.com",
+            "name": "Oche",
+            "username": "EjembiEmmanuel"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09ba7d9a3b8732c6c040c03407b093613ec051dc",
+          "message": "feat: add support for signed integers (#2161)\n\n* feat: add support for signed integers\r\n\r\n* chore: run scripts/rust_fmt.sh\r\n\r\n* feat: add support for signed integers\r\n\r\n* chore: run scripts/rust_fmt.sh\r\n\r\n* feat: decode signed integer\r\n\r\n* test: test signed integers decoder\r\n\r\n* refac: remove redundant type casting\r\n\r\n* refac: modify signed integer decoder\r\n\r\n* feat: implement try from felt for signed integers\r\n\r\n* Delete scripts/prettier.sh\r\n\r\n* chore: add comments\r\n\r\n* fix: ensure signed integers are correctly printed\r\n\r\n* fix: add more tests\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-16T09:58:25-06:00",
+          "tree_id": "09f20d145880cd261c53ccf8c0d261fd86167737",
+          "url": "https://github.com/dojoengine/dojo/commit/09ba7d9a3b8732c6c040c03407b093613ec051dc"
+        },
+        "date": 1721146033518,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16890164,
+            "range": "± 369328",
             "unit": "ns/iter"
           }
         ]
