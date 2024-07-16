@@ -10,7 +10,6 @@ version.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 
-convert_case.workspace = true
 parking_lot.workspace = true
 starknet = { workspace = true, optional = true }
 thiserror.workspace = true

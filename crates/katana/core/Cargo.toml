@@ -7,7 +7,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-katana-cairo.workspace = true
 katana-db.workspace = true
 katana-executor.workspace = true
 katana-primitives.workspace = true

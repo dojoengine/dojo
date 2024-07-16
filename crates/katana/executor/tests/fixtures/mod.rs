@@ -1,7 +1,5 @@
 pub mod transaction;
 
-use std::collections::HashMap;
-
 use alloy_primitives::U256;
 // use katana_cairo::cairo_vm::vm::runners::builtin_runner::{
 //     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,

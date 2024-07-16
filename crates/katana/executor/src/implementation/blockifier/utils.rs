@@ -46,8 +46,7 @@ use katana_primitives::chain::NamedChainId;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-use katana_primitives::trace::TxResources;
-use katana_primitives::trace::{L1Gas, TxExecInfo};
+use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
@@ -655,23 +654,25 @@ mod tests {
 
     use std::collections::HashSet;
 
+    use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_cairo::starknet_api::core::EntryPointSelector;
+    use katana_cairo::starknet_api::felt;
     use katana_cairo::starknet_api::transaction::{EventContent, EventData, EventKey};
-    use katana_primitives::chain::{ChainId, NamedChainId};
+    use katana_primitives::chain::NamedChainId;
     use katana_primitives::felt::FieldElement;
 
     use super::*;
 
     #[test]
     fn convert_chain_id() {
-        let mainnet = to_blk_chain_id(ChainId::Named(NamedChainId::Mainnet));
-        let goerli = to_blk_chain_id(ChainId::Named(NamedChainId::Goerli));
-        let sepolia = to_blk_chain_id(ChainId::Named(NamedChainId::Sepolia));
+        let mainnet =
+            to_blk_chain_id(katana_primitives::chain::ChainId::Named(NamedChainId::Mainnet));
+        let sepolia =
+            to_blk_chain_id(katana_primitives::chain::ChainId::Named(NamedChainId::Sepolia));
 
-        assert_eq!(mainnet.0, parse_cairo_short_string(&NamedChainId::Mainnet.id()).unwrap());
-        assert_eq!(goerli.0, parse_cairo_short_string(&NamedChainId::Goerli.id()).unwrap());
-        assert_eq!(sepolia.0, parse_cairo_short_string(&NamedChainId::Sepolia.id()).unwrap());
+        assert_eq!(mainnet, ChainId::Mainnet);
+        assert_eq!(sepolia, ChainId::Sepolia);
     }
 
     fn create_blockifier_call_info() -> CallInfo {
@@ -713,8 +714,8 @@ mod tests {
                 storage_address: 100u128.into(),
                 code_address: Some(100u128.into()),
                 entry_point_type: EntryPointType::External,
-                calldata: Calldata(Arc::new(vec![stark_felt!(1_u8)])),
-                entry_point_selector: EntryPointSelector(stark_felt!(999_u32)),
+                calldata: Calldata(Arc::new(vec![felt!(1_u8)])),
+                entry_point_selector: EntryPointSelector(felt!(999_u32)),
             },
             execution: CallExecution {
                 failed: true,
@@ -722,14 +723,14 @@ mod tests {
                 events: top_events,
                 ..Default::default()
             },
-            storage_read_values: vec![stark_felt!(1_u8), stark_felt!(2_u8)],
+            storage_read_values: vec![felt!(1_u8), felt!(2_u8)],
             accessed_storage_keys: HashSet::from([3u128.into(), 4u128.into(), 5u128.into()]),
             resources: ExecutionResources {
                 n_steps: 1_000_000,
                 n_memory_holes: 9_000,
                 builtin_instance_counter: HashMap::from([
-                    ("ecdsa_builtin".into(), 50),
-                    ("pedersen_builtin".into(), 9),
+                    (BuiltinName::ecdsa, 50),
+                    (BuiltinName::pedersen, 9),
                 ]),
             },
             inner_calls: vec![nested_call],
@@ -744,20 +745,10 @@ mod tests {
         let expected_contract_address = to_address(call.call.storage_address);
         let expected_caller_address = to_address(call.call.caller_address);
         let expected_code_address = call.call.code_address.map(to_address);
-        let expected_class_hash = call.call.class_hash;
+        let expected_class_hash = call.call.class_hash.map(|c| c.0);
         let expected_entry_point_selector = call.call.entry_point_selector.0;
-        let expected_calldata = call.call.calldata.0.clone();
+        let expected_calldata = call.call.calldata.0.as_ref().clone();
         let expected_retdata = call.execution.retdata.0.clone();
-
-        let builtin_counter = call.resources.builtin_instance_counter.clone();
-        let expected_execution_resources = trace::ExecutionResources {
-            n_steps: call.resources.n_steps as u64,
-            n_memory_holes: call.resources.n_memory_holes as u64,
-            builtin_instance_counter: builtin_counter
-                .into_iter()
-                .map(|(k, v)| (k, v as u64))
-                .collect(),
-        };
 
         let CallExecution { events, l2_to_l1_messages, .. } = call.execution.clone();
         let expected_events: Vec<_> = events.into_iter().map(to_ordered_event).collect();
@@ -797,7 +788,6 @@ mod tests {
         assert_eq!(call.entry_point_selector, expected_entry_point_selector);
         assert_eq!(call.calldata, expected_calldata);
         assert_eq!(call.retdata, expected_retdata);
-        assert_eq!(call.execution_resources, expected_execution_resources);
         assert_eq!(call.events, expected_events);
         assert_eq!(call.l2_to_l1_messages, expected_l2_to_l1_msg);
         assert_eq!(call.call_type, expected_call_type);

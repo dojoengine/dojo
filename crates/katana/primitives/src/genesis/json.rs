@@ -1215,10 +1215,12 @@ mod tests {
     fn genesis_from_json_with_unresolved_paths() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
         let json: GenesisJson = serde_json::from_reader(file).unwrap();
-        assert!(Genesis::try_from(json)
-            .unwrap_err()
-            .to_string()
-            .contains("Unresolved class artifact path"));
+        assert!(
+            Genesis::try_from(json)
+                .unwrap_err()
+                .to_string()
+                .contains("Unresolved class artifact path")
+        );
     }
 
     #[test]
@@ -1262,9 +1264,8 @@ mod tests {
             .expect("failed to load genesis file");
 
         let res = Genesis::try_from(json);
-        assert!(res
-            .unwrap_err()
-            .to_string()
-            .contains(&format!("Class name '{name}' already exists")))
+        assert!(
+            res.unwrap_err().to_string().contains(&format!("Class name '{name}' already exists"))
+        )
     }
 }
