@@ -119,95 +119,21 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: dojo::world::IWorldDispatcherImpl::set_entity,
+                            function: ?6::set,
                             args: [
+                                Value(
+                                    Snapshot(
+                                        ExprSnapshot {
+                                            inner: Var(
+                                                LocalVarId(test::__set_model_instance__),
+                                            ),
+                                            ty: @test::Health,
+                                        },
+                                    ),
+                                ),
                                 Value(
                                     Var(
                                         LocalVarId(test::world),
-                                    ),
-                                ),
-                                Value(
-                                    FunctionCall(
-                                        ExprFunctionCall {
-                                            function: ?7::instance_selector,
-                                            args: [
-                                                Value(
-                                                    Snapshot(
-                                                        ExprSnapshot {
-                                                            inner: Var(
-                                                                LocalVarId(test::__set_model_instance__),
-                                                            ),
-                                                            ty: @test::Health,
-                                                        },
-                                                    ),
-                                                ),
-                                            ],
-                                            coupon_arg: None,
-                                            ty: core::felt252,
-                                        },
-                                    ),
-                                ),
-                                Value(
-                                    FunctionCall(
-                                        ExprFunctionCall {
-                                            function: ?8::keys,
-                                            args: [
-                                                Value(
-                                                    Snapshot(
-                                                        ExprSnapshot {
-                                                            inner: Var(
-                                                                LocalVarId(test::__set_model_instance__),
-                                                            ),
-                                                            ty: @test::Health,
-                                                        },
-                                                    ),
-                                                ),
-                                            ],
-                                            coupon_arg: None,
-                                            ty: core::array::Span::<core::felt252>,
-                                        },
-                                    ),
-                                ),
-                                Value(
-                                    FunctionCall(
-                                        ExprFunctionCall {
-                                            function: ?9::values,
-                                            args: [
-                                                Value(
-                                                    Snapshot(
-                                                        ExprSnapshot {
-                                                            inner: Var(
-                                                                LocalVarId(test::__set_model_instance__),
-                                                            ),
-                                                            ty: @test::Health,
-                                                        },
-                                                    ),
-                                                ),
-                                            ],
-                                            coupon_arg: None,
-                                            ty: core::array::Span::<core::felt252>,
-                                        },
-                                    ),
-                                ),
-                                Value(
-                                    FunctionCall(
-                                        ExprFunctionCall {
-                                            function: ?10::instance_layout,
-                                            args: [
-                                                Value(
-                                                    Snapshot(
-                                                        ExprSnapshot {
-                                                            inner: Var(
-                                                                LocalVarId(test::__set_model_instance__),
-                                                            ),
-                                                            ty: @test::Health,
-                                                        },
-                                                    ),
-                                                ),
-                                            ],
-                                            coupon_arg: None,
-                                            ty: dojo::database::introspect::Layout,
-                                        },
                                     ),
                                 ),
                             ],

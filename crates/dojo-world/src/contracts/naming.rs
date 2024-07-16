@@ -68,8 +68,8 @@ pub fn get_filename_from_tag(tag: &str) -> String {
     format!("{tag}{TAG_SEPARATOR}{selector}")
 }
 
-pub fn compute_bytearray_hash(namespace: &str) -> Felt {
-    let ba = ByteArray::from_string(namespace).unwrap();
+pub fn compute_bytearray_hash(value: &str) -> Felt {
+    let ba = ByteArray::from_string(value).unwrap();
     poseidon_hash_many(&ByteArray::cairo_serialize(&ba))
 }
 

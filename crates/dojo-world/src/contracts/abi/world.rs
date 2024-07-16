@@ -53,6 +53,24 @@ abigen!(
     ]
   },
   {
+    "type": "enum",
+    "name": "dojo::world::ModelIndex",
+    "variants": [
+      {
+        "name": "Keys",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "Id",
+        "type": "core::felt252"
+      },
+      {
+        "name": "MemberId",
+        "type": "(core::felt252, core::felt252)"
+      }
+    ]
+  },
+  {
     "type": "struct",
     "name": "core::array::Span::<core::integer::u8>",
     "members": [
@@ -304,12 +322,12 @@ abigen!(
         "name": "entity",
         "inputs": [
           {
-            "name": "model",
+            "name": "model_selector",
             "type": "core::felt252"
           },
           {
-            "name": "keys",
-            "type": "core::array::Span::<core::felt252>"
+            "name": "index",
+            "type": "dojo::world::ModelIndex"
           },
           {
             "name": "layout",
@@ -328,12 +346,12 @@ abigen!(
         "name": "set_entity",
         "inputs": [
           {
-            "name": "model",
+            "name": "model_selector",
             "type": "core::felt252"
           },
           {
-            "name": "keys",
-            "type": "core::array::Span::<core::felt252>"
+            "name": "index",
+            "type": "dojo::world::ModelIndex"
           },
           {
             "name": "values",
@@ -352,12 +370,12 @@ abigen!(
         "name": "delete_entity",
         "inputs": [
           {
-            "name": "model",
+            "name": "model_selector",
             "type": "core::felt252"
           },
           {
-            "name": "keys",
-            "type": "core::array::Span::<core::felt252>"
+            "name": "index",
+            "type": "dojo::world::ModelIndex"
           },
           {
             "name": "layout",
@@ -943,6 +961,28 @@ abigen!(
   },
   {
     "type": "event",
+    "name": "dojo::world::world::StoreUpdateRecord",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "table",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "entity_id",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "values",
+        "type": "core::array::Span::<core::felt252>",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
     "name": "dojo::world::world::StoreDelRecord",
     "kind": "struct",
     "members": [
@@ -952,8 +992,8 @@ abigen!(
         "kind": "data"
       },
       {
-        "name": "keys",
-        "type": "core::array::Span::<core::felt252>",
+        "name": "entity_id",
+        "type": "core::felt252",
         "kind": "data"
       }
     ]
@@ -1115,6 +1155,11 @@ abigen!(
       {
         "name": "StoreSetRecord",
         "type": "dojo::world::world::StoreSetRecord",
+        "kind": "nested"
+      },
+      {
+        "name": "StoreUpdateRecord",
+        "type": "dojo::world::world::StoreUpdateRecord",
         "kind": "nested"
       },
       {

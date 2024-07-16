@@ -160,12 +160,8 @@ impl InlineMacroExprPlugin for SetMacro {
             builder.add_str(&format!(
                 "
                 let __set_model_instance__ = {};
-                {}.set_entity(
-                    dojo::model::Model::instance_selector(@__set_model_instance__),
-                    dojo::model::Model::keys(@__set_model_instance__),
-                    dojo::model::Model::values(@__set_model_instance__),
-                    dojo::model::Model::instance_layout(@__set_model_instance__),
-                );",
+                dojo::model::Model::set(@__set_model_instance__, {});
+                ",
                 entity,
                 world.as_syntax_node().get_text(db),
             ));

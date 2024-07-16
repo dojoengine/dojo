@@ -7,7 +7,7 @@ use starknet::providers::Provider;
 use tracing::info;
 
 use super::EventProcessor;
-use crate::processors::{MODEL_INDEX, NUM_KEYS_INDEX};
+use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_del_record";
@@ -57,10 +57,11 @@ where
             "Store delete record."
         );
 
-        let keys_start = NUM_KEYS_INDEX + 1;
-        let keys = event.data[keys_start..].to_vec();
+        let entity_id = event.data[ENTITY_ID_INDEX];
         let entity = model.schema().await?;
-        db.delete_entity(keys, entity).await?;
+
+        db.delete_entity(entity_id, entity).await?;
+
         Ok(())
     }
 }
