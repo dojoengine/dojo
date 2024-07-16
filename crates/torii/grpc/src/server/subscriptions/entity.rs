@@ -27,7 +27,8 @@ use crate::types::{EntityKeysClause, PatternMatching};
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity";
 
-pub(crate) type EntitiesSubscriber = Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>;
+pub(crate) type EntitiesSubscriber =
+    Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>;
 
 #[derive(Debug, Default)]
 pub struct EntityManager {
@@ -95,18 +96,16 @@ impl Service {
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;
 
-        for (clause, subs) in subs.subscribers.read().await.iter() {
+        for (clauses, subs) in subs.subscribers.read().await.iter() {
             // Check if the subscriber is interested in this entity
             // If we have a clause of hashed keys, then check that the id of the entity
             // is in the list of hashed keys.
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-            match clause {
+            if !clauses.iter().any(|clause| match &sub.keys {
                 Some(EntityKeysClause::HashedKeys(hashed_keys)) => {
-                    if !hashed_keys.is_empty() && !hashed_keys.contains(&hashed) {
-                        continue;
-                    }
+                    return hashed_keys.is_empty() || hashed_keys.contains(&hashed);
                 }
                 Some(EntityKeysClause::Keys(clause)) => {
                     // if we have a model clause, then we need to check that the entity
@@ -132,7 +131,7 @@ impl Service {
                                         || clause_model == "*")
                             })
                         {
-                            continue;
+                            return false;
                         }
                     }
 
@@ -141,10 +140,10 @@ impl Service {
                     if clause.pattern_matching == PatternMatching::FixedLen
                         && keys.len() != clause.keys.len()
                     {
-                        continue;
+                        return false;
                     }
 
-                    if !keys.iter().enumerate().all(|(idx, key)| {
+                    return keys.iter().enumerate().all(|(idx, key)| {
                         // this is going to be None if our key pattern overflows the subscriber
                         // key pattern in this case we should skip
                         let sub_key = clause.keys.get(idx);
@@ -159,12 +158,12 @@ impl Service {
                             // so we should match all next keys
                             _ => true,
                         }
-                    }) {
-                        continue;
-                    }
+                    });
                 }
                 // if None, then we are interested in all entities
                 None => {}
+            }) {
+                continue;
             }
 
             if entity.updated_model.is_none() {

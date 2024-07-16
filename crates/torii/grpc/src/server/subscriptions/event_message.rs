@@ -102,8 +102,7 @@ impl Service {
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-
-            clauses.iter().any(|clause| match clause {
+            if !clauses.iter().any(|clause| match &sub.keys {
                 Some(EntityKeysClause::HashedKeys(hashed_keys)) => {
                     return hashed_keys.is_empty() || hashed_keys.contains(&hashed);
                 }
@@ -114,8 +113,8 @@ impl Service {
                         let name = updated_model.name();
                         let (namespace, name) = name.split_once('-').unwrap();
 
-                        return clause.models.is_empty()
-                            || clause.models.iter().any(|clause_model| {
+                        if !clause.models.is_empty()
+                            && !clause.models.iter().any(|clause_model| {
                                 let (clause_namespace, clause_model) =
                                     clause_model.split_once('-').unwrap();
                                 // if both namespace and model are empty, we should match all.
@@ -129,7 +128,10 @@ impl Service {
                                     && (clause_model.is_empty()
                                         || clause_model == name
                                         || clause_model == "*")
-                            });
+                            })
+                        {
+                            return false;
+                        }
                     }
 
                     // if the key pattern doesnt match our subscribers key pattern, skip
@@ -140,7 +142,7 @@ impl Service {
                         return false;
                     }
 
-                    if !keys.iter().enumerate().all(|(idx, key)| {
+                    return keys.iter().enumerate().all(|(idx, key)| {
                         // this is going to be None if our key pattern overflows the subscriber
                         // key pattern in this case we should skip
                         let sub_key = clause.keys.get(idx);
@@ -155,14 +157,13 @@ impl Service {
                             // so we should match all next keys
                             _ => true,
                         }
-                    }) {
-                        continue;
-                    }
+                    });
                 }
                 // if None, then we are interested in all entities
                 None => {}
-            })
-            
+            }) {
+                continue;
+            }
 
             // publish all updates if ids is empty or only ids that are subscribed to
             let models_query = r#"
