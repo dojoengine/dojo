@@ -141,20 +141,20 @@ impl Client {
     /// A direct stream to grpc subscribe entities
     pub async fn on_entity_updated(
         &self,
-        clause: Option<EntityKeysClause>,
+        clauses: Vec<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_entities(clause).await?;
+        let stream = grpc_client.subscribe_entities(clauses).await?;
         Ok(stream)
     }
 
     /// A direct stream to grpc subscribe event messages
     pub async fn on_event_message_updated(
         &self,
-        clause: Option<EntityKeysClause>,
+        clauses: Vec<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_event_messages(clause).await?;
+        let stream = grpc_client.subscribe_event_messages(clauses).await?;
         Ok(stream)
     }
 

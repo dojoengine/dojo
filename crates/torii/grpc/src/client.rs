@@ -9,7 +9,7 @@ use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeEntitiesRequest,
     SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse,
-    SubscribeModelsRequest, SubscribeModelsResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest,
 };
 use crate::types::schema::{self, Entity, SchemaError};
 use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
@@ -104,12 +104,12 @@ impl WorldClient {
     /// Subscribe to entities updates of a World.
     pub async fn subscribe_entities(
         &mut self,
-        clause: Option<EntityKeysClause>,
+        clauses: Vec<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
-        let clause = clause.map(|c| c.into());
+        let clauses = clauses.into_iter().map(|c| c.into()).collect();
         let stream = self
             .inner
-            .subscribe_entities(SubscribeEntitiesRequest { clause })
+            .subscribe_entities(SubscribeEntitiesRequest { clauses })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -120,15 +120,34 @@ impl WorldClient {
         }))))
     }
 
+    /// Update an entities subscription.
+    pub async fn update_entities_subscription(
+        &mut self,
+        subscription_id: u64,
+        clauses: Vec<EntityKeysClause>,
+    ) -> Result<(), Error> {
+        let clauses = clauses.into_iter().map(|c| c.into()).collect();
+
+        Ok(self
+            .inner
+            .update_entities_subscription(UpdateEntitiesSubscriptionRequest {
+                subscription_id,
+                clauses,
+            })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?)
+    }
+
     /// Subscribe to event messages of a World.
     pub async fn subscribe_event_messages(
         &mut self,
-        clause: Option<EntityKeysClause>,
+        clauses: Vec<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
-        let clause = clause.map(|c| c.into());
+        let clauses = clauses.into_iter().map(|c| c.into()).collect();
         let stream = self
             .inner
-            .subscribe_event_messages(SubscribeEntitiesRequest { clause })
+            .subscribe_event_messages(SubscribeEntitiesRequest { clauses })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -137,6 +156,24 @@ impl WorldClient {
             Some(entity) => entity.try_into().expect("must able to serialize"),
             None => Entity { hashed_keys: Felt::ZERO, models: vec![] },
         }))))
+    }
+
+    /// Update an event messages subscription.
+    pub async fn update_event_messages_subscription(
+        &mut self,
+        subscription_id: u64,
+        clauses: Vec<EntityKeysClause>,
+    ) -> Result<(), Error> {
+        let clauses = clauses.into_iter().map(|c| c.into()).collect();
+        Ok(self
+            .inner
+            .update_event_messages_subscription(UpdateEntitiesSubscriptionRequest {
+                subscription_id,
+                clauses,
+            })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?)
     }
 
     /// Subscribe to the events of a World.
