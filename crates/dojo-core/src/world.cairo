@@ -862,7 +862,8 @@ mod world {
                 ModelIndex::MemberId((
                     entity_id, member_id
                 )) => {
-                    self._write_model_member(model_selector, entity_id, member_id, values, layout)
+                    self._write_model_member(model_selector, entity_id, member_id, values, layout);
+                    // TODO: here we need a new event update and see how Torii can process that.
                 }
             }
         }

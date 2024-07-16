@@ -33,6 +33,7 @@ use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
+use torii_core::processors::store_update_record::StoreUpdateRecordProcessor;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
 use torii_core::types::Model;
@@ -170,6 +171,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(MetadataUpdateProcessor),
             Box::new(StoreDelRecordProcessor),
             Box::new(EventMessageProcessor),
+            Box::new(StoreUpdateRecordProcessor),
         ],
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
