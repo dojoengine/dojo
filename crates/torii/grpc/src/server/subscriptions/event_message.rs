@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 use rand::Rng;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::Felt;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver};
 use tokio::sync::RwLock;
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError};
@@ -117,7 +117,7 @@ impl Service {
             // matches the key pattern of the subscriber.
             if !sub.clauses.iter().any(|clause| match clause {
                 EntityKeysClause::HashedKeys(hashed_keys) => {
-                    return hashed_keys.is_empty() || hashed_keys.contains(&hashed);
+                    hashed_keys.is_empty() || hashed_keys.contains(&hashed)
                 }
                 EntityKeysClause::Keys(clause) => {
                     // if we have a model clause, then we need to check that the entity

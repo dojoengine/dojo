@@ -130,15 +130,14 @@ impl WorldClient {
     ) -> Result<(), Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
 
-        Ok(self
-            .inner
+        self.inner
             .update_entities_subscription(UpdateEntitiesSubscriptionRequest {
                 subscription_id,
                 clauses,
             })
             .await
             .map_err(Error::Grpc)
-            .map(|res| res.into_inner())?)
+            .map(|res| res.into_inner())
     }
 
     /// Subscribe to event messages of a World.
@@ -169,15 +168,14 @@ impl WorldClient {
         clauses: Vec<EntityKeysClause>,
     ) -> Result<(), Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
-        Ok(self
-            .inner
+        self.inner
             .update_event_messages_subscription(UpdateEntitiesSubscriptionRequest {
                 subscription_id,
                 clauses,
             })
             .await
             .map_err(Error::Grpc)
-            .map(|res| res.into_inner())?)
+            .map(|res| res.into_inner())
     }
 
     /// Subscribe to the events of a World.
