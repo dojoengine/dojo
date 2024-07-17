@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721239311424,
+  "lastUpdate": 1721259666979,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11941,6 +11941,42 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5586170,
             "range": "± 302549",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d8b5f9d4f8bdbfc61ba39b3d8366e6284a4c9c6",
+          "message": "feat: update subscription by subscription id & multiple clauses (#2176)\n\n* feat: determistic subscription id (by clause) so we can update subscroptions without id\r\n\r\n* feat: start refactoring to have an array of clauses for sub\r\n\r\n* refactor: check clauses\r\n\r\n* refactor: start refactoring to add sub id in stream\r\n\r\n* chore: update proto to include subscription id\r\n\r\n* feat: add update subscription rpc endpoint\r\n\r\n* feat: implement update subscriptions\r\n\r\n* feat: finalized torii server & wip client\r\n\r\n* feat: update torii client to add updating subs\r\n\r\n* fmt\r\n\r\n* refactor: apply suggestions\r\n\r\n* chore: clippy\r\n\r\n* fix: deadlock\r\n\r\n* type alias for sub id",
+          "timestamp": "2024-07-18T00:30:10+01:00",
+          "tree_id": "1aff9decaf6258685ef6cec0b00dfa7c80ab820c",
+          "url": "https://github.com/dojoengine/dojo/commit/5d8b5f9d4f8bdbfc61ba39b3d8366e6284a4c9c6"
+        },
+        "date": 1721259666308,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16658600,
+            "range": "± 189646",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5408896,
+            "range": "± 185308",
             "unit": "ns/iter"
           }
         ]
