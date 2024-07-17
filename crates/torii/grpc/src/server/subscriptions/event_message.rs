@@ -55,13 +55,16 @@ impl EventMessageManager {
     }
 
     pub async fn update_subscriber(&self, id: u64, clauses: Vec<EntityKeysClause>) {
-        self.subscribers.write().await.insert(
-            id,
-            EntitiesSubscriber {
-                clauses,
-                sender: self.subscribers.read().await[&id].sender.clone(),
-            },
-        );
+        let sender = {
+            let subscribers = self.subscribers.read().await;
+            if let Some(subscriber) = subscribers.get(&id) {
+                subscriber.sender.clone()
+            } else {
+                return; // Subscriber not found, exit early
+            }
+        };
+
+        self.subscribers.write().await.insert(id, EntitiesSubscriber { clauses, sender });
     }
 
     pub(super) async fn remove_subscriber(&self, id: u64) {
