@@ -583,7 +583,7 @@ impl Sql {
         }
     }
 
-    pub fn build_set_entity_queries_recursive(
+    fn build_set_entity_queries_recursive(
         &mut self,
         path: Vec<String>,
         event_id: &str,
