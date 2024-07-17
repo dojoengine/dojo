@@ -93,7 +93,6 @@ where
         let keys = db.get_entity_keys(entity_id, &tag).await?;
         let mut keys_and_unpacked = [keys, values].concat();
 
-        
         ty.deserialize(&mut keys_and_unpacked)?;
         db.set_model_member(entity_id, &schema.name(), &ty, block_timestamp).await
     }
