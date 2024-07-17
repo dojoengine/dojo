@@ -1,7 +1,7 @@
 use dojo::world::IWorldDispatcher;
 
 #[starknet::contract]
-mod base {
+pub mod base {
     use starknet::{ClassHash, get_caller_address};
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldProvider;

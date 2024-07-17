@@ -1,12 +1,11 @@
 use starknet::{ClassHash, ContractAddress};
-use array::{ArrayTrait, SpanTrait};
-use traits::{Into, TryInto};
-use integer::{U256BitAnd, U256BitOr, U256BitXor, upcast, downcast, BoundedInt};
-use option::OptionTrait;
+use core::array::{ArrayTrait, SpanTrait};
+use core::traits::{Into, TryInto};
+use core::option::OptionTrait;
 
 const PACKING_MAX_BITS: u8 = 251;
 
-fn pack(
+pub fn pack(
     ref packed: Array<felt252>, ref unpacked: Span<felt252>, offset: u32, ref layout: Span<u8>
 ) {
     assert((unpacked.len() - offset) >= layout.len(), 'mismatched input lens');
@@ -28,7 +27,7 @@ fn pack(
     packed.append(packing);
 }
 
-fn calculate_packed_size(ref layout: Span<u8>) -> usize {
+pub fn calculate_packed_size(ref layout: Span<u8>) -> usize {
     let mut size = 1;
     let mut partial = 0_usize;
 
@@ -49,7 +48,7 @@ fn calculate_packed_size(ref layout: Span<u8>) -> usize {
     size
 }
 
-fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: Span<u8>) {
+pub fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: Span<u8>) {
     let mut unpacking: felt252 = 0x0;
     let mut offset: u8 = PACKING_MAX_BITS;
     loop {
@@ -60,7 +59,7 @@ fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: S
                     Option::None(_) => {
                         // Layout value was successfully poped,
                         // we are then expecting an unpacked value.
-                        panic_with_felt252('Unpack inner failed');
+                        core::panic_with_felt252('Unpack inner failed');
                     }
                 }
             },
@@ -70,7 +69,7 @@ fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: S
 }
 
 /// Pack the proposal fields into a single felt252.
-fn pack_inner(
+pub fn pack_inner(
     self: @felt252,
     size: u8,
     ref packing: felt252,
@@ -104,7 +103,7 @@ fn pack_inner(
     packing_offset = packing_offset + size;
 }
 
-fn unpack_inner(
+pub fn unpack_inner(
     size: u8, ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8
 ) -> Option<felt252> {
     let remaining_bits: u8 = (PACKING_MAX_BITS - unpacking_offset).into();
@@ -136,9 +135,9 @@ fn unpack_inner(
     return result.try_into();
 }
 
-fn fpow(x: u256, n: u8) -> u256 {
-    if x.is_zero() {
-        panic_with_felt252('base 0 not allowed in fpow');
+pub fn fpow(x: u256, n: u8) -> u256 {
+    if x == 0 {
+        core::panic_with_felt252('base 0 not allowed in fpow');
     }
 
     let y = x;
@@ -155,19 +154,19 @@ fn fpow(x: u256, n: u8) -> u256 {
     return double;
 }
 
-fn shl(x: u256, n: u8) -> u256 {
+pub fn shl(x: u256, n: u8) -> u256 {
     x * pow2_const(n)
 }
 
-fn shr(x: u256, n: u8) -> u256 {
+pub fn shr(x: u256, n: u8) -> u256 {
     x / pow2_const(n)
 }
 
-fn pow2_const(n: u8) -> u256 {
+pub fn pow2_const(n: u8) -> u256 {
     *POW_2.span().at(n.into())
 }
 
-const POW_2: [
+pub const POW_2: [
     u256
     ; 256] = [
     1,

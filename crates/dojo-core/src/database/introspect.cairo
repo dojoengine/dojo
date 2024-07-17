@@ -1,11 +1,11 @@
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
-struct FieldLayout {
-    selector: felt252,
-    layout: Layout
+pub struct FieldLayout {
+    pub selector: felt252,
+    pub layout: Layout
 }
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
-enum Layout {
+pub enum Layout {
     Fixed: Span<u8>,
     Struct: Span<FieldLayout>,
     Tuple: Span<Layout>,
@@ -21,7 +21,7 @@ enum Layout {
 }
 
 #[derive(Copy, Drop, Serde)]
-enum Ty {
+pub enum Ty {
     Primitive: felt252,
     Struct: Struct,
     Enum: Enum,
@@ -34,33 +34,33 @@ enum Ty {
 }
 
 #[derive(Copy, Drop, Serde)]
-struct Struct {
-    name: felt252,
-    attrs: Span<felt252>,
-    children: Span<Member>
+pub struct Struct {
+    pub name: felt252,
+    pub attrs: Span<felt252>,
+    pub children: Span<Member>
 }
 
 #[derive(Copy, Drop, Serde)]
-struct Enum {
-    name: felt252,
-    attrs: Span<felt252>,
-    children: Span<(felt252, Ty)>
+pub struct Enum {
+    pub name: felt252,
+    pub attrs: Span<felt252>,
+    pub children: Span<(felt252, Ty)>
 }
 
 #[derive(Copy, Drop, Serde)]
-struct Member {
-    name: felt252,
-    attrs: Span<felt252>,
-    ty: Ty
+pub struct Member {
+    pub name: felt252,
+    pub attrs: Span<felt252>,
+    pub ty: Ty
 }
 
-trait Introspect<T> {
+pub trait Introspect<T> {
     fn size() -> Option<usize>;
     fn layout() -> Layout;
     fn ty() -> Ty;
 }
 
-impl Introspect_felt252 of Introspect<felt252> {
+pub impl Introspect_felt252 of Introspect<felt252> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -72,7 +72,7 @@ impl Introspect_felt252 of Introspect<felt252> {
     }
 }
 
-impl Introspect_bool of Introspect<bool> {
+pub impl Introspect_bool of Introspect<bool> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -84,7 +84,7 @@ impl Introspect_bool of Introspect<bool> {
     }
 }
 
-impl Introspect_u8 of Introspect<u8> {
+pub impl Introspect_u8 of Introspect<u8> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -96,7 +96,7 @@ impl Introspect_u8 of Introspect<u8> {
     }
 }
 
-impl Introspect_u16 of Introspect<u16> {
+pub impl Introspect_u16 of Introspect<u16> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -108,7 +108,7 @@ impl Introspect_u16 of Introspect<u16> {
     }
 }
 
-impl Introspect_u32 of Introspect<u32> {
+pub impl Introspect_u32 of Introspect<u32> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -120,7 +120,7 @@ impl Introspect_u32 of Introspect<u32> {
     }
 }
 
-impl Introspect_u64 of Introspect<u64> {
+pub impl Introspect_u64 of Introspect<u64> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -132,7 +132,7 @@ impl Introspect_u64 of Introspect<u64> {
     }
 }
 
-impl Introspect_u128 of Introspect<u128> {
+pub impl Introspect_u128 of Introspect<u128> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -144,7 +144,7 @@ impl Introspect_u128 of Introspect<u128> {
     }
 }
 
-impl Introspect_u256 of Introspect<u256> {
+pub impl Introspect_u256 of Introspect<u256> {
     fn size() -> Option<usize> {
         Option::Some(2)
     }
@@ -156,7 +156,7 @@ impl Introspect_u256 of Introspect<u256> {
     }
 }
 
-impl Introspect_i8 of Introspect<i8> {
+pub impl Introspect_i8 of Introspect<i8> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -168,7 +168,7 @@ impl Introspect_i8 of Introspect<i8> {
     }
 }
 
-impl Introspect_i16 of Introspect<i16> {
+pub impl Introspect_i16 of Introspect<i16> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -180,7 +180,7 @@ impl Introspect_i16 of Introspect<i16> {
     }
 }
 
-impl Introspect_i32 of Introspect<i32> {
+pub impl Introspect_i32 of Introspect<i32> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -192,7 +192,7 @@ impl Introspect_i32 of Introspect<i32> {
     }
 }
 
-impl Introspect_i64 of Introspect<i64> {
+pub impl Introspect_i64 of Introspect<i64> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -204,7 +204,7 @@ impl Introspect_i64 of Introspect<i64> {
     }
 }
 
-impl Introspect_i128 of Introspect<i128> {
+pub impl Introspect_i128 of Introspect<i128> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -216,7 +216,7 @@ impl Introspect_i128 of Introspect<i128> {
     }
 }
 
-impl Introspect_address of Introspect<starknet::ContractAddress> {
+pub impl Introspect_address of Introspect<starknet::ContractAddress> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -228,7 +228,7 @@ impl Introspect_address of Introspect<starknet::ContractAddress> {
     }
 }
 
-impl Introspect_classhash of Introspect<starknet::ClassHash> {
+pub impl Introspect_classhash of Introspect<starknet::ClassHash> {
     fn size() -> Option<usize> {
         Option::Some(1)
     }
@@ -240,7 +240,7 @@ impl Introspect_classhash of Introspect<starknet::ClassHash> {
     }
 }
 
-impl Introspect_bytearray of Introspect<ByteArray> {
+pub impl Introspect_bytearray of Introspect<ByteArray> {
     fn size() -> Option<usize> {
         Option::None
     }
@@ -252,7 +252,7 @@ impl Introspect_bytearray of Introspect<ByteArray> {
     }
 }
 
-impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
+pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
     fn size() -> Option<usize> {
         Option::None
     }
@@ -283,7 +283,7 @@ impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
     }
 }
 
-impl Introspect_array<T, +Introspect<T>> of Introspect<Array<T>> {
+pub impl Introspect_array<T, +Introspect<T>> of Introspect<Array<T>> {
     fn size() -> Option<usize> {
         Option::None
     }
@@ -296,7 +296,7 @@ impl Introspect_array<T, +Introspect<T>> of Introspect<Array<T>> {
     }
 }
 
-impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
+pub impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
     fn size() -> Option<usize> {
         Option::None
     }

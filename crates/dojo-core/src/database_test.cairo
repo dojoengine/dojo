@@ -1,12 +1,12 @@
 use core::result::ResultTrait;
-use array::ArrayTrait;
-use option::OptionTrait;
-use serde::Serde;
-use array::SpanTrait;
-use traits::{Into, TryInto};
+use core::array::ArrayTrait;
+use core::option::OptionTrait;
+use core::serde::Serde;
+use core::array::SpanTrait;
+use core::traits::{Into, TryInto};
 
 use starknet::syscalls::deploy_syscall;
-use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
+use starknet::class_hash::ClassHash;
 use dojo::world::{IWorldDispatcher};
 use dojo::database::{get, set, MAX_ARRAY_LENGTH};
 use dojo::test_utils::assert_array;

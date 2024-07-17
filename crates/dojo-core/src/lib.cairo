@@ -1,22 +1,22 @@
-mod base;
+pub mod base;
 #[cfg(test)]
 mod base_test;
-mod config;
-mod database;
+pub mod config;
+pub mod database;
 #[cfg(test)]
 mod database_test;
-mod interfaces;
-mod model;
+pub mod interfaces;
+pub mod model;
 #[cfg(test)]
 mod model_test;
-mod contract;
-mod packing;
+pub mod contract;
+pub mod packing;
 #[cfg(test)]
 mod packing_test;
-mod world;
+pub mod world;
 #[cfg(test)]
 mod world_test;
-mod utils;
+pub mod utils;
 #[cfg(test)]
 mod utils_test;
 
@@ -30,10 +30,10 @@ mod utils_test;
 // Since `test_utils` is using `TEST_CLASS_HASH` to factorize some deployment
 // core, we place it under the test target manually.
 #[cfg(target: "test")]
-mod test_utils;
+pub mod test_utils;
 
 #[cfg(test)]
 mod benchmarks;
 
-mod components;
-mod resource_metadata;
+pub mod components;
+pub mod resource_metadata;

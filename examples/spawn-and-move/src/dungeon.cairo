@@ -1,12 +1,12 @@
 #[dojo::interface]
-trait IDungeon {
+pub trait IDungeon {
     fn enter();
 }
 
 #[dojo::contract]
-mod dungeon {
+pub mod dungeon {
     #[abi(embed_v0)]
-    impl IDungeonImpl of super::IDungeon<ContractState> {
+    pub impl IDungeonImpl of super::IDungeon<ContractState> {
         fn enter() {}
     }
 }

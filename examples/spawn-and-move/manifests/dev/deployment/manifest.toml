@@ -1,10 +1,10 @@
 [world]
 kind = "WorldContract"
-class_hash = "0x26a8f65e0b0ba2a6d2f9e93d4f72f75eabebb853ea7413e134b3902ea352557"
-original_class_hash = "0x26a8f65e0b0ba2a6d2f9e93d4f72f75eabebb853ea7413e134b3902ea352557"
+class_hash = "0x71819175fb1971b65368cdbc486b7044ea1a15fe499296181c574e90d91adcd"
+original_class_hash = "0x71819175fb1971b65368cdbc486b7044ea1a15fe499296181c574e90d91adcd"
 abi = "manifests/dev/deployment/abis/dojo-world.json"
-address = "0x5377ecb8b7b6ce3f17daf9064a5f5ee7f6642c3e72579b45478a828007db355"
-transaction_hash = "0x59c745b80871acdab7ad1c29703cac9aa949f4326b32037943512adc0a19ab2"
+address = "0x62c5e1e2ceab297dfaca3ef17ca6549635272f363bd5373c888bbacdc3d8548"
+transaction_hash = "0x30d768fa29fd2ba80734946a339118c1adfea82629458b054a4d4a35103db47"
 block_number = 3
 seed = "dojo_examples"
 manifest_name = "dojo-world"
@@ -23,9 +23,9 @@ manifest_name = "dojo-base"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x5c92c8995272a6ae073392c6878fe80cd71ae0be4931bce75f3dbfe24c208a8"
-class_hash = "0x676eed1c5c6c5f1ddf488914d137e07761d1a320df8a50fbf75ecf209624a33"
-original_class_hash = "0x676eed1c5c6c5f1ddf488914d137e07761d1a320df8a50fbf75ecf209624a33"
+address = "0x604bd94012befb403ad70472bcbae1504211b17c804373ea835aec77eb1ee1"
+class_hash = "0xb3f81618df8f1170864da1c68f565aafe192c30f9b73436af4823b293a7ea5"
+original_class_hash = "0xb3f81618df8f1170864da1c68f565aafe192c30f9b73436af4823b293a7ea5"
 base_class_hash = "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-actions-40b6994c.json"
 reads = []
@@ -40,7 +40,7 @@ manifest_name = "dojo_examples-actions-40b6994c"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x44e1b43ee34f816374612ae2df4a668e76a1aa723de8d7b67166e10a7225112"
+address = "0x7e7462000391d3084e3eabd1c28f027c06ad683c787cd8173ca33d906e9a082"
 class_hash = "0x14b3096b82a761f63dd47277c2b5ac18925dea43586418483939a2f1f57f674"
 original_class_hash = "0x14b3096b82a761f63dd47277c2b5ac18925dea43586418483939a2f1f57f674"
 base_class_hash = "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4"
@@ -54,7 +54,7 @@ manifest_name = "dojo_examples-dungeon-6620e0e6"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x6840cf5bebab9c134ddc4d34f6b021684610d7b83d663fc46e2e10d3569ea15"
+address = "0xcc6decf700ca5870865e95307c74cb531728f6d50670449fa33518e4a9c3c8"
 class_hash = "0x761d18a3557d98b3962ebb2c9ddae89ad586ce81de7e86c5fd1e1b4f9d0028"
 original_class_hash = "0x761d18a3557d98b3962ebb2c9ddae89ad586ce81de7e86c5fd1e1b4f9d0028"
 base_class_hash = "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4"
@@ -68,7 +68,7 @@ manifest_name = "dojo_examples-mock_token-31599eb2"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x512bcb4058b044f689269d8a1c23e653c04baee2029f7e5d3f4ec053e6c5c91"
+address = "0x6cf6ece03c80fcddd4107270a52eab493534b8ccf8346ff17d451362a4e99d0"
 class_hash = "0x479bfb12dcba5398d77303e7a665fc3fedb16f2d7f9cb1f5d7e2beb3b7e2ba7"
 original_class_hash = "0x479bfb12dcba5398d77303e7a665fc3fedb16f2d7f9cb1f5d7e2beb3b7e2ba7"
 base_class_hash = "0x26a4f5d2d9638877a2648297339275df5eaab0adb3cdf0010887c2dbf2be4"

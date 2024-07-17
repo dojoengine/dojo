@@ -1,5 +1,5 @@
 #[dojo::contract]
-mod mock_token {
+pub mod mock_token {
     use dojo_examples::models::{MockToken};
     use starknet::{ContractAddress, get_caller_address};
 

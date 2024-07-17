@@ -7,39 +7,43 @@ use dojo::world::{IWorldDispatcherTrait, ModelIndex};
 use dojo::model::Model;
 use dojo::utils;
 
-fn initial_address() -> starknet::ContractAddress {
+pub fn initial_address() -> starknet::ContractAddress {
     starknet::contract_address_const::<0>()
 }
 
-fn initial_class_hash() -> starknet::ClassHash {
-    starknet::class_hash_const::<
+pub fn initial_class_hash() -> starknet::ClassHash {
+    starknet::class_hash::class_hash_const::<
         0x03f75587469e8101729b3b02a46150a3d99315bc9c5026d64f2e8a061e413255
     >()
 }
 
 #[derive(Drop, Serde, PartialEq, Clone, Debug)]
-struct ResourceMetadata {
+pub struct ResourceMetadata {
     // #[key]
-    resource_id: felt252,
-    metadata_uri: ByteArray,
+    pub resource_id: felt252,
+    pub metadata_uri: ByteArray,
 }
 
-impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
-    fn get(world: dojo::world::IWorldDispatcher, keys: Span<felt252>) -> ResourceMetadata {
-        let values = world.entity(Self::selector(), ModelIndex::Keys(keys), Self::layout());
-        let mut serialized = core::array::ArrayTrait::new();
-        core::array::serialize_array_helper(keys, ref serialized);
-        core::array::serialize_array_helper(values, ref serialized);
-        let mut serialized = core::array::ArrayTrait::span(@serialized);
-        let entity = core::serde::Serde::<ResourceMetadata>::deserialize(ref serialized);
-
-        if core::option::OptionTrait::<ResourceMetadata>::is_none(@entity) {
-            panic!(
-                "Model `ResourceMetadata`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
-            );
+#[generate_trait]
+pub impl ResourceMetadataImpl of ResourceMetadataTrait {
+    fn from_values(resource_id: felt252, ref values: Span<felt252>) -> ResourceMetadata {
+        let metadata_uri = core::serde::Serde::<ByteArray>::deserialize(ref values);
+        if metadata_uri.is_none() {
+            panic!("Model `ResourceMetadata`: metadata_uri deserialization failed.");
         }
 
-        core::option::OptionTrait::<ResourceMetadata>::unwrap(entity)
+        ResourceMetadata { resource_id, metadata_uri: metadata_uri.unwrap() }
+    }
+}
+
+pub impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
+    fn get(world: dojo::world::IWorldDispatcher, keys: Span<felt252>) -> ResourceMetadata {
+        if keys.len() != 1 {
+            panic!("Model `ResourceMetadata`: bad keys length.");
+        };
+
+        let mut values = world.entity(Self::selector(), ModelIndex::Keys(keys), Self::layout());
+        ResourceMetadataTrait::from_values(*keys.at(0), ref values)
     }
 
     fn set(self: @ResourceMetadata, world: dojo::world::IWorldDispatcher,) {
@@ -63,7 +67,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
                         Self::selector(), ModelIndex::MemberId((entity_id, member_id)), field_layout
                     )
             },
-            Option::None => panic_with_felt252('bad member id')
+            Option::None => core::panic_with_felt252('bad member id')
         }
     }
 
@@ -83,7 +87,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
                         field_layout
                     )
             },
-            Option::None => panic_with_felt252('bad member id')
+            Option::None => core::panic_with_felt252('bad member id')
         }
     }
 
@@ -107,7 +111,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        poseidon::poseidon_hash_span(array![Self::namespace_hash(), Self::name_hash()].span())
+        core::poseidon::poseidon_hash_span(array![Self::namespace_hash(), Self::name_hash()].span())
     }
 
     #[inline(always)]
@@ -125,7 +129,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     #[inline(always)]
     fn entity_id(self: @ResourceMetadata) -> felt252 {
-        poseidon::poseidon_hash_span(self.keys())
+        core::poseidon::poseidon_hash_span(self.keys())
     }
 
     #[inline(always)]
@@ -158,7 +162,9 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
     }
 }
 
-impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<ResourceMetadata<>> {
+pub impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<
+    ResourceMetadata<>
+> {
     #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
@@ -202,7 +208,7 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
 }
 
 #[starknet::contract]
-mod resource_metadata {
+pub mod resource_metadata {
     use super::ResourceMetadata;
     use super::ResourceMetadataModel;
 

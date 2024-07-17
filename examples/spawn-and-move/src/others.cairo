@@ -1,5 +1,5 @@
 #[dojo::contract]
-mod others {
+pub mod others {
     use starknet::{ContractAddress, ClassHash, get_caller_address};
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
