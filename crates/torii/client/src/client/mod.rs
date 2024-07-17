@@ -141,21 +141,43 @@ impl Client {
     /// A direct stream to grpc subscribe entities
     pub async fn on_entity_updated(
         &self,
-        clause: Option<EntityKeysClause>,
+        clauses: Vec<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_entities(clause).await?;
+        let stream = grpc_client.subscribe_entities(clauses).await?;
         Ok(stream)
+    }
+
+    /// Update the entities subscription
+    pub async fn update_entity_subscription(
+        &self,
+        subscription_id: u64,
+        clauses: Vec<EntityKeysClause>,
+    ) -> Result<(), Error> {
+        let mut grpc_client = self.inner.write().await;
+        grpc_client.update_entities_subscription(subscription_id, clauses).await?;
+        Ok(())
     }
 
     /// A direct stream to grpc subscribe event messages
     pub async fn on_event_message_updated(
         &self,
-        clause: Option<EntityKeysClause>,
+        clauses: Vec<EntityKeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_event_messages(clause).await?;
+        let stream = grpc_client.subscribe_event_messages(clauses).await?;
         Ok(stream)
+    }
+
+    /// Update the event messages subscription
+    pub async fn update_event_message_subscription(
+        &self,
+        subscription_id: u64,
+        clauses: Vec<EntityKeysClause>,
+    ) -> Result<(), Error> {
+        let mut grpc_client = self.inner.write().await;
+        grpc_client.update_event_messages_subscription(subscription_id, clauses).await?;
+        Ok(())
     }
 
     pub async fn on_starknet_event(
