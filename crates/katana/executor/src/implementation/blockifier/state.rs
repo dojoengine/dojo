@@ -130,13 +130,16 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<katana_primitives::class::CompiledClassHash>> {
-        let Ok(hash) = self.0.lock().inner.get_compiled_class_hash(ClassHash(hash)) else {
+        let Ok(hash) = dbg!(self.0.lock().inner.get_compiled_class_hash(ClassHash(hash))) else {
             return Ok(None);
         };
 
-        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
-
     fn sierra_class(
         &self,
         hash: katana_primitives::class::ClassHash,
@@ -159,7 +162,11 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 
     fn nonce(
