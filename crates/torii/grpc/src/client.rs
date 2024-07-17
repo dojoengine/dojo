@@ -239,9 +239,10 @@ impl Stream for ModelDiffsStreaming {
     }
 }
 
+type SubscriptionId = u64;
 type EntityMappedStream = MapOk<
     tonic::Streaming<SubscribeEntityResponse>,
-    Box<dyn Fn(SubscribeEntityResponse) -> (u64, Entity) + Send>,
+    Box<dyn Fn(SubscribeEntityResponse) -> (SubscriptionId, Entity) + Send>,
 >;
 
 #[derive(Debug)]
