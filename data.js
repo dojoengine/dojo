@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721227603376,
+  "lastUpdate": 1721227710835,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11875,6 +11875,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16792579,
             "range": "± 190774",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "efffe5ca768a761708b70c16a8af2a14e77a11d7",
+          "message": "move to edition 2023_11 (#2179)\n\n* move to edition 2023_11\r\n\r\n* add edition to Scarb.toml of Torii tests",
+          "timestamp": "2024-07-17T08:40:09-06:00",
+          "tree_id": "7e4ede94f3e6842b8f8b02136cfed7bc39faa152",
+          "url": "https://github.com/dojoengine/dojo/commit/efffe5ca768a761708b70c16a8af2a14e77a11d7"
+        },
+        "date": 1721227710097,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16730172,
+            "range": "± 226693",
             "unit": "ns/iter"
           }
         ]
