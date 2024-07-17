@@ -271,6 +271,29 @@ impl Sql {
         Ok(())
     }
 
+    pub async fn set_model_member(
+        &mut self,
+        entity_id: Felt,
+        model_tag: &str,
+        member: &Ty,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        let entity_id = format!("{:#x}", entity_id);
+        let path = vec![model_tag.to_string()];
+        // update model member
+        self.build_set_entity_queries_recursive(
+            path,
+            &entity_id,
+            (&entity_id, false),
+            member,
+            block_timestamp,
+            &vec![],
+        );
+        self.query_queue.execute_all().await?;
+
+        Ok(())
+    }
+
     pub async fn delete_entity(&mut self, entity_id: Felt, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
         let path = vec![entity.name()];
@@ -556,7 +579,7 @@ impl Sql {
         }
     }
 
-    fn build_set_entity_queries_recursive(
+    pub fn build_set_entity_queries_recursive(
         &mut self,
         path: Vec<String>,
         event_id: &str,
@@ -658,7 +681,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;

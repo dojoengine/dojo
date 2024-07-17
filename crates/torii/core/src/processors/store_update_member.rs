@@ -1,10 +1,11 @@
-use anyhow::{Context, Error, Ok, Result};
+use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
 use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tracing::info;
 
@@ -13,6 +14,8 @@ use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
 use crate::sql::Sql;
 
 pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_record";
+
+const MEMBER_INDEX: usize = 2;
 
 #[derive(Default, Debug)]
 pub struct StoreUpdateMemberProcessor;
@@ -46,11 +49,12 @@ where
         _block_number: u64,
         block_timestamp: u64,
         _transaction_receipt: &TransactionReceiptWithBlockInfo,
-        event_id: &str,
+        _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
         let selector = event.data[MODEL_INDEX];
         let entity_id = event.data[ENTITY_ID_INDEX];
+        let member_selector = event.data[MEMBER_INDEX];
 
         let model = db.model(selector).await?;
 
@@ -61,7 +65,7 @@ where
             "Store update record.",
         );
 
-        let values_start = ENTITY_ID_INDEX + 1;
+        let values_start = MEMBER_INDEX + 1;
         let values_end: usize =
             values_start + event.data[values_start].to_usize().context("invalid usize")?;
 
@@ -75,10 +79,21 @@ where
         let keys = db.get_entity_keys(entity_id, &tag).await?;
         let mut keys_and_unpacked = [keys, values].concat();
 
-        let mut entity = model.schema().await?;
-        entity.deserialize(&mut keys_and_unpacked)?;
+        let schema = model.schema().await?;
+        let mut ty = schema
+            .as_struct()
+            .expect("model schema must be a struct")
+            .children
+            .iter()
+            .find(|c| {
+                get_selector_from_name(&c.name).expect("invalid selector for member name")
+                    == member_selector
+            })
+            .context("member not found")?
+            .ty
+            .clone();
+        ty.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_entity(entity, event_id, block_timestamp).await?;
-        Ok(())
+        db.set_model_member(entity_id, &schema.name(), &ty, block_timestamp).await
     }
 }
