@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721222292783,
+  "lastUpdate": 1721227603376,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11845,6 +11845,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17623546,
             "range": "± 334646",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "60488569+tcoratger@users.noreply.github.com",
+            "name": "Thomas Coratger",
+            "username": "tcoratger"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c10a0b8434e099b882a452f13a587a5f547dc412",
+          "message": "rm useless alloy patches (#2183)\n\n* rm useless alloy patches\r\n\r\n* small fix",
+          "timestamp": "2024-07-17T08:37:32-06:00",
+          "tree_id": "d15a22fa12cd5c60172d2c778b51a44e16fa4f3c",
+          "url": "https://github.com/dojoengine/dojo/commit/c10a0b8434e099b882a452f13a587a5f547dc412"
+        },
+        "date": 1721227602560,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16792579,
+            "range": "± 190774",
             "unit": "ns/iter"
           }
         ]
