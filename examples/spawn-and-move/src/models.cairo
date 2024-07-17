@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
-#[derive(Serde, Copy, Drop, Introspect, PartialEq)]
-enum Direction {
+#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug)]
+pub enum Direction {
     None,
     Left,
     Right,
@@ -23,78 +23,78 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
 
 #[derive(Drop, Serde)]
 #[dojo::model]
-struct Message {
+pub struct Message {
     #[key]
-    identity: ContractAddress,
+    pub identity: ContractAddress,
     #[key]
-    channel: felt252,
-    message: ByteArray,
+    pub channel: felt252,
+    pub message: ByteArray,
     #[key]
-    salt: felt252
+    pub salt: felt252
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
-struct Moves {
+pub struct Moves {
     #[key]
-    player: ContractAddress,
-    remaining: u8,
-    last_direction: Direction
+    pub player: ContractAddress,
+    pub remaining: u8,
+    pub last_direction: Direction
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
-struct MockToken {
+pub struct MockToken {
     #[key]
-    account: ContractAddress,
-    amount: u128,
+    pub account: ContractAddress,
+    pub amount: u128,
 }
 
-#[derive(Copy, Drop, Serde, IntrospectPacked)]
-struct Vec2 {
-    x: u32,
-    y: u32
+#[derive(Copy, Drop, Serde, IntrospectPacked, Debug)]
+pub struct Vec2 {
+    pub x: u32,
+    pub y: u32
 }
 
 // If `Vec2` wasn't packed, the `Position` would be invalid,
 // and a runtime error would be thrown.
 // Any field that is a custom type into a `IntrospectPacked` type
 // must be packed.
-#[derive(Copy, Drop, Serde, IntrospectPacked)]
+#[derive(Copy, Drop, Serde, IntrospectPacked, Debug)]
 #[dojo::model]
-struct Position {
+pub struct Position {
     #[key]
-    player: ContractAddress,
-    vec: Vec2,
+    pub player: ContractAddress,
+    pub vec: Vec2,
 }
 
 // Every field inside a model must derive `Introspect` or `IntrospectPacked`.
 // `IntrospectPacked` can also be used into models that are only using `Introspect`.
 #[derive(Copy, Drop, Serde, Introspect)]
-struct PlayerItem {
-    item_id: u32,
-    quantity: u32,
-    score: i32,
+pub struct PlayerItem {
+    pub item_id: u32,
+    pub quantity: u32,
+    pub score: i32,
 }
 
 #[derive(Drop, Serde)]
 #[dojo::model]
-struct PlayerConfig {
+pub struct PlayerConfig {
     #[key]
-    player: ContractAddress,
-    name: ByteArray,
-    items: Array<PlayerItem>,
-    favorite_item: Option<u32>,
+    pub player: ContractAddress,
+    pub name: ByteArray,
+    pub items: Array<PlayerItem>,
+    pub favorite_item: Option<u32>,
 }
 
 #[derive(Drop, Serde)]
 #[dojo::model]
-struct ServerProfile {
+pub struct ServerProfile {
     #[key]
-    player: ContractAddress,
+    pub player: ContractAddress,
     #[key]
-    server_id: u32,
-    name: ByteArray,
+    pub server_id: u32,
+    pub name: ByteArray,
 }
 
 trait Vec2Trait {

@@ -1,2 +1,2 @@
-mod component;
-mod interface;
+pub mod component;
+pub mod interface;

@@ -1,12 +1,10 @@
-use array::{ArrayTrait, SpanTrait};
-use starknet::{ClassHash, ContractAddress, Felt252TryIntoContractAddress, Felt252TryIntoClassHash};
+use core::array::{ArrayTrait, SpanTrait};
+use starknet::{ClassHash, ContractAddress};
 use dojo::packing::{
     shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const
 };
-use integer::U256BitAnd;
-use option::OptionTrait;
-use debug::PrintTrait;
-use traits::{Into, TryInto};
+use core::option::OptionTrait;
+use core::traits::{Into, TryInto};
 use dojo::database::introspect::Introspect;
 
 #[test]
@@ -46,7 +44,7 @@ fn test_bit_shift() {
 #[test]
 #[available_gas(9000000)]
 fn test_pack_unpack_single() {
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@18, 251, ref packing, ref offset, ref packed);
@@ -65,7 +63,7 @@ fn test_pack_unpack_single() {
 #[test]
 #[available_gas(9000000)]
 fn test_pack_unpack_felt252_u128() {
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@1337, 128, ref packing, ref offset, ref packed);
@@ -88,7 +86,7 @@ fn test_pack_unpack_felt252_u128() {
 #[test]
 #[available_gas(100000000)]
 fn test_pack_multiple() {
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
 
@@ -114,7 +112,7 @@ fn test_pack_multiple() {
 #[test]
 #[available_gas(500000000)]
 fn test_pack_unpack_multiple() {
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
 
@@ -157,7 +155,7 @@ fn test_pack_unpack_multiple() {
 #[test]
 #[available_gas(500000000)]
 fn test_pack_unpack_types() {
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
 
@@ -169,9 +167,9 @@ fn test_pack_unpack_types() {
     pack_inner(@58, 251, ref packing, ref offset, ref packed);
     pack_inner(@false.into(), 1, ref packing, ref offset, ref packed);
 
-    let contract_address = Felt252TryIntoContractAddress::try_into(3).unwrap();
+    let contract_address = starknet::contract_address_const::<3>();
     pack_inner(@contract_address.into(), 251, ref packing, ref offset, ref packed);
-    let class_hash = Felt252TryIntoClassHash::try_into(1337).unwrap();
+    let class_hash = starknet::class_hash::class_hash_const::<1337>();
     pack_inner(@class_hash.into(), 251, ref packing, ref offset, ref packed);
 
     packed.append(packing);
@@ -243,7 +241,7 @@ fn test_pack_unpack_types() {
 #[available_gas(9000000)]
 fn test_inner_pack_unpack_u256_single() {
     let input: u256 = 2000;
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@input.low.into(), 128, ref packing, ref offset, ref packed);
@@ -278,7 +276,7 @@ fn test_pack_unpack_u256_single() {
 
     let mut unpacked_span = unpacked.span();
 
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     pack(ref packed, ref unpacked_span, 0, ref layout_span);
 
     let mut layout = ArrayTrait::new();
@@ -286,11 +284,11 @@ fn test_pack_unpack_u256_single() {
     layout.append(128);
     let mut layout_span = layout.span();
 
-    let mut unpacked = array::ArrayTrait::new();
+    let mut unpacked = core::array::ArrayTrait::new();
     let mut packed_span = packed.span();
     unpack(ref unpacked, ref packed_span, ref layout_span);
     let mut unpacked_span = unpacked.span();
-    let output = serde::Serde::<u256>::deserialize(ref unpacked_span).unwrap();
+    let output = core::serde::Serde::<u256>::deserialize(ref unpacked_span).unwrap();
     assert(input == output, 'invalid output');
 }
 
@@ -298,7 +296,7 @@ fn test_pack_unpack_u256_single() {
 #[available_gas(9000000)]
 fn test_pack_unpack_max_felt252() {
     let MAX: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@MAX, 251, ref packing, ref offset, ref packed);
@@ -324,18 +322,18 @@ fn test_pack_unpack_felt252_single() {
 
     let mut unpacked_span = unpacked.span();
 
-    let mut packed = array::ArrayTrait::new();
+    let mut packed = core::array::ArrayTrait::new();
     pack(ref packed, ref unpacked_span, 0, ref layout_span);
 
     let mut layout = ArrayTrait::new();
     layout.append(251);
     let mut layout_span = layout.span();
 
-    let mut unpacked = array::ArrayTrait::new();
+    let mut unpacked = core::array::ArrayTrait::new();
     let mut packed_span = packed.span();
     unpack(ref unpacked, ref packed_span, ref layout_span);
     let mut unpacked_span = unpacked.span();
-    let output = serde::Serde::<felt252>::deserialize(ref unpacked_span).unwrap();
+    let output = core::serde::Serde::<felt252>::deserialize(ref unpacked_span).unwrap();
     assert(input == output, 'invalid output');
 }
 

@@ -1,7 +1,6 @@
-use debug::PrintTrait;
-use option::OptionTrait;
+use core::option::OptionTrait;
 use starknet::ClassHash;
-use traits::TryInto;
+use core::traits::TryInto;
 
 use dojo::base::base;
 use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
@@ -10,14 +9,14 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 
 #[starknet::contract]
-mod contract_upgrade {
+pub mod contract_upgrade {
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, IWorldProvider};
 
     #[storage]
     struct Storage {}
 
     #[starknet::interface]
-    trait IQuantumLeap<TState> {
+    pub trait IQuantumLeap<TState> {
         fn plz_more_tps(self: @TState) -> felt252;
     }
 
@@ -25,14 +24,14 @@ mod contract_upgrade {
     fn constructor(ref self: ContractState) {}
 
     #[abi(embed_v0)]
-    impl QuantumLeap of IQuantumLeap<ContractState> {
+    pub impl QuantumLeap of IQuantumLeap<ContractState> {
         fn plz_more_tps(self: @ContractState) -> felt252 {
             'daddy'
         }
     }
 
     #[abi(embed_v0)]
-    impl WorldProviderImpl of IWorldProvider<ContractState> {
+    pub impl WorldProviderImpl of IWorldProvider<ContractState> {
         fn world(self: @ContractState) -> IWorldDispatcher {
             IWorldDispatcher { contract_address: starknet::contract_address_const::<'world'>() }
         }
@@ -40,7 +39,7 @@ mod contract_upgrade {
 }
 
 #[starknet::contract]
-mod contract_invalid_upgrade {
+pub mod contract_invalid_upgrade {
     #[storage]
     struct Storage {}
 }

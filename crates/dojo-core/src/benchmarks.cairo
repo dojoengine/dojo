@@ -1,8 +1,7 @@
 use core::result::ResultTrait;
-use array::ArrayTrait;
-use array::SpanTrait;
-use debug::PrintTrait;
-use poseidon::poseidon_hash_span;
+use core::array::ArrayTrait;
+use core::array::SpanTrait;
+use core::poseidon::poseidon_hash_span;
 use starknet::SyscallResultTrait;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 
@@ -10,13 +9,13 @@ use dojo::database;
 use dojo::database::storage;
 use dojo::model::Model;
 use dojo::world_test::Foo;
-use dojo::test_utils::GasCounterImpl;
+use dojo::test_utils::GasCounterTrait;
 use dojo::database::introspect::{Introspect, Layout};
 
 #[test]
 #[available_gas(1000000000)]
 fn bench_reference_offset() {
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     gas.end("bench empty");
 }
 
@@ -25,11 +24,11 @@ fn bench_reference_offset() {
 fn bench_storage_single() {
     let keys = array!['database_test', '42'].span();
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     storage::set(0, keys, 420);
     gas.end("storage set");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let res = storage::get(0, keys);
     gas.end("storage get");
 
@@ -43,11 +42,11 @@ fn bench_storage_many() {
     let values = array![1, 2].span();
     let layout = array![251, 251].span();
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     storage::set_many(0, keys, values, 0, layout).unwrap();
     gas.end("storage set_many");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let res = storage::get_many(0, keys, layout).unwrap();
     gas.end("storage get_many");
 
@@ -59,18 +58,20 @@ fn bench_storage_many() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_native_storage() {
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let keys = array![0x1337].span();
-    let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
-    let address = starknet::storage_address_from_base(base);
+    let base = starknet::storage_access::storage_base_address_from_felt252(
+        poseidon_hash_span(keys)
+    );
+    let address = starknet::storage_access::storage_address_from_base(base);
     gas.end("native prep");
 
-    let gas = GasCounterImpl::start();
-    starknet::storage_write_syscall(0, address, 42).unwrap_syscall();
+    let gas = GasCounterTrait::start();
+    starknet::syscalls::storage_write_syscall(0, address, 42).unwrap_syscall();
     gas.end("native write");
 
-    let gas = GasCounterImpl::start();
-    let value = starknet::storage_read_syscall(0, address).unwrap_syscall();
+    let gas = GasCounterTrait::start();
+    let value = starknet::syscalls::storage_read_syscall(0, address).unwrap_syscall();
     gas.end("native read");
 
     assert(value == 42, 'read invalid');
@@ -79,18 +80,20 @@ fn bench_native_storage() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_native_storage_offset() {
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let keys = array![0x1337].span();
-    let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
-    let address = starknet::storage_address_from_base_and_offset(base, 42);
+    let base = starknet::storage_access::storage_base_address_from_felt252(
+        poseidon_hash_span(keys)
+    );
+    let address = starknet::storage_access::storage_address_from_base_and_offset(base, 42);
     gas.end("native prep of");
 
-    let gas = GasCounterImpl::start();
-    starknet::storage_write_syscall(0, address, 42).unwrap_syscall();
+    let gas = GasCounterTrait::start();
+    starknet::syscalls::storage_write_syscall(0, address, 42).unwrap_syscall();
     gas.end("native writ of");
 
-    let gas = GasCounterImpl::start();
-    let value = starknet::storage_read_syscall(0, address).unwrap_syscall();
+    let gas = GasCounterTrait::start();
+    let value = starknet::syscalls::storage_read_syscall(0, address).unwrap_syscall();
     gas.end("native read of");
 
     assert(value == 42, 'read invalid');
@@ -118,11 +121,11 @@ fn bench_database_array() {
         i += 1;
     };
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     database::set('table', 'key', values.span(), 0, layout.span());
     gas.end("db set arr");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let res = database::get('table', 'key', layout.span());
     gas.end("db get arr");
 
@@ -142,18 +145,18 @@ fn bench_database_array() {
 fn bench_simple_struct() {
     let caller = starknet::contract_address_const::<0x42>();
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let mut foo = Foo { caller, a: 0x123456789abcdef, b: 0x123456789abcdef, };
     gas.end("foo init");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let mut serialized = ArrayTrait::new();
-    serde::Serde::serialize(@foo.a, ref serialized);
-    serde::Serde::serialize(@foo.b, ref serialized);
-    let serialized = array::ArrayTrait::span(@serialized);
+    core::serde::Serde::serialize(@foo.a, ref serialized);
+    core::serde::Serde::serialize(@foo.b, ref serialized);
+    let serialized = core::array::ArrayTrait::span(@serialized);
     gas.end("foo serialize");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let values: Span<felt252> = foo.values();
     gas.end("foo values");
 
@@ -181,7 +184,7 @@ struct PositionWithQuaterions {
 #[test]
 #[available_gas(1000000000)]
 fn test_struct_with_many_fields_fixed() {
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
 
     let mut pos = PositionWithQuaterions {
         id: 0x123456789abcdef,
@@ -195,19 +198,19 @@ fn test_struct_with_many_fields_fixed() {
     };
     gas.end("pos init");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let mut serialized = ArrayTrait::new();
-    serde::Serde::serialize(@pos.x, ref serialized);
-    serde::Serde::serialize(@pos.y, ref serialized);
-    serde::Serde::serialize(@pos.z, ref serialized);
-    serde::Serde::serialize(@pos.a, ref serialized);
-    serde::Serde::serialize(@pos.b, ref serialized);
-    serde::Serde::serialize(@pos.c, ref serialized);
-    serde::Serde::serialize(@pos.d, ref serialized);
-    let serialized = array::ArrayTrait::span(@serialized);
+    core::serde::Serde::serialize(@pos.x, ref serialized);
+    core::serde::Serde::serialize(@pos.y, ref serialized);
+    core::serde::Serde::serialize(@pos.z, ref serialized);
+    core::serde::Serde::serialize(@pos.a, ref serialized);
+    core::serde::Serde::serialize(@pos.b, ref serialized);
+    core::serde::Serde::serialize(@pos.c, ref serialized);
+    core::serde::Serde::serialize(@pos.d, ref serialized);
+    let serialized = core::array::ArrayTrait::span(@serialized);
     gas.end("pos serialize");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let values: Span<felt252> = pos.values();
     gas.end("pos values");
 
@@ -226,28 +229,28 @@ fn test_struct_with_many_fields_fixed() {
         _ => panic!("expected fixed layout"),
     };
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     database::set('positions', '42', pos.values(), 0, layout);
     gas.end("pos db set");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     database::get('positions', '42', layout);
     gas.end("pos db get");
 }
 
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
-struct Sword {
-    swordsmith: ContractAddress,
-    damage: u32,
+pub struct Sword {
+    pub swordsmith: ContractAddress,
+    pub damage: u32,
 }
 
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
 #[dojo::model]
-struct Case {
+pub struct Case {
     #[key]
-    owner: ContractAddress,
-    sword: Sword,
-    material: felt252,
+    pub owner: ContractAddress,
+    pub sword: Sword,
+    pub material: felt252,
 }
 
 // TODO: this test should be adapted to benchmark the new layout system
@@ -257,24 +260,20 @@ struct Case {
 fn bench_nested_struct_packed() {
     let caller = starknet::contract_address_const::<0x42>();
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let mut case = Case {
         owner: caller, sword: Sword { swordsmith: caller, damage: 0x12345678, }, material: 'wooden',
     };
     gas.end("case init");
 
-    // ????
-    let _gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let mut serialized = ArrayTrait::new();
-    serde::Serde::serialize(@case.sword, ref serialized);
-    serde::Serde::serialize(@case.material, ref serialized);
-    let serialized = array::ArrayTrait::span(@serialized);
+    core::serde::Serde::serialize(@case.sword, ref serialized);
+    core::serde::Serde::serialize(@case.material, ref serialized);
+    let serialized = core::array::ArrayTrait::span(@serialized);
     gas.end("case serialize");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let values: Span<felt252> = case.values();
     gas.end("case values");
 
@@ -293,52 +292,52 @@ fn bench_nested_struct_packed() {
         _ => panic!("expected fixed layout"),
     };
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     database::set('cases', '42', values, 0, layout);
     gas.end("case db set");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     database::get('cases', '42', layout);
     gas.end("case db get");
 }
 
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
 #[dojo::model]
-struct Character {
+pub struct Character {
     #[key]
-    caller: ContractAddress,
-    heigth: felt252,
-    abilities: Abilities,
-    stats: Stats,
-    weapon: Weapon,
-    gold: u32,
+    pub caller: ContractAddress,
+    pub heigth: felt252,
+    pub abilities: Abilities,
+    pub stats: Stats,
+    pub weapon: Weapon,
+    pub gold: u32,
 }
 
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
-struct Abilities {
-    strength: u8,
-    dexterity: u8,
-    constitution: u8,
-    intelligence: u8,
-    wisdom: u8,
-    charisma: u8,
+pub struct Abilities {
+    pub strength: u8,
+    pub dexterity: u8,
+    pub constitution: u8,
+    pub intelligence: u8,
+    pub wisdom: u8,
+    pub charisma: u8,
 }
 
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
-struct Stats {
-    kills: u128,
-    deaths: u16,
-    rests: u32,
-    hits: u64,
-    blocks: u32,
-    walked: felt252,
-    runned: felt252,
-    finished: bool,
-    romances: u16,
+pub struct Stats {
+    pub kills: u128,
+    pub deaths: u16,
+    pub rests: u32,
+    pub hits: u64,
+    pub blocks: u32,
+    pub walked: felt252,
+    pub runned: felt252,
+    pub finished: bool,
+    pub romances: u16,
 }
 
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
-enum Weapon {
+pub enum Weapon {
     DualWield: (Sword, Sword),
     Fists: (Sword, Sword), // Introspect requires same arms
 }
@@ -348,7 +347,7 @@ enum Weapon {
 #[ignore]
 #[available_gas(1000000000)]
 fn bench_complex_struct_packed() {
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
 
     let char = Character {
         caller: starknet::contract_address_const::<0x42>(),
@@ -386,17 +385,17 @@ fn bench_complex_struct_packed() {
     };
     gas.end("chars init");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let mut serialized = ArrayTrait::new();
-    serde::Serde::serialize(@char.heigth, ref serialized);
-    serde::Serde::serialize(@char.abilities, ref serialized);
-    serde::Serde::serialize(@char.stats, ref serialized);
-    serde::Serde::serialize(@char.weapon, ref serialized);
-    serde::Serde::serialize(@char.gold, ref serialized);
-    let serialized = array::ArrayTrait::span(@serialized);
+    core::serde::Serde::serialize(@char.heigth, ref serialized);
+    core::serde::Serde::serialize(@char.abilities, ref serialized);
+    core::serde::Serde::serialize(@char.stats, ref serialized);
+    core::serde::Serde::serialize(@char.weapon, ref serialized);
+    core::serde::Serde::serialize(@char.gold, ref serialized);
+    let serialized = core::array::ArrayTrait::span(@serialized);
     gas.end("chars serialize");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     let values: Span<felt252> = char.values();
     gas.end("chars values");
 
@@ -416,11 +415,11 @@ fn bench_complex_struct_packed() {
         _ => panic!("expected fixed layout"),
     };
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     database::set('chars', '42', char.values(), 0, layout);
     gas.end("chars db set");
 
-    let gas = GasCounterImpl::start();
+    let gas = GasCounterTrait::start();
     database::get('chars', '42', layout);
     gas.end("chars db get");
 }

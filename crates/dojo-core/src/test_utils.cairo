@@ -1,12 +1,8 @@
-use starknet::{
-    ClassHash, ContractAddress, syscalls::deploy_syscall, class_hash::Felt252TryIntoClassHash,
-    get_caller_address
-};
-use array::{ArrayTrait, SpanTrait};
-use traits::TryInto;
-use option::OptionTrait;
+use starknet::{ClassHash, ContractAddress, syscalls::deploy_syscall, get_caller_address};
+use core::array::{ArrayTrait, SpanTrait};
+use core::traits::TryInto;
+use core::option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
-use debug::PrintTrait;
 
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 use dojo::packing::{shl, shr};
@@ -21,8 +17,10 @@ use dojo::resource_metadata::resource_metadata;
 ///
 /// # Returns
 /// * address of contract deployed
-fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> ContractAddress {
-    let (contract, _) = starknet::deploy_syscall(class_hash.try_into().unwrap(), 0, calldata, false)
+pub fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> ContractAddress {
+    let (contract, _) = starknet::syscalls::deploy_syscall(
+        class_hash.try_into().unwrap(), 0, calldata, false
+    )
         .unwrap();
     contract
 }
@@ -36,12 +34,12 @@ fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> ContractAddr
 ///
 /// # Returns
 /// * address of contract deployed
-fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> ContractAddress {
+pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> ContractAddress {
     deploy_contract(class_hash, array![world.contract_address.into()].span())
 }
 
-fn spawn_test_world(namespace: ByteArray, models: Array<felt252>) -> IWorldDispatcher {
-    let salt = testing::get_available_gas();
+pub fn spawn_test_world(namespace: ByteArray, models: Array<felt252>) -> IWorldDispatcher {
+    let salt = core::testing::get_available_gas();
 
     // deploy world
     let (world_address, _) = deploy_syscall(
@@ -72,24 +70,24 @@ fn spawn_test_world(namespace: ByteArray, models: Array<felt252>) -> IWorldDispa
 
 
 #[derive(Drop)]
-struct GasCounter {
-    start: u128,
+pub struct GasCounter {
+    pub start: u128,
 }
 
 #[generate_trait]
-impl GasCounterImpl of GasCounterTrait {
+pub impl GasCounterImpl of GasCounterTrait {
     fn start() -> GasCounter {
-        let start = testing::get_available_gas();
-        gas::withdraw_gas().unwrap();
+        let start = core::testing::get_available_gas();
+        core::gas::withdraw_gas().unwrap();
         GasCounter { start }
     }
 
     fn end(self: GasCounter, name: ByteArray) {
-        let end = testing::get_available_gas();
+        let end = core::testing::get_available_gas();
         let gas_used = self.start - end;
 
         println!("# GAS # {}: {}", Self::pad_start(name, 18), gas_used);
-        gas::withdraw_gas().unwrap();
+        core::gas::withdraw_gas().unwrap();
     }
 
     fn pad_start(str: ByteArray, len: u32) -> ByteArray {
@@ -108,7 +106,7 @@ impl GasCounterImpl of GasCounterTrait {
 }
 
 // assert that `value` and `expected` have the same size and the same content
-fn assert_array(value: Span<felt252>, expected: Span<felt252>) {
+pub fn assert_array(value: Span<felt252>, expected: Span<felt252>) {
     assert!(value.len() == expected.len(), "Bad array length");
 
     let mut i = 0;
