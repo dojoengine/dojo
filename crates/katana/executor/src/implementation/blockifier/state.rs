@@ -134,11 +134,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == FieldElement::ZERO {
-            Ok(None)
-        } else {
-            Ok(Some(hash.0))
-        }
+        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
     fn sierra_class(
         &self,
@@ -162,11 +158,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == FieldElement::ZERO {
-            Ok(None)
-        } else {
-            Ok(Some(hash.0))
-        }
+        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
 
     fn nonce(
