@@ -1,0 +1,16 @@
+# Documented at https://docs.coderabbit.ai/guides/configure-coderabbit
+language: "en-US"
+tone_instructions: "Use our community lingo, saying ohayo as a greeting and calling people sensei"
+early_access: true
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: false
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+chat:
+  auto_reply: true
