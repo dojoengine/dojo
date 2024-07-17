@@ -1,79 +1,79 @@
-use array::ArrayTrait;
+use core::array::ArrayTrait;
 use starknet::{ContractAddress, ClassHash};
 
 #[derive(Introspect, Drop, Serde)]
 #[dojo::model]
-struct Record {
+pub struct Record {
     #[key]
-    record_id: u32,
-    depth: Depth,
-    type_i8: i8,
-    type_i16: i16,
-    type_i32: i32,
-    type_i64: i64,
-    type_i128: i128,
-    type_u8: u8,
-    type_u16: u16,
-    type_u32: u32,
-    type_u64: u64,
-    type_u128: u128,
-    type_u256: u256,
-    type_bool: bool,
-    type_felt: felt252,
-    type_class_hash: ClassHash,
-    type_contract_address: ContractAddress,
-    type_deeply_nested: Nested,
-    type_nested_one: NestedMost,
-    type_nested_two: NestedMost,
-    random_u8: u8,
-    random_u128: u128,
-    composite_u256: u256,
+    pub record_id: u32,
+    pub depth: Depth,
+    pub type_i8: i8,
+    pub type_i16: i16,
+    pub type_i32: i32,
+    pub type_i64: i64,
+    pub type_i128: i128,
+    pub type_u8: u8,
+    pub type_u16: u16,
+    pub type_u32: u32,
+    pub type_u64: u64,
+    pub type_u128: u128,
+    pub type_u256: u256,
+    pub type_bool: bool,
+    pub type_felt: felt252,
+    pub type_class_hash: ClassHash,
+    pub type_contract_address: ContractAddress,
+    pub type_deeply_nested: Nested,
+    pub type_nested_one: NestedMost,
+    pub type_nested_two: NestedMost,
+    pub random_u8: u8,
+    pub random_u128: u128,
+    pub composite_u256: u256,
 }
 
 #[derive(Introspect, Copy, Drop, Serde)]
 #[dojo::model]
-struct RecordSibling {
+pub struct RecordSibling {
     #[key]
-    record_id: u32,
-    random_u8: u8
+    pub record_id: u32,
+    pub random_u8: u8
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
-struct Nested {
-    depth: Depth,
-    type_number: u8,
-    type_string: felt252,
-    type_nested_more: NestedMore,
+pub struct Nested {
+    pub depth: Depth,
+    pub type_number: u8,
+    pub type_string: felt252,
+    pub type_nested_more: NestedMore,
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
-struct NestedMore {
-    depth: Depth,
-    type_number: u8,
-    type_string: felt252,
-    type_nested_most: NestedMost,
+pub struct NestedMore {
+    pub depth: Depth,
+    pub type_number: u8,
+    pub type_string: felt252,
+    pub type_nested_most: NestedMost,
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
-struct NestedMost {
-    depth: Depth,
-    type_number: u8,
-    type_string: felt252,
+pub struct NestedMost {
+    pub depth: Depth,
+    pub type_number: u8,
+    pub type_string: felt252,
 }
 
 #[derive(Introspect, Copy, Drop, Serde)]
 #[dojo::model]
-struct Subrecord {
+pub struct Subrecord {
     #[key]
-    record_id: u32,
+    pub record_id: u32,
     #[key]
-    subrecord_id: u32,
-    type_u8: u8,
-    random_u8: u8,
+    pub subrecord_id: u32,
+    pub type_u8: u8,
+    pub random_u8: u8,
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum Depth {
+pub enum Depth {
     Zero: (),
     One: (),
     Two: (),
@@ -353,4 +353,5 @@ impl DepthIntoFelt252 of Into<Depth, felt252> {
 //     a254: u256,
 //     a255: u256,
 // }
+
 

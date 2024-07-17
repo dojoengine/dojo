@@ -318,11 +318,12 @@ pub mod world {
         /// `resource_id` - The resource id.
         fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
             let mut values = self
-                .entity(
+                ._read_model_entity(
                     dojo::model::Model::<ResourceMetadata>::selector(),
-                    ModelIndex::Keys(array![resource_id].span()),
+                    entity_id_from_keys(array![resource_id].span()),
                     dojo::model::Model::<ResourceMetadata>::layout()
                 );
+
             ResourceMetadataTrait::from_values(resource_id, ref values)
         }
 
