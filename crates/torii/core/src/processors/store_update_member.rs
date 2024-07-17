@@ -49,7 +49,7 @@ where
         _block_number: u64,
         block_timestamp: u64,
         _transaction_receipt: &TransactionReceiptWithBlockInfo,
-        _event_id: &str,
+        event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
         let selector = event.data[MODEL_INDEX];
@@ -94,6 +94,6 @@ where
         let mut keys_and_unpacked = [keys, values].concat();
 
         ty.deserialize(&mut keys_and_unpacked)?;
-        db.set_model_member(entity_id, &schema.name(), &ty, block_timestamp).await
+        db.set_model_member(entity_id, false, &schema.name(), &ty, event_id, block_timestamp).await
     }
 }

@@ -23,6 +23,8 @@ use crate::types::{
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
+type IsEventMessage = bool;
+
 pub const FELT_DELIMITER: &str = "/";
 
 #[cfg(test)]
@@ -274,8 +276,10 @@ impl Sql {
     pub async fn set_model_member(
         &mut self,
         entity_id: Felt,
+        is_event_message: bool,
         model_tag: &str,
         member: &Ty,
+        event_id: &str,
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
@@ -283,8 +287,8 @@ impl Sql {
         // update model member
         self.build_set_entity_queries_recursive(
             path,
-            &entity_id,
-            (&entity_id, false),
+            event_id,
+            (&entity_id, is_event_message),
             member,
             block_timestamp,
             &vec![],
@@ -584,7 +588,7 @@ impl Sql {
         path: Vec<String>,
         event_id: &str,
         // The id of the entity and if the entity is an event message
-        entity_id: (&str, bool),
+        entity_id: (&str, IsEventMessage),
         entity: &Ty,
         block_timestamp: u64,
         indexes: &Vec<i64>,
@@ -681,7 +685,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
