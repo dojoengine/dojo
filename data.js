@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721227710835,
+  "lastUpdate": 1721239311424,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11905,6 +11905,42 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16730172,
             "range": "± 226693",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fa002d5e85d19e78de7b4c3d0a3b44e279d0e06c",
+          "message": "Update Katana benchmark CI (#2184)",
+          "timestamp": "2024-07-18T01:50:27+08:00",
+          "tree_id": "bad965afdb13eb742da89ce765e3e775bbb8f7fe",
+          "url": "https://github.com/dojoengine/dojo/commit/fa002d5e85d19e78de7b4c3d0a3b44e279d0e06c"
+        },
+        "date": 1721239310689,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16739094,
+            "range": "± 139816",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5586170,
+            "range": "± 302549",
             "unit": "ns/iter"
           }
         ]
