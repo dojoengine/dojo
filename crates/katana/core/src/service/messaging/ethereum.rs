@@ -7,7 +7,7 @@ use std::sync::Arc;
 use alloy_network::Ethereum;
 use alloy_primitives::{Address, U256};
 use alloy_provider::{Provider, ReqwestProvider};
-use alloy_rpc_types::{BlockNumberOrTag, Filter, FilterBlockOption, FilterSet, Log, Topic};
+use alloy_rpc_types_eth::{BlockNumberOrTag, Filter, FilterBlockOption, FilterSet, Log, Topic};
 use alloy_sol_types::{sol, SolEvent};
 use anyhow::Result;
 use async_trait::async_trait;
