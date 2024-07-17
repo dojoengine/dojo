@@ -114,11 +114,11 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
-            Some(entity) => {
-                (res.subscription_id, entity.try_into().expect("must able to serialize"))
-            }
-            None => (res.subscription_id, Entity { hashed_keys: Felt::ZERO, models: vec![] }),
+        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
+            res.entity.map_or(
+                (res.subscription_id, Entity { hashed_keys: Felt::ZERO, models: vec![] }),
+                |entity| (res.subscription_id, entity.try_into().expect("must able to serialize")),
+            )
         }))))
     }
 
@@ -154,11 +154,11 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| match res.entity {
-            Some(entity) => {
-                (res.subscription_id, entity.try_into().expect("must able to serialize"))
-            }
-            None => (res.subscription_id, Entity { hashed_keys: Felt::ZERO, models: vec![] }),
+        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
+            res.entity.map_or(
+                (res.subscription_id, Entity { hashed_keys: Felt::ZERO, models: vec![] }),
+                |entity| (res.subscription_id, entity.try_into().expect("must able to serialize")),
+            )
         }))))
     }
 
