@@ -57,12 +57,26 @@ where
         let member_selector = event.data[MEMBER_INDEX];
 
         let model = db.model(selector).await?;
+        let schema = model.schema().await?;
+        let mut ty = schema
+            .as_struct()
+            .expect("model schema must be a struct")
+            .children
+            .iter()
+            .find(|c| {
+                get_selector_from_name(&c.name).expect("invalid selector for member name")
+                    == member_selector
+            })
+            .context("member not found")?
+            .ty
+            .clone();
 
         info!(
             target: LOG_TARGET,
             name = %model.name(),
             entity_id = format!("{:#x}", entity_id),
-            "Store update record.",
+            member = %ty.name(),
+            "Store update member.",
         );
 
         let values_start = MEMBER_INDEX + 1;
@@ -79,21 +93,8 @@ where
         let keys = db.get_entity_keys(entity_id, &tag).await?;
         let mut keys_and_unpacked = [keys, values].concat();
 
-        let schema = model.schema().await?;
-        let mut ty = schema
-            .as_struct()
-            .expect("model schema must be a struct")
-            .children
-            .iter()
-            .find(|c| {
-                get_selector_from_name(&c.name).expect("invalid selector for member name")
-                    == member_selector
-            })
-            .context("member not found")?
-            .ty
-            .clone();
+        
         ty.deserialize(&mut keys_and_unpacked)?;
-
         db.set_model_member(entity_id, &schema.name(), &ty, block_timestamp).await
     }
 }
