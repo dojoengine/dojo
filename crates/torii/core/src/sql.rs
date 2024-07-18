@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{EnumOption, Member, Struct, Ty};
+use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
@@ -269,35 +269,6 @@ impl Sql {
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(event_message_updated);
-
-        Ok(())
-    }
-
-    pub async fn set_model_member(
-        &mut self,
-        entity_id: Felt,
-        is_event_message: bool,
-        model_tag: &str,
-        member: &Member,
-        event_id: &str,
-        block_timestamp: u64,
-    ) -> Result<()> {
-        let entity_id = format!("{:#x}", entity_id);
-        let path = vec![model_tag.to_string()];
-
-        let wrapped_ty =
-            Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
-
-        // update model member
-        self.build_set_entity_queries_recursive(
-            path,
-            event_id,
-            (&entity_id, is_event_message),
-            &wrapped_ty,
-            block_timestamp,
-            &vec![],
-        );
-        self.query_queue.execute_all().await?;
 
         Ok(())
     }

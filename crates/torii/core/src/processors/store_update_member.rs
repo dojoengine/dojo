@@ -1,5 +1,6 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
+use dojo_types::schema::{Struct, Ty};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
@@ -59,7 +60,7 @@ where
         let model = db.model(selector).await?;
         let schema = model.schema().await?;
 
-        let member = schema
+        let mut member = schema
             .as_struct()
             .expect("model schema must be a struct")
             .children
@@ -101,6 +102,11 @@ where
 
         member.ty.deserialize(&mut values)?;
 
-        db.set_model_member(entity_id, false, &schema.name(), &ty, event_id, block_timestamp).await
+        db.set_entity(
+            Ty::Struct(Struct { name: schema.name(), children: vec![member.clone()] }),
+            event_id,
+            block_timestamp,
+        )
+        .await
     }
 }
