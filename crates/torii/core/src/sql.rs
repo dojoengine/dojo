@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{EnumOption, Member, Ty};
+use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
@@ -283,13 +283,19 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
-        let path = vec![model_tag.to_string(), member.name()];
+        let path = vec![model_tag.to_string()];
+
+        let wrapped_ty = Ty::Struct(Struct {
+            name: model_tag.to_string(),
+            children: vec![Member { name: member.name(), ty: member.clone(), key: false }],
+        });
+
         // update model member
         self.build_set_entity_queries_recursive(
             path,
             event_id,
             (&entity_id, is_event_message),
-            member,
+            &wrapped_ty,
             block_timestamp,
             &vec![],
         );
@@ -684,7 +690,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
