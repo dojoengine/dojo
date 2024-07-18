@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721259666979,
+  "lastUpdate": 1721313005155,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -11977,6 +11977,42 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5408896,
             "range": "± 185308",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2b671b3a7bb6e694a0241ae5c10142c0cb59e09b",
+          "message": "fix: ensure the snake case is only applied to model name (#2185)",
+          "timestamp": "2024-07-18T08:18:36-06:00",
+          "tree_id": "e8685fda1cbc057a3c4de488bb11c9e4f92fdef4",
+          "url": "https://github.com/dojoengine/dojo/commit/2b671b3a7bb6e694a0241ae5c10142c0cb59e09b"
+        },
+        "date": 1721313004044,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16867846,
+            "range": "± 157923",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5616581,
+            "range": "± 103439",
             "unit": "ns/iter"
           }
         ]
