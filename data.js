@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721313005155,
+  "lastUpdate": 1721330503013,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12013,6 +12013,42 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5616581,
             "range": "± 103439",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d3318a91b34f5b8176382fcf68744390948498a",
+          "message": "Bump `blockifier` to support Cairo 2.7 (#2180)\n\n* workign bump for blockifier to ver 2.7. of cairo\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* no error\r\n\r\n* update resources log\r\n\r\n* remove commented code\r\n\r\n* clippy\r\n\r\n* fmt\r\n\r\n* restore lockfile\r\n\r\n* remove comment\r\n\r\n* remove unused dep\r\n\r\n* fmt\r\n\r\n* wip\r\n\r\n* update blockifier rev\r\n\r\n* fmt\r\n\r\n* Update crates/katana/executor/src/implementation/blockifier/state.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Update crates/katana/executor/src/implementation/blockifier/state.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* apply suggestion\r\n\r\n* remove dbg\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-18T13:10:09-06:00",
+          "tree_id": "4ca9d0c979eb5727d47dafbd0129a62a4cb12baf",
+          "url": "https://github.com/dojoengine/dojo/commit/1d3318a91b34f5b8176382fcf68744390948498a"
+        },
+        "date": 1721330502103,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16973926,
+            "range": "± 238438",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4835680,
+            "range": "± 185256",
             "unit": "ns/iter"
           }
         ]
