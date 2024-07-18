@@ -13,7 +13,7 @@ use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
 use crate::sql::Sql;
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_record";
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_member";
 
 const MEMBER_INDEX: usize = 2;
 

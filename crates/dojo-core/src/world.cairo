@@ -156,6 +156,7 @@ mod world {
         ModelRegistered: ModelRegistered,
         StoreSetRecord: StoreSetRecord,
         StoreUpdateRecord: StoreUpdateRecord,
+        StoreUpdateMember: StoreUpdateMember,
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
@@ -227,6 +228,14 @@ mod world {
     struct StoreUpdateRecord {
         table: felt252,
         entity_id: felt252,
+        values: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct StoreUpdateMember {
+        table: felt252,
+        entity_id: felt252,
+        member_selector: felt252,
         values: Span<felt252>,
     }
 
@@ -860,10 +869,12 @@ mod world {
                     );
                 },
                 ModelIndex::MemberId((
-                    entity_id, member_id
+                    entity_id, member_selector
                 )) => {
-                    self._write_model_member(model_selector, entity_id, member_id, values, layout);
-                // TODO: here we need a new event update and see how Torii can process that.
+                    self._write_model_member(model_selector, entity_id, member_selector, values, layout);
+                    EventEmitter::emit(
+                        ref self, StoreUpdateMember { table: model_selector, entity_id, member_selector, values }
+                    );
                 }
             }
         }
