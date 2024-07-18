@@ -1,5 +1,7 @@
 //! This benchmark is used to measure how much concurrency we can get when accessing the main
-//! execution state for executing indepdenent transactions in parallel.
+//! execution state for executing indepdenent transactions in parallel. This is useful to measure
+//! how much concurrency we can get when the pending state is being accessed by multiple independent
+//! requests.
 
 use std::sync::Arc;
 use std::time::Duration;
