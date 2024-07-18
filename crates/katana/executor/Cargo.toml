@@ -10,14 +10,12 @@ version.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 
-convert_case.workspace = true
 parking_lot.workspace = true
 starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
-# blockifier deps
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "57c11586", features = [ "testing" ], optional = true }
+blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "cairo-2.7", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
 
 # Disable SIR for now until they support Cairo 2.6.3

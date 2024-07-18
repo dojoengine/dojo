@@ -15,7 +15,6 @@ katana-tasks.workspace = true
 
 anyhow.workspace = true
 async-trait = { workspace = true, optional = true }
-cairo-vm.workspace = true
 derive_more.workspace = true
 dojo-metrics.workspace = true
 futures.workspace = true

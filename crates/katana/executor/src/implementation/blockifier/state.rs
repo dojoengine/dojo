@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use blockifier::state::cached_state::{self, GlobalContractCache};
+use blockifier::state::cached_state;
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
 use katana_cairo::starknet_api::core::{ClassHash, CompiledClassHash, Nonce};
@@ -12,10 +12,9 @@ use katana_provider::error::ProviderError;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::Mutex;
 
-use super::utils::{self, to_felt, to_stark_felt};
-use super::CACHE_SIZE;
+use super::utils::{self};
 use crate::StateProviderDb;
 
 /// A helper trait to enforce that a type must implement both [StateProvider] and [StateReader].
@@ -25,38 +24,36 @@ impl<T> StateDb for T where T: StateProvider + StateReader {}
 
 impl<'a> StateReader for StateProviderDb<'a> {
     fn get_class_hash_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<katana_cairo::starknet_api::core::ClassHash> {
         self.0
             .class_hash_of_contract(utils::to_address(contract_address))
-            .map(|v| ClassHash(to_stark_felt(v.unwrap_or_default())))
+            .map(|v| ClassHash(v.unwrap_or_default()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
 
     fn get_compiled_class_hash(
-        &mut self,
+        &self,
         class_hash: katana_cairo::starknet_api::core::ClassHash,
     ) -> StateResult<katana_cairo::starknet_api::core::CompiledClassHash> {
         if let Some(hash) = self
             .0
-            .compiled_class_hash_of_class_hash(to_felt(class_hash.0))
+            .compiled_class_hash_of_class_hash(class_hash.0)
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
-            Ok(CompiledClassHash(to_stark_felt(hash)))
+            Ok(CompiledClassHash(hash))
         } else {
             Err(StateError::UndeclaredClassHash(class_hash))
         }
     }
 
     fn get_compiled_contract_class(
-        &mut self,
+        &self,
         class_hash: ClassHash,
     ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
-        if let Some(class) = self
-            .0
-            .class(to_felt(class_hash.0))
-            .map_err(|e| StateError::StateReadError(e.to_string()))?
+        if let Some(class) =
+            self.0.class(class_hash.0).map_err(|e| StateError::StateReadError(e.to_string()))?
         {
             let class =
                 utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
@@ -68,29 +65,29 @@ impl<'a> StateReader for StateProviderDb<'a> {
     }
 
     fn get_nonce_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<katana_cairo::starknet_api::core::Nonce> {
         self.0
             .nonce(utils::to_address(contract_address))
-            .map(|n| Nonce(to_stark_felt(n.unwrap_or_default())))
+            .map(|n| Nonce(n.unwrap_or_default()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
 
     fn get_storage_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
         key: katana_cairo::starknet_api::state::StorageKey,
-    ) -> StateResult<katana_cairo::starknet_api::hash::StarkFelt> {
+    ) -> StateResult<katana_cairo::starknet_api::hash::StarkHash> {
         self.0
-            .storage(utils::to_address(contract_address), to_felt(*key.0.key()))
-            .map(|v| to_stark_felt(v.unwrap_or_default()))
+            .storage(utils::to_address(contract_address), *key.0.key())
+            .map(|v| v.unwrap_or_default())
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
 }
 
 #[derive(Debug)]
-pub(super) struct CachedState<S: StateDb>(pub(super) Arc<RwLock<CachedStateInner<S>>>);
+pub(super) struct CachedState<S: StateDb>(pub(super) Arc<Mutex<CachedStateInner<S>>>);
 
 impl<S: StateDb> Clone for CachedState<S> {
     fn clone(&self) -> Self {
@@ -109,18 +106,9 @@ pub(super) struct CachedStateInner<S: StateReader> {
 impl<S: StateDb> CachedState<S> {
     pub(super) fn new(state: S) -> Self {
         let declared_classes = HashMap::new();
-        let cached_state =
-            cached_state::CachedState::new(state, GlobalContractCache::new(CACHE_SIZE));
+        let cached_state = cached_state::CachedState::new(state);
         let inner = CachedStateInner { inner: cached_state, declared_classes };
-        Self(Arc::new(RwLock::new(inner)))
-    }
-
-    pub(super) fn read(&self) -> RwLockReadGuard<'_, CachedStateInner<S>> {
-        self.0.read()
-    }
-
-    pub(super) fn write(&self) -> RwLockWriteGuard<'_, CachedStateInner<S>> {
-        self.0.write()
+        Self(Arc::new(Mutex::new(inner)))
     }
 }
 
@@ -129,7 +117,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<CompiledClass>> {
-        let state = self.read();
+        let state = self.0.lock();
         if let Some((class, _)) = state.declared_classes.get(&hash) {
             Ok(Some(class.clone()))
         } else {
@@ -141,18 +129,17 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<katana_primitives::class::CompiledClassHash>> {
-        let Ok(hash) = self.write().inner.get_compiled_class_hash(ClassHash(to_stark_felt(hash)))
-        else {
+        let Ok(hash) = self.0.lock().inner.get_compiled_class_hash(ClassHash(hash)) else {
             return Ok(None);
         };
-        Ok(Some(to_felt(hash.0)))
-    }
 
+        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+    }
     fn sierra_class(
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<FlattenedSierraClass>> {
-        let state = self.read();
+        let state = self.0.lock();
         if let Some((_, sierra)) = state.declared_classes.get(&hash) {
             Ok(sierra.clone())
         } else {
@@ -166,12 +153,11 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         &self,
         address: katana_primitives::contract::ContractAddress,
     ) -> ProviderResult<Option<katana_primitives::class::ClassHash>> {
-        let Ok(hash) = self.write().inner.get_class_hash_at(utils::to_blk_address(address)) else {
+        let Ok(hash) = self.0.lock().inner.get_class_hash_at(utils::to_blk_address(address)) else {
             return Ok(None);
         };
 
-        let hash = to_felt(hash.0);
-        if hash == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash)) }
+        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
 
     fn nonce(
@@ -183,8 +169,8 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         }
 
-        match self.0.write().inner.get_nonce_at(utils::to_blk_address(address)) {
-            Ok(nonce) => Ok(Some(to_felt(nonce.0))),
+        match self.0.lock().inner.get_nonce_at(utils::to_blk_address(address)) {
+            Ok(nonce) => Ok(Some(nonce.0)),
             Err(e) => Err(ProviderError::Other(e.to_string())),
         }
     }
@@ -200,14 +186,11 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         }
 
         let address = utils::to_blk_address(address);
-        let key = StorageKey(
-            to_stark_felt(storage_key)
-                .try_into()
-                .expect("storage key is not a valid field element"),
-        );
+        let key =
+            StorageKey(storage_key.try_into().expect("storage key is not a valid field element"));
 
-        match self.write().inner.get_storage_at(address, key) {
-            Ok(value) => Ok(Some(to_felt(value))),
+        match self.0.lock().inner.get_storage_at(address, key) {
+            Ok(value) => Ok(Some(value)),
             Err(e) => Err(ProviderError::Other(e.to_string())),
         }
     }
@@ -215,36 +198,36 @@ impl<S: StateDb> StateProvider for CachedState<S> {
 
 impl<S: StateDb> StateReader for CachedState<S> {
     fn get_class_hash_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<ClassHash> {
-        self.write().inner.get_class_hash_at(contract_address)
+        self.0.lock().inner.get_class_hash_at(contract_address)
     }
 
-    fn get_compiled_class_hash(&mut self, class_hash: ClassHash) -> StateResult<CompiledClassHash> {
-        self.write().inner.get_compiled_class_hash(class_hash)
+    fn get_compiled_class_hash(&self, class_hash: ClassHash) -> StateResult<CompiledClassHash> {
+        self.0.lock().inner.get_compiled_class_hash(class_hash)
     }
 
     fn get_compiled_contract_class(
-        &mut self,
+        &self,
         class_hash: ClassHash,
     ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
-        self.write().inner.get_compiled_contract_class(class_hash)
+        self.0.lock().inner.get_compiled_contract_class(class_hash)
     }
 
     fn get_nonce_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<Nonce> {
-        self.write().inner.get_nonce_at(contract_address)
+        self.0.lock().inner.get_nonce_at(contract_address)
     }
 
     fn get_storage_at(
-        &mut self,
+        &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
         key: StorageKey,
-    ) -> StateResult<katana_cairo::starknet_api::hash::StarkFelt> {
-        self.write().inner.get_storage_at(contract_address, key)
+    ) -> StateResult<katana_cairo::starknet_api::hash::StarkHash> {
+        self.0.lock().inner.get_storage_at(contract_address, key)
     }
 }
 
@@ -252,9 +235,6 @@ impl<S: StateDb> StateReader for CachedState<S> {
 mod tests {
 
     use blockifier::state::state_api::{State, StateReader};
-    use katana_cairo::starknet_api::core::PatriciaKey;
-    use katana_cairo::starknet_api::hash::StarkHash;
-    use katana_cairo::starknet_api::patricia_key;
     use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::genesis::constant::{
@@ -306,7 +286,7 @@ mod tests {
     #[test]
     fn can_fetch_from_inner_state_provider() -> anyhow::Result<()> {
         let state = state_provider();
-        let mut cached_state = CachedState::new(StateProviderDb(state));
+        let cached_state = CachedState::new(StateProviderDb(state));
 
         let address = ContractAddress::from(felt!("0x67"));
         let legacy_class_hash = felt!("0x111");
@@ -315,19 +295,17 @@ mod tests {
         let api_address = utils::to_blk_address(address);
         let actual_class_hash = cached_state.get_class_hash_at(api_address)?;
         let actual_nonce = cached_state.get_nonce_at(api_address)?;
-        let actual_storage_value = cached_state.get_storage_at(
-            api_address,
-            StorageKey(patricia_key!(utils::to_stark_felt(storage_key))),
-        )?;
+        let actual_storage_value = cached_state
+            .get_storage_at(api_address, StorageKey(storage_key.try_into().unwrap()))?;
         let actual_compiled_hash = cached_state.get_compiled_class_hash(actual_class_hash)?;
         let actual_class = cached_state.get_compiled_contract_class(actual_class_hash)?;
-        let actual_legacy_class = cached_state
-            .get_compiled_contract_class(ClassHash(to_stark_felt(legacy_class_hash)))?;
+        let actual_legacy_class =
+            cached_state.get_compiled_contract_class(ClassHash(legacy_class_hash))?;
 
-        assert_eq!(actual_nonce.0, to_stark_felt(felt!("0x7")));
-        assert_eq!(actual_storage_value, to_stark_felt(felt!("0x2")));
-        assert_eq!(actual_class_hash.0, to_stark_felt(felt!("0x123")));
-        assert_eq!(actual_compiled_hash.0, to_stark_felt(felt!("0x456")));
+        assert_eq!(actual_nonce.0, felt!("0x7"));
+        assert_eq!(actual_storage_value, felt!("0x2"));
+        assert_eq!(actual_class_hash.0, felt!("0x123"));
+        assert_eq!(actual_compiled_hash.0, felt!("0x456"));
         assert_eq!(
             actual_class,
             utils::to_class(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()).unwrap().contract_class()
@@ -383,21 +361,20 @@ mod tests {
 
         // insert some data to the cached state
         {
-            let lock = &mut cached_state.0.write();
+            let lock = &mut cached_state.0.lock();
             let blk_state = &mut lock.inner;
 
             let address = utils::to_blk_address(new_address);
-            let storage_key = StorageKey(patricia_key!(utils::to_stark_felt(new_storage_key)));
-            let storage_value = utils::to_stark_felt(new_storage_value);
-            let class_hash = ClassHash(utils::to_stark_felt(new_class_hash));
+            let storage_key = StorageKey(new_storage_key.try_into().unwrap());
+            let storage_value = new_storage_value;
+            let class_hash = ClassHash(new_class_hash);
             let class =
                 utils::to_class(new_compiled_sierra_class.clone()).unwrap().contract_class();
-            let compiled_hash = CompiledClassHash(utils::to_stark_felt(new_compiled_hash));
-            let legacy_class_hash = ClassHash(utils::to_stark_felt(new_legacy_class_hash));
+            let compiled_hash = CompiledClassHash(new_compiled_hash);
+            let legacy_class_hash = ClassHash(new_legacy_class_hash);
             let legacy_class =
                 utils::to_class(DEFAULT_LEGACY_UDC_CASM.clone()).unwrap().contract_class();
-            let legacy_compiled_hash =
-                CompiledClassHash(utils::to_stark_felt(new_legacy_compiled_hash));
+            let legacy_compiled_hash = CompiledClassHash(new_legacy_compiled_hash);
 
             blk_state.increment_nonce(address)?;
             blk_state.set_class_hash_at(address, legacy_class_hash)?;
@@ -495,11 +472,11 @@ mod tests {
 
         let sp = db.latest()?;
 
-        let mut cached_state = CachedState::new(StateProviderDb(sp));
+        let cached_state = CachedState::new(StateProviderDb(sp));
 
         let api_address = utils::to_blk_address(address);
-        let api_storage_key = StorageKey(patricia_key!(utils::to_stark_felt(storage_key)));
-        let api_class_hash = ClassHash(utils::to_stark_felt(class_hash));
+        let api_storage_key = StorageKey(storage_key.try_into().unwrap());
+        let api_class_hash = ClassHash(class_hash);
 
         let actual_nonce =
             cached_state.get_nonce_at(api_address).expect("should return default value");

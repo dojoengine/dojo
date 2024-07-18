@@ -355,11 +355,11 @@ impl TryFrom<GenesisJson> for Genesis {
                     // check if the class hash is provided, otherwise compute it from the
                     // artifacts
                     let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
-                    let compiled_hash = class.casm.compiled_class_hash().to_be_bytes();
+                    let compiled_hash = class.casm.compiled_class_hash();
 
                     (
                         class_hash,
-                        FieldElement::from_bytes_be(&compiled_hash),
+                        compiled_hash,
                         Some(Arc::new(sierra.flatten()?)),
                         Arc::new(CompiledClass::Class(class)),
                     )
