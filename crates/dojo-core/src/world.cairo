@@ -851,9 +851,15 @@ pub mod world {
                 ModelIndex::MemberId((
                     entity_id, member_selector
                 )) => {
-                    self._write_model_member(model_selector, entity_id, member_selector, values, layout);
+                    self
+                        ._write_model_member(
+                            model_selector, entity_id, member_selector, values, layout
+                        );
                     EventEmitter::emit(
-                        ref self, StoreUpdateMember { table: model_selector, entity_id, member_selector, values }
+                        ref self,
+                        StoreUpdateMember {
+                            table: model_selector, entity_id, member_selector, values
+                        }
                     );
                 }
             }
