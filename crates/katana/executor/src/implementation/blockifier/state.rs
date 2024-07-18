@@ -15,7 +15,6 @@ use katana_provider::ProviderResult;
 use parking_lot::Mutex;
 
 use super::utils::{self};
-// use super::CACHE_SIZE;
 use crate::StateProviderDb;
 
 /// A helper trait to enforce that a type must implement both [StateProvider] and [StateReader].
