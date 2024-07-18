@@ -132,6 +132,24 @@ impl BaseManifest {
         self.models.retain(|model| !tags.contains(&model.inner.tag));
     }
 
+    /// Generates a map of `tag -> ManifestKind`
+    pub fn build_kind_from_tags(&self) -> HashMap<String, ManifestKind> {
+        let mut kind_from_tags = HashMap::<String, ManifestKind>::new();
+
+        kind_from_tags.insert(WORLD_CONTRACT_TAG.to_string(), ManifestKind::WorldClass);
+        kind_from_tags.insert(BASE_CONTRACT_TAG.to_string(), ManifestKind::BaseClass);
+
+        for model in self.models.as_slice() {
+            kind_from_tags.insert(model.inner.tag.clone(), ManifestKind::Model);
+        }
+
+        for contract in self.contracts.as_slice() {
+            kind_from_tags.insert(contract.inner.tag.clone(), ManifestKind::Contract);
+        }
+
+        kind_from_tags
+    }
+
     pub fn merge(&mut self, overlay: OverlayManifest) {
         let mut base_map = HashMap::new();
 
@@ -161,7 +179,7 @@ impl BaseManifest {
 }
 
 #[derive(Clone, Debug, Copy)]
-enum ManifestKind {
+pub enum ManifestKind {
     BaseClass,
     WorldClass,
     Contract,
@@ -169,23 +187,6 @@ enum ManifestKind {
 }
 
 impl OverlayManifest {
-    fn build_kind_from_tags(base_manifest: &BaseManifest) -> HashMap<String, ManifestKind> {
-        let mut kind_from_tags = HashMap::<String, ManifestKind>::new();
-
-        kind_from_tags.insert(WORLD_CONTRACT_TAG.to_string(), ManifestKind::WorldClass);
-        kind_from_tags.insert(BASE_CONTRACT_TAG.to_string(), ManifestKind::BaseClass);
-
-        for model in base_manifest.models.as_slice() {
-            kind_from_tags.insert(model.inner.tag.clone(), ManifestKind::Model);
-        }
-
-        for contract in base_manifest.contracts.as_slice() {
-            kind_from_tags.insert(contract.inner.tag.clone(), ManifestKind::Contract);
-        }
-
-        kind_from_tags
-    }
-
     fn load_overlay(
         path: &PathBuf,
         kind: ManifestKind,
@@ -219,7 +220,7 @@ impl OverlayManifest {
     ) -> Result<Self, AbstractManifestError> {
         fs::create_dir_all(path)?;
 
-        let kind_from_tags = Self::build_kind_from_tags(base_manifest);
+        let kind_from_tags = base_manifest.build_kind_from_tags();
         let mut loaded_tags = HashMap::<String, bool>::new();
         let mut overlays = OverlayManifest::default();
 
