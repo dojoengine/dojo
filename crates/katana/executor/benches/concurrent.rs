@@ -1,4 +1,5 @@
-//! This benchmark is used to measure how much concurrency we can get when accessing the main execution state for executing indepdenent transactions in parallel.
+//! This benchmark is used to measure how much concurrency we can get when accessing the main
+//! execution state for executing indepdenent transactions in parallel.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -6,8 +7,7 @@ use std::time::Duration;
 use criterion::measurement::WallTime;
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkGroup, Criterion};
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_executor::ExecutorFactory;
-use katana_executor::SimulationFlag;
+use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::test_utils;
