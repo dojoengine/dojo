@@ -168,11 +168,11 @@ impl DojoContract {
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
 
-                    component!(path: dojo::components::upgradeable::upgradeable, storage: \
+                    component!(path: dojo::contract::upgradeable::upgradeable, storage: \
                      upgradeable, event: UpgradeableEvent);
 
                     #[abi(embed_v0)]
-                    impl ContractImpl of IContract<ContractState> {
+                    pub impl ContractImpl of IContract<ContractState> {
                         fn contract_name(self: @ContractState) -> ByteArray {
                             \"$name$\"
                         }
@@ -207,7 +207,7 @@ impl DojoContract {
 
                     #[abi(embed_v0)]
                     impl UpgradableImpl = \
-                     dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+                     dojo::contract::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                     $body$
                 }
@@ -362,7 +362,7 @@ impl DojoContract {
             #[event]
             #[derive(Drop, starknet::Event)]
             enum Event {
-                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+                UpgradeableEvent: dojo::contract::upgradeable::upgradeable::Event,
                 $variants$
             }
             ",
@@ -377,7 +377,7 @@ impl DojoContract {
             #[event]
             #[derive(Drop, starknet::Event)]
             enum Event {
-                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+                UpgradeableEvent: dojo::contract::upgradeable::upgradeable::Event,
             }
             "
             .to_string(),
@@ -402,7 +402,7 @@ impl DojoContract {
             struct Storage {
                 world_dispatcher: IWorldDispatcher,
                 #[substorage(v0)]
-                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+                upgradeable: dojo::contract::upgradeable::upgradeable::Storage,
                 $members$
             }
             ",
@@ -418,7 +418,7 @@ impl DojoContract {
             struct Storage {
                 world_dispatcher: IWorldDispatcher,
                 #[substorage(v0)]
-                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+                upgradeable: dojo::contract::upgradeable::upgradeable::Storage,
             }
             "
             .to_string(),

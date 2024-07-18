@@ -1,18 +1,29 @@
-use dojo::world::{IWorldDispatcher, ModelIndex};
 use starknet::SyscallResult;
+
+use dojo::model::Layout;
+use dojo::model::introspect::Ty;
+use dojo::world::IWorldDispatcher;
+
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
+pub enum ModelIndex {
+    Keys: Span<felt252>,
+    Id: felt252,
+    // (entity_id, member_id)
+    MemberId: (felt252, felt252)
+}
 
 /// Trait that is implemented at Cairo level for each struct that is a model.
 pub trait ModelEntity<T> {
     fn id(self: @T) -> felt252;
     fn values(self: @T) -> Span<felt252>;
-    fn from_values(entity_id: felt252, values: Span<felt252>) -> T;
+    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> T;
     fn get(world: IWorldDispatcher, entity_id: felt252) -> T;
     fn update(self: @T, world: IWorldDispatcher);
     fn delete(self: @T, world: IWorldDispatcher);
     fn get_member(
         world: IWorldDispatcher, entity_id: felt252, member_id: felt252,
     ) -> Span<felt252>;
-    fn set_member(self: @T, world: IWorldDispatcher, member_id: felt252, values: Span<felt252>,);
+    fn set_member(self: @T, world: IWorldDispatcher, member_id: felt252, values: Span<felt252>);
 }
 
 pub trait Model<T> {
@@ -50,8 +61,8 @@ pub trait Model<T> {
     fn entity_id(self: @T) -> felt252;
     fn keys(self: @T) -> Span<felt252>;
     fn values(self: @T) -> Span<felt252>;
-    fn layout() -> dojo::database::introspect::Layout;
-    fn instance_layout(self: @T) -> dojo::database::introspect::Layout;
+    fn layout() -> Layout;
+    fn instance_layout(self: @T) -> Layout;
     fn packed_size() -> Option<usize>;
 }
 
@@ -67,8 +78,8 @@ pub trait IModel<T> {
     fn namespace_hash(self: @T) -> felt252;
     fn unpacked_size(self: @T) -> Option<usize>;
     fn packed_size(self: @T) -> Option<usize>;
-    fn layout(self: @T) -> dojo::database::introspect::Layout;
-    fn schema(self: @T) -> dojo::database::introspect::Ty;
+    fn layout(self: @T) -> Layout;
+    fn schema(self: @T) -> Ty;
 }
 
 /// Deploys a model with the given [`ClassHash`] and retrieves it's name.

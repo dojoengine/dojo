@@ -1,15 +1,10 @@
-use starknet::{ContractAddress, ClassHash, storage_access::StorageBaseAddress, SyscallResult};
-use core::traits::{Into, TryInto};
 use core::option::OptionTrait;
-use dojo::resource_metadata::ResourceMetadata;
+use core::traits::{Into, TryInto};
+use starknet::{ContractAddress, ClassHash, storage_access::StorageBaseAddress, SyscallResult};
 
-#[derive(Copy, Drop, Serde, Debug, PartialEq)]
-pub enum ModelIndex {
-    Keys: Span<felt252>,
-    Id: felt252,
-    // (entity_id, member_id)
-    MemberId: (felt252, felt252)
-}
+use dojo::model::{ModelIndex, ResourceMetadata};
+use dojo::model::{Layout};
+use dojo::utils::bytearray_hash;
 
 #[starknet::interface]
 pub trait IWorld<T> {
@@ -27,24 +22,16 @@ pub trait IWorld<T> {
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
 
     fn entity(
-        self: @T,
-        model_selector: felt252,
-        index: ModelIndex,
-        layout: dojo::database::introspect::Layout
+        self: @T, model_selector: felt252, index: ModelIndex, layout: Layout
     ) -> Span<felt252>;
     fn set_entity(
         ref self: T,
         model_selector: felt252,
         index: ModelIndex,
         values: Span<felt252>,
-        layout: dojo::database::introspect::Layout
+        layout: Layout
     );
-    fn delete_entity(
-        ref self: T,
-        model_selector: felt252,
-        index: ModelIndex,
-        layout: dojo::database::introspect::Layout
-    );
+    fn delete_entity(ref self: T, model_selector: felt252, index: ModelIndex, layout: Layout);
 
     fn base(self: @T) -> ClassHash;
 
@@ -96,45 +83,43 @@ pub mod Errors {
 
 #[starknet::contract]
 pub mod world {
-    use dojo::config::interface::IConfig;
+    use core::array::{ArrayTrait, SpanTrait};
+    use core::box::BoxTrait;
+    use core::hash::{HashStateExTrait, HashStateTrait};
+    use core::num::traits::Zero;
+    use core::option::OptionTrait;
+    use core::pedersen::PedersenTrait;
+    use core::serde::Serde;
     use core::to_byte_array::FormatAsByteArray;
     use core::traits::TryInto;
-    use core::array::{ArrayTrait, SpanTrait};
     use core::traits::Into;
-    use core::option::OptionTrait;
-    use core::box::BoxTrait;
+
     use starknet::event::EventEmitter;
-    use core::serde::Serde;
-    use core::hash::{HashStateExTrait, HashStateTrait};
-    use core::pedersen::PedersenTrait;
     use starknet::{
         contract_address_const, get_caller_address, get_contract_address, get_tx_info, ClassHash,
         ContractAddress, syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall},
         SyscallResult, SyscallResultTrait, storage::Map,
     };
-    use core::num::traits::Zero;
 
-    use dojo::database;
-    use dojo::database::introspect::{Introspect, Layout, FieldLayout};
-    use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+    use dojo::world::config::{Config, IConfig};
+    use dojo::contract::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::contract::{IContractDispatcher, IContractDispatcherTrait};
-    use dojo::config::component::Config;
-    use dojo::model::{Model, IModelDispatcher, IModelDispatcherTrait};
-    use dojo::interfaces::{
+    use dojo::world::update::{
         IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherTrait, StorageUpdate,
         ProgramOutput
     };
-    use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
-    use dojo::resource_metadata;
-    use dojo::resource_metadata::{ResourceMetadata, ResourceMetadataTrait};
-    use dojo::utils::entity_id_from_keys;
+    use dojo::model::{
+        Model, IModelDispatcher, IModelDispatcherTrait, Layout, ResourceMetadata,
+        ResourceMetadataTrait, metadata
+    };
+    use dojo::storage;
+    use dojo::utils::{entity_id_from_keys, bytearray_hash};
 
-    use super::{Errors, ModelIndex};
+    use super::{
+        Errors, ModelIndex, IWorldDispatcher, IWorldDispatcherTrait, IWorld, IUpgradeableWorld
+    };
 
     const WORLD: felt252 = 0;
-
-    // the minimum internal size of an empty ByteArray
-    const MIN_BYTE_ARRAY_SIZE: u32 = 3;
 
     const DOJO_INIT_SELECTOR: felt252 = selector!("dojo_init");
 
@@ -292,14 +277,12 @@ pub mod world {
         self
             .resources
             .write(
-                dojo::model::Model::<ResourceMetadata>::selector(),
-                ResourceData::Model(
-                    (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
-                )
+                Model::<ResourceMetadata>::selector(),
+                ResourceData::Model((metadata::initial_class_hash(), metadata::initial_address()))
             );
         self.owners.write((WORLD, creator), true);
 
-        let dojo_namespace_hash = dojo::utils::hash(@"__DOJO__");
+        let dojo_namespace_hash = bytearray_hash(@"__DOJO__");
 
         self.resources.write(dojo_namespace_hash, ResourceData::Namespace);
         self.owners.write((dojo_namespace_hash, creator), true);
@@ -319,9 +302,9 @@ pub mod world {
         fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
             let mut values = self
                 ._read_model_entity(
-                    dojo::model::Model::<ResourceMetadata>::selector(),
+                    Model::<ResourceMetadata>::selector(),
                     entity_id_from_keys(array![resource_id].span()),
-                    dojo::model::Model::<ResourceMetadata>::layout()
+                    Model::<ResourceMetadata>::layout()
                 );
 
             ResourceMetadataTrait::from_values(resource_id, ref values)
@@ -626,7 +609,7 @@ pub mod world {
         fn register_namespace(ref self: ContractState, namespace: ByteArray) {
             let caller_account = self._get_account_address();
 
-            let hash = dojo::utils::hash(@namespace);
+            let hash = bytearray_hash(@namespace);
 
             match self.resources.read(hash) {
                 ResourceData::Namespace => {
@@ -786,10 +769,7 @@ pub mod world {
         ///
         /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
         fn entity(
-            self: @ContractState,
-            model_selector: felt252,
-            index: ModelIndex,
-            layout: dojo::database::introspect::Layout
+            self: @ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
         ) -> Span<felt252> {
             match index {
                 ModelIndex::Keys(keys) => {
@@ -818,7 +798,7 @@ pub mod world {
             model_selector: felt252,
             index: ModelIndex,
             values: Span<felt252>,
-            layout: dojo::database::introspect::Layout
+            layout: Layout
         ) {
             assert(
                 self.can_write_model(model_selector, get_caller_address()),
@@ -857,10 +837,7 @@ pub mod world {
         /// * `index` - The index of the record/entity to delete.
         /// * `layout` - The memory layout of the model.
         fn delete_entity(
-            ref self: ContractState,
-            model_selector: felt252,
-            index: ModelIndex,
-            layout: dojo::database::introspect::Layout
+            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
         ) {
             assert(
                 self.can_write_model(model_selector, get_caller_address()),
@@ -1131,18 +1108,18 @@ pub mod world {
             model_selector: felt252,
             entity_id: felt252,
             values: Span<felt252>,
-            layout: dojo::database::introspect::Layout
+            layout: Layout
         ) {
             let mut offset = 0;
 
             match layout {
                 Layout::Fixed(layout) => {
-                    Self::_write_fixed_layout(
+                    storage::layout::write_fixed_layout(
                         model_selector, entity_id, values, ref offset, layout
                     );
                 },
                 Layout::Struct(layout) => {
-                    Self::_write_struct_layout(
+                    storage::layout::write_struct_layout(
                         model_selector, entity_id, values, ref offset, layout
                     );
                 },
@@ -1157,17 +1134,14 @@ pub mod world {
         ///   * `entity_id` - the ID of the entity to remove.
         ///   * `layout` - the model layout
         fn _delete_model_entity(
-            ref self: ContractState,
-            model_selector: felt252,
-            entity_id: felt252,
-            layout: dojo::database::introspect::Layout
+            ref self: ContractState, model_selector: felt252, entity_id: felt252, layout: Layout
         ) {
             match layout {
                 Layout::Fixed(layout) => {
-                    Self::_delete_fixed_layout(model_selector, entity_id, layout);
+                    storage::layout::delete_fixed_layout(model_selector, entity_id, layout);
                 },
                 Layout::Struct(layout) => {
-                    Self::_delete_struct_layout(model_selector, entity_id, layout);
+                    storage::layout::delete_struct_layout(model_selector, entity_id, layout);
                 },
                 _ => { panic!("Unexpected layout type for a model."); }
             };
@@ -1180,19 +1154,20 @@ pub mod world {
         ///   * `entity_id` - the ID of the entity to read.
         ///   * `layout` - the model layout
         fn _read_model_entity(
-            self: @ContractState,
-            model_selector: felt252,
-            entity_id: felt252,
-            layout: dojo::database::introspect::Layout
+            self: @ContractState, model_selector: felt252, entity_id: felt252, layout: Layout
         ) -> Span<felt252> {
             let mut read_data = ArrayTrait::<felt252>::new();
 
             match layout {
                 Layout::Fixed(layout) => {
-                    Self::_read_fixed_layout(model_selector, entity_id, ref read_data, layout);
+                    storage::layout::read_fixed_layout(
+                        model_selector, entity_id, ref read_data, layout
+                    );
                 },
                 Layout::Struct(layout) => {
-                    Self::_read_struct_layout(model_selector, entity_id, ref read_data, layout);
+                    storage::layout::read_struct_layout(
+                        model_selector, entity_id, ref read_data, layout
+                    );
                 },
                 _ => { panic!("Unexpected layout type for a model."); }
             };
@@ -1212,11 +1187,14 @@ pub mod world {
             model_selector: felt252,
             entity_id: felt252,
             member_id: felt252,
-            layout: dojo::database::introspect::Layout
+            layout: Layout
         ) -> Span<felt252> {
             let mut read_data = ArrayTrait::<felt252>::new();
-            Self::_read_layout(
-                model_selector, Self::_combine_key(entity_id, member_id), ref read_data, layout
+            storage::layout::read_layout(
+                model_selector,
+                dojo::utils::combine_key(entity_id, member_id),
+                ref read_data,
+                layout
             );
 
             read_data.span()
@@ -1236,551 +1214,16 @@ pub mod world {
             entity_id: felt252,
             member_id: felt252,
             values: Span<felt252>,
-            layout: dojo::database::introspect::Layout
+            layout: Layout
         ) {
             let mut offset = 0;
-            Self::_write_layout(
-                model_selector, Self::_combine_key(entity_id, member_id), values, ref offset, layout
+            storage::layout::write_layout(
+                model_selector,
+                dojo::utils::combine_key(entity_id, member_id),
+                values,
+                ref offset,
+                layout
             )
-        }
-
-        /// Combine parent and child keys to build one full key.
-        fn _combine_key(parent_key: felt252, child_key: felt252) -> felt252 {
-            core::poseidon::poseidon_hash_span(array![parent_key, child_key].span())
-        }
-
-        /// Append some values to an array.
-        ///
-        /// # Arguments
-        ///  * `dest` - the array to extend
-        ///  * `values` - the values to append to the array
-        fn _append_array(ref dest: Array<felt252>, values: Span<felt252>) {
-            let mut i = 0;
-            loop {
-                if i >= values.len() {
-                    break;
-                }
-                dest.append(*values.at(i));
-                i += 1;
-            };
-        }
-
-        fn _find_variant_layout(
-            variant: felt252, variant_layouts: Span<FieldLayout>
-        ) -> Option<Layout> {
-            let mut i = 0;
-            let layout = loop {
-                if i >= variant_layouts.len() {
-                    break Option::None;
-                }
-
-                let variant_layout = *variant_layouts.at(i);
-                if variant == variant_layout.selector {
-                    break Option::Some(variant_layout.layout);
-                }
-
-                i += 1;
-            };
-
-            layout
-        }
-
-        /// Write values to the world storage.
-        ///
-        /// # Arguments
-        /// * `model` - the model selector.
-        /// * `key` - the object key.
-        /// * `values` - the object values.
-        /// * `offset` - the start of object values in the `values` parameter.
-        /// * `layout` - the object values layout.
-        fn _write_layout(
-            model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Layout,
-        ) {
-            match layout {
-                Layout::Fixed(layout) => {
-                    Self::_write_fixed_layout(model, key, values, ref offset, layout);
-                },
-                Layout::Struct(layout) => {
-                    Self::_write_struct_layout(model, key, values, ref offset, layout);
-                },
-                Layout::Array(layout) => {
-                    Self::_write_array_layout(model, key, values, ref offset, layout);
-                },
-                Layout::Tuple(layout) => {
-                    Self::_write_tuple_layout(model, key, values, ref offset, layout);
-                },
-                Layout::ByteArray => {
-                    Self::_write_byte_array_layout(model, key, values, ref offset);
-                },
-                Layout::Enum(layout) => {
-                    Self::_write_enum_layout(model, key, values, ref offset, layout);
-                }
-            }
-        }
-
-        /// Write fixed layout model record to the world storage.
-        ///
-        /// # Arguments
-        /// * `model` - the model selector.
-        /// * `key` - the model record key.
-        /// * `values` - the model record values.
-        /// * `offset` - the start of model record values in the `values` parameter.
-        /// * `layout` - the model record layout.
-        fn _write_fixed_layout(
-            model: felt252, key: felt252, values: Span<felt252>, ref offset: u32, layout: Span<u8>
-        ) {
-            database::set(model, key, values, offset, layout);
-            offset += layout.len();
-        }
-
-        /// Write array layout model record to the world storage.
-        ///
-        /// # Arguments
-        /// * `model` - the model selector.
-        /// * `key` - the model record key.
-        /// * `values` - the model record values.
-        /// * `offset` - the start of model record values in the `values` parameter.
-        /// * `item_layout` - the model record layout (temporary a Span because of type recursion issue).
-        fn _write_array_layout(
-            model: felt252,
-            key: felt252,
-            values: Span<felt252>,
-            ref offset: u32,
-            item_layout: Span<Layout>
-        ) {
-            assert((values.len() - offset) > 0, 'Invalid values length');
-
-            // first, read array size which is the first felt252 from values
-            let array_len = *values.at(offset);
-            assert(array_len.into() <= dojo::database::MAX_ARRAY_LENGTH, 'invalid array length');
-            let array_len: u32 = array_len.try_into().unwrap();
-
-            // then, write the array size
-            database::set(model, key, values, offset, array![251].span());
-            offset += 1;
-
-            // and then, write array items
-            let item_layout = *item_layout.at(0);
-
-            let mut i = 0;
-            loop {
-                if i >= array_len {
-                    break;
-                }
-                let key = Self::_combine_key(key, i.into());
-
-                Self::_write_layout(model, key, values, ref offset, item_layout);
-
-                i += 1;
-            };
-        }
-
-        ///
-        fn _write_byte_array_layout(
-            model: felt252, key: felt252, values: Span<felt252>, ref offset: u32
-        ) {
-            // The ByteArray internal structure is
-            // struct ByteArray {
-            //    data: Array<bytes31>,
-            //    pending_word: felt252,
-            //    pending_word_len: usize,
-            // }
-            //
-            // That means, the length of data to write from 'values' is:
-            // 1 + len(data) + 1 + 1 = len(data) + 3
-            assert((values.len() - offset) >= MIN_BYTE_ARRAY_SIZE, 'Invalid values length');
-
-            let data_len = *values.at(offset);
-            assert(
-                data_len.into() <= (dojo::database::MAX_ARRAY_LENGTH - MIN_BYTE_ARRAY_SIZE.into()),
-                'invalid array length'
-            );
-
-            let array_size: u32 = data_len.try_into().unwrap() + MIN_BYTE_ARRAY_SIZE.into();
-            assert((values.len() - offset) >= array_size, 'Invalid values length');
-
-            database::set_array(model, key, values, offset, array_size);
-            offset += array_size;
-        }
-
-        /// Write struct layout model record to the world storage.
-        ///
-        /// # Arguments
-        /// * `model` - the model selector.
-        /// * `key` - the model record key.
-        /// * `values` - the model record values.
-        /// * `offset` - the start of model record values in the `values` parameter.
-        /// * `layout` - list of field layouts.
-        fn _write_struct_layout(
-            model: felt252,
-            key: felt252,
-            values: Span<felt252>,
-            ref offset: u32,
-            layout: Span<FieldLayout>
-        ) {
-            let mut i = 0;
-            loop {
-                if i >= layout.len() {
-                    break;
-                }
-
-                let field_layout = *layout.at(i);
-                let field_key = Self::_combine_key(key, field_layout.selector);
-
-                Self::_write_layout(model, field_key, values, ref offset, field_layout.layout);
-
-                i += 1;
-            }
-        }
-
-        /// Write tuple layout model record to the world storage.
-        ///
-        /// # Arguments
-        /// * `model` - the model selector.
-        /// * `key` - the model record key.
-        /// * `values` - the model record values.
-        /// * `offset` - the start of model record values in the `values` parameter.
-        /// * `layout` - list of tuple item layouts.
-        fn _write_tuple_layout(
-            model: felt252,
-            key: felt252,
-            values: Span<felt252>,
-            ref offset: u32,
-            layout: Span<Layout>
-        ) {
-            let mut i = 0;
-            loop {
-                if i >= layout.len() {
-                    break;
-                }
-
-                let field_layout = *layout.at(i);
-                let key = Self::_combine_key(key, i.into());
-
-                Self::_write_layout(model, key, values, ref offset, field_layout);
-
-                i += 1;
-            };
-        }
-
-        fn _write_enum_layout(
-            model: felt252,
-            key: felt252,
-            values: Span<felt252>,
-            ref offset: u32,
-            variant_layouts: Span<FieldLayout>
-        ) {
-            // first, get the variant value from `values``
-            let variant = *values.at(offset);
-            assert(variant.into() < 256_u256, 'invalid variant value');
-
-            // and write it
-            database::set(model, key, values, offset, array![251].span());
-            offset += 1;
-
-            // find the corresponding layout and then write the full variant
-            let variant_data_key = Self::_combine_key(key, variant);
-
-            match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_write_layout(
-                    model, variant_data_key, values, ref offset, layout
-                ),
-                Option::None => panic!("Unable to find the variant layout")
-            };
-        }
-
-        /// Delete a fixed layout model record from the world storage.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector.
-        ///   * `key` - the model record key.
-        ///   * `layout` - the model layout
-        fn _delete_fixed_layout(model: felt252, key: felt252, layout: Span<u8>) {
-            database::delete(model, key, layout);
-        }
-
-        /// Delete an array layout model record from the world storage.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector.
-        ///   * `key` - the model record key.
-        fn _delete_array_layout(model: felt252, key: felt252) {
-            // just set the array length to 0
-            database::delete(model, key, array![251].span());
-        }
-
-        ///
-        fn _delete_byte_array_layout(model: felt252, key: felt252) {
-            // The ByteArray internal structure is
-            // struct ByteArray {
-            //    data: Array<bytes31>,
-            //    pending_word: felt252,
-            //    pending_word_len: usize,
-            // }
-            //
-
-            // So, just set the 3 first values to 0 (len(data), pending_world and pending_word_len)
-            database::delete(model, key, array![251, 251, 251].span());
-        }
-
-        /// Delete a model record from the world storage.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector.
-        ///   * `key` - the model record key.
-        ///   * `layout` - the model layout
-        fn _delete_layout(model: felt252, key: felt252, layout: Layout) {
-            match layout {
-                Layout::Fixed(layout) => { Self::_delete_fixed_layout(model, key, layout); },
-                Layout::Struct(layout) => { Self::_delete_struct_layout(model, key, layout); },
-                Layout::Array(_) => { Self::_delete_array_layout(model, key); },
-                Layout::Tuple(layout) => { Self::_delete_tuple_layout(model, key, layout); },
-                Layout::ByteArray => { Self::_delete_byte_array_layout(model, key); },
-                Layout::Enum(layout) => { Self::_delete_enum_layout(model, key, layout); }
-            }
-        }
-
-        /// Delete a struct layout model record from the world storage.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector.
-        ///   * `key` - the model record key.
-        ///   * `layout` - list of field layouts.
-        fn _delete_struct_layout(model: felt252, key: felt252, layout: Span<FieldLayout>) {
-            let mut i = 0;
-            loop {
-                if i >= layout.len() {
-                    break;
-                }
-
-                let field_layout = *layout.at(i);
-                let key = Self::_combine_key(key, field_layout.selector);
-
-                Self::_delete_layout(model, key, field_layout.layout);
-
-                i += 1;
-            }
-        }
-
-        /// Delete a tuple layout model record from the world storage.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector.
-        ///   * `key` - the model record key.
-        ///   * `layout` - list of tuple item layouts.
-        fn _delete_tuple_layout(model: felt252, key: felt252, layout: Span<Layout>) {
-            let mut i = 0;
-            loop {
-                if i >= layout.len() {
-                    break;
-                }
-
-                let field_layout = *layout.at(i);
-                let key = Self::_combine_key(key, i.into());
-
-                Self::_delete_layout(model, key, field_layout);
-
-                i += 1;
-            }
-        }
-
-        fn _delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<FieldLayout>) {
-            // read the variant value
-            let res = database::get(model, key, array![251].span());
-            assert(res.len() == 1, 'internal database error');
-
-            let variant = *res.at(0);
-            assert(variant.into() < 256_u256, 'invalid variant value');
-
-            // reset the variant value
-            database::delete(model, key, array![251].span());
-
-            // find the corresponding layout and the delete the full variant
-            let variant_data_key = Self::_combine_key(key, variant);
-
-            match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_delete_layout(model, variant_data_key, layout),
-                Option::None => panic!("Unable to find the variant layout")
-            };
-        }
-
-        /// Read a model record.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `key` - model record key.
-        ///   * `read_data` - the read data.
-        ///   * `layout` - the model layout
-        fn _read_layout(
-            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Layout
-        ) {
-            match layout {
-                Layout::Fixed(layout) => Self::_read_fixed_layout(
-                    model, key, ref read_data, layout
-                ),
-                Layout::Struct(layout) => Self::_read_struct_layout(
-                    model, key, ref read_data, layout
-                ),
-                Layout::Array(layout) => Self::_read_array_layout(
-                    model, key, ref read_data, layout
-                ),
-                Layout::Tuple(layout) => Self::_read_tuple_layout(
-                    model, key, ref read_data, layout
-                ),
-                Layout::ByteArray => Self::_read_byte_array_layout(model, key, ref read_data),
-                Layout::Enum(layout) => Self::_read_enum_layout(model, key, ref read_data, layout),
-            };
-        }
-
-        /// Read a fixed layout model record.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `key` - model record key.
-        ///   * `read_data` - the read data.
-        ///   * `layout` - the model layout
-        fn _read_fixed_layout(
-            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<u8>
-        ) {
-            let data = database::get(model, key, layout);
-            Self::_append_array(ref read_data, data);
-        }
-
-        /// Read an array layout model record.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `key` - model record key.
-        ///   * `read_data` - the read data.
-        ///   * `layout` - the array item layout
-        fn _read_array_layout(
-            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
-        ) {
-            // read number of array items
-            let res = database::get(model, key, array![251].span());
-            assert(res.len() == 1, 'internal database error');
-
-            let array_len = *res.at(0);
-            assert(array_len.into() <= dojo::database::MAX_ARRAY_LENGTH, 'invalid array length');
-
-            read_data.append(array_len);
-
-            let item_layout = *layout.at(0);
-            let array_len: u32 = array_len.try_into().unwrap();
-
-            let mut i = 0;
-            loop {
-                if i >= array_len {
-                    break;
-                }
-
-                let field_key = Self::_combine_key(key, i.into());
-                Self::_read_layout(model, field_key, ref read_data, item_layout);
-
-                i += 1;
-            };
-        }
-
-        ///
-        fn _read_byte_array_layout(model: felt252, key: felt252, ref read_data: Array<felt252>) {
-            // The ByteArray internal structure is
-            // struct ByteArray {
-            //    data: Array<bytes31>,
-            //    pending_word: felt252,
-            //    pending_word_len: usize,
-            // }
-            //
-            // So, read the length of data and compute the full size to read
-
-            let res = database::get(model, key, array![251].span());
-            assert(res.len() == 1, 'internal database error');
-
-            let data_len = *res.at(0);
-            assert(
-                data_len.into() <= (dojo::database::MAX_ARRAY_LENGTH - MIN_BYTE_ARRAY_SIZE.into()),
-                'invalid array length'
-            );
-
-            let array_size: u32 = data_len.try_into().unwrap() + MIN_BYTE_ARRAY_SIZE;
-
-            let data = database::get_array(model, key, array_size);
-
-            Self::_append_array(ref read_data, data);
-        }
-
-        /// Read a struct layout model record.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `key` - model record key.
-        ///   * `read_data` - the read data.
-        ///   * `layout` - the list of field layouts.
-        fn _read_struct_layout(
-            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<FieldLayout>
-        ) {
-            let mut i = 0;
-            loop {
-                if i >= layout.len() {
-                    break;
-                }
-
-                let field_layout = *layout.at(i);
-                let field_key = Self::_combine_key(key, field_layout.selector);
-
-                Self::_read_layout(model, field_key, ref read_data, field_layout.layout);
-
-                i += 1;
-            }
-        }
-
-        /// Read a tuple layout model record.
-        ///
-        /// # Arguments
-        ///   * `model` - the model selector
-        ///   * `key` - model record key.
-        ///   * `read_data` - the read data.
-        ///   * `layout` - the tuple item layouts
-        fn _read_tuple_layout(
-            model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
-        ) {
-            let mut i = 0;
-            loop {
-                if i >= layout.len() {
-                    break;
-                }
-
-                let field_layout = *layout.at(i);
-                let field_key = Self::_combine_key(key, i.into());
-                Self::_read_layout(model, field_key, ref read_data, field_layout);
-
-                i += 1;
-            };
-        }
-
-        fn _read_enum_layout(
-            model: felt252,
-            key: felt252,
-            ref read_data: Array<felt252>,
-            variant_layouts: Span<FieldLayout>
-        ) {
-            // read the variant value first
-            let res = database::get(model, key, array![8].span());
-            assert(res.len() == 1, 'internal database error');
-
-            let variant = *res.at(0);
-            assert(variant.into() < 256_u256, 'invalid variant value');
-
-            read_data.append(variant);
-
-            // find the corresponding layout and the read the variant data
-            let variant_data_key = Self::_combine_key(key, variant);
-
-            match Self::_find_variant_layout(variant, variant_layouts) {
-                Option::Some(layout) => Self::_read_layout(
-                    model, variant_data_key, ref read_data, layout
-                ),
-                Option::None => panic!("Unable to find the variant layout")
-            };
         }
     }
 }

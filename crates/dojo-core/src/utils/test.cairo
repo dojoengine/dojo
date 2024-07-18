@@ -1,12 +1,14 @@
-use starknet::{ClassHash, ContractAddress, syscalls::deploy_syscall, get_caller_address};
 use core::array::{ArrayTrait, SpanTrait};
-use core::traits::TryInto;
 use core::option::OptionTrait;
-use core::{result::ResultTrait, traits::Into};
+use core::result::ResultTrait;
+use core::traits::{Into, TryInto};
 
+use starknet::{ClassHash, ContractAddress, syscalls::deploy_syscall, get_caller_address};
+
+use dojo::contract::base;
+use dojo::model::resource_metadata;
+use dojo::storage::packing::{shl, shr};
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
-use dojo::packing::{shl, shr};
-use dojo::resource_metadata::resource_metadata;
 
 /// Deploy classhash with calldata for constructor
 ///
@@ -45,7 +47,7 @@ pub fn spawn_test_world(namespace: ByteArray, models: Array<felt252>) -> IWorldD
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
         salt.into(),
-        array![dojo::base::base::TEST_CLASS_HASH].span(),
+        array![base::TEST_CLASS_HASH].span(),
         false
     )
         .unwrap();

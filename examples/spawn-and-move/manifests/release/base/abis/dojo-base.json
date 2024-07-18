@@ -2,11 +2,11 @@
   {
     "type": "impl",
     "name": "WorldProviderImpl",
-    "interface_name": "dojo::world::IWorldProvider"
+    "interface_name": "dojo::world::world_contract::IWorldProvider"
   },
   {
     "type": "struct",
-    "name": "dojo::world::IWorldDispatcher",
+    "name": "dojo::world::world_contract::IWorldDispatcher",
     "members": [
       {
         "name": "contract_address",
@@ -16,7 +16,7 @@
   },
   {
     "type": "interface",
-    "name": "dojo::world::IWorldProvider",
+    "name": "dojo::world::world_contract::IWorldProvider",
     "items": [
       {
         "type": "function",
@@ -24,7 +24,7 @@
         "inputs": [],
         "outputs": [
           {
-            "type": "dojo::world::IWorldDispatcher"
+            "type": "dojo::world::world_contract::IWorldDispatcher"
           }
         ],
         "state_mutability": "view"
@@ -34,11 +34,11 @@
   {
     "type": "impl",
     "name": "UpgradableImpl",
-    "interface_name": "dojo::components::upgradeable::IUpgradeable"
+    "interface_name": "dojo::contract::upgradeable::IUpgradeable"
   },
   {
     "type": "interface",
-    "name": "dojo::components::upgradeable::IUpgradeable",
+    "name": "dojo::contract::upgradeable::IUpgradeable",
     "items": [
       {
         "type": "function",
@@ -61,7 +61,7 @@
   },
   {
     "type": "event",
-    "name": "dojo::components::upgradeable::upgradeable::Upgraded",
+    "name": "dojo::contract::upgradeable::upgradeable::Upgraded",
     "kind": "struct",
     "members": [
       {
@@ -73,24 +73,24 @@
   },
   {
     "type": "event",
-    "name": "dojo::components::upgradeable::upgradeable::Event",
+    "name": "dojo::contract::upgradeable::upgradeable::Event",
     "kind": "enum",
     "variants": [
       {
         "name": "Upgraded",
-        "type": "dojo::components::upgradeable::upgradeable::Upgraded",
+        "type": "dojo::contract::upgradeable::upgradeable::Upgraded",
         "kind": "nested"
       }
     ]
   },
   {
     "type": "event",
-    "name": "dojo::base::base::Event",
+    "name": "dojo::contract::base_contract::base::Event",
     "kind": "enum",
     "variants": [
       {
         "name": "UpgradeableEvent",
-        "type": "dojo::components::upgradeable::upgradeable::Event",
+        "type": "dojo::contract::upgradeable::upgradeable::Event",
         "kind": "flat"
       }
     ]

@@ -1,6 +1,6 @@
 kind = "DojoModel"
-class_hash = "0x33728d68e7d0d807184b6cb065b608a5145fb4b964c1c0bf3c8a4b92695053e"
-original_class_hash = "0x33728d68e7d0d807184b6cb065b608a5145fb4b964c1c0bf3c8a4b92695053e"
+class_hash = "0x3ca17c0ebb595e1d1cc01813923864316a49b91f4a725ef1371329abbc1947b"
+original_class_hash = "0x3ca17c0ebb595e1d1cc01813923864316a49b91f4a725ef1371329abbc1947b"
 abi = "manifests/dev/base/abis/models/dojo_examples-Message-1bb1d226.json"
 tag = "dojo_examples-Message"
 manifest_name = "dojo_examples-Message-1bb1d226"

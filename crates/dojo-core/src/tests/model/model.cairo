@@ -1,4 +1,5 @@
-use dojo::test_utils::{spawn_test_world};
+use dojo::model::{Model, ModelEntity};
+use dojo::utils::test::{spawn_test_world};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 // Utils
@@ -28,23 +29,23 @@ fn test_values() {
     let mvalues = FooEntity { __id: 1, v1: 3, v2: 4 };
     let expected_values = array![3, 4].span();
 
-    let values = dojo::model::ModelEntity::<FooEntity>::values(@mvalues);
+    let values = ModelEntity::<FooEntity>::values(@mvalues);
     assert!(expected_values == values);
 }
 
 #[test]
 fn test_from_values() {
-    let values = array![3, 4].span();
+    let mut values = array![3, 4].span();
 
-    let model_entity = dojo::model::ModelEntity::<FooEntity>::from_values(1, values);
+    let model_entity = ModelEntity::<FooEntity>::from_values(1, ref values);
     assert!(model_entity.__id == 1 && model_entity.v1 == 3 && model_entity.v2 == 4);
 }
 
 #[test]
 #[should_panic(expected: "ModelEntity `FooEntity`: deserialization failed.")]
 fn test_from_values_bad_data() {
-    let values = array![3].span();
-    let _ = dojo::model::ModelEntity::<FooEntity>::from_values(1, values);
+    let mut values = array![3].span();
+    let _ = ModelEntity::<FooEntity>::from_values(1, ref values);
 }
 
 #[test]
@@ -92,7 +93,7 @@ fn test_get_and_set_member_from_entity() {
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
 
-    let v1_raw_value: Span<felt252> = dojo::model::ModelEntity::<
+    let v1_raw_value: Span<felt252> = ModelEntity::<
         FooEntity
     >::get_member(world, foo.entity_id(), selector!("v1"));
 
@@ -169,7 +170,7 @@ fn test_get_and_set_member_from_model() {
     let keys = array![foo.k1.into(), foo.k2.into()].span();
     foo.set(world);
 
-    let v1_raw_value = dojo::model::Model::<Foo>::get_member(world, keys, selector!("v1"));
+    let v1_raw_value = Model::<Foo>::get_member(world, keys, selector!("v1"));
 
     assert!(v1_raw_value.len() == 1);
     assert!(*v1_raw_value.at(0) == 3);

@@ -1,10 +1,11 @@
 use core::option::OptionTrait;
-use starknet::ClassHash;
 use core::traits::TryInto;
 
-use dojo::base::base;
-use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
-use dojo::test_utils::{spawn_test_world};
+use starknet::ClassHash;
+
+use dojo::contract::base;
+use dojo::contract::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+use dojo::utils::test::{spawn_test_world};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 
@@ -133,7 +134,7 @@ mod invalid_legacy_model {
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::utils::hash(@Self::namespace(self))
+            dojo::utils::bytearray_hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -160,7 +161,7 @@ mod invalid_legacy_model_world {
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::utils::hash(@Self::namespace(self))
+            dojo::utils::bytearray_hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -187,7 +188,7 @@ mod invalid_model {
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::utils::hash(@Self::namespace(self))
+            dojo::utils::bytearray_hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -214,7 +215,7 @@ mod invalid_model_world {
         }
 
         fn namespace_hash(self: @ContractState) -> felt252 {
-            dojo::utils::hash(@Self::namespace(self))
+            dojo::utils::bytearray_hash(@Self::namespace(self))
         }
 
         fn name(self: @ContractState) -> ByteArray {

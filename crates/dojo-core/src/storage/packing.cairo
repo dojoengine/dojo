@@ -1,7 +1,8 @@
-use starknet::{ClassHash, ContractAddress};
 use core::array::{ArrayTrait, SpanTrait};
-use core::traits::{Into, TryInto};
 use core::option::OptionTrait;
+use core::traits::{Into, TryInto};
+
+use starknet::{ClassHash, ContractAddress};
 
 const PACKING_MAX_BITS: u8 = 251;
 

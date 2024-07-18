@@ -28,7 +28,7 @@ pub fn handle_introspect_struct(
         layout::build_packed_struct_layout(db, diagnostics, &struct_ast)
     } else {
         format!(
-            "dojo::database::introspect::Layout::Struct(
+            "dojo::model::Layout::Struct(
             array![
             {}
             ].span()
@@ -66,7 +66,7 @@ pub fn handle_introspect_enum(
         }
     } else {
         format!(
-            "dojo::database::introspect::Layout::Enum(
+            "dojo::model::Layout::Enum(
             array![
             {}
             ].span()
@@ -94,19 +94,19 @@ fn generate_introspect(
 ) -> RewriteNode {
     RewriteNode::interpolate_patched(
         "
-impl $name$Introspect<$generics$> of \
-         dojo::database::introspect::Introspect<$name$<$generics_types$>> {
+impl $name$Introspect<$generics$> of dojo::model::introspect::Introspect<$name$<$generics_types$>> \
+         {
     #[inline(always)]
     fn size() -> Option<usize> {
         $size$
     }
 
-    fn layout() -> dojo::database::introspect::Layout {
+    fn layout() -> dojo::model::Layout {
         $layout$
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
+    fn ty() -> dojo::model::introspect::Ty {
         $ty$
     }
 }
@@ -148,7 +148,7 @@ fn build_generic_types_and_impls(
 
     let generic_impls = generic_types
         .iter()
-        .map(|g| format!("{g}, impl {g}Introspect: dojo::database::introspect::Introspect<{g}>"))
+        .map(|g| format!("{g}, impl {g}Introspect: dojo::model::introspect::Introspect<{g}>"))
         .collect::<Vec<_>>()
         .join(", ");
 

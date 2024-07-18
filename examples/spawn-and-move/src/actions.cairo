@@ -213,7 +213,7 @@ pub mod actions {
 mod tests {
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-    use dojo::test_utils::{spawn_test_world, deploy_contract};
+    use dojo::utils::test::{spawn_test_world, deploy_contract};
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
     use dojo_examples::models::{Position, position, Moves, moves, Direction, Vec2};

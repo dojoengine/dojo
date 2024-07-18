@@ -1,4 +1,5 @@
-use dojo::database::introspect::{Introspect, Layout, FieldLayout};
+use dojo::model::introspect::Introspect;
+use dojo::model::{Layout, FieldLayout};
 
 #[derive(Drop, Introspect)]
 struct Base {

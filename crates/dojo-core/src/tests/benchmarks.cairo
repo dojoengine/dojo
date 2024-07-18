@@ -1,16 +1,22 @@
-use core::result::ResultTrait;
-use core::array::ArrayTrait;
-use core::array::SpanTrait;
+use core::array::{ArrayTrait, SpanTrait};
 use core::poseidon::poseidon_hash_span;
-use starknet::SyscallResultTrait;
-use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
+use core::result::ResultTrait;
+use core::serde::Serde;
 
-use dojo::database;
-use dojo::database::storage;
-use dojo::model::Model;
-use dojo::world_test::Foo;
-use dojo::test_utils::GasCounterTrait;
-use dojo::database::introspect::{Introspect, Layout};
+use starknet::{
+    contract_address_const, ContractAddress, ClassHash, get_caller_address, SyscallResultTrait
+};
+use starknet::storage_access::{
+    storage_base_address_from_felt252, storage_address_from_base,
+    storage_address_from_base_and_offset
+};
+use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
+
+use dojo::model::{Model, Layout};
+use dojo::model::introspect::Introspect;
+use dojo::storage::{database, storage};
+use dojo::utils::test::GasCounterTrait;
+use dojo::tests::world::Foo;
 
 #[test]
 #[available_gas(1000000000)]
@@ -60,18 +66,16 @@ fn bench_storage_many() {
 fn bench_native_storage() {
     let gas = GasCounterTrait::start();
     let keys = array![0x1337].span();
-    let base = starknet::storage_access::storage_base_address_from_felt252(
-        poseidon_hash_span(keys)
-    );
-    let address = starknet::storage_access::storage_address_from_base(base);
+    let base = storage_base_address_from_felt252(poseidon_hash_span(keys));
+    let address = storage_address_from_base(base);
     gas.end("native prep");
 
     let gas = GasCounterTrait::start();
-    starknet::syscalls::storage_write_syscall(0, address, 42).unwrap_syscall();
+    storage_write_syscall(0, address, 42).unwrap_syscall();
     gas.end("native write");
 
     let gas = GasCounterTrait::start();
-    let value = starknet::syscalls::storage_read_syscall(0, address).unwrap_syscall();
+    let value = storage_read_syscall(0, address).unwrap_syscall();
     gas.end("native read");
 
     assert(value == 42, 'read invalid');
@@ -82,18 +86,16 @@ fn bench_native_storage() {
 fn bench_native_storage_offset() {
     let gas = GasCounterTrait::start();
     let keys = array![0x1337].span();
-    let base = starknet::storage_access::storage_base_address_from_felt252(
-        poseidon_hash_span(keys)
-    );
-    let address = starknet::storage_access::storage_address_from_base_and_offset(base, 42);
+    let base = storage_base_address_from_felt252(poseidon_hash_span(keys));
+    let address = storage_address_from_base_and_offset(base, 42);
     gas.end("native prep of");
 
     let gas = GasCounterTrait::start();
-    starknet::syscalls::storage_write_syscall(0, address, 42).unwrap_syscall();
+    storage_write_syscall(0, address, 42).unwrap_syscall();
     gas.end("native writ of");
 
     let gas = GasCounterTrait::start();
-    let value = starknet::syscalls::storage_read_syscall(0, address).unwrap_syscall();
+    let value = storage_read_syscall(0, address).unwrap_syscall();
     gas.end("native read of");
 
     assert(value == 42, 'read invalid');
@@ -151,9 +153,9 @@ fn bench_simple_struct() {
 
     let gas = GasCounterTrait::start();
     let mut serialized = ArrayTrait::new();
-    core::serde::Serde::serialize(@foo.a, ref serialized);
-    core::serde::Serde::serialize(@foo.b, ref serialized);
-    let serialized = core::array::ArrayTrait::span(@serialized);
+    Serde::serialize(@foo.a, ref serialized);
+    Serde::serialize(@foo.b, ref serialized);
+    let serialized = ArrayTrait::span(@serialized);
     gas.end("foo serialize");
 
     let gas = GasCounterTrait::start();
@@ -200,14 +202,14 @@ fn test_struct_with_many_fields_fixed() {
 
     let gas = GasCounterTrait::start();
     let mut serialized = ArrayTrait::new();
-    core::serde::Serde::serialize(@pos.x, ref serialized);
-    core::serde::Serde::serialize(@pos.y, ref serialized);
-    core::serde::Serde::serialize(@pos.z, ref serialized);
-    core::serde::Serde::serialize(@pos.a, ref serialized);
-    core::serde::Serde::serialize(@pos.b, ref serialized);
-    core::serde::Serde::serialize(@pos.c, ref serialized);
-    core::serde::Serde::serialize(@pos.d, ref serialized);
-    let serialized = core::array::ArrayTrait::span(@serialized);
+    Serde::serialize(@pos.x, ref serialized);
+    Serde::serialize(@pos.y, ref serialized);
+    Serde::serialize(@pos.z, ref serialized);
+    Serde::serialize(@pos.a, ref serialized);
+    Serde::serialize(@pos.b, ref serialized);
+    Serde::serialize(@pos.c, ref serialized);
+    Serde::serialize(@pos.d, ref serialized);
+    let serialized = ArrayTrait::span(@serialized);
     gas.end("pos serialize");
 
     let gas = GasCounterTrait::start();
@@ -268,9 +270,9 @@ fn bench_nested_struct_packed() {
 
     let gas = GasCounterTrait::start();
     let mut serialized = ArrayTrait::new();
-    core::serde::Serde::serialize(@case.sword, ref serialized);
-    core::serde::Serde::serialize(@case.material, ref serialized);
-    let serialized = core::array::ArrayTrait::span(@serialized);
+    Serde::serialize(@case.sword, ref serialized);
+    Serde::serialize(@case.material, ref serialized);
+    let serialized = ArrayTrait::span(@serialized);
     gas.end("case serialize");
 
     let gas = GasCounterTrait::start();
@@ -387,12 +389,12 @@ fn bench_complex_struct_packed() {
 
     let gas = GasCounterTrait::start();
     let mut serialized = ArrayTrait::new();
-    core::serde::Serde::serialize(@char.heigth, ref serialized);
-    core::serde::Serde::serialize(@char.abilities, ref serialized);
-    core::serde::Serde::serialize(@char.stats, ref serialized);
-    core::serde::Serde::serialize(@char.weapon, ref serialized);
-    core::serde::Serde::serialize(@char.gold, ref serialized);
-    let serialized = core::array::ArrayTrait::span(@serialized);
+    Serde::serialize(@char.heigth, ref serialized);
+    Serde::serialize(@char.abilities, ref serialized);
+    Serde::serialize(@char.stats, ref serialized);
+    Serde::serialize(@char.weapon, ref serialized);
+    Serde::serialize(@char.gold, ref serialized);
+    let serialized = ArrayTrait::span(@serialized);
     gas.end("chars serialize");
 
     let gas = GasCounterTrait::start();

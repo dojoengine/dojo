@@ -1,6 +1,6 @@
 kind = "DojoContract"
-class_hash = "0x11bb79f4255371bbd58715696ede661544e281ece752d783e52e73deb8948cf"
-original_class_hash = "0x11bb79f4255371bbd58715696ede661544e281ece752d783e52e73deb8948cf"
+class_hash = "0x45ad5a298db270a9c3ee439b7a7a008e3219b70937cfaa144589866442f3908"
+original_class_hash = "0x45ad5a298db270a9c3ee439b7a7a008e3219b70937cfaa144589866442f3908"
 base_class_hash = "0x0"
 abi = "manifests/release/base/abis/contracts/dojo_examples-dungeon-6620e0e6.json"
 reads = []
