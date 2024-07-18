@@ -7,7 +7,7 @@ use num_traits::ToPrimitive;
 use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{info, warn};
 
 use super::EventProcessor;
 use crate::processors::{ENTITY_ID_INDEX, MODEL_INDEX};
@@ -58,7 +58,8 @@ where
 
         let model = db.model(selector).await?;
         let schema = model.schema().await?;
-        let mut ty = schema
+
+        let member = schema
             .as_struct()
             .expect("model schema must be a struct")
             .children
@@ -68,14 +69,13 @@ where
                     == member_selector
             })
             .context("member not found")?
-            .ty
             .clone();
 
         info!(
             target: LOG_TARGET,
             name = %model.name(),
             entity_id = format!("{:#x}", entity_id),
-            member = %ty.name(),
+            member = %member.name,
             "Store update member.",
         );
 
@@ -84,16 +84,24 @@ where
             values_start + event.data[values_start].to_usize().context("invalid usize")?;
 
         // Skip the length to only get the values as they will be deserialized.
-        let values = event.data[values_start + 1..=values_end].to_vec();
+        let mut values = event.data[values_start + 1..=values_end].to_vec();
 
         let tag = naming::get_tag(model.namespace(), model.name());
 
-        // Keys are read from the db, since we don't have access to them when only
-        // the entity id is passed.
-        let keys = db.get_entity_keys(entity_id, &tag).await?;
-        let mut keys_and_unpacked = [keys, values].concat();
+        if !db.does_entity_exist(tag.clone(), entity_id).await? {
+            warn!(
+                target: LOG_TARGET,
+                tag,
+                entity_id = format!("{:#x}", entity_id),
+                "Entity not found, must be set before updating a member.",
+            );
 
-        ty.deserialize(&mut keys_and_unpacked)?;
+            return Ok(());
+        }
+
+        let mut ty = member.ty.clone();
+        ty.deserialize(&mut values)?;
+
         db.set_model_member(entity_id, false, &schema.name(), &ty, event_id, block_timestamp).await
     }
 }

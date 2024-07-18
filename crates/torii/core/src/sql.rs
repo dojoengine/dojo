@@ -283,7 +283,7 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
-        let path = vec![model_tag.to_string()];
+        let path = vec![model_tag.to_string(), member.name()];
         // update model member
         self.build_set_entity_queries_recursive(
             path,
@@ -410,14 +410,13 @@ impl Sql {
         Ok(keys)
     }
 
-    pub async fn entity(&self, model: String, key: Felt) -> Result<Vec<Felt>> {
-        let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ? WHERE id = ?")
-            .bind(model)
-            .bind(format!("{:#x}", key));
+    pub async fn does_entity_exist(&self, model: String, key: Felt) -> Result<bool> {
+        let sql = format!("SELECT COUNT(*) FROM [{model}] WHERE id = ?");
 
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let row: (i32, String, String) = query.fetch_one(&mut *conn).await?;
-        Ok(serde_json::from_str(&row.2).unwrap())
+        let count: i64 =
+            sqlx::query_scalar(&sql).bind(format!("{:#x}", key)).fetch_one(&self.pool).await?;
+
+        Ok(count > 0)
     }
 
     pub async fn entities(&self, model: String) -> Result<Vec<Vec<Felt>>> {

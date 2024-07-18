@@ -236,7 +236,7 @@ alloy-provider = { version = "0.2", default-features = false, features = [
 ] }
 alloy-rpc-types-eth = { version = "0.2", default-features = false }
 alloy-signer = { version = "0.2", default-features = false }
-alloy-transport = { version = "0.2" }
+alloy-transport = { version = "0.2", default-features = false }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
