@@ -230,8 +230,8 @@ pub fn get_packed_array(
             index_in_chunk, 1
         );
         index_in_chunk = match has_overflowed {
-            true => sum,
-            false => {
+            false => sum,
+            true => {
                 // After reading 256 `felt`s, `index_in_chunk` will overflow and we move to the
                 // next chunk.
                 chunk += 1;
