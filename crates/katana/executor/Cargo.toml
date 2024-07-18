@@ -19,8 +19,6 @@ tracing.workspace = true
 # blockifier deps
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "57c11586", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
-oneshot = { version = "0.1.8", default-features = false, features = [ "std" ] }
-rayon.workspace = true
 
 # Disable SIR for now until they support Cairo 2.6.3
 # # starknet_in_rust deps
@@ -41,7 +39,9 @@ similar-asserts.workspace = true
 tokio.workspace = true
 
 criterion.workspace = true
+oneshot = { version = "0.1.8", default-features = false, features = [ "std" ] }
 pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
+rayon.workspace = true
 
 [features]
 blockifier = [ "dep:blockifier", "dep:katana-cairo", "dep:starknet" ]
