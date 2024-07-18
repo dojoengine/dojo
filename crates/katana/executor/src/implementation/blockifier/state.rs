@@ -129,7 +129,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<katana_primitives::class::CompiledClassHash>> {
-        let Ok(hash) = dbg!(self.0.lock().inner.get_compiled_class_hash(ClassHash(hash))) else {
+        let Ok(hash) = self.0.lock().inner.get_compiled_class_hash(ClassHash(hash)) else {
             return Ok(None);
         };
 
