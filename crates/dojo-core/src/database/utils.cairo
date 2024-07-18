@@ -1,4 +1,4 @@
-fn any_none<T>(arr: @Array<Option<T>>) -> bool {
+pub fn any_none<T>(arr: @Array<Option<T>>) -> bool {
     let mut i = 0;
     let mut res = false;
     loop {
@@ -15,7 +15,7 @@ fn any_none<T>(arr: @Array<Option<T>>) -> bool {
     res
 }
 
-fn sum(arr: Array<Option<u32>>) -> u32 {
+pub fn sum(arr: Array<Option<u32>>) -> u32 {
     let mut i = 0;
     let mut res = 0;
 

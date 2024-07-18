@@ -1,9 +1,9 @@
 #[derive(Drop, Serde)]
 #[dojo::model(namespace: "bestiary")]
-struct RiverSkale {
+pub struct RiverSkale {
     #[key]
-    id: u32,
-    health: u32,
-    armor: u32,
-    attack: u32,
+    pub id: u32,
+    pub health: u32,
+    pub armor: u32,
+    pub attack: u32,
 }

@@ -1,5 +1,6 @@
 [package]
 cairo-version = "=2.6.4"
+edition = "2023_11"
 name = "types_test"
 version = "0.7.3"
 

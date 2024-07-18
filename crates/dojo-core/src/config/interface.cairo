@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait IConfig<T> {
+pub trait IConfig<T> {
     /// Sets the information of the program that generates the
     /// state transition trace (namely DojoOS).
     ///

@@ -1,7 +1,6 @@
-use array::ArrayTrait;
-use array::SpanTrait;
-use traits::Into;
-use debug::PrintTrait;
+use core::array::ArrayTrait;
+use core::array::SpanTrait;
+use core::traits::Into;
 
 use dojo::database::storage;
 

@@ -1,5 +1,5 @@
 #[starknet::interface]
-trait IContract<T> {
+pub trait IContract<T> {
     fn contract_name(self: @T) -> ByteArray;
     fn namespace(self: @T) -> ByteArray;
     fn tag(self: @T) -> ByteArray;

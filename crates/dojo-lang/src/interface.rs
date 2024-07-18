@@ -50,7 +50,7 @@ impl DojoInterface {
                 node: Box::new(RewriteNode::interpolate_patched(
                     "
                 #[starknet::interface]
-                trait $name$<TContractState> {
+                pub trait $name$<TContractState> {
                     $body$
                 }
                 ",
@@ -67,7 +67,7 @@ impl DojoInterface {
                 node: Box::new(RewriteNode::interpolate_patched(
                     "
                 #[starknet::interface]
-                trait $name$<TContractState> {}
+                pub trait $name$<TContractState> {}
                 ",
                     &UnorderedHashMap::from([(
                         "name".to_string(),

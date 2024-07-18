@@ -1,7 +1,7 @@
 use dojo_examples::models::{Direction, Position, Vec2};
 
 #[dojo::interface]
-trait IActions {
+pub trait IActions {
     fn spawn(ref world: IWorldDispatcher);
     fn move(ref world: IWorldDispatcher, direction: Direction);
     fn set_player_config(ref world: IWorldDispatcher, name: ByteArray);
@@ -15,13 +15,13 @@ trait IActions {
 }
 
 #[dojo::interface]
-trait IActionsComputed {
+pub trait IActionsComputed {
     fn tile_terrain(vec: Vec2) -> felt252;
     fn quadrant(pos: Position) -> u8;
 }
 
 #[dojo::contract]
-mod actions {
+pub mod actions {
     use super::IActions;
     use super::IActionsComputed;
 
@@ -32,7 +32,7 @@ mod actions {
     };
     use dojo_examples::utils::next_position;
 
-    // Featues can be used on modules, structs, trait and `use`. Not inside
+    // Features can be used on modules, structs, trait and `use`. Not inside
     // a function.
     #[cfg(feature: 'dungeon')]
     use dojo_examples::dungeon::{IDungeonDispatcher, IDungeonDispatcherTrait};
@@ -44,10 +44,10 @@ mod actions {
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
     #[dojo::model]
-    struct Moved {
+    pub struct Moved {
         #[key]
-        player: ContractAddress,
-        direction: Direction,
+        pub player: ContractAddress,
+        pub direction: Direction,
     }
 
     #[abi(embed_v0)]
@@ -164,8 +164,7 @@ mod actions {
             let river_skale = RiverSkale { id: 1, health: 5, armor: 3, attack: 2 };
 
             set!(world, (flatbow, river_skale));
-
-            IDungeonDispatcher { contract_address: dungeon_address }.enter();
+        //            IDungeonDispatcher { contract_address: dungeon_address }.enter();
         }
 
         fn update_player_name(ref world: IWorldDispatcher, name: ByteArray) {
@@ -212,8 +211,6 @@ mod actions {
 
 #[cfg(test)]
 mod tests {
-    use starknet::class_hash::Felt252TryIntoClassHash;
-
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
     use dojo::test_utils::{spawn_test_world, deploy_contract};
@@ -241,6 +238,7 @@ mod tests {
         let initial_moves = get!(world, caller, Moves);
         let initial_position = get!(world, caller, Position);
 
+        println!("initial_position: {:?}", initial_position);
         assert(
             initial_position.vec.x == 10 && initial_position.vec.y == 10, 'wrong initial position'
         );

@@ -1,10 +1,10 @@
-use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
-use traits::{Into, TryInto};
-use option::OptionTrait;
+use starknet::{ContractAddress, ClassHash, storage_access::StorageBaseAddress, SyscallResult};
+use core::traits::{Into, TryInto};
+use core::option::OptionTrait;
 use dojo::resource_metadata::ResourceMetadata;
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
-enum ModelIndex {
+pub enum ModelIndex {
     Keys: Span<felt252>,
     Id: felt252,
     // (entity_id, member_id)
@@ -12,7 +12,7 @@ enum ModelIndex {
 }
 
 #[starknet::interface]
-trait IWorld<T> {
+pub trait IWorld<T> {
     fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
     fn model(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
@@ -66,67 +66,67 @@ trait IWorld<T> {
 }
 
 #[starknet::interface]
-trait IUpgradeableWorld<T> {
+pub trait IUpgradeableWorld<T> {
     fn upgrade(ref self: T, new_class_hash: ClassHash);
 }
 
 #[starknet::interface]
-trait IWorldProvider<T> {
+pub trait IWorldProvider<T> {
     fn world(self: @T) -> IWorldDispatcher;
 }
 
-mod Errors {
-    const METADATA_DESER: felt252 = 'metadata deser error';
-    const NOT_OWNER: felt252 = 'not owner';
-    const NOT_OWNER_WRITER: felt252 = 'not owner or writer';
-    const NO_WRITE_ACCESS: felt252 = 'no write access';
-    const NO_MODEL_WRITE_ACCESS: felt252 = 'no model write access';
-    const NO_NAMESPACE_WRITE_ACCESS: felt252 = 'no namespace write access';
-    const NAMESPACE_NOT_REGISTERED: felt252 = 'namespace not registered';
-    const NOT_REGISTERED: felt252 = 'resource not registered';
-    const INVALID_MODEL_NAME: felt252 = 'invalid model name';
-    const INVALID_NAMESPACE_NAME: felt252 = 'invalid namespace name';
-    const INVALID_RESOURCE_SELECTOR: felt252 = 'invalid resource selector';
-    const OWNER_ONLY_UPGRADE: felt252 = 'only owner can upgrade';
-    const OWNER_ONLY_UPDATE: felt252 = 'only owner can update';
-    const NAMESPACE_ALREADY_REGISTERED: felt252 = 'namespace already registered';
-    const DELETE_ENTITY_MEMBER: felt252 = 'cannot delete entity member';
-    const UNEXPECTED_ERROR: felt252 = 'unexpected error';
+pub mod Errors {
+    pub const METADATA_DESER: felt252 = 'metadata deser error';
+    pub const NOT_OWNER: felt252 = 'not owner';
+    pub const NOT_OWNER_WRITER: felt252 = 'not owner or writer';
+    pub const NO_WRITE_ACCESS: felt252 = 'no write access';
+    pub const NO_MODEL_WRITE_ACCESS: felt252 = 'no model write access';
+    pub const NO_NAMESPACE_WRITE_ACCESS: felt252 = 'no namespace write access';
+    pub const NAMESPACE_NOT_REGISTERED: felt252 = 'namespace not registered';
+    pub const NOT_REGISTERED: felt252 = 'resource not registered';
+    pub const INVALID_MODEL_NAME: felt252 = 'invalid model name';
+    pub const INVALID_NAMESPACE_NAME: felt252 = 'invalid namespace name';
+    pub const INVALID_RESOURCE_SELECTOR: felt252 = 'invalid resource selector';
+    pub const OWNER_ONLY_UPGRADE: felt252 = 'only owner can upgrade';
+    pub const OWNER_ONLY_UPDATE: felt252 = 'only owner can update';
+    pub const NAMESPACE_ALREADY_REGISTERED: felt252 = 'namespace already registered';
+    pub const DELETE_ENTITY_MEMBER: felt252 = 'cannot delete entity member';
+    pub const UNEXPECTED_ERROR: felt252 = 'unexpected error';
 }
 
 #[starknet::contract]
-mod world {
+pub mod world {
     use dojo::config::interface::IConfig;
     use core::to_byte_array::FormatAsByteArray;
     use core::traits::TryInto;
-    use array::{ArrayTrait, SpanTrait};
-    use traits::Into;
-    use option::OptionTrait;
-    use box::BoxTrait;
+    use core::array::{ArrayTrait, SpanTrait};
+    use core::traits::Into;
+    use core::option::OptionTrait;
+    use core::box::BoxTrait;
     use starknet::event::EventEmitter;
-    use serde::Serde;
+    use core::serde::Serde;
     use core::hash::{HashStateExTrait, HashStateTrait};
-    use pedersen::{PedersenTrait, HashStateImpl, PedersenImpl};
+    use core::pedersen::PedersenTrait;
     use starknet::{
-        contract_address_const, get_caller_address, get_contract_address, get_tx_info,
-        contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult,
-        SyscallResultTrait, SyscallResultTraitImpl, storage::Map,
+        contract_address_const, get_caller_address, get_contract_address, get_tx_info, ClassHash,
+        ContractAddress, syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall},
+        SyscallResult, SyscallResultTrait, storage::Map,
     };
+    use core::num::traits::Zero;
 
     use dojo::database;
     use dojo::database::introspect::{Introspect, Layout, FieldLayout};
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::contract::{IContractDispatcher, IContractDispatcherTrait};
     use dojo::config::component::Config;
-    use dojo::model::{Model, IModelDispatcher, IModelDispatcherImpl};
+    use dojo::model::{Model, IModelDispatcher, IModelDispatcherTrait};
     use dojo::interfaces::{
-        IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherImpl, StorageUpdate,
+        IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherTrait, StorageUpdate,
         ProgramOutput
     };
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
-    use dojo::resource_metadata::ResourceMetadata;
+    use dojo::resource_metadata::{ResourceMetadata, ResourceMetadataTrait};
     use dojo::utils::entity_id_from_keys;
 
     use super::{Errors, ModelIndex};
@@ -165,98 +165,98 @@ mod world {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct StateUpdated {
-        da_hash: felt252,
+    pub struct StateUpdated {
+        pub da_hash: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct WorldSpawned {
-        address: ContractAddress,
-        creator: ContractAddress
+    pub struct WorldSpawned {
+        pub address: ContractAddress,
+        pub creator: ContractAddress
     }
 
     #[derive(Drop, starknet::Event)]
-    struct WorldUpgraded {
-        class_hash: ClassHash,
+    pub struct WorldUpgraded {
+        pub class_hash: ClassHash,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ContractDeployed {
-        salt: felt252,
-        class_hash: ClassHash,
-        address: ContractAddress,
-        namespace: ByteArray,
-        name: ByteArray
+    pub struct ContractDeployed {
+        pub salt: felt252,
+        pub class_hash: ClassHash,
+        pub address: ContractAddress,
+        pub namespace: ByteArray,
+        pub name: ByteArray
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ContractUpgraded {
-        class_hash: ClassHash,
-        address: ContractAddress,
+    pub struct ContractUpgraded {
+        pub class_hash: ClassHash,
+        pub address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct MetadataUpdate {
-        resource: felt252,
-        uri: ByteArray
+    pub struct MetadataUpdate {
+        pub resource: felt252,
+        pub uri: ByteArray
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct NamespaceRegistered {
-        namespace: ByteArray,
-        hash: felt252
+        pub namespace: ByteArray,
+        pub hash: felt252
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ModelRegistered {
-        name: ByteArray,
-        namespace: ByteArray,
-        class_hash: ClassHash,
-        prev_class_hash: ClassHash,
-        address: ContractAddress,
-        prev_address: ContractAddress,
+    pub struct ModelRegistered {
+        pub name: ByteArray,
+        pub namespace: ByteArray,
+        pub class_hash: ClassHash,
+        pub prev_class_hash: ClassHash,
+        pub address: ContractAddress,
+        pub prev_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct StoreSetRecord {
-        table: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
+    pub struct StoreSetRecord {
+        pub table: felt252,
+        pub keys: Span<felt252>,
+        pub values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct StoreUpdateRecord {
-        table: felt252,
-        entity_id: felt252,
-        values: Span<felt252>,
+    pub struct StoreUpdateRecord {
+        pub table: felt252,
+        pub entity_id: felt252,
+        pub values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct StoreUpdateMember {
-        table: felt252,
-        entity_id: felt252,
-        member_selector: felt252,
-        values: Span<felt252>,
+    pub struct StoreUpdateMember {
+        pub table: felt252,
+        pub entity_id: felt252,
+        pub member_selector: felt252,
+        pub values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct StoreDelRecord {
-        table: felt252,
-        entity_id: felt252,
+    pub struct StoreDelRecord {
+        pub table: felt252,
+        pub entity_id: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct WriterUpdated {
-        resource: felt252,
-        contract: ContractAddress,
-        value: bool
+    pub struct WriterUpdated {
+        pub resource: felt252,
+        pub contract: ContractAddress,
+        pub value: bool
     }
 
     #[derive(Drop, starknet::Event)]
-    struct OwnerUpdated {
-        address: ContractAddress,
-        resource: felt252,
-        value: bool,
+    pub struct OwnerUpdated {
+        pub address: ContractAddress,
+        pub resource: felt252,
+        pub value: bool,
     }
 
     #[storage]
@@ -273,7 +273,7 @@ mod world {
     }
 
     #[derive(Drop, starknet::Store, Default, Debug)]
-    enum ResourceData {
+    pub enum ResourceData {
         Model: (ClassHash, ContractAddress),
         Contract: (ClassHash, ContractAddress),
         Namespace,
@@ -326,20 +326,14 @@ mod world {
         ///
         /// `resource_id` - The resource id.
         fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
-            let mut model = array![resource_id];
-            let entity_id = entity_id_from_keys(model.span());
-            let mut data = self
+            let mut values = self
                 ._read_model_entity(
                     dojo::model::Model::<ResourceMetadata>::selector(),
-                    entity_id,
-                    Model::<ResourceMetadata>::layout()
+                    entity_id_from_keys(array![resource_id].span()),
+                    dojo::model::Model::<ResourceMetadata>::layout()
                 );
 
-            core::array::serialize_array_helper(data, ref model);
-
-            let mut model_span = model.span();
-
-            Serde::<ResourceMetadata>::deserialize(ref model_span).expect(Errors::METADATA_DESER)
+            ResourceMetadataTrait::from_values(resource_id, ref values)
         }
 
         /// Sets the metadata of the resource.
@@ -353,12 +347,13 @@ mod world {
                 Errors::NO_WRITE_ACCESS
             );
 
-            let model = Model::<ResourceMetadata>::selector();
-            let entity_id = Model::<ResourceMetadata>::entity_id(@metadata);
-            let values = Model::<ResourceMetadata>::values(@metadata);
-            let layout = Model::<ResourceMetadata>::layout();
-
-            self._write_model_entity(model, entity_id, values, layout);
+            self
+                ._write_model_entity(
+                    metadata.instance_selector(),
+                    metadata.entity_id(),
+                    metadata.values(),
+                    metadata.instance_layout()
+                );
 
             EventEmitter::emit(
                 ref self,
@@ -493,16 +488,14 @@ mod world {
         fn can_write_resource(
             self: @ContractState, resource_id: felt252, contract: ContractAddress
         ) -> bool {
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(resource_id);
-            match resource {
+            match self.resources.read(resource_id) {
                 ResourceData::Model((_, model_address)) => self
                     ._check_model_write_access(resource_id, model_address, contract),
                 ResourceData::Contract((_, contract_address)) => self
                     ._check_contract_write_access(resource_id, contract_address, contract),
                 ResourceData::Namespace => self._check_basic_write_access(resource_id, contract),
                 ResourceData::World => self._check_basic_write_access(WORLD, contract),
-                ResourceData::None => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+                ResourceData::None => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
@@ -523,12 +516,10 @@ mod world {
         fn can_write_model(
             self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(selector);
-            match resource {
+            match self.resources.read(selector) {
                 ResourceData::Model((_, model_address)) => self
                     ._check_model_write_access(selector, model_address, contract),
-                _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
@@ -549,12 +540,10 @@ mod world {
         fn can_write_contract(
             self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(selector);
-            match resource {
+            match self.resources.read(selector) {
                 ResourceData::Contract((_, contract_address)) => self
                     ._check_contract_write_access(selector, contract_address, contract),
-                _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
@@ -575,11 +564,9 @@ mod world {
         fn can_write_namespace(
             self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(selector);
-            match resource {
+            match self.resources.read(selector) {
                 ResourceData::Namespace => self._check_basic_write_access(selector, contract),
-                _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
@@ -601,8 +588,8 @@ mod world {
             self.models_count.write(salt + 1);
 
             let (mut prev_class_hash, mut prev_address) = (
-                starknet::class_hash::ClassHashZeroable::zero(),
-                starknet::contract_address::ContractAddressZeroable::zero(),
+                core::num::traits::Zero::<ClassHash>::zero(),
+                core::num::traits::Zero::<ContractAddress>::zero(),
             );
 
             assert(self._is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
@@ -612,13 +599,10 @@ mod world {
             );
 
             if selector.is_zero() {
-                panic_with_felt252(Errors::INVALID_MODEL_NAME);
+                core::panic_with_felt252(Errors::INVALID_MODEL_NAME);
             }
 
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(selector);
-
-            match resource {
+            match self.resources.read(selector) {
                 // If model is already registered, validate permission to update.
                 ResourceData::Model((
                     model_hash, model_address
@@ -631,7 +615,7 @@ mod world {
                 ResourceData::None => { self.owners.write((selector, caller), true); },
                 // Avoids a model name to conflict with already registered resource,
                 // which can cause ACL issue with current ACL implementation.
-                _ => panic_with_felt252(Errors::INVALID_MODEL_NAME)
+                _ => core::panic_with_felt252(Errors::INVALID_MODEL_NAME)
             };
 
             self.resources.write(selector, ResourceData::Model((class_hash, address)));
@@ -653,12 +637,10 @@ mod world {
 
             let hash = dojo::utils::hash(@namespace);
 
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(hash);
-            match resource {
+            match self.resources.read(hash) {
                 ResourceData::Namespace => {
                     if !self.is_account_owner(hash) {
-                        panic_with_felt252(Errors::NAMESPACE_ALREADY_REGISTERED);
+                        core::panic_with_felt252(Errors::NAMESPACE_ALREADY_REGISTERED);
                     }
                 },
                 ResourceData::None => {
@@ -667,7 +649,7 @@ mod world {
 
                     EventEmitter::emit(ref self, NamespaceRegistered { namespace, hash });
                 },
-                _ => { panic_with_felt252(Errors::INVALID_NAMESPACE_NAME); }
+                _ => { core::panic_with_felt252(Errors::INVALID_NAMESPACE_NAME); }
             };
         }
 
@@ -682,20 +664,16 @@ mod world {
         ///
         /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the model.
         fn model(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(selector);
-            match resource {
+            match self.resources.read(selector) {
                 ResourceData::Model(m) => m,
-                _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
         fn contract(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(selector);
-            match resource {
+            match self.resources.read(selector) {
                 ResourceData::Contract(c) => c,
-                _ => panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
@@ -739,7 +717,9 @@ mod world {
             if self.initialized_contract.read(selector) {
                 panic!("Contract has already been initialized");
             } else {
-                starknet::call_contract_syscall(contract_address, DOJO_INIT_SELECTOR, init_calldata)
+                starknet::syscalls::call_contract_syscall(
+                    contract_address, DOJO_INIT_SELECTOR, init_calldata
+                )
                     .unwrap_syscall();
                 self.initialized_contract.write(selector, true);
             }
@@ -912,7 +892,9 @@ mod world {
                         ref self, StoreDelRecord { table: model_selector, entity_id }
                     );
                 },
-                ModelIndex::MemberId(_) => { panic_with_felt252(Errors::DELETE_ENTITY_MEMBER); }
+                ModelIndex::MemberId(_) => {
+                    core::panic_with_felt252(Errors::DELETE_ENTITY_MEMBER);
+                }
             }
         }
 
@@ -954,7 +936,7 @@ mod world {
             program_output: ProgramOutput,
             program_hash: felt252
         ) {
-            let mut da_hasher = PedersenImpl::new(0);
+            let mut da_hasher = PedersenTrait::new(0);
             let mut i = 0;
             loop {
                 if i == new_state.len() {
@@ -975,9 +957,11 @@ mod world {
 
             let mut program_output_array = array![];
             program_output.serialize(ref program_output_array);
-            let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
+            let program_output_hash = core::poseidon::poseidon_hash_span(
+                program_output_array.span()
+            );
 
-            let fact = poseidon::PoseidonImpl::new()
+            let fact = core::poseidon::PoseidonImpl::new()
                 .update(program_hash)
                 .update(program_output_hash)
                 .finalize();
@@ -991,9 +975,13 @@ mod world {
                 if i >= new_state.len() {
                     break;
                 }
-                let base = starknet::storage_base_address_from_felt252(*new_state.at(i).key);
-                starknet::storage_write_syscall(
-                    0, starknet::storage_address_from_base(base), *new_state.at(i).value
+                let base = starknet::storage_access::storage_base_address_from_felt252(
+                    *new_state.at(i).key
+                );
+                starknet::syscalls::storage_write_syscall(
+                    0,
+                    starknet::storage_access::storage_address_from_base(base),
+                    *new_state.at(i).value
                 )
                     .unwrap_syscall();
                 i += 1;
@@ -1054,9 +1042,7 @@ mod world {
         /// Indicates if the provided namespace is already registered
         #[inline(always)]
         fn _is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
-            // TODO: use match self.resources... directly when https://github.com/starkware-libs/cairo/pull/5743 fixed
-            let resource: ResourceData = self.resources.read(namespace_hash);
-            match resource {
+            match self.resources.read(namespace_hash) {
                 ResourceData::Namespace => true,
                 _ => false
             }
@@ -1271,7 +1257,7 @@ mod world {
 
         /// Combine parent and child keys to build one full key.
         fn _combine_key(parent_key: felt252, child_key: felt252) -> felt252 {
-            poseidon::poseidon_hash_span(array![parent_key, child_key].span())
+            core::poseidon::poseidon_hash_span(array![parent_key, child_key].span())
         }
 
         /// Append some values to an array.
