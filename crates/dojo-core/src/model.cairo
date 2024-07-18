@@ -2,7 +2,7 @@ use dojo::world::{IWorldDispatcher, ModelIndex};
 use starknet::SyscallResult;
 
 /// Trait that is implemented at Cairo level for each struct that is a model.
-trait ModelEntity<T> {
+pub trait ModelEntity<T> {
     fn id(self: @T) -> felt252;
     fn values(self: @T) -> Span<felt252>;
     fn from_values(entity_id: felt252, values: Span<felt252>) -> T;
@@ -15,7 +15,7 @@ trait ModelEntity<T> {
     fn set_member(self: @T, world: IWorldDispatcher, member_id: felt252, values: Span<felt252>,);
 }
 
-trait Model<T> {
+pub trait Model<T> {
     fn get(world: IWorldDispatcher, keys: Span<felt252>) -> T;
     // Note: `get` is implemented with a generated trait because it takes
     // the list of model keys as separated parameters.
@@ -56,7 +56,7 @@ trait Model<T> {
 }
 
 #[starknet::interface]
-trait IModel<T> {
+pub trait IModel<T> {
     fn name(self: @T) -> ByteArray;
     fn namespace(self: @T) -> ByteArray;
     fn tag(self: @T) -> ByteArray;
@@ -78,10 +78,10 @@ trait IModel<T> {
 ///
 /// * `salt` - A salt used to uniquely deploy the model.
 /// * `class_hash` - Class Hash of the model.
-fn deploy_and_get_metadata(
+pub fn deploy_and_get_metadata(
     salt: felt252, class_hash: starknet::ClassHash
 ) -> SyscallResult<(starknet::ContractAddress, ByteArray, felt252, ByteArray, felt252)> {
-    let (contract_address, _) = starknet::deploy_syscall(
+    let (contract_address, _) = starknet::syscalls::deploy_syscall(
         class_hash, salt, array![].span(), false,
     )?;
     let model = IModelDispatcher { contract_address };

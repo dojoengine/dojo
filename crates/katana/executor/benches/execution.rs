@@ -39,7 +39,7 @@ fn blockifier(
     // convert to blockifier block context
     let block_context = block_context_from_envs(&block_envs.0, &block_envs.1);
 
-    group.bench_function("Blockifier", |b| {
+    group.bench_function("Blockifier.Cold", |b| {
         // we need to set up the cached state for each iteration as it's not cloneable
         b.iter_batched(
             || {

@@ -15,7 +15,7 @@ starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "24029ba4", features = [ "testing" ], optional = true }
+blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "cairo-2.7", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
 
 # Disable SIR for now until they support Cairo 2.6.3

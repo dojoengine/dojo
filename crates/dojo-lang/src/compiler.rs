@@ -69,8 +69,18 @@ impl ContractSelector {
         PackageName::new(parts.0)
     }
 
-    fn full_path(&self) -> String {
-        self.0.clone()
+    /// Returns the path with the model name in snake case.
+    /// This is used to match the output of the `compile()` function and Dojo plugin naming for
+    /// models contracts.
+    fn path_with_model_snake_case(&self) -> String {
+        let (path, last_segment) =
+            self.0.rsplit_once(CAIRO_PATH_SEPARATOR).unwrap_or(("", &self.0));
+
+        // We don't want to snake case the whole path because some of names like `erc20`
+        // will be changed to `erc_20`, and leading to invalid paths.
+        // The model name has to be snaked case as it's how the Dojo plugin names the Model's
+        // contract.
+        format!("{}{}{}", path, CAIRO_PATH_SEPARATOR, last_segment.to_case(Case::Snake))
     }
 }
 
@@ -174,11 +184,10 @@ fn find_project_contracts(
         find_contracts(db, crate_ids.as_ref())
             .into_iter()
             .filter(|decl| {
-                external_contracts.iter().any(|selector| {
-                    let contract_path = decl.module_id().full_path(db.upcast());
-                    // Snake case is used to ensure we match the `compile()` output.
-                    contract_path == selector.full_path().to_case(Case::Snake)
-                })
+                let contract_path = decl.module_id().full_path(db.upcast());
+                external_contracts
+                    .iter()
+                    .any(|selector| contract_path == selector.path_with_model_snake_case())
             })
             .collect::<Vec<ContractDeclaration>>()
     } else {
@@ -396,9 +405,10 @@ fn get_dojo_model_artifacts(
         if let Ok(Some(ModuleItemId::Struct(struct_id))) =
             db.module_item_by_name(module_id, model.name.clone().into())
         {
-            // The `struct_id` full_path() method uses the original struct name case while
-            // snake case was used to build `compiled_classes` in `compile()`.
-            let qualified_path = struct_id.full_path(db).to_case(Case::Snake);
+            // Leverages the contract selector function to only snake case the model name and
+            // not the full path.
+            let contract_selector = ContractSelector(struct_id.full_path(db));
+            let qualified_path = contract_selector.path_with_model_snake_case();
             let compiled_class = compiled_classes.get(&qualified_path).cloned();
             let tag = naming::get_tag(&model.namespace, &model.name);
 

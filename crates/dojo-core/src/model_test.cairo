@@ -6,7 +6,7 @@ fn deploy_world() -> IWorldDispatcher {
     spawn_test_world("dojo", array![])
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
 struct Foo {
     #[key]

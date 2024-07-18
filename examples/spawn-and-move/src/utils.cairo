@@ -1,6 +1,6 @@
 use dojo_examples::models::{Position, Direction};
 
-fn next_position(mut position: Position, direction: Direction) -> Position {
+pub fn next_position(mut position: Position, direction: Direction) -> Position {
     match direction {
         Direction::None => { return position; },
         Direction::Left => { position.vec.x -= 1; },

@@ -583,12 +583,6 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
     let calldata = call.call.calldata.0.as_ref().clone();
     let retdata = call.execution.retdata.0;
 
-    // let execution_resources = trace::ExecutionResources {
-    //     n_steps: call.resources.n_steps,
-    //     n_memory_holes: call.resources.n_memory_holes as u64,
-    //     builtin_instance_counter: call.resources.builtin_instance_counter,
-    // };
-
     let CallExecution { events, l2_to_l1_messages, .. } = call.execution;
 
     let events = events.into_iter().map(to_ordered_event).collect();

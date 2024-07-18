@@ -10,7 +10,8 @@ trait IRecords {
 mod records {
     use starknet::{ContractAddress, get_caller_address};
     use types_test::models::{
-        Record, RecordTrait, RecordSibling, RecordSiblingTrait, Subrecord, SubrecordTrait, Nested, NestedMore, NestedMost, Depth
+        Record, RecordTrait, RecordSibling, RecordSiblingTrait, Subrecord, SubrecordTrait, Nested,
+        NestedMore, NestedMost, Depth
     };
     use types_test::{seed, random};
     use super::IRecords;
@@ -42,11 +43,11 @@ mod records {
                 }
 
                 let type_felt: felt252 = record_idx.into();
-                let random_u8 = random(pedersen::pedersen(seed(), record_idx.into()), 0, 100)
+                let random_u8 = random(core::pedersen::pedersen(seed(), record_idx.into()), 0, 100)
                     .try_into()
                     .unwrap();
                 let random_u128 = random(
-                    pedersen::pedersen(seed(), record_idx.into()),
+                    core::pedersen::pedersen(seed(), record_idx.into()),
                     0,
                     0xffffffffffffffffffffffffffffffff_u128
                 );

@@ -30,35 +30,50 @@ pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::entity"
 #[derive(Debug)]
 pub struct EntitiesSubscriber {
     /// Entity ids that the subscriber is interested in
-    keys: Option<EntityKeysClause>,
+    pub(crate) clauses: Vec<EntityKeysClause>,
     /// The channel to send the response back to the subscriber.
-    sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
+    pub(crate) sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
-
 #[derive(Debug, Default)]
 pub struct EntityManager {
-    subscribers: RwLock<HashMap<usize, EntitiesSubscriber>>,
+    subscribers: RwLock<HashMap<u64, EntitiesSubscriber>>,
 }
 
 impl EntityManager {
     pub async fn add_subscriber(
         &self,
-        keys: Option<EntityKeysClause>,
+        clauses: Vec<EntityKeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        let id = rand::thread_rng().gen::<usize>();
+        let subscription_id = rand::thread_rng().gen::<u64>();
         let (sender, receiver) = channel(1);
 
         // NOTE: unlock issue with firefox/safari
         // initially send empty stream message to return from
         // initial subscribe call
-        let _ = sender.send(Ok(SubscribeEntityResponse { entity: None })).await;
+        let _ = sender.send(Ok(SubscribeEntityResponse { entity: None, subscription_id })).await;
 
-        self.subscribers.write().await.insert(id, EntitiesSubscriber { keys, sender });
+        self.subscribers
+            .write()
+            .await
+            .insert(subscription_id, EntitiesSubscriber { clauses, sender });
 
         Ok(receiver)
     }
 
-    pub(super) async fn remove_subscriber(&self, id: usize) {
+    pub async fn update_subscriber(&self, id: u64, clauses: Vec<EntityKeysClause>) {
+        let sender = {
+            let subscribers = self.subscribers.read().await;
+            if let Some(subscriber) = subscribers.get(&id) {
+                subscriber.sender.clone()
+            } else {
+                return; // Subscriber not found, exit early
+            }
+        };
+
+        self.subscribers.write().await.insert(id, EntitiesSubscriber { clauses, sender });
+    }
+
+    pub(super) async fn remove_subscriber(&self, id: u64) {
         self.subscribers.write().await.remove(&id);
     }
 }
@@ -109,13 +124,11 @@ impl Service {
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-            match &sub.keys {
-                Some(EntityKeysClause::HashedKeys(hashed_keys)) => {
-                    if !hashed_keys.is_empty() && !hashed_keys.contains(&hashed) {
-                        continue;
-                    }
+            if !sub.clauses.iter().any(|clause| match clause {
+                EntityKeysClause::HashedKeys(hashed_keys) => {
+                    hashed_keys.is_empty() || hashed_keys.contains(&hashed)
                 }
-                Some(EntityKeysClause::Keys(clause)) => {
+                EntityKeysClause::Keys(clause) => {
                     // if we have a model clause, then we need to check that the entity
                     // has an updated model and that the model name matches the clause
                     if let Some(updated_model) = &entity.updated_model {
@@ -139,7 +152,7 @@ impl Service {
                                         || clause_model == "*")
                             })
                         {
-                            continue;
+                            return false;
                         }
                     }
 
@@ -148,10 +161,10 @@ impl Service {
                     if clause.pattern_matching == PatternMatching::FixedLen
                         && keys.len() != clause.keys.len()
                     {
-                        continue;
+                        return false;
                     }
 
-                    if !keys.iter().enumerate().all(|(idx, key)| {
+                    return keys.iter().enumerate().all(|(idx, key)| {
                         // this is going to be None if our key pattern overflows the subscriber
                         // key pattern in this case we should skip
                         let sub_key = clause.keys.get(idx);
@@ -166,12 +179,10 @@ impl Service {
                             // so we should match all next keys
                             _ => true,
                         }
-                    }) {
-                        continue;
-                    }
+                    });
                 }
-                // if None, then we are interested in all entities
-                None => {}
+            }) {
+                continue;
             }
 
             if entity.updated_model.is_none() {
@@ -180,6 +191,7 @@ impl Service {
                         hashed_keys: hashed.to_bytes_be().to_vec(),
                         models: vec![],
                     }),
+                    subscription_id: *idx,
                 };
 
                 if sub.sender.send(Ok(resp)).await.is_err() {
@@ -222,6 +234,7 @@ impl Service {
 
             let resp = proto::world::SubscribeEntityResponse {
                 entity: Some(map_row_to_entity(&row, &arrays_rows, schemas.clone())?),
+                subscription_id: *idx,
             };
 
             if sub.sender.send(Ok(resp)).await.is_err() {

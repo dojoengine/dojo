@@ -11,14 +11,15 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  bench-katana:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v0.7.2
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-alpha.1
     steps:
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: cargo bench --bench codec -- --output-format bencher |sed 1d | tee output.txt
+      - name: Running Katana benchmarks 
+        run: cargo bench --bench codec --bench execution -- --output-format bencher |sed 1d | tee output.txt
       - uses: benchmark-action/github-action-benchmark@v1
         with:
           tool: "cargo"

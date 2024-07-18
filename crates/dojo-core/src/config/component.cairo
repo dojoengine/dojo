@@ -1,11 +1,11 @@
-mod errors {
-    const INVALID_CALLER: felt252 = 'Config: not owner or operator';
-    const ALREADY_REGISTERED: felt252 = 'Config: already operator';
-    const NOT_OPERATOR: felt252 = 'Config: not operator';
+pub mod errors {
+    pub const INVALID_CALLER: felt252 = 'Config: not owner or operator';
+    pub const ALREADY_REGISTERED: felt252 = 'Config: already operator';
+    pub const NOT_OPERATOR: felt252 = 'Config: not operator';
 }
 
 #[starknet::component]
-mod Config {
+pub mod Config {
     use dojo::config::interface::IConfig;
     use starknet::ContractAddress;
     use super::errors;
@@ -22,17 +22,17 @@ mod Config {
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct DifferProgramHashUpdate {
-        program_hash: felt252,
+        pub program_hash: felt252,
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct MergerProgramHashUpdate {
-        program_hash: felt252,
+        pub program_hash: felt252,
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct FactsRegistryUpdate {
-        address: ContractAddress
+        pub address: ContractAddress
     }
 
     #[storage]
@@ -44,7 +44,7 @@ mod Config {
     }
 
     #[generate_trait]
-    impl InternalImpl<
+    pub impl InternalImpl<
         TContractState, +HasComponent<TContractState>
     > of InternalTrait<TContractState> {
         fn initializer(ref self: ComponentState<TContractState>, owner: ContractAddress) {

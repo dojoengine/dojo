@@ -34,11 +34,11 @@ url.workspace = true
 alloy-primitives = { workspace = true, features = [ "serde" ] }
 alloy-sol-types = { workspace = true, default-features = false, features = [ "json" ], optional = true }
 
-alloy-contract = { version = "0.1.0", default-features = false, optional = true }
-alloy-network = { version = "0.1.0", default-features = false, optional = true }
-alloy-provider = { version = "0.1.0", default-features = false, optional = true, features = [ "reqwest" ] }
-alloy-rpc-types = { version = "0.1.0", default-features = false, optional = true }
-alloy-transport = { version = "0.1.0", default-features = false, optional = true }
+alloy-contract = { workspace = true, default-features = false, optional = true }
+alloy-network = { workspace = true, default-features = false, optional = true }
+alloy-provider = { workspace = true, default-features = false, optional = true, features = [ "reqwest" ] }
+alloy-transport = { workspace = true, default-features = false, optional = true }
+alloy-rpc-types-eth = { workspace = true, default-features = false, optional = true }
 
 [dev-dependencies]
 assert_matches.workspace = true
@@ -50,7 +50,7 @@ messaging = [
     "alloy-contract",
     "alloy-network",
     "alloy-provider",
-    "alloy-rpc-types",
+    "alloy-rpc-types-eth",
     "alloy-sol-types",
     "alloy-transport",
     "async-trait",

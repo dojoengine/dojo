@@ -276,7 +276,8 @@ pub fn handle_model_struct(
             param_keys.push(format!("{}: {}", member.name, member.ty));
         } else {
             serialized_values.push(serialize_member_ty(&member, true));
-            members_values.push(RewriteNode::Text(format!("{}: {},\n", member.name, member.ty)));
+            members_values
+                .push(RewriteNode::Text(format!("pub {}: {},\n", member.name, member.ty)));
         }
 
         members.push(member);
@@ -325,7 +326,7 @@ pub struct $type_name$Entity {
 }
 
 #[generate_trait]
-impl $type_name$EntityImpl of $type_name$EntityTrait {
+pub impl $type_name$EntityImpl of $type_name$EntityTrait {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> $type_name$Entity {
         $type_name$ModelEntityImpl::get(world, entity_id)
     }
@@ -334,11 +335,29 @@ impl $type_name$EntityImpl of $type_name$EntityTrait {
 }
 
 #[generate_trait]
-impl $type_name$Impl of $type_name$Trait {
+pub impl $type_name$Impl of $type_name$Trait {
     fn entity_id_from_keys($param_keys$) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_param_keys$
         core::poseidon::poseidon_hash_span(serialized.span())
+    }
+
+    fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> $type_name$ {
+        let mut serialized = core::array::ArrayTrait::new();
+        serialized.append_span(keys);
+        serialized.append_span(values);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<$type_name$>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<$type_name$>::is_none(@entity) {
+            panic!(
+                \"Model `$type_name$`: deserialization failed. Ensure the length of the keys tuple \
+             is matching the number of #[key] fields in the model struct.\"
+            );
+        }
+
+        core::option::OptionTrait::<$type_name$>::unwrap(entity)
     }
 
     fn get(world: dojo::world::IWorldDispatcher, $param_keys$) -> $type_name$ {
@@ -351,7 +370,7 @@ impl $type_name$Impl of $type_name$Trait {
     $field_accessors$
 }
 
-impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entity> {
+pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entity> {
     fn id(self: @$type_name$Entity) -> felt252 {
         *self.__id
     }
@@ -451,32 +470,17 @@ impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entity> {
     }
 }
 
-impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
+pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
     fn get(world: dojo::world::IWorldDispatcher, keys: Span<felt252>) -> $type_name$ {
-        let values = dojo::world::IWorldDispatcherTrait::entity(
+        let mut values = dojo::world::IWorldDispatcherTrait::entity(
             world,
             Self::selector(),
             dojo::world::ModelIndex::Keys(keys),
             Self::layout()
         );
+        let mut _keys = keys;
 
-        // TODO: Generate method to deserialize from keys / values directly to avoid
-        // serializing to intermediate array.
-        let mut serialized = core::array::ArrayTrait::new();
-        core::array::serialize_array_helper(keys, ref serialized);
-        core::array::serialize_array_helper(values, ref serialized);
-        let mut serialized = core::array::ArrayTrait::span(@serialized);
-
-        let entity = core::serde::Serde::<$type_name$>::deserialize(ref serialized);
-
-        if core::option::OptionTrait::<$type_name$>::is_none(@entity) {
-            panic!(
-                \"Model `$type_name$`: deserialization failed. Ensure the length of the keys tuple \
-             is matching the number of #[key] fields in the model struct.\"
-            );
-        }
-
-        core::option::OptionTrait::<$type_name$>::unwrap(entity)
+        $type_name$Trait::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -631,12 +635,12 @@ impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
 }
 
 #[starknet::interface]
-trait I$contract_name$<T> {
+pub trait I$contract_name$<T> {
     fn ensure_abi(self: @T, model: $type_name$);
 }
 
 #[starknet::contract]
-mod $contract_name$ {
+pub mod $contract_name$ {
     use super::$type_name$;
     use super::I$contract_name$;
 
@@ -795,17 +799,13 @@ fn generate_field_accessors(
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_param_keys$
 
-        let values = dojo::model::Model::<$model_name$>::get_member(
+        let mut values = dojo::model::Model::<$model_name$>::get_member(
             world,
             serialized.span(),
             $field_selector$
         );
 
-        let mut serialized = core::array::ArrayTrait::new();
-        core::array::serialize_array_helper(values, ref serialized);
-        let mut serialized = core::array::ArrayTrait::span(@serialized);
-
-        let field_value = core::serde::Serde::<$field_type$>::deserialize(ref serialized);
+        let field_value = core::serde::Serde::<$field_type$>::deserialize(ref values);
 
         if core::option::OptionTrait::<$field_type$>::is_none(@field_value) {
             panic!(
@@ -859,17 +859,12 @@ fn generate_entity_field_accessors(model_name: String, member: &Member) -> Rewri
         "
     fn get_$field_name$(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> $field_type$ \
          {
-        let values = dojo::model::ModelEntity::<$model_name$Entity>::get_member(
+        let mut values = dojo::model::ModelEntity::<$model_name$Entity>::get_member(
             world,
             entity_id,
             $field_selector$
         );
-
-        let mut serialized = core::array::ArrayTrait::new();
-        core::array::serialize_array_helper(values, ref serialized);
-        let mut serialized = core::array::ArrayTrait::span(@serialized);
-
-        let field_value = core::serde::Serde::<$field_type$>::deserialize(ref serialized);
+        let field_value = core::serde::Serde::<$field_type$>::deserialize(ref values);
 
         if core::option::OptionTrait::<$field_type$>::is_none(@field_value) {
             panic!(

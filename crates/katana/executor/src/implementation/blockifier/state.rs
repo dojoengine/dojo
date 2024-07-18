@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use blockifier::state::cached_state::{self};
+use blockifier::state::cached_state;
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
 use katana_cairo::starknet_api::core::{ClassHash, CompiledClassHash, Nonce};
@@ -15,7 +15,6 @@ use katana_provider::ProviderResult;
 use parking_lot::Mutex;
 
 use super::utils::{self};
-// use super::CACHE_SIZE;
 use crate::StateProviderDb;
 
 /// A helper trait to enforce that a type must implement both [StateProvider] and [StateReader].
@@ -130,7 +129,7 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
         &self,
         hash: katana_primitives::class::ClassHash,
     ) -> ProviderResult<Option<katana_primitives::class::CompiledClassHash>> {
-        let Ok(hash) = dbg!(self.0.lock().inner.get_compiled_class_hash(ClassHash(hash))) else {
+        let Ok(hash) = self.0.lock().inner.get_compiled_class_hash(ClassHash(hash)) else {
             return Ok(None);
         };
 
