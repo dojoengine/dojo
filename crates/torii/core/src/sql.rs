@@ -278,17 +278,15 @@ impl Sql {
         entity_id: Felt,
         is_event_message: bool,
         model_tag: &str,
-        member: &Ty,
+        member: &Member,
         event_id: &str,
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
         let path = vec![model_tag.to_string()];
 
-        let wrapped_ty = Ty::Struct(Struct {
-            name: model_tag.to_string(),
-            children: vec![Member { name: member.name(), ty: member.clone(), key: false }],
-        });
+        let wrapped_ty =
+            Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
 
         // update model member
         self.build_set_entity_queries_recursive(

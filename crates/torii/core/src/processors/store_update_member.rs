@@ -99,8 +99,7 @@ where
             return Ok(());
         }
 
-        let mut ty = member.ty.clone();
-        ty.deserialize(&mut values)?;
+        member.ty.deserialize(&mut values)?;
 
         db.set_model_member(entity_id, false, &schema.name(), &ty, event_id, block_timestamp).await
     }
