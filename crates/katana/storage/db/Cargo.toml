@@ -18,7 +18,6 @@ serde_json.workspace = true
 tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
 
-cairo-vm.workspace = true
 roaring = { version = "0.10.3", features = [ "serde" ] }
 
 # codecs

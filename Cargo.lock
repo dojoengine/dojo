@@ -7656,7 +7656,6 @@ name = "katana-db"
 version = "1.0.0-alpha.1"
 dependencies = [
  "anyhow",
- "cairo-vm",
  "criterion",
  "katana-cairo",
  "katana-primitives",

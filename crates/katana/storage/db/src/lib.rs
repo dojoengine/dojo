@@ -1,5 +1,7 @@
 //! Code adapted from Paradigm's [`reth`](https://github.com/paradigmxyz/reth/tree/main/crates/storage/db) DB implementation.
 
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
 use std::fs;
 use std::path::Path;
 
