@@ -54,9 +54,12 @@ pub fn get_many(
             break SyscallResult::<Span<felt252>>::Ok(packed.span());
         }
 
-        index_in_chunk = match core::integer::u8_overflowing_add(index_in_chunk, 1) {
-            Result::Ok(x) => x,
-            Result::Err(_) => {
+        let (sum, has_overflowed) = core::num::traits::OverflowingAdd::overflowing_add(
+            index_in_chunk, 1
+        );
+        index_in_chunk = match has_overflowed {
+            false => sum,
+            true => {
                 // After reading 256 `felt`s, `index_in_chunk` will overflow and we move to the
                 // next chunk.
                 chunk += 1;
@@ -119,9 +122,12 @@ pub fn set_many(
             Result::Err(err) => { break Result::Err(err); },
         };
 
-        index_in_chunk = match core::integer::u8_overflowing_add(index_in_chunk, 1) {
-            Result::Ok(x) => x,
-            Result::Err(_) => {
+        let (sum, has_overflowed) = core::num::traits::OverflowingAdd::overflowing_add(
+            index_in_chunk, 1
+        );
+        index_in_chunk = match has_overflowed {
+            false => sum,
+            true => {
                 // After writing 256 `felt`s, `index_in_chunk` will overflow and we move to the
                 // next chunk which will be stored in an other storage segment.
                 chunk += 1;
@@ -164,9 +170,12 @@ pub fn set_packed_array(
             Result::Err(err) => { break Result::Err(err); },
         };
 
-        index_in_chunk = match core::integer::u8_overflowing_add(index_in_chunk, 1) {
-            Result::Ok(x) => x,
-            Result::Err(_) => {
+        let (sum, has_overflowed) = core::num::traits::OverflowingAdd::overflowing_add(
+            index_in_chunk, 1
+        );
+        index_in_chunk = match has_overflowed {
+            false => sum,
+            true => {
                 // After writing 256 `felt`s, `index_in_chunk` will overflow and we move to the
                 // next chunk which will be stored in an other storage segment.
                 chunk += 1;
@@ -217,9 +226,12 @@ pub fn get_packed_array(
             break Result::Ok(packed.span());
         }
 
-        index_in_chunk = match core::integer::u8_overflowing_add(index_in_chunk, 1) {
-            Result::Ok(x) => x,
-            Result::Err(_) => {
+        let (sum, has_overflowed) = core::num::traits::OverflowingAdd::overflowing_add(
+            index_in_chunk, 1
+        );
+        index_in_chunk = match has_overflowed {
+            false => sum,
+            true => {
                 // After reading 256 `felt`s, `index_in_chunk` will overflow and we move to the
                 // next chunk.
                 chunk += 1;

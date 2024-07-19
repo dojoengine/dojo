@@ -10,8 +10,8 @@ dependencies = [
 
 [[package]]
 name = "dojo_plugin"
-version = "0.7.2"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.7.3#e8539d5b199efbd51c89c75da32f6592de5d9262"
+version = "0.7.3"
+source = "git+https://github.com/dojoengine/dojo?branch=bump-cairo-2.7#17bc842f2f87b6ac0472d196efc11f01a5e55add"
 
 [[package]]
 name = "types_test"

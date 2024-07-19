@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
+    InlineMacroExprPlugin, InlinePluginResult, MacroPluginMetadata, NamedPlugin, PluginDiagnostic,
+    PluginGeneratedFile,
 };
 use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
@@ -25,6 +26,7 @@ impl InlineMacroExprPlugin for DeleteMacro {
         &self,
         db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
         syntax: &ast::ExprInlineMacro,
+        _metadata: &MacroPluginMetadata<'_>,
     ) -> InlinePluginResult {
         let ast::WrappedArgList::ParenthesizedArgList(arg_list) = syntax.arguments(db) else {
             return unsupported_bracket_diagnostic(db, syntax);

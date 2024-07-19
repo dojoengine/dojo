@@ -290,7 +290,8 @@ fn update_files(
 
     for crate_id in crate_ids {
         for module_id in db.crate_modules(crate_id).as_ref() {
-            let file_infos = db.module_generated_file_infos(*module_id).unwrap_or_default();
+            let file_infos =
+                db.module_generated_file_infos(*module_id).unwrap_or(std::sync::Arc::new([]));
             for aux_data in file_infos
                 .iter()
                 .skip(1)

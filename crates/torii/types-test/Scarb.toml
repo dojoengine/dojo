@@ -1,5 +1,5 @@
 [package]
-cairo-version = "=2.6.4"
+cairo-version = "=2.7.0-rc.3"
 edition = "2023_11"
 name = "types_test"
 version = "0.7.3"
