@@ -1,3 +1,5 @@
+//! Starknet JSON-RPC specifications: <https://github.com/starkware-libs/starknet-specs>
+
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 use katana_primitives::block::{BlockIdOrTag, BlockNumber};
@@ -19,12 +21,14 @@ use katana_rpc_types::{
     ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag,
     SimulationFlagForEstimateFee, SyncingStatus,
 };
-use starknet::core::types::{SimulatedTransaction, TransactionStatus};
+use starknet::core::types::{
+    SimulatedTransaction, TransactionStatus, TransactionTrace, TransactionTraceWithHash,
+};
 
 /// The currently supported version of the Starknet JSON-RPC specification.
 pub const RPC_SPEC_VERSION: &str = "0.7.1";
 
-/// Starknet JSON-RPC APIs: <https://github.com/starkware-libs/starknet-specs>
+/// Read API.
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
 #[cfg_attr(feature = "client", rpc(client, server, namespace = "starknet"))]
 pub trait StarknetApi {
@@ -172,7 +176,12 @@ pub trait StarknetApi {
         block_id: BlockIdOrTag,
         contract_address: FieldElement,
     ) -> RpcResult<FeltAsHex>;
+}
 
+/// Write API.
+#[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
+#[cfg_attr(feature = "client", rpc(client, server, namespace = "starknet"))]
+pub trait StarknetWriteApi {
     /// Submit a new transaction to be added to the chain.
     #[method(name = "addInvokeTransaction")]
     async fn add_invoke_transaction(
@@ -193,13 +202,27 @@ pub trait StarknetApi {
         &self,
         deploy_account_transaction: BroadcastedDeployAccountTx,
     ) -> RpcResult<DeployAccountTxResult>;
+}
+
+/// Trace API.
+#[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
+#[cfg_attr(feature = "client", rpc(client, server, namespace = "starknet"))]
+pub trait StarknetTraceApi {
+    /// Returns the execution trace of the transaction designated by the input hash.
+    #[method(name = "traceTransaction")]
+    async fn trace(&self, transaction_hash: TxHash) -> RpcResult<TransactionTrace>;
 
     /// Simulates a list of transactions on the provided block.
     #[method(name = "simulateTransactions")]
-    async fn simulate_transactions(
+    async fn simulate(
         &self,
         block_id: BlockIdOrTag,
         transactions: Vec<BroadcastedTx>,
         simulation_flags: Vec<SimulationFlag>,
     ) -> RpcResult<Vec<SimulatedTransaction>>;
+
+    /// Returns the execution traces of all transactions included in the given block.
+    #[method(name = "traceBlockTransactions")]
+    async fn trace_block(&self, block_id: BlockIdOrTag)
+        -> RpcResult<Vec<TransactionTraceWithHash>>;
 }
