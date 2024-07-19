@@ -372,6 +372,18 @@ export function defineContractComponents(world: World) {
                     arg_name,
                     handle_arg_recursive("item", &t.inner, handled_tokens)
                 ),
+                Token::Tuple(t) => format!(
+                    "...[{}]",
+                    t.inners
+                        .iter()
+                        .map(|t| handle_arg_recursive(
+                            &format!("props.{arg_name}[{}]", t.type_name()),
+                            t,
+                            handled_tokens
+                        ))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                ),
                 _ => format!("props.{}", arg_name),
             }
         }
