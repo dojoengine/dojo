@@ -333,31 +333,53 @@ export function defineContractComponents(world: World) {
             .collect::<Vec<String>>()
             .join(", ");
 
+        fn handle_arg_recursive(
+            arg_name: &str,
+            arg: &Token,
+            handled_tokens: &[Composite],
+        ) -> String {
+            match arg {
+                Token::Composite(_) => {
+                    match handled_tokens.iter().find(|t| t.type_name() == arg.type_name()) {
+                        Some(t) => {
+                            // Need to flatten the struct members.
+                            match t.r#type {
+                                CompositeType::Struct => t
+                                    .inners
+                                    .iter()
+                                    .map(|field| format!("props.{}.{}", arg_name, field.name))
+                                    .collect::<Vec<String>>()
+                                    .join(",\n                    "),
+                                CompositeType::Enum => format!(
+                                    "[{}].indexOf(props.{}.type)",
+                                    t.inners
+                                        .iter()
+                                        .map(|field| format!("\"{}\"", field.name))
+                                        .collect::<Vec<String>>()
+                                        .join(", "),
+                                    arg_name
+                                ),
+                                _ => {
+                                    format!("props.{}", arg_name)
+                                }
+                            }
+                        }
+                        None => format!("props.{}", arg_name),
+                    }
+                }
+                Token::Array(t) => format!(
+                    "...props.{}.map(item => {}) ",
+                    arg_name,
+                    handle_arg_recursive("item", &t.inner, handled_tokens)
+                ),
+                _ => format!("props.{}", arg_name),
+            }
+        }
+
         let calldata = system
             .inputs
             .iter()
-            .map(|arg| {
-                let token = &arg.1;
-                let type_name = &arg.0;
-
-                match handled_tokens.iter().find(|t| t.type_name() == token.type_name()) {
-                    Some(t) => {
-                        // Need to flatten the struct members.
-                        match t.r#type {
-                            CompositeType::Struct => t
-                                .inners
-                                .iter()
-                                .map(|field| format!("props.{}.{}", type_name, field.name))
-                                .collect::<Vec<String>>()
-                                .join(",\n                    "),
-                            _ => {
-                                format!("props.{}", type_name)
-                            }
-                        }
-                    }
-                    None => format!("props.{}", type_name),
-                }
-            })
+            .map(|arg| handle_arg_recursive(&arg.0, &arg.1, handled_tokens))
             .collect::<Vec<String>>()
             .join(",\n                ");
 
