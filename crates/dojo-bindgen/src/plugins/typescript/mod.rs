@@ -20,6 +20,11 @@ impl TypescriptPlugin {
     fn map_type(token: &Token, generic_args: &Vec<(String, Token)>) -> String {
         match token.type_name().as_str() {
             "bool" => "RecsType.Boolean".to_string(),
+            "i8" => "RecsType.Number".to_string(),
+            "i16" => "RecsType.Number".to_string(),
+            "i32" => "RecsType.Number".to_string(),
+            "i64" => "RecsType.Number".to_string(),
+            "i128" => "RecsType.BigInt".to_string(),
             "u8" => "RecsType.Number".to_string(),
             "u16" => "RecsType.Number".to_string(),
             "u32" => "RecsType.Number".to_string(),
