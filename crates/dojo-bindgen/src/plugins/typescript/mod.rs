@@ -49,20 +49,6 @@ impl TypescriptPlugin {
                     panic!("Invalid array token: {:?}", token);
                 }
             }
-            "tuple" => {
-                if let Token::Tuple(tuple) = token {
-                    let inners = tuple
-                        .inners
-                        .iter()
-                        .map(|inner| TypescriptPlugin::map_type(inner))
-                        .collect::<Vec<String>>()
-                        .join(", ");
-
-                    format!("[{}]", inners)
-                } else {
-                    panic!("Invalid tuple token: {:?}", token);
-                }
-            }
             "generic_arg" => {
                 if let Token::GenericArg(g) = &token {
                     g.clone()
@@ -71,6 +57,7 @@ impl TypescriptPlugin {
                 }
             }
 
+            // we consider tuples as essentially objects
             _ => {
                 let mut type_name = token.type_name().to_string();
 
