@@ -183,7 +183,7 @@ export const {name}Definition = {{
     // Token should be a model
     // This will be formatted into a C# class inheriting from ModelInstance
     // Fields are mapped using C# and unity SDK types
-    fn format_model(namespace: &str, model: &Composite, handled_tokens: &[Composite]) -> String {
+    fn format_model(namespace: &str, model: &Composite) -> String {
         let mut custom_types = Vec::<String>::new();
         let mut types = Vec::<String>::new();
         let fields = model
@@ -193,16 +193,7 @@ export const {name}Definition = {{
                 let mapped = TypescriptPlugin::map_type(&field.token);
                 if mapped == field.token.type_name() {
                     custom_types.push(format!("\"{}\"", field.token.type_name()));
-
-                    let token = handled_tokens
-                        .iter()
-                        .find(|t| t.type_name() == field.token.type_name())
-                        .unwrap_or_else(|| panic!("Token not found: {}", field.token.type_name()));
-                    if token.r#type == CompositeType::Enum {
-                        format!("{}: {},", field.name, "RecsType.Number")
-                    } else {
-                        format!("{}: {}Definition,", field.name, mapped)
-                    }
+                    format!("{}: {}Definition,", field.name, mapped)
                 } else {
                     types.push(format!("\"{}\"", field.token.type_name()));
                     format!("{}: {},", field.name, mapped)
@@ -311,7 +302,7 @@ export function defineContractComponents(world: World) {
 ";
 
         for (namespace, model) in models_structs {
-            out += TypescriptPlugin::format_model(&namespace, &model, handled_tokens).as_str();
+            out += TypescriptPlugin::format_model(&namespace, &model).as_str();
         }
 
         out += "    };
