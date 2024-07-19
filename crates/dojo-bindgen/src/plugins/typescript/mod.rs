@@ -169,12 +169,11 @@ type {} = ",
         result += format!(
             "
 export const {name}Definition = {{
-    type: RecsType.String,
-    {}
+    type: RecsType.String,{}
 }};
 ",
             if !token.inners.is_empty() {
-                format!("value: RecsType.String")
+                format!("\n    value: RecsType.String")
             } else {
                 "".to_string()
             }
