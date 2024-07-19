@@ -224,5 +224,5 @@ pub trait StarknetTraceApi {
     /// Returns the execution traces of all transactions included in the given block.
     #[method(name = "traceBlockTransactions")]
     async fn trace_block(&self, block_id: BlockIdOrTag)
-        -> RpcResult<Vec<TransactionTraceWithHash>>;
+    -> RpcResult<Vec<TransactionTraceWithHash>>;
 }
