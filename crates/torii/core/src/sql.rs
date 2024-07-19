@@ -660,9 +660,12 @@ impl Sql {
 
                 let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
                 let statement = format!(
-                    "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
+                    // on conflict do update to set all of the columns to the new values
+                    "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({}) ON CONFLICT(id) DO UPDATE SET {}",
                     columns.join(","),
-                    placeholders.join(",")
+                    placeholders.join(","),
+                    // exclude the first column (id) from the update
+                    columns.iter().skip(1).map(|c| format!("{} = EXCLUDED.{}", c, c)).collect::<Vec<String>>().join(", ")
                 );
 
                 query_queue.enqueue(statement, arguments);
