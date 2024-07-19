@@ -37,7 +37,9 @@ similar-asserts.workspace = true
 tokio.workspace = true
 
 criterion.workspace = true
+oneshot = { version = "0.1.8", default-features = false, features = [ "std" ] }
 pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
+rayon.workspace = true
 
 [features]
 blockifier = [ "dep:blockifier", "dep:katana-cairo", "dep:starknet" ]
@@ -48,4 +50,9 @@ default = [ "blockifier" ]
 [[bench]]
 harness = false
 name = "execution"
+required-features = [ "blockifier" ]
+
+[[bench]]
+harness = false
+name = "concurrent"
 required-features = [ "blockifier" ]
