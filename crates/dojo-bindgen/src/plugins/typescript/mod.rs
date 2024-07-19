@@ -39,7 +39,12 @@ impl TypescriptPlugin {
             "ByteArray" => "RecsType.String".to_string(),
             "array" => {
                 if let Token::Array(array) = token {
-                    format!("{}[]", TypescriptPlugin::map_type(&array.inner, generic_args))
+                    let mut mapped = TypescriptPlugin::map_type(&array.inner, generic_args);
+                    if mapped == array.inner.type_name() {
+                        mapped = "RecsType.String".to_string();
+                    }
+
+                    format!("{}Array", mapped)
                 } else {
                     panic!("Invalid array token: {:?}", token);
                 }
@@ -87,20 +92,25 @@ impl TypescriptPlugin {
     // Token should be a struct
     // This will be formatted into a C# struct
     // using C# and unity SDK types
-    fn format_struct(token: &Composite, handled_tokens: &[Composite]) -> String {
+    fn format_struct(token: &Composite) -> String {
         let mut native_fields = String::new();
         let mut fields = String::new();
 
         for field in &token.inners {
             let mapped = TypescriptPlugin::map_type(&field.token, &token.generic_args);
+
             if mapped == field.token.type_name() {
                 native_fields +=
                     format!("{}: {};\n    ", field.name, field.token.type_name()).as_str();
-                fields += format!("{}: {}Definition,\n    ", field.name, mapped).as_str();
+                fields += format!("{}: {}Definition,\n    ", field.name, mapped,).as_str();
             } else {
-                native_fields +=
-                    format!("{}: {};\n    ", field.name, mapped.replace("RecsType.", "")).as_str();
-                fields += format!("{}: {},\n    ", field.name, mapped).as_str();
+                native_fields += format!(
+                    "{}: {};\n    ",
+                    field.name,
+                    mapped.replace("RecsType.", "").replace("Array", "[]")
+                )
+                .as_str();
+                fields += format!("{}: {},\n    ", field.name, mapped,).as_str();
             }
         }
 
@@ -131,7 +141,7 @@ export const {name}Definition = {{
         let mut result = format!(
             "
 // Type definition for `{}` enum
-type {}Definition = ",
+type {} = ",
             token.type_path, name
         );
 
@@ -153,6 +163,23 @@ type {}Definition = ",
         }
 
         result += &variants.join(" | ");
+
+        result += ";\n";
+
+        result += format!(
+            "
+export const {name}Definition = {{
+    type: RecsType.String,
+    {}
+}};
+",
+            if !token.inners.is_empty() {
+                format!("value: RecsType.String")
+            } else {
+                "".to_string()
+            }
+        )
+        .as_str();
 
         result
     }
@@ -268,9 +295,7 @@ type {}Definition = ",
                     ));
                 }
 
-                out +=
-                    TypescriptPlugin::format_struct(token.to_composite().unwrap(), handled_tokens)
-                        .as_str();
+                out += TypescriptPlugin::format_struct(token.to_composite().unwrap()).as_str();
             }
 
             for token in &tokens.enums {
