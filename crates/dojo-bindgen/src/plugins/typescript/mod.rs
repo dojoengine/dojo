@@ -330,11 +330,10 @@ export function defineContractComponents(world: World) {
         fn map_type(token: &Token) -> String {
             match token {
                 Token::CoreBasic(_) => TypescriptPlugin::map_type(token, &vec![])
-                .replace("RecsType.", "")
+                .replace("RecsType.", "").replace("Array", "[]")
                 // types should be lowercased
                 .to_lowercase(),
                 Token::Composite(t) => format!("models.{}", t.type_name()),
-                Token::Array(t) => format!("{}[]", map_type(&t.inner)),
                 _ => panic!("Unsupported token type: {:?}", token),
             }
         }
