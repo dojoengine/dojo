@@ -169,7 +169,7 @@ type {} = ",
     // Token should be a model
     // This will be formatted into a C# class inheriting from ModelInstance
     // Fields are mapped using C# and unity SDK types
-    fn format_model(model: &Composite, handled_tokens: &[Composite]) -> String {
+    fn format_model(namespace: &str, model: &Composite, handled_tokens: &[Composite]) -> String {
         let mut custom_types = Vec::<String>::new();
         let mut types = Vec::<String>::new();
         let fields = model
@@ -208,6 +208,7 @@ type {} = ",
                 }},
                 {{
                     metadata: {{
+                        namespace: \"{namespace}\",
                         name: \"{model}\",
                         types: [{types}],
                         customTypes: [{custom_types}],
@@ -218,7 +219,6 @@ type {} = ",
 ",
             path = model.type_path,
             model = model.type_name(),
-            fields = fields,
             types = types.join(", "),
             custom_types = custom_types.join(", ")
         )
@@ -271,7 +271,10 @@ type {} = ",
 
                 // first index is our model struct
                 if token.type_name() == naming::get_name_from_tag(&model.tag) {
-                    models_structs.push(token.to_composite().unwrap().clone());
+                    models_structs.push((
+                        naming::get_namespace_from_tag(&model.tag),
+                        token.to_composite().unwrap().clone(),
+                    ));
                 }
 
                 out +=
@@ -295,8 +298,8 @@ export function defineContractComponents(world: World) {
     return {
 ";
 
-        for model in models_structs {
-            out += TypescriptPlugin::format_model(&model, handled_tokens).as_str();
+        for (namespace, model) in models_structs {
+            out += TypescriptPlugin::format_model(&namespace, &model, handled_tokens).as_str();
         }
 
         out += "    };
