@@ -20,6 +20,11 @@ impl UnityPlugin {
     // Maps cairo types to C#/Unity SDK defined types
     fn map_type(token: &Token) -> String {
         match token.type_name().as_str() {
+            "i8" => "sbyte".to_string(),
+            "i16" => "short".to_string(),
+            "i32" => "int".to_string(),
+            "i64" => "long".to_string(),
+            "i128" => "BigInteger".to_string(),
             "u8" => "byte".to_string(),
             "u16" => "ushort".to_string(),
             "u32" => "uint".to_string(),
