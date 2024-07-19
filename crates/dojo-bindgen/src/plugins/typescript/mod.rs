@@ -94,18 +94,9 @@ impl TypescriptPlugin {
         for field in &token.inners {
             let mapped = TypescriptPlugin::map_type(&field.token, &token.generic_args);
             if mapped == field.token.type_name() {
-                let token = handled_tokens
-                    .iter()
-                    .find(|t| t.type_name() == field.token.type_name())
-                    .unwrap_or_else(|| panic!("Token not found: {}", field.token.type_name()));
-                if token.r#type == CompositeType::Enum {
-                    native_fields += format!("{}: {};\n    ", field.name, mapped).as_str();
-                    fields += format!("{}: RecsType.Number,\n    ", field.name).as_str();
-                } else {
-                    native_fields +=
-                        format!("{}: {};\n    ", field.name, field.token.type_name()).as_str();
-                    fields += format!("{}: {}Definition,\n    ", field.name, mapped).as_str();
-                }
+                native_fields +=
+                    format!("{}: {};\n    ", field.name, field.token.type_name()).as_str();
+                fields += format!("{}: {}Definition,\n    ", field.name, mapped).as_str();
             } else {
                 native_fields +=
                     format!("{}: {};\n    ", field.name, mapped.replace("RecsType.", "")).as_str();
@@ -140,7 +131,7 @@ export const {name}Definition = {{
         let mut result = format!(
             "
 // Type definition for `{}` enum
-type {} = ",
+type {}Definition = ",
             token.type_path, name
         );
 
@@ -155,7 +146,7 @@ type {} = ",
                 format!("{{ type: '{}'; }}", field.name)
             } else {
                 // With associated data
-                format!("{{ type: '{}'; data: {}; }}", field.name, field_type)
+                format!("{{ type: '{}'; value: {}; }}", field.name, field_type)
             };
 
             variants.push(variant_definition);
