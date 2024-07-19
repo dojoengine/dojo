@@ -21,11 +21,10 @@ const CONTRACT_NAME_LABEL: &str = "Contract";
 
 #[derive(Debug, Args)]
 pub struct BuildArgs {
-    // Should we deprecate typescript bindings codegen?
-    // Disabled due to lack of support in dojo.js
-    // #[arg(long)]
-    // #[arg(help = "Generate Typescript bindings.")]
-    // pub typescript: bool,
+    #[arg(long)]
+    #[arg(help = "Generate Typescript bindings.")]
+    pub typescript: bool,
+    
     #[arg(long)]
     #[arg(help = "Generate Typescript bindings.")]
     pub typescript_v2: bool,
@@ -92,10 +91,9 @@ impl BuildArgs {
 
         let mut builtin_plugins = vec![];
 
-        // Disable typescript for now. Due to lack of support and maintenance in dojo.js
-        // if self.typescript {
-        //     builtin_plugins.push(BuiltinPlugins::Typescript);
-        // }
+        if self.typescript {
+            builtin_plugins.push(BuiltinPlugins::Typescript);
+        }
 
         if self.typescript_v2 {
             builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
