@@ -24,7 +24,7 @@ pub struct BuildArgs {
     #[arg(long)]
     #[arg(help = "Generate Typescript bindings.")]
     pub typescript: bool,
-    
+
     #[arg(long)]
     #[arg(help = "Generate Typescript bindings.")]
     pub typescript_v2: bool,
@@ -162,6 +162,7 @@ impl Default for BuildArgs {
 
         Self {
             features,
+            typescript: false,
             typescript_v2: false,
             unity: false,
             bindings_output: "bindings".to_string(),
