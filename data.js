@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721359971856,
+  "lastUpdate": 1721363869315,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12097,6 +12097,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5207430,
             "range": "± 98208",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d90b52b89749ac8af82f352dc08aa0b1378cfae6",
+          "message": "fix(dojo-lang): bump to cairo `2.7.0-rc.3` (#2189)\n\n* workign bump for blockifier to ver 2.7. of cairo\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* no error\r\n\r\n* update resources log\r\n\r\n* remove commented code\r\n\r\n* clippy\r\n\r\n* fmt\r\n\r\n* restore lockfile\r\n\r\n* remove comment\r\n\r\n* remove unused dep\r\n\r\n* fmt\r\n\r\n* wip\r\n\r\n* update blockifier rev\r\n\r\n* fmt\r\n\r\n* bump cairo to 2.7.0-rc.2\r\n\r\n* fix: fix dojo-lang compilation and bump to 2.7.0-rc3\r\n\r\n* chore: sync Scarb.toml files to use latest cairo version\r\n\r\n* fix: fix dojo core warning replacing deprecated functions\r\n\r\n* fix: remove unused line\r\n\r\n* fix: fix typo in match for overflow checking\r\n\r\n* fix: fix tests\r\n\r\n* remove cairo-vm from katana-db\r\n\r\n* remove unused dep in katana-db\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-07-18T22:19:51-06:00",
+          "tree_id": "10de9feb1dda6302e4c753a25deabc32b4695e56",
+          "url": "https://github.com/dojoengine/dojo/commit/d90b52b89749ac8af82f352dc08aa0b1378cfae6"
+        },
+        "date": 1721363868676,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17477058,
+            "range": "± 49995",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4683622,
+            "range": "± 247449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3295182495,
+            "range": "± 596167208",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4912404,
+            "range": "± 77760",
             "unit": "ns/iter"
           }
         ]
