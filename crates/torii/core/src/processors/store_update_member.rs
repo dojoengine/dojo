@@ -1,6 +1,5 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use dojo_types::schema::{Struct, Ty};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
@@ -102,8 +101,11 @@ where
 
         member.ty.deserialize(&mut values)?;
 
-        db.set_entity(
-            Ty::Struct(Struct { name: schema.name(), children: vec![member.clone()] }),
+        db.set_model_member(
+            entity_id,
+            false,
+            &schema.name(),
+            &member,
             event_id,
             block_timestamp,
         )
