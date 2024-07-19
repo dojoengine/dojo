@@ -7657,7 +7657,6 @@ version = "1.0.0-alpha.1"
 dependencies = [
  "anyhow",
  "criterion",
- "katana-cairo",
  "katana-primitives",
  "page_size",
  "parking_lot 0.12.3",
