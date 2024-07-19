@@ -344,6 +344,7 @@ export function defineContractComponents(world: World) {
                         Some(t) => {
                             // Need to flatten the struct members.
                             match t.r#type {
+                                CompositeType::Struct if t.type_name() == "ByteArray" => format!("byteArray.byteArrayFromString(props.{})", arg_name),
                                 CompositeType::Struct => t
                                     .inners
                                     .iter()
@@ -376,8 +377,9 @@ export function defineContractComponents(world: World) {
                     "...[{}]",
                     t.inners
                         .iter()
-                        .map(|t| handle_arg_recursive(
-                            &format!("props.{arg_name}[{}]", t.type_name()),
+                        .enumerate()
+                        .map(|(idx, t)| handle_arg_recursive(
+                            &format!("props.{arg_name}[{idx}]"),
                             t,
                             handled_tokens
                         ))
@@ -440,7 +442,7 @@ export function defineContractComponents(world: World) {
     ) -> String {
         let mut out = String::new();
         out += TypescriptPlugin::generated_header().as_str();
-        out += "import { Account } from \"starknet\";\n";
+        out += "import { Account, byteArray } from \"starknet\";\n";
         out += "import { DojoProvider } from \"@dojoengine/core\";\n";
         out += "import * as models from \"./models.gen\";\n";
         out += "\n";
