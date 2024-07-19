@@ -101,14 +101,7 @@ where
 
         member.ty.deserialize(&mut values)?;
 
-        db.set_model_member(
-            entity_id,
-            false,
-            &schema.name(),
-            &member,
-            event_id,
-            block_timestamp,
-        )
-        .await
+        db.set_model_member(entity_id, false, &schema.name(), &member, event_id, block_timestamp)
+            .await
     }
 }
