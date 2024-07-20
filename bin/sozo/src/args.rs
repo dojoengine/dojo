@@ -69,15 +69,15 @@ impl SozoArgs {
 #[derive(Parser, Clone, Debug)]
 #[group(multiple = false)]
 pub struct ProfileSpec {
-    #[arg(short = 'P', long, global = true)]
+    #[arg(short = 'P', long, global = true, group = "profiles")]
     #[arg(help = "Specify profile to use by name.")]
     pub profile: Option<SmolStr>,
 
-    #[arg(long, hide_short_help = true, global = true)]
+    #[arg(long, hide_short_help = true, global = true, group = "profiles")]
     #[arg(help = "Use release profile.")]
     pub release: bool,
 
-    #[arg(long, hide_short_help = true, global = true)]
+    #[arg(long, hide_short_help = true, global = true, group = "profiles")]
     #[arg(help = "Use dev profile.")]
     pub dev: bool,
 }
