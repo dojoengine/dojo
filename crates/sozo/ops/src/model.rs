@@ -1,51 +1,56 @@
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::Ty;
+use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::model::ModelReader;
+use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
+use dojo_world::metadata::get_default_namespace_from_ws;
 use num_traits::ToPrimitive;
+use scarb::core::Workspace;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::Provider;
 
 const INDENT: &str = "    ";
 
-pub async fn model_class_hash(
-    tag: String,
-    world_address: Felt,
-    provider: JsonRpcClient<HttpTransport>,
-) -> Result<()> {
-    let mut world_reader = WorldContractReader::new(world_address, &provider);
+pub async fn model_class_hash<P>(tag: String, world_address: Felt, provider: P) -> Result<Felt>
+where
+    P: Provider + Send + Sync,
+{
+    let mut world_reader = WorldContractReader::new(world_address, provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
 
     println!("{:#x}", model.class_hash());
 
-    Ok(())
+    Ok(model.class_hash())
 }
 
-pub async fn model_contract_address(
+pub async fn model_contract_address<P>(
     tag: String,
     world_address: Felt,
-    provider: JsonRpcClient<HttpTransport>,
-) -> Result<()> {
-    let mut world_reader = WorldContractReader::new(world_address, &provider);
+    provider: P,
+) -> Result<Felt>
+where
+    P: Provider + Send + Sync,
+{
+    let mut world_reader = WorldContractReader::new(world_address, provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
 
     println!("{:#x}", model.contract_address());
 
-    Ok(())
+    Ok(model.contract_address())
 }
 
-pub async fn model_layout(
-    tag: String,
-    world_address: Felt,
-    provider: JsonRpcClient<HttpTransport>,
-) -> Result<()> {
+pub async fn model_layout<P>(tag: String, world_address: Felt, provider: P) -> Result<Layout>
+where
+    P: Provider + Send + Sync,
+{
     let mut world_reader = WorldContractReader::new(world_address, &provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
@@ -61,15 +66,18 @@ pub async fn model_layout(
 
     deep_print_layout(&tag, &layout, &schema);
 
-    Ok(())
+    Ok(layout)
 }
 
-pub async fn model_schema(
+pub async fn model_schema<P>(
     tag: String,
     world_address: Felt,
-    provider: JsonRpcClient<HttpTransport>,
+    provider: P,
     to_json: bool,
-) -> Result<()> {
+) -> Result<Ty>
+where
+    P: Provider + Send + Sync,
+{
     let mut world_reader = WorldContractReader::new(world_address, &provider);
     world_reader.set_block(BlockId::Tag(BlockTag::Pending));
 
@@ -79,18 +87,21 @@ pub async fn model_schema(
     if to_json {
         println!("{}", serde_json::to_string_pretty(&schema)?)
     } else {
-        deep_print_ty(schema);
+        deep_print_ty(&schema);
     }
 
-    Ok(())
+    Ok(schema)
 }
 
-pub async fn model_get(
+pub async fn model_get<P>(
     tag: String,
     keys: Vec<Felt>,
     world_address: Felt,
-    provider: JsonRpcClient<HttpTransport>,
-) -> Result<()> {
+    provider: P,
+) -> Result<(Ty, Vec<Felt>)>
+where
+    P: Provider + Send + Sync,
+{
     if keys.is_empty() {
         anyhow::bail!("Models always have at least one key. Please provide it (or them).");
     }
@@ -104,7 +115,7 @@ pub async fn model_get(
 
     deep_print_record(&schema, &keys, &values);
 
-    Ok(())
+    Ok((schema, values))
 }
 
 #[derive(Clone, Debug)]
@@ -649,11 +660,25 @@ pub fn print_ty(ty: &Ty) {
 }
 
 // print the full Ty tree
-pub fn deep_print_ty(root: Ty) {
+pub fn deep_print_ty(root: &Ty) {
     let mut ty_list = vec![];
-    get_printable_ty_list(&root, &mut ty_list);
+    get_printable_ty_list(root, &mut ty_list);
 
     for ty in ty_list {
         print_ty(&ty);
+    }
+}
+
+/// Checks if the tag is a valid tag, if not, return the default namespace. This allows
+/// sozo model commands to be run even without a Scarb.toml file in the current directory
+/// if a valid tag is provided.
+/// TODO: This may be removed in the future once SDKs are updated to use the new bindgen.
+pub fn check_tag_or_read_default_namespace(tag_or_name: &str, ws: &Workspace) -> Result<String> {
+    if naming::is_valid_tag(tag_or_name) {
+        Ok(tag_or_name.to_string())
+    } else {
+        let default_namespace = get_default_namespace_from_ws(ws)?;
+        let tag = naming::ensure_namespace(tag_or_name, &default_namespace);
+        Ok(tag)
     }
 }
