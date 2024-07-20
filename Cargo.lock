@@ -2456,7 +2456,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-macro"
 version = "0.0.1"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 dependencies = [
  "cairo-lang-macro-attributes",
  "cairo-lang-macro-stable",
@@ -2466,7 +2466,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-macro-attributes"
 version = "0.0.1"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 dependencies = [
  "quote",
  "scarb-stable-hash",
@@ -2476,7 +2476,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-macro-stable"
 version = "1.0.0"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 
 [[package]]
 name = "cairo-lang-parser"
@@ -3623,7 +3623,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 dependencies = [
  "anyhow",
  "core-foundation",
@@ -4034,16 +4034,7 @@ version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d67778784b508018359cbc8696edb3db78160bab2c2a28ba7f56ef6932997f8"
 dependencies = [
- "derive_builder_macro 0.12.0",
-]
-
-[[package]]
-name = "derive_builder"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0350b5cb0331628a5916d6c5c0b72e97393b8b6b03b47a9284f4e7f5a405ffd7"
-dependencies = [
- "derive_builder_macro 0.20.0",
+ "derive_builder_macro",
 ]
 
 [[package]]
@@ -4059,35 +4050,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "derive_builder_core"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d48cda787f839151732d396ac69e3473923d54312c070ee21e9effcaa8ca0b1d"
-dependencies = [
- "darling 0.20.10",
- "proc-macro2",
- "quote",
- "syn 2.0.71",
-]
-
-[[package]]
 name = "derive_builder_macro"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebcda35c7a396850a55ffeac740804b40ffec779b98fffbb1738f4033f0ee79e"
 dependencies = [
- "derive_builder_core 0.12.0",
+ "derive_builder_core",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "derive_builder_macro"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "206868b8242f27cecce124c19fd88157fbd0dd334df2587f36417bafbc85097b"
-dependencies = [
- "derive_builder_core 0.20.0",
- "syn 2.0.71",
 ]
 
 [[package]]
@@ -11680,8 +11649,8 @@ dependencies = [
 
 [[package]]
 name = "scarb"
-version = "2.7.0-rc.3"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+version = "2.7.0-rc.4"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -11708,7 +11677,7 @@ dependencies = [
  "create-output-dir",
  "data-encoding",
  "deno_task_shell",
- "derive_builder 0.20.0",
+ "derive_builder",
  "directories",
  "dunce",
  "fs4",
@@ -11729,7 +11698,7 @@ dependencies = [
  "redb",
  "reqwest 0.11.27",
  "scarb-build-metadata",
- "scarb-metadata 1.12.0 (git+https://github.com/software-mansion/scarb?rev=be95601)",
+ "scarb-metadata 1.12.0 (git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4)",
  "scarb-stable-hash",
  "scarb-ui",
  "semver 1.0.23",
@@ -11759,8 +11728,8 @@ dependencies = [
 
 [[package]]
 name = "scarb-build-metadata"
-version = "2.7.0-rc.3"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+version = "2.7.0-rc.4"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 dependencies = [
  "cargo_metadata",
 ]
@@ -11781,10 +11750,10 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.12.0"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 dependencies = [
  "camino",
- "derive_builder 0.20.0",
+ "derive_builder",
  "semver 1.0.23",
  "serde",
  "serde_json",
@@ -11794,7 +11763,7 @@ dependencies = [
 [[package]]
 name = "scarb-stable-hash"
 version = "1.0.0"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 dependencies = [
  "data-encoding",
  "xxhash-rust",
@@ -11803,14 +11772,14 @@ dependencies = [
 [[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/software-mansion/scarb?rev=be95601#be956017baeeec403212f364dded449fca31d0d5"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4#88bf93564b905336e6f34e0243e30ce7ce8859ec"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.12.0 (git+https://github.com/software-mansion/scarb?rev=be95601)",
+ "scarb-metadata 1.12.0 (git+https://github.com/software-mansion/scarb?tag=v2.7.0-rc.4)",
  "serde",
  "serde_json",
  "tracing-core",
@@ -15108,7 +15077,7 @@ source = "git+https://github.com/cartridge-gg/wasm-webauthn?rev=972693f#972693fd
 dependencies = [
  "ciborium",
  "coset",
- "derive_builder 0.12.0",
+ "derive_builder",
  "js-sys",
  "serde",
  "serde-wasm-bindgen",

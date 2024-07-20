@@ -34,4 +34,4 @@ dependencies = [
 [[package]]
 name = "dojo_plugin"
 version = "0.7.3"
-source = "git+https://github.com/dojoengine/dojo?branch=bump-cairo-2.7#88b87323e20b872cdb86eed879e96c792b6583ab"
+source = "git+https://github.com/dojoengine/dojo?rev=d90b52b#d90b52b89749ac8af82f352dc08aa0b1378cfae6"
