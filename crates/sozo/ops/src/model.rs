@@ -10,7 +10,6 @@ use num_traits::ToPrimitive;
 use scarb::core::Workspace;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::Provider;
 
 const INDENT: &str = "    ";
@@ -673,7 +672,10 @@ pub fn deep_print_ty(root: &Ty) {
 /// sozo model commands to be run even without a Scarb.toml file in the current directory
 /// if a valid tag is provided.
 /// TODO: This may be removed in the future once SDKs are updated to use the new bindgen.
-pub fn check_tag_or_read_default_namespace(tag_or_name: &str, ws: &Workspace) -> Result<String> {
+pub fn check_tag_or_read_default_namespace(
+    tag_or_name: &str,
+    ws: &Workspace<'_>,
+) -> Result<String> {
     if naming::is_valid_tag(tag_or_name) {
         Ok(tag_or_name.to_string())
     } else {

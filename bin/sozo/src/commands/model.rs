@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::contracts::naming::{ensure_namespace, is_valid_tag};
 use scarb::core::Config;
 use sozo_ops::model;
 use starknet::core::types::Felt;

@@ -134,7 +134,7 @@ async fn test_model_ops() {
 
     let (_, values) = model::model_get(
         "dojo_examples-Moves".to_string(),
-        vec![Felt::from(sequencer.account(0).address())],
+        vec![sequencer.account(0).address()],
         world.address,
         sequencer.provider(),
     )
@@ -159,7 +159,7 @@ async fn test_model_ops() {
 
     let (_, values) = model::model_get(
         "dojo_examples-Moves".to_string(),
-        vec![Felt::from(sequencer.account(0).address())],
+        vec![sequencer.account(0).address()],
         world.address,
         sequencer.provider(),
     )
