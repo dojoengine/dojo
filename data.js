@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721363869315,
+  "lastUpdate": 1721488290221,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12145,6 +12145,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4912404,
             "range": "± 77760",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "729f46f2b2bb1f66267094e7ebf3a4fa3e08454a",
+          "message": "fix: ensure scarb points to the correct plugin version (#2194)",
+          "timestamp": "2024-07-20T08:53:27-06:00",
+          "tree_id": "fadaece650853f385ee795e03643583be7711fbc",
+          "url": "https://github.com/dojoengine/dojo/commit/729f46f2b2bb1f66267094e7ebf3a4fa3e08454a"
+        },
+        "date": 1721488288958,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17682087,
+            "range": "± 151623",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4695284,
+            "range": "± 151241",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3214475243,
+            "range": "± 536271997",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4775110,
+            "range": "± 30754",
             "unit": "ns/iter"
           }
         ]
