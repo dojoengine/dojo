@@ -170,7 +170,7 @@ export const {name}Definition = {{
 }};
 ",
             if !token.inners.is_empty() {
-                format!("\n    value: RecsType.String")
+                "\n    value: RecsType.String".to_string()
             } else {
                 "".to_string()
             }
@@ -344,7 +344,9 @@ export function defineContractComponents(world: World) {
                         Some(t) => {
                             // Need to flatten the struct members.
                             match t.r#type {
-                                CompositeType::Struct if t.type_name() == "ByteArray" => format!("byteArray.byteArrayFromString(props.{})", arg_name),
+                                CompositeType::Struct if t.type_name() == "ByteArray" => {
+                                    format!("byteArray.byteArrayFromString(props.{})", arg_name)
+                                }
                                 CompositeType::Struct => t
                                     .inners
                                     .iter()
