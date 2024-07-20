@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721511671130,
+  "lastUpdate": 1721514788798,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12337,6 +12337,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4819395,
             "range": "± 58334",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8a1a652d9ea06f141645316f22e3916a148403ec",
+          "message": "fix(sozo): use `Provider` trait and avoid manifest read when possible (#2197)\n\n* fix: avoid reading manifest when possible for sozo model commands\r\n\r\n* fix: use Provider trait instead of JsonRpcProvider + add tests\r\n\r\n* fix: fmt and clippy\r\n\r\n* fix: ensure scarb manifest is not read on valid tag",
+          "timestamp": "2024-07-20T16:15:06-06:00",
+          "tree_id": "72fccc7fe8bc0736559b9d02afc7529c87e53ec0",
+          "url": "https://github.com/dojoengine/dojo/commit/8a1a652d9ea06f141645316f22e3916a148403ec"
+        },
+        "date": 1721514787550,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17021067,
+            "range": "± 154090",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4695928,
+            "range": "± 63149",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3152666063,
+            "range": "± 496609237",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4826676,
+            "range": "± 54109",
             "unit": "ns/iter"
           }
         ]
