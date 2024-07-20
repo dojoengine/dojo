@@ -7,7 +7,7 @@ use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::get_default_namespace_from_ws;
 use num_traits::ToPrimitive;
-use scarb::core::Workspace;
+use scarb::core::Config;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -672,14 +672,12 @@ pub fn deep_print_ty(root: &Ty) {
 /// sozo model commands to be run even without a Scarb.toml file in the current directory
 /// if a valid tag is provided.
 /// TODO: This may be removed in the future once SDKs are updated to use the new bindgen.
-pub fn check_tag_or_read_default_namespace(
-    tag_or_name: &str,
-    ws: &Workspace<'_>,
-) -> Result<String> {
+pub fn check_tag_or_read_default_namespace(tag_or_name: &str, config: &Config) -> Result<String> {
     if naming::is_valid_tag(tag_or_name) {
         Ok(tag_or_name.to_string())
     } else {
-        let default_namespace = get_default_namespace_from_ws(ws)?;
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let default_namespace = get_default_namespace_from_ws(&ws)?;
         let tag = naming::ensure_namespace(tag_or_name, &default_namespace);
         Ok(tag)
     }

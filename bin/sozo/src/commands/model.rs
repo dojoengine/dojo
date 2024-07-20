@@ -109,13 +109,12 @@ hashes, called 'hash' in the following documentation.
 impl ModelArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         trace!(args = ?self);
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         config.tokio_handle().block_on(async {
             match self.command {
                 ModelCommand::ClassHash { tag_or_name, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, &ws)?;
+                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
 
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
@@ -123,7 +122,7 @@ impl ModelArgs {
                     Ok(())
                 }
                 ModelCommand::ContractAddress { tag_or_name, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, &ws)?;
+                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
 
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
@@ -131,7 +130,7 @@ impl ModelArgs {
                     Ok(())
                 }
                 ModelCommand::Layout { tag_or_name, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, &ws)?;
+                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
 
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
@@ -139,7 +138,7 @@ impl ModelArgs {
                     Ok(())
                 }
                 ModelCommand::Schema { tag_or_name, to_json, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, &ws)?;
+                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
 
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
@@ -147,7 +146,7 @@ impl ModelArgs {
                     Ok(())
                 }
                 ModelCommand::Get { tag_or_name, keys, starknet, world } => {
-                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, &ws)?;
+                    let tag = model::check_tag_or_read_default_namespace(&tag_or_name, config)?;
 
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();

@@ -172,11 +172,10 @@ async fn test_model_ops() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_check_tag_or_read_default() {
     let config = setup::load_config();
-    let ws = setup::setup_ws(&config);
 
-    let tag = model::check_tag_or_read_default_namespace("Moves", &ws).unwrap();
+    let tag = model::check_tag_or_read_default_namespace("Moves", &config).unwrap();
     assert_eq!(tag, "dojo_examples-Moves");
 
-    let tag = model::check_tag_or_read_default_namespace("dojo_examples-Moves", &ws).unwrap();
+    let tag = model::check_tag_or_read_default_namespace("dojo_examples-Moves", &config).unwrap();
     assert_eq!(tag, "dojo_examples-Moves");
 }
