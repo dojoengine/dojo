@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
 use dojo_world::contracts::WorldContract;
-use dojo_world::manifest::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
+use dojo_world::manifest::{
+    DeploymentMetadata, BASE_DIR, DEPLOYMENT_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
+};
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
@@ -116,9 +118,7 @@ where
 
     if total_diffs == 0 {
         ui.print("\n✨ No changes to be made. Remote World is already up to date!");
-        return Ok(None);
     }
-
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
     strategy.resolve_variable(world_address)?;
@@ -126,7 +126,7 @@ where
     if dry_run {
         print_strategy(&ui, account.provider(), &strategy, world_address).await;
 
-        update_manifests_and_abis(
+        let work = update_manifests_and_abis(
             ws,
             local_manifest,
             &manifest_dir,
@@ -138,13 +138,15 @@ where
         )
         .await?;
 
+        dbg!(&work);
+
         Ok(None)
     } else {
         // Migrate according to the diff.
         let migration_output = match apply_diff(ws, &account, txn_config, &mut strategy).await {
             Ok(migration_output) => Some(migration_output),
             Err(e) => {
-                update_manifests_and_abis(
+                let _ = update_manifests_and_abis(
                     ws,
                     local_manifest,
                     &manifest_dir,
@@ -159,7 +161,7 @@ where
             }
         };
 
-        update_manifests_and_abis(
+        let work = update_manifests_and_abis(
             ws,
             local_manifest.clone(),
             &manifest_dir,
@@ -173,26 +175,37 @@ where
 
         let account = Arc::new(account);
         let world = WorldContract::new(world_address, account.clone());
-        if let Some(migration_output) = &migration_output {
-            match auto_authorize(
-                ws,
-                &world,
-                &txn_config,
-                &local_manifest,
-                migration_output,
-                &default_namespace,
-            )
-            .await
-            {
-                Ok(()) => {
-                    ui.print_sub("Auto authorize completed successfully");
-                }
-                Err(e) => {
-                    ui.print_sub(format!("Failed to auto authorize with error: {e}"));
-                }
-            };
 
-            //
+        dbg!(&work);
+        match auto_authorize(ws, &world, &txn_config, &local_manifest, &default_namespace, &work)
+            .await
+        {
+            Ok(()) => {
+                let deployment_dir = manifest_dir.join(DEPLOYMENT_DIR);
+                let deployment_metadata_path =
+                    deployment_dir.join("metadata").with_extension("toml");
+
+                // read back metadata file and update it
+                let mut deployment_metadata =
+                    DeploymentMetadata::load_from_path(&deployment_metadata_path)?;
+
+                work.iter().for_each(|tag| {
+                    let contract =
+                        deployment_metadata.contracts.get_mut(tag).expect("unexpected tag found");
+
+                    *contract = false;
+                });
+
+                deployment_metadata.write_to_path_toml(&deployment_metadata_path)?;
+
+                ui.print_sub("Auto authorize completed successfully");
+            }
+            Err(e) => {
+                ui.print_sub(format!("Failed to auto authorize with error: {e}"));
+            }
+        };
+
+        if let Some(migration_output) = &migration_output {
             if !ws.config().offline() {
                 upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
             }

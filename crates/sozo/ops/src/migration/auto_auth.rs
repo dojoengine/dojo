@@ -9,7 +9,6 @@ use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 
 use super::ui::MigrationUi;
-use super::MigrationOutput;
 use crate::auth::{grant_writer, ResourceWriter};
 
 pub async fn auto_authorize<A>(
@@ -17,8 +16,8 @@ pub async fn auto_authorize<A>(
     world: &WorldContract<A>,
     txn_config: &TxnConfig,
     local_manifest: &BaseManifest,
-    migration_output: &MigrationOutput,
     default_namespace: &str,
+    work: &Vec<String>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send,
@@ -29,25 +28,23 @@ where
     ui.print(" ");
     ui.print_step(6, "🖋️", "Authorizing systems based on overlay...");
     ui.print(" ");
-    let new_writers = compute_writers(&ui, local_manifest, migration_output)?;
+    let new_writers = create_writers(&ui, local_manifest, work)?;
     grant_writer(&ui, world, new_writers, *txn_config, default_namespace).await
 }
 
-pub fn compute_writers(
+pub fn create_writers(
     ui: &Ui,
     local_manifest: &BaseManifest,
-    migration_output: &MigrationOutput,
+    tags: &Vec<String>,
 ) -> Result<Vec<crate::auth::ResourceWriter>> {
     let mut res = vec![];
     let local_contracts = &local_manifest.contracts;
 
     // From all the contracts that were migrated successfully.
-    for migrated_contract in migration_output.contracts.iter().flatten() {
+    for tag in tags {
         // Find that contract from local_manifest based on its tag.
-        let contract = local_contracts
-            .iter()
-            .find(|c| migrated_contract.tag == c.inner.tag)
-            .expect("we know this contract exists");
+        let contract =
+            local_contracts.iter().find(|c| tag == &c.inner.tag).expect("unexpected tag found");
 
         if !contract.inner.writes.is_empty() {
             ui.print_sub(format!(
@@ -64,7 +61,7 @@ pub fn compute_writers(
                 format!("m:{}", tag_with_prefix)
             };
 
-            let resource = format!("{},{}", resource_type, migrated_contract.tag);
+            let resource = format!("{},{}", resource_type, tag);
             res.push(ResourceWriter::from_str(&resource)?);
         }
     }

@@ -29,9 +29,10 @@ mod test;
 mod types;
 
 pub use types::{
-    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, DeploymentManifest, DojoContract,
-    DojoModel, Manifest, ManifestMethods, Member, OverlayClass, OverlayContract,
-    OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldContract, WorldMetadata,
+    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, DeploymentManifest,
+    DeploymentMetadata, DojoContract, DojoModel, Manifest, ManifestMethods, Member, OverlayClass,
+    OverlayContract, OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldContract,
+    WorldMetadata,
 };
 
 pub const WORLD_CONTRACT_TAG: &str = "dojo-world";
@@ -361,6 +362,7 @@ impl DeploymentManifest {
         Ok(())
     }
 
+    // Writes the Deployment manifest in JSON format, with ABIs embedded.
     pub fn write_to_path_json(&self, path: &Utf8PathBuf, root_dir: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
@@ -440,6 +442,34 @@ impl DeploymentManifest {
                 naming::get_filename_from_tag(BASE_CONTRACT_TAG),
             ),
         })
+    }
+}
+
+impl DeploymentMetadata {
+    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
+
+        Ok(manifest)
+    }
+
+    pub fn write_to_path_toml(&self, path: &Utf8PathBuf) -> Result<()> {
+        fs::create_dir_all(path.parent().unwrap())?;
+
+        let deployed_manifest = toml::to_string_pretty(&self)?;
+        fs::write(path, deployed_manifest)?;
+
+        Ok(())
+    }
+
+    // adds any missing contracts to the metadata
+    // this is required so we add any newly added contract to the metadata
+    pub fn add_missing(&mut self, manifest: &BaseManifest) {
+        for contract in manifest.contracts.iter() {
+            let name = naming::get_tag_from_filename(&contract.manifest_name).unwrap();
+            if !self.contracts.contains_key(&name) {
+                self.contracts.insert(name, true);
+            }
+        }
     }
 }
 

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 
 use camino::Utf8PathBuf;
@@ -34,6 +35,14 @@ pub struct DeploymentManifest {
     pub base: Manifest<Class>,
     pub contracts: Vec<Manifest<DojoContract>>,
     pub models: Vec<Manifest<DojoModel>>,
+}
+
+// bool represents authorization has been done for that contract
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct DeploymentMetadata {
+    // manifest_name -> bool
+    pub contracts: HashMap<String, bool>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]

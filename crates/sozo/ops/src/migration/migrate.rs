@@ -9,9 +9,9 @@ use dojo_world::contracts::naming::{
 };
 use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::manifest::{
-    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoModel, Manifest,
-    ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,
-    DEPLOYMENT_DIR, MANIFESTS_DIR,
+    AbiFormat, BaseManifest, Class, DeploymentManifest, DeploymentMetadata, DojoContract,
+    DojoModel, Manifest, ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata,
+    ABIS_DIR, BASE_DIR, DEPLOYMENT_DIR, MANIFESTS_DIR,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, ResourceMetadata};
 use dojo_world::migration::class::ClassMigration;
@@ -803,7 +803,7 @@ pub async fn update_manifests_and_abis(
     world_address: Felt,
     migration_output: Option<MigrationOutput>,
     salt: &str,
-) -> Result<()> {
+) -> Result<Vec<String>> {
     let ui = ws.config().ui();
     ui.print_step(5, "✨", "Updating manifests...");
 
@@ -811,6 +811,19 @@ pub async fn update_manifests_and_abis(
 
     let deployed_path = deployment_dir.join("manifest").with_extension("toml");
     let deployed_path_json = deployment_dir.join("manifest").with_extension("json");
+    let deployment_metadata_path = deployment_dir.join("metadata").with_extension("toml");
+
+    let mut deployment_metadata = if deployment_metadata_path.exists() {
+        DeploymentMetadata::load_from_path(&deployment_metadata_path)?
+    } else {
+        DeploymentMetadata::default()
+    };
+
+    deployment_metadata.add_missing(&local_manifest);
+    let work = calculate(migration_output.as_ref(), &mut deployment_metadata);
+    deployment_metadata
+        .write_to_path_toml(&deployment_metadata_path)
+        .with_context(|| "Failed to write deployment metadata")?;
 
     let mut local_manifest: DeploymentManifest = local_manifest.into();
 
@@ -830,6 +843,8 @@ pub async fn update_manifests_and_abis(
     // when the migration has not been applied because in `plan` mode or because of an error,
     // the `migration_output` is empty.
     if let Some(migration_output) = migration_output {
+        // update world deployment transaction hash or block number if they are present in the
+        // migration output
         if migration_output.world_tx_hash.is_some() {
             local_manifest.world.inner.transaction_hash = migration_output.world_tx_hash;
         }
@@ -840,7 +855,7 @@ pub async fn update_manifests_and_abis(
         migration_output.contracts.iter().for_each(|contract_output| {
             // ignore failed migration which are represented by None
             if let Some(output) = contract_output {
-                // find the contract in local manifest and update its address and base class hash
+                // find the contract in local manifest and update its base class hash
                 let local = local_manifest
                     .contracts
                     .iter_mut()
@@ -852,6 +867,8 @@ pub async fn update_manifests_and_abis(
         });
     }
 
+    // compute contract addresses and update them in the manifest for contracts
+    // that have a base class hash set.
     local_manifest.contracts.iter_mut().for_each(|contract| {
         if contract.inner.base_class_hash != Felt::ZERO {
             let salt = generate_salt(&get_name_from_tag(&contract.inner.tag));
@@ -864,8 +881,6 @@ pub async fn update_manifests_and_abis(
         }
     });
 
-    // copy abi files from `base/abi` to `deployment/abi` and update abi path in
-    // local_manifest
     update_manifest_abis(&mut local_manifest, manifest_dir, profile_name).await;
 
     local_manifest
@@ -879,9 +894,36 @@ pub async fn update_manifests_and_abis(
         .with_context(|| "Failed to write json manifest")?;
     ui.print("\n✨ Done.");
 
-    Ok(())
+    Ok(work)
 }
 
+fn calculate(
+    migration_output: Option<&MigrationOutput>,
+    deployment_metadata: &mut DeploymentMetadata,
+) -> Vec<String> {
+    if let Some(migration_output) = migration_output {
+        migration_output.contracts.iter().flatten().for_each(|contract_output| {
+            let name = contract_output.tag.clone();
+
+            // overwrite existing information, since we now need to do the migration
+            deployment_metadata.contracts.insert(name, true);
+        });
+    }
+
+    // given deployment_metadata.contracts return only the ones that are true
+    let contracts =
+        deployment_metadata.contracts.iter().filter(|(_, &v)| v == true).collect::<Vec<_>>();
+
+    let mut work = vec![];
+    for contract in contracts {
+        work.push(contract.0.clone());
+    }
+
+    work
+}
+
+// copy abi files from `base/abi` to `deployment/abi` and update abi path in
+// local_manifest
 async fn update_manifest_abis(
     local_manifest: &mut DeploymentManifest,
     manifest_dir: &Utf8PathBuf,
