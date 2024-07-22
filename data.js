@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721514788798,
+  "lastUpdate": 1721681977796,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12385,6 +12385,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4826676,
             "range": "± 54109",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "25da1a82eb0e5f86b7957a4787513c4a6682bbe6",
+          "message": "katana: remove `starknet_in_rust` executor support (#2200)",
+          "timestamp": "2024-07-23T04:41:23+08:00",
+          "tree_id": "bb6733fe3b58b0c23c693c6de07ae40a060723bf",
+          "url": "https://github.com/dojoengine/dojo/commit/25da1a82eb0e5f86b7957a4787513c4a6682bbe6"
+        },
+        "date": 1721681977111,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17310464,
+            "range": "± 152729",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4748540,
+            "range": "± 205801",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3433149183,
+            "range": "± 640631695",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4993026,
+            "range": "± 177508",
             "unit": "ns/iter"
           }
         ]
