@@ -485,41 +485,50 @@ impl DojoContract {
     }
 
     /// Rewrites all the functions of a Impl block.
-    fn rewrite_impl(&mut self, db: &dyn SyntaxGroup, impl_ast: ast::ItemImpl) -> Vec<RewriteNode> {
+    fn rewrite_impl(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        impl_ast: ast::ItemImpl,
+    ) -> Vec<RewriteNode> {
         let generate_attrs = impl_ast.attributes(db).query_attr(db, "generate_trait");
         let has_generate_trait = !generate_attrs.is_empty();
 
         if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
+            // We shouldn't have generic param in the case of contract's endpoints.
+            let impl_node = RewriteNode::Mapped {
+                node: Box::new(RewriteNode::Text(format!(
+                    "{} impl {} of {} {{",
+                    impl_ast.attributes(db).as_syntax_node().get_text(db),
+                    impl_ast.name(db).as_syntax_node().get_text(db),
+                    impl_ast.trait_path(db).as_syntax_node().get_text(db),
+                ))),
+                origin: impl_ast.as_syntax_node().span_without_trivia(db),
+            };
+
             let body_nodes: Vec<_> = body
                 .items(db)
                 .elements(db)
                 .iter()
                 .flat_map(|el| {
-                    if let ast::ImplItem::Function(fn_ast) = el {
+                    if let ast::ImplItem::Function(ref fn_ast) = el {
                         return self.rewrite_function(db, fn_ast.clone(), has_generate_trait);
                     }
                     vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
 
-            let mut builder = PatchBuilder::new(db, &impl_ast);
-            builder.add_modified(RewriteNode::interpolate_patched(
-                "$body$",
-                &UnorderedHashMap::from([(
-                    "body".to_string(),
-                    RewriteNode::new_modified(body_nodes),
-                )]),
-            ));
+            let body_node = RewriteNode::Mapped {
+                node: Box::new(RewriteNode::interpolate_patched(
+                    "$body$",
+                    &UnorderedHashMap::from([(
+                        "body".to_string(),
+                        RewriteNode::new_modified(body_nodes),
+                    )]),
+                )),
+                origin: impl_ast.as_syntax_node().span_without_trivia(db),
+            };
 
-            let mut rewritten_impl = RewriteNode::from_ast(&impl_ast);
-            let rewritten_items = rewritten_impl
-                .modify_child(db, ast::ItemImpl::INDEX_BODY)
-                .modify_child(db, ast::ImplBody::INDEX_ITEMS);
-
-            let (code, _) = builder.build();
-
-            rewritten_items.set_str(code);
-            return vec![rewritten_impl];
+            return vec![impl_node, body_node, RewriteNode::Text("}".to_string())];
         }
 
         vec![RewriteNode::Copied(impl_ast.as_syntax_node())]
