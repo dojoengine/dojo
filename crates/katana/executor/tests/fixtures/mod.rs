@@ -259,16 +259,3 @@ pub mod blockifier {
         BlockifierFactory::new(cfg, flags)
     }
 }
-
-#[cfg(feature = "sir")]
-pub mod sir {
-    use katana_executor::implementation::sir::NativeExecutorFactory;
-    use katana_executor::SimulationFlag;
-
-    use super::{cfg, flags, CfgEnv};
-
-    #[rstest::fixture]
-    pub fn factory(cfg: CfgEnv, #[with(true)] flags: SimulationFlag) -> NativeExecutorFactory {
-        NativeExecutorFactory::new(cfg, flags)
-    }
-}

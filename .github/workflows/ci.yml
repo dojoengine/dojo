@@ -43,8 +43,6 @@ jobs:
           chmod +x /tmp/bins/katana
           KATANA_RUNNER_BIN=/tmp/bins/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
           cargo llvm-cov nextest --no-report -p katana
-          # TODO(kariy): uncomment this line when `sir` feature support Cairo 2.6.3
-          # cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
           cargo llvm-cov report --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v4
         with:
