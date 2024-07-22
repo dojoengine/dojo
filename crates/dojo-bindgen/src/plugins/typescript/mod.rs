@@ -118,7 +118,6 @@ impl TypescriptPlugin {
 export interface {name} {{
     {native_fields}
 }}
-
 export const {name}Definition = {{
     {fields}
 }};
@@ -165,10 +164,10 @@ type {} = ",
 
         result += format!(
             "
-export const {name}Definition = {{
-    type: RecsType.String,{}
-}};
-",
+        export const {name}Definition = {{
+            type: RecsType.String,{}
+        }};
+        ",
             if !token.inners.is_empty() {
                 "\n    value: RecsType.String".to_string()
             } else {
@@ -314,7 +313,20 @@ export function defineContractComponents(world: World) {
     // Formats a system into a C# method used by the contract class
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
-    fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
+    fn format_system(system: &Function, handled_tokens: &[Composite], namespace: String) -> String {
+        if [
+            "contract_name",
+            "namespace",
+            "tag",
+            "name_hash",
+            "selector",
+            "dojo_init",
+            "namespace_hash",
+        ]
+        .contains(&system.name.as_str())
+        {
+            return String::new();
+        }
         fn map_type(token: &Token) -> String {
             match token {
                 Token::CoreBasic(_) => TypescriptPlugin::map_type(token)
@@ -329,6 +341,18 @@ export function defineContractComponents(world: World) {
         let args = system
             .inputs
             .iter()
+            .filter(|arg| {
+                ![
+                    "contract_name",
+                    "namespace",
+                    "tag",
+                    "name_hash",
+                    "selector",
+                    "dojo_init",
+                    "namespace_hash",
+                ]
+                .contains(&arg.0.as_str())
+            })
             .map(|arg| format!("{}: {}", arg.0, map_type(&arg.1)))
             .collect::<Vec<String>>()
             .join(", ");
@@ -395,6 +419,18 @@ export function defineContractComponents(world: World) {
         let calldata = system
             .inputs
             .iter()
+            .filter(|arg| {
+                ![
+                    "contract_name",
+                    "namespace",
+                    "tag",
+                    "name_hash",
+                    "selector",
+                    "dojo_init",
+                    "namespace_hash",
+                ]
+                .contains(&arg.0.as_str())
+            })
             .map(|arg| handle_arg_recursive(&arg.0, &arg.1, handled_tokens))
             .collect::<Vec<String>>()
             .join(",\n                ");
@@ -408,7 +444,8 @@ export function defineContractComponents(world: World) {
                     props.account,
                     contract_name,
                     \"{system_name}\",
-                    [{calldata}]
+                    [{calldata}],
+                    \"{namespace}\"
                 );
             }} catch (error) {{
                 console.error(\"Error executing spawn:\", error);
@@ -423,14 +460,19 @@ export function defineContractComponents(world: World) {
             // formatted args to use our mapped types
             args = args,
             // calldata for execute
-            calldata = calldata
+            calldata = calldata,
+            namespace = TypescriptPlugin::get_namespace_from_tag(&namespace)
         )
     }
 
     // Formats a contract tag into a pretty contract name
-    // eg. dojo_examples-actions -> Actions
+    // eg. dojo_examples-actions -> actions
     fn formatted_contract_name(tag: &str) -> String {
-        naming::capitalize(&naming::get_name_from_tag(tag))
+        naming::get_name_from_tag(tag)
+    }
+
+    fn get_namespace_from_tag(tag: &str) -> String {
+        tag.split('-').next().unwrap_or(tag).to_string()
     }
 
     // Handles a contract definition and its underlying systems
@@ -458,8 +500,25 @@ export function defineContractComponents(world: World) {
             let systems = contract
                 .systems
                 .iter()
+                .filter(|system| {
+                    let name = system.to_function().unwrap().name.as_str();
+                    ![
+                        "contract_name",
+                        "namespace",
+                        "tag",
+                        "name_hash",
+                        "selector",
+                        "dojo_init",
+                        "namespace_hash",
+                    ]
+                    .contains(&name)
+                })
                 .map(|system| {
-                    TypescriptPlugin::format_system(system.to_function().unwrap(), handled_tokens)
+                    TypescriptPlugin::format_system(
+                        system.to_function().unwrap(),
+                        handled_tokens,
+                        contract.tag.clone(),
+                    )
                 })
                 .collect::<Vec<String>>()
                 .join("\n\n    ");
@@ -485,6 +544,19 @@ export function defineContractComponents(world: World) {
                 contract
                     .systems
                     .iter()
+                    .filter(|system| {
+                        let name = system.to_function().unwrap().name.as_str();
+                        ![
+                            "contract_name",
+                            "namespace",
+                            "tag",
+                            "name_hash",
+                            "selector",
+                            "dojo_init",
+                            "namespace_hash",
+                        ]
+                        .contains(&name)
+                    })
                     .map(|system| { system.to_function().unwrap().name.to_string() })
                     .collect::<Vec<String>>()
                     .join(", ")
