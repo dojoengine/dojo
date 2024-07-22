@@ -1,3 +1,5 @@
+#[cfg(feature = "blockifier-concurrent")]
+mod concurrent;
 mod error;
 mod state;
 pub mod utils;

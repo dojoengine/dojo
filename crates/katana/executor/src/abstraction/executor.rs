@@ -31,7 +31,7 @@ pub trait ExecutorFactory: Send + Sync + 'static + core::fmt::Debug {
 }
 
 /// An executor that can execute a block of transactions.
-pub trait BlockExecutor<'a>: ExecutorExt + Send + Sync + core::fmt::Debug {
+pub trait BlockExecutor<'a>: ExecutorExt + Send + Sync {
     /// Executes the given block.
     fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()>;
 

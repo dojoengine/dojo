@@ -173,7 +173,7 @@ pub fn call<S: StateReader>(
     Ok(res.execution.retdata.0)
 }
 
-fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
+pub(super) fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
     let hash = tx.hash;
 
     match tx.transaction {
