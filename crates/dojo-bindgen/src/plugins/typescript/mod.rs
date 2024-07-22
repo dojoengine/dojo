@@ -133,12 +133,22 @@ export const {name}Definition = {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
+        if token.type_path == "core::option::Option::<core::integer::u32>"
+            || token.type_path == "core::option::Option::<core::integer::u8>"
+            || token.type_path == "core::option::Option::<core::integer::u16>"
+            || token.type_path == "core::option::Option::<core::integer::u64>"
+            || token.type_path == "core::option::Option::<core::integer::u128>"
+            || token.type_path == "core::option::Option::<core::integer::u256>"
+        {
+            return String::new(); // Return an empty string for these enums
+        }
+
         let name = TypescriptPlugin::map_type(&Token::Composite(token.clone()));
 
         let mut result = format!(
             "
 // Type definition for `{}` enum
-type {} = ",
+export type {} = ",
             token.type_path, name
         );
 
