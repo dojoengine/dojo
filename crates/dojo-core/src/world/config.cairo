@@ -48,6 +48,7 @@ pub mod Config {
     use starknet::ContractAddress;
     use starknet::get_caller_address;
     use starknet::event::EventEmitter;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
 
     use super::errors;
     use super::IConfig;
@@ -76,7 +77,7 @@ pub mod Config {
     }
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         differ_program_hash: felt252,
         merger_program_hash: felt252,
         facts_registry: ContractAddress,

@@ -306,7 +306,7 @@ trait Ibar<TContractState> {
 mod bar {
     use core::traits::Into;
     use starknet::{get_caller_address, ContractAddress};
-
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use dojo::model::{Model, ModelIndex};
 
     use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait, Introspect};
@@ -855,6 +855,7 @@ trait IWorldUpgrade<TContractState> {
 #[starknet::contract]
 mod worldupgrade {
     use super::{IWorldUpgrade, IWorldDispatcher, ContractAddress};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
 
     #[storage]
     struct Storage {

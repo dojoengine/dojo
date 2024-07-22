@@ -100,6 +100,10 @@ pub mod world {
         ContractAddress, syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall},
         SyscallResult, SyscallResultTrait, storage::Map,
     };
+    pub use starknet::storage::{
+        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess
+    };
 
     use dojo::world::config::{Config, IConfig};
     use dojo::contract::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
@@ -301,7 +305,7 @@ pub mod world {
         /// `resource_id` - The resource id.
         fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
             let mut values = self
-                ._read_model_entity(
+                .read_model_entity(
                     Model::<ResourceMetadata>::selector(),
                     entity_id_from_keys(array![resource_id].span()),
                     Model::<ResourceMetadata>::layout()
@@ -322,7 +326,7 @@ pub mod world {
             );
 
             self
-                ._write_model_entity(
+                .write_model_entity(
                     metadata.instance_selector(),
                     metadata.entity_id(),
                     metadata.values(),
@@ -351,9 +355,9 @@ pub mod world {
 
         /// Grants ownership of the resource to the address.
         /// Can only be called by an existing owner or the world admin.
-        /// 
+        ///
         /// Note that this resource must have been registered to the world first.
-        /// 
+        ///
         /// # Arguments
         ///
         /// * `address` - The contract address.
@@ -386,10 +390,10 @@ pub mod world {
         }
 
         /// Checks if the provided contract is a writer of the resource.
-        /// 
-        /// Note: that this function just indicates if a contract has the `writer` role for the resource,
-        /// without applying any specific rule. For example, for a model, the write access right
-        /// to the model namespace is not checked. 
+        ///
+        /// Note: that this function just indicates if a contract has the `writer` role for the
+        /// resource, without applying any specific rule. For example, for a model, the write access
+        /// right to the model namespace is not checked.
         /// It does not even check if the contract is an owner of the resource.
         /// Please use more high-level functions such `can_write_model` for that.
         ///
@@ -424,7 +428,7 @@ pub mod world {
         }
 
         /// Revokes writer permission to the contract for the model.
-        /// Can only be called by an existing model writer, owner or the world admin.
+        /// Can only be called by an existing model owner or the world admin.
         ///
         /// Note that this resource must have been registered to the world first.
         ///
@@ -434,19 +438,15 @@ pub mod world {
         /// * `contract` - The name of the contract.
         fn revoke_writer(ref self: ContractState, resource: felt252, contract: ContractAddress) {
             assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
+            assert(self.is_account_owner(resource), Errors::NOT_OWNER);
 
-            let caller = get_caller_address();
-            assert(
-                self.is_writer(resource, caller) || self.is_account_owner(resource),
-                Errors::NOT_OWNER_WRITER
-            );
             self.writers.write((resource, contract), false);
 
             EventEmitter::emit(ref self, WriterUpdated { resource, contract, value: false });
         }
 
         /// Checks if the provided contract can write to the resource.
-        /// 
+        ///
         /// Note: Contrary to `is_writer`, this function checks resource specific rules.
         /// For example, for a model, it checks if the contract is a write/owner of the resource,
         /// OR a write/owner of the namespace.
@@ -464,20 +464,20 @@ pub mod world {
         ) -> bool {
             match self.resources.read(resource_id) {
                 ResourceData::Model((_, model_address)) => self
-                    ._check_model_write_access(resource_id, model_address, contract),
+                    .check_model_write_access(resource_id, model_address, contract),
                 ResourceData::Contract((_, contract_address)) => self
-                    ._check_contract_write_access(resource_id, contract_address, contract),
-                ResourceData::Namespace => self._check_basic_write_access(resource_id, contract),
-                ResourceData::World => self._check_basic_write_access(WORLD, contract),
+                    .check_contract_write_access(resource_id, contract_address, contract),
+                ResourceData::Namespace => self.check_basic_write_access(resource_id, contract),
+                ResourceData::World => self.check_basic_write_access(WORLD, contract),
                 ResourceData::None => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
         /// Checks if the provided contract can write to the model.
         /// It panics if the resource selector is not a model.
-        /// 
-        /// Note: Contrary to `is_writer`, this function checks if the contract is a write/owner of the model,
-        /// OR a write/owner of the namespace.
+        ///
+        /// Note: Contrary to `is_writer`, this function checks if the contract is a write/owner of
+        /// the model, OR a write/owner of the namespace.
         ///
         /// # Arguments
         ///
@@ -492,16 +492,16 @@ pub mod world {
         ) -> bool {
             match self.resources.read(selector) {
                 ResourceData::Model((_, model_address)) => self
-                    ._check_model_write_access(selector, model_address, contract),
+                    .check_model_write_access(selector, model_address, contract),
                 _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
         /// Checks if the provided contract can write to the contract.
         /// It panics if the resource selector is not a contract.
-        /// 
-        /// Note: Contrary to `is_writer`, this function checks if the contract is a write/owner of the contract,
-        /// OR a write/owner of the namespace.
+        ///
+        /// Note: Contrary to `is_writer`, this function checks if the contract is a write/owner of
+        /// the contract, OR a write/owner of the namespace.
         ///
         /// # Arguments
         ///
@@ -516,14 +516,14 @@ pub mod world {
         ) -> bool {
             match self.resources.read(selector) {
                 ResourceData::Contract((_, contract_address)) => self
-                    ._check_contract_write_access(selector, contract_address, contract),
+                    .check_contract_write_access(selector, contract_address, contract),
                 _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
         /// Checks if the provided contract can write to the namespace.
         /// It panics if the resource selector is not a namespace.
-        /// 
+        ///
         /// Note: Contrary to `is_writer`, this function also checks if the caller account is
         /// the owner of the namespace.
         ///
@@ -539,7 +539,7 @@ pub mod world {
             self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
             match self.resources.read(selector) {
-                ResourceData::Namespace => self._check_basic_write_access(selector, contract),
+                ResourceData::Namespace => self.check_basic_write_access(selector, contract),
                 _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
@@ -566,7 +566,7 @@ pub mod world {
                 core::num::traits::Zero::<ContractAddress>::zero(),
             );
 
-            assert(self._is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
+            assert(self.is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
             assert(
                 self.can_write_namespace(namespace_hash, get_caller_address()),
                 Errors::NO_NAMESPACE_WRITE_ACCESS
@@ -607,7 +607,7 @@ pub mod world {
         ///
         /// * `namespace` - The name of the namespace to be registered.
         fn register_namespace(ref self: ContractState, namespace: ByteArray) {
-            let caller_account = self._get_account_address();
+            let caller_account = self.get_account_address();
 
             let hash = bytearray_hash(@namespace);
 
@@ -636,7 +636,8 @@ pub mod world {
         ///
         /// # Returns
         ///
-        /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the model.
+        /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the
+        /// model.
         fn model(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
             match self.resources.read(selector) {
                 ResourceData::Model(m) => m,
@@ -680,7 +681,7 @@ pub mod world {
             let namespace = dispatcher.namespace();
             let name = dispatcher.contract_name();
             let namespace_hash = dispatcher.namespace_hash();
-            assert(self._is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
+            assert(self.is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
             assert(
                 self.can_write_namespace(namespace_hash, get_caller_address()),
                 Errors::NO_NAMESPACE_WRITE_ACCESS
@@ -774,14 +775,14 @@ pub mod world {
             match index {
                 ModelIndex::Keys(keys) => {
                     let entity_id = entity_id_from_keys(keys);
-                    self._read_model_entity(model_selector, entity_id, layout)
+                    self.read_model_entity(model_selector, entity_id, layout)
                 },
                 ModelIndex::Id(entity_id) => {
-                    self._read_model_entity(model_selector, entity_id, layout)
+                    self.read_model_entity(model_selector, entity_id, layout)
                 },
                 ModelIndex::MemberId((
                     entity_id, member_id
-                )) => { self._read_model_member(model_selector, entity_id, member_id, layout) }
+                )) => { self.read_model_member(model_selector, entity_id, member_id, layout) }
             }
         }
 
@@ -808,13 +809,13 @@ pub mod world {
             match index {
                 ModelIndex::Keys(keys) => {
                     let entity_id = entity_id_from_keys(keys);
-                    self._write_model_entity(model_selector, entity_id, values, layout);
+                    self.write_model_entity(model_selector, entity_id, values, layout);
                     EventEmitter::emit(
                         ref self, StoreSetRecord { table: model_selector, keys, values }
                     );
                 },
                 ModelIndex::Id(entity_id) => {
-                    self._write_model_entity(model_selector, entity_id, values, layout);
+                    self.write_model_entity(model_selector, entity_id, values, layout);
                     EventEmitter::emit(
                         ref self, StoreUpdateRecord { table: model_selector, entity_id, values }
                     );
@@ -822,8 +823,8 @@ pub mod world {
                 ModelIndex::MemberId((
                     entity_id, member_id
                 )) => {
-                    self._write_model_member(model_selector, entity_id, member_id, values, layout);
-                // TODO: here we need a new event update and see how Torii can process that.
+                    self.write_model_member(model_selector, entity_id, member_id, values, layout);
+                    // TODO: here we need a new event update and see how Torii can process that.
                 }
             }
         }
@@ -847,13 +848,13 @@ pub mod world {
             match index {
                 ModelIndex::Keys(keys) => {
                     let entity_id = entity_id_from_keys(keys);
-                    self._delete_model_entity(model_selector, entity_id, layout);
+                    self.delete_model_entity(model_selector, entity_id, layout);
                     EventEmitter::emit(
                         ref self, StoreDelRecord { table: model_selector, entity_id }
                     );
                 },
                 ModelIndex::Id(entity_id) => {
-                    self._delete_model_entity(model_selector, entity_id, layout);
+                    self.delete_model_entity(model_selector, entity_id, layout);
                     EventEmitter::emit(
                         ref self, StoreDelRecord { table: model_selector, entity_id }
                     );
@@ -959,7 +960,7 @@ pub mod world {
     #[generate_trait]
     impl Self of SelfTrait {
         #[inline(always)]
-        fn _get_account_address(self: @ContractState) -> ContractAddress {
+        fn get_account_address(self: @ContractState) -> ContractAddress {
             get_tx_info().unbox().account_contract_address
         }
 
@@ -972,11 +973,12 @@ pub mod world {
         ///
         /// # Returns
         ///
-        /// * `bool` - True if the calling account is the owner of the resource or the owner of the world,
+        /// * `bool` - True if the calling account is the owner of the resource or the owner of the
+        /// world,
         ///            false otherwise.
         #[inline(always)]
         fn is_account_owner(self: @ContractState, resource: felt252) -> bool {
-            IWorld::is_owner(self, self._get_account_address(), resource)
+            IWorld::is_owner(self, self.get_account_address(), resource)
                 || self.is_account_world_owner()
         }
 
@@ -992,7 +994,7 @@ pub mod world {
         ///            false otherwise.
         #[inline(always)]
         fn is_account_writer(self: @ContractState, resource: felt252) -> bool {
-            IWorld::is_writer(self, resource, self._get_account_address())
+            IWorld::is_writer(self, resource, self.get_account_address())
         }
 
         /// Verifies if the calling account is the world owner.
@@ -1002,12 +1004,12 @@ pub mod world {
         /// * `bool` - True if the calling account is the world owner, false otherwise.
         #[inline(always)]
         fn is_account_world_owner(self: @ContractState) -> bool {
-            IWorld::is_owner(self, self._get_account_address(), WORLD)
+            IWorld::is_owner(self, self.get_account_address(), WORLD)
         }
 
         /// Indicates if the provided namespace is already registered
         #[inline(always)]
-        fn _is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
+        fn is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
             match self.resources.read(namespace_hash) {
                 ResourceData::Namespace => true,
                 _ => false
@@ -1020,16 +1022,16 @@ pub mod world {
         /// - the calling account has the owner and/or writer role for the model OR,
         /// - the calling contract has the writer role for the model namespace OR
         /// - the calling account has the owner and/or writer role for the model namespace.
-        /// 
+        ///
         /// # Arguments
         ///  * `model_selector` - the model selector to check.
         ///  * `model_address` - the model contract address.
         ///  * `contract` - the calling contract.
-        /// 
+        ///
         /// # Returns
         ///  `true` if the write access is allowed, false otherwise.
-        /// 
-        fn _check_model_write_access(
+        ///
+        fn check_model_write_access(
             self: @ContractState,
             model_selector: felt252,
             model_address: ContractAddress,
@@ -1039,7 +1041,7 @@ pub mod world {
                 && !self.is_account_owner(model_selector)
                 && !self.is_account_writer(model_selector) {
                 let model = IModelDispatcher { contract_address: model_address };
-                self._check_basic_write_access(model.namespace_hash(), contract)
+                self.check_basic_write_access(model.namespace_hash(), contract)
             } else {
                 true
             }
@@ -1051,16 +1053,16 @@ pub mod world {
         /// - the calling account has the owner and/or writer role for the contract OR,
         /// - the calling contract has the writer role for the contract namespace OR
         /// - the calling account has the owner and/or writer role for the model namespace.
-        /// 
+        ///
         /// # Arguments
         ///  * `contract_selector` - the contract selector to check.
         ///  * `contract_address` - the contract contract address.
         ///  * `contract` - the calling contract.
-        /// 
+        ///
         /// # Returns
         ///  `true` if the write access is allowed, false otherwise.
-        /// 
-        fn _check_contract_write_access(
+        ///
+        fn check_contract_write_access(
             self: @ContractState,
             contract_selector: felt252,
             contract_address: ContractAddress,
@@ -1070,7 +1072,7 @@ pub mod world {
                 && !self.is_account_owner(contract_selector)
                 && !self.is_account_writer(contract_selector) {
                 let dispatcher = IContractDispatcher { contract_address };
-                self._check_basic_write_access(dispatcher.namespace_hash(), contract)
+                self.check_basic_write_access(dispatcher.namespace_hash(), contract)
             } else {
                 true
             }
@@ -1080,15 +1082,15 @@ pub mod world {
         /// That means, check if:
         /// - the calling contract has the writer role for the resource OR,
         /// - the calling account has the owner and/or writer role for the resource.
-        /// 
+        ///
         /// # Arguments
         ///  * `resource_id` - the resource selector to check.
         ///  * `contract` - the calling contract.
-        /// 
+        ///
         /// # Returns
         ///  `true` if the write access is allowed, false otherwise.
-        /// 
-        fn _check_basic_write_access(
+        ///
+        fn check_basic_write_access(
             self: @ContractState, resource_id: felt252, contract: ContractAddress
         ) -> bool {
             self.is_writer(resource_id, contract)
@@ -1103,7 +1105,7 @@ pub mod world {
         ///   * `entity_id` - the id used to identify the record
         ///   * `values` - the field values of the record
         ///   * `layout` - the model layout
-        fn _write_model_entity(
+        fn write_model_entity(
             ref self: ContractState,
             model_selector: felt252,
             entity_id: felt252,
@@ -1133,7 +1135,7 @@ pub mod world {
         ///   * `model_selector` - the model selector
         ///   * `entity_id` - the ID of the entity to remove.
         ///   * `layout` - the model layout
-        fn _delete_model_entity(
+        fn delete_model_entity(
             ref self: ContractState, model_selector: felt252, entity_id: felt252, layout: Layout
         ) {
             match layout {
@@ -1153,7 +1155,7 @@ pub mod world {
         ///   * `model_selector` - the model selector
         ///   * `entity_id` - the ID of the entity to read.
         ///   * `layout` - the model layout
-        fn _read_model_entity(
+        fn read_model_entity(
             self: @ContractState, model_selector: felt252, entity_id: felt252, layout: Layout
         ) -> Span<felt252> {
             let mut read_data = ArrayTrait::<felt252>::new();
@@ -1180,9 +1182,9 @@ pub mod world {
         /// # Arguments
         ///   * `model_selector` - the model selector
         ///   * `entity_id` - the ID of the entity for which to read a member.
-        ///   * `member_id` - the selector of the model member to read. 
+        ///   * `member_id` - the selector of the model member to read.
         ///   * `layout` - the model layout
-        fn _read_model_member(
+        fn read_model_member(
             self: @ContractState,
             model_selector: felt252,
             entity_id: felt252,
@@ -1206,9 +1208,9 @@ pub mod world {
         ///   * `model_selector` - the model selector
         ///   * `entity_id` - the ID of the entity for which to write a member.
         ///   * `member_id` - the selector of the model member to write.
-        ///   * `values` - the new member value. 
+        ///   * `values` - the new member value.
         ///   * `layout` - the model layout
-        fn _write_model_member(
+        fn write_model_member(
             self: @ContractState,
             model_selector: felt252,
             entity_id: felt252,

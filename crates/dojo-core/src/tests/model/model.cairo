@@ -57,7 +57,7 @@ fn test_get_and_update_entity() {
     foo.set(world);
 
     let entity_id = foo.entity_id();
-    let mut entity = FooEntityTrait::get(world, entity_id);
+    let mut entity = FooEntityStore::get(world, entity_id);
     assert!(entity.__id == entity_id && entity.v1 == entity.v1 && entity.v2 == entity.v2);
 
     entity.v1 = 12;
@@ -65,7 +65,7 @@ fn test_get_and_update_entity() {
 
     entity.update(world);
 
-    let read_values = FooEntityTrait::get(world, entity_id);
+    let read_values = FooEntityStore::get(world, entity_id);
     assert!(read_values.v1 == entity.v1 && read_values.v2 == entity.v2);
 }
 
@@ -78,10 +78,10 @@ fn test_delete_entity() {
     foo.set(world);
 
     let entity_id = foo.entity_id();
-    let mut entity = FooEntityTrait::get(world, entity_id);
+    let mut entity = FooEntityStore::get(world, entity_id);
     entity.delete(world);
 
-    let read_values = FooEntityTrait::get(world, entity_id);
+    let read_values = FooEntityStore::get(world, entity_id);
     assert!(read_values.v1 == 0 && read_values.v2 == 0);
 }
 
@@ -100,10 +100,10 @@ fn test_get_and_set_member_from_entity() {
     assert!(v1_raw_value.len() == 1);
     assert!(*v1_raw_value.at(0) == 3);
 
-    let entity = FooEntityTrait::get(world, foo.entity_id());
+    let entity = FooEntityStore::get(world, foo.entity_id());
     entity.set_member(world, selector!("v1"), array![42].span());
 
-    let entity = FooEntityTrait::get(world, foo.entity_id());
+    let entity = FooEntityStore::get(world, foo.entity_id());
     assert!(entity.v1 == 42);
 }
 
@@ -115,13 +115,13 @@ fn test_get_and_set_field_name() {
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
 
-    let v1 = FooEntityTrait::get_v1(world, foo.entity_id());
+    let v1 = FooEntityStore::get_v1(world, foo.entity_id());
     assert!(foo.v1 == v1);
 
-    let entity = FooEntityTrait::get(world, foo.entity_id());
+    let entity = FooEntityStore::get(world, foo.entity_id());
     entity.set_v1(world, 42);
 
-    let v1 = FooEntityTrait::get_v1(world, foo.entity_id());
+    let v1 = FooEntityStore::get_v1(world, foo.entity_id());
     assert!(v1 == 42);
 }
 
@@ -133,7 +133,7 @@ fn test_get_and_set_from_model() {
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
 
-    let read_entity = FooTrait::get(world, foo.k1, foo.k2);
+    let read_entity = FooStore::get(world, foo.k1, foo.k2);
 
     assert!(
         foo.k1 == read_entity.k1
@@ -152,7 +152,7 @@ fn test_delete_from_model() {
     foo.set(world);
     foo.delete(world);
 
-    let read_entity = FooTrait::get(world, foo.k1, foo.k2);
+    let read_entity = FooStore::get(world, foo.k1, foo.k2);
     assert!(
         read_entity.k1 == foo.k1
             && read_entity.k2 == foo.k2
@@ -176,7 +176,7 @@ fn test_get_and_set_member_from_model() {
     assert!(*v1_raw_value.at(0) == 3);
 
     foo.set_member(world, selector!("v1"), array![42].span());
-    let foo = FooTrait::get(world, foo.k1, foo.k2);
+    let foo = FooStore::get(world, foo.k1, foo.k2);
     assert!(foo.v1 == 42);
 }
 
@@ -188,12 +188,12 @@ fn test_get_and_set_field_name_from_model() {
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     foo.set(world);
 
-    let v1 = FooTrait::get_v1(world, foo.k1, foo.k2);
+    let v1 = FooStore::get_v1(world, foo.k1, foo.k2);
     assert!(v1 == 3);
 
     foo.set_v1(world, 42);
 
-    let v1 = FooTrait::get_v1(world, foo.k1, foo.k2);
+    let v1 = FooStore::get_v1(world, foo.k1, foo.k2);
     assert!(v1 == 42);
 }
 

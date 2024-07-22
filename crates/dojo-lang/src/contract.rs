@@ -167,6 +167,10 @@ impl DojoContract {
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, \
+                     StoragePointerWriteAccess
+                    };
 
                     component!(path: dojo::contract::upgradeable::upgradeable, storage: \
                      upgradeable, event: UpgradeableEvent);

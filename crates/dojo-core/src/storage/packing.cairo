@@ -80,9 +80,11 @@ pub fn pack_inner(
     assert(packing_offset <= PACKING_MAX_BITS, 'Invalid packing offset');
     assert(size <= PACKING_MAX_BITS, 'Invalid layout size');
 
-    // Cannot use all 252 bits because some bit arrangements (eg. 11111...11111) are not valid felt252 values. 
+    // Cannot use all 252 bits because some bit arrangements (eg. 11111...11111) are not valid
+    // felt252 values.
     // Thus only 251 bits are used.                               ^-252 times-^
-    // One could optimize by some conditional alligment mechanism, but it would be an at most 1/252 space-wise improvement.
+    // One could optimize by some conditional alligment mechanism, but it would be an at most 1/252
+    // space-wise improvement.
     let remaining_bits: u8 = (PACKING_MAX_BITS - packing_offset).into();
 
     // If we have less remaining bits than the current item size,

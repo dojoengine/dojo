@@ -646,6 +646,9 @@ impl ComponentStorageBaseMutCopy of core::traits::Copy::<ComponentStorageBaseMut
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -1454,6 +1457,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -2262,6 +2268,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -3067,6 +3076,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -3875,6 +3887,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -4716,6 +4731,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -5629,6 +5647,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -6607,6 +6628,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -7608,6 +7632,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {
@@ -8447,6 +8474,9 @@ impl MutableIDojoInitSafeDispatcherSubPointersCopy of core::traits::Copy::<Mutab
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                     use dojo::contract::IContract;
+                    use starknet::storage::{
+                        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess
+                    };
 
                     #[abi(embed_v0)]
                     pub impl ContractImpl of IContract<ContractState> {

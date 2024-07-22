@@ -402,7 +402,7 @@ pub struct BadModelMultipleVersionsEntity {
 }
 
 #[generate_trait]
-pub impl BadModelMultipleVersionsEntityImpl of BadModelMultipleVersionsEntityTrait {
+pub impl BadModelMultipleVersionsEntityStoreImpl of BadModelMultipleVersionsEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelMultipleVersionsEntity {
         BadModelMultipleVersionsModelEntityImpl::get(world, entity_id)
     }
@@ -439,7 +439,7 @@ pub impl BadModelMultipleVersionsEntityImpl of BadModelMultipleVersionsEntityTra
 }
 
 #[generate_trait]
-pub impl BadModelMultipleVersionsImpl of BadModelMultipleVersionsTrait {
+pub impl BadModelMultipleVersionsStoreImpl of BadModelMultipleVersionsStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -612,7 +612,7 @@ pub impl BadModelMultipleVersionsModelImpl of dojo::model::Model<BadModelMultipl
         );
         let mut _keys = keys;
 
-        BadModelMultipleVersionsTrait::from_values(ref _keys, ref values)
+        BadModelMultipleVersionsStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -1211,7 +1211,7 @@ pub struct BadModelBadVersionTypeEntity {
 }
 
 #[generate_trait]
-pub impl BadModelBadVersionTypeEntityImpl of BadModelBadVersionTypeEntityTrait {
+pub impl BadModelBadVersionTypeEntityStoreImpl of BadModelBadVersionTypeEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelBadVersionTypeEntity {
         BadModelBadVersionTypeModelEntityImpl::get(world, entity_id)
     }
@@ -1248,7 +1248,7 @@ pub impl BadModelBadVersionTypeEntityImpl of BadModelBadVersionTypeEntityTrait {
 }
 
 #[generate_trait]
-pub impl BadModelBadVersionTypeImpl of BadModelBadVersionTypeTrait {
+pub impl BadModelBadVersionTypeStoreImpl of BadModelBadVersionTypeStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -1421,7 +1421,7 @@ pub impl BadModelBadVersionTypeModelImpl of dojo::model::Model<BadModelBadVersio
         );
         let mut _keys = keys;
 
-        BadModelBadVersionTypeTrait::from_values(ref _keys, ref values)
+        BadModelBadVersionTypeStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -2020,7 +2020,7 @@ pub struct BadModelNoVersionValueEntity {
 }
 
 #[generate_trait]
-pub impl BadModelNoVersionValueEntityImpl of BadModelNoVersionValueEntityTrait {
+pub impl BadModelNoVersionValueEntityStoreImpl of BadModelNoVersionValueEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelNoVersionValueEntity {
         BadModelNoVersionValueModelEntityImpl::get(world, entity_id)
     }
@@ -2057,7 +2057,7 @@ pub impl BadModelNoVersionValueEntityImpl of BadModelNoVersionValueEntityTrait {
 }
 
 #[generate_trait]
-pub impl BadModelNoVersionValueImpl of BadModelNoVersionValueTrait {
+pub impl BadModelNoVersionValueStoreImpl of BadModelNoVersionValueStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -2230,7 +2230,7 @@ pub impl BadModelNoVersionValueModelImpl of dojo::model::Model<BadModelNoVersion
         );
         let mut _keys = keys;
 
-        BadModelNoVersionValueTrait::from_values(ref _keys, ref values)
+        BadModelNoVersionValueStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -2829,7 +2829,7 @@ pub struct BadModelUnexpectedArgWithValueEntity {
 }
 
 #[generate_trait]
-pub impl BadModelUnexpectedArgWithValueEntityImpl of BadModelUnexpectedArgWithValueEntityTrait {
+pub impl BadModelUnexpectedArgWithValueEntityStoreImpl of BadModelUnexpectedArgWithValueEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelUnexpectedArgWithValueEntity {
         BadModelUnexpectedArgWithValueModelEntityImpl::get(world, entity_id)
     }
@@ -2866,7 +2866,7 @@ pub impl BadModelUnexpectedArgWithValueEntityImpl of BadModelUnexpectedArgWithVa
 }
 
 #[generate_trait]
-pub impl BadModelUnexpectedArgWithValueImpl of BadModelUnexpectedArgWithValueTrait {
+pub impl BadModelUnexpectedArgWithValueStoreImpl of BadModelUnexpectedArgWithValueStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -3039,7 +3039,7 @@ pub impl BadModelUnexpectedArgWithValueModelImpl of dojo::model::Model<BadModelU
         );
         let mut _keys = keys;
 
-        BadModelUnexpectedArgWithValueTrait::from_values(ref _keys, ref values)
+        BadModelUnexpectedArgWithValueStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -3638,7 +3638,7 @@ pub struct BadModelUnexpectedArgEntity {
 }
 
 #[generate_trait]
-pub impl BadModelUnexpectedArgEntityImpl of BadModelUnexpectedArgEntityTrait {
+pub impl BadModelUnexpectedArgEntityStoreImpl of BadModelUnexpectedArgEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelUnexpectedArgEntity {
         BadModelUnexpectedArgModelEntityImpl::get(world, entity_id)
     }
@@ -3675,7 +3675,7 @@ pub impl BadModelUnexpectedArgEntityImpl of BadModelUnexpectedArgEntityTrait {
 }
 
 #[generate_trait]
-pub impl BadModelUnexpectedArgImpl of BadModelUnexpectedArgTrait {
+pub impl BadModelUnexpectedArgStoreImpl of BadModelUnexpectedArgStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -3848,7 +3848,7 @@ pub impl BadModelUnexpectedArgModelImpl of dojo::model::Model<BadModelUnexpected
         );
         let mut _keys = keys;
 
-        BadModelUnexpectedArgTrait::from_values(ref _keys, ref values)
+        BadModelUnexpectedArgStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -4447,7 +4447,7 @@ pub struct BadModelNotSupportedVersionEntity {
 }
 
 #[generate_trait]
-pub impl BadModelNotSupportedVersionEntityImpl of BadModelNotSupportedVersionEntityTrait {
+pub impl BadModelNotSupportedVersionEntityStoreImpl of BadModelNotSupportedVersionEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelNotSupportedVersionEntity {
         BadModelNotSupportedVersionModelEntityImpl::get(world, entity_id)
     }
@@ -4484,7 +4484,7 @@ pub impl BadModelNotSupportedVersionEntityImpl of BadModelNotSupportedVersionEnt
 }
 
 #[generate_trait]
-pub impl BadModelNotSupportedVersionImpl of BadModelNotSupportedVersionTrait {
+pub impl BadModelNotSupportedVersionStoreImpl of BadModelNotSupportedVersionStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -4657,7 +4657,7 @@ pub impl BadModelNotSupportedVersionModelImpl of dojo::model::Model<BadModelNotS
         );
         let mut _keys = keys;
 
-        BadModelNotSupportedVersionTrait::from_values(ref _keys, ref values)
+        BadModelNotSupportedVersionStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -5256,7 +5256,7 @@ pub struct Modelv0Entity {
 }
 
 #[generate_trait]
-pub impl Modelv0EntityImpl of Modelv0EntityTrait {
+pub impl Modelv0EntityStoreImpl of Modelv0EntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> Modelv0Entity {
         Modelv0ModelEntityImpl::get(world, entity_id)
     }
@@ -5293,7 +5293,7 @@ pub impl Modelv0EntityImpl of Modelv0EntityTrait {
 }
 
 #[generate_trait]
-pub impl Modelv0Impl of Modelv0Trait {
+pub impl Modelv0StoreImpl of Modelv0Store {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -5466,7 +5466,7 @@ pub impl Modelv0ModelImpl of dojo::model::Model<Modelv0> {
         );
         let mut _keys = keys;
 
-        Modelv0Trait::from_values(ref _keys, ref values)
+        Modelv0Store::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -6065,7 +6065,7 @@ pub struct ModelWithBadNamespaceFormatEntity {
 }
 
 #[generate_trait]
-pub impl ModelWithBadNamespaceFormatEntityImpl of ModelWithBadNamespaceFormatEntityTrait {
+pub impl ModelWithBadNamespaceFormatEntityStoreImpl of ModelWithBadNamespaceFormatEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithBadNamespaceFormatEntity {
         ModelWithBadNamespaceFormatModelEntityImpl::get(world, entity_id)
     }
@@ -6102,7 +6102,7 @@ pub impl ModelWithBadNamespaceFormatEntityImpl of ModelWithBadNamespaceFormatEnt
 }
 
 #[generate_trait]
-pub impl ModelWithBadNamespaceFormatImpl of ModelWithBadNamespaceFormatTrait {
+pub impl ModelWithBadNamespaceFormatStoreImpl of ModelWithBadNamespaceFormatStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -6275,7 +6275,7 @@ pub impl ModelWithBadNamespaceFormatModelImpl of dojo::model::Model<ModelWithBad
         );
         let mut _keys = keys;
 
-        ModelWithBadNamespaceFormatTrait::from_values(ref _keys, ref values)
+        ModelWithBadNamespaceFormatStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -6874,7 +6874,7 @@ pub struct ModelWithShortStringNamespaceEntity {
 }
 
 #[generate_trait]
-pub impl ModelWithShortStringNamespaceEntityImpl of ModelWithShortStringNamespaceEntityTrait {
+pub impl ModelWithShortStringNamespaceEntityStoreImpl of ModelWithShortStringNamespaceEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithShortStringNamespaceEntity {
         ModelWithShortStringNamespaceModelEntityImpl::get(world, entity_id)
     }
@@ -6911,7 +6911,7 @@ pub impl ModelWithShortStringNamespaceEntityImpl of ModelWithShortStringNamespac
 }
 
 #[generate_trait]
-pub impl ModelWithShortStringNamespaceImpl of ModelWithShortStringNamespaceTrait {
+pub impl ModelWithShortStringNamespaceStoreImpl of ModelWithShortStringNamespaceStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -7084,7 +7084,7 @@ pub impl ModelWithShortStringNamespaceModelImpl of dojo::model::Model<ModelWithS
         );
         let mut _keys = keys;
 
-        ModelWithShortStringNamespaceTrait::from_values(ref _keys, ref values)
+        ModelWithShortStringNamespaceStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -7683,7 +7683,7 @@ pub struct ModelWithStringNamespaceEntity {
 }
 
 #[generate_trait]
-pub impl ModelWithStringNamespaceEntityImpl of ModelWithStringNamespaceEntityTrait {
+pub impl ModelWithStringNamespaceEntityStoreImpl of ModelWithStringNamespaceEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithStringNamespaceEntity {
         ModelWithStringNamespaceModelEntityImpl::get(world, entity_id)
     }
@@ -7720,7 +7720,7 @@ pub impl ModelWithStringNamespaceEntityImpl of ModelWithStringNamespaceEntityTra
 }
 
 #[generate_trait]
-pub impl ModelWithStringNamespaceImpl of ModelWithStringNamespaceTrait {
+pub impl ModelWithStringNamespaceStoreImpl of ModelWithStringNamespaceStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -7893,7 +7893,7 @@ pub impl ModelWithStringNamespaceModelImpl of dojo::model::Model<ModelWithString
         );
         let mut _keys = keys;
 
-        ModelWithStringNamespaceTrait::from_values(ref _keys, ref values)
+        ModelWithStringNamespaceStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -8492,7 +8492,7 @@ pub struct PositionEntity {
 }
 
 #[generate_trait]
-pub impl PositionEntityImpl of PositionEntityTrait {
+pub impl PositionEntityStoreImpl of PositionEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> PositionEntity {
         PositionModelEntityImpl::get(world, entity_id)
     }
@@ -8529,7 +8529,7 @@ pub impl PositionEntityImpl of PositionEntityTrait {
 }
 
 #[generate_trait]
-pub impl PositionImpl of PositionTrait {
+pub impl PositionStoreImpl of PositionStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -8702,7 +8702,7 @@ pub impl PositionModelImpl of dojo::model::Model<Position> {
         );
         let mut _keys = keys;
 
-        PositionTrait::from_values(ref _keys, ref values)
+        PositionStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -9301,7 +9301,7 @@ pub struct RolesEntity {
 }
 
 #[generate_trait]
-pub impl RolesEntityImpl of RolesEntityTrait {
+pub impl RolesEntityStoreImpl of RolesEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> RolesEntity {
         RolesModelEntityImpl::get(world, entity_id)
     }
@@ -9338,7 +9338,7 @@ pub impl RolesEntityImpl of RolesEntityTrait {
 }
 
 #[generate_trait]
-pub impl RolesImpl of RolesTrait {
+pub impl RolesStoreImpl of RolesStore {
     fn entity_id_from_keys() -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         
@@ -9508,7 +9508,7 @@ pub impl RolesModelImpl of dojo::model::Model<Roles> {
         );
         let mut _keys = keys;
 
-        RolesTrait::from_values(ref _keys, ref values)
+        RolesStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -10097,7 +10097,7 @@ pub struct OnlyKeyModelEntity {
 }
 
 #[generate_trait]
-pub impl OnlyKeyModelEntityImpl of OnlyKeyModelEntityTrait {
+pub impl OnlyKeyModelEntityStoreImpl of OnlyKeyModelEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> OnlyKeyModelEntity {
         OnlyKeyModelModelEntityImpl::get(world, entity_id)
     }
@@ -10106,7 +10106,7 @@ pub impl OnlyKeyModelEntityImpl of OnlyKeyModelEntityTrait {
 }
 
 #[generate_trait]
-pub impl OnlyKeyModelImpl of OnlyKeyModelTrait {
+pub impl OnlyKeyModelStoreImpl of OnlyKeyModelStore {
     fn entity_id_from_keys(id: felt252) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, id);
@@ -10245,7 +10245,7 @@ pub impl OnlyKeyModelModelImpl of dojo::model::Model<OnlyKeyModel> {
         );
         let mut _keys = keys;
 
-        OnlyKeyModelTrait::from_values(ref _keys, ref values)
+        OnlyKeyModelStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -10834,7 +10834,7 @@ pub struct U256KeyModelEntity {
 }
 
 #[generate_trait]
-pub impl U256KeyModelEntityImpl of U256KeyModelEntityTrait {
+pub impl U256KeyModelEntityStoreImpl of U256KeyModelEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> U256KeyModelEntity {
         U256KeyModelModelEntityImpl::get(world, entity_id)
     }
@@ -10843,7 +10843,7 @@ pub impl U256KeyModelEntityImpl of U256KeyModelEntityTrait {
 }
 
 #[generate_trait]
-pub impl U256KeyModelImpl of U256KeyModelTrait {
+pub impl U256KeyModelStoreImpl of U256KeyModelStore {
     fn entity_id_from_keys(id: u256) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(@id, ref serialized);
@@ -10982,7 +10982,7 @@ pub impl U256KeyModelModelImpl of dojo::model::Model<U256KeyModel> {
         );
         let mut _keys = keys;
 
-        U256KeyModelTrait::from_values(ref _keys, ref values)
+        U256KeyModelStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -11585,7 +11585,7 @@ pub struct PlayerEntity {
 }
 
 #[generate_trait]
-pub impl PlayerEntityImpl of PlayerEntityTrait {
+pub impl PlayerEntityStoreImpl of PlayerEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> PlayerEntity {
         PlayerModelEntityImpl::get(world, entity_id)
     }
@@ -11622,7 +11622,7 @@ pub impl PlayerEntityImpl of PlayerEntityTrait {
 }
 
 #[generate_trait]
-pub impl PlayerImpl of PlayerTrait {
+pub impl PlayerStoreImpl of PlayerStore {
     fn entity_id_from_keys(game: felt252, player: ContractAddress) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::array::ArrayTrait::append(ref serialized, game);
@@ -11798,7 +11798,7 @@ pub impl PlayerModelImpl of dojo::model::Model<Player> {
         );
         let mut _keys = keys;
 
-        PlayerTrait::from_values(ref _keys, ref values)
+        PlayerStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -12413,7 +12413,7 @@ pub y: Array<u8>,
 }
 
 #[generate_trait]
-pub impl ModelWithSimpleArrayEntityImpl of ModelWithSimpleArrayEntityTrait {
+pub impl ModelWithSimpleArrayEntityStoreImpl of ModelWithSimpleArrayEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithSimpleArrayEntity {
         ModelWithSimpleArrayModelEntityImpl::get(world, entity_id)
     }
@@ -12478,7 +12478,7 @@ pub impl ModelWithSimpleArrayEntityImpl of ModelWithSimpleArrayEntityTrait {
 }
 
 #[generate_trait]
-pub impl ModelWithSimpleArrayImpl of ModelWithSimpleArrayTrait {
+pub impl ModelWithSimpleArrayStoreImpl of ModelWithSimpleArrayStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(@player, ref serialized);
@@ -12685,7 +12685,7 @@ pub impl ModelWithSimpleArrayModelImpl of dojo::model::Model<ModelWithSimpleArra
         );
         let mut _keys = keys;
 
-        ModelWithSimpleArrayTrait::from_values(ref _keys, ref values)
+        ModelWithSimpleArrayStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -13296,7 +13296,7 @@ pub y: ByteArray,
 }
 
 #[generate_trait]
-pub impl ModelWithByteArrayEntityImpl of ModelWithByteArrayEntityTrait {
+pub impl ModelWithByteArrayEntityStoreImpl of ModelWithByteArrayEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithByteArrayEntity {
         ModelWithByteArrayModelEntityImpl::get(world, entity_id)
     }
@@ -13361,7 +13361,7 @@ pub impl ModelWithByteArrayEntityImpl of ModelWithByteArrayEntityTrait {
 }
 
 #[generate_trait]
-pub impl ModelWithByteArrayImpl of ModelWithByteArrayTrait {
+pub impl ModelWithByteArrayStoreImpl of ModelWithByteArrayStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(@player, ref serialized);
@@ -13568,7 +13568,7 @@ pub impl ModelWithByteArrayModelImpl of dojo::model::Model<ModelWithByteArray> {
         );
         let mut _keys = keys;
 
-        ModelWithByteArrayTrait::from_values(ref _keys, ref values)
+        ModelWithByteArrayStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -14183,7 +14183,7 @@ pub y: Array<Vec3>,
 }
 
 #[generate_trait]
-pub impl ModelWithComplexArrayEntityImpl of ModelWithComplexArrayEntityTrait {
+pub impl ModelWithComplexArrayEntityStoreImpl of ModelWithComplexArrayEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithComplexArrayEntity {
         ModelWithComplexArrayModelEntityImpl::get(world, entity_id)
     }
@@ -14248,7 +14248,7 @@ pub impl ModelWithComplexArrayEntityImpl of ModelWithComplexArrayEntityTrait {
 }
 
 #[generate_trait]
-pub impl ModelWithComplexArrayImpl of ModelWithComplexArrayTrait {
+pub impl ModelWithComplexArrayStoreImpl of ModelWithComplexArrayStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(@player, ref serialized);
@@ -14455,7 +14455,7 @@ pub impl ModelWithComplexArrayModelImpl of dojo::model::Model<ModelWithComplexAr
         );
         let mut _keys = keys;
 
-        ModelWithComplexArrayTrait::from_values(ref _keys, ref values)
+        ModelWithComplexArrayStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -15077,7 +15077,7 @@ pub y: (u8, u16, u32),
 }
 
 #[generate_trait]
-pub impl ModelWithTupleEntityImpl of ModelWithTupleEntityTrait {
+pub impl ModelWithTupleEntityStoreImpl of ModelWithTupleEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithTupleEntity {
         ModelWithTupleModelEntityImpl::get(world, entity_id)
     }
@@ -15142,7 +15142,7 @@ pub impl ModelWithTupleEntityImpl of ModelWithTupleEntityTrait {
 }
 
 #[generate_trait]
-pub impl ModelWithTupleImpl of ModelWithTupleTrait {
+pub impl ModelWithTupleStoreImpl of ModelWithTupleStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(@player, ref serialized);
@@ -15349,7 +15349,7 @@ pub impl ModelWithTupleModelImpl of dojo::model::Model<ModelWithTuple> {
         );
         let mut _keys = keys;
 
-        ModelWithTupleTrait::from_values(ref _keys, ref values)
+        ModelWithTupleStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -15980,7 +15980,7 @@ pub y: (u8, Vec3, u32),
 }
 
 #[generate_trait]
-pub impl ModelWithTupleNoPrimitivesEntityImpl of ModelWithTupleNoPrimitivesEntityTrait {
+pub impl ModelWithTupleNoPrimitivesEntityStoreImpl of ModelWithTupleNoPrimitivesEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithTupleNoPrimitivesEntity {
         ModelWithTupleNoPrimitivesModelEntityImpl::get(world, entity_id)
     }
@@ -16045,7 +16045,7 @@ pub impl ModelWithTupleNoPrimitivesEntityImpl of ModelWithTupleNoPrimitivesEntit
 }
 
 #[generate_trait]
-pub impl ModelWithTupleNoPrimitivesImpl of ModelWithTupleNoPrimitivesTrait {
+pub impl ModelWithTupleNoPrimitivesStoreImpl of ModelWithTupleNoPrimitivesStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         core::serde::Serde::serialize(@player, ref serialized);
@@ -16252,7 +16252,7 @@ pub impl ModelWithTupleNoPrimitivesModelImpl of dojo::model::Model<ModelWithTupl
         );
         let mut _keys = keys;
 
-        ModelWithTupleNoPrimitivesTrait::from_values(ref _keys, ref values)
+        ModelWithTupleNoPrimitivesStore::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -16815,7 +16815,7 @@ impl BadModelMultipleVersionsEntitySerde of core::serde::Serde::<BadModelMultipl
         })
     }
 }
-pub trait BadModelMultipleVersionsEntityTrait {
+pub trait BadModelMultipleVersionsEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelMultipleVersionsEntity;
 
     
@@ -16824,7 +16824,7 @@ pub trait BadModelMultipleVersionsEntityTrait {
     fn set_v(self: @BadModelMultipleVersionsEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait BadModelMultipleVersionsTrait {
+pub trait BadModelMultipleVersionsStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> BadModelMultipleVersions;
@@ -16943,7 +16943,7 @@ impl BadModelBadVersionTypeEntitySerde of core::serde::Serde::<BadModelBadVersio
         })
     }
 }
-pub trait BadModelBadVersionTypeEntityTrait {
+pub trait BadModelBadVersionTypeEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelBadVersionTypeEntity;
 
     
@@ -16952,7 +16952,7 @@ pub trait BadModelBadVersionTypeEntityTrait {
     fn set_v(self: @BadModelBadVersionTypeEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait BadModelBadVersionTypeTrait {
+pub trait BadModelBadVersionTypeStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> BadModelBadVersionType;
@@ -17071,7 +17071,7 @@ impl BadModelNoVersionValueEntitySerde of core::serde::Serde::<BadModelNoVersion
         })
     }
 }
-pub trait BadModelNoVersionValueEntityTrait {
+pub trait BadModelNoVersionValueEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelNoVersionValueEntity;
 
     
@@ -17080,7 +17080,7 @@ pub trait BadModelNoVersionValueEntityTrait {
     fn set_v(self: @BadModelNoVersionValueEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait BadModelNoVersionValueTrait {
+pub trait BadModelNoVersionValueStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> BadModelNoVersionValue;
@@ -17199,7 +17199,7 @@ impl BadModelUnexpectedArgWithValueEntitySerde of core::serde::Serde::<BadModelU
         })
     }
 }
-pub trait BadModelUnexpectedArgWithValueEntityTrait {
+pub trait BadModelUnexpectedArgWithValueEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelUnexpectedArgWithValueEntity;
 
     
@@ -17208,7 +17208,7 @@ pub trait BadModelUnexpectedArgWithValueEntityTrait {
     fn set_v(self: @BadModelUnexpectedArgWithValueEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait BadModelUnexpectedArgWithValueTrait {
+pub trait BadModelUnexpectedArgWithValueStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> BadModelUnexpectedArgWithValue;
@@ -17327,7 +17327,7 @@ impl BadModelUnexpectedArgEntitySerde of core::serde::Serde::<BadModelUnexpected
         })
     }
 }
-pub trait BadModelUnexpectedArgEntityTrait {
+pub trait BadModelUnexpectedArgEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelUnexpectedArgEntity;
 
     
@@ -17336,7 +17336,7 @@ pub trait BadModelUnexpectedArgEntityTrait {
     fn set_v(self: @BadModelUnexpectedArgEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait BadModelUnexpectedArgTrait {
+pub trait BadModelUnexpectedArgStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> BadModelUnexpectedArg;
@@ -17455,7 +17455,7 @@ impl BadModelNotSupportedVersionEntitySerde of core::serde::Serde::<BadModelNotS
         })
     }
 }
-pub trait BadModelNotSupportedVersionEntityTrait {
+pub trait BadModelNotSupportedVersionEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> BadModelNotSupportedVersionEntity;
 
     
@@ -17464,7 +17464,7 @@ pub trait BadModelNotSupportedVersionEntityTrait {
     fn set_v(self: @BadModelNotSupportedVersionEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait BadModelNotSupportedVersionTrait {
+pub trait BadModelNotSupportedVersionStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> BadModelNotSupportedVersion;
@@ -17583,7 +17583,7 @@ impl Modelv0EntitySerde of core::serde::Serde::<Modelv0Entity> {
         })
     }
 }
-pub trait Modelv0EntityTrait {
+pub trait Modelv0EntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> Modelv0Entity;
 
     
@@ -17592,7 +17592,7 @@ pub trait Modelv0EntityTrait {
     fn set_v(self: @Modelv0Entity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait Modelv0Trait {
+pub trait Modelv0Store {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> Modelv0;
@@ -17711,7 +17711,7 @@ impl ModelWithBadNamespaceFormatEntitySerde of core::serde::Serde::<ModelWithBad
         })
     }
 }
-pub trait ModelWithBadNamespaceFormatEntityTrait {
+pub trait ModelWithBadNamespaceFormatEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithBadNamespaceFormatEntity;
 
     
@@ -17720,7 +17720,7 @@ pub trait ModelWithBadNamespaceFormatEntityTrait {
     fn set_v(self: @ModelWithBadNamespaceFormatEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait ModelWithBadNamespaceFormatTrait {
+pub trait ModelWithBadNamespaceFormatStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> ModelWithBadNamespaceFormat;
@@ -17839,7 +17839,7 @@ impl ModelWithShortStringNamespaceEntitySerde of core::serde::Serde::<ModelWithS
         })
     }
 }
-pub trait ModelWithShortStringNamespaceEntityTrait {
+pub trait ModelWithShortStringNamespaceEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithShortStringNamespaceEntity;
 
     
@@ -17848,7 +17848,7 @@ pub trait ModelWithShortStringNamespaceEntityTrait {
     fn set_v(self: @ModelWithShortStringNamespaceEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait ModelWithShortStringNamespaceTrait {
+pub trait ModelWithShortStringNamespaceStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> ModelWithShortStringNamespace;
@@ -17967,7 +17967,7 @@ impl ModelWithStringNamespaceEntitySerde of core::serde::Serde::<ModelWithString
         })
     }
 }
-pub trait ModelWithStringNamespaceEntityTrait {
+pub trait ModelWithStringNamespaceEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithStringNamespaceEntity;
 
     
@@ -17976,7 +17976,7 @@ pub trait ModelWithStringNamespaceEntityTrait {
     fn set_v(self: @ModelWithStringNamespaceEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait ModelWithStringNamespaceTrait {
+pub trait ModelWithStringNamespaceStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> ModelWithStringNamespace;
@@ -18095,7 +18095,7 @@ impl PositionEntitySerde of core::serde::Serde::<PositionEntity> {
         })
     }
 }
-pub trait PositionEntityTrait {
+pub trait PositionEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> PositionEntity;
 
     
@@ -18104,7 +18104,7 @@ pub trait PositionEntityTrait {
     fn set_v(self: @PositionEntity, world: dojo::world::IWorldDispatcher, value: Vec3);
 
 }
-pub trait PositionTrait {
+pub trait PositionStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> Position;
@@ -18223,7 +18223,7 @@ impl RolesEntitySerde of core::serde::Serde::<RolesEntity> {
         })
     }
 }
-pub trait RolesEntityTrait {
+pub trait RolesEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> RolesEntity;
 
     
@@ -18232,7 +18232,7 @@ pub trait RolesEntityTrait {
     fn set_role_ids(self: @RolesEntity, world: dojo::world::IWorldDispatcher, value: Array<u8>);
 
 }
-pub trait RolesTrait {
+pub trait RolesStore {
     fn entity_id_from_keys() -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> Roles;
@@ -18349,12 +18349,12 @@ impl OnlyKeyModelEntitySerde of core::serde::Serde::<OnlyKeyModelEntity> {
         })
     }
 }
-pub trait OnlyKeyModelEntityTrait {
+pub trait OnlyKeyModelEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> OnlyKeyModelEntity;
 
     
 }
-pub trait OnlyKeyModelTrait {
+pub trait OnlyKeyModelStore {
     fn entity_id_from_keys(id: felt252) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> OnlyKeyModel;
@@ -18467,12 +18467,12 @@ impl U256KeyModelEntitySerde of core::serde::Serde::<U256KeyModelEntity> {
         })
     }
 }
-pub trait U256KeyModelEntityTrait {
+pub trait U256KeyModelEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> U256KeyModelEntity;
 
     
 }
-pub trait U256KeyModelTrait {
+pub trait U256KeyModelStore {
     fn entity_id_from_keys(id: u256) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> U256KeyModel;
@@ -18587,7 +18587,7 @@ impl PlayerEntitySerde of core::serde::Serde::<PlayerEntity> {
         })
     }
 }
-pub trait PlayerEntityTrait {
+pub trait PlayerEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> PlayerEntity;
 
     
@@ -18596,7 +18596,7 @@ pub trait PlayerEntityTrait {
     fn set_name(self: @PlayerEntity, world: dojo::world::IWorldDispatcher, value: felt252);
 
 }
-pub trait PlayerTrait {
+pub trait PlayerStore {
     fn entity_id_from_keys(game: felt252, player: ContractAddress) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> Player;
@@ -18717,7 +18717,7 @@ impl ModelWithSimpleArrayEntitySerde of core::serde::Serde::<ModelWithSimpleArra
         })
     }
 }
-pub trait ModelWithSimpleArrayEntityTrait {
+pub trait ModelWithSimpleArrayEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithSimpleArrayEntity;
 
     
@@ -18730,7 +18730,7 @@ pub trait ModelWithSimpleArrayEntityTrait {
     fn set_y(self: @ModelWithSimpleArrayEntity, world: dojo::world::IWorldDispatcher, value: Array<u8>);
 
 }
-pub trait ModelWithSimpleArrayTrait {
+pub trait ModelWithSimpleArrayStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> ModelWithSimpleArray;
@@ -18855,7 +18855,7 @@ impl ModelWithByteArrayEntitySerde of core::serde::Serde::<ModelWithByteArrayEnt
         })
     }
 }
-pub trait ModelWithByteArrayEntityTrait {
+pub trait ModelWithByteArrayEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithByteArrayEntity;
 
     
@@ -18868,7 +18868,7 @@ pub trait ModelWithByteArrayEntityTrait {
     fn set_y(self: @ModelWithByteArrayEntity, world: dojo::world::IWorldDispatcher, value: ByteArray);
 
 }
-pub trait ModelWithByteArrayTrait {
+pub trait ModelWithByteArrayStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> ModelWithByteArray;
@@ -18993,7 +18993,7 @@ impl ModelWithComplexArrayEntitySerde of core::serde::Serde::<ModelWithComplexAr
         })
     }
 }
-pub trait ModelWithComplexArrayEntityTrait {
+pub trait ModelWithComplexArrayEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithComplexArrayEntity;
 
     
@@ -19006,7 +19006,7 @@ pub trait ModelWithComplexArrayEntityTrait {
     fn set_y(self: @ModelWithComplexArrayEntity, world: dojo::world::IWorldDispatcher, value: Array<Vec3>);
 
 }
-pub trait ModelWithComplexArrayTrait {
+pub trait ModelWithComplexArrayStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> ModelWithComplexArray;
@@ -19131,7 +19131,7 @@ impl ModelWithTupleEntitySerde of core::serde::Serde::<ModelWithTupleEntity> {
         })
     }
 }
-pub trait ModelWithTupleEntityTrait {
+pub trait ModelWithTupleEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithTupleEntity;
 
     
@@ -19144,7 +19144,7 @@ pub trait ModelWithTupleEntityTrait {
     fn set_y(self: @ModelWithTupleEntity, world: dojo::world::IWorldDispatcher, value: (u8, u16, u32));
 
 }
-pub trait ModelWithTupleTrait {
+pub trait ModelWithTupleStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> ModelWithTuple;
@@ -19269,7 +19269,7 @@ impl ModelWithTupleNoPrimitivesEntitySerde of core::serde::Serde::<ModelWithTupl
         })
     }
 }
-pub trait ModelWithTupleNoPrimitivesEntityTrait {
+pub trait ModelWithTupleNoPrimitivesEntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> ModelWithTupleNoPrimitivesEntity;
 
     
@@ -19282,7 +19282,7 @@ pub trait ModelWithTupleNoPrimitivesEntityTrait {
     fn set_y(self: @ModelWithTupleNoPrimitivesEntity, world: dojo::world::IWorldDispatcher, value: (u8, Vec3, u32));
 
 }
-pub trait ModelWithTupleNoPrimitivesTrait {
+pub trait ModelWithTupleNoPrimitivesStore {
     fn entity_id_from_keys(player: ContractAddress) -> felt252;
 
     fn from_values(ref keys: Span<felt252>, ref values: Span<felt252>) -> ModelWithTupleNoPrimitives;

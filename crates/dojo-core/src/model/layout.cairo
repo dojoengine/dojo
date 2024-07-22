@@ -22,7 +22,9 @@ pub enum Layout {
     Enum: Span<FieldLayout>,
 }
 
-// TODO RBA
+/// Compute the full size in bytes of a layout, when all the fields
+/// are bit-packed.
+/// Could be None if at least a field has a dynamic size.
 pub fn compute_packed_size(layout: Layout) -> Option<usize> {
     if let Layout::Fixed(layout) = layout {
         let mut span_layout = layout;

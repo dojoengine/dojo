@@ -1,6 +1,7 @@
 #[starknet::contract]
 pub mod base {
-    use starknet::{ClassHash, get_caller_address};
+    use starknet::{ClassHash, ContractAddress, get_caller_address};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
 
     use dojo::contract::upgradeable::upgradeable as upgradeable_component;
     use dojo::world::{IWorldProvider, IWorldDispatcher, IWorldDispatcherTrait};

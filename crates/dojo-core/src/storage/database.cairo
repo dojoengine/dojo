@@ -31,7 +31,7 @@ fn fill_with_zeroes(ref values: Array<felt252>, size: u32) {
 }
 
 /// Compute the internal storage key from a table selector and a key.
-/// 
+///
 /// # Arguments
 ///   * `table` - the table selector
 ///   * `key` - a key to identify a record in the table

@@ -16,7 +16,7 @@ pub mod upgradeable {
     use dojo::world::{IWorldProvider, IWorldProviderDispatcher, IWorldDispatcher};
 
     #[storage]
-    struct Storage {}
+    pub struct Storage {}
 
     #[event]
     #[derive(Drop, starknet::Event)]

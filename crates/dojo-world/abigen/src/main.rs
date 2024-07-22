@@ -105,7 +105,7 @@ fn compile_dojo_core() {
         r#"
 [package]
 cairo-version = "2.7.0-rc.3"
-edition = "2023_11"
+edition = "2024_07"
 name = "dojo"
 version = "0.7.3"
 

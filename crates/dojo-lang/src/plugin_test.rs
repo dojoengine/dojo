@@ -111,7 +111,7 @@ pub fn test_expand_plugin_inner(
         r#"
 [package]
 cairo-version = "=2.6.4"
-edition = "2023_11"
+edition = "2024_07"
 name = "test_package"
 version = "0.7.3"
 

@@ -27,8 +27,8 @@ pub mod actions {
 
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{
-        Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile, PositionTrait,
-        MovesTrait, MovesEntityTrait, PlayerConfigTrait, PlayerConfigEntityTrait
+        Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile, PositionStore,
+        MovesStore, MovesEntityStore, PlayerConfigStore, PlayerConfigEntityStore
     };
     use dojo_examples::utils::next_position;
 
@@ -89,24 +89,25 @@ pub mod actions {
             let player = get_caller_address();
 
             // instead of using the `get!` macro, you can directly use
-            // the <ModelName>Trait::get method
-            let mut position = PositionTrait::get(world, player);
+            // the <ModelName>Store::get method
+            let mut position = PositionStore::get(world, player);
 
-            // you can also get entity values by entity ID with the `<ModelName>EntityTrait` trait.
+            // you can also get entity values by entity ID with the `<ModelName>EntityStore` trait.
             // Note that it returns a `<ModelName>Entity` struct which contains
             // model values and the entity ID.
-            let move_id = MovesTrait::entity_id_from_keys(player);
-            let mut moves = MovesEntityTrait::get(world, move_id);
+            let move_id = MovesStore::entity_id_from_keys(player);
+            let mut moves = MovesEntityStore::get(world, move_id);
 
             moves.remaining -= 1;
             moves.last_direction = direction;
             let next = next_position(position, direction);
 
             // instead of using the `set!` macro, you can directly use
-            // the <ModelName>Trait::set method
+            // the <ModelName>Store::set method
             next.set(world);
 
-            // you can also update entity values by entity ID with the `<ModelName>EntityTrait` trait.
+            // you can also update entity values by entity ID with the `<ModelName>EntityStore`
+            // trait.
             moves.update(world);
 
             emit!(world, (Moved { player, direction }));
@@ -129,7 +130,7 @@ pub mod actions {
             let player = get_caller_address();
 
             let (position, moves) = get!(world, player, (Position, Moves));
-            let config = PlayerConfigTrait::get(world, player);
+            let config = PlayerConfigStore::get(world, player);
 
             delete!(world, (position, moves));
             config.delete(world);
@@ -164,26 +165,26 @@ pub mod actions {
             let river_skale = RiverSkale { id: 1, health: 5, armor: 3, attack: 2 };
 
             set!(world, (flatbow, river_skale));
-        //            IDungeonDispatcher { contract_address: dungeon_address }.enter();
+            IDungeonDispatcher { contract_address: dungeon_address }.enter();
         }
 
         fn update_player_name(ref world: IWorldDispatcher, name: ByteArray) {
             let player = get_caller_address();
-            let config = PlayerConfigTrait::get(world, player);
+            let config = PlayerConfigStore::get(world, player);
             config.set_name(world, name.clone());
 
-            let new_name = PlayerConfigTrait::get_name(world, player);
+            let new_name = PlayerConfigStore::get_name(world, player);
             assert(new_name == name, 'unable to change name');
         }
 
         fn update_player_name_value(ref world: IWorldDispatcher, name: ByteArray) {
             let player = get_caller_address();
-            let config_id = PlayerConfigTrait::entity_id_from_keys(player);
+            let config_id = PlayerConfigStore::entity_id_from_keys(player);
 
-            let config = PlayerConfigEntityTrait::get(world, config_id);
+            let config = PlayerConfigEntityStore::get(world, config_id);
             config.set_name(world, name.clone());
 
-            let new_name = PlayerConfigEntityTrait::get_name(world, config_id);
+            let new_name = PlayerConfigEntityStore::get_name(world, config_id);
             assert(new_name == name, 'unable to change name');
         }
     }

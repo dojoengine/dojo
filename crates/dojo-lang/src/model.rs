@@ -326,7 +326,7 @@ pub struct $type_name$Entity {
 }
 
 #[generate_trait]
-pub impl $type_name$EntityImpl of $type_name$EntityTrait {
+pub impl $type_name$EntityStoreImpl of $type_name$EntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> $type_name$Entity {
         $type_name$ModelEntityImpl::get(world, entity_id)
     }
@@ -335,7 +335,7 @@ pub impl $type_name$EntityImpl of $type_name$EntityTrait {
 }
 
 #[generate_trait]
-pub impl $type_name$Impl of $type_name$Trait {
+pub impl $type_name$StoreImpl of $type_name$Store {
     fn entity_id_from_keys($param_keys$) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_param_keys$
@@ -475,7 +475,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         );
         let mut _keys = keys;
 
-        $type_name$Trait::from_values(ref _keys, ref values)
+        $type_name$Store::from_values(ref _keys, ref values)
     }
 
    fn set(
