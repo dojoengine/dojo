@@ -46,6 +46,11 @@ pub struct ContractMigrationOutput {
     pub base_class_hash: Felt,
 }
 
+// TODO: when diff is zero we still need to run auto authorize
+// TODO: read deployment manifest to find diff in `writes` for auto authorize
+// TODO: update method names to better reflect what they now do
+// TODO: add tests
+// TODO: general cleanup
 #[allow(clippy::too_many_arguments)]
 pub async fn migrate<A>(
     ws: &Workspace<'_>,
@@ -117,8 +122,9 @@ where
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
 
     if total_diffs == 0 {
-        ui.print("\n✨ No changes to be made. Remote World is already up to date!");
+        ui.print("\n✨ No diffs found. Remote World is already up to date!");
     }
+
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
     strategy.resolve_variable(world_address)?;
@@ -176,7 +182,6 @@ where
         let account = Arc::new(account);
         let world = WorldContract::new(world_address, account.clone());
 
-        dbg!(&work);
         match auto_authorize(ws, &world, &txn_config, &local_manifest, &default_namespace, &work)
             .await
         {
