@@ -32,8 +32,7 @@ pub fn prepare_migration(
         manifest.merge(overlay_manifest);
     }
 
-    let mut world = WorldDiff::compute(manifest, None);
-    world.update_order(default_namespace).unwrap();
+    let world = WorldDiff::compute(manifest, None, default_namespace)?;
 
     let mut strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world).unwrap();
     strat.resolve_variable(strat.world_address().unwrap()).unwrap();
@@ -62,8 +61,7 @@ pub fn prepare_migration_with_world_and_seed(
         manifest.merge(overlay_manifest);
     }
 
-    let mut world = WorldDiff::compute(manifest, None);
-    world.update_order(default_namespace).unwrap();
+    let world = WorldDiff::compute(manifest, None, default_namespace)?;
 
     let seed = cairo_short_string_to_felt(seed).unwrap();
     prepare_for_migration(world_address, seed, &target_dir, world)

@@ -75,8 +75,7 @@ pub async fn deploy_world(
         manifest.merge(overlay_manifest);
     }
 
-    let mut world = WorldDiff::compute(manifest.clone(), None);
-    world.update_order(default_namespace).unwrap();
+    let world = WorldDiff::compute(manifest.clone(), None, default_namespace).unwrap();
 
     let account = sequencer.account(0);
 

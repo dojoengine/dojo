@@ -136,7 +136,7 @@ async fn metadata_calculated_properly() {
         manifest.merge(overlay_manifest);
     }
 
-    let world = WorldDiff::compute(manifest, None);
+    let world = WorldDiff::compute(manifest, None, &"dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,
@@ -175,7 +175,7 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     )
     .unwrap();
 
-    let world = WorldDiff::compute(manifest.clone(), None);
+    let world = WorldDiff::compute(manifest.clone(), None, &"dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,
@@ -207,8 +207,8 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     }
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
-    let mut world = WorldDiff::compute(manifest, Some(remote_manifest));
-    world.update_order(&default_namespace).expect("Failed to update order");
+    let world = WorldDiff::compute(manifest, Some(remote_manifest), &default_namespace)
+        .expect("failed to update order");
 
     let mut migration = prepare_for_migration(
         Some(world_address),
@@ -243,7 +243,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    let world = WorldDiff::compute(manifest, None);
+    let world = WorldDiff::compute(manifest, None, &"dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,

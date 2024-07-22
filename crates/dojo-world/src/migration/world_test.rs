@@ -32,7 +32,7 @@ fn no_diff_when_local_and_remote_are_equal() {
     let mut remote: DeploymentManifest = local.clone().into();
     remote.models = remote_models;
 
-    let diff = WorldDiff::compute(local, Some(remote));
+    let diff = WorldDiff::compute(local, Some(remote), &"dojo-test").unwrap();
 
     assert_eq!(diff.count_diffs(), 0);
 }
@@ -121,7 +121,7 @@ fn diff_when_local_and_remote_are_different() {
     remote.models[1].inner.class_hash = 33_u32.into();
     remote.contracts[0].inner.class_hash = felt!("0x1112");
 
-    let diff = WorldDiff::compute(local, Some(remote));
+    let diff = WorldDiff::compute(local, Some(remote), &"dojo-test").unwrap();
 
     assert_eq!(diff.count_diffs(), 3);
     assert!(diff.models.iter().any(|m| m.tag == get_tag("dojo_mock", "model2")));

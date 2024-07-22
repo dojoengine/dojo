@@ -28,7 +28,11 @@ pub struct WorldDiff {
 }
 
 impl WorldDiff {
-    pub fn compute(local: BaseManifest, remote: Option<DeploymentManifest>) -> WorldDiff {
+    pub fn compute(
+        local: BaseManifest,
+        remote: Option<DeploymentManifest>,
+        default_namespace: &str,
+    ) -> Result<WorldDiff> {
         let models = local
             .models
             .iter()
@@ -90,7 +94,10 @@ impl WorldDiff {
             init_calldata: vec![],
         };
 
-        WorldDiff { world, base, contracts, models }
+        let mut diff = WorldDiff { world, base, contracts, models };
+        diff.update_order(&default_namespace)?;
+
+        Ok(diff)
     }
 
     pub fn count_diffs(&self) -> usize {

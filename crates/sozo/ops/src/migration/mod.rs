@@ -115,8 +115,8 @@ where
 
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
-    let mut diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
-    diff.update_order(&default_namespace)?;
+    let diff =
+        WorldDiff::compute(local_manifest.clone(), remote_manifest.clone(), &default_namespace)?;
 
     let total_diffs = diff.count_diffs();
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
@@ -143,8 +143,6 @@ where
             name,
         )
         .await?;
-
-        dbg!(&work);
 
         Ok(None)
     } else {
