@@ -334,20 +334,3 @@ mod blockifier {
         test_executor_with_valid_blocks_impl(factory, state, blocks)
     }
 }
-
-#[cfg(feature = "sir")]
-mod sir {
-    use fixtures::sir::factory;
-    use katana_executor::implementation::sir::NativeExecutorFactory;
-
-    use super::*;
-
-    #[rstest::rstest]
-    fn test_executor_with_valid_blocks(
-        factory: NativeExecutorFactory,
-        #[from(state_provider)] state: Box<dyn StateProvider>,
-        #[from(valid_blocks)] blocks: [ExecutableBlock; 3],
-    ) {
-        test_executor_with_valid_blocks_impl(factory, state, blocks)
-    }
-}
