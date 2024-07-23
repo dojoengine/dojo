@@ -9,6 +9,8 @@ use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
 use crate::{DojoContract, DojoData, DojoModel};
 
+mod tests;
+
 pub struct TypescriptPlugin {}
 
 impl TypescriptPlugin {
@@ -201,21 +203,26 @@ export const {name}Definition = {{
     fn format_model(namespace: &str, model: &Composite) -> String {
         let mut custom_types = Vec::<String>::new();
         let mut types = Vec::<String>::new();
-        let fields = model
-            .inners
-            .iter()
-            .map(|field| {
+        let (fields, _composite_type) =
+            model.inners.iter().fold((Vec::new(), model.r#type), |(mut fields, _), field| {
                 let mapped = TypescriptPlugin::map_type(&field.token);
-                if mapped == field.token.type_name() {
+                let field_str = if model.r#type == CompositeType::Enum {
+                    // For enums, use RecsType.String
+                    types.push(format!("\"{}\"", field.token.type_name()));
+                    format!("{}: RecsType.String,", field.name)
+                } else if mapped == field.token.type_name() {
                     custom_types.push(format!("\"{}\"", field.token.type_name()));
                     format!("{}: {}Definition,", field.name, mapped)
                 } else {
                     types.push(format!("\"{}\"", field.token.type_name()));
                     format!("{}: {},", field.name, mapped)
-                }
-            })
-            .collect::<Vec<String>>()
-            .join("\n                    ");
+                };
+
+                fields.push(field_str);
+                (fields, model.r#type)
+            });
+
+        let fields_str = fields.join("\n                    ");
 
         format!(
             "
@@ -224,7 +231,7 @@ export const {name}Definition = {{
             return defineComponent(
                 world,
                 {{
-                    {fields}
+                    {fields_str}
                 }},
                 {{
                     metadata: {{
