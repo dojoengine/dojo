@@ -137,6 +137,8 @@ export const {name}Definition = {{
     // This will be formatted into a C# enum
     // Enum is mapped using index of cairo enum
     fn format_enum(token: &Composite) -> String {
+        // filter out common types
+        // TODO: Make cleaner
         if token.type_path == "core::option::Option::<core::integer::u32>"
             || token.type_path == "core::option::Option::<core::integer::u8>"
             || token.type_path == "core::option::Option::<core::integer::u16>"
