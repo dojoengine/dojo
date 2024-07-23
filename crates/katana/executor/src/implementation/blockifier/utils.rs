@@ -659,14 +659,17 @@ mod tests {
 
     #[test]
     fn convert_chain_id() {
-        let katana_mainnet_id = katana_primitives::chain::ChainId::MAINNET;
-        let katana_sepolia_id = katana_primitives::chain::ChainId::SEPOLIA;
+        let katana_mainnet = katana_primitives::chain::ChainId::MAINNET;
+        let katana_sepolia = katana_primitives::chain::ChainId::SEPOLIA;
+        let katana_id = katana_primitives::chain::ChainId::Id(felt!("0x1337"));
 
-        let blockifier_mainnet = to_blk_chain_id(katana_mainnet_id);
-        let blockifier_sepolia = to_blk_chain_id(katana_sepolia_id);
+        let blockifier_mainnet = to_blk_chain_id(katana_mainnet);
+        let blockifier_sepolia = to_blk_chain_id(katana_sepolia);
+        let blockifier_id = to_blk_chain_id(katana_id);
 
         assert_eq!(blockifier_mainnet, ChainId::Mainnet);
         assert_eq!(blockifier_sepolia, ChainId::Sepolia);
+        assert_eq!(blockifier_id.as_hex(), katana_id.to_string());
     }
 
     /// Test to ensure that when Blockifier pass the chain id to the contract ( thru a syscall eg,
@@ -674,7 +677,7 @@ mod tests {
     ///
     /// Issue: <https://github.com/dojoengine/dojo/issues/1595>
     #[test]
-    fn blockifier_chain_id_in_syscall() {
+    fn blockifier_chain_id_invariant() {
         let id = felt!("0x1337");
 
         let katana_id = katana_primitives::chain::ChainId::Id(id);
