@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use blockifier::state::cached_state;
 use blockifier::state::errors::StateError;
-use blockifier::state::state_api::{StateReader, StateResult};
+use blockifier::state::state_api::{DojoStateAdapter, StateReader, StateResult, UpdatableState};
 use katana_cairo::starknet_api::core::{ClassHash, CompiledClassHash, Nonce};
 use katana_cairo::starknet_api::state::StorageKey;
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
@@ -133,7 +133,11 @@ impl<S: StateDb> ContractClassProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
     fn sierra_class(
         &self,
@@ -157,7 +161,11 @@ impl<S: StateDb> StateProvider for CachedState<S> {
             return Ok(None);
         };
 
-        if hash.0 == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 
     fn nonce(
@@ -228,6 +236,27 @@ impl<S: StateDb> StateReader for CachedState<S> {
         key: StorageKey,
     ) -> StateResult<katana_cairo::starknet_api::hash::StarkHash> {
         self.0.lock().inner.get_storage_at(contract_address, key)
+    }
+}
+
+impl<S: StateDb> UpdatableState for CachedState<S> {
+    fn apply_writes(
+        &mut self,
+        writes: &cached_state::StateMaps,
+        class_hash_to_class: &cached_state::ContractClassMapping,
+        visited_pcs: &HashMap<ClassHash, std::collections::HashSet<usize>>,
+    ) {
+        self.0.lock().inner.apply_writes(writes, class_hash_to_class, visited_pcs);
+    }
+}
+
+impl<S: StateDb> DojoStateAdapter for CachedState<S> {
+    fn to_state_diff(&mut self) -> StateResult<cached_state::StateMaps> {
+        self.0.lock().inner.to_state_diff()
+    }
+
+    fn visited_pcs(&self) -> HashMap<ClassHash, std::collections::HashSet<usize>> {
+        self.0.lock().inner.visited_pcs()
     }
 }
 

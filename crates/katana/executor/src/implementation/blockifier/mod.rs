@@ -1,5 +1,3 @@
-#[cfg(feature = "blockifier-concurrent")]
-mod concurrent;
 mod error;
 mod state;
 pub mod utils;
@@ -7,6 +5,8 @@ pub mod utils;
 use std::num::NonZeroU128;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
+use blockifier::blockifier::config::TransactionExecutorConfig;
+use blockifier::blockifier::transaction_executor::{TransactionExecutor, TransactionExecutorError};
 use blockifier::context::BlockContext;
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
@@ -18,8 +18,10 @@ use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithH
 use katana_primitives::FieldElement;
 use katana_provider::traits::state::StateProvider;
 use tracing::info;
+use utils::to_executor_tx;
 
 use self::state::CachedState;
+use crate::utils::build_receipt;
 use crate::{
     BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
     ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
@@ -67,13 +69,14 @@ impl ExecutorFactory for BlockifierFactory {
     }
 }
 
-#[derive(Debug)]
 pub struct StarknetVMProcessor<'a> {
-    block_context: BlockContext,
-    state: CachedState<StateProviderDb<'a>>,
+    // block_context: BlockContext,
+    // state: CachedState<StateProviderDb<'a>>,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
     simulation_flags: SimulationFlag,
     stats: ExecutionStats,
+
+    executor: TransactionExecutor<CachedState<StateProviderDb<'a>>>,
 }
 
 impl<'a> StarknetVMProcessor<'a> {
@@ -86,7 +89,17 @@ impl<'a> StarknetVMProcessor<'a> {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
         let state = state::CachedState::new(StateProviderDb(state));
-        Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
+
+        let config = TransactionExecutorConfig::create_for_testing();
+        let executor = TransactionExecutor::new(state, block_context, config);
+
+        Self {
+            // block_context, state,
+            transactions,
+            simulation_flags,
+            stats: Default::default(),
+            executor,
+        }
     }
 
     fn fill_block_env_from_header(&mut self, header: &PartialHeader) {
@@ -107,8 +120,8 @@ impl<'a> StarknetVMProcessor<'a> {
         // TODO: @kariy, not sure here if we should add some functions to alter it
         // instead of cloning. Or did I miss a function?
         // https://github.com/starkware-libs/blockifier/blob/a6200402ab635d8a8e175f7f135be5914c960007/crates/blockifier/src/context.rs#L23
-        let versioned_constants = self.block_context.versioned_constants().clone();
-        let chain_info = self.block_context.chain_info().clone();
+        let versioned_constants = self.executor.block_context.versioned_constants().clone();
+        let chain_info = self.executor.block_context.chain_info().clone();
         let block_info = BlockInfo {
             block_number: number,
             block_timestamp: timestamp,
@@ -122,7 +135,7 @@ impl<'a> StarknetVMProcessor<'a> {
             use_kzg_da: false,
         };
 
-        self.block_context =
+        self.executor.block_context =
             BlockContext::new(block_info, chain_info, versioned_constants, Default::default());
     }
 
@@ -135,18 +148,20 @@ impl<'a> StarknetVMProcessor<'a> {
     where
         F: FnMut(&mut dyn StateReader, (TxWithHash, ExecutionResult)) -> T,
     {
-        let block_context = &self.block_context;
-        let state = &mut self.state.0.lock().inner;
-        let mut state = cached_state::CachedState::new(MutRefState::new(state));
+        // let block_context = &self.block_context;
+        // let state = &mut self.state.0.lock().inner;
+        // let mut state = cached_state::CachedState::new(MutRefState::new(state));
 
-        let mut results = Vec::with_capacity(transactions.len());
-        for exec_tx in transactions {
-            let tx = TxWithHash::from(&exec_tx);
-            let res = utils::transact(&mut state, block_context, flags, exec_tx);
-            results.push(op(&mut state, (tx, res)));
-        }
+        // let mut results = Vec::with_capacity(transactions.len());
+        // for exec_tx in transactions {
+        //     let tx = TxWithHash::from(&exec_tx);
+        //     let res = utils::transact(&mut state, block_context, flags, exec_tx);
+        //     results.push(op(&mut state, (tx, res)));
+        // }
 
-        results
+        // results
+
+        todo!()
     }
 }
 
@@ -161,47 +176,69 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
         &mut self,
         transactions: Vec<ExecutableTxWithHash>,
     ) -> ExecutorResult<()> {
-        let block_context = &self.block_context;
-        let flags = &self.simulation_flags;
-        let mut state = self.state.0.lock();
+        let txs = transactions.into_iter().map(to_executor_tx).collect::<Vec<_>>();
+        let results = self.executor.execute_txs(&txs);
 
-        for exec_tx in transactions {
-            // Collect class artifacts if its a declare tx
-            let class_decl_artifacts = if let ExecutableTx::Declare(tx) = exec_tx.as_ref() {
-                let class_hash = tx.class_hash();
-                Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
-            } else {
-                None
-            };
+        for res in results {
+            match res {
+                Ok(info) => {
+                    // get the trace and receipt from the execution info
+                    let trace = utils::to_exec_info(info);
+                    let receipt = build_receipt(tx.tx_ref(), fee, &trace);
+                    let res = ExecutionResult::new_success(receipt, trace);
 
-            let tx = TxWithHash::from(&exec_tx);
-            let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
-
-            match &res {
-                ExecutionResult::Success { receipt, trace } => {
-                    self.stats.l1_gas_used += receipt.fee().gas_consumed;
-                    self.stats.cairo_steps_used +=
-                        receipt.resources_used().vm_resources.n_steps as u128;
-
-                    if let Some(reason) = receipt.revert_reason() {
-                        info!(target: LOG_TARGET, %reason, "Transaction reverted.");
-                    }
-
-                    if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
-                        state.declared_classes.insert(class_hash, (compiled, sierra));
-                    }
-
-                    crate::utils::log_resources(&trace.actual_resources);
-                    crate::utils::log_events(receipt.events());
+                    todo!()
                 }
 
-                ExecutionResult::Failed { error } => {
-                    info!(target: LOG_TARGET, %error, "Executing transaction.");
-                }
-            };
-
-            self.transactions.push((tx, res));
+                Err(e) => match e {
+                    TransactionExecutorError::BlockFull => {}
+                    TransactionExecutorError::StateError(_) => {}
+                    TransactionExecutorError::TransactionExecutionError(_) => {}
+                },
+            }
         }
+
+        // let block_context = &self.block_context;
+        // let flags = &self.simulation_flags;
+        // let mut state = self.state.0.lock();
+
+        // for exec_tx in transactions {
+        //     // Collect class artifacts if its a declare tx
+        //     let class_decl_artifacts = if let ExecutableTx::Declare(tx) = exec_tx.as_ref() {
+        //         let class_hash = tx.class_hash();
+        //         Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
+        //     } else {
+        //         None
+        //     };
+
+        //     let tx = TxWithHash::from(&exec_tx);
+        //     let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
+
+        //     match &res {
+        //         ExecutionResult::Success { receipt, trace } => {
+        //             self.stats.l1_gas_used += receipt.fee().gas_consumed;
+        //             self.stats.cairo_steps_used +=
+        //                 receipt.resources_used().vm_resources.n_steps as u128;
+
+        //             if let Some(reason) = receipt.revert_reason() {
+        //                 info!(target: LOG_TARGET, %reason, "Transaction reverted.");
+        //             }
+
+        //             if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
+        //                 state.declared_classes.insert(class_hash, (compiled, sierra));
+        //             }
+
+        //             crate::utils::log_resources(&trace.actual_resources);
+        //             crate::utils::log_events(receipt.events());
+        //         }
+
+        //         ExecutionResult::Failed { error } => {
+        //             info!(target: LOG_TARGET, %error, "Executing transaction.");
+        //         }
+        //     };
+
+        //     self.transactions.push((tx, res));
+        // }
 
         Ok(())
     }
@@ -214,7 +251,9 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     }
 
     fn state(&self) -> Box<dyn StateProvider + 'a> {
-        Box::new(self.state.clone())
+        // Box::new(self.state.clone())
+
+        todo!()
     }
 
     fn transactions(&self) -> &[(TxWithHash, ExecutionResult)] {
@@ -222,13 +261,16 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     }
 
     fn block_env(&self) -> BlockEnv {
-        let eth_l1_gas_price = self.block_context.block_info().gas_prices.eth_l1_gas_price;
-        let strk_l1_gas_price = self.block_context.block_info().gas_prices.strk_l1_gas_price;
+        let eth_l1_gas_price = self.executor.block_context.block_info().gas_prices.eth_l1_gas_price;
+        let strk_l1_gas_price =
+            self.executor.block_context.block_info().gas_prices.strk_l1_gas_price;
 
         BlockEnv {
-            number: self.block_context.block_info().block_number.0,
-            timestamp: self.block_context.block_info().block_timestamp.0,
-            sequencer_address: utils::to_address(self.block_context.block_info().sequencer_address),
+            number: self.executor.block_context.block_info().block_number.0,
+            timestamp: self.executor.block_context.block_info().block_timestamp.0,
+            sequencer_address: utils::to_address(
+                self.executor.block_context.block_info().sequencer_address,
+            ),
             l1_gas_prices: KatanaGasPrices {
                 eth: eth_l1_gas_price.into(),
                 strk: strk_l1_gas_price.into(),
@@ -273,10 +315,12 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
     }
 
     fn call(&self, call: EntryPointCall) -> Result<Vec<FieldElement>, ExecutionError> {
-        let block_context = &self.block_context;
-        let mut state = self.state.0.lock();
-        let state = MutRefState::new(&mut state.inner);
-        let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
-        Ok(retdata)
+        // let block_context = &self.block_context;
+        // let mut state = self.state.0.lock();
+        // let state = MutRefState::new(&mut state.inner);
+        // let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
+        // Ok(retdata)
+
+        todo!()
     }
 }
