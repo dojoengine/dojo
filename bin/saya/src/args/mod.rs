@@ -7,6 +7,7 @@ use clap::Parser;
 use saya_core::data_availability::celestia::CelestiaConfig;
 use saya_core::data_availability::DataAvailabilityConfig;
 use saya_core::{ProverAccessKey, SayaConfig, StarknetAccountData};
+use shard::ShardOptions;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_account::StarknetAccountOptions;
 use tracing::Subscriber;
@@ -18,6 +19,7 @@ use crate::args::proof::ProofOptions;
 
 mod data_availability;
 mod proof;
+mod shard;
 mod starknet_account;
 
 #[derive(Parser, Debug)]
@@ -59,6 +61,10 @@ pub struct SayaArgs {
     #[arg(help = "The number of blocks to be merged into a single proof.")]
     #[arg(conflicts_with = "end_block")]
     pub batch_size: usize,
+
+    #[command(flatten)]
+    #[command(next_help_heading = "Choose the saya execution mode")]
+    pub shard: ShardOptions,
 
     #[command(flatten)]
     #[command(next_help_heading = "Data availability options")]
@@ -152,6 +158,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 store_proofs: args.store_proofs,
                 block_range: (args.start_block, args.end_block),
                 batch_size: args.batch_size,
+                mode: args.shard.saya_mode.0,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
@@ -164,7 +171,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
 
 #[cfg(test)]
 mod tests {
-    use katana_primitives::felt::FieldElement;
+    use saya_core::SayaMode;
 
     use super::*;
     use crate::args::data_availability::CelestiaOptions;
@@ -185,6 +192,7 @@ mod tests {
             start_block: 0,
             end_block: None,
             batch_size: 4,
+            shard: ShardOptions { saya_mode: shard::SayaModeArg(SayaMode::Persistent) },
             data_availability: DataAvailabilityOptions {
                 da_chain: None,
                 celestia: CelestiaOptions {
@@ -213,14 +221,15 @@ mod tests {
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");
         assert_eq!(config.prover_url.as_str(), "http://localhost:1234/");
         assert_eq!(config.batch_size, 4);
+        assert_eq!(config.block_range, (0, Some(100)));
         assert_eq!(
             config.prover_key.signing_key_as_hex_string(),
             "0xd0fa91f4949e9a777ebec071ca3ca6acc1f5cd6c6827f123b798f94e73425027"
         );
         assert!(!config.store_proofs);
         assert!(config.skip_publishing_proof);
-        assert_eq!(config.block_range.0, 0);
-        assert_eq!(config.block_range.1, None);
+        assert_eq!(config.mode, SayaMode::Persistent);
+
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");
             assert_eq!(celestia_config.node_auth_token, Some("your_auth_token".to_string()));

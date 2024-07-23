@@ -83,7 +83,7 @@ impl Scheduler {
         inputs: Vec<ProgramInput>,
         world: FieldElement,
         prover: ProverIdentifier,
-    ) -> anyhow::Result<(Proof, Vec<FieldElement>)> {
+    ) -> anyhow::Result<(Proof, ProgramInput)> {
         let mut scheduler = Scheduler::new(inputs.len(), world, prover);
         let number_of_inputs = inputs.len();
         trace!(target: LOG_TARGET, number_of_inputs, "Pushing inputs to scheduler");
@@ -91,7 +91,8 @@ impl Scheduler {
             scheduler.push_diff(input)?;
         }
         info!(target: LOG_TARGET, number_of_inputs, "inputs pushed to scheduler");
-        let (merged_proof, merged_input, _) = scheduler.proved().await?;
+        let (merged_proof, merged_input) = scheduler.root_task.await?;
+
         Ok((merged_proof, merged_input))
     }
 

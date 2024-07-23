@@ -8,6 +8,8 @@
   "fact_registry_address": "0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb",
   "start_block": 0,
   "skip_publishing_proof": true,
+  "mode": "Persistent",
+  "block_range": [0, 100],
   "data_availability": {
     "Celestia": {
       "node_url": "http://localhost:26657",
