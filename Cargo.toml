@@ -84,7 +84,7 @@ katana-executor = { path = "crates/katana/executor", default-features = false }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }
-katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
+katana-rpc-api = { path = "crates/katana/rpc/rpc-api", default-features = false }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
@@ -231,9 +231,7 @@ slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
 alloy-contract = { version = "0.2", default-features = false }
 alloy-json-rpc = { version = "0.2", default-features = false }
 alloy-network = { version = "0.2", default-features = false }
-alloy-provider = { version = "0.2", default-features = false, features = [
-    "reqwest",
-] }
+alloy-provider = { version = "0.2", default-features = false, features = [ "reqwest" ] }
 alloy-rpc-types-eth = { version = "0.2", default-features = false }
 alloy-signer = { version = "0.2", default-features = false }
 alloy-transport = { version = "0.2", default-features = false }
