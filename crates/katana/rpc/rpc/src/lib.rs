@@ -46,6 +46,7 @@ pub async fn spawn<EF: ExecutorFactory>(
     for api in &config.apis {
         match api {
             ApiKind::Starknet => {
+                // TODO: merge these into a single logic.
                 let server = StarknetApi::new(sequencer.clone());
                 methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
