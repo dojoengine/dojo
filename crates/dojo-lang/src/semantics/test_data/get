@@ -231,7 +231,7 @@ Block(
 )
 
 //! > semantic_diagnostics
-error: Trait has no implementation in context: dojo::model::Model::<test::Health>.
+error: Trait has no implementation in context: dojo::model::model::Model::<test::Health>.
  --> lib.cairo:12:1
 get!(world, key, (Health))
 ^************************^

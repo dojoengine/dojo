@@ -63,7 +63,8 @@ test_semantics
 //! > setup_code
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-#[derive(Copy, Drop, Serde, Model)]
+#[derive(Copy, Drop, Serde)]
+#[dojo::model]
 struct Health {
 	#[key]
 	id: u32,
@@ -119,7 +120,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?6::set,
+                            function: test::HealthModelImpl::set,
                             args: [
                                 Value(
                                     Snapshot(
@@ -150,17 +151,7 @@ Block(
 )
 
 //! > semantic_diagnostics
-error: Plugin diagnostic: Unknown derive `Model` - a plugin might be missing.
- --> lib.cairo:3:29
-#[derive(Copy, Drop, Serde, Model)]
-                            ^***^
-
 warning[E0001]: Unused variable. Consider ignoring by prefixing with `_`.
- --> lib.cairo:9:22
+ --> lib.cairo:10:22
 fn test_func() { let key: felt252 = 0xb0b;
                      ^*^
-
-error: Trait has no implementation in context: dojo::model::Model::<test::Health>.
- --> lib.cairo:11:1
-set!(world, (Health{id: 0xb0b, health: 79}))
-^******************************************^

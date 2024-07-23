@@ -1,11 +1,11 @@
 use core::array::{ArrayTrait, SpanTrait};
-use starknet::{ClassHash, ContractAddress};
-use dojo::packing::{
-    shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const
-};
 use core::option::OptionTrait;
 use core::traits::{Into, TryInto};
-use dojo::database::introspect::Introspect;
+use starknet::{ClassHash, ContractAddress};
+
+use dojo::storage::packing::{
+    shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const
+};
 
 #[test]
 #[available_gas(9000000)]
@@ -44,7 +44,7 @@ fn test_bit_shift() {
 #[test]
 #[available_gas(9000000)]
 fn test_pack_unpack_single() {
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@18, 251, ref packing, ref offset, ref packed);
@@ -63,7 +63,7 @@ fn test_pack_unpack_single() {
 #[test]
 #[available_gas(9000000)]
 fn test_pack_unpack_felt252_u128() {
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@1337, 128, ref packing, ref offset, ref packed);
@@ -86,7 +86,7 @@ fn test_pack_unpack_felt252_u128() {
 #[test]
 #[available_gas(100000000)]
 fn test_pack_multiple() {
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
 
@@ -112,7 +112,7 @@ fn test_pack_multiple() {
 #[test]
 #[available_gas(500000000)]
 fn test_pack_unpack_multiple() {
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
 
@@ -155,7 +155,7 @@ fn test_pack_unpack_multiple() {
 #[test]
 #[available_gas(500000000)]
 fn test_pack_unpack_types() {
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
 
@@ -241,7 +241,7 @@ fn test_pack_unpack_types() {
 #[available_gas(9000000)]
 fn test_inner_pack_unpack_u256_single() {
     let input: u256 = 2000;
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@input.low.into(), 128, ref packing, ref offset, ref packed);
@@ -276,7 +276,7 @@ fn test_pack_unpack_u256_single() {
 
     let mut unpacked_span = unpacked.span();
 
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     pack(ref packed, ref unpacked_span, 0, ref layout_span);
 
     let mut layout = ArrayTrait::new();
@@ -284,7 +284,7 @@ fn test_pack_unpack_u256_single() {
     layout.append(128);
     let mut layout_span = layout.span();
 
-    let mut unpacked = core::array::ArrayTrait::new();
+    let mut unpacked = ArrayTrait::new();
     let mut packed_span = packed.span();
     unpack(ref unpacked, ref packed_span, ref layout_span);
     let mut unpacked_span = unpacked.span();
@@ -296,7 +296,7 @@ fn test_pack_unpack_u256_single() {
 #[available_gas(9000000)]
 fn test_pack_unpack_max_felt252() {
     let MAX: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@MAX, 251, ref packing, ref offset, ref packed);
@@ -322,14 +322,14 @@ fn test_pack_unpack_felt252_single() {
 
     let mut unpacked_span = unpacked.span();
 
-    let mut packed = core::array::ArrayTrait::new();
+    let mut packed = ArrayTrait::new();
     pack(ref packed, ref unpacked_span, 0, ref layout_span);
 
     let mut layout = ArrayTrait::new();
     layout.append(251);
     let mut layout_span = layout.span();
 
-    let mut unpacked = core::array::ArrayTrait::new();
+    let mut unpacked = ArrayTrait::new();
     let mut packed_span = packed.span();
     unpack(ref unpacked, ref packed_span, ref layout_span);
     let mut unpacked_span = unpacked.span();

@@ -13,7 +13,7 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 
-use super::abi::world::Layout;
+use super::abi::world::{Layout, ModelIndex};
 use super::naming;
 use crate::contracts::WorldContractReader;
 
@@ -24,9 +24,6 @@ mod model_test;
 pub mod abigen {
     pub mod model {
         pub use crate::contracts::abi::model::*;
-    }
-    pub mod world {
-        pub use crate::contracts::abi::world::*;
     }
 }
 
@@ -121,7 +118,7 @@ where
     }
 
     pub async fn entity_storage(&self, keys: &[Felt]) -> Result<Vec<Felt>, ModelError> {
-        // As the dojo::database::introspect::Layout type has been pasted
+        // As the dojo::model::Layout type has been pasted
         // in both `model` and `world` ABI by abigen, the compiler sees both types
         // as different even if they are strictly identical.
         // Here is a trick reading the model layout as raw FieldElement
@@ -131,7 +128,7 @@ where
 
         Ok(self
             .world_reader
-            .entity(&self.selector(), &abigen::world::ModelIndex::Keys(keys.to_vec()), &layout)
+            .entity(&self.selector(), &ModelIndex::Keys(keys.to_vec()), &layout)
             .call()
             .await?)
     }

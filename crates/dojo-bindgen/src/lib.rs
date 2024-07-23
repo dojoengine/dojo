@@ -141,7 +141,7 @@ fn gather_dojo_data(
         // interfaces.
         let mut systems = vec![];
         let interface_blacklist =
-            ["dojo::world::IWorldProvider", "dojo::components::upgradeable::IUpgradeable"];
+            ["dojo::world::IWorldProvider", "dojo::contract::upgradeable::IUpgradeable"];
 
         for (interface, funcs) in &tokens.interfaces {
             if !interface_blacklist.contains(&interface.as_str()) {
@@ -183,7 +183,7 @@ fn filter_model_tokens(tokens: &TokenizedAbi) -> TokenizedAbi {
     // All types from introspect module can also be removed as the clients does not rely on them.
     // Events are also always empty at model contract level.
     fn skip_token(token: &Token) -> bool {
-        if token.type_path().starts_with("dojo::database::introspect") {
+        if token.type_path().starts_with("dojo::model::introspect") {
             return true;
         }
 
