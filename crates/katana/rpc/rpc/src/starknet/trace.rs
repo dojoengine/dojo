@@ -1,4 +1,6 @@
 use jsonrpsee::core::{async_trait, Error, RpcResult};
+use jsonrpsee::types::error::{CallError, METHOD_NOT_FOUND_CODE};
+use jsonrpsee::types::ErrorObject;
 use katana_executor::{ExecutionResult, ExecutorFactory, ResultAndStates};
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::receipt::Receipt;
@@ -20,7 +22,11 @@ use super::StarknetApi;
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetTraceApiServer for StarknetApi<EF> {
     async fn trace(&self, _: TxHash) -> RpcResult<TransactionTrace> {
-        Err(Error::MethodNotFound("traceTransaction".to_string()))
+        Err(Error::Call(CallError::Custom(ErrorObject::owned(
+            METHOD_NOT_FOUND_CODE,
+            "Unsupported method - starknet_traceTransaction".to_string(),
+            None::<()>,
+        ))))
     }
 
     async fn simulate(
@@ -206,6 +212,10 @@ impl<EF: ExecutorFactory> StarknetTraceApiServer for StarknetApi<EF> {
     }
 
     async fn trace_block(&self, _: BlockIdOrTag) -> RpcResult<Vec<TransactionTraceWithHash>> {
-        Err(Error::MethodNotFound("traceBlockTransactions".to_string()))
+        Err(Error::Call(CallError::Custom(ErrorObject::owned(
+            METHOD_NOT_FOUND_CODE,
+            "Unsupported method - starknet_traceBlockTransactions".to_string(),
+            None::<()>,
+        ))))
     }
 }
