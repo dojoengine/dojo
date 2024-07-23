@@ -33,7 +33,7 @@ use super::StarknetApi;
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn chain_id(&self) -> RpcResult<FeltAsHex> {
-        Ok(FieldElement::from(self.inner.sequencer.chain_id()).into())
+        Ok(self.backend.chain_id.id().into())
     }
 
     async fn get_nonce(
@@ -42,12 +42,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         contract_address: FieldElement,
     ) -> RpcResult<FeltAsHex> {
         self.on_io_blocking_task(move |this| {
-            let nonce = this
-                .inner
-                .sequencer
-                .nonce_at(block_id, contract_address.into())
-                .map_err(StarknetApiError::from)?
-                .ok_or(StarknetApiError::ContractNotFound)?;
+            let nonce = this.nonce_at(block_id, contract_address.into())?;
             Ok(nonce.into())
         })
         .await
@@ -55,31 +50,20 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
     async fn block_number(&self) -> RpcResult<u64> {
         self.on_io_blocking_task(move |this| {
-            let block_number =
-                this.inner.sequencer.block_number().map_err(StarknetApiError::from)?;
+            let provider = self.backend.blockchain.provider();
+            let block_number = provider.latest_number()?;
             Ok(block_number)
         })
         .await
     }
 
     async fn get_transaction_by_hash(&self, transaction_hash: FieldElement) -> RpcResult<Tx> {
-        self.on_io_blocking_task(move |this| {
-            let tx = this
-                .inner
-                .sequencer
-                .transaction(&transaction_hash)
-                .map_err(StarknetApiError::from)?
-                .ok_or(StarknetApiError::TxnHashNotFound)?;
-            Ok(tx.into())
-        })
-        .await
+        self.on_io_blocking_task(move |this| Ok(this.transaction(&transaction_hash)?.into())).await
     }
 
     async fn get_block_transaction_count(&self, block_id: BlockIdOrTag) -> RpcResult<u64> {
         self.on_io_blocking_task(move |this| {
             let count = this
-                .inner
-                .sequencer
                 .block_tx_count(block_id)
                 .map_err(StarknetApiError::from)?
                 .ok_or(StarknetApiError::BlockNotFound)?;
@@ -93,24 +77,20 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
         contract_address: FieldElement,
     ) -> RpcResult<ContractClass> {
-        let class_hash = self
-            .on_io_blocking_task(move |this| {
-                this.inner
-                    .sequencer
-                    .class_hash_at(block_id, contract_address.into())
-                    .map_err(StarknetApiError::from)?
-                    .ok_or(StarknetApiError::ContractNotFound)
-            })
-            .await?;
-        self.get_class(block_id, class_hash).await
+        self.on_io_blocking_task(move |this| {
+            let hash = this.class_hash_at(block_id, contract_address.into())?;
+            let class = self.class(block_id, hash)?;
+            Ok(class)
+        })
+        .await?;
     }
 
     async fn block_hash_and_number(&self) -> RpcResult<BlockHashAndNumber> {
-        let hash_and_num_pair = self
-            .on_io_blocking_task(move |this| this.inner.sequencer.block_hash_and_number())
-            .await
-            .map_err(StarknetApiError::from)?;
-        Ok(hash_and_num_pair.into())
+        self.on_io_blocking_task(move |this| {
+            let res = this.block_hash_and_number()?;
+            Ok(res.into())
+        })
+        .await
     }
 
     async fn get_block_with_tx_hashes(
