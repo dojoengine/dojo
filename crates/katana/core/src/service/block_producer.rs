@@ -8,7 +8,7 @@ use std::time::Duration;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
-use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFactory};
+use katana_executor::{ExecutionResult, ExecutionStats, Executor, ExecutorFactory};
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
@@ -158,10 +158,10 @@ pub enum BlockProducerMode<EF: ExecutorFactory> {
 }
 
 #[derive(Debug, Clone, derive_more::Deref)]
-pub struct PendingExecutor(#[deref] Arc<RwLock<Box<dyn BlockExecutor<'static>>>>);
+pub struct PendingExecutor(#[deref] Arc<RwLock<Box<dyn Executor<'static>>>>);
 
 impl PendingExecutor {
-    fn new(executor: Box<dyn BlockExecutor<'static>>) -> Self {
+    fn new(executor: Box<dyn Executor<'static>>) -> Self {
         Self(Arc::new(RwLock::new(executor)))
     }
 }

@@ -23,9 +23,8 @@ use utils::to_executor_tx;
 use self::state::CachedState;
 use crate::utils::build_receipt;
 use crate::{
-    BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
-    ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
-    StateProviderDb,
+    EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult, ExecutionStats, Executor,
+    ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag, StateProviderDb,
 };
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
@@ -44,7 +43,7 @@ impl BlockifierFactory {
 }
 
 impl ExecutorFactory for BlockifierFactory {
-    fn with_state<'a, P>(&self, state: P) -> Box<dyn BlockExecutor<'a> + 'a>
+    fn with_state<'a, P>(&self, state: P) -> Box<dyn Executor<'a> + 'a>
     where
         P: StateProvider + 'a,
     {
@@ -55,7 +54,7 @@ impl ExecutorFactory for BlockifierFactory {
         &self,
         state: P,
         block_env: BlockEnv,
-    ) -> Box<dyn BlockExecutor<'a> + 'a>
+    ) -> Box<dyn Executor<'a> + 'a>
     where
         P: StateProvider + 'a,
     {
@@ -165,7 +164,7 @@ impl<'a> StarknetVMProcessor<'a> {
     }
 }
 
-impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
+impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
     fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()> {
         self.fill_block_env_from_header(&block.header);
         self.execute_transactions(block.body)?;

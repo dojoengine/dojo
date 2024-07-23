@@ -13,7 +13,7 @@ use crate::{
 /// A type that can create [BlockExecutor] instance.
 pub trait ExecutorFactory: Send + Sync + 'static + core::fmt::Debug {
     /// Construct a new [BlockExecutor] with the given state.
-    fn with_state<'a, P>(&self, state: P) -> Box<dyn BlockExecutor<'a> + 'a>
+    fn with_state<'a, P>(&self, state: P) -> Box<dyn Executor<'a> + 'a>
     where
         P: StateProvider + 'a;
 
@@ -22,7 +22,7 @@ pub trait ExecutorFactory: Send + Sync + 'static + core::fmt::Debug {
         &self,
         state: P,
         block_env: BlockEnv,
-    ) -> Box<dyn BlockExecutor<'a> + 'a>
+    ) -> Box<dyn Executor<'a> + 'a>
     where
         P: StateProvider + 'a;
 
@@ -31,7 +31,7 @@ pub trait ExecutorFactory: Send + Sync + 'static + core::fmt::Debug {
 }
 
 /// An executor that can execute a block of transactions.
-pub trait BlockExecutor<'a>: ExecutorExt + Send + Sync {
+pub trait Executor<'a>: ExecutorExt + Send + Sync {
     /// Executes the given block.
     fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()>;
 
