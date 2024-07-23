@@ -273,8 +273,9 @@ async fn test_combine_proofs() {
     assert_eq!(scheduler.query(103).await.unwrap(), ProvingState::Proving);
 
     let (_, output, block_range) = scheduler.proved().await.unwrap();
-    let expected: ProgramInput = serde_json::from_str(expected).unwrap();
-    assert_eq!(output, expected);
+    let mut expected: ProgramInput = serde_json::from_str(expected).unwrap();
+    expected.fill_da(world);
+    assert_eq!(output, expected.world_da.unwrap());
     assert_eq!(block_range, (102, 103));
 }
 

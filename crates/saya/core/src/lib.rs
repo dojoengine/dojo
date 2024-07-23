@@ -113,6 +113,13 @@ struct FetchedBlockInfo {
     exec_infos: Vec<TxExecutionInfo>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SayaMode {
+    Ephemeral,
+    Persistent,
+    PersistentMerging,
+}
+
 impl Saya {
     /// Initializes a new [`Saya`] instance from the given [`SayaConfig`].
     ///
@@ -133,8 +140,8 @@ impl Saya {
         let blockchain = Blockchain::new();
 
         let prover_identifier = ProverIdentifier::Http(Arc::new(HttpProverParams {
-            prover_url: config.url.clone(),
-            prover_key: config.private_key.clone(),
+            prover_url: config.prover_url.clone(),
+            prover_key: config.prover_key.clone(),
         }));
 
         Ok(Self { config, da_client, provider, blockchain, prover_identifier })
@@ -245,6 +252,7 @@ impl Saya {
         let (transaction_hash, ..) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
+            self.config.starknet_account,
             FieldElement::from(1u64),
         )
         .await?;
@@ -434,6 +442,7 @@ impl Saya {
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
             self.config.starknet_account.clone(),
+            FieldElement::from(1u64),
         )
         .await?;
         info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
