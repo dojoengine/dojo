@@ -26,15 +26,15 @@ cargo run --bin saya -- --rpc-url http://localhost:5050 --da-chain celestia --ce
 
 1. Prepare fact registry contract
 
-   Declare or use already declared `class-hash`: `0x7f6076572e04d7182a1c5c9f1f4c15aafcb069b1bfdb3de4d7c9e47c99deeb4`.
+   Declare or use already declared `class-hash`: `0x06e1138519d7cd3d24dfe4d8eeef02520d96be7f3a3b21cbd28fb3fe1abf20ac`.
 
-   Deploy or use already deployed `contract`: `0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb`.
+   Deploy or use already deployed `contract`: `0x6785fb582092f7a1775447cc6de519b13ac6a6eac396f16591c5e71904d303a`.
 
    In the repository https://github.com/HerodotusDev/integrity run
 
 ```bash
     fact_registry/1-declare.sh # extract `class-hash`
-    fact_registry/1-deploy.sh <CLASS_HASH> # use at <FACT_REGISTRY>
+    fact_registry/2-deploy.sh <CLASS_HASH> # use at <FACT_REGISTRY>
 ```
 
 2. Spawn world

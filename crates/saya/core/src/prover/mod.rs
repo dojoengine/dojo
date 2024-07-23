@@ -42,7 +42,8 @@ pub enum ProveDiffProgram {
 
 pub enum ProveProgram {
     DiffProgram(ProveDiffProgram),
-    Checker,
+    Checker, // Contract specific checker program.
+    Batcher, // Simulating snos, contract from dojo-os repository.
 }
 
 impl ProverIdentifier {
@@ -81,7 +82,7 @@ impl ProverIdentifier {
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove(params.clone(), dbg!(input), ProveProgram::Checker, true).await
+                http_prove(params.clone(), input, ProveProgram::Checker, true).await
             }
             ProverIdentifier::Stone => todo!(),
             ProverIdentifier::Sharp => todo!(),
