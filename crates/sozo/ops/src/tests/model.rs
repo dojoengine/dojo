@@ -37,7 +37,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x413aab3045f0a59103449d05974e30aaf91985113b0ae5d97a43b1141c3e1cb")
+        Felt::from_hex("0x6dd9f573496d64b1c026c68cbfe31a7724c7bcd4a142099666e8e22b82e0688")
             .unwrap()
     );
 
