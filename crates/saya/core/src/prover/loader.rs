@@ -18,6 +18,7 @@ pub async fn load_program(prove_program: ProveProgram) -> anyhow::Result<Value> 
             manifest_dir.join("programs/cairo0merger.json")
         }
         ProveProgram::Checker => manifest_dir.join("programs/cairo1checker.json"),
+        ProveProgram::Batcher => manifest_dir.join("programs/cairo1batcher.json"),
     };
     let mut program_file = File::open(program_file).await?;
 

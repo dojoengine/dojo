@@ -8,8 +8,9 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
-use cairo_proof_parser::parse;
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
+use cairo_proof_parser::{parse, to_felts};
+use dojo_os::STARKNET_ACCOUNT;
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
@@ -21,7 +22,7 @@ pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use starknet::accounts::Call;
+use starknet::accounts::{Call, ConnectedAccount};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::poseidon_hash_many;
 use starknet_types_core::felt::Felt;
@@ -29,12 +30,12 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
 use url::Url;
+use verifier::VerifierIdentifier;
 
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
 use crate::prover::{extract_messages, ProgramInput, Scheduler};
-use crate::verifier::VerifierIdentifier;
 
 pub mod blockchain;
 pub mod data_availability;
@@ -237,12 +238,22 @@ impl Saya {
             file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
         }
 
-        let ExtractOutputResult { program_output: mut diff, .. } = extract_output(&proof)?;
-        // diff.remove(0); // Remove length.
-        // debug_assert!(diff.len() % 2 == 0);
+        let parsed_proof = parse(&proof)?;
+        let serialized_proof = to_felts(&parsed_proof).context("Failed to serialize proof.")?;
+
+        trace!(target: LOG_TARGET, "Verifying checker.");
+        let (transaction_hash, ..) = verifier::verify(
+            VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
+            serialized_proof,
+            FieldElement::from(1u64),
+        )
+        .await?;
+        info!(target: LOG_TARGET, transaction_hash, "Checker verified.");
+
+        let ExtractOutputResult { program_output: diff, .. } = extract_output(&proof)?;
         self.process_proven((proof, dbg!(diff), block_range)).await?;
 
-        println!("Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
+        info!(target: LOG_TARGET, "Successfully processed {} blocks.", block_range.1 - block_range.0 + 1);
 
         Ok(())
     }
@@ -342,8 +353,6 @@ impl Saya {
         let state_updates_to_prove = state_updates.state_updates.clone();
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
-        let calls = extract_execute_calls(&exec_infos);
-
         if block_number == 0 {
             return Ok(None);
         }
@@ -405,7 +414,8 @@ impl Saya {
             file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
         }
 
-        let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
+        let parsed_proof = parse(&proof)?;
+        let serialized_proof = to_felts(&parsed_proof).context("Failed to serialize proof.")?;
         let world_da = state_diff;
 
         // Publish state difference if DA client is available
@@ -430,7 +440,8 @@ impl Saya {
 
         let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
         let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
-        let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
+        let expected_fact =
+            poseidon_hash_many(&[dbg!(program_hash), program_output_hash]).to_string();
         info!(target: LOG_TARGET, expected_fact, "Expected fact.");
 
         // When not waiting for couple of second `apply_diffs` will sometimes fail due to reliance

@@ -7,6 +7,7 @@ use starknet::core::types::{Felt, TransactionExecutionStatus, TransactionStatus}
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
+use tracing::warn;
 
 use crate::dojo_os::get_starknet_account;
 use crate::StarknetAccountData;
@@ -14,8 +15,15 @@ use crate::StarknetAccountData;
 pub async fn starknet_verify(
     fact_registry_address: Felt,
     serialized_proof: Vec<Felt>,
+    cairo_version: Felt,
     starknet_config: StarknetAccountData,
 ) -> anyhow::Result<(String, Felt)> {
+    let calldata = serialized_proof.into_iter().chain(vec![cairo_version]).collect::<Vec<_>>();
+
+    if calldata.len() > 3000 {
+        warn!("Calldata too long at: {} felts, transaction might fail.", calldata.len());
+    }
+
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let account = get_starknet_account(starknet_config)?;
     let account = account.lock().await;
@@ -25,7 +33,7 @@ pub async fn starknet_verify(
         .execute_v1(vec![Call {
             to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
-            calldata: serialized_proof,
+            calldata,
         }])
         .nonce(nonce)
         .send_with_cfg(&txn_config)

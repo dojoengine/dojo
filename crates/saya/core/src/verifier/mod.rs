@@ -26,10 +26,17 @@ pub async fn verify(
     verifier: VerifierIdentifier,
     serialized_proof: Vec<Felt>,
     account: StarknetAccountData,
+    cairo_version: FieldElement,
 ) -> anyhow::Result<(String, Felt)> {
     match verifier {
         VerifierIdentifier::HerodotusStarknetSepolia(fact_registry_address) => {
-            starknet::starknet_verify(fact_registry_address, serialized_proof, account).await
+            starknet::starknet_verify(
+                fact_registry_address,
+                serialized_proof,
+                account,
+                cairo_version,
+            )
+            .await
         }
         VerifierIdentifier::StoneLocal => unimplemented!("Stone Verifier not yet supported"),
         VerifierIdentifier::StarkwareEthereum => {
