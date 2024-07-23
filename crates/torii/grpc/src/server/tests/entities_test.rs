@@ -49,20 +49,19 @@ async fn test_entities_queries() {
 
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
-    let mut migration = prepare_migration(
+    let migration = prepare_migration(
         config.manifest_path().parent().unwrap().into(),
         target_path,
         dojo_metadata.skip_migration,
         &default_namespace,
     )
     .unwrap();
-    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-    let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
+    let world = WorldContractReader::new(migration.world_address, &provider);
 
     let account = sequencer.account(0);
 

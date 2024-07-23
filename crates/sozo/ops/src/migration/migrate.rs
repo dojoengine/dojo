@@ -71,7 +71,7 @@ pub async fn apply_diff<A>(
     ws: &Workspace<'_>,
     account: A,
     txn_config: TxnConfig,
-    strategy: &mut MigrationStrategy,
+    strategy: &MigrationStrategy,
 ) -> Result<MigrationOutput>
 where
     A: ConnectedAccount + Sync + Send,
@@ -93,27 +93,18 @@ where
             ui.print(format!(
                 "\n🎉 Successfully migrated World on block #{} at address {}\n",
                 block_number,
-                bold_message(format!(
-                    "{:#x}",
-                    strategy.world_address().expect("world address must exist")
-                ))
+                bold_message(format!("{:#x}", strategy.world_address))
             ));
         } else {
             ui.print(format!(
                 "\n🎉 Successfully migrated World at address {}\n",
-                bold_message(format!(
-                    "{:#x}",
-                    strategy.world_address().expect("world address must exist")
-                ))
+                bold_message(format!("{:#x}", strategy.world_address))
             ));
         }
     } else {
         ui.print(format!(
             "\n🚨 Partially migrated World at address {}",
-            bold_message(format!(
-                "{:#x}",
-                strategy.world_address().expect("world address must exist")
-            ))
+            bold_message(format!("{:#x}", strategy.world_address))
         ));
     }
 
@@ -207,16 +198,15 @@ where
         None => {}
     };
 
+    let world_address = strategy.world_address;
     let mut migration_output = MigrationOutput {
-        world_address: strategy.world_address()?,
+        world_address,
         world_tx_hash,
         world_block_number,
         full: false,
         models: vec![],
         contracts: vec![],
     };
-
-    let world_address = strategy.world_address()?;
 
     // register namespaces
     let mut namespaces =
@@ -700,42 +690,38 @@ pub fn handle_artifact_error(ui: &Ui, artifact_path: &Path, error: anyhow::Error
 pub async fn get_contract_operation_name<P>(
     provider: P,
     contract: &ContractMigration,
-    world_address: Option<Felt>,
+    world_address: Felt,
 ) -> String
 where
     P: Provider + Sync + Send,
 {
-    if let Some(world_address) = world_address {
-        if let Ok(base_class_hash) = provider
-            .call(
-                FunctionCall {
-                    contract_address: world_address,
-                    calldata: vec![],
-                    entry_point_selector: get_selector_from_name("base").unwrap(),
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await
-        {
-            let contract_address =
-                get_contract_address(contract.salt, base_class_hash[0], &[], world_address);
+    if let Ok(base_class_hash) = provider
+        .call(
+            FunctionCall {
+                contract_address: world_address,
+                calldata: vec![],
+                entry_point_selector: get_selector_from_name("base").unwrap(),
+            },
+            BlockId::Tag(BlockTag::Pending),
+        )
+        .await
+    {
+        let contract_address =
+            get_contract_address(contract.salt, base_class_hash[0], &[], world_address);
 
-            match provider
-                .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
-                .await
-            {
-                Ok(current_class_hash) if current_class_hash != contract.diff.local_class_hash => {
-                    return format!("{}: Upgrade", contract.diff.tag);
-                }
-                Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                    return format!("{}: Deploy", contract.diff.tag);
-                }
-                Ok(_) => return "Already Deployed".to_string(),
-                Err(_) => return format!("{}: Deploy", contract.diff.tag),
+        match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address).await {
+            Ok(current_class_hash) if current_class_hash != contract.diff.local_class_hash => {
+                return format!("{}: Upgrade", contract.diff.tag);
             }
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                return format!("{}: Deploy", contract.diff.tag);
+            }
+            Ok(_) => return "Already Deployed".to_string(),
+            Err(_) => return format!("{}: Deploy", contract.diff.tag),
         }
+    } else {
+        format!("{}: Deploy", contract.diff.tag)
     }
-    format!("deploy {}", contract.diff.tag)
 }
 
 pub async fn print_strategy<P>(

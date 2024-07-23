@@ -210,14 +210,13 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     let world = WorldDiff::compute(manifest, Some(remote_manifest), &default_namespace)
         .expect("failed to update order");
 
-    let mut migration = prepare_for_migration(
+    let migration = prepare_for_migration(
         Some(world_address),
         felt!("0x12345"),
         &Utf8Path::new(&target_dir).to_path_buf(),
         world,
     )
     .unwrap();
-    migration.resolve_variable(migration.world_address().unwrap()).expect("Failed to resolve");
 
     let migration_output =
         execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
@@ -262,7 +261,7 @@ async fn migration_from_remote() {
 
     let remote_manifest = DeploymentManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
-        migration.world_address().unwrap(),
+        migration.world_address,
     )
     .await
     .unwrap();
@@ -349,8 +348,7 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let mut migration = setup::setup_migration(&config).unwrap();
-    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
+    let migration = setup::setup_migration(&config).unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =
@@ -372,7 +370,7 @@ async fn migrate_with_auto_authorize() {
 
     let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
 
-    let world_address = migration.world_address().expect("must be present");
+    let world_address = migration.world_address;
     let world = WorldContract::new(world_address, account);
 
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();

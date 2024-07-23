@@ -79,9 +79,8 @@ pub async fn deploy_world(
 
     let account = sequencer.account(0);
 
-    let mut strategy =
+    let strategy =
         prepare_for_migration(None, Felt::from_hex("0x12345").unwrap(), target_dir, world).unwrap();
-    strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
 
     let base_class_hash =
         strategy.base.unwrap().declare(&account, &TxnConfig::init_wait()).await.unwrap().class_hash;

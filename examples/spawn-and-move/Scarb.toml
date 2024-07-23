@@ -10,19 +10,16 @@ edition = "2023_11"
 sierra-replace-ids = true
 
 [dependencies]
-dojo = { path = "../../crates/dojo-core" }
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
+dojo = { path = "../../crates/dojo-core" }
 
 [[target.dojo]]
-build-external-contracts = [
-    "armory::Flatbow",
-    "bestiary::RiverSkale",
-]
+build-external-contracts = [ "armory::Flatbow", "bestiary::RiverSkale" ]
 
 [features]
-default = ["dungeon"]
-dungeon = []
+default = [ "dungeon" ]
+dungeon = [  ]
 
 # `dev` profile
 
@@ -43,7 +40,7 @@ rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-world_address = "0x5ffa124a5076e590a23e9d393ebe4fc7c66989c2cd228a46f38a9e2d48305a7"
+# world_address = "0x5ffa124a5076e590a23e9d393ebe4fc7c66989c2cd228a46f38a9e2d48305a7"
 
 [profile.release.tool.dojo]
 # for more info on how `merge-strategy` works see:

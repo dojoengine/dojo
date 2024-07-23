@@ -41,7 +41,7 @@ async fn reregister_models() {
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
-    let world_address = &format!("0x{:x}", &migration.world_address().unwrap());
+    let world_address = &format!("0x{:x}", &migration.world_address);
     let account_address = &format!("0x{:x}", account.address());
     let private_key =
         &format!("0x{:x}", sequencer.account_data(0).private_key.as_ref().unwrap().secret_scalar());

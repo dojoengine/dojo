@@ -34,8 +34,7 @@ pub fn prepare_migration(
 
     let world = WorldDiff::compute(manifest, None, default_namespace)?;
 
-    let mut strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world).unwrap();
-    strat.resolve_variable(strat.world_address().unwrap()).unwrap();
+    let strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world).unwrap();
 
     Ok(strat)
 }

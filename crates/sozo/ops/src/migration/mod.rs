@@ -125,12 +125,10 @@ where
         ui.print("\n✨ No diffs found. Remote World is already up to date!");
     }
 
-    let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
-    let world_address = strategy.world_address().expect("world address must exist");
-    strategy.resolve_variable(world_address)?;
+    let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
 
     if dry_run {
-        print_strategy(&ui, account.provider(), &strategy, world_address).await;
+        print_strategy(&ui, account.provider(), &strategy, strategy.world_address).await;
 
         let work = update_manifests_and_abis(
             ws,
@@ -138,7 +136,7 @@ where
             &manifest_dir,
             &profile_name,
             &rpc_url,
-            world_address,
+            strategy.world_address,
             None,
             name,
         )
@@ -147,7 +145,7 @@ where
         Ok(None)
     } else {
         // Migrate according to the diff.
-        let migration_output = match apply_diff(ws, &account, txn_config, &mut strategy).await {
+        let migration_output = match apply_diff(ws, &account, txn_config, &strategy).await {
             Ok(migration_output) => Some(migration_output),
             Err(e) => {
                 let _ = update_manifests_and_abis(
@@ -156,7 +154,7 @@ where
                     &manifest_dir,
                     &profile_name,
                     &rpc_url,
-                    world_address,
+                    strategy.world_address,
                     None,
                     name,
                 )
@@ -171,14 +169,14 @@ where
             &manifest_dir,
             &profile_name,
             &rpc_url,
-            world_address,
+            strategy.world_address,
             migration_output.clone(),
             name,
         )
         .await?;
 
         let account = Arc::new(account);
-        let world = WorldContract::new(world_address, account.clone());
+        let world = WorldContract::new(strategy.world_address, account.clone());
 
         match auto_authorize(ws, &world, &txn_config, &local_manifest, &default_namespace, &work)
             .await
