@@ -33,15 +33,6 @@ impl From<ProviderError> for SayaApiError {
     }
 }
 
-// impl From<SequencerError> for SayaApiError {
-//     fn from(value: SequencerError) -> Self {
-//         match value {
-//             SequencerError::BlockNotFound(_) => SayaApiError::BlockNotFound,
-//             err => SayaApiError::UnexpectedError { reason: err.to_string() },
-//         }
-//     }
-// }
-
 impl From<SayaApiError> for Error {
     fn from(err: SayaApiError) -> Self {
         let code = err.code();
