@@ -364,7 +364,7 @@ export function defineContractComponents(world: World) {
                 // types should be lowercased
                 .to_lowercase(),
                 Token::Composite(t) => format!("models.{}", t.type_name()),
-                Token::Array(t) => TypescriptPlugin::map_type(token),
+                Token::Array(_) => TypescriptPlugin::map_type(token),
                 _ => panic!("Unsupported token type: {:?}", token),
             }
         }
