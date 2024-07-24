@@ -70,11 +70,11 @@ impl ExecutorFactory for BlockifierFactory {
 
 pub struct StarknetVMProcessor<'a> {
     // block_context: BlockContext,
-    // state: CachedState<StateProviderDb<'a>>,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
     simulation_flags: SimulationFlag,
     stats: ExecutionStats,
 
+    state: CachedState<StateProviderDb<'a>>,
     executor: TransactionExecutor<CachedState<StateProviderDb<'a>>>,
 }
 
@@ -181,10 +181,10 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         for res in results {
             match res {
                 Ok(info) => {
-                    // get the trace and receipt from the execution info
-                    let trace = utils::to_exec_info(info);
-                    let receipt = build_receipt(tx.tx_ref(), fee, &trace);
-                    let res = ExecutionResult::new_success(receipt, trace);
+                    // // get the trace and receipt from the execution info
+                    // let trace = utils::to_exec_info(info);
+                    // let receipt = build_receipt(tx.tx_ref(), fee, &trace);
+                    // let res = ExecutionResult::new_success(receipt, trace);
 
                     todo!()
                 }
