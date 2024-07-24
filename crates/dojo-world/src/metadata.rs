@@ -3,11 +3,11 @@ use std::io::Cursor;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use cairo_lang_filesystem::cfg::CfgSet;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use regex::Regex;
 use scarb::core::{ManifestMetadata, Package, TargetKind, Workspace};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use cairo_lang_filesystem::cfg::CfgSet;
 use serde_json::json;
 use url::Url;
 

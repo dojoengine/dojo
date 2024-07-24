@@ -19,9 +19,12 @@ use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_world::metadata::{NamespaceConfig, DEFAULT_NAMESPACE_CFG_KEY, NAMESPACE_CFG_PREFIX};
 use regex::Regex;
-use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
+use scarb::compiler::{
+    CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes, CompilationUnitComponent,
+};
 use scarb::core::{Config, Package, PackageId, TargetKind};
 use scarb::ops::CompileOpts;
+use scarb_ui::Ui;
 use smol_str::SmolStr;
 use toml::Table;
 use tracing::trace;
@@ -111,68 +114,37 @@ pub fn compile_workspace(
     let mut compile_error_units = vec![];
     for unit in compilation_units {
         trace!(target: LOG_TARGET, unit_name = %unit.name(), target_kind = %unit.main_component().target_kind(), "Compiling unit.");
-        match unit {
-            CompilationUnit::Cairo(mut unit) => {
-                let unit_name = unit.name();                
-                let re = Regex::new(r"\s*\([^()]*\)$").unwrap();
-                let unit_name_no_path = re.replace(&unit_name, "");
 
-                ui.print(format!("compiling {}", unit_name_no_path));
-                ui.verbose(format!("target kind: {}", unit.main_component().target_kind()));
+        // Proc macro are not supported yet on Dojo, hence we only consider processing Cairo
+        // compilation units.
+        if let CompilationUnit::Cairo(mut unit) = unit {
+            let unit_name = unit.name();
+            let re = Regex::new(r"\s*\([^()]*\)$").unwrap();
+            let unit_name_no_path = re.replace(&unit_name, "");
 
-                let root_package_data = PackageData::from_scarb_package(&unit.components[0].package)?;
+            ui.print(format!("compiling {}", unit_name_no_path));
+            ui.verbose(format!("target kind: {}", unit.main_component().target_kind()));
 
-                if let Some(nm_config) = &root_package_data.namespace_config {
-                    ui.verbose(nm_config.display_mappings());
-                }
+            let root_package_data = PackageData::from_scarb_package(&unit.components[0].package)?;
 
-                // For each component in the compilation unit (namely, the dependencies being compiled)
-                // we inject into the `CfgSet` the component name and namespace configuration.
-                // Doing this here ensures the parsing of of the manifest is done once at compile time,
-                // and not everytime the plugin is called.
-                for c in unit.components.iter_mut() {
-                    let cname = c.cairo_package_name().clone();
-                    let package_data = PackageData::from_scarb_package(&c.package)?;
-
-                    ui.verbose(format!("component: {} ({})", cname, c.package.manifest_path()));
-
-                    tracing::debug!(target: LOG_TARGET, ?c, ?package_data);
-
-                    let component_cfg = Cfg { key: "component_name".into(), value: Some(cname.into()) };
-
-                    let cfg_set = c.cfg_set.get_or_insert_with(CfgSet::new);
-                    cfg_set.insert(component_cfg);
-
-                    if let Some(namespace_config) = package_data.namespace_config {
-                        cfg_set.insert(
-                            Cfg { key: DEFAULT_NAMESPACE_CFG_KEY.into(), value: Some(namespace_config.default.into()) }
-                        );
-
-                        // We ignore mappings for dependencies as the [[target.dojo]] package is defining
-                        // them.
-                    }
-
-                    // Inject the mapping from the root package with [[target.dojo]] to
-                    // all dependencies to ensure correct namespace mappings.
-                    if let Some(config) = &root_package_data.namespace_config {
-                        if let Some(mappings) = &config.mappings {
-                            for (k, v) in mappings.iter() {
-                                cfg_set.insert(Cfg { key: format!("{}{}", NAMESPACE_CFG_PREFIX, k).into(), value: Some(v.into()) });
-                            }
-                        }
-                    }
-
-                    c.cfg_set = Some(cfg_set.to_owned());
-                }
-
-                let mut db = build_scarb_root_database(&unit).unwrap();
-                if let Err(err) = ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
-                    ws.config().ui().anyhow(&err);
-                    compile_error_units.push(unit.name());
-                }
+            if let Some(nm_config) = &root_package_data.namespace_config {
+                ui.verbose(nm_config.display_mappings());
             }
-            // Proc macro are not supported yet on Dojo.
-            _ => {}
+
+            // For each component in the compilation unit (namely, the dependencies being
+            // compiled) we inject into the `CfgSet` the component name and
+            // namespace configuration. Doing this here ensures the parsing of
+            // of the manifest is done once at compile time, and not everytime
+            // the plugin is called.
+            for c in unit.components.iter_mut() {
+                c.cfg_set = Some(cfg_set_from_component(c, &root_package_data, &ui)?);
+            }
+
+            let mut db = build_scarb_root_database(&unit).unwrap();
+            if let Err(err) = ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
+                ws.config().ui().anyhow(&err);
+                compile_error_units.push(unit.name());
+            }
         }
     }
 
@@ -240,13 +212,16 @@ impl PackageData {
         let is_dojo_target = package.target(&TargetKind::new(SmolStr::from("dojo"))).is_some();
 
         if is_lib && is_dojo_target {
-            return Err(anyhow::anyhow!("A library package [lib] cannot have dojo target [[target.dojo]] ({}).", manifest_path));
+            return Err(anyhow::anyhow!(
+                "A library package [lib] cannot have dojo target [[target.dojo]] ({}).",
+                manifest_path
+            ));
         }
 
         let mut is_dojo_dependent = false;
 
         // Read the manifest path to inspect package dependencies.
-        let manifest_content = match fs::read_to_string(&manifest_path) {
+        let manifest_content = match fs::read_to_string(manifest_path) {
             Ok(x) => x,
             Err(e) => return Err(anyhow::anyhow!("Failed to read Scarb.toml file: {e}.")),
         };
@@ -265,25 +240,28 @@ impl PackageData {
             }
         }
 
-        let namespace_config = namespace_config_from_toml(&manifest_path, &config)?;
+        let namespace_config = namespace_config_from_toml(manifest_path, &config)?;
 
-        if is_dojo_dependent {
-            if namespace_config.is_none() {
-                return Err(anyhow::anyhow!("A package with dojo as dependency must at least define a default namespace inside [tool.dojo.world.namespace] ({}).", manifest_path));
-            }
+        if is_dojo_dependent && namespace_config.is_none() {
+            return Err(anyhow::anyhow!(
+                "A package with dojo as a dependency must at least define a default namespace \
+                 inside [tool.dojo.world.namespace] ({}).",
+                manifest_path
+            ));
         }
 
         Ok(Self { namespace_config })
     }
 }
 
-fn namespace_config_from_toml(config_path: &Utf8Path, config: &Table) -> Result<Option<NamespaceConfig>> {
+fn namespace_config_from_toml(
+    config_path: &Utf8Path,
+    config: &Table,
+) -> Result<Option<NamespaceConfig>> {
     if let Some(tool) = config.get("tool").and_then(|t| t.as_table()) {
         if let Some(dojo) = tool.get("dojo").and_then(|d| d.as_table()) {
             if let Some(world) = dojo.get("world").and_then(|w| w.as_table()) {
-                if let Some(namespace_config) =
-                    world.get("namespace").and_then(|n| n.as_table())
-                {
+                if let Some(namespace_config) = world.get("namespace").and_then(|n| n.as_table()) {
                     match toml::from_str::<NamespaceConfig>(&namespace_config.to_string()) {
                         Ok(config) => return Ok(Some(config.validate()?)),
                         Err(e) => {
@@ -300,4 +278,56 @@ fn namespace_config_from_toml(config_path: &Utf8Path, config: &Table) -> Result<
     }
 
     Ok(None)
+}
+
+fn cfg_set_from_component(
+    c: &CompilationUnitComponent,
+    root_package_data: &PackageData,
+    ui: &Ui,
+) -> Result<CfgSet> {
+    let cname = c.cairo_package_name().clone();
+    let package_data = PackageData::from_scarb_package(&c.package)?;
+
+    ui.verbose(format!("component: {} ({})", cname, c.package.manifest_path()));
+
+    tracing::debug!(target: LOG_TARGET, ?c, ?package_data);
+
+    let component_cfg = Cfg { key: "component_name".into(), value: Some(cname) };
+
+    let mut cfg_set = CfgSet::new();
+
+    // Keep orinigal cfg set of the component.
+    if let Some(component_cfg_set) = c.cfg_set.clone() {
+        for cfg in component_cfg_set.into_iter() {
+            cfg_set.insert(cfg);
+        }
+    }
+
+    // Add it's name for debugging on the plugin side.
+    cfg_set.insert(component_cfg);
+
+    if let Some(namespace_config) = package_data.namespace_config {
+        cfg_set.insert(Cfg {
+            key: DEFAULT_NAMESPACE_CFG_KEY.into(),
+            value: Some(namespace_config.default.into()),
+        });
+
+        // We ignore mappings for dependencies as the [[target.dojo]] package is
+        // defining them.
+    }
+
+    // Inject the mapping from the root package with [[target.dojo]] to
+    // all dependencies to ensure correct namespace mappings.
+    if let Some(config) = &root_package_data.namespace_config {
+        if let Some(mappings) = &config.mappings {
+            for (k, v) in mappings.iter() {
+                cfg_set.insert(Cfg {
+                    key: format!("{}{}", NAMESPACE_CFG_PREFIX, k).into(),
+                    value: Some(v.into()),
+                });
+            }
+        }
+    }
+
+    Ok(cfg_set)
 }

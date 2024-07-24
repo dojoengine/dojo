@@ -42,6 +42,7 @@ once_cell.workspace = true
 regex.workspace = true
 salsa.workspace = true
 scarb.workspace = true
+scarb-ui.workspace = true
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
