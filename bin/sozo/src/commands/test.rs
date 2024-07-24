@@ -69,8 +69,6 @@ pub struct TestArgs {
 
 impl TestArgs {
     pub fn run(self, config: &Config) -> anyhow::Result<()> {
-        println!("packages: {:?}", self.packages);
-
         let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
             eprintln!("error: {err}");
             std::process::exit(1);
