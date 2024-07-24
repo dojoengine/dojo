@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721768762092,
+  "lastUpdate": 1721779608951,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12529,6 +12529,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4786206,
             "range": "± 28987",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8ec82d416d046ed279139fa5d96525ecf1b123ef",
+          "message": "Cleaning/Refactoring of the dojo-core crate. (#2187)\n\n* chore: cleaning/refactoring dojo-core\r\n\r\n* move to edition 2024_07\r\n\r\n* fix: fix test\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-23T17:48:30-06:00",
+          "tree_id": "3b1fc40758131c207be386c71591039be41496b7",
+          "url": "https://github.com/dojoengine/dojo/commit/8ec82d416d046ed279139fa5d96525ecf1b123ef"
+        },
+        "date": 1721779608292,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17476150,
+            "range": "± 192493",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4797686,
+            "range": "± 196770",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3307052252,
+            "range": "± 602164732",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4957950,
+            "range": "± 121376",
             "unit": "ns/iter"
           }
         ]
