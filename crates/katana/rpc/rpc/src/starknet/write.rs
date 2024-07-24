@@ -20,11 +20,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 return Err(StarknetApiError::UnsupportedTransactionVersion.into());
             }
 
-            let tx = tx.into_tx_with_chain_id(this.backend.chain_id);
+            let tx = tx.into_tx_with_chain_id(this.inner.sequencer.backend.chain_id);
             let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(tx));
             let tx_hash = tx.hash;
 
-            this.pool.add_transaction(tx);
+            this.inner.sequencer.pool.add_transaction(tx);
             Ok(tx_hash.into())
         })
         .await
@@ -40,14 +40,14 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             }
 
             let tx = tx
-                .try_into_tx_with_chain_id(this.backend.chain_id)
+                .try_into_tx_with_chain_id(this.inner.sequencer.backend.chain_id)
                 .map_err(|_| StarknetApiError::InvalidContractClass)?;
 
             let class_hash = tx.class_hash();
             let tx = ExecutableTxWithHash::new(ExecutableTx::Declare(tx));
             let tx_hash = tx.hash;
 
-            this.pool.add_transaction(tx);
+            this.inner.sequencer.pool.add_transaction(tx);
             Ok((tx_hash, class_hash).into())
         })
         .await
@@ -62,13 +62,13 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 return Err(StarknetApiError::UnsupportedTransactionVersion.into());
             }
 
-            let tx = tx.into_tx_with_chain_id(this.backend.chain_id);
+            let tx = tx.into_tx_with_chain_id(this.inner.sequencer.backend.chain_id);
             let contract_address = tx.contract_address();
 
             let tx = ExecutableTxWithHash::new(ExecutableTx::DeployAccount(tx));
             let tx_hash = tx.hash;
 
-            this.pool.add_transaction(tx);
+            this.inner.sequencer.pool.add_transaction(tx);
             Ok((tx_hash, contract_address).into())
         })
         .await

@@ -105,312 +105,313 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
         }
     }
 
-    pub fn block_producer(&self) -> &BlockProducer<EF> {
-        &self.block_producer
-    }
+    // pub fn block_producer(&self) -> &BlockProducer<EF> {
+    //     &self.block_producer
+    // }
 
-    pub fn backend(&self) -> &Backend<EF> {
-        &self.backend
-    }
+    // pub fn backend(&self) -> &Backend<EF> {
+    //     &self.backend
+    // }
 
-    pub fn block_env_at(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<BlockEnv>> {
-        let provider = self.backend.blockchain.provider();
+    // pub fn block_env_at(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<BlockEnv>> {
+    //     let provider = self.backend.blockchain.provider();
 
-        if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-            if let Some(exec) = self.pending_executor() {
-                return Ok(Some(exec.read().block_env()));
-            }
-        }
+    //     if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
+    //         if let Some(exec) = self.pending_executor() {
+    //             return Ok(Some(exec.read().block_env()));
+    //         }
+    //     }
 
-        match block_id {
-            BlockIdOrTag::Tag(BlockTag::Pending) | BlockIdOrTag::Tag(BlockTag::Latest) => {
-                let num = provider.latest_number()?;
-                provider
-                    .block_env_at(num.into())?
-                    .map(Some)
-                    .ok_or(SequencerError::BlockNotFound(block_id))
-            }
+    //     match block_id {
+    //         BlockIdOrTag::Tag(BlockTag::Pending) | BlockIdOrTag::Tag(BlockTag::Latest) => {
+    //             let num = provider.latest_number()?;
+    //             provider
+    //                 .block_env_at(num.into())?
+    //                 .map(Some)
+    //                 .ok_or(SequencerError::BlockNotFound(block_id))
+    //         }
 
-            BlockIdOrTag::Hash(hash) => provider
-                .block_env_at(hash.into())?
-                .map(Some)
-                .ok_or(SequencerError::BlockNotFound(block_id)),
+    //         BlockIdOrTag::Hash(hash) => provider
+    //             .block_env_at(hash.into())?
+    //             .map(Some)
+    //             .ok_or(SequencerError::BlockNotFound(block_id)),
 
-            BlockIdOrTag::Number(num) => provider
-                .block_env_at(num.into())?
-                .map(Some)
-                .ok_or(SequencerError::BlockNotFound(block_id)),
-        }
-    }
+    //         BlockIdOrTag::Number(num) => provider
+    //             .block_env_at(num.into())?
+    //             .map(Some)
+    //             .ok_or(SequencerError::BlockNotFound(block_id)),
+    //     }
+    // }
 
-    pub fn state(&self, block_id: &BlockIdOrTag) -> SequencerResult<Box<dyn StateProvider>> {
-        let provider = self.backend.blockchain.provider();
+    // pub fn state(&self, block_id: &BlockIdOrTag) -> SequencerResult<Box<dyn StateProvider>> {
+    //     let provider = self.backend.blockchain.provider();
 
-        match block_id {
-            BlockIdOrTag::Tag(BlockTag::Latest) => {
-                let state = StateFactoryProvider::latest(provider)?;
-                Ok(state)
-            }
+    //     match block_id {
+    //         BlockIdOrTag::Tag(BlockTag::Latest) => {
+    //             let state = StateFactoryProvider::latest(provider)?;
+    //             Ok(state)
+    //         }
 
-            BlockIdOrTag::Tag(BlockTag::Pending) => {
-                if let Some(exec) = self.pending_executor() {
-                    Ok(Box::new(exec.read().state()))
-                } else {
-                    let state = StateFactoryProvider::latest(provider)?;
-                    Ok(state)
-                }
-            }
+    //         BlockIdOrTag::Tag(BlockTag::Pending) => {
+    //             if let Some(exec) = self.pending_executor() {
+    //                 Ok(Box::new(exec.read().state()))
+    //             } else {
+    //                 let state = StateFactoryProvider::latest(provider)?;
+    //                 Ok(state)
+    //             }
+    //         }
 
-            BlockIdOrTag::Hash(hash) => {
-                StateFactoryProvider::historical(provider, BlockHashOrNumber::Hash(*hash))?
-                    .ok_or(SequencerError::BlockNotFound(*block_id))
-            }
+    //         BlockIdOrTag::Hash(hash) => {
+    //             StateFactoryProvider::historical(provider, BlockHashOrNumber::Hash(*hash))?
+    //                 .ok_or(SequencerError::BlockNotFound(*block_id))
+    //         }
 
-            BlockIdOrTag::Number(num) => {
-                StateFactoryProvider::historical(provider, BlockHashOrNumber::Num(*num))?
-                    .ok_or(SequencerError::BlockNotFound(*block_id))
-            }
-        }
-    }
+    //         BlockIdOrTag::Number(num) => {
+    //             StateFactoryProvider::historical(provider, BlockHashOrNumber::Num(*num))?
+    //                 .ok_or(SequencerError::BlockNotFound(*block_id))
+    //         }
+    //     }
+    // }
 
-    pub fn add_transaction_to_pool(&self, tx: ExecutableTxWithHash) {
-        self.pool.add_transaction(tx);
-    }
+    // pub fn add_transaction_to_pool(&self, tx: ExecutableTxWithHash) {
+    //     self.pool.add_transaction(tx);
+    // }
 
-    pub fn block_hash_and_number(&self) -> SequencerResult<(BlockHash, BlockNumber)> {
-        let provider = self.backend.blockchain.provider();
-        let hash = BlockHashProvider::latest_hash(provider)?;
-        let number = BlockNumberProvider::latest_number(provider)?;
-        Ok((hash, number))
-    }
+    // pub fn block_hash_and_number(&self) -> SequencerResult<(BlockHash, BlockNumber)> {
+    //     let provider = self.backend.blockchain.provider();
+    //     let hash = BlockHashProvider::latest_hash(provider)?;
+    //     let number = BlockNumberProvider::latest_number(provider)?;
+    //     Ok((hash, number))
+    // }
 
-    pub fn class_hash_at(
-        &self,
-        block_id: BlockIdOrTag,
-        contract_address: ContractAddress,
-    ) -> SequencerResult<Option<ClassHash>> {
-        let state = self.state(&block_id)?;
-        let class_hash = StateProvider::class_hash_of_contract(&state, contract_address)?;
-        Ok(class_hash)
-    }
+    // pub fn class_hash_at(
+    //     &self,
+    //     block_id: BlockIdOrTag,
+    //     contract_address: ContractAddress,
+    // ) -> SequencerResult<Option<ClassHash>> {
+    //     let state = self.state(&block_id)?;
+    //     let class_hash = StateProvider::class_hash_of_contract(&state, contract_address)?;
+    //     Ok(class_hash)
+    // }
 
-    pub fn class(
-        &self,
-        block_id: BlockIdOrTag,
-        class_hash: ClassHash,
-    ) -> SequencerResult<Option<StarknetContract>> {
-        let state = self.state(&block_id)?;
+    // pub fn class(
+    //     &self,
+    //     block_id: BlockIdOrTag,
+    //     class_hash: ClassHash,
+    // ) -> SequencerResult<Option<StarknetContract>> {
+    //     let state = self.state(&block_id)?;
 
-        let Some(class) = ContractClassProvider::class(&state, class_hash)? else {
-            return Ok(None);
-        };
+    //     let Some(class) = ContractClassProvider::class(&state, class_hash)? else {
+    //         return Ok(None);
+    //     };
 
-        match class {
-            CompiledClass::Deprecated(class) => Ok(Some(StarknetContract::Legacy(class))),
-            CompiledClass::Class(_) => {
-                let class = ContractClassProvider::sierra_class(&state, class_hash)?
-                    .map(StarknetContract::Sierra);
-                Ok(class)
-            }
-        }
-    }
+    //     match class {
+    //         CompiledClass::Deprecated(class) => Ok(Some(StarknetContract::Legacy(class))),
+    //         CompiledClass::Class(_) => {
+    //             let class = ContractClassProvider::sierra_class(&state, class_hash)?
+    //                 .map(StarknetContract::Sierra);
+    //             Ok(class)
+    //         }
+    //     }
+    // }
 
-    pub fn storage_at(
-        &self,
-        contract_address: ContractAddress,
-        storage_key: StorageKey,
-        block_id: BlockIdOrTag,
-    ) -> SequencerResult<StorageValue> {
-        let state = self.state(&block_id)?;
+    // pub fn storage_at(
+    //     &self,
+    //     contract_address: ContractAddress,
+    //     storage_key: StorageKey,
+    //     block_id: BlockIdOrTag,
+    // ) -> SequencerResult<StorageValue> {
+    //     let state = self.state(&block_id)?;
 
-        // check that contract exist by checking the class hash of the contract
-        let Some(_) = StateProvider::class_hash_of_contract(&state, contract_address)? else {
-            return Err(SequencerError::ContractNotFound(contract_address));
-        };
+    //     // check that contract exist by checking the class hash of the contract
+    //     let Some(_) = StateProvider::class_hash_of_contract(&state, contract_address)? else {
+    //         return Err(SequencerError::ContractNotFound(contract_address));
+    //     };
 
-        let value = StateProvider::storage(&state, contract_address, storage_key)?;
-        Ok(value.unwrap_or_default())
-    }
+    //     let value = StateProvider::storage(&state, contract_address, storage_key)?;
+    //     Ok(value.unwrap_or_default())
+    // }
 
-    pub fn chain_id(&self) -> ChainId {
-        self.backend.chain_id
-    }
+    // pub fn chain_id(&self) -> ChainId {
+    //     self.backend.chain_id
+    // }
 
-    pub fn block_number(&self) -> SequencerResult<BlockNumber> {
-        let num = BlockNumberProvider::latest_number(&self.backend.blockchain.provider())?;
-        Ok(num)
-    }
+    // pub fn block_number(&self) -> SequencerResult<BlockNumber> {
+    //     let num = BlockNumberProvider::latest_number(&self.backend.blockchain.provider())?;
+    //     Ok(num)
+    // }
 
-    pub fn block_tx_count(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<u64>> {
-        let provider = self.backend.blockchain.provider();
+    // pub fn block_tx_count(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<u64>> {
+    //     let provider = self.backend.blockchain.provider();
 
-        let count = match block_id {
-            BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_executor() {
-                Some(exec) => Some(exec.read().transactions().len() as u64),
+    //     let count = match block_id {
+    //         BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_executor() {
+    //             Some(exec) => Some(exec.read().transactions().len() as u64),
 
-                None => {
-                    let hash = BlockHashProvider::latest_hash(provider)?;
-                    TransactionProvider::transaction_count_by_block(provider, hash.into())?
-                }
-            },
+    //             None => {
+    //                 let hash = BlockHashProvider::latest_hash(provider)?;
+    //                 TransactionProvider::transaction_count_by_block(provider, hash.into())?
+    //             }
+    //         },
 
-            BlockIdOrTag::Tag(BlockTag::Latest) => {
-                let num = BlockNumberProvider::latest_number(provider)?;
-                TransactionProvider::transaction_count_by_block(provider, num.into())?
-            }
+    //         BlockIdOrTag::Tag(BlockTag::Latest) => {
+    //             let num = BlockNumberProvider::latest_number(provider)?;
+    //             TransactionProvider::transaction_count_by_block(provider, num.into())?
+    //         }
 
-            BlockIdOrTag::Number(num) => {
-                TransactionProvider::transaction_count_by_block(provider, num.into())?
-            }
+    //         BlockIdOrTag::Number(num) => {
+    //             TransactionProvider::transaction_count_by_block(provider, num.into())?
+    //         }
 
-            BlockIdOrTag::Hash(hash) => {
-                TransactionProvider::transaction_count_by_block(provider, hash.into())?
-            }
-        };
+    //         BlockIdOrTag::Hash(hash) => {
+    //             TransactionProvider::transaction_count_by_block(provider, hash.into())?
+    //         }
+    //     };
 
-        Ok(count)
-    }
+    //     Ok(count)
+    // }
 
-    pub fn nonce_at(
-        &self,
-        block_id: BlockIdOrTag,
-        contract_address: ContractAddress,
-    ) -> SequencerResult<Option<Nonce>> {
-        let state = self.state(&block_id)?;
-        let nonce = StateProvider::nonce(&state, contract_address)?;
-        Ok(nonce)
-    }
+    // pub fn nonce_at(
+    //     &self,
+    //     block_id: BlockIdOrTag,
+    //     contract_address: ContractAddress,
+    // ) -> SequencerResult<Option<Nonce>> {
+    //     let state = self.state(&block_id)?;
+    //     let nonce = StateProvider::nonce(&state, contract_address)?;
+    //     Ok(nonce)
+    // }
 
-    pub fn transaction(&self, hash: &TxHash) -> SequencerResult<Option<TxWithHash>> {
-        let tx =
-            TransactionProvider::transaction_by_hash(self.backend.blockchain.provider(), *hash)?;
+    // pub fn transaction(&self, hash: &TxHash) -> SequencerResult<Option<TxWithHash>> {
+    //     let tx =
+    //         TransactionProvider::transaction_by_hash(self.backend.blockchain.provider(), *hash)?;
 
-        let tx @ Some(_) = tx else {
-            return Ok(self.pending_executor().as_ref().and_then(|exec| {
-                exec.read()
-                    .transactions()
-                    .iter()
-                    .find_map(|tx| if tx.0.hash == *hash { Some(tx.0.clone()) } else { None })
-            }));
-        };
+    //     let tx @ Some(_) = tx else {
+    //         return Ok(self.pending_executor().as_ref().and_then(|exec| {
+    //             exec.read()
+    //                 .transactions()
+    //                 .iter()
+    //                 .find_map(|tx| if tx.0.hash == *hash { Some(tx.0.clone()) } else { None })
+    //         }));
+    //     };
 
-        Ok(tx)
-    }
+    //     Ok(tx)
+    // }
 
-    pub fn events(
-        &self,
-        from_block: BlockIdOrTag,
-        to_block: BlockIdOrTag,
-        address: Option<ContractAddress>,
-        keys: Option<Vec<Vec<FieldElement>>>,
-        continuation_token: Option<String>,
-        chunk_size: u64,
-    ) -> SequencerResult<EventsPage> {
-        let provider = self.backend.blockchain.provider();
-        let mut current_block = 0;
+    // pub fn events(
+    //     &self,
+    //     from_block: BlockIdOrTag,
+    //     to_block: BlockIdOrTag,
+    //     address: Option<ContractAddress>,
+    //     keys: Option<Vec<Vec<FieldElement>>>,
+    //     continuation_token: Option<String>,
+    //     chunk_size: u64,
+    // ) -> SequencerResult<EventsPage> {
+    //     let provider = self.backend.blockchain.provider();
+    //     let mut current_block = 0;
 
-        let (mut from_block, to_block) = {
-            let from = BlockIdReader::convert_block_id(provider, from_block)?
-                .ok_or(SequencerError::BlockNotFound(to_block))?;
-            let to = BlockIdReader::convert_block_id(provider, to_block)?
-                .ok_or(SequencerError::BlockNotFound(to_block))?;
-            (from, to)
-        };
+    //     let (mut from_block, to_block) = {
+    //         let from = BlockIdReader::convert_block_id(provider, from_block)?
+    //             .ok_or(SequencerError::BlockNotFound(to_block))?;
+    //         let to = BlockIdReader::convert_block_id(provider, to_block)?
+    //             .ok_or(SequencerError::BlockNotFound(to_block))?;
+    //         (from, to)
+    //     };
 
-        let mut continuation_token = match continuation_token {
-            Some(token) => ContinuationToken::parse(token)?,
-            None => ContinuationToken::default(),
-        };
+    //     let mut continuation_token = match continuation_token {
+    //         Some(token) => ContinuationToken::parse(token)?,
+    //         None => ContinuationToken::default(),
+    //     };
 
-        // skip blocks that have been already read
-        from_block += continuation_token.block_n;
+    //     // skip blocks that have been already read
+    //     from_block += continuation_token.block_n;
 
-        let mut filtered_events = Vec::with_capacity(chunk_size as usize);
+    //     let mut filtered_events = Vec::with_capacity(chunk_size as usize);
 
-        for i in from_block..=to_block {
-            let block_hash = BlockHashProvider::block_hash_by_num(provider, i)?
-                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
+    //     for i in from_block..=to_block {
+    //         let block_hash = BlockHashProvider::block_hash_by_num(provider, i)?
+    //             .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
 
-            let receipts = ReceiptProvider::receipts_by_block(provider, BlockHashOrNumber::Num(i))?
-                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
+    //         let receipts = ReceiptProvider::receipts_by_block(provider,
+    // BlockHashOrNumber::Num(i))?             
+    // .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
 
-            let tx_range = BlockProvider::block_body_indices(provider, BlockHashOrNumber::Num(i))?
-                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
-            let tx_hashes =
-                TransactionsProviderExt::transaction_hashes_in_range(provider, tx_range.into())?;
+    //         let tx_range = BlockProvider::block_body_indices(provider,
+    // BlockHashOrNumber::Num(i))?             
+    // .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;         let tx_hashes =
+    //             TransactionsProviderExt::transaction_hashes_in_range(provider, tx_range.into())?;
 
-            let txn_n = receipts.len();
-            if (txn_n as u64) < continuation_token.txn_n {
-                return Err(SequencerError::ContinuationToken(
-                    ContinuationTokenError::InvalidToken,
-                ));
-            }
+    //         let txn_n = receipts.len();
+    //         if (txn_n as u64) < continuation_token.txn_n {
+    //             return Err(SequencerError::ContinuationToken(
+    //                 ContinuationTokenError::InvalidToken,
+    //             ));
+    //         }
 
-            for (tx_hash, events) in tx_hashes
-                .into_iter()
-                .zip(receipts.iter().map(|r| r.events()))
-                .skip(continuation_token.txn_n as usize)
-            {
-                let txn_events_len: usize = events.len();
+    //         for (tx_hash, events) in tx_hashes
+    //             .into_iter()
+    //             .zip(receipts.iter().map(|r| r.events()))
+    //             .skip(continuation_token.txn_n as usize)
+    //         {
+    //             let txn_events_len: usize = events.len();
 
-                // check if continuation_token.event_n is correct
-                match (txn_events_len as u64).cmp(&continuation_token.event_n) {
-                    Ordering::Greater => (),
-                    Ordering::Less => {
-                        return Err(SequencerError::ContinuationToken(
-                            ContinuationTokenError::InvalidToken,
-                        ));
-                    }
-                    Ordering::Equal => {
-                        continuation_token.txn_n += 1;
-                        continuation_token.event_n = 0;
-                        continue;
-                    }
-                }
+    //             // check if continuation_token.event_n is correct
+    //             match (txn_events_len as u64).cmp(&continuation_token.event_n) {
+    //                 Ordering::Greater => (),
+    //                 Ordering::Less => {
+    //                     return Err(SequencerError::ContinuationToken(
+    //                         ContinuationTokenError::InvalidToken,
+    //                     ));
+    //                 }
+    //                 Ordering::Equal => {
+    //                     continuation_token.txn_n += 1;
+    //                     continuation_token.event_n = 0;
+    //                     continue;
+    //                 }
+    //             }
 
-                // skip events
-                let txn_events = events.iter().skip(continuation_token.event_n as usize);
+    //             // skip events
+    //             let txn_events = events.iter().skip(continuation_token.event_n as usize);
 
-                let (new_filtered_events, continuation_index) = filter_events_by_params(
-                    txn_events,
-                    address,
-                    keys.clone(),
-                    Some((chunk_size as usize) - filtered_events.len()),
-                );
+    //             let (new_filtered_events, continuation_index) = filter_events_by_params(
+    //                 txn_events,
+    //                 address,
+    //                 keys.clone(),
+    //                 Some((chunk_size as usize) - filtered_events.len()),
+    //             );
 
-                filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
-                    from_address: e.from_address.into(),
-                    keys: e.keys.clone(),
-                    data: e.data.clone(),
-                    block_hash: Some(block_hash),
-                    block_number: Some(i),
-                    transaction_hash: tx_hash,
-                }));
+    //             filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
+    //                 from_address: e.from_address.into(),
+    //                 keys: e.keys.clone(),
+    //                 data: e.data.clone(),
+    //                 block_hash: Some(block_hash),
+    //                 block_number: Some(i),
+    //                 transaction_hash: tx_hash,
+    //             }));
 
-                if filtered_events.len() >= chunk_size as usize {
-                    let token = if current_block < to_block
-                        || continuation_token.txn_n < txn_n as u64 - 1
-                        || continuation_index < txn_events_len
-                    {
-                        continuation_token.event_n = continuation_index as u64;
-                        Some(continuation_token.to_string())
-                    } else {
-                        None
-                    };
-                    return Ok(EventsPage { events: filtered_events, continuation_token: token });
-                }
+    //             if filtered_events.len() >= chunk_size as usize {
+    //                 let token = if current_block < to_block
+    //                     || continuation_token.txn_n < txn_n as u64 - 1
+    //                     || continuation_index < txn_events_len
+    //                 {
+    //                     continuation_token.event_n = continuation_index as u64;
+    //                     Some(continuation_token.to_string())
+    //                 } else {
+    //                     None
+    //                 };
+    //                 return Ok(EventsPage { events: filtered_events, continuation_token: token });
+    //             }
 
-                continuation_token.txn_n += 1;
-                continuation_token.event_n = 0;
-            }
+    //             continuation_token.txn_n += 1;
+    //             continuation_token.event_n = 0;
+    //         }
 
-            current_block += 1;
-            continuation_token.block_n += 1;
-            continuation_token.txn_n = 0;
-        }
+    //         current_block += 1;
+    //         continuation_token.block_n += 1;
+    //         continuation_token.txn_n = 0;
+    //     }
 
-        Ok(EventsPage { events: filtered_events, continuation_token: None })
-    }
+    //     Ok(EventsPage { events: filtered_events, continuation_token: None })
+    // }
 
     pub fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
         if self.has_pending_transactions() {
