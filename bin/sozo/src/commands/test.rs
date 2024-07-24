@@ -16,7 +16,7 @@ use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::{Config, TargetKind};
 use scarb::ops::{self, CompileOpts};
-use scarb_ui::args::FeaturesSpec;
+use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
@@ -62,6 +62,9 @@ pub struct TestArgs {
     /// Specify the features to activate.
     #[command(flatten)]
     features: FeaturesSpec,
+    /// Specify packages to test.
+    #[command(flatten)]
+    pub packages: Option<PackagesFilter>,
 }
 
 impl TestArgs {

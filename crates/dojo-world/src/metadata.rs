@@ -6,13 +6,15 @@ use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use regex::Regex;
-use scarb::core::{ManifestMetadata, Package, PackageId, Workspace};
+use scarb::core::{ManifestMetadata, Package, TargetKind, Workspace};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
 
 use crate::contracts::naming;
 use crate::manifest::{BaseManifest, CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
+
+const LOG_TARGET: &str = "dojo-world::metadata";
 
 #[cfg(test)]
 #[path = "metadata_test.rs"]
@@ -97,13 +99,13 @@ pub fn project_to_world_metadata(m: ProjectWorldMetadata) -> WorldMetadata {
 }
 
 pub fn dojo_metadata_from_package(package: &Package, ws: &Workspace<'_>) -> Result<DojoMetadata> {
-    tracing::debug!(package_id = package.id.to_string(), "Collecting Dojo metadata from package.");
+    tracing::debug!(target: LOG_TARGET, package_id = package.id.to_string(), "Collecting Dojo metadata from package.");
 
     let project_metadata = package
-            .manifest
-            .metadata
-            .dojo()
-            .with_context(|| format!("Error parsing manifest file `{}`", ws.manifest_path()))?;
+        .manifest
+        .metadata
+        .dojo()
+        .with_context(|| format!("Error parsing manifest file `{}`", ws.manifest_path()))?;
 
     let dojo_metadata = DojoMetadata {
         env: project_metadata.env.clone(),
@@ -112,9 +114,41 @@ pub fn dojo_metadata_from_package(package: &Package, ws: &Workspace<'_>) -> Resu
         ..Default::default()
     };
 
-    tracing::trace!(?dojo_metadata);
+    tracing::trace!(target: LOG_TARGET, ?dojo_metadata);
 
     Ok(dojo_metadata)
+}
+
+pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> {
+    let dojo_packages: Vec<Package> = ws
+        .members()
+        .into_iter()
+        .filter(|package| {
+            package.target(&TargetKind::new("dojo")).is_some()
+                && !package.target(&TargetKind::new("lib")).is_some()
+        })
+        .collect();
+
+    match dojo_packages.len() {
+        0 => {
+            ws.config().ui().warn(
+                "No package with dojo target found in workspace. If your package is a [lib] with \
+                 [[target.dojo]], you can ignore this warning.",
+            );
+            Ok(DojoMetadata::default())
+        }
+        1 => {
+            let dojo_package =
+                dojo_packages.into_iter().next().expect("Package must exist as len is 1.");
+            Ok(dojo_metadata_from_package(&dojo_package, &ws)?)
+        }
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Multiple packages with dojo target found in workspace. Please specify a package \
+                 using --package option or maybe one of them must be declared as a [lib]."
+            ));
+        }
+    }
 }
 
 /// Collect metadata from the project configuration and from the workspace.
@@ -124,7 +158,7 @@ pub fn dojo_metadata_from_package(package: &Package, ws: &Workspace<'_>) -> Resu
 ///
 /// # Returns
 /// A [`DojoMetadata`] object containing all Dojo metadata.
-pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> {
+pub fn dojo_metadata_from_workspace_old(ws: &Workspace<'_>) -> Result<DojoMetadata> {
     let profile = ws.config().profile();
 
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
@@ -144,8 +178,8 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
         // (being the only package or using --package).
         return Err(anyhow!(
             "No current package with dojo metadata found, virtual manifest in workspace are not \
-                supported. Until package compilation is supported, you will have to provide the path \
-                to the Scarb.toml file using the --manifest-path option."
+             supported. Until package compilation is supported, you will have to provide the path \
+             to the Scarb.toml file using the --manifest-path option."
         ));
     };
 

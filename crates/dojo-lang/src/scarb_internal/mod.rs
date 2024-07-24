@@ -14,6 +14,7 @@ use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use camino::Utf8PathBuf;
+use regex::Regex;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::{Config, PackageId};
 use scarb::ops::CompileOpts;
@@ -90,6 +91,7 @@ pub fn compile_workspace(
 ) -> Result<CompileInfo> {
     let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
     let resolve = scarb::ops::resolve_workspace(&ws)?;
+    let ui = config.ui();
 
     let compilation_units = scarb::ops::generate_compilation_units(&resolve, &opts.features, &ws)?
         .into_iter()
@@ -105,9 +107,15 @@ pub fn compile_workspace(
     for unit in compilation_units {
         trace!(target: LOG_TARGET, unit_name = %unit.name(), target_kind = %unit.main_component().target_kind(), "Compiling unit.");
         if let CompilationUnit::Cairo(unit) = unit {
+            let unit_name = unit.name();
+            let re = Regex::new(r"\s*\([^()]*\)$").unwrap();
+            let unit_name_no_path = re.replace(&unit_name, "");
+
+            ui.print(format!("compiling {}", unit_name_no_path));
+            ui.verbose(format!("target kind: {}", unit.main_component().target_kind()));
+
             let mut db = build_scarb_root_database(&unit).unwrap();
             if let Err(err) = ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
-                println!("err");
                 ws.config().ui().anyhow(&err);
                 compile_error_units.push(unit.name());
             }
