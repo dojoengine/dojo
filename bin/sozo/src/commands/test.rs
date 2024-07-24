@@ -90,6 +90,8 @@ impl TestArgs {
                 opts.include_target_kinds.is_empty()
                     || opts.include_target_kinds.contains(&cu.main_component().target_kind())
             })
+            // TODOL: Need to find how to filter from packages with the compilation unit. We need something
+            // implementing PackagesSource trait.
             .collect::<Vec<_>>();
 
         for unit in compilation_units {

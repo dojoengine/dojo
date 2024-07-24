@@ -60,8 +60,8 @@ impl BuildArgs {
         };
 
         let dojo_metadata = if packages.len() == 1 {
-            let package = packages.iter().next().unwrap();
-            dojo_metadata_from_package(&package, &ws)?
+            let package = packages.first().unwrap();
+            dojo_metadata_from_package(package, &ws)?
         } else {
             dojo_metadata_from_workspace(&ws)?
         };
