@@ -7,6 +7,7 @@ use std::num::NonZeroU128;
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::blockifier::config::TransactionExecutorConfig;
 use blockifier::blockifier::transaction_executor::{TransactionExecutor, TransactionExecutorError};
+use blockifier::bouncer::BouncerConfig;
 use blockifier::context::BlockContext;
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
 use blockifier::state::cached_state::{self, MutRefState};
@@ -142,8 +143,9 @@ impl<'a> StarknetVMProcessor<'a> {
             use_kzg_da: false,
         };
 
+        // TODO: check what should be the value of the bouncer config
         self.executor.block_context =
-            BlockContext::new(block_info, chain_info, versioned_constants, Default::default());
+            BlockContext::new(block_info, chain_info, versioned_constants, BouncerConfig::max());
     }
 
     fn simulate_with<F, T>(
@@ -189,6 +191,8 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         let mut execution_results = Vec::with_capacity(results.len());
 
         for (res, tx) in results.into_iter().zip(transactions.iter()) {
+            println!("processing transaction");
+
             match res {
                 Ok(info) => {
                     // Collect class artifacts if its a declare tx
@@ -239,21 +243,19 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
 
                     // let res = ExecutionResult::new_success(receipt, trace);
 
-                    //              self.stats.l1_gas_used += receipt.fee().gas_consumed;
-                    // self.stats.cairo_steps_used +=
-                    //     receipt.resources_used().vm_resources.n_steps as u128;
+                    self.stats.l1_gas_used += receipt.fee().gas_consumed;
+                    self.stats.cairo_steps_used +=
+                        receipt.resources_used().vm_resources.n_steps as u128;
 
-                    // if let Some(reason) = receipt.revert_reason() {
-                    //     info!(target: LOG_TARGET, %reason, "Transaction reverted.");
-                    // }
+                    if let Some(reason) = receipt.revert_reason() {
+                        info!(target: LOG_TARGET, %reason, "Transaction reverted.");
+                    }
 
                     if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
                         self.state.0.lock().declared_classes.insert(class_hash, (compiled, sierra));
                     }
 
                     execution_results.push(ExecutionResult::new_success(receipt, trace));
-
-                    // todo!()
                 }
 
                 Err(e) => match e {
@@ -266,7 +268,8 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
                     }
 
                     TransactionExecutorError::BlockFull => {
-                        is_full = true;
+                        // is_full = true;
+                        println!("block is full");
                         break;
                     }
                 },
@@ -315,8 +318,8 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         //     self.transactions.push((tx, res));
         // }
 
-        let txs = transactions.into_iter().map(TxWithHash::from).collect::<Vec<_>>();
-        self.transactions = txs.into_iter().zip(execution_results).collect();
+        let txs = dbg!(transactions.into_iter().map(TxWithHash::from).collect::<Vec<_>>());
+        self.transactions = txs.into_iter().zip(dbg!(execution_results)).collect();
 
         Ok(())
     }
