@@ -20,10 +20,10 @@ mod ui;
 mod utils;
 
 pub use self::auto_auth::auto_authorize;
-use self::migrate::update_manifests_and_abis;
 pub use self::migrate::{
     apply_diff, execute_strategy, prepare_migration, print_strategy, upload_metadata,
 };
+use self::migrate::{update_deployment_metadata, update_manifests_and_abis};
 use self::ui::MigrationUi;
 
 #[derive(Debug, Default, Clone)]
@@ -126,11 +126,14 @@ where
     }
 
     let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
-
     if dry_run {
+        if total_diffs == 0 {
+            return Ok(None);
+        }
+
         print_strategy(&ui, account.provider(), &strategy, strategy.world_address).await;
 
-        let work = update_manifests_and_abis(
+        update_manifests_and_abis(
             ws,
             local_manifest,
             &manifest_dir,
@@ -144,26 +147,29 @@ where
 
         Ok(None)
     } else {
-        // Migrate according to the diff.
-        let migration_output = match apply_diff(ws, &account, txn_config, &strategy).await {
-            Ok(migration_output) => Some(migration_output),
-            Err(e) => {
-                let _ = update_manifests_and_abis(
-                    ws,
-                    local_manifest,
-                    &manifest_dir,
-                    &profile_name,
-                    &rpc_url,
-                    strategy.world_address,
-                    None,
-                    name,
-                )
-                .await?;
-                return Err(e)?;
+        let migration_output = if total_diffs != 0 {
+            match apply_diff(ws, &account, txn_config, &strategy).await {
+                Ok(migration_output) => Some(migration_output),
+                Err(e) => {
+                    update_manifests_and_abis(
+                        ws,
+                        local_manifest,
+                        &manifest_dir,
+                        &profile_name,
+                        &rpc_url,
+                        strategy.world_address,
+                        None,
+                        name,
+                    )
+                    .await?;
+                    return Err(e)?;
+                }
             }
+        } else {
+            None
         };
 
-        let work = update_manifests_and_abis(
+        update_manifests_and_abis(
             ws,
             local_manifest.clone(),
             &manifest_dir,
@@ -174,6 +180,9 @@ where
             name,
         )
         .await?;
+
+        let work =
+            update_deployment_metadata(&manifest_dir, &local_manifest, migration_output.as_ref())?;
 
         let account = Arc::new(account);
         let world = WorldContract::new(strategy.world_address, account.clone());

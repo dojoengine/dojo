@@ -789,7 +789,7 @@ pub async fn update_manifests_and_abis(
     world_address: Felt,
     migration_output: Option<MigrationOutput>,
     salt: &str,
-) -> Result<Vec<String>> {
+) -> Result<()> {
     let ui = ws.config().ui();
     ui.print_step(5, "✨", "Updating manifests...");
 
@@ -797,19 +797,6 @@ pub async fn update_manifests_and_abis(
 
     let deployed_path = deployment_dir.join("manifest").with_extension("toml");
     let deployed_path_json = deployment_dir.join("manifest").with_extension("json");
-    let deployment_metadata_path = deployment_dir.join("metadata").with_extension("toml");
-
-    let mut deployment_metadata = if deployment_metadata_path.exists() {
-        DeploymentMetadata::load_from_path(&deployment_metadata_path)?
-    } else {
-        DeploymentMetadata::default()
-    };
-
-    deployment_metadata.add_missing(&local_manifest);
-    let work = calculate(migration_output.as_ref(), &mut deployment_metadata);
-    deployment_metadata
-        .write_to_path_toml(&deployment_metadata_path)
-        .with_context(|| "Failed to write deployment metadata")?;
 
     let mut local_manifest: DeploymentManifest = local_manifest.into();
 
@@ -879,6 +866,29 @@ pub async fn update_manifests_and_abis(
         .write_to_path_json(&deployed_path_json, &root_dir)
         .with_context(|| "Failed to write json manifest")?;
     ui.print("\n✨ Done.");
+
+    Ok(())
+}
+
+pub fn update_deployment_metadata(
+    manifest_dir: &Utf8PathBuf,
+    local_manifest: &BaseManifest,
+    migration_output: Option<&MigrationOutput>,
+) -> Result<Vec<String>> {
+    let deployment_dir = manifest_dir.join(DEPLOYMENT_DIR);
+    let deployment_metadata_path = deployment_dir.join("metadata").with_extension("toml");
+
+    let mut deployment_metadata = if deployment_metadata_path.exists() {
+        DeploymentMetadata::load_from_path(&deployment_metadata_path)?
+    } else {
+        DeploymentMetadata::default()
+    };
+
+    deployment_metadata.add_missing(local_manifest);
+    let work = calculate(migration_output, &mut deployment_metadata);
+    deployment_metadata
+        .write_to_path_toml(&deployment_metadata_path)
+        .with_context(|| "Failed to write deployment metadata")?;
 
     Ok(work)
 }
