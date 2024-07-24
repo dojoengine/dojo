@@ -13,7 +13,6 @@ sierra-replace-ids = true
 dojo = { path = "../../crates/dojo-core" }
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
-origami_token = { path = "/Users/glihm/cgg/origami" }
 
 [[target.dojo]]
 build-external-contracts = [
