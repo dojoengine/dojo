@@ -327,6 +327,8 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
     }
 
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {
+        let (output, ..) = self.executor.finalize().unwrap();
+
         let states = utils::state_update_from_cached_state(&self.state);
         let transactions = std::mem::take(&mut self.transactions);
         let stats = std::mem::take(&mut self.stats);
