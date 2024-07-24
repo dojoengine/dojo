@@ -9,7 +9,7 @@ use std::slice::Iter;
 use std::{iter::Skip, sync::Arc};
 
 use anyhow::Result;
-use katana_core::backend::{contract::StarknetContract, Backend};
+use katana_core::backend::Backend;
 use katana_core::pool::TransactionPool;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
@@ -193,10 +193,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
     fn backend(&self) -> &Backend<EF> {
         &self.backend
-    }
-
-    fn add_transaction_to_pool(&self, tx: ExecutableTxWithHash) {
-        self.pool.add_transaction(tx);
     }
 
     fn block_hash_and_number(&self) -> Result<(BlockHash, BlockNumber), StarknetApiError> {
