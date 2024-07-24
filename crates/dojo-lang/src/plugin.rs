@@ -37,7 +37,6 @@ use crate::interface::DojoInterface;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
-use crate::utils::get_namespace_config;
 
 pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
@@ -339,26 +338,27 @@ fn get_additional_derive_attrs_for_model(derive_attr_names: &[String]) -> Vec<St
 }
 
 impl MacroPlugin for BuiltinDojoPlugin {
+    // This function is called for every item in whole db. Hence,
+    // the sooner we can return, the better.
+    // As an example, compiling spawn-and-move project, it's almost 14K calls to this
+    // function.
     fn generate_code(
         &self,
         db: &dyn SyntaxGroup,
         item_ast: ast::ModuleItem,
         metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
-        let namespace_config = match get_namespace_config(db) {
-            Ok(config) => config,
-            Err(e) => {
-                return PluginResult {
-                    code: Option::None,
-                    diagnostics: vec![PluginDiagnostic {
-                        stable_ptr: item_ast.stable_ptr().0,
-                        message: format!("{e}"),
-                        severity: Severity::Error,
-                    }],
-                    remove_original_item: false,
-                };
-            }
-        };
+        // Metadata gives information from the crates from where `item_ast` was parsed.
+        // During the compilation phase, we inject namespace information into the `CfgSet`
+        // so that it can be used here.
+        let namespace_config: NamespaceConfig = metadata.cfg_set.into();
+
+        // Avoid the whole plugin checks if there is no default namespace.
+        // The compiler already checked for invalid package configuration,
+        // so empty default namespace can be skipped.
+        if namespace_config.default.is_empty() {
+            return PluginResult::default();
+        }
 
         match item_ast {
             ast::ModuleItem::Module(module_ast) => {

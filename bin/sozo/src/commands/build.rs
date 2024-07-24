@@ -3,7 +3,6 @@ use clap::{Args, Parser};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use dojo_world::manifest::MANIFESTS_DIR;
-use dojo_world::metadata::{dojo_metadata_from_package, dojo_metadata_from_workspace};
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, Package, TargetKind};
@@ -57,13 +56,6 @@ impl BuildArgs {
             filter.match_many(&ws)?.into_iter().collect()
         } else {
             ws.members().collect()
-        };
-
-        let dojo_metadata = if packages.len() == 1 {
-            let package = packages.first().unwrap();
-            dojo_metadata_from_package(package, &ws)?
-        } else {
-            dojo_metadata_from_workspace(&ws)?
         };
 
         let profile_name =
@@ -146,9 +138,11 @@ impl BuildArgs {
         };
         trace!(pluginManager=?bindgen, "Generating bindings.");
 
+        // TODO: check about the skip migration as now we process the metadata
+        // directly during the compilation to get the data we need from it.
         tokio::runtime::Runtime::new()
             .unwrap()
-            .block_on(bindgen.generate(dojo_metadata.skip_migration))
+            .block_on(bindgen.generate(None))
             .expect("Error generating bindings");
 
         Ok(())

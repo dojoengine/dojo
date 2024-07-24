@@ -7,6 +7,7 @@ use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use regex::Regex;
 use scarb::core::{ManifestMetadata, Package, TargetKind, Workspace};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use cairo_lang_filesystem::cfg::CfgSet;
 use serde_json::json;
 use url::Url;
 
@@ -24,6 +25,8 @@ pub const IPFS_PASSWORD: &str = "12290b883db9138a8ae3363b6739d220";
 pub const MANIFESTS_DIR: &str = "manifests";
 pub const ABIS_DIR: &str = "abis";
 pub const BASE_DIR: &str = "base";
+pub const NAMESPACE_CFG_PREFIX: &str = "nm|";
+pub const DEFAULT_NAMESPACE_CFG_KEY: &str = "namespace_default";
 
 /// Get the default namespace from the workspace.
 ///
@@ -235,18 +238,31 @@ pub struct NamespaceConfig {
 }
 
 impl NamespaceConfig {
-    /// Create a new namespace configuration with a default namespace.
+    /// Creates a new namespace configuration with a default namespace.
     pub fn new(default: &str) -> Self {
         NamespaceConfig { default: default.to_string(), mappings: None }
     }
 
-    /// Add mappings to the namespace configuration.
+    /// Adds mappings to the namespace configuration.
     pub fn with_mappings(mut self, mappings: HashMap<String, String>) -> Self {
         self.mappings = Some(mappings);
         self
     }
 
-    /// Get the namespace for a given tag or namespace, or return the default
+    /// Displays the namespace mappings as a string.
+    pub fn display_mappings(&self) -> String {
+        if let Some(mappings) = &self.mappings {
+            let mut result = String::from("\n-- Mappings --\n");
+            for (k, v) in mappings.iter() {
+                result += &format!("{} -> {}\n", k, v);
+            }
+            result
+        } else {
+            "No mapping to apply".to_string()
+        }
+    }
+
+    /// Gets the namespace for a given tag or namespace, or return the default
     /// namespace if no mapping was found.
     ///
     /// If the input is a tag, a first perfect match is checked. If no match
@@ -310,6 +326,30 @@ impl NamespaceConfig {
         }
 
         Ok(self)
+    }
+}
+
+impl From<&CfgSet> for NamespaceConfig {
+    fn from(cfg_set: &CfgSet) -> Self {
+        let mut default = "".to_string();
+        let mut mappings = HashMap::new();
+
+        for cfg in cfg_set.into_iter() {
+            if cfg.key == DEFAULT_NAMESPACE_CFG_KEY {
+                if let Some(v) = &cfg.value {
+                    default = v.to_string();
+                }
+            } else if cfg.key.starts_with(NAMESPACE_CFG_PREFIX) {
+                let key = cfg.key.replace(NAMESPACE_CFG_PREFIX, "");
+                if let Some(v) = &cfg.value {
+                    mappings.insert(key, v.to_string());
+                }
+            }
+        }
+
+        let mappings = if mappings.is_empty() { None } else { Some(mappings) };
+
+        NamespaceConfig { default: default.to_string(), mappings }
     }
 }
 

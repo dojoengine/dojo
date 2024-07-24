@@ -29,9 +29,17 @@ dependencies = [
  "armory",
  "bestiary",
  "dojo",
+ "origami_token",
 ]
 
 [[package]]
 name = "dojo_plugin"
 version = "0.7.3"
 source = "git+https://github.com/dojoengine/dojo?rev=d90b52b#d90b52b89749ac8af82f352dc08aa0b1378cfae6"
+
+[[package]]
+name = "origami_token"
+version = "1.0.0-alpha.0"
+dependencies = [
+ "dojo",
+]
