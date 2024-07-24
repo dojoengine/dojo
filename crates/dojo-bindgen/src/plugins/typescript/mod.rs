@@ -372,18 +372,6 @@ export function defineContractComponents(world: World) {
         let args = system
             .inputs
             .iter()
-            .filter(|arg| {
-                ![
-                    "contract_name",
-                    "namespace",
-                    "tag",
-                    "name_hash",
-                    "selector",
-                    "dojo_init",
-                    "namespace_hash",
-                ]
-                .contains(&arg.0.as_str())
-            })
             .map(|arg| format!("{}: {}", arg.0, map_type(&arg.1)))
             .collect::<Vec<String>>()
             .join(", ");
@@ -446,18 +434,6 @@ export function defineContractComponents(world: World) {
         let calldata = system
             .inputs
             .iter()
-            .filter(|arg| {
-                ![
-                    "contract_name",
-                    "namespace",
-                    "tag",
-                    "name_hash",
-                    "selector",
-                    "dojo_init",
-                    "namespace_hash",
-                ]
-                .contains(&arg.0.as_str())
-            })
             .map(|arg| handle_arg_recursive(&arg.0, &arg.1, handled_tokens))
             .collect::<Vec<String>>()
             .join(",\n                ");
