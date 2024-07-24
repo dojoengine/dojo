@@ -21,7 +21,7 @@ use super::StarknetApi;
 
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetTraceApiServer for StarknetApi<EF> {
-    async fn trace(&self, _: TxHash) -> RpcResult<TransactionTrace> {
+    async fn trace_transaction(&self, _: TxHash) -> RpcResult<TransactionTrace> {
         Err(Error::Call(CallError::Custom(ErrorObject::owned(
             METHOD_NOT_FOUND_CODE,
             "Unsupported method - starknet_traceTransaction".to_string(),
@@ -29,7 +29,7 @@ impl<EF: ExecutorFactory> StarknetTraceApiServer for StarknetApi<EF> {
         ))))
     }
 
-    async fn simulate(
+    async fn simulate_transactions(
         &self,
         block_id: BlockIdOrTag,
         transactions: Vec<BroadcastedTx>,
@@ -211,7 +211,10 @@ impl<EF: ExecutorFactory> StarknetTraceApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn trace_block(&self, _: BlockIdOrTag) -> RpcResult<Vec<TransactionTraceWithHash>> {
+    async fn trace_block_transactions(
+        &self,
+        _: BlockIdOrTag,
+    ) -> RpcResult<Vec<TransactionTraceWithHash>> {
         Err(Error::Call(CallError::Custom(ErrorObject::owned(
             METHOD_NOT_FOUND_CODE,
             "Unsupported method - starknet_traceBlockTransactions".to_string(),
