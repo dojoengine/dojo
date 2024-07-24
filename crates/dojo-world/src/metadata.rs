@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use regex::Regex;
-use scarb::core::{ManifestMetadata, Workspace};
+use scarb::core::{ManifestMetadata, Package, PackageId, Workspace};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
@@ -96,6 +96,27 @@ pub fn project_to_world_metadata(m: ProjectWorldMetadata) -> WorldMetadata {
     }
 }
 
+pub fn dojo_metadata_from_package(package: &Package, ws: &Workspace<'_>) -> Result<DojoMetadata> {
+    tracing::debug!(package_id = package.id.to_string(), "Collecting Dojo metadata from package.");
+
+    let project_metadata = package
+            .manifest
+            .metadata
+            .dojo()
+            .with_context(|| format!("Error parsing manifest file `{}`", ws.manifest_path()))?;
+
+    let dojo_metadata = DojoMetadata {
+        env: project_metadata.env.clone(),
+        skip_migration: project_metadata.skip_migration.clone(),
+        world: project_to_world_metadata(project_metadata.world),
+        ..Default::default()
+    };
+
+    tracing::trace!(?dojo_metadata);
+
+    Ok(dojo_metadata)
+}
+
 /// Collect metadata from the project configuration and from the workspace.
 ///
 /// # Arguments
@@ -123,8 +144,8 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
         // (being the only package or using --package).
         return Err(anyhow!(
             "No current package with dojo metadata found, virtual manifest in workspace are not \
-             supported. Until package compilation is supported, you will have to provide the path \
-             to the Scarb.toml file using the --manifest-path option."
+                supported. Until package compilation is supported, you will have to provide the path \
+                to the Scarb.toml file using the --manifest-path option."
         ));
     };
 

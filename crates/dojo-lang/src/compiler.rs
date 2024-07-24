@@ -100,6 +100,8 @@ impl Compiler for DojoCompiler {
 
         let compiler_config = build_compiler_config(&unit, ws);
 
+        trace!(target: LOG_TARGET, unit = %unit.name(), ?props, "Compiling unit dojo compiler.");
+
         let mut main_crate_ids = collect_main_crate_ids(&unit, db);
         let core_crate_ids: Vec<CrateId> = collect_core_crate_ids(db);
         main_crate_ids.extend(core_crate_ids);

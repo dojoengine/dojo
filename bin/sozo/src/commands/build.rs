@@ -3,12 +3,12 @@ use clap::{Args, Parser};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use dojo_world::manifest::MANIFESTS_DIR;
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::metadata::{dojo_metadata_from_package, dojo_metadata_from_workspace, DojoMetadata};
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
-use scarb::core::{Config, TargetKind};
-use scarb::ops::CompileOpts;
-use scarb_ui::args::FeaturesSpec;
+use scarb::core::{Config, Package, TargetKind};
+use scarb::ops::{package, CompileOpts};
+use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
@@ -43,28 +43,60 @@ pub struct BuildArgs {
     /// Specify the features to activate.
     #[command(flatten)]
     pub features: FeaturesSpec,
+
+    /// Specify packages to build.
+    #[command(flatten)]
+    pub packages: Option<PackagesFilter>,
 }
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        if let Ok(current_package) = ws.current_package() {
-            if current_package.target(&TargetKind::new("dojo")).is_none() {
-                return Err(anyhow::anyhow!(
-                    "No Dojo target found in the {} package. Add [[target.dojo]] to the {} \
-                     manifest to enable Dojo features and compile with sozo.",
-                    current_package.id.to_string(),
-                    current_package.manifest_path()
-                ));
+        let packages: Vec<Package> = if let Some(filter) = self.packages {
+            filter.match_many(&ws)?.into_iter().collect()
+        } else {
+            ws.members().collect()
+        };
+
+        let dojo_metadata = if packages.len() == 1 {
+            let package = packages.iter().next().unwrap();
+            dojo_metadata_from_package(&package, &ws)?
+        } else {
+            trace!("Looking for Dojo metadata among packages.");
+            // Here, we should iterate and remove any package that is not dojo specific?
+            // Or take the metadata from the first dojo package. But only one package
+            // that is NOT LIB and has the dojo target.
+            // Check all workspace members for a package with dojo target and not lib target
+            let dojo_packages: Vec<Package> = ws.members().into_iter()
+                .filter(|package| {
+                    package.target(&TargetKind::new("dojo")).is_some()
+                        && !package.target(&TargetKind::new("lib")).is_some()
+                })
+                .collect();
+
+            match dojo_packages.len() {
+                0 => {
+                    // If libs, we don't care about the output. Usually, only the lib compilation and testing
+                    // is required.
+                    tracing::warn!("No package with dojo target (and not a lib) found in workspace.");
+                    DojoMetadata::default()
+                }
+                1 => {
+                    let dojo_package = dojo_packages.into_iter().next().expect("Package must exist as len is 1.");
+                    dojo_metadata_from_package(&dojo_package, &ws)?
+                }
+                _ => {
+                    return Err(anyhow::anyhow!("Multiple packages with dojo target found in workspace. Please specify a package using --package option."));
+                }
             }
-        }
+        };
 
         // Namespaces are required to compute contracts/models data. Hence, we can't continue
         // if no metadata are found.
         // Once sozo will support package option, users will be able to do `-p` to select
         // the package directly from the workspace instead of using `--manifest-path`.
-        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
+        //let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
 
         let profile_name =
             ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
@@ -75,7 +107,8 @@ impl BuildArgs {
 
         let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
         CleanArgs::clean_manifests(&profile_dir)?;
-        let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
+
+        trace!(?packages);
 
         let compile_info = compile_workspace(
             config,
@@ -85,7 +118,7 @@ impl BuildArgs {
                 exclude_target_kinds: vec![TargetKind::TEST],
                 features: self.features.try_into()?,
             },
-            packages,
+            packages.iter().map(|p| p.id).collect(),
         )?;
         trace!(?compile_info, "Compiled workspace.");
 
@@ -167,6 +200,7 @@ impl Default for BuildArgs {
             unity: false,
             bindings_output: "bindings".to_string(),
             stats: false,
+            packages: None,
         }
     }
 }

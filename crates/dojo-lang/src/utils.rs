@@ -6,6 +6,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use dojo_world::metadata::NamespaceConfig;
 use regex::Regex;
 use toml::Table;
+use tracing::debug;
 
 /// Check if the provided name follows the format rules.
 pub fn is_name_valid(name: &str) -> bool {
@@ -15,6 +16,21 @@ pub fn is_name_valid(name: &str) -> bool {
 /// Get the namespace configuration from the workspace.
 // TODO: Ask to Scarb team to expose this information with the new macro system.
 pub fn get_namespace_config(db: &dyn SyntaxGroup) -> Result<NamespaceConfig> {
+    // Super verbose print, but useful to get the CfgSet.
+    // debug!(cfg_set = ?db.cfg_set(), crates = ?db.crates(), "Retrieving namespace configuration.");
+
+    if !db.cfg_set().contains(&cairo_lang_filesystem::cfg::Cfg {
+        key: "target".into(),
+        value: Some("dojo".into()),
+    }) {
+        // When a [lib] is compiled without the target "dojo", we shouldn't care about
+        // the namespace being retrieved.
+        return Ok(NamespaceConfig {
+            default: "ignored_namespace".into(),
+            mappings: None,
+        });
+    }
+
     let crates = db.crates();
 
     if crates.is_empty() {
@@ -26,13 +42,17 @@ pub fn get_namespace_config(db: &dyn SyntaxGroup) -> Result<NamespaceConfig> {
     // Crates[0] is always the root crate that triggered the build origin.
     // In case of a library, crates[0] refers to the lib itself if compiled directly,
     // or the crate using the library otherwise.
-    let configuration = match db.crate_config(crates[0]) {
+    let configuration = match db.crate_config(*crates.first().expect("No root crate found in the workspace.")) {
         Option::Some(cfg) => cfg,
         Option::None => return Err(anyhow::anyhow!("No configuration found for the root crate.")),
     };
 
     if let Directory::Real(ref path) = configuration.root {
         let config_path = path.parent().unwrap().join("Scarb.toml");
+
+        // Very verbose.
+        // tracing::debug!(config_path = %config_path.to_string_lossy(), "Reading Scarb.toml file for namespace config.");
+
         let config_content = match fs::read_to_string(&config_path) {
             Ok(x) => x,
             Err(e) => return Err(anyhow::anyhow!("Failed to read Scarb.toml file: {e}.")),

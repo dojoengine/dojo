@@ -103,10 +103,11 @@ pub fn compile_workspace(
 
     let mut compile_error_units = vec![];
     for unit in compilation_units {
+        trace!(target: LOG_TARGET, unit_name = %unit.name(), target_kind = %unit.main_component().target_kind(), "Compiling unit.");
         if let CompilationUnit::Cairo(unit) = unit {
             let mut db = build_scarb_root_database(&unit).unwrap();
-
             if let Err(err) = ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
+                println!("err");
                 ws.config().ui().anyhow(&err);
                 compile_error_units.push(unit.name());
             }
