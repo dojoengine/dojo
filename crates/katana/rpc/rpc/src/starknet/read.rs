@@ -36,7 +36,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         Ok(FieldElement::from(self.inner.sequencer.chain_id()).into())
     }
 
-    async fn nonce(
+    async fn get_nonce(
         &self,
         block_id: BlockIdOrTag,
         contract_address: FieldElement,
@@ -62,7 +62,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn transaction_by_hash(&self, transaction_hash: FieldElement) -> RpcResult<Tx> {
+    async fn get_transaction_by_hash(&self, transaction_hash: FieldElement) -> RpcResult<Tx> {
         self.on_io_blocking_task(move |this| {
             let tx = this
                 .inner
@@ -75,7 +75,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn block_transaction_count(&self, block_id: BlockIdOrTag) -> RpcResult<u64> {
+    async fn get_block_transaction_count(&self, block_id: BlockIdOrTag) -> RpcResult<u64> {
         self.on_io_blocking_task(move |this| {
             let count = this
                 .inner
@@ -88,7 +88,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn class_at(
+    async fn get_class_at(
         &self,
         block_id: BlockIdOrTag,
         contract_address: FieldElement,
@@ -102,7 +102,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     .ok_or(StarknetApiError::ContractNotFound)
             })
             .await?;
-        self.class(block_id, class_hash).await
+        self.get_class(block_id, class_hash).await
     }
 
     async fn block_hash_and_number(&self) -> RpcResult<BlockHashAndNumber> {
@@ -113,7 +113,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         Ok(hash_and_num_pair.into())
     }
 
-    async fn block_with_tx_hashes(
+    async fn get_block_with_tx_hashes(
         &self,
         block_id: BlockIdOrTag,
     ) -> RpcResult<MaybePendingBlockWithTxHashes> {
@@ -169,7 +169,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn transaction_by_block_id_and_index(
+    async fn get_transaction_by_block_id_and_index(
         &self,
         block_id: BlockIdOrTag,
         index: u64,
@@ -201,7 +201,10 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn block_with_txs(&self, block_id: BlockIdOrTag) -> RpcResult<MaybePendingBlockWithTxs> {
+    async fn get_block_with_txs(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> RpcResult<MaybePendingBlockWithTxs> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 
@@ -255,7 +258,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn block_with_receipts(
+    async fn get_block_with_receipts(
         &self,
         block_id: BlockIdOrTag,
     ) -> RpcResult<MaybePendingBlockWithReceipts> {
@@ -311,7 +314,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn state_update(&self, block_id: BlockIdOrTag) -> RpcResult<StateUpdate> {
+    async fn get_state_update(&self, block_id: BlockIdOrTag) -> RpcResult<StateUpdate> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 
@@ -336,7 +339,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn transaction_receipt(
+    async fn get_transaction_receipt(
         &self,
         transaction_hash: FieldElement,
     ) -> RpcResult<TxReceiptWithBlockInfo> {
@@ -380,7 +383,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn class_hash_at(
+    async fn get_class_hash_at(
         &self,
         block_id: BlockIdOrTag,
         contract_address: FieldElement,
@@ -397,7 +400,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn class(
+    async fn get_class(
         &self,
         block_id: BlockIdOrTag,
         class_hash: FieldElement,
@@ -419,7 +422,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn events(&self, filter: EventFilterWithPage) -> RpcResult<EventsPage> {
+    async fn get_events(&self, filter: EventFilterWithPage) -> RpcResult<EventsPage> {
         self.on_io_blocking_task(move |this| {
             let from_block = filter.event_filter.from_block.unwrap_or(BlockIdOrTag::Number(0));
             let to_block =
@@ -479,7 +482,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn storage_at(
+    async fn get_storage_at(
         &self,
         contract_address: FieldElement,
         key: FieldElement,
@@ -590,7 +593,10 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         .await
     }
 
-    async fn transaction_status(&self, transaction_hash: TxHash) -> RpcResult<TransactionStatus> {
+    async fn get_transaction_status(
+        &self,
+        transaction_hash: TxHash,
+    ) -> RpcResult<TransactionStatus> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 
