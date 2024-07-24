@@ -11,7 +11,10 @@ version = "0.7.3"
 dojo_plugin = { git = "https://github.com/dojoengine/dojo", rev = "d90b52b" }
 starknet = "=2.7.0-rc.3"
 
+[lib]
+
 # Dojo core is tested with sozo, hence we need a namespace for the test
 # command to work.
 [tool.dojo.world]
+seed = "dojo"
 namespace = { default = "dojo" }

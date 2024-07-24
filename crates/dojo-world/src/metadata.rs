@@ -79,17 +79,30 @@ pub fn project_to_world_metadata(m: ProjectWorldMetadata) -> WorldMetadata {
 pub fn dojo_metadata_from_package(package: &Package, ws: &Workspace<'_>) -> Result<DojoMetadata> {
     tracing::debug!(target: LOG_TARGET, package_id = package.id.to_string(), "Collecting Dojo metadata from package.");
 
-    if package.target(&TargetKind::new("lib")).is_some()
-        || package.target(&TargetKind::new("dojo")).is_none()
-    {
-        return Ok(DojoMetadata::default());
+    // If it's a lib, we can try to extract dojo data. If failed -> then we can return default.
+    // But like so, if some metadata are here, we get them.
+    // [[target.dojo]] shouldn't be used with [lib] as no files will be deployed.
+    let is_lib = package.target(&TargetKind::new("lib")).is_some();
+    let is_dojo = package.target(&TargetKind::new("dojo")).is_some();
+
+    if is_lib && is_dojo {
+        return Err(anyhow::anyhow!("[lib] package cannot have [[target.dojo]]."));
     }
 
-    let project_metadata = package
-        .manifest
-        .metadata
-        .dojo()
-        .with_context(|| format!("Error parsing manifest file `{}`", ws.manifest_path()))?;
+    let project_metadata = match package.manifest.metadata.dojo() {
+        Ok(m) => Ok(m),
+        Err(e) => {
+            if is_lib || !is_dojo {
+                Ok(ProjectMetadata::default())
+            } else {
+                Err(anyhow::anyhow!(
+                    "In manifest {} [dojo] package must have [[target.dojo]]: {}.",
+                    ws.manifest_path(),
+                    e
+                ))
+            }
+        }
+    }?;
 
     let dojo_metadata = DojoMetadata {
         env: project_metadata.env.clone(),
@@ -125,12 +138,10 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
                 dojo_packages.into_iter().next().expect("Package must exist as len is 1.");
             Ok(dojo_metadata_from_package(&dojo_package, ws)?)
         }
-        _ => {
-            Err(anyhow::anyhow!(
-                "Multiple packages with dojo target found in workspace. Please specify a package \
-                 using --package option or maybe one of them must be declared as a [lib]."
-            ))
-        }
+        _ => Err(anyhow::anyhow!(
+            "Multiple packages with dojo target found in workspace. Please specify a package \
+             using --package option or maybe one of them must be declared as a [lib]."
+        )),
     }
 }
 

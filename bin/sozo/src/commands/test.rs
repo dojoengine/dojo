@@ -95,6 +95,8 @@ impl TestArgs {
             .collect::<Vec<_>>();
 
         for unit in compilation_units {
+            tracing::trace!(unit = %unit.name(), "Adding unit to test runner.");
+
             let unit = if let CompilationUnit::Cairo(unit) = unit {
                 unit
             } else {
