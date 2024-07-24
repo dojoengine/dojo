@@ -136,7 +136,7 @@ async fn metadata_calculated_properly() {
         manifest.merge(overlay_manifest);
     }
 
-    let world = WorldDiff::compute(manifest, None, &"dojo-test").unwrap();
+    let world = WorldDiff::compute(manifest, None, "dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,
@@ -175,7 +175,7 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     )
     .unwrap();
 
-    let world = WorldDiff::compute(manifest.clone(), None, &"dojo-test").unwrap();
+    let world = WorldDiff::compute(manifest.clone(), None, "dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,
@@ -242,7 +242,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    let world = WorldDiff::compute(manifest, None, &"dojo-test").unwrap();
+    let world = WorldDiff::compute(manifest, None, "dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,

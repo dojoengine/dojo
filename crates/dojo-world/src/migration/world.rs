@@ -95,7 +95,7 @@ impl WorldDiff {
         };
 
         let mut diff = WorldDiff { world, base, contracts, models };
-        diff.update_order(&default_namespace)?;
+        diff.update_order(default_namespace)?;
 
         Ok(diff)
     }

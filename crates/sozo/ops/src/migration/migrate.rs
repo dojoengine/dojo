@@ -711,13 +711,13 @@ where
 
         match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address).await {
             Ok(current_class_hash) if current_class_hash != contract.diff.local_class_hash => {
-                return format!("{}: Upgrade", contract.diff.tag);
+                format!("{}: Upgrade", contract.diff.tag)
             }
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                return format!("{}: Deploy", contract.diff.tag);
+                format!("{}: Deploy", contract.diff.tag)
             }
-            Ok(_) => return "Already Deployed".to_string(),
-            Err(_) => return format!("{}: Deploy", contract.diff.tag),
+            Ok(_) => "Already Deployed".to_string(),
+            Err(_) => format!("{}: Deploy", contract.diff.tag),
         }
     } else {
         format!("{}: Deploy", contract.diff.tag)
@@ -907,8 +907,7 @@ fn calculate(
     }
 
     // given deployment_metadata.contracts return only the ones that are true
-    let contracts =
-        deployment_metadata.contracts.iter().filter(|(_, &v)| v == true).collect::<Vec<_>>();
+    let contracts = deployment_metadata.contracts.iter().filter(|(_, &v)| v).collect::<Vec<_>>();
 
     let mut work = vec![];
     for contract in contracts {

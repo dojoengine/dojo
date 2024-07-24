@@ -466,9 +466,7 @@ impl DeploymentMetadata {
     pub fn add_missing(&mut self, manifest: &BaseManifest) {
         for contract in manifest.contracts.iter() {
             let name = naming::get_tag_from_filename(&contract.manifest_name).unwrap();
-            if !self.contracts.contains_key(&name) {
-                self.contracts.insert(name, true);
-            }
+            self.contracts.entry(name).or_insert(true);
         }
     }
 }

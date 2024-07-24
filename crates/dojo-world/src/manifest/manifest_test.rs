@@ -357,7 +357,7 @@ fn fetch_remote_manifest() {
 
     // compute diff from local and remote manifest
 
-    let diff = WorldDiff::compute(local_manifest, Some(remote_manifest), &"dojo-test").unwrap();
+    let diff = WorldDiff::compute(local_manifest, Some(remote_manifest), "dojo-test").unwrap();
 
     assert_eq!(diff.count_diffs(), 0, "there should not be any diff");
 }
