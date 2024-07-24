@@ -201,7 +201,7 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
 }
 
 #[derive(Debug)]
-struct PackageData {
+pub struct PackageData {
     pub namespace_config: Option<NamespaceConfig>,
 }
 
@@ -280,7 +280,7 @@ fn namespace_config_from_toml(
     Ok(None)
 }
 
-fn cfg_set_from_component(
+pub fn cfg_set_from_component(
     c: &CompilationUnitComponent,
     root_package_data: &PackageData,
     ui: &Ui,

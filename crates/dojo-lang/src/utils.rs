@@ -18,16 +18,6 @@ pub fn get_namespace_config(db: &dyn SyntaxGroup) -> Result<NamespaceConfig> {
     // Super verbose print, but useful to get the CfgSet.
     // debug!(cfg_set = ?db.cfg_set(), crates = ?db.crates(), "Retrieving namespace
     // configuration.");
-
-    if !db.cfg_set().contains(&cairo_lang_filesystem::cfg::Cfg {
-        key: "target".into(),
-        value: Some("dojo".into()),
-    }) {
-        // When a [lib] is compiled without the target "dojo", we shouldn't care about
-        // the namespace being retrieved.
-        return Ok(NamespaceConfig { default: "ignored_namespace".into(), mappings: None });
-    }
-
     let crates = db.crates();
 
     if crates.is_empty() {

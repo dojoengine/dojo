@@ -7,6 +7,7 @@ use cairo_lang_defs::plugin::{
     PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
+use cairo_lang_filesystem::cfg::Cfg;
 use cairo_lang_semantic::plugin::PluginSuite;
 use cairo_lang_starknet::plugin::aux_data::StarkNetEventAuxData;
 use cairo_lang_syntax::attribute::structured::{AttributeArgVariant, AttributeStructurize};
@@ -37,6 +38,7 @@ use crate::interface::DojoInterface;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
+use crate::utils;
 
 pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
@@ -348,17 +350,37 @@ impl MacroPlugin for BuiltinDojoPlugin {
         item_ast: ast::ModuleItem,
         metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
-        // Metadata gives information from the crates from where `item_ast` was parsed.
-        // During the compilation phase, we inject namespace information into the `CfgSet`
-        // so that it can be used here.
-        let namespace_config: NamespaceConfig = metadata.cfg_set.into();
+        let namespace_config: NamespaceConfig = if db.cfg_set().contains(&Cfg::kv("target", "test"))
+        {
+            // In test mode, we can't inject namespace information into the `CfgSet`
+            // as the compiler panics.
+            match utils::get_namespace_config(db) {
+                Ok(config) => config,
+                Err(e) => {
+                    return PluginResult {
+                        code: Option::None,
+                        diagnostics: vec![PluginDiagnostic {
+                            stable_ptr: item_ast.stable_ptr().0,
+                            message: format!("{e}"),
+                            severity: Severity::Error,
+                        }],
+                        remove_original_item: false,
+                    };
+                }
+            }
+        } else {
+            // Metadata gives information from the crates from where `item_ast` was parsed.
+            // During the compilation phase, we inject namespace information into the `CfgSet`
+            // so that it can be used here.
+            metadata.cfg_set.into()
+        };
 
         // Avoid the whole plugin checks if there is no default namespace.
         // The compiler already checked for invalid package configuration,
         // so empty default namespace can be skipped.
-        if namespace_config.default.is_empty() {
-            return PluginResult::default();
-        }
+        //         if namespace_config.default.is_empty() {
+        // return PluginResult::default();
+        // }
 
         match item_ast {
             ast::ModuleItem::Module(module_ast) => {

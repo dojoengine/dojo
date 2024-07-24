@@ -8,7 +8,7 @@ version = "0.7.3"
 [dependencies]
 # Rev points to support for Cairo 2.7.0-rc.3 without any tag yet. Should be
 # updated once a release is cut with `2.7.0-rc.3` support in it.
-dojo_plugin = { git = "https://github.com/dojoengine/dojo", rev = "d90b52b" }
+dojo_plugin = { git = "https://github.com/dojoengine/dojo", rev = "71b1f1a4" }
 starknet = "=2.7.0-rc.3"
 
 [lib]
