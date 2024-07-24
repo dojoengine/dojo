@@ -353,7 +353,8 @@ impl MacroPlugin for BuiltinDojoPlugin {
         let namespace_config: NamespaceConfig = if db.cfg_set().contains(&Cfg::kv("target", "test"))
         {
             // In test mode, we can't inject namespace information into the `CfgSet`
-            // as the compiler panics.
+            // as the compiler panics. We then extract the info from the main component
+            // of the compilation unit.
             match utils::get_namespace_config(db) {
                 Ok(config) => config,
                 Err(e) => {

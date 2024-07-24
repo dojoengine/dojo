@@ -14,7 +14,7 @@ use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
-use scarb::core::{Config, TargetKind};
+use scarb::core::{Config, Package, PackageId, TargetKind};
 use scarb::ops::{self, CompileOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use tracing::trace;
@@ -69,10 +69,20 @@ pub struct TestArgs {
 
 impl TestArgs {
     pub fn run(self, config: &Config) -> anyhow::Result<()> {
+        println!("packages: {:?}", self.packages);
+
         let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
             eprintln!("error: {err}");
             std::process::exit(1);
         });
+
+        let packages: Vec<Package> = if let Some(filter) = self.packages {
+            filter.match_many(&ws)?.into_iter().collect()
+        } else {
+            ws.members().collect()
+        };
+
+        let package_ids = packages.iter().map(|p| p.id).collect::<Vec<PackageId>>();
 
         let resolve = ops::resolve_workspace(&ws)?;
 
@@ -90,6 +100,7 @@ impl TestArgs {
                 opts.include_target_kinds.is_empty()
                     || opts.include_target_kinds.contains(&cu.main_component().target_kind())
             })
+            .filter(|cu| package_ids.contains(&cu.main_package_id()))
             .collect::<Vec<_>>();
 
         for unit in compilation_units {
@@ -98,6 +109,8 @@ impl TestArgs {
             } else {
                 continue;
             };
+
+            config.ui().print(format!("testing {}", unit.name()));
 
             // Injecting the cfg_set for the unit makes compiler panics.
             // We rely then on the default namespace for testing...?
