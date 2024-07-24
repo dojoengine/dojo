@@ -57,7 +57,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.0", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", branch = "fix/inner-composite-resolution", features = [ "abigen-rs" ] }
 common = { path = "crates/common" }
 
 # metrics
@@ -231,9 +231,7 @@ slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
 alloy-contract = { version = "0.2", default-features = false }
 alloy-json-rpc = { version = "0.2", default-features = false }
 alloy-network = { version = "0.2", default-features = false }
-alloy-provider = { version = "0.2", default-features = false, features = [
-    "reqwest",
-] }
+alloy-provider = { version = "0.2", default-features = false, features = [ "reqwest" ] }
 alloy-rpc-types-eth = { version = "0.2", default-features = false }
 alloy-signer = { version = "0.2", default-features = false }
 alloy-transport = { version = "0.2", default-features = false }

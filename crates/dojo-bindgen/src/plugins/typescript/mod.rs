@@ -206,16 +206,24 @@ export const {name}Definition = {{
         let (fields, _composite_type) =
             model.inners.iter().fold((Vec::new(), model.r#type), |(mut fields, _), field| {
                 let mapped = TypescriptPlugin::map_type(&field.token);
-                let field_str = if model.r#type == CompositeType::Enum {
-                    // For enums, use RecsType.String
-                    types.push(format!("\"{}\"", field.token.type_name()));
-                    format!("{}: RecsType.String,", field.name)
-                } else if mapped == field.token.type_name() {
-                    custom_types.push(format!("\"{}\"", field.token.type_name()));
-                    format!("{}: {}Definition,", field.name, mapped)
-                } else {
-                    types.push(format!("\"{}\"", field.token.type_name()));
-                    format!("{}: {},", field.name, mapped)
+
+                let field_str = match field.token {
+                    Token::Composite(ref c) if c.r#type == CompositeType::Enum => {
+                        types.push(format!("\"{}\"", field.token.type_name()));
+                        format!("{}: RecsType.String,", field.name)
+                    }
+                    Token::Composite(_) => {
+                        custom_types.push(format!("\"{}\"", field.token.type_name()));
+                        format!("{}: {}Definition,", field.name, mapped)
+                    }
+                    _ if mapped == field.token.type_name() => {
+                        custom_types.push(format!("\"{}\"", field.token.type_name()));
+                        format!("{}: {}Definition,", field.name, mapped)
+                    }
+                    _ => {
+                        types.push(format!("\"{}\"", field.token.type_name()));
+                        format!("{}: {},", field.name, mapped)
+                    }
                 };
 
                 fields.push(field_str);
@@ -356,6 +364,7 @@ export function defineContractComponents(world: World) {
                 // types should be lowercased
                 .to_lowercase(),
                 Token::Composite(t) => format!("models.{}", t.type_name()),
+                Token::Array(t) => TypescriptPlugin::map_type(token),
                 _ => panic!("Unsupported token type: {:?}", token),
             }
         }
