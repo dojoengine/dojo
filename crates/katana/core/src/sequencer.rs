@@ -1,32 +1,11 @@
-use std::cmp::Ordering;
-use std::iter::Skip;
-use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
 use katana_executor::ExecutorFactory;
-use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
-use katana_primitives::chain::ChainId;
-use katana_primitives::class::{ClassHash, CompiledClass};
-use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
-use katana_primitives::env::BlockEnv;
-use katana_primitives::event::{ContinuationToken, ContinuationTokenError};
-use katana_primitives::receipt::Event;
-use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
-use katana_primitives::FieldElement;
-use katana_provider::traits::block::{
-    BlockHashProvider, BlockIdReader, BlockNumberProvider, BlockProvider,
-};
-use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
-use katana_provider::traits::transaction::{
-    ReceiptProvider, TransactionProvider, TransactionsProviderExt,
-};
-use starknet::core::types::{BlockTag, EmittedEvent, EventsPage};
+use katana_provider::BlockchainProvider;
 
 use crate::backend::config::StarknetConfig;
-use crate::backend::contract::StarknetContract;
+use crate::backend::storage::Database;
 use crate::backend::Backend;
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
@@ -36,8 +15,6 @@ use crate::service::messaging::MessagingConfig;
 #[cfg(feature = "messaging")]
 use crate::service::messaging::MessagingService;
 use crate::service::{NodeService, TransactionMiner};
-
-type SequencerResult<T> = Result<T, SequencerError>;
 
 #[derive(Debug, Default)]
 pub struct SequencerConfig {
@@ -49,10 +26,10 @@ pub struct SequencerConfig {
 
 #[allow(missing_debug_implementations)]
 pub struct KatanaSequencer<EF: ExecutorFactory> {
-    pub config: SequencerConfig,
-    pub pool: Arc<TransactionPool>,
-    pub backend: Arc<Backend<EF>>,
-    pub block_producer: Arc<BlockProducer<EF>>,
+    config: SequencerConfig,
+    pool: Arc<TransactionPool>,
+    backend: Arc<Backend<EF>>,
+    block_producer: Arc<BlockProducer<EF>>,
 }
 
 impl<EF: ExecutorFactory> KatanaSequencer<EF> {
@@ -105,13 +82,25 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
         }
     }
 
-    // pub fn block_producer(&self) -> &BlockProducer<EF> {
-    //     &self.block_producer
-    // }
+    pub fn block_producer(&self) -> &BlockProducer<EF> {
+        &self.block_producer
+    }
 
-    // pub fn backend(&self) -> &Backend<EF> {
-    //     &self.backend
-    // }
+    pub fn backend(&self) -> &Backend<EF> {
+        &self.backend
+    }
+
+    pub fn pool(&self) -> &Arc<TransactionPool> {
+        &self.pool
+    }
+
+    pub fn config(&self) -> &SequencerConfig {
+        &self.config
+    }
+
+    pub fn provider(&self) -> &BlockchainProvider<Box<dyn Database>> {
+        &self.backend.blockchain.provider()
+    }
 
     // pub fn block_env_at(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<BlockEnv>> {
     //     let provider = self.backend.blockchain.provider();
@@ -332,11 +321,11 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
     //             .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
 
     //         let receipts = ReceiptProvider::receipts_by_block(provider,
-    // BlockHashOrNumber::Num(i))?             
+    // BlockHashOrNumber::Num(i))?
     // .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
 
     //         let tx_range = BlockProvider::block_body_indices(provider,
-    // BlockHashOrNumber::Num(i))?             
+    // BlockHashOrNumber::Num(i))?
     // .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;         let tx_hashes =
     //             TransactionsProviderExt::transaction_hashes_in_range(provider, tx_range.into())?;
 
@@ -417,7 +406,7 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
         if self.has_pending_transactions() {
             return Err(SequencerError::PendingTransactions);
         }
-        self.backend().block_context_generator.write().next_block_start_time = timestamp;
+        self.backend.block_context_generator.write().next_block_start_time = timestamp;
         Ok(())
     }
 
@@ -425,7 +414,7 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
         if self.has_pending_transactions() {
             return Err(SequencerError::PendingTransactions);
         }
-        self.backend().block_context_generator.write().block_timestamp_offset += timestamp as i64;
+        self.backend.block_context_generator.write().block_timestamp_offset += timestamp as i64;
         Ok(())
     }
 
@@ -445,56 +434,6 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
     // ) -> Result<(), SequencerError> { if let Some(ref pending) = self.pending_state() {
     //   StateWriter::set_storage(&pending.state, contract_address, storage_key, value)?; } Ok(())
     // }
-}
-
-fn filter_events_by_params(
-    events: Skip<Iter<'_, Event>>,
-    address: Option<ContractAddress>,
-    filter_keys: Option<Vec<Vec<FieldElement>>>,
-    max_results: Option<usize>,
-) -> (Vec<Event>, usize) {
-    let mut filtered_events = vec![];
-    let mut index = 0;
-
-    // Iterate on block events.
-    for event in events {
-        index += 1;
-        if !address.map_or(true, |addr| addr == event.from_address) {
-            continue;
-        }
-
-        let match_keys = match filter_keys {
-            // From starknet-api spec:
-            // Per key (by position), designate the possible values to be matched for events to be
-            // returned. Empty array designates 'any' value"
-            Some(ref filter_keys) => filter_keys.iter().enumerate().all(|(i, keys)| {
-                // Lets say we want to filter events which are either named `Event1` or `Event2` and
-                // custom key `0x1` or `0x2` Filter: [[sn_keccack("Event1"),
-                // sn_keccack("Event2")], ["0x1", "0x2"]]
-
-                // This checks: number of keys in event >= number of keys in filter (we check > i
-                // and not >= i because i is zero indexed) because otherwise this
-                // event doesn't contain all the keys we requested
-                event.keys.len() > i &&
-                    // This checks: Empty array desginates 'any' value
-                    (keys.is_empty()
-                    ||
-                    // This checks: If this events i'th value is one of the requested value in filter_keys[i]
-                    keys.contains(&event.keys[i]))
-            }),
-            None => true,
-        };
-
-        if match_keys {
-            filtered_events.push(event.clone());
-            if let Some(max_results) = max_results {
-                if filtered_events.len() >= max_results {
-                    break;
-                }
-            }
-        }
-    }
-    (filtered_events, index)
 }
 
 #[cfg(test)]

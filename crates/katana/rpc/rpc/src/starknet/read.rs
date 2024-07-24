@@ -29,7 +29,7 @@ use super::StarknetApi;
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn chain_id(&self) -> RpcResult<FeltAsHex> {
-        Ok(self.inner.sequencer.backend.chain_id.id().into())
+        Ok(self.inner.sequencer.backend().chain_id.id().into())
     }
 
     async fn get_nonce(
@@ -73,7 +73,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<MaybePendingBlockWithTxHashes> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.inner.sequencer.backend.blockchain.provider();
+            let provider = this.inner.sequencer.backend().blockchain.provider();
 
             if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
                 if let Some(executor) = this.inner.sequencer.pending_executor() {
@@ -140,7 +140,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 let pending_txs = executor.transactions();
                 pending_txs.get(index as usize).map(|(tx, _)| tx.clone())
             } else {
-                let provider = &this.inner.sequencer.backend.blockchain.provider();
+                let provider = &this.inner.sequencer.backend().blockchain.provider();
 
                 let block_num = BlockIdReader::convert_block_id(provider, block_id)
                     .map_err(StarknetApiError::from)?
@@ -161,7 +161,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<MaybePendingBlockWithTxs> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.inner.sequencer.backend.blockchain.provider();
+            let provider = this.inner.sequencer.backend().blockchain.provider();
 
             if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
                 if let Some(executor) = this.inner.sequencer.pending_executor() {
@@ -218,7 +218,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<MaybePendingBlockWithReceipts> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.inner.sequencer.backend.blockchain.provider();
+            let provider = this.inner.sequencer.backend().blockchain.provider();
 
             if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
                 if let Some(executor) = this.inner.sequencer.pending_executor() {
@@ -271,7 +271,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
     async fn get_state_update(&self, block_id: BlockIdOrTag) -> RpcResult<StateUpdate> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.inner.sequencer.backend.blockchain.provider();
+            let provider = this.inner.sequencer.backend().blockchain.provider();
 
             let block_id = match block_id {
                 BlockIdOrTag::Number(num) => BlockHashOrNumber::Num(num),
@@ -299,7 +299,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         transaction_hash: FieldElement,
     ) -> RpcResult<TxReceiptWithBlockInfo> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.inner.sequencer.backend.blockchain.provider();
+            let provider = this.inner.sequencer.backend().blockchain.provider();
             let receipt = ReceiptBuilder::new(transaction_hash, provider)
                 .build()
                 .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?;
@@ -392,8 +392,12 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             // get the state and block env at the specified block for function call execution
             let state = this.state(&block_id)?;
             let env = this.block_env_at(&block_id)?;
-            let executor =
-                this.inner.sequencer.backend.executor_factory.with_state_and_block_env(state, env);
+            let executor = this
+                .inner
+                .sequencer
+                .backend()
+                .executor_factory
+                .with_state_and_block_env(state, env);
 
             match executor.call(request) {
                 Ok(retdata) => Ok(retdata.into_iter().map(|v| v.into()).collect()),
@@ -425,7 +429,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.sequencer.backend.chain_id;
+            let chain_id = this.inner.sequencer.backend().chain_id;
 
             let transactions = request
                 .into_iter()
@@ -465,7 +469,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             // If the node is run with transaction validation disabled, then we should not validate
             // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
             let should_validate =
-                !(skip_validate || this.inner.sequencer.backend.config.disable_validate);
+                !(skip_validate || this.inner.sequencer.backend().config.disable_validate);
             let flags = katana_executor::SimulationFlag {
                 skip_validate: !should_validate,
                 ..Default::default()
@@ -483,7 +487,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<FeeEstimate> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.sequencer.backend.chain_id;
+            let chain_id = this.inner.sequencer.backend().chain_id;
 
             let tx = message.into_tx_with_chain_id(chain_id);
             let hash = tx.calculate_hash();

@@ -6,6 +6,7 @@ use katana_core::sequencer::KatanaSequencer;
 use katana_core::service::block_producer::BlockProducerMode;
 use katana_executor::ExecutorFactory;
 use katana_primitives::block::{BlockHashOrNumber, FinalityStatus};
+use katana_provider::traits::block::BlockNumberProvider;
 use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_types::error::torii::ToriiApiError;
@@ -53,9 +54,9 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                 let mut transactions = Vec::new();
                 let mut next_cursor = cursor;
 
-                let provider = this.sequencer.backend.blockchain.provider();
+                let provider = this.sequencer.backend().blockchain.provider();
                 let latest_block_number =
-                    this.sequencer.block_number().map_err(ToriiApiError::from)?;
+                    this.sequencer.provider().latest_number().map_err(ToriiApiError::from)?;
 
                 if cursor.block_number > latest_block_number + 1 {
                     return Err(ToriiApiError::BlockNotFound);
