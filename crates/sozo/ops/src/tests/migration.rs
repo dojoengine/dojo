@@ -26,7 +26,9 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
 use super::setup;
-use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
+use crate::migration::{
+    auto_authorize, execute_strategy, update_deployment_metadata, upload_metadata,
+};
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -103,16 +105,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let account = sequencer.account(0);
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &migration,
-            &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &migration,
+        &account,
+        TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
+    )
+    .await
+    .is_err());
 }
 
 #[tokio::test]
@@ -188,7 +188,7 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     let migration_output =
         execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 
-    // first time others will fail due to calldata error
+    // first time DojoContract named `others` will fail due to calldata error
     assert!(!migration_output.full);
 
     let world_address = migration_output.world_address;
@@ -373,9 +373,10 @@ async fn migrate_with_auto_authorize() {
     let world_address = migration.world_address;
     let world = WorldContract::new(world_address, account);
 
+    let work =
+        update_deployment_metadata(&manifest_base.to_path_buf(), &manifest, Some(&output)).unwrap();
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
-    let res =
-        auto_authorize(&ws, &world, &txn_config, &manifest, &output, &default_namespace).await;
+    let res = auto_authorize(&ws, &world, &txn_config, &manifest, &default_namespace, &work).await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();
@@ -419,7 +420,7 @@ async fn migration_with_mismatching_world_address_and_seed() {
 
     // The strategy.world has it's address set with the seed directly, and not
     // from the world address provided by the user.
-    assert_ne!(strategy.world_address.unwrap(), strategy.world.unwrap().contract_address);
+    assert_ne!(strategy.world_address, strategy.world.unwrap().contract_address);
 }
 
 /// Get the hash from a IPFS URI
