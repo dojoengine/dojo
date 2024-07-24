@@ -48,7 +48,7 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
-    DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
+    DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, TxWithHash,
 };
 use katana_primitives::{class, event, message, trace, FieldElement};
 use katana_provider::traits::contract::ContractClassProvider;
@@ -127,6 +127,7 @@ pub fn transact<S: StateReader>(
         Err(e) => ExecutionResult::new_failed(e),
     }
 }
+
 
 /// Perform a function call on a contract and retrieve the return values.
 pub fn call<S: StateReader>(
@@ -492,7 +493,7 @@ fn to_api_resource_bounds(
 
 /// Get the fee type of a transaction. The fee type determines the token used to pay for the
 /// transaction.
-fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
+pub(super) fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
     match transaction {
         Transaction::AccountTransaction(tx) => tx.fee_type(),
         Transaction::L1HandlerTransaction(tx) => tx.fee_type(),

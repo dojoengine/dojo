@@ -4,7 +4,10 @@ use katana_primitives::FieldElement;
 
 /// Errors that can be returned by the executor.
 #[derive(Debug, thiserror::Error)]
-pub enum ExecutorError {}
+pub enum ExecutorError {
+    #[error("block is full")]
+    BlockFull,
+}
 
 /// Errors that can occur during the transaction execution.
 #[derive(Debug, Clone, thiserror::Error)]

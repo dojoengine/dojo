@@ -157,7 +157,7 @@ pub enum BlockProducerMode<EF: ExecutorFactory> {
     Instant(InstantBlockProducer<EF>),
 }
 
-#[derive(Debug, Clone, derive_more::Deref)]
+#[derive(Clone, derive_more::Deref)]
 pub struct PendingExecutor(#[deref] Arc<RwLock<Box<dyn Executor<'static>>>>);
 
 impl PendingExecutor {
