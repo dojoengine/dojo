@@ -4,23 +4,34 @@ mod read;
 mod trace;
 mod write;
 
-use std::sync::Arc;
+use std::cmp::Ordering;
+use std::slice::Iter;
+use std::{iter::Skip, sync::Arc};
 
-use katana_core::{
-    backend::{contract::StarknetContract, Backend},
-    pool::TransactionPool,
-    service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor},
-};
-use katana_executor::ExecutorFactory;
+use anyhow::Result;
+use katana_core::backend::{contract::StarknetContract, Backend};
+use katana_core::pool::TransactionPool;
+use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
+use katana_executor::{ExecutionResult, ExecutorFactory};
+use katana_primitives::block::FinalityStatus;
+use katana_primitives::class::CompiledClass;
+use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
+use katana_primitives::event::ContinuationToken;
+use katana_primitives::receipt::Event;
+use katana_primitives::FieldElement;
 use katana_primitives::{
     block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag},
-    class::CompiledClass,
     contract::{Nonce, StorageKey, StorageValue},
     env::BlockEnv,
     transaction::{TxHash, TxWithHash},
 };
 use katana_primitives::{
     class::ClassHash, contract::ContractAddress, transaction::ExecutableTxWithHash,
+};
+use katana_provider::traits::block::{BlockIdReader, BlockProvider};
+use katana_provider::traits::contract::ContractClassProvider;
+use katana_provider::traits::transaction::{
+    ReceiptProvider, TransactionStatusProvider, TransactionsProviderExt,
 };
 use katana_provider::traits::{
     block::{BlockHashProvider, BlockNumberProvider},
@@ -31,6 +42,9 @@ use katana_provider::traits::{
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::FeeEstimate;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
+use starknet::core::types::{
+    ContractClass, EmittedEvent, EventsPage, TransactionExecutionStatus, TransactionStatus,
+};
 
 #[allow(missing_debug_implementations)]
 pub struct StarknetApi<EF: ExecutorFactory> {
@@ -173,58 +187,77 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         env.ok_or(StarknetApiError::BlockNotFound)
     }
 
-    pub fn block_producer(&self) -> &BlockProducer<EF> {
+    fn block_producer(&self) -> &BlockProducer<EF> {
         &self.block_producer
     }
 
-    pub fn backend(&self) -> &Backend<EF> {
+    fn backend(&self) -> &Backend<EF> {
         &self.backend
     }
 
-    pub fn add_transaction_to_pool(&self, tx: ExecutableTxWithHash) {
+    fn add_transaction_to_pool(&self, tx: ExecutableTxWithHash) {
         self.pool.add_transaction(tx);
     }
 
-    pub fn block_hash_and_number(&self) -> Result<(BlockHash, BlockNumber), StarknetApiError> {
+    fn block_hash_and_number(&self) -> Result<(BlockHash, BlockNumber), StarknetApiError> {
         let provider = self.backend.blockchain.provider();
         let hash = provider.latest_hash()?;
         let number = provider.latest_number()?;
         Ok((hash, number))
     }
 
-    pub fn class_hash_at(
+    async fn class_at_hash(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hash: ClassHash,
+    ) -> Result<ContractClass, StarknetApiError> {
+        self.on_io_blocking_task(move |this| {
+            let state = this.state(&block_id)?;
+
+            let Some(class) = state.class(class_hash)? else {
+                return Err(StarknetApiError::ClassHashNotFound);
+            };
+
+            match class {
+                CompiledClass::Deprecated(class) => Ok(legacy_inner_to_rpc_class(class)?),
+                CompiledClass::Class(_) => {
+                    let Some(sierra) = state.sierra_class(class_hash)? else {
+                        return Err(StarknetApiError::UnexpectedError {
+                            reason: "Class hash exist, but its Sierra class is missing".to_string(),
+                        });
+                    };
+
+                    Ok(ContractClass::Sierra(sierra))
+                }
+            }
+        })
+        .await
+    }
+
+    async fn class_hash_at_address(
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,
     ) -> Result<ClassHash, StarknetApiError> {
-        let state = self.state(&block_id)?;
-        let class_hash = state.class_hash_of_contract(contract_address)?;
-        class_hash.ok_or(StarknetApiError::ContractNotFound)
+        self.on_io_blocking_task(move |this| {
+            let state = this.state(&block_id)?;
+            let class_hash = state.class_hash_of_contract(contract_address)?;
+            class_hash.ok_or(StarknetApiError::ContractNotFound)
+        })
+        .await
     }
 
-    pub fn class(
+    async fn class_at_address(
         &self,
         block_id: BlockIdOrTag,
-        class_hash: ClassHash,
-    ) -> Result<StarknetContract, StarknetApiError> {
-        let state = self.state(&block_id)?;
-
-        let Some(class) = state.class(class_hash)? else {
-            return Err(StarknetApiError::ClassHashNotFound);
-        };
-
-        match class {
-            CompiledClass::Deprecated(class) => Ok(StarknetContract::Legacy(class)),
-            CompiledClass::Class(_) => match state.sierra_class(class_hash)? {
-                Some(sierra_class) => Ok(StarknetContract::Sierra(sierra_class)),
-                None => Err(StarknetApiError::UnexpectedError {
-                    reason: "Class hash exist, but missing its Sierra class".to_string(),
-                }),
-            },
-        }
+        contract_address: ContractAddress,
+    ) -> Result<ContractClass, StarknetApiError> {
+        let hash = self.class_hash_at_address(block_id, contract_address).await?;
+        let class = self.class_at_hash(block_id, hash).await?;
+        Ok(class)
     }
 
-    pub fn storage_at(
+    fn storage_at(
         &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
@@ -233,80 +266,78 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let state = self.state(&block_id)?;
 
         // check that contract exist by checking the class hash of the contract
-        let Some(_) = StateProvider::class_hash_of_contract(&state, contract_address)? else {
-            return Err(SequencerError::ContractNotFound(contract_address));
+        let Some(_) = state.class_hash_of_contract(contract_address)? else {
+            return Err(StarknetApiError::ContractNotFound);
         };
 
-        let value = StateProvider::storage(&state, contract_address, storage_key)?;
+        let value = state.storage(contract_address, storage_key)?;
         Ok(value.unwrap_or_default())
     }
 
-    pub fn block_number(&self) -> Result<BlockNumber, StarknetApiError> {
-        let num = BlockNumberProvider::latest_number(&self.backend.blockchain.provider())?;
-        Ok(num)
-    }
-
-    pub fn block_tx_count(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<u64>> {
+    fn block_tx_count(&self, block_id: BlockIdOrTag) -> Result<u64, StarknetApiError> {
         let provider = self.backend.blockchain.provider();
 
-        let count = match block_id {
+        let block_id: BlockHashOrNumber = match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_executor() {
-                Some(exec) => Some(exec.read().transactions().len() as u64),
-
-                None => {
-                    let hash = BlockHashProvider::latest_hash(provider)?;
-                    TransactionProvider::transaction_count_by_block(provider, hash.into())?
-                }
+                Some(exec) => return Ok(exec.read().transactions().len() as u64),
+                None => provider.latest_hash()?.into(),
             },
-
-            BlockIdOrTag::Tag(BlockTag::Latest) => {
-                let num = BlockNumberProvider::latest_number(provider)?;
-                TransactionProvider::transaction_count_by_block(provider, num.into())?
-            }
-
-            BlockIdOrTag::Number(num) => {
-                TransactionProvider::transaction_count_by_block(provider, num.into())?
-            }
-
-            BlockIdOrTag::Hash(hash) => {
-                TransactionProvider::transaction_count_by_block(provider, hash.into())?
-            }
+            BlockIdOrTag::Tag(BlockTag::Latest) => provider.latest_number()?.into(),
+            BlockIdOrTag::Number(num) => num.into(),
+            BlockIdOrTag::Hash(hash) => hash.into(),
         };
+
+        let count = provider
+            .transaction_count_by_block(block_id)?
+            .ok_or(StarknetApiError::BlockNotFound)?;
 
         Ok(count)
     }
 
-    pub fn nonce_at(
+    async fn latest_block_number(&self) -> Result<BlockNumber, StarknetApiError> {
+        self.on_io_blocking_task(move |this| {
+            Ok(this.backend.blockchain.provider().latest_number()?)
+        })
+        .await
+    }
+
+    async fn nonce_at(
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,
     ) -> Result<Nonce, StarknetApiError> {
-        let state = self.state(&block_id)?;
-        let nonce = state.nonce(contract_address)?.ok_or(StarknetApiError::ContractNotFound)?;
-        Ok(nonce)
+        self.on_io_blocking_task(move |this| {
+            let state = this.state(&block_id)?;
+            let nonce = state.nonce(contract_address)?.ok_or(StarknetApiError::ContractNotFound)?;
+            Ok(nonce)
+        })
+        .await
     }
 
-    pub fn transaction(&self, hash: &TxHash) -> Result<TxWithHash, StarknetApiError> {
-        let tx = self.backend.blockchain.provider().transaction_by_hash(*hash)?;
+    async fn transaction(&self, hash: TxHash) -> Result<TxWithHash, StarknetApiError> {
+        self.on_io_blocking_task(move |this| {
+            let tx = this.backend.blockchain.provider().transaction_by_hash(hash)?;
 
-        let tx = match tx {
-            tx @ Some(_) => tx,
-            None => {
-                // check if the transaction is in the pending block
-                self.pending_executor().as_ref().and_then(|exec| {
-                    exec.read()
-                        .transactions()
-                        .iter()
-                        .find(|(tx, _)| tx.hash == *hash)
-                        .map(|(tx, _)| tx.clone())
-                })
-            }
-        };
+            let tx = match tx {
+                tx @ Some(_) => tx,
+                None => {
+                    // check if the transaction is in the pending block
+                    this.pending_executor().as_ref().and_then(|exec| {
+                        exec.read()
+                            .transactions()
+                            .iter()
+                            .find(|(tx, _)| tx.hash == hash)
+                            .map(|(tx, _)| tx.clone())
+                    })
+                }
+            };
 
-        tx.ok_or(StarknetApiError::TxnHashNotFound)
+            tx.ok_or(StarknetApiError::TxnHashNotFound)
+        })
+        .await
     }
 
-    pub fn events(
+    fn events(
         &self,
         from_block: BlockIdOrTag,
         to_block: BlockIdOrTag,
@@ -314,17 +345,13 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         keys: Option<Vec<Vec<FieldElement>>>,
         continuation_token: Option<String>,
         chunk_size: u64,
-    ) -> SequencerResult<EventsPage> {
+    ) -> Result<EventsPage, StarknetApiError> {
         let provider = self.backend.blockchain.provider();
         let mut current_block = 0;
 
-        let (mut from_block, to_block) = {
-            let from = BlockIdReader::convert_block_id(provider, from_block)?
-                .ok_or(SequencerError::BlockNotFound(to_block))?;
-            let to = BlockIdReader::convert_block_id(provider, to_block)?
-                .ok_or(SequencerError::BlockNotFound(to_block))?;
-            (from, to)
-        };
+        let mut from =
+            provider.convert_block_id(from_block)?.ok_or(StarknetApiError::BlockNotFound)?;
+        let to = provider.convert_block_id(to_block)?.ok_or(StarknetApiError::BlockNotFound)?;
 
         let mut continuation_token = match continuation_token {
             Some(token) => ContinuationToken::parse(token)?,
@@ -332,27 +359,25 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         };
 
         // skip blocks that have been already read
-        from_block += continuation_token.block_n;
+        from += continuation_token.block_n;
 
         let mut filtered_events = Vec::with_capacity(chunk_size as usize);
 
-        for i in from_block..=to_block {
-            let block_hash = BlockHashProvider::block_hash_by_num(provider, i)?
-                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
+        for i in from..=to {
+            let block_hash =
+                provider.block_hash_by_num(i)?.ok_or(StarknetApiError::BlockNotFound)?;
 
-            let receipts = ReceiptProvider::receipts_by_block(provider, BlockHashOrNumber::Num(i))?
-                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
+            let receipts =
+                provider.receipts_by_block(i.into())?.ok_or(StarknetApiError::BlockNotFound)?;
 
-            let tx_range = BlockProvider::block_body_indices(provider, BlockHashOrNumber::Num(i))?
-                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
-            let tx_hashes =
-                TransactionsProviderExt::transaction_hashes_in_range(provider, tx_range.into())?;
+            let tx_range =
+                provider.block_body_indices(i.into())?.ok_or(StarknetApiError::BlockNotFound)?;
+
+            let tx_hashes = provider.transaction_hashes_in_range(tx_range.into())?;
 
             let txn_n = receipts.len();
             if (txn_n as u64) < continuation_token.txn_n {
-                return Err(SequencerError::ContinuationToken(
-                    ContinuationTokenError::InvalidToken,
-                ));
+                return Err(StarknetApiError::InvalidContinuationToken);
             }
 
             for (tx_hash, events) in tx_hashes
@@ -366,9 +391,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 match (txn_events_len as u64).cmp(&continuation_token.event_n) {
                     Ordering::Greater => (),
                     Ordering::Less => {
-                        return Err(SequencerError::ContinuationToken(
-                            ContinuationTokenError::InvalidToken,
-                        ));
+                        return Err(StarknetApiError::InvalidContinuationToken);
                     }
                     Ordering::Equal => {
                         continuation_token.txn_n += 1;
@@ -397,7 +420,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 }));
 
                 if filtered_events.len() >= chunk_size as usize {
-                    let token = if current_block < to_block
+                    let token = if current_block < to
                         || continuation_token.txn_n < txn_n as u64 - 1
                         || continuation_index < txn_events_len
                     {
@@ -421,28 +444,61 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         Ok(EventsPage { events: filtered_events, continuation_token: None })
     }
 
-    pub fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
-        if self.has_pending_transactions() {
-            return Err(SequencerError::PendingTransactions);
-        }
-        self.backend().block_context_generator.write().next_block_start_time = timestamp;
-        Ok(())
-    }
+    async fn transaction_status(
+        &self,
+        hash: TxHash,
+    ) -> Result<TransactionStatus, StarknetApiError> {
+        self.on_io_blocking_task(move |this| {
+            let provider = this.backend.blockchain.provider();
+            let status = provider.transaction_status(hash)?;
 
-    pub fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
-        if self.has_pending_transactions() {
-            return Err(SequencerError::PendingTransactions);
-        }
-        self.backend().block_context_generator.write().block_timestamp_offset += timestamp as i64;
-        Ok(())
-    }
+            if let Some(status) = status {
+                // TODO: this might not work once we allow querying for 'failed' transactions from the provider
+                let Some(receipt) = provider.receipt_by_hash(hash)? else {
+                    return Err(StarknetApiError::UnexpectedError {
+                        reason: "Transaction hash exist, but the receipt is missing".to_string(),
+                    });
+                };
 
-    pub fn has_pending_transactions(&self) -> bool {
-        if let Some(ref exec) = self.pending_executor() {
-            !exec.read().transactions().is_empty()
-        } else {
-            false
-        }
+                let exec_status = if receipt.is_reverted() {
+                    TransactionExecutionStatus::Reverted
+                } else {
+                    TransactionExecutionStatus::Succeeded
+                };
+
+                return Ok(match status {
+                    FinalityStatus::AcceptedOnL1 => TransactionStatus::AcceptedOnL1(exec_status),
+                    FinalityStatus::AcceptedOnL2 => TransactionStatus::AcceptedOnL2(exec_status),
+                });
+            }
+
+            // seach in the pending block if the transaction is not found
+            if let Some(pending_executor) = this.pending_executor() {
+                let pending_executor = pending_executor.read();
+                let pending_txs = pending_executor.transactions();
+                let (_, res) = pending_txs
+                    .iter()
+                    .find(|(tx, _)| tx.hash == hash)
+                    .ok_or(StarknetApiError::TxnHashNotFound)?;
+
+                // TODO: should impl From<ExecutionResult> for TransactionStatus
+                let status = match res {
+                    ExecutionResult::Failed { .. } => TransactionStatus::Rejected,
+                    ExecutionResult::Success { receipt, .. } => {
+                        if receipt.is_reverted() {
+                            TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Reverted)
+                        } else {
+                            TransactionStatus::AcceptedOnL2(TransactionExecutionStatus::Succeeded)
+                        }
+                    }
+                };
+
+                Ok(status)
+            } else {
+                Err(StarknetApiError::TxnHashNotFound)
+            }
+        })
+        .await
     }
 }
 
