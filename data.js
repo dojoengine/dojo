@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721788633707,
+  "lastUpdate": 1721838531415,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12625,6 +12625,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4838538,
             "range": "± 63669",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "71b1f1a467534cbeeb901356f41e612ed4187bd1",
+          "message": "refactor(katana-rpc): rename trait methods to their exact names in the api spec (#2208)",
+          "timestamp": "2024-07-25T00:10:14+08:00",
+          "tree_id": "6bd636609cc44908dd048fcc14a58dc311c776b6",
+          "url": "https://github.com/dojoengine/dojo/commit/71b1f1a467534cbeeb901356f41e612ed4187bd1"
+        },
+        "date": 1721838530056,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17408075,
+            "range": "± 106175",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 5241990,
+            "range": "± 273070",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3198588298,
+            "range": "± 651456682",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5207160,
+            "range": "± 116327",
             "unit": "ns/iter"
           }
         ]
