@@ -425,11 +425,7 @@ export function defineContractComponents(world: World) {
                         None => format!("props.{}", arg_name),
                     }
                 }
-                Token::Array(t) => format!(
-                    "...props.{}.map(item => {}) ",
-                    arg_name,
-                    handle_arg_recursive("item", &t.inner, handled_tokens)
-                ),
+                Token::Array(_) => format!("...props.{}", arg_name),
                 Token::Tuple(t) => format!(
                     "...[{}]",
                     t.inners
