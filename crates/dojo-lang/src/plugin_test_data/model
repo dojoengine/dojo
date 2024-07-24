@@ -3,6 +3,9 @@
 //! > test_runner_name
 test_expand_plugin
 
+//! > test_id
+model
+
 //! > cairo_code
 #[dojo::model(version: 0)]
 #[dojo::model(version: 0)]
@@ -26115,56 +26118,56 @@ impl MutableImodel_with_tuple_no_primitivesSafeDispatcherSubPointersCopy of core
 
 //! > expected_diagnostics
 error: A Dojo model must have zero or one dojo::model attribute.
- --> /tmp/plugin_test/src/lib.cairo:1:1
+ --> /tmp/plugin_test/model/src/lib.cairo:1:1
 #[dojo::model(version: 0)]
 ^************************^
 
 error: Too many 'version' attributes for dojo::model
- --> /tmp/plugin_test/src/lib.cairo:9:1
+ --> /tmp/plugin_test/model/src/lib.cairo:9:1
 #[dojo::model(version: 0, version: 0)]
 ^************************************^
 
 error: The argument 'version' of dojo::model must be an integer
- --> /tmp/plugin_test/src/lib.cairo:16:24
+ --> /tmp/plugin_test/model/src/lib.cairo:16:24
 #[dojo::model(version: hello)]
                        ^***^
 
 error: Unexpected argument 'version' for dojo::model
- --> /tmp/plugin_test/src/lib.cairo:23:15
+ --> /tmp/plugin_test/model/src/lib.cairo:23:15
 #[dojo::model(version)]
               ^*****^
 
 error: Unexpected argument 'my_arg' for dojo::model
- --> /tmp/plugin_test/src/lib.cairo:30:15
+ --> /tmp/plugin_test/model/src/lib.cairo:30:15
 #[dojo::model(my_arg: 1)]
               ^*******^
 
 error: Unexpected argument 'my_arg' for dojo::model
- --> /tmp/plugin_test/src/lib.cairo:37:15
+ --> /tmp/plugin_test/model/src/lib.cairo:37:15
 #[dojo::model(my_arg)]
               ^****^
 
 error: dojo::model version 2 not supported
- --> /tmp/plugin_test/src/lib.cairo:44:24
+ --> /tmp/plugin_test/model/src/lib.cairo:44:24
 #[dojo::model(version: 2)]
                        ^
 
 error: Model must define at least one #[key] attribute
- --> /tmp/plugin_test/src/lib.cairo:87:8
+ --> /tmp/plugin_test/model/src/lib.cairo:87:8
 struct Roles {
        ^***^
 
 error: Model must define at least one member that is not a key
- --> /tmp/plugin_test/src/lib.cairo:92:8
+ --> /tmp/plugin_test/model/src/lib.cairo:92:8
 struct OnlyKeyModel {
        ^**********^
 
 error: Key is only supported for core types that are 1 felt long once serialized. `u256` is a struct of 2 u128, hence not supported.
- --> /tmp/plugin_test/src/lib.cairo:100:5
+ --> /tmp/plugin_test/model/src/lib.cairo:100:5
     id: u256
     ^^
 
 error: Model must define at least one member that is not a key
- --> /tmp/plugin_test/src/lib.cairo:98:8
+ --> /tmp/plugin_test/model/src/lib.cairo:98:8
 struct U256KeyModel {
        ^**********^

@@ -96,11 +96,12 @@ pub fn test_expand_plugin_inner(
         db.set_cfg_set(Arc::new(cfg_set));
     }
 
+    let test_id = &inputs["test_id"];
     let cairo_code = &inputs["cairo_code"];
 
     // The path as to remain the same, because diagnostics contains the path
     // of the file. Which can cause error when checked without CAIRO_FIX=1.
-    let tmp_dir = PathBuf::from("/tmp/plugin_test");
+    let tmp_dir = PathBuf::from(format!("/tmp/plugin_test/{}", test_id));
     let _ = std::fs::create_dir_all(&tmp_dir);
     let tmp_path = tmp_dir.as_path();
 
