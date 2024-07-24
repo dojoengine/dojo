@@ -179,6 +179,8 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         Ok(())
     }
 
+    // bcs the executor is not writing to the CacheState directly, we need to call `.finalize()`
+    // of the `TransactionExecutor` and apply the state diff to the cache state.
     fn execute_transactions(
         &mut self,
         transactions: Vec<ExecutableTxWithHash>,
