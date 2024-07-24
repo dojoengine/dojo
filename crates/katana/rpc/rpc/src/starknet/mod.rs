@@ -120,14 +120,6 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         Ok(estimates)
     }
 
-    // /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise
-    // `None`. fn pending_executor(&self) -> Option<PendingExecutor> {
-    //     match &*self.block_producer.inner.read() {
-    //         BlockProducerMode::Instant(_) => None,
-    //         BlockProducerMode::Interval(producer) => Some(producer.executor()),
-    //     }
-    // }
-
     fn state(&self, block_id: &BlockIdOrTag) -> Result<Box<dyn StateProvider>, StarknetApiError> {
         let provider = self.inner.sequencer.backend().blockchain.provider();
 

@@ -7736,6 +7736,7 @@ name = "katana-rpc"
 version = "1.0.0-alpha.3"
 dependencies = [
  "alloy",
+ "alloy-primitives",
  "anyhow",
  "assert_matches",
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.3.2)",

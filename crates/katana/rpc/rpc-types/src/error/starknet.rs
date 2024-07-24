@@ -1,7 +1,6 @@
 use jsonrpsee::core::Error;
 use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
-use katana_core::sequencer_error::SequencerError;
 use katana_primitives::event::ContinuationTokenError;
 use katana_provider::error::ProviderError;
 use serde::Serialize;
@@ -136,16 +135,6 @@ impl From<StarknetApiError> for Error {
 impl From<ProviderError> for StarknetApiError {
     fn from(value: ProviderError) -> Self {
         StarknetApiError::UnexpectedError { reason: value.to_string() }
-    }
-}
-
-impl From<SequencerError> for StarknetApiError {
-    fn from(value: SequencerError) -> Self {
-        match value {
-            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-            SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
-            err => StarknetApiError::UnexpectedError { reason: err.to_string() },
-        }
     }
 }
 

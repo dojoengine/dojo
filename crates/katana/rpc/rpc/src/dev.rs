@@ -5,7 +5,7 @@ use katana_core::sequencer::KatanaSequencer;
 use katana_executor::ExecutorFactory;
 use katana_primitives::FieldElement;
 use katana_rpc_api::dev::DevApiServer;
-use katana_rpc_types::error::katana::KatanaApiError;
+use katana_rpc_types::error::dev::DevApiError;
 
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
@@ -15,6 +15,36 @@ pub struct DevApi<EF: ExecutorFactory> {
 impl<EF: ExecutorFactory> DevApi<EF> {
     pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
         Self { sequencer }
+    }
+
+    fn has_pending_transactions(&self) -> bool {
+        if let Some(ref exec) = self.sequencer.pending_executor() {
+            !exec.read().transactions().is_empty()
+        } else {
+            false
+        }
+    }
+
+    pub fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), DevApiError> {
+        if self.has_pending_transactions() {
+            return Err(DevApiError::PendingTransactions);
+        }
+
+        let mut block_context_generator = self.sequencer.backend().block_context_generator.write();
+        block_context_generator.next_block_start_time = timestamp;
+
+        Ok(())
+    }
+
+    pub fn increase_next_block_timestamp(&self, offset: u64) -> Result<(), DevApiError> {
+        if self.has_pending_transactions() {
+            return Err(DevApiError::PendingTransactions);
+        }
+
+        let mut block_context_generator = self.sequencer.backend().block_context_generator.write();
+        block_context_generator.block_timestamp_offset += offset as i64;
+
+        Ok(())
     }
 }
 
@@ -31,15 +61,11 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
     }
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
-        self.sequencer
-            .set_next_block_timestamp(timestamp)
-            .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
+        Ok(self.set_next_block_timestamp(timestamp)?)
     }
 
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
-        self.sequencer
-            .increase_next_block_timestamp(timestamp)
-            .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
+        Ok(self.increase_next_block_timestamp(timestamp)?)
     }
 
     async fn set_storage_at(
