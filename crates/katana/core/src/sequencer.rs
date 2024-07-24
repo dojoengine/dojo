@@ -97,7 +97,7 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
     }
 
     pub fn provider(&self) -> &BlockchainProvider<Box<dyn Database>> {
-        &self.backend.blockchain.provider()
+        self.backend.blockchain.provider()
     }
 
     // pub async fn set_storage_at(

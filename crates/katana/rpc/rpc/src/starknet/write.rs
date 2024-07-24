@@ -17,7 +17,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> Result<InvokeTxResult, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
             if tx.is_query() {
-                return Err(StarknetApiError::UnsupportedTransactionVersion.into());
+                return Err(StarknetApiError::UnsupportedTransactionVersion);
             }
 
             let tx = tx.into_tx_with_chain_id(this.inner.sequencer.backend().chain_id);
@@ -36,7 +36,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> Result<DeclareTxResult, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
             if tx.is_query() {
-                return Err(StarknetApiError::UnsupportedTransactionVersion.into());
+                return Err(StarknetApiError::UnsupportedTransactionVersion);
             }
 
             let tx = tx
@@ -59,7 +59,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> Result<DeployAccountTxResult, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
             if tx.is_query() {
-                return Err(StarknetApiError::UnsupportedTransactionVersion.into());
+                return Err(StarknetApiError::UnsupportedTransactionVersion);
             }
 
             let tx = tx.into_tx_with_chain_id(this.inner.sequencer.backend().chain_id);
