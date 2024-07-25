@@ -9,6 +9,7 @@ use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
 use crate::{DojoContract, DojoData, DojoModel};
 
+#[cfg(test)]
 mod tests;
 
 pub struct TypescriptPlugin {}
