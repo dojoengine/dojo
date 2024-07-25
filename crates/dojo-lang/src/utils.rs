@@ -79,3 +79,23 @@ pub fn get_namespace_config(db: &dyn SyntaxGroup) -> Result<NamespaceConfig> {
     // need it. This only concern the tests.
     Ok(NamespaceConfig { default: "__NO_NAMESPACE__".into(), mappings: None })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_name_valid() {
+        assert!(is_name_valid("valid_name"));
+        assert!(is_name_valid("ValidName"));
+        assert!(is_name_valid("valid123"));
+        assert!(is_name_valid("_valid"));
+        assert!(is_name_valid("valid_"));
+
+        assert!(!is_name_valid(""));
+        assert!(!is_name_valid("invalid-name"));
+        assert!(!is_name_valid("invalid name"));
+        assert!(!is_name_valid("invalid!name"));
+        assert!(!is_name_valid("invalid.name"));
+    }
+}
