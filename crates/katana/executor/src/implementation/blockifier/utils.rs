@@ -14,7 +14,7 @@ use blockifier::execution::contract_class::{
 };
 use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
-use blockifier::state::cached_state;
+use blockifier::state::cached_state::{self, CommitmentStateDiff};
 use blockifier::state::state_api::{DojoStateAdapter, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::objects::{

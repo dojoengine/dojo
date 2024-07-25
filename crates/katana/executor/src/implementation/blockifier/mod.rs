@@ -13,6 +13,7 @@ use blockifier::fee::fee_utils::get_fee_by_gas_vector;
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::objects::FeeType;
+use blockifier::transaction::transactions::ExecutionFlags;
 use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
 use katana_cairo::starknet_api::transaction::Fee;
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
@@ -77,8 +78,8 @@ impl ExecutorFactory for BlockifierFactory {
 
 pub struct StarknetVMProcessor<'a> {
     // block_context: BlockContext,
+    // simulation_flags: SimulationFlag,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
-    simulation_flags: SimulationFlag,
     stats: ExecutionStats,
 
     state: CachedState<StateProviderDb<'a>>,
@@ -97,12 +98,19 @@ impl<'a> StarknetVMProcessor<'a> {
         let state = state::CachedState::new(StateProviderDb(state));
 
         let config = TransactionExecutorConfig::create_for_testing();
-        let executor = TransactionExecutor::new(state.clone(), block_context, config);
+
+        let flags = ExecutionFlags {
+            charge_fee: !simulation_flags.skip_fee_transfer,
+            validate: !simulation_flags.skip_validate,
+            ..Default::default()
+        };
+
+        let executor = TransactionExecutor::new(state.clone(), block_context, config, flags);
 
         Self {
             // block_context,
             transactions,
-            simulation_flags,
+            // simulation_flags,
             stats: Default::default(),
 
             state,
@@ -110,6 +118,7 @@ impl<'a> StarknetVMProcessor<'a> {
         }
     }
 
+    // TODO: removed this, we dont really have a non-executed block yet
     fn fill_block_env_from_header(&mut self, header: &PartialHeader) {
         let number = BlockNumber(header.number);
         let timestamp = BlockTimestamp(header.timestamp);
@@ -189,12 +198,9 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         let results = self.executor.execute_txs(&txs);
 
         let mut is_full = false;
-        // let txs = transactions.into_iter().map(TxWithHash::from).collect::<Vec<_>>();
         let mut execution_results = Vec::with_capacity(results.len());
 
         for (res, tx) in results.into_iter().zip(transactions.iter()) {
-            println!("processing transaction");
-
             match res {
                 Ok(info) => {
                     // Collect class artifacts if its a declare tx
@@ -242,8 +248,6 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
 
                     crate::utils::log_resources(&trace.actual_resources);
                     crate::utils::log_events(receipt.events());
-
-                    // let res = ExecutionResult::new_success(receipt, trace);
 
                     self.stats.l1_gas_used += receipt.fee().gas_consumed;
                     self.stats.cairo_steps_used +=
@@ -320,15 +324,13 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         //     self.transactions.push((tx, res));
         // }
 
-        let txs = dbg!(transactions.into_iter().map(TxWithHash::from).collect::<Vec<_>>());
-        self.transactions = txs.into_iter().zip(dbg!(execution_results)).collect();
+        let txs = transactions.into_iter().map(TxWithHash::from).collect::<Vec<_>>();
+        self.transactions.extend(txs.into_iter().zip(execution_results));
 
         Ok(())
     }
 
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {
-        let (output, ..) = self.executor.finalize().unwrap();
-
         let states = utils::state_update_from_cached_state(&self.state);
         let transactions = std::mem::take(&mut self.transactions);
         let stats = std::mem::take(&mut self.stats);
