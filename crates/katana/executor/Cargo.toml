@@ -10,7 +10,7 @@ version.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 
-parking_lot.workspace = true
+parking_lot = { workspace = true, optional = true }
 starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
@@ -36,7 +36,12 @@ pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 rayon.workspace = true
 
 [features]
-blockifier = [ "dep:blockifier", "dep:katana-cairo", "dep:starknet" ]
+blockifier = [
+	"dep:blockifier",
+	"dep:katana-cairo",
+	"dep:parking_lot",
+	"dep:starknet",
+]
 default = [ "blockifier" ]
 
 [[bench]]
