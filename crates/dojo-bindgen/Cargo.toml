@@ -7,7 +7,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-assert_matches.workspace = true
 async-trait.workspace = true
 camino.workspace = true
 chrono.workspace = true
@@ -16,7 +15,6 @@ serde.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
 
 # Some issue with CI on windows, need to be investigated.
 # https://github.com/dojoengine/dojo/actions/runs/7736050751/job/21092743552?pr=1501#step:6:249
@@ -26,5 +24,7 @@ cainome.workspace = true
 dojo-world = { path = "../dojo-world", features = [ "manifest" ] }
 
 [dev-dependencies]
+assert_matches.workspace = true
 dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
 scarb = { workspace = true }
+tokio.workspace = true
