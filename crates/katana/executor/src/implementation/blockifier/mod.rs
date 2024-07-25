@@ -31,8 +31,7 @@ use self::utils::get_fee_type_from_tx;
 use crate::utils::build_receipt;
 use crate::{
     EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult, ExecutionStats, Executor,
-    ExecutorError, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
-    StateProviderDb,
+    ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag, StateProviderDb,
 };
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
@@ -197,7 +196,6 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         let txs = transactions.clone().into_iter().map(utils::to_executor_tx).collect::<Vec<_>>();
         let results = self.executor.execute_txs(&txs);
 
-        let mut is_full = false;
         let mut execution_results = Vec::with_capacity(results.len());
 
         for (res, tx) in results.into_iter().zip(transactions.iter()) {
@@ -213,15 +211,15 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
 
                     let fee_type = FeeType::Eth;
 
-                    let fee = if info.transaction_receipt.fee == Fee(0) {
-                        get_fee_by_gas_vector(
-                            self.executor.block_context.block_info(),
-                            info.transaction_receipt.gas,
-                            &fee_type,
-                        )
-                    } else {
-                        info.transaction_receipt.fee
-                    };
+                    // let fee = if info.transaction_receipt.fee == Fee(0) {
+                    //     get_fee_by_gas_vector(
+                    //         self.executor.block_context.block_info(),
+                    //         info.transaction_receipt.gas,
+                    //         &fee_type,
+                    //     )
+                    // } else {
+                    //     info.transaction_receipt.fee
+                    // };
 
                     let gas_consumed = info.transaction_receipt.gas.l1_gas;
 
@@ -240,7 +238,7 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
                         gas_consumed,
                         gas_price: gas_price.into(),
                         unit,
-                        overall_fee: fee.0,
+                        overall_fee: info.transaction_receipt.fee.0,
                     };
 
                     let trace = utils::to_exec_info(info);
