@@ -354,10 +354,21 @@ fn update_files(
         fs::create_dir_all(contracts_dir.path_unchecked())?;
     }
 
+    // Ensure `contracts` dir exist event if no contracts are compiled
+    // to avoid errors when loading manifests.
+    let base_contracts_dir = base_manifests_dir.join(CONTRACTS_DIR);
+    let base_contracts_abis_dir = base_abis_dir.join(CONTRACTS_DIR);
+    if !base_contracts_dir.exists() {
+        std::fs::create_dir_all(&base_contracts_dir)?;
+    }
+    if !base_contracts_abis_dir.exists() {
+        std::fs::create_dir_all(&base_contracts_abis_dir)?;
+    }
+
     for (_, (manifest, class, module_id)) in contracts.iter_mut() {
         write_manifest_and_abi(
-            &base_manifests_dir.join(CONTRACTS_DIR),
-            &base_abis_dir.join(CONTRACTS_DIR),
+            &base_contracts_dir,
+            &base_contracts_abis_dir,
             &manifest_dir,
             manifest,
             &class.abi,
@@ -380,10 +391,21 @@ fn update_files(
         fs::create_dir_all(models_dir.path_unchecked())?;
     }
 
+    // Ensure `models` dir exist event if no models are compiled
+    // to avoid errors when loading manifests.
+    let base_models_dir = base_manifests_dir.join(MODELS_DIR);
+    let base_models_abis_dir = base_abis_dir.join(MODELS_DIR);
+    if !base_models_dir.exists() {
+        std::fs::create_dir_all(&base_models_dir)?;
+    }
+    if !base_models_abis_dir.exists() {
+        std::fs::create_dir_all(&base_models_abis_dir)?;
+    }
+
     for (_, (manifest, class, module_id)) in models.iter_mut() {
         write_manifest_and_abi(
-            &base_manifests_dir.join(MODELS_DIR),
-            &base_abis_dir.join(MODELS_DIR),
+            &base_models_dir,
+            &base_models_abis_dir,
             &manifest_dir,
             manifest,
             &class.abi,
