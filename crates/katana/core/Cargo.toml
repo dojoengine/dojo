@@ -8,7 +8,7 @@ version.workspace = true
 
 [dependencies]
 katana-db.workspace = true
-katana-executor.workspace = true
+katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-primitives.workspace = true
 katana-provider.workspace = true
 katana-tasks.workspace = true
@@ -37,8 +37,8 @@ alloy-sol-types = { workspace = true, default-features = false, features = [ "js
 alloy-contract = { workspace = true, default-features = false, optional = true }
 alloy-network = { workspace = true, default-features = false, optional = true }
 alloy-provider = { workspace = true, default-features = false, optional = true, features = [ "reqwest" ] }
-alloy-transport = { workspace = true, default-features = false, optional = true }
 alloy-rpc-types-eth = { workspace = true, default-features = false, optional = true }
+alloy-transport = { workspace = true, default-features = false, optional = true }
 
 [dev-dependencies]
 assert_matches.workspace = true
@@ -47,15 +47,15 @@ tempfile.workspace = true
 
 [features]
 messaging = [
-    "alloy-contract",
-    "alloy-network",
-    "alloy-provider",
-    "alloy-rpc-types-eth",
-    "alloy-sol-types",
-    "alloy-transport",
-    "async-trait",
-    "reqwest",
-    "serde",
-    "serde_json",
+	"alloy-contract",
+	"alloy-network",
+	"alloy-provider",
+	"alloy-rpc-types-eth",
+	"alloy-sol-types",
+	"alloy-transport",
+	"async-trait",
+	"reqwest",
+	"serde",
+	"serde_json",
 ]
 starknet-messaging = [  ]
