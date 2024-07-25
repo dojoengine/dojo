@@ -4269,6 +4269,7 @@ dependencies = [
  "regex",
  "salsa",
  "scarb",
+ "scarb-ui",
  "semver 1.0.23",
  "serde",
  "serde_json",

@@ -3,12 +3,11 @@ use clap::{Args, Parser};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use dojo_world::manifest::MANIFESTS_DIR;
-use dojo_world::metadata::dojo_metadata_from_workspace;
 use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
-use scarb::core::{Config, TargetKind};
+use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::CompileOpts;
-use scarb_ui::args::FeaturesSpec;
+use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 use tracing::trace;
 
@@ -43,39 +42,32 @@ pub struct BuildArgs {
     /// Specify the features to activate.
     #[command(flatten)]
     pub features: FeaturesSpec,
+
+    /// Specify packages to build.
+    #[command(flatten)]
+    pub packages: Option<PackagesFilter>,
 }
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        if let Ok(current_package) = ws.current_package() {
-            if current_package.target(&TargetKind::new("dojo")).is_none() {
-                return Err(anyhow::anyhow!(
-                    "No Dojo target found in the {} package. Add [[target.dojo]] to the {} \
-                     manifest to enable Dojo features and compile with sozo.",
-                    current_package.id.to_string(),
-                    current_package.manifest_path()
-                ));
-            }
-        }
-
-        // Namespaces are required to compute contracts/models data. Hence, we can't continue
-        // if no metadata are found.
-        // Once sozo will support package option, users will be able to do `-p` to select
-        // the package directly from the workspace instead of using `--manifest-path`.
-        let dojo_metadata = dojo_metadata_from_workspace(&ws)?;
+        let packages: Vec<Package> = if let Some(filter) = self.packages {
+            filter.match_many(&ws)?.into_iter().collect()
+        } else {
+            ws.members().collect()
+        };
 
         let profile_name =
             ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
 
-        // Manifest path is always a file, we can unwrap safely to get the
-        // parent folder.
+        // Manifest path is always a file, we can unwrap safely to get the parent folder.
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
         let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
         CleanArgs::clean_manifests(&profile_dir)?;
-        let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
+
+        trace!(?packages);
 
         let compile_info = compile_workspace(
             config,
@@ -85,7 +77,7 @@ impl BuildArgs {
                 exclude_target_kinds: vec![TargetKind::TEST],
                 features: self.features.try_into()?,
             },
-            packages,
+            packages.iter().map(|p| p.id).collect(),
         )?;
         trace!(?compile_info, "Compiled workspace.");
 
@@ -146,9 +138,11 @@ impl BuildArgs {
         };
         trace!(pluginManager=?bindgen, "Generating bindings.");
 
+        // TODO: check about the skip migration as now we process the metadata
+        // directly during the compilation to get the data we need from it.
         tokio::runtime::Runtime::new()
             .unwrap()
-            .block_on(bindgen.generate(dojo_metadata.skip_migration))
+            .block_on(bindgen.generate(None))
             .expect("Error generating bindings");
 
         Ok(())
@@ -167,6 +161,7 @@ impl Default for BuildArgs {
             unity: false,
             bindings_output: "bindings".to_string(),
             stats: false,
+            packages: None,
         }
     }
 }
