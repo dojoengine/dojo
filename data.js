@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721876728425,
+  "lastUpdate": 1721881824437,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12721,6 +12721,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4820671,
             "range": "± 50544",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "90423308+ponderingdemocritus@users.noreply.github.com",
+            "name": "Loaf",
+            "username": "ponderingdemocritus"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1da9ffff01f08e956dc973117f7008cef7d9138d",
+          "message": "fix(sozo): adjust typescript bindgen to v1 (#2202)\n\n* work on ts v1 bindgen\r\n\r\n* work on model def\r\n\r\n* formatting\r\n\r\n* improve codegen\r\n\r\n* add tests\r\n\r\n* update enum to string\r\n\r\n* fix mapping in systems gen\r\n\r\n* remove unneeded filters\r\n\r\n* fix imports and errors\r\n\r\n* fix: fix tests and fmt\r\n\r\n* chore: bump cainome\r\n\r\n* chore: move deps to dev deps\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-24T22:12:13-06:00",
+          "tree_id": "d0c296d310497e80bc4045e90605a7f05e9b11fe",
+          "url": "https://github.com/dojoengine/dojo/commit/1da9ffff01f08e956dc973117f7008cef7d9138d"
+        },
+        "date": 1721881823154,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17330350,
+            "range": "± 239379",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4787225,
+            "range": "± 151311",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3408153523,
+            "range": "± 662967933",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4928007,
+            "range": "± 105262",
             "unit": "ns/iter"
           }
         ]
