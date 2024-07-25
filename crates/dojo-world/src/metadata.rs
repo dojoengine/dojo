@@ -4,12 +4,16 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use cairo_lang_filesystem::cfg::CfgSet;
+use camino::Utf8PathBuf;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use regex::Regex;
 use scarb::core::{ManifestMetadata, Package, TargetKind, Workspace};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
+
+use crate::contracts::naming;
+use crate::manifest::{BaseManifest, CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 
 const LOG_TARGET: &str = "dojo_world::metadata";
 
@@ -107,12 +111,14 @@ pub fn dojo_metadata_from_package(package: &Package, ws: &Workspace<'_>) -> Resu
         }
     }?;
 
-    let dojo_metadata = DojoMetadata {
+    let mut dojo_metadata = DojoMetadata {
         env: project_metadata.env.clone(),
         skip_migration: project_metadata.skip_migration.clone(),
         world: project_to_world_metadata(project_metadata.world),
         ..Default::default()
     };
+
+    metadata_artifacts_load(&mut dojo_metadata, ws)?;
 
     tracing::trace!(target: LOG_TARGET, ?dojo_metadata);
 
@@ -145,6 +151,87 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
             "Multiple packages with dojo target found in workspace. Please specify a package \
              using --package option or maybe one of them must be declared as a [lib]."
         )),
+    }
+}
+
+/// Loads the artifacts metadata for the world.
+/// TODO: if the compiler supports to output the data to the package level,
+/// we should also pass the package to use it's path instead of the WS root.
+fn metadata_artifacts_load(dojo_metadata: &mut DojoMetadata, ws: &Workspace<'_>) -> Result<()> {
+    let profile = ws.config().profile();
+
+    // Use package.manifest_path() if supported by the compiler.
+    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+    let manifest_dir = manifest_dir.join(MANIFESTS_DIR).join(profile.as_str());
+    let abi_dir = manifest_dir.join(BASE_DIR).join(ABIS_DIR);
+    let source_dir = ws.target_dir().path_existent().unwrap();
+    let source_dir = source_dir.join(profile.as_str());
+
+    let world_artifact = build_artifact_from_filename(
+        &abi_dir,
+        &source_dir,
+        &naming::get_filename_from_tag(WORLD_CONTRACT_TAG),
+    );
+
+    dojo_metadata.world.artifacts = world_artifact;
+
+    // load models and contracts metadata
+    if manifest_dir.join(BASE_DIR).exists() {
+        if let Ok(manifest) = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)) {
+            for model in manifest.models {
+                let tag = model.inner.tag.clone();
+                let abi_model_dir = abi_dir.join(MODELS_DIR);
+                let source_model_dir = source_dir.join(MODELS_DIR);
+                dojo_metadata.resources_artifacts.insert(
+                    tag.clone(),
+                    ResourceMetadata {
+                        name: tag.clone(),
+                        artifacts: build_artifact_from_filename(
+                            &abi_model_dir,
+                            &source_model_dir,
+                            &naming::get_filename_from_tag(&tag),
+                        ),
+                    },
+                );
+            }
+
+            for contract in manifest.contracts {
+                let tag = contract.inner.tag.clone();
+                let abi_contract_dir = abi_dir.join(CONTRACTS_DIR);
+                let source_contract_dir = source_dir.join(CONTRACTS_DIR);
+                dojo_metadata.resources_artifacts.insert(
+                    tag.clone(),
+                    ResourceMetadata {
+                        name: tag.clone(),
+                        artifacts: build_artifact_from_filename(
+                            &abi_contract_dir,
+                            &source_contract_dir,
+                            &naming::get_filename_from_tag(&tag),
+                        ),
+                    },
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn build_artifact_from_filename(
+    abi_dir: &Utf8PathBuf,
+    source_dir: &Utf8PathBuf,
+    filename: &str,
+) -> ArtifactMetadata {
+    let abi_file = abi_dir.join(format!("{filename}.json"));
+    let src_file = source_dir.join(format!("{filename}.cairo"));
+
+    ArtifactMetadata {
+        abi: if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None },
+        source: if src_file.exists() {
+            Some(Uri::File(src_file.into_std_path_buf()))
+        } else {
+            None
+        },
     }
 }
 
@@ -562,6 +649,9 @@ impl MetadataExt for ManifestMetadata {
 
 #[cfg(test)]
 mod tests {
+    use cairo_lang_filesystem::cfg::Cfg;
+    use smol_str::SmolStr;
+
     use super::*;
 
     #[test]
@@ -645,5 +735,33 @@ mod tests {
         assert!(!is_name_valid("invalid.name"));
         assert!(!is_name_valid("invalid!name"));
         assert!(!is_name_valid(""));
+    }
+
+    #[test]
+    fn test_namespace_config_from_cfg_set() {
+        let mut cfg_set = CfgSet::new();
+        cfg_set.insert(Cfg::kv(DEFAULT_NAMESPACE_CFG_KEY, SmolStr::from("default_namespace")));
+        cfg_set
+            .insert(Cfg::kv(format!("{}tag1", NAMESPACE_CFG_PREFIX), SmolStr::from("namespace1")));
+        cfg_set
+            .insert(Cfg::kv(format!("{}tag2", NAMESPACE_CFG_PREFIX), SmolStr::from("namespace2")));
+
+        let namespace_config = NamespaceConfig::from(&cfg_set);
+
+        assert_eq!(namespace_config.default, "default_namespace");
+        assert_eq!(
+            namespace_config.mappings,
+            Some(HashMap::from([
+                ("tag1".to_string(), "namespace1".to_string()),
+                ("tag2".to_string(), "namespace2".to_string()),
+            ]))
+        );
+
+        // Test with empty CfgSet
+        let empty_cfg_set = CfgSet::new();
+        let empty_namespace_config = NamespaceConfig::from(&empty_cfg_set);
+
+        assert_eq!(empty_namespace_config.default, "");
+        assert_eq!(empty_namespace_config.mappings, None);
     }
 }

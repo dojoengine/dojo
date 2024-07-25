@@ -98,6 +98,11 @@ impl Compiler for DojoCompiler {
         let props: Props = unit.main_component().target_props()?;
         let target_dir = unit.target_dir(ws);
 
+        // TODO: if we want to output the manifests at the package level,
+        // we must iterate on the ws members, to find the location of the
+        // sole package with the `dojo` target.
+        // In this case, we can use this path to output the manifests.
+
         let compiler_config = build_compiler_config(&unit, ws);
 
         trace!(target: LOG_TARGET, unit = %unit.name(), ?props, "Compiling unit dojo compiler.");
