@@ -3,6 +3,9 @@
 //! > test_runner_name
 test_expand_plugin
 
+//! > test_id
+model
+
 //! > cairo_code
 #[dojo::model(version: 0)]
 #[dojo::model(version: 0)]
@@ -159,25 +162,109 @@ struct ModelWithTupleNoPrimitives {
 }
 
 //! > expanded_cairo_code
-use serde::Serde;
-use debug::PrintTrait;
+#[dojo::model(version: 0)]
+#[dojo::model(version: 0)]
+struct BadModelMultipleAttr {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
 
-#[derive(Print)]
+#[dojo::model(version: 0, version: 0)]
+struct BadModelMultipleVersions {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: hello)]
+struct BadModelBadVersionType {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version)]
+struct BadModelNoVersionValue {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(my_arg: 1)]
+struct BadModelUnexpectedArgWithValue {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(my_arg)]
+struct BadModelUnexpectedArg {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: 2)]
+struct BadModelNotSupportedVersion {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(version: 0)]
+struct Modelv0 {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(namespace: 'MyNamespace')]
+struct ModelWithBadNamespaceFormat {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(namespace: 'my_namespace')]
+struct ModelWithShortStringNamespace {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model(namespace: "my_namespace")]
+struct ModelWithStringNamespace {
+    #[key]
+    id: felt252,
+    v: Vec3,
+}
+
+#[dojo::model]
 struct Position {
     #[key]
     id: felt252,
-    x: felt252,
-    y: felt252
+    v: Vec3,
 }
 
-#[derive(Print)]
+#[dojo::model]
 struct Roles {
     role_ids: Array<u8>
 }
 
-use starknet::ContractAddress;
+#[dojo::model]
+struct OnlyKeyModel {
+    #[key]
+    id: felt252
+}
 
-#[derive(Print)]
+#[dojo::model]
+struct U256KeyModel {
+    #[key]
+    id: u256
+}
+
+#[dojo::model]
 struct Player {
     #[key]
     game: felt252,
@@ -186,30 +273,1089 @@ struct Player {
     name: felt252,
 }
 
-#[derive(Print)]
-enum Enemy {
-    Unknown,
-    Bot: felt252,
-    OtherPlayer: ContractAddress,
+#[dojo::model]
+type OtherPlayer = Player;
+
+#[dojo::model]
+struct ModelWithSimpleArray {
+    #[key]
+    player: ContractAddress,
+    x: u16,
+    y: Array<u8>
+}
+
+#[dojo::model]
+struct ModelWithByteArray {
+    #[key]
+    player: ContractAddress,
+    x: u16,
+    y: ByteArray
+}
+
+#[dojo::model]
+struct ModelWithComplexArray {
+    #[key]
+    player: ContractAddress,
+    x: u16,
+    y: Array<Vec3>
+}
+
+#[dojo::model]
+struct ModelWithTuple {
+    #[key]
+    player: ContractAddress,
+    x: u16,
+    y: (u8, u16, u32)
+}
+
+#[dojo::model]
+struct ModelWithTupleNoPrimitives {
+    #[key]
+    player: ContractAddress,
+    x: u16,
+    y: (u8, Vec3, u32)
+}
+impl BadModelMultipleAttrIntrospect<> of dojo::model::introspect::Introspect<BadModelMultipleAttr<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'BadModelMultipleAttr',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl BadModelMultipleVersionsIntrospect<> of dojo::model::introspect::Introspect<BadModelMultipleVersions<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'BadModelMultipleVersions',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl BadModelBadVersionTypeIntrospect<> of dojo::model::introspect::Introspect<BadModelBadVersionType<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'BadModelBadVersionType',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl BadModelNoVersionValueIntrospect<> of dojo::model::introspect::Introspect<BadModelNoVersionValue<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'BadModelNoVersionValue',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl BadModelUnexpectedArgWithValueIntrospect<> of dojo::model::introspect::Introspect<BadModelUnexpectedArgWithValue<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'BadModelUnexpectedArgWithValue',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl BadModelUnexpectedArgIntrospect<> of dojo::model::introspect::Introspect<BadModelUnexpectedArg<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'BadModelUnexpectedArg',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl BadModelNotSupportedVersionIntrospect<> of dojo::model::introspect::Introspect<BadModelNotSupportedVersion<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'BadModelNotSupportedVersion',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl Modelv0Introspect<> of dojo::model::introspect::Introspect<Modelv0<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'Modelv0',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl ModelWithBadNamespaceFormatIntrospect<> of dojo::model::introspect::Introspect<ModelWithBadNamespaceFormat<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'ModelWithBadNamespaceFormat',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl ModelWithShortStringNamespaceIntrospect<> of dojo::model::introspect::Introspect<ModelWithShortStringNamespace<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'ModelWithShortStringNamespace',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl ModelWithStringNamespaceIntrospect<> of dojo::model::introspect::Introspect<ModelWithStringNamespace<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'ModelWithStringNamespace',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl PositionIntrospect<> of dojo::model::introspect::Introspect<Position<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        dojo::model::introspect::Introspect::<Vec3>::size()
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 578691550836206188651404750433984985630363913126316857592149308417275000080,
+                    layout: dojo::model::introspect::Introspect::<Vec3>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'Position',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'v',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<Vec3>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl RolesIntrospect<> of dojo::model::introspect::Introspect<Roles<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 387776731289756409274549987067854286905927440612427426920343953432870065647,
+                    layout: dojo::model::introspect::Introspect::<Array<u8>
+>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'Roles',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'role_ids',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Ty::Array(
+                array![
+                dojo::model::introspect::Introspect::<u8>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl OnlyKeyModelIntrospect<> of dojo::model::introspect::Introspect<OnlyKeyModel<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'OnlyKeyModel',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl U256KeyModelIntrospect<> of dojo::model::introspect::Introspect<U256KeyModel<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'U256KeyModel',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'id',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<u256>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl PlayerIntrospect<> of dojo::model::introspect::Introspect<Player<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 1528802474226268325865027367859591458315299653151958663884057507666229546336,
+                    layout: dojo::model::introspect::Introspect::<felt252>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'Player',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'game',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'name',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<felt252>::ty()
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl ModelWithSimpleArrayIntrospect<> of dojo::model::introspect::Introspect<ModelWithSimpleArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::model::introspect::Introspect::<u16>::layout()
+                },
+dojo::model::FieldLayout {
+                    selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
+                    layout: dojo::model::introspect::Introspect::<Array<u8>
+>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'ModelWithSimpleArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<u16>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Ty::Array(
+                array![
+                dojo::model::introspect::Introspect::<u8>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl ModelWithByteArrayIntrospect<> of dojo::model::introspect::Introspect<ModelWithByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::model::introspect::Introspect::<u16>::layout()
+                },
+dojo::model::FieldLayout {
+                    selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
+                    layout: dojo::model::introspect::Introspect::<ByteArray
+>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'ModelWithByteArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<u16>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Ty::ByteArray
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl ModelWithComplexArrayIntrospect<> of dojo::model::introspect::Introspect<ModelWithComplexArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::model::introspect::Introspect::<u16>::layout()
+                },
+dojo::model::FieldLayout {
+                    selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
+                    layout: dojo::model::introspect::Introspect::<Array<Vec3>
+>::layout()
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'ModelWithComplexArray',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<u16>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Ty::Array(
+                array![
+                dojo::model::introspect::Introspect::<Vec3>::ty()
+                ].span()
+            )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl ModelWithTupleIntrospect<> of dojo::model::introspect::Introspect<ModelWithTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::model::introspect::Introspect::<u16>::layout()
+                },
+dojo::model::FieldLayout {
+                    selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
+                    layout: dojo::model::Layout::Tuple(
+            array![
+            dojo::model::introspect::Introspect::<u8>::layout(),
+dojo::model::introspect::Introspect::<u16>::layout(),
+dojo::model::introspect::Introspect::<u32>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'ModelWithTuple',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<u16>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Ty::Tuple(
+            array![
+            dojo::model::introspect::Introspect::<u8>::ty(),
+dojo::model::introspect::Introspect::<u16>::ty(),
+dojo::model::introspect::Introspect::<u32>::ty()
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
+}
+
+impl ModelWithTupleNoPrimitivesIntrospect<> of dojo::model::introspect::Introspect<ModelWithTupleNoPrimitives<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                    dojo::model::introspect::Introspect::<Vec3>::size(),
+Option::Some(3)
+                ];
+
+                if dojo::utils::any_none(@sizes) {
+                    return Option::None;
+                }
+                Option::Some(dojo::utils::sum(sizes))
+                
+    }
+
+    fn layout() -> dojo::model::Layout {
+        dojo::model::Layout::Struct(
+            array![
+            dojo::model::FieldLayout {
+                    selector: 512066735765477566404754172672287371265995314501343422459174036873487219331,
+                    layout: dojo::model::introspect::Introspect::<u16>::layout()
+                },
+dojo::model::FieldLayout {
+                    selector: 1591024729085637502504777720563487898377940395575083379770417352976841400819,
+                    layout: dojo::model::Layout::Tuple(
+            array![
+            dojo::model::introspect::Introspect::<u8>::layout(),
+dojo::model::introspect::Introspect::<Vec3>::layout(),
+dojo::model::introspect::Introspect::<u32>::layout()
+            ].span()
+        )
+                }
+            ].span()
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::model::introspect::Ty {
+        dojo::model::introspect::Ty::Struct(
+            dojo::model::introspect::Struct {
+                name: 'ModelWithTupleNoPrimitives',
+                attrs: array![].span(),
+                children: array![
+                dojo::model::introspect::Member {
+            name: 'player',
+            attrs: array!['key'].span(),
+            ty: dojo::model::introspect::Introspect::<ContractAddress>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'x',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Introspect::<u16>::ty()
+        },
+dojo::model::introspect::Member {
+            name: 'y',
+            attrs: array![].span(),
+            ty: dojo::model::introspect::Ty::Tuple(
+            array![
+            dojo::model::introspect::Introspect::<u8>::ty(),
+dojo::model::introspect::Introspect::<Vec3>::ty(),
+dojo::model::introspect::Introspect::<u32>::ty()
+            ].span()
+        )
+        }
+
+                ].span()
+            }
+        )
+    }
 }
 
 //! > expected_diagnostics
-error: Unknown derive `Print` - a plugin might be missing.
- --> /tmp/plugin_test/src/lib.cairo:4:10
-#[derive(Print)]
-         ^***^
+error: A Dojo model must have zero or one dojo::model attribute.
+ --> /tmp/plugin_test/model/src/lib.cairo:1:1
+#[dojo::model(version: 0)]
+^************************^
 
-error: Unknown derive `Print` - a plugin might be missing.
- --> /tmp/plugin_test/src/lib.cairo:12:10
-#[derive(Print)]
-         ^***^
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:10:8
+struct BadModelMultipleVersions {
+       ^**********************^
 
-error: Unknown derive `Print` - a plugin might be missing.
- --> /tmp/plugin_test/src/lib.cairo:19:10
-#[derive(Print)]
-         ^***^
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:17:8
+struct BadModelBadVersionType {
+       ^********************^
 
-error: Unknown derive `Print` - a plugin might be missing.
- --> /tmp/plugin_test/src/lib.cairo:28:10
-#[derive(Print)]
-         ^***^
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:24:8
+struct BadModelNoVersionValue {
+       ^********************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:31:8
+struct BadModelUnexpectedArgWithValue {
+       ^****************************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:38:8
+struct BadModelUnexpectedArg {
+       ^*******************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:45:8
+struct BadModelNotSupportedVersion {
+       ^*************************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:52:8
+struct Modelv0 {
+       ^*****^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:59:8
+struct ModelWithBadNamespaceFormat {
+       ^*************************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:66:8
+struct ModelWithShortStringNamespace {
+       ^***************************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:73:8
+struct ModelWithStringNamespace {
+       ^**********************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:80:8
+struct Position {
+       ^******^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:87:8
+struct Roles {
+       ^***^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:92:8
+struct OnlyKeyModel {
+       ^**********^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:98:8
+struct U256KeyModel {
+       ^**********^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:104:8
+struct Player {
+       ^****^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:116:8
+struct ModelWithSimpleArray {
+       ^******************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:124:8
+struct ModelWithByteArray {
+       ^****************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:132:8
+struct ModelWithComplexArray {
+       ^*******************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:140:8
+struct ModelWithTuple {
+       ^************^
+
+error: The namespace '' can only contain characters (a-z/A-Z), digits (0-9) and underscore (_).
+ --> /tmp/plugin_test/model/src/lib.cairo:148:8
+struct ModelWithTupleNoPrimitives {
+       ^************************^

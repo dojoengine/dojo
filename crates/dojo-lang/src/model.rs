@@ -326,7 +326,7 @@ pub struct $type_name$Entity {
 }
 
 #[generate_trait]
-pub impl $type_name$EntityImpl of $type_name$EntityTrait {
+pub impl $type_name$EntityStoreImpl of $type_name$EntityStore {
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> $type_name$Entity {
         $type_name$ModelEntityImpl::get(world, entity_id)
     }
@@ -335,7 +335,7 @@ pub impl $type_name$EntityImpl of $type_name$EntityTrait {
 }
 
 #[generate_trait]
-pub impl $type_name$Impl of $type_name$Trait {
+pub impl $type_name$StoreImpl of $type_name$Store {
     fn entity_id_from_keys($param_keys$) -> felt252 {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_param_keys$
@@ -381,14 +381,9 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
         core::array::ArrayTrait::span(@serialized)
     }
 
-    fn from_values(entity_id: felt252, values: Span<felt252>) -> $type_name$Entity {
+    fn from_values(entity_id: felt252, ref values: Span<felt252>) -> $type_name$Entity {
         let mut serialized = array![entity_id];
-        let mut i = 0;
-        loop {
-            if i >= values.len() { break; }
-            serialized.append(*values.at(i));
-            i += 1;
-        };
+        serialized.append_span(values);
         let mut serialized = core::array::ArrayTrait::span(@serialized);
 
         let entity_values = core::serde::Serde::<$type_name$Entity>::deserialize(ref serialized);
@@ -401,20 +396,20 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
     }
 
     fn get(world: dojo::world::IWorldDispatcher, entity_id: felt252) -> $type_name$Entity {
-        let values = dojo::world::IWorldDispatcherTrait::entity(
+        let mut values = dojo::world::IWorldDispatcherTrait::entity(
             world,
             dojo::model::Model::<$type_name$>::selector(),
-            dojo::world::ModelIndex::Id(entity_id),
+            dojo::model::ModelIndex::Id(entity_id),
             dojo::model::Model::<$type_name$>::layout()
         );
-        Self::from_values(entity_id, values)
+        Self::from_values(entity_id, ref values)
     }
 
     fn update(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
         dojo::world::IWorldDispatcherTrait::set_entity(
             world,
             dojo::model::Model::<$type_name$>::selector(),
-            dojo::world::ModelIndex::Id(self.id()),
+            dojo::model::ModelIndex::Id(self.id()),
             self.values(),
             dojo::model::Model::<$type_name$>::layout()
         );
@@ -424,7 +419,7 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
         dojo::world::IWorldDispatcherTrait::delete_entity(
             world,
             dojo::model::Model::<$type_name$>::selector(),
-            dojo::world::ModelIndex::Id(self.id()),
+            dojo::model::ModelIndex::Id(self.id()),
             dojo::model::Model::<$type_name$>::layout()
         );
     }
@@ -440,7 +435,7 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
                 dojo::world::IWorldDispatcherTrait::entity(
                     world,
                     dojo::model::Model::<$type_name$>::selector(),
-                    dojo::world::ModelIndex::MemberId((entity_id, member_id)),
+                    dojo::model::ModelIndex::MemberId((entity_id, member_id)),
                     field_layout
                 )
             },
@@ -460,7 +455,7 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
                 dojo::world::IWorldDispatcherTrait::set_entity(
                     world,
                     dojo::model::Model::<$type_name$>::selector(),
-                    dojo::world::ModelIndex::MemberId((self.id(), member_id)),
+                    dojo::model::ModelIndex::MemberId((self.id(), member_id)),
                     values,
                     field_layout
                 )
@@ -475,12 +470,12 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         let mut values = dojo::world::IWorldDispatcherTrait::entity(
             world,
             Self::selector(),
-            dojo::world::ModelIndex::Keys(keys),
+            dojo::model::ModelIndex::Keys(keys),
             Self::layout()
         );
         let mut _keys = keys;
 
-        $type_name$Trait::from_values(ref _keys, ref values)
+        $type_name$Store::from_values(ref _keys, ref values)
     }
 
    fn set(
@@ -490,7 +485,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         dojo::world::IWorldDispatcherTrait::set_entity(
             world,
             Self::selector(),
-            dojo::world::ModelIndex::Keys(Self::keys(self)),
+            dojo::model::ModelIndex::Keys(Self::keys(self)),
             Self::values(self),
             Self::layout()
         );
@@ -503,7 +498,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
         dojo::world::IWorldDispatcherTrait::delete_entity(
             world,
             Self::selector(),
-            dojo::world::ModelIndex::Keys(Self::keys(self)),
+            dojo::model::ModelIndex::Keys(Self::keys(self)),
             Self::layout()
         );
     }
@@ -519,7 +514,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
                 dojo::world::IWorldDispatcherTrait::entity(
                     world,
                     Self::selector(),
-                    dojo::world::ModelIndex::MemberId((entity_id, member_id)),
+                    dojo::model::ModelIndex::MemberId((entity_id, member_id)),
                     field_layout
                 )
             },
@@ -538,7 +533,7 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
                 dojo::world::IWorldDispatcherTrait::set_entity(
                     world,
                     Self::selector(),
-                    dojo::world::ModelIndex::MemberId((self.entity_id(), member_id)),
+                    dojo::model::ModelIndex::MemberId((self.entity_id(), member_id)),
                     values,
                     field_layout
                 )
@@ -607,30 +602,18 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
     }
 
     #[inline(always)]
-    fn layout() -> dojo::database::introspect::Layout {
-        dojo::database::introspect::Introspect::<$type_name$>::layout()
+    fn layout() -> dojo::model::Layout {
+        dojo::model::introspect::Introspect::<$type_name$>::layout()
     }
 
     #[inline(always)]
-    fn instance_layout(self: @$type_name$) -> dojo::database::introspect::Layout {
+    fn instance_layout(self: @$type_name$) -> dojo::model::Layout {
         Self::layout()
     }
 
     #[inline(always)]
     fn packed_size() -> Option<usize> {
-        let layout = Self::layout();
-
-        match layout {
-            dojo::database::introspect::Layout::Fixed(layout) => {
-                let mut span_layout = layout;
-                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
-            },
-            dojo::database::introspect::Layout::Struct(_) => Option::None,
-            dojo::database::introspect::Layout::Array(_) => Option::None,
-            dojo::database::introspect::Layout::Tuple(_) => Option::None,
-            dojo::database::introspect::Layout::Enum(_) => Option::None,
-            dojo::database::introspect::Layout::ByteArray => Option::None,
-        }
+        dojo::model::layout::compute_packed_size(Self::layout())
     }
 }
 
@@ -678,19 +661,19 @@ pub mod $contract_name$ {
         }
 
         fn unpacked_size(self: @ContractState) -> Option<usize> {
-            dojo::database::introspect::Introspect::<$type_name$>::size()
+            dojo::model::introspect::Introspect::<$type_name$>::size()
         }
 
         fn packed_size(self: @ContractState) -> Option<usize> {
             dojo::model::Model::<$type_name$>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+        fn layout(self: @ContractState) -> dojo::model::Layout {
             dojo::model::Model::<$type_name$>::layout()
         }
 
-        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-            dojo::database::introspect::Introspect::<$type_name$>::ty()
+        fn schema(self: @ContractState) -> dojo::model::introspect::Ty {
+            dojo::model::introspect::Introspect::<$type_name$>::ty()
         }
     }
 

@@ -14,9 +14,9 @@ use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
-use scarb::core::{Config, TargetKind};
+use scarb::core::{Config, Package, PackageId, TargetKind};
 use scarb::ops::{self, CompileOpts};
-use scarb_ui::args::FeaturesSpec;
+use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
@@ -62,6 +62,9 @@ pub struct TestArgs {
     /// Specify the features to activate.
     #[command(flatten)]
     features: FeaturesSpec,
+    /// Specify packages to test.
+    #[command(flatten)]
+    pub packages: Option<PackagesFilter>,
 }
 
 impl TestArgs {
@@ -70,6 +73,14 @@ impl TestArgs {
             eprintln!("error: {err}");
             std::process::exit(1);
         });
+
+        let packages: Vec<Package> = if let Some(filter) = self.packages {
+            filter.match_many(&ws)?.into_iter().collect()
+        } else {
+            ws.members().collect()
+        };
+
+        let package_ids = packages.iter().map(|p| p.id).collect::<Vec<PackageId>>();
 
         let resolve = ops::resolve_workspace(&ws)?;
 
@@ -87,6 +98,7 @@ impl TestArgs {
                 opts.include_target_kinds.is_empty()
                     || opts.include_target_kinds.contains(&cu.main_component().target_kind())
             })
+            .filter(|cu| package_ids.contains(&cu.main_package_id()))
             .collect::<Vec<_>>();
 
         for unit in compilation_units {
@@ -95,6 +107,11 @@ impl TestArgs {
             } else {
                 continue;
             };
+
+            config.ui().print(format!("testing {}", unit.name()));
+
+            // Injecting the cfg_set for the unit makes compiler panics.
+            // We rely then on the default namespace for testing...?
 
             let props: Props = unit.main_component().target_props()?;
             let db = build_root_database(&unit)?;
@@ -155,10 +172,10 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
     let crate_roots = unit
         .components
         .iter()
-        .filter(|model| !model.package.id.is_core())
+        .filter(|c| !c.package.id.is_core())
         // NOTE: We're taking the first target of each compilation unit, which should always be the
         //       main package source root due to the order maintained by scarb.
-        .map(|model| (model.cairo_package_name(), model.targets[0].source_root().into()))
+        .map(|c| (c.cairo_package_name(), c.targets[0].source_root().into()))
         .collect();
 
     let corelib =

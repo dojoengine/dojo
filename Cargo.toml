@@ -84,7 +84,7 @@ katana-executor = { path = "crates/katana/executor", default-features = false }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }
-katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
+katana-rpc-api = { path = "crates/katana/rpc/rpc-api", default-features = false }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }

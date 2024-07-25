@@ -653,20 +653,43 @@ mod tests {
     use katana_cairo::starknet_api::core::EntryPointSelector;
     use katana_cairo::starknet_api::felt;
     use katana_cairo::starknet_api::transaction::{EventContent, EventData, EventKey};
-    use katana_primitives::chain::NamedChainId;
     use katana_primitives::felt::FieldElement;
 
     use super::*;
 
     #[test]
     fn convert_chain_id() {
-        let mainnet =
-            to_blk_chain_id(katana_primitives::chain::ChainId::Named(NamedChainId::Mainnet));
-        let sepolia =
-            to_blk_chain_id(katana_primitives::chain::ChainId::Named(NamedChainId::Sepolia));
+        let katana_mainnet = katana_primitives::chain::ChainId::MAINNET;
+        let katana_sepolia = katana_primitives::chain::ChainId::SEPOLIA;
+        let katana_id = katana_primitives::chain::ChainId::Id(felt!("0x1337"));
 
-        assert_eq!(mainnet, ChainId::Mainnet);
-        assert_eq!(sepolia, ChainId::Sepolia);
+        let blockifier_mainnet = to_blk_chain_id(katana_mainnet);
+        let blockifier_sepolia = to_blk_chain_id(katana_sepolia);
+        let blockifier_id = to_blk_chain_id(katana_id);
+
+        assert_eq!(blockifier_mainnet, ChainId::Mainnet);
+        assert_eq!(blockifier_sepolia, ChainId::Sepolia);
+        assert_eq!(blockifier_id.as_hex(), katana_id.to_string());
+    }
+
+    /// Test to ensure that when Blockifier pass the chain id to the contract ( thru a syscall eg,
+    /// get_tx_inbox().unbox().chain_id ), the value is exactly the same as Katana chain id.
+    ///
+    /// Issue: <https://github.com/dojoengine/dojo/issues/1595>
+    #[test]
+    fn blockifier_chain_id_invariant() {
+        let id = felt!("0x1337");
+
+        let katana_id = katana_primitives::chain::ChainId::Id(id);
+        let blockifier_id = to_blk_chain_id(katana_id);
+
+        // Mimic how blockifier convert from ChainId to FieldElement.
+        //
+        // This is how blockifier pass the chain id to the contract through a syscall.
+        // https://github.com/dojoengine/blockifier/blob/f2246ce2862d043e4efe2ecf149a4cb7bee689cd/crates/blockifier/src/execution/syscalls/hint_processor.rs#L600-L602
+        let actual_id = FieldElement::from_hex(blockifier_id.as_hex().as_str()).unwrap();
+
+        assert_eq!(actual_id, id)
     }
 
     fn create_blockifier_call_info() -> CallInfo {

@@ -15,15 +15,15 @@ common.workspace = true
 console.workspace = true
 dojo-metrics.workspace = true
 katana-core.workspace = true
-katana-executor.workspace = true
+katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-primitives.workspace = true
-katana-rpc-api.workspace = true
 katana-rpc.workspace = true
+katana-rpc-api.workspace = true
 serde_json.workspace = true
 shellexpand = "3.1.0"
 tokio.workspace = true
-tracing-subscriber.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true
 url.workspace = true
 
 katana-slot-controller = { workspace = true, optional = true }
@@ -32,11 +32,7 @@ katana-slot-controller = { workspace = true, optional = true }
 assert_matches.workspace = true
 
 [features]
-default = [ "blockifier", "jemalloc", "messaging", "slot" ]
-
-blockifier = [ "katana-executor/blockifier" ]
-# Disable until SIR support Cairo 2.6.3
-#sir = [ "katana-executor/sir" ]
+default = [ "jemalloc", "messaging", "slot" ]
 
 jemalloc = [ "dojo-metrics/jemalloc" ]
 messaging = [ "katana-core/messaging" ]

@@ -24,7 +24,7 @@ use katana_executor::ExecutorFactory;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_api::saya::SayaApiServer;
-use katana_rpc_api::starknet::StarknetApiServer;
+use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_api::ApiKind;
 use metrics::RpcServerMetrics;
@@ -46,7 +46,11 @@ pub async fn spawn<EF: ExecutorFactory>(
     for api in &config.apis {
         match api {
             ApiKind::Starknet => {
-                methods.merge(StarknetApi::new(sequencer.clone()).into_rpc())?;
+                // TODO: merge these into a single logic.
+                let server = StarknetApi::new(sequencer.clone());
+                methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
+                methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
+                methods.merge(StarknetTraceApiServer::into_rpc(server))?;
             }
             ApiKind::Katana => {
                 methods.merge(KatanaApi::new(sequencer.clone()).into_rpc())?;
