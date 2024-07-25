@@ -61,7 +61,7 @@ pub fn create_writers(
 
     let mut grant_writer = vec![];
     for (tag, resources) in grant.iter() {
-        ui.print_sub(format!("Authorizing write access of {} for resources: {:?}", tag, resources));
+        ui.print_sub(format!("Granting write access to {} for resources: {:?}", tag, resources));
 
         for resource in resources {
             let resource = if resource.contains(':') {
@@ -77,7 +77,7 @@ pub fn create_writers(
 
     let mut revoke_writer = vec![];
     for (tag, resources) in revoke.iter() {
-        ui.print_sub(format!("Revoking write access of {} for resources: {:?}", tag, resources));
+        ui.print_sub(format!("Revoking write access from {} for resources: {:?}", tag, resources));
 
         for resource in resources {
             let resource = if resource.contains(':') {
