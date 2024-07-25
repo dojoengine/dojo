@@ -47,9 +47,7 @@ pub struct ContractMigrationOutput {
     pub base_class_hash: Felt,
 }
 
-// TODO: when diff is zero we still need to run auto authorize
 // TODO: read deployment manifest to find diff in `writes` for auto authorize
-// TODO: update method names to better reflect what they now do
 // TODO: add tests
 // TODO: general cleanup
 #[allow(clippy::too_many_arguments)]
@@ -64,7 +62,7 @@ pub async fn migrate<A>(
     skip_manifests: Option<Vec<String>>,
 ) -> Result<Option<MigrationOutput>>
 where
-    A: ConnectedAccount + Sync + Send,
+    A: ConnectedAccount + Sync + Send + 'static,
     A::Provider: Send,
     A::SignError: 'static,
 {
@@ -127,6 +125,9 @@ where
     }
 
     let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    // TODO: dry run can also show the diffs for things apart from world state
+    // what new authorizations would be granted, if ipfs data would change or not,
+    // etc...
     if dry_run {
         if total_diffs == 0 {
             return Ok(None);
@@ -188,9 +189,7 @@ where
         let account = Arc::new(account);
         let world = WorldContract::new(strategy.world_address, account.clone());
 
-        match auto_authorize(ws, &world, &txn_config, &local_manifest, &default_namespace, &work)
-            .await
-        {
+        match auto_authorize(ws, &world, &txn_config, &default_namespace, &work).await {
             Ok(()) => {
                 let deployment_dir = manifest_dir.join(DEPLOYMENT_DIR);
                 let deployment_metadata_path =
@@ -200,11 +199,11 @@ where
                 let mut deployment_metadata =
                     DeploymentMetadata::load_from_path(&deployment_metadata_path)?;
 
-                work.iter().for_each(|tag| {
-                    let contract =
+                work.iter().for_each(|(tag, _)| {
+                    let contract_metadata =
                         deployment_metadata.contracts.get_mut(tag).expect("unexpected tag found");
 
-                    *contract = false;
+                    contract_metadata.clear();
                 });
 
                 deployment_metadata.write_to_path_toml(&deployment_metadata_path)?;

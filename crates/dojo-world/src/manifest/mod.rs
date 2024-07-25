@@ -29,10 +29,10 @@ mod test;
 mod types;
 
 pub use types::{
-    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, DeploymentManifest,
-    DeploymentMetadata, DojoContract, DojoModel, Manifest, ManifestMethods, Member, OverlayClass,
-    OverlayContract, OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldContract,
-    WorldMetadata,
+    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, ContractMetadata, DeploymentManifest,
+    DeploymentMetadata, DojoContract, DojoModel, Manifest, ManifestMethods, Member, Operation,
+    OverlayClass, OverlayContract, OverlayDojoContract, OverlayDojoModel, OverlayManifest,
+    WorldContract, WorldMetadata,
 };
 
 pub const WORLD_CONTRACT_TAG: &str = "dojo-world";
@@ -466,7 +466,7 @@ impl DeploymentMetadata {
     pub fn add_missing(&mut self, manifest: &BaseManifest) {
         for contract in manifest.contracts.iter() {
             let name = naming::get_tag_from_filename(&contract.manifest_name).unwrap();
-            self.contracts.entry(name).or_insert(true);
+            self.contracts.entry(name).or_insert(ContractMetadata::default());
         }
     }
 }

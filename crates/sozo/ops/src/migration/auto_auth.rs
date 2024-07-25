@@ -1,26 +1,25 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use anyhow::Result;
-use dojo_world::contracts::WorldContract;
-use dojo_world::manifest::BaseManifest;
+use dojo_world::manifest::ContractMetadata;
 use dojo_world::migration::TxnConfig;
+use dojo_world::{contracts::WorldContract, manifest::Operation};
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 
 use super::ui::MigrationUi;
-use crate::auth::{grant_writer, ResourceWriter};
+use crate::auth::{grant_writer, revoke_writer, ResourceWriter};
 
 pub async fn auto_authorize<A>(
     ws: &Workspace<'_>,
     world: &WorldContract<A>,
     txn_config: &TxnConfig,
-    local_manifest: &BaseManifest,
     default_namespace: &str,
-    work: &Vec<String>,
+    work: &Vec<(String, ContractMetadata)>,
 ) -> Result<()>
 where
-    A: ConnectedAccount + Sync + Send,
+    A: ConnectedAccount + Sync + Send + 'static,
     A::SignError: 'static,
 {
     let ui = ws.config().ui();
@@ -28,43 +27,69 @@ where
     ui.print(" ");
     ui.print_step(6, "🖋️", "Authorizing systems based on overlay...");
     ui.print(" ");
-    let new_writers = create_writers(&ui, local_manifest, work)?;
-    grant_writer(&ui, world, new_writers, *txn_config, default_namespace).await
+    let (grant, revoke) = create_writers(&ui, work)?;
+    grant_writer(&ui, world, grant, *txn_config, default_namespace).await?;
+    revoke_writer(&ui, world, revoke, *txn_config, default_namespace).await?;
+
+    Ok(())
 }
 
 pub fn create_writers(
     ui: &Ui,
-    local_manifest: &BaseManifest,
-    tags: &Vec<String>,
-) -> Result<Vec<crate::auth::ResourceWriter>> {
-    let mut res = vec![];
-    let local_contracts = &local_manifest.contracts;
+    work: &Vec<(String, ContractMetadata)>,
+) -> Result<(Vec<ResourceWriter>, Vec<ResourceWriter>)> {
+    let mut grant = HashMap::new();
+    let mut revoke = HashMap::new();
 
     // From all the contracts that were migrated successfully.
-    for tag in tags {
-        // Find that contract from local_manifest based on its tag.
-        let contract =
-            local_contracts.iter().find(|c| tag == &c.inner.tag).expect("unexpected tag found");
-
-        if !contract.inner.writes.is_empty() {
-            ui.print_sub(format!(
-                "Authorizing {} for resources: {:?}",
-                contract.inner.tag, contract.inner.writes
-            ));
-        }
-
-        for tag_with_prefix in &contract.inner.writes {
-            let resource_type = if tag_with_prefix.contains(':') {
-                tag_with_prefix.to_string()
-            } else {
-                // Default to model if no prefix was given.
-                format!("m:{}", tag_with_prefix)
-            };
-
-            let resource = format!("{},{}", resource_type, tag);
-            res.push(ResourceWriter::from_str(&resource)?);
+    for (tag, contract_metadata) in work {
+        // separate out the resources that are being granted and revoked.
+        // based on the Operation type in the contract_metadata.
+        for (resource, operation) in contract_metadata {
+            match operation {
+                Operation::Grant => {
+                    let entry = grant.entry(tag).or_insert(vec![]);
+                    entry.push(resource);
+                }
+                Operation::Revoke => {
+                    let entry = revoke.entry(tag).or_insert(vec![]);
+                    entry.push(resource);
+                }
+            }
         }
     }
 
-    Ok(res)
+    let mut grant_writer = vec![];
+    for (tag, resources) in grant.iter() {
+        ui.print_sub(format!("Authorizing write access of {} for resources: {:?}", tag, resources));
+
+        for resource in resources {
+            let resource = if resource.contains(':') {
+                resource.to_string()
+            } else {
+                // Default to model if no prefix was given.
+                format!("m:{}", resource)
+            };
+            let resource = format!("{},{}", resource, tag);
+            grant_writer.push(ResourceWriter::from_str(&resource)?);
+        }
+    }
+
+    let mut revoke_writer = vec![];
+    for (tag, resources) in revoke.iter() {
+        ui.print_sub(format!("Revoking write access of {} for resources: {:?}", tag, resources));
+
+        for resource in resources {
+            let resource = if resource.contains(':') {
+                resource.to_string()
+            } else {
+                // Default to model if no prefix was given.
+                format!("m:{}", resource)
+            };
+            let resource = format!("{},{}", resource, tag);
+            revoke_writer.push(ResourceWriter::from_str(&resource)?);
+        }
+    }
+
+    Ok((grant_writer, revoke_writer))
 }

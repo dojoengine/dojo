@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -9,9 +10,10 @@ use dojo_world::contracts::naming::{
 };
 use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::manifest::{
-    AbiFormat, BaseManifest, Class, DeploymentManifest, DeploymentMetadata, DojoContract,
-    DojoModel, Manifest, ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata,
-    ABIS_DIR, BASE_DIR, DEPLOYMENT_DIR, MANIFESTS_DIR,
+    AbiFormat, BaseManifest, Class, ContractMetadata, DeploymentManifest, DeploymentMetadata,
+    DojoContract, DojoModel, Manifest, ManifestMethods, Operation,
+    WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR, DEPLOYMENT_DIR,
+    MANIFESTS_DIR,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, ResourceMetadata};
 use dojo_world::migration::class::ClassMigration;
@@ -251,13 +253,13 @@ where
 /// into the Dojo resource registry.
 ///
 /// # Arguments
-/// * `element_name` - fully qualified name of the element linked to the metadata
-/// * `resource_id` - the id of the resource to create.
-/// * `artifact` - the artifact to upload on IPFS.
+/// * `ui` - The user interface object for displaying information
+/// * `resource_id` - The id of the resource to create
+/// * `metadata` - The ResourceMetadata object containing the metadata to upload
 ///
 /// # Returns
-/// A [`ResourceData`] object to register in the Dojo resource register
-/// on success.
+/// A [`world::ResourceMetadata`] object to register in the Dojo resource register
+/// on success, or an error if the upload fails.
 async fn upload_on_ipfs_and_create_resource(
     ui: &Ui,
     resource_id: Felt,
@@ -874,7 +876,7 @@ pub fn update_deployment_metadata(
     manifest_dir: &Utf8PathBuf,
     local_manifest: &BaseManifest,
     migration_output: Option<&MigrationOutput>,
-) -> Result<Vec<String>> {
+) -> Result<Vec<(String, ContractMetadata)>> {
     let deployment_dir = manifest_dir.join(DEPLOYMENT_DIR);
     let deployment_metadata_path = deployment_dir.join("metadata").with_extension("toml");
 
@@ -885,7 +887,9 @@ pub fn update_deployment_metadata(
     };
 
     deployment_metadata.add_missing(local_manifest);
-    let work = calculate(migration_output, &mut deployment_metadata);
+
+    let work = calculate(migration_output, &mut deployment_metadata, &local_manifest);
+
     deployment_metadata
         .write_to_path_toml(&deployment_metadata_path)
         .with_context(|| "Failed to write deployment metadata")?;
@@ -896,22 +900,41 @@ pub fn update_deployment_metadata(
 fn calculate(
     migration_output: Option<&MigrationOutput>,
     deployment_metadata: &mut DeploymentMetadata,
-) -> Vec<String> {
+    local_manifest: &BaseManifest,
+) -> Vec<(String, ContractMetadata)> {
     if let Some(migration_output) = migration_output {
+        if migration_output.world_tx_hash.is_some() {
+            deployment_metadata.world_metadata = true;
+        }
+
         migration_output.contracts.iter().flatten().for_each(|contract_output| {
             let name = contract_output.tag.clone();
 
-            // overwrite existing information, since we now need to do the migration
-            deployment_metadata.contracts.insert(name, true);
+            let writes = deployment_metadata
+                .contracts
+                .entry(name.clone())
+                .or_insert_with(|| HashMap::default());
+
+            // since `name` is coming from `migration_output` its safe to unwrap
+            let contract = local_manifest.contracts.iter().find(|c| c.inner.tag == name).unwrap();
+
+            contract.inner.writes.iter().for_each(|i| {
+                writes.insert(i.to_string(), Operation::Grant);
+            });
         });
     }
 
     // given deployment_metadata.contracts return only the ones that are true
-    let contracts = deployment_metadata.contracts.iter().filter(|(_, &v)| v).collect::<Vec<_>>();
+    let contracts = deployment_metadata
+        .contracts
+        .clone()
+        .into_iter()
+        .filter(|(_, v)| v.keys().len() > 0)
+        .collect::<Vec<(String, HashMap<String, Operation>)>>();
 
     let mut work = vec![];
     for contract in contracts {
-        work.push(contract.0.clone());
+        work.push(contract);
     }
 
     work
