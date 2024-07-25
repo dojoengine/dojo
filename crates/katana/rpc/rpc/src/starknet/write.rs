@@ -10,77 +10,91 @@ use katana_rpc_types::transaction::{
 
 use super::StarknetApi;
 
-#[async_trait]
-impl<EF: ExecutorFactory> StarknetWriteApiServer for StarknetApi<EF> {
-    async fn add_invoke_transaction(
+impl<EF: ExecutorFactory> StarknetApi<EF> {
+    async fn add_invoke_transaction_impl(
         &self,
-        invoke_transaction: BroadcastedInvokeTx,
-    ) -> RpcResult<InvokeTxResult> {
+        tx: BroadcastedInvokeTx,
+    ) -> Result<InvokeTxResult, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
-            if invoke_transaction.is_query() {
-                return Err(StarknetApiError::UnsupportedTransactionVersion.into());
+            if tx.is_query() {
+                return Err(StarknetApiError::UnsupportedTransactionVersion);
             }
 
-            let chain_id = this.inner.sequencer.chain_id();
-
-            let tx = invoke_transaction.into_tx_with_chain_id(chain_id);
+            let tx = tx.into_tx_with_chain_id(this.inner.sequencer.backend().chain_id);
             let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(tx));
             let tx_hash = tx.hash;
 
-            this.inner.sequencer.add_transaction_to_pool(tx);
-
+            this.inner.sequencer.pool().add_transaction(tx);
             Ok(tx_hash.into())
         })
         .await
     }
 
-    async fn add_declare_transaction(
+    async fn add_declare_transaction_impl(
         &self,
-        declare_transaction: BroadcastedDeclareTx,
-    ) -> RpcResult<DeclareTxResult> {
+        tx: BroadcastedDeclareTx,
+    ) -> Result<DeclareTxResult, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
-            if declare_transaction.is_query() {
-                return Err(StarknetApiError::UnsupportedTransactionVersion.into());
+            if tx.is_query() {
+                return Err(StarknetApiError::UnsupportedTransactionVersion);
             }
 
-            let chain_id = this.inner.sequencer.chain_id();
-
-            let tx = declare_transaction
-                .try_into_tx_with_chain_id(chain_id)
+            let tx = tx
+                .try_into_tx_with_chain_id(this.inner.sequencer.backend().chain_id)
                 .map_err(|_| StarknetApiError::InvalidContractClass)?;
 
             let class_hash = tx.class_hash();
             let tx = ExecutableTxWithHash::new(ExecutableTx::Declare(tx));
             let tx_hash = tx.hash;
 
-            this.inner.sequencer.add_transaction_to_pool(tx);
-
+            this.inner.sequencer.pool().add_transaction(tx);
             Ok((tx_hash, class_hash).into())
         })
         .await
+    }
+
+    async fn add_deploy_account_transaction_impl(
+        &self,
+        tx: BroadcastedDeployAccountTx,
+    ) -> Result<DeployAccountTxResult, StarknetApiError> {
+        self.on_io_blocking_task(move |this| {
+            if tx.is_query() {
+                return Err(StarknetApiError::UnsupportedTransactionVersion);
+            }
+
+            let tx = tx.into_tx_with_chain_id(this.inner.sequencer.backend().chain_id);
+            let contract_address = tx.contract_address();
+
+            let tx = ExecutableTxWithHash::new(ExecutableTx::DeployAccount(tx));
+            let tx_hash = tx.hash;
+
+            this.inner.sequencer.pool().add_transaction(tx);
+            Ok((tx_hash, contract_address).into())
+        })
+        .await
+    }
+}
+
+#[async_trait]
+impl<EF: ExecutorFactory> StarknetWriteApiServer for StarknetApi<EF> {
+    async fn add_invoke_transaction(
+        &self,
+        invoke_transaction: BroadcastedInvokeTx,
+    ) -> RpcResult<InvokeTxResult> {
+        Ok(self.add_invoke_transaction_impl(invoke_transaction).await?)
+    }
+
+    async fn add_declare_transaction(
+        &self,
+        declare_transaction: BroadcastedDeclareTx,
+    ) -> RpcResult<DeclareTxResult> {
+        Ok(self.add_declare_transaction_impl(declare_transaction).await?)
     }
 
     async fn add_deploy_account_transaction(
         &self,
         deploy_account_transaction: BroadcastedDeployAccountTx,
     ) -> RpcResult<DeployAccountTxResult> {
-        self.on_io_blocking_task(move |this| {
-            if deploy_account_transaction.is_query() {
-                return Err(StarknetApiError::UnsupportedTransactionVersion.into());
-            }
-
-            let chain_id = this.inner.sequencer.chain_id();
-
-            let tx = deploy_account_transaction.into_tx_with_chain_id(chain_id);
-            let contract_address = tx.contract_address();
-
-            let tx = ExecutableTxWithHash::new(ExecutableTx::DeployAccount(tx));
-            let tx_hash = tx.hash;
-
-            this.inner.sequencer.add_transaction_to_pool(tx);
-
-            Ok((tx_hash, contract_address).into())
-        })
-        .await
+        Ok(self.add_deploy_account_transaction_impl(deploy_account_transaction).await?)
     }
 }

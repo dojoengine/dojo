@@ -83,7 +83,7 @@ impl TestSequencer {
 
         let url = Url::parse(&format!("http://{}", handle.addr)).expect("Failed to parse URL");
 
-        let account = sequencer.backend.config.genesis.accounts().next().unwrap();
+        let account = sequencer.backend().config.genesis.accounts().next().unwrap();
         let account = TestAccount {
             private_key: Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be()),
             account_address: Felt::from_bytes_be(&account.0.to_bytes_be()),
@@ -114,7 +114,7 @@ impl TestSequencer {
         &self,
         index: usize,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
-        let accounts: Vec<_> = self.sequencer.backend.config.genesis.accounts().collect::<_>();
+        let accounts: Vec<_> = self.sequencer.backend().config.genesis.accounts().collect::<_>();
 
         let account = accounts[index];
         let private_key = Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be());
