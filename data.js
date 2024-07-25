@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721920822140,
+  "lastUpdate": 1721938235272,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12865,6 +12865,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5110586,
             "range": "± 125492",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "27580f6aab337ee31a6b9abeba4e07a001d383af",
+          "message": "refactor(katana-rpc): move API implementations from `Sequencer` to their dedicated server struct (#2209)",
+          "timestamp": "2024-07-26T03:52:22+08:00",
+          "tree_id": "586d8dd8c42361528839203a5a17164f9501bd6c",
+          "url": "https://github.com/dojoengine/dojo/commit/27580f6aab337ee31a6b9abeba4e07a001d383af"
+        },
+        "date": 1721938233972,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17103856,
+            "range": "± 339767",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4674732,
+            "range": "± 144132",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3231451601,
+            "range": "± 608554337",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4819039,
+            "range": "± 86188",
             "unit": "ns/iter"
           }
         ]
