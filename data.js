@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721838531415,
+  "lastUpdate": 1721876728425,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12673,6 +12673,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5207160,
             "range": "± 116327",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5ee2f05ffe57a64c58653f2dd161ea26b7f14ff6",
+          "message": "feat(sozo): add full workspace and accept non-dojo targets (#2207)",
+          "timestamp": "2024-07-24T20:47:30-06:00",
+          "tree_id": "9d1dda043759ce3238614e3d30cf5f12a4f6eb0c",
+          "url": "https://github.com/dojoengine/dojo/commit/5ee2f05ffe57a64c58653f2dd161ea26b7f14ff6"
+        },
+        "date": 1721876727688,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17062949,
+            "range": "± 208918",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4677621,
+            "range": "± 53508",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3317294995,
+            "range": "± 587431848",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4820671,
+            "range": "± 50544",
             "unit": "ns/iter"
           }
         ]
