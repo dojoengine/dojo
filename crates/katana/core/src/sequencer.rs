@@ -14,6 +14,9 @@ use crate::service::messaging::MessagingConfig;
 use crate::service::messaging::MessagingService;
 use crate::service::{NodeService, TransactionMiner};
 
+// TODO: just a placeholder for now, remove until we have a dedicated class for building node
+// components
+#[deprecated = "In the process of removal"]
 #[derive(Debug, Default)]
 pub struct SequencerConfig {
     pub block_time: Option<u64>,
@@ -22,7 +25,8 @@ pub struct SequencerConfig {
     pub messaging: Option<MessagingConfig>,
 }
 
-#[allow(missing_debug_implementations)]
+#[deprecated = "In the process of removal"]
+#[allow(missing_debug_implementations, deprecated)]
 pub struct KatanaSequencer<EF: ExecutorFactory> {
     config: SequencerConfig,
     pool: Arc<TransactionPool>,
@@ -30,6 +34,7 @@ pub struct KatanaSequencer<EF: ExecutorFactory> {
     block_producer: Arc<BlockProducer<EF>>,
 }
 
+#[allow(deprecated)]
 impl<EF: ExecutorFactory> KatanaSequencer<EF> {
     pub async fn new(
         executor_factory: EF,
@@ -112,9 +117,11 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
 
 #[cfg(test)]
 mod tests {
+
     use katana_executor::implementation::noop::NoopExecutorFactory;
     use katana_provider::traits::block::BlockNumberProvider;
 
+    #[allow(deprecated)]
     use super::{KatanaSequencer, SequencerConfig};
     use crate::backend::config::StarknetConfig;
 
@@ -122,6 +129,7 @@ mod tests {
     async fn init_interval_block_producer_with_correct_block_env() {
         let executor_factory = NoopExecutorFactory::default();
 
+        #[allow(deprecated)]
         let sequencer = KatanaSequencer::new(
             executor_factory,
             SequencerConfig { no_mining: true, ..Default::default() },
@@ -130,7 +138,7 @@ mod tests {
         .await
         .unwrap();
 
-        let provider = sequencer.backend.blockchain.provider();
+        let provider = sequencer.provider();
 
         let latest_num = provider.latest_number().unwrap();
         let producer_block_env = sequencer.pending_executor().unwrap().read().block_env();

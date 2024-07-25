@@ -7539,7 +7539,6 @@ dependencies = [
  "console",
  "dojo-metrics",
  "katana-core",
- "katana-executor",
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, RpcResult};
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::backend::Backend;
+use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_provider::error::ProviderError;
@@ -14,18 +15,22 @@ use katana_tasks::TokioTaskSpawner;
 
 #[allow(missing_debug_implementations)]
 pub struct SayaApi<EF: ExecutorFactory> {
-    sequencer: Arc<KatanaSequencer<EF>>,
+    backend: Arc<Backend<EF>>,
+    block_producer: Arc<BlockProducer<EF>>,
 }
 
 impl<EF: ExecutorFactory> Clone for SayaApi<EF> {
     fn clone(&self) -> Self {
-        Self { sequencer: self.sequencer.clone() }
+        Self {
+            backend: Arc::clone(&self.backend),
+            block_producer: Arc::clone(&self.block_producer),
+        }
     }
 }
 
 impl<EF: ExecutorFactory> SayaApi<EF> {
-    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
-        Self { sequencer }
+    pub fn new(backend: Arc<Backend<EF>>, block_producer: Arc<BlockProducer<EF>>) -> Self {
+        Self { backend, block_producer }
     }
 
     async fn on_io_blocking_task<F, T>(&self, func: F) -> T
@@ -36,6 +41,14 @@ impl<EF: ExecutorFactory> SayaApi<EF> {
         let this = self.clone();
         TokioTaskSpawner::new().unwrap().spawn_blocking(move || func(this)).await.unwrap()
     }
+
+    /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
+    fn pending_executor(&self) -> Option<PendingExecutor> {
+        match &*self.block_producer.inner.read() {
+            BlockProducerMode::Instant(_) => None,
+            BlockProducerMode::Interval(producer) => Some(producer.executor()),
+        }
+    }
 }
 
 #[async_trait]
@@ -45,12 +58,12 @@ impl<EF: ExecutorFactory> SayaApiServer for SayaApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<TxExecutionInfo>> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.sequencer.backend().blockchain.provider();
+            let provider = this.backend.blockchain.provider();
 
             match block_id {
                 BlockIdOrTag::Tag(BlockTag::Pending) => {
                     // if there is no pending block (eg on instant mining), return an empty list
-                    let Some(pending) = this.sequencer.pending_executor() else {
+                    let Some(pending) = this.pending_executor() else {
                         return Ok(Vec::new());
                     };
 

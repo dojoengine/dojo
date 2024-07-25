@@ -390,6 +390,7 @@ where
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
+    #[allow(deprecated)]
     use dojo_test_utils::sequencer::{
         get_default_test_starknet_config, SequencerConfig, TestSequencer,
     };
@@ -403,6 +404,7 @@ mod tests {
 
     use super::{Duration, TransactionWaiter};
 
+    #[allow(deprecated)]
     async fn create_test_sequencer() -> (TestSequencer, JsonRpcClient<HttpTransport>) {
         let sequencer =
             TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())

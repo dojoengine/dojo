@@ -1,9 +1,12 @@
+#![allow(deprecated)]
+
 use std::sync::Arc;
 
 use alloy_primitives::U256;
 use katana_core::backend::config::StarknetConfig;
-use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
-use katana_executor::implementation::noop::NoopExecutorFactory;
+use katana_core::backend::Backend;
+use katana_core::sequencer::SequencerConfig;
+use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
@@ -25,87 +28,79 @@ fn create_test_sequencer_config() -> (SequencerConfig, StarknetConfig) {
     )
 }
 
-async fn create_test_sequencer() -> Arc<KatanaSequencer<NoopExecutorFactory>> {
-    let executor_factory = NoopExecutorFactory::new();
+async fn create_test_dev_api() -> (DevApi<BlockifierFactory>, Arc<Backend<BlockifierFactory>>) {
     let (sequencer_config, starknet_config) = create_test_sequencer_config();
-    let sequencer =
-        KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await.unwrap();
-    Arc::new(sequencer)
+    let (_, backend, bp) =
+        katana_core::build_node_components(sequencer_config, starknet_config).await.unwrap();
+    (DevApi::new(backend.clone(), bp), backend)
 }
 
 #[tokio::test]
 async fn test_next_block_timestamp_in_past() {
-    let sequencer = create_test_sequencer().await;
-    let api = DevApi::new(Arc::clone(&sequencer));
+    let (api, backend) = create_test_dev_api().await;
+    let provider = backend.blockchain.provider();
 
-    let block_num = sequencer.provider().latest_number().unwrap();
-    let mut block_env = sequencer.provider().block_env_at(block_num.into()).unwrap().unwrap();
-    sequencer.backend().update_block_env(&mut block_env);
+    let block_num = provider.latest_number().unwrap();
+    let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+    backend.update_block_env(&mut block_env);
 
-    let block1 = sequencer.backend().mine_empty_block(&block_env).unwrap().block_number;
-    let block1_timestamp =
-        sequencer.provider().block(block1.into()).unwrap().unwrap().header.timestamp;
+    let block1 = backend.mine_empty_block(&block_env).unwrap().block_number;
+    let block1_timestamp = provider.block(block1.into()).unwrap().unwrap().header.timestamp;
     api.set_next_block_timestamp(block1_timestamp - 1000).unwrap();
 
-    let block_num = sequencer.provider().latest_number().unwrap();
-    let mut block_env = sequencer.provider().block_env_at(block_num.into()).unwrap().unwrap();
-    sequencer.backend().update_block_env(&mut block_env);
+    let block_num = provider.latest_number().unwrap();
+    let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+    backend.update_block_env(&mut block_env);
 
-    let block2 = sequencer.backend().mine_empty_block(&block_env).unwrap().block_number;
-    let block2_timestamp =
-        sequencer.provider().block(block2.into()).unwrap().unwrap().header.timestamp;
+    let block2 = backend.mine_empty_block(&block_env).unwrap().block_number;
+    let block2_timestamp = provider.block(block2.into()).unwrap().unwrap().header.timestamp;
 
     assert_eq!(block2_timestamp, block1_timestamp - 1000, "timestamp should be updated");
 }
 
 #[tokio::test]
 async fn test_set_next_block_timestamp_in_future() {
-    let sequencer = create_test_sequencer().await;
-    let api = DevApi::new(Arc::clone(&sequencer));
+    let (api, backend) = create_test_dev_api().await;
+    let provider = backend.blockchain.provider();
 
-    let block_num = sequencer.provider().latest_number().unwrap();
-    let mut block_env = sequencer.provider().block_env_at(block_num.into()).unwrap().unwrap();
-    sequencer.backend().update_block_env(&mut block_env);
-    let block1 = sequencer.backend().mine_empty_block(&block_env).unwrap().block_number;
+    let block_num = provider.latest_number().unwrap();
+    let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+    backend.update_block_env(&mut block_env);
+    let block1 = backend.mine_empty_block(&block_env).unwrap().block_number;
 
-    let block1_timestamp =
-        sequencer.provider().block(block1.into()).unwrap().unwrap().header.timestamp;
+    let block1_timestamp = provider.block(block1.into()).unwrap().unwrap().header.timestamp;
 
     api.set_next_block_timestamp(block1_timestamp + 1000).unwrap();
 
-    let block_num = sequencer.provider().latest_number().unwrap();
-    let mut block_env = sequencer.provider().block_env_at(block_num.into()).unwrap().unwrap();
-    sequencer.backend().update_block_env(&mut block_env);
-    let block2 = sequencer.backend().mine_empty_block(&block_env).unwrap().block_number;
+    let block_num = provider.latest_number().unwrap();
+    let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+    backend.update_block_env(&mut block_env);
+    let block2 = backend.mine_empty_block(&block_env).unwrap().block_number;
 
-    let block2_timestamp =
-        sequencer.provider().block(block2.into()).unwrap().unwrap().header.timestamp;
+    let block2_timestamp = provider.block(block2.into()).unwrap().unwrap().header.timestamp;
 
     assert_eq!(block2_timestamp, block1_timestamp + 1000, "timestamp should be updated");
 }
-
 #[tokio::test]
 async fn test_increase_next_block_timestamp() {
-    let sequencer = create_test_sequencer().await;
-    let api = DevApi::new(Arc::clone(&sequencer));
+    let (api, backend) = create_test_dev_api().await;
+    let provider = backend.blockchain.provider();
 
-    let block_num = sequencer.provider().latest_number().unwrap();
-    let mut block_env = sequencer.provider().block_env_at(block_num.into()).unwrap().unwrap();
-    sequencer.backend().update_block_env(&mut block_env);
-    let block1 = sequencer.backend().mine_empty_block(&block_env).unwrap().block_number;
+    let block_num = provider.latest_number().unwrap();
+    let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+    backend.update_block_env(&mut block_env);
+    let block1 = backend.mine_empty_block(&block_env).unwrap().block_number;
 
-    let block1_timestamp =
-        sequencer.provider().block(block1.into()).unwrap().unwrap().header.timestamp;
+    let block1_timestamp = provider.block(block1.into()).unwrap().unwrap().header.timestamp;
 
     api.increase_next_block_timestamp(1000).unwrap();
 
-    let block_num = sequencer.provider().latest_number().unwrap();
-    let mut block_env = sequencer.provider().block_env_at(block_num.into()).unwrap().unwrap();
-    sequencer.backend().update_block_env(&mut block_env);
-    let block2 = sequencer.backend().mine_empty_block(&block_env).unwrap().block_number;
+    let block_num = provider.latest_number().unwrap();
+    let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+    backend.update_block_env(&mut block_env);
+    let block2 = backend.mine_empty_block(&block_env).unwrap().block_number;
 
-    let block2_timestamp =
-        sequencer.provider().block(block2.into()).unwrap().unwrap().header.timestamp;
+    let block2_timestamp = provider.block(block2.into()).unwrap().unwrap().header.timestamp;
 
     // Depending on the current time and the machine we run on, we may have 1 sec difference
     // between the expected and actual timestamp.
