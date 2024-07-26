@@ -329,7 +329,6 @@ fn encode_da_mode(
 #[cfg(test)]
 mod tests {
     use num_traits::ToPrimitive;
-    use starknet::core::chain_id;
     use starknet::macros::{felt, short_string};
 
     use super::*;
@@ -399,12 +398,12 @@ mod tests {
         let contract_address_salt = felt!("0x74a02936feda8279d6df2c6ca0991281674fa028fed1990ad9ad460509fa411");
         let tip = 0;
         let l1_gas_bounds = ResourceBounds {
-            max_gas_amount: felt!("0x29"),
-            max_fee: felt!("0x16b812d3fa41"),
+            max_amount: felt!("0x29"),
+            max_price_per_unit: felt!("0x16b812d3fa41"),
         };
         let l2_gas_bounds = ResourceBounds {
-            max_gas_amount: felt!("0x0"),
-            max_fee: felt!("0x0"),
+            max_amount: felt!("0x0"),
+            max_price_per_unit: felt!("0x0"),
         };
         let paymaster_data = vec![];
         let chain_id = ChainId::MAINNET.id();
@@ -488,15 +487,15 @@ mod tests {
         let compiled_class_hash = felt!("0x1add56d64bebf8140f3b8a38bdf102b7874437f0c861ab4ca7526ec33b4d0f8");
         let tip = 0;
         let l1_gas_bounds = ResourceBounds {
-            max_gas_amount: felt!("0x186a0"),
-            max_fee: felt!("0x2540be400"),
+            max_amount: felt!("0x186a0"),
+            max_price_per_unit: felt!("0x2540be400"),
         };
         let l2_gas_bounds = ResourceBounds {
-            max_gas_amount: felt!("0x0"),
-            max_fee: felt!("0x0"),
+            max_amount: felt!("0x0"),
+            max_price_per_unit: felt!("0x0"),
         };
         let paymaster_data = vec![];
-        let chain_id = ChainId::GOERLI.id();;
+        let chain_id = ChainId::GOERLI.id();
         let nonce = felt!("0x1");
         let nonce_da_mode = &DataAvailabilityMode::L1;
         let fee_da_mode = &DataAvailabilityMode::L1;
@@ -506,6 +505,7 @@ mod tests {
             sender_address,
             class_hash,
             compiled_class_hash,
+            tip,
             &l1_gas_bounds,
             &l2_gas_bounds,
             &paymaster_data,
@@ -586,12 +586,12 @@ mod tests {
         ];
         let tip = 0;
         let l1_gas_bounds = ResourceBounds {
-            max_gas_amount: felt!("0x9b"),
-            max_fee: felt!("0x1d744c7328c8"),
+            max_amount: felt!("0x9b"),
+            max_price_per_unit: felt!("0x1d744c7328c8"),
         };
         let l2_gas_bounds = ResourceBounds {
-            max_gas_amount: felt!("0x0"),
-            max_fee: felt!("0x0"),
+            max_amount: felt!("0x0"),
+            max_price_per_unit: felt!("0x0"),
         };
         let paymaster_data = vec![];
         let chain_id = ChainId::MAINNET.id();
