@@ -29,6 +29,9 @@ use sequencer::SequencerConfig;
 /// Build the core Katana components from the given configurations.
 // TODO: placeholder until we implement a dedicated class that encapsulate building the node
 // components
+//
+// Most of the logic are taken out of the `main.rs` file in `/bin/katana` directory, and combined
+// with the exact copy of the setup logic for `NodeService` from `KatanaSequencer::new`.
 #[allow(deprecated)]
 pub async fn build_node_components(
     config: SequencerConfig,
