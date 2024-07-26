@@ -2,6 +2,7 @@ mod error;
 mod state;
 pub mod utils;
 
+use std::sync::Arc;
 use std::num::NonZeroU128;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
@@ -12,13 +13,16 @@ use blockifier::context::BlockContext;
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
-use blockifier::transaction::objects::FeeType;
+use blockifier::transaction::objects::{FeeType, TransactionExecutionInfo};
 use blockifier::transaction::transactions::ExecutionFlags;
 use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
 use katana_cairo::starknet_api::transaction::Fee;
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
+use katana_primitives::class::{CompiledClass, SierraClass};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
+use katana_primitives::receipt::Receipt;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, Tx, TxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::state::StateProvider;
@@ -76,8 +80,6 @@ impl ExecutorFactory for BlockifierFactory {
 }
 
 pub struct StarknetVMProcessor<'a> {
-    // block_context: BlockContext,
-    // simulation_flags: SimulationFlag,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
     stats: ExecutionStats,
 
@@ -106,15 +108,7 @@ impl<'a> StarknetVMProcessor<'a> {
 
         let executor = TransactionExecutor::new(state.clone(), block_context, config, flags);
 
-        Self {
-            // block_context,
-            transactions,
-            // simulation_flags,
-            stats: Default::default(),
-
-            state,
-            executor,
-        }
+        Self { state, executor, transactions, stats: Default::default() }
     }
 
     // TODO: removed this, we dont really have a non-executed block yet
@@ -178,6 +172,106 @@ impl<'a> StarknetVMProcessor<'a> {
 
         results
     }
+
+    fn process_execution_results(
+        &mut self,
+        results: Vec<Result<TransactionExecutionInfo, TransactionExecutorError>>,
+        transactions: &[ExecutableTxWithHash],
+    ) -> Vec<ExecutionResult> {
+        results
+            .into_iter()
+            .zip(transactions.iter())
+            .map(|(res, tx)| self.process_single_result(res, tx))
+            .collect()
+    }
+
+    fn process_single_result(
+        &mut self,
+        res: Result<TransactionExecutionInfo, TransactionExecutorError>,
+        tx: &ExecutableTxWithHash,
+    ) -> ExecutionResult {
+        match res {
+            Ok(info) => self.handle_successful_execution(info, tx),
+            Err(e) => self.handle_execution_error(e),
+        }
+    }
+
+    fn handle_successful_execution(
+        &mut self,
+        info: TransactionExecutionInfo,
+        tx: &ExecutableTxWithHash,
+    ) -> ExecutionResult {
+        let class_decl_artifacts = self.collect_class_artifacts(tx);
+        let fee_info = self.calculate_fee_info(&info);
+        let trace = utils::to_exec_info(info);
+        let receipt = build_receipt(tx.tx_ref(), fee_info, &trace);
+
+        self.update_stats(&receipt);
+        self.log_execution_info(&receipt, &trace);
+
+        if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
+            self.state.0.lock().declared_classes.insert(class_hash, (compiled, sierra));
+        }
+
+        ExecutionResult::new_success(receipt, trace)
+    }
+
+    fn handle_execution_error(&self, e: TransactionExecutorError) -> ExecutionResult {
+        match e {
+            TransactionExecutorError::StateError(e) => ExecutionResult::new_failed(e),
+            TransactionExecutorError::TransactionExecutionError(e) => ExecutionResult::new_failed(e),
+            TransactionExecutorError::BlockFull => {
+                println!("block is full");
+                ExecutionResult::new_failed("Block is full".into())
+            }
+        }
+    }
+
+    fn collect_class_artifacts(&self, tx: &ExecutableTxWithHash) -> Option<(FieldElement, Arc<CompiledClass>, Arc<SierraClass>)> {
+        if let ExecutableTx::Declare(tx) = tx.as_ref() {
+            let class_hash = tx.class_hash();
+            Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
+        } else {
+            None
+        }
+    }
+
+    fn calculate_fee_info(&self, info: &TransactionExecutionInfo) -> TxFeeInfo {
+        let fee_type = FeeType::Eth;
+        let gas_consumed = info.transaction_receipt.gas.l1_gas;
+
+        let (unit, gas_price) = match fee_type {
+            FeeType::Eth => (
+                PriceUnit::Wei,
+                self.executor.block_context.block_info().gas_prices.eth_l1_gas_price,
+            ),
+            FeeType::Strk => (
+                PriceUnit::Fri,
+                self.executor.block_context.block_info().gas_prices.strk_l1_gas_price,
+            ),
+        };
+
+        TxFeeInfo {
+            gas_consumed,
+            gas_price: gas_price.into(),
+            unit,
+            overall_fee: info.transaction_receipt.fee.0,
+        }
+    }
+
+    fn update_stats(&mut self, receipt: &Receipt) {
+        self.stats.l1_gas_used += receipt.fee().gas_consumed;
+        self.stats.cairo_steps_used += receipt.resources_used().vm_resources.n_steps as u128;
+    }
+
+    fn log_execution_info(&self, receipt: &Receipt, trace: &TxExecInfo) {
+        crate::utils::log_resources(&trace.actual_resources);
+        crate::utils::log_events(receipt.events());
+
+        if let Some(reason) = receipt.revert_reason() {
+            info!(target: LOG_TARGET, %reason, "Transaction reverted.");
+        }
+    }
 }
 
 impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
@@ -187,8 +281,6 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         Ok(())
     }
 
-    // bcs the executor is not writing to the CacheState directly, we need to call `.finalize()`
-    // of the `TransactionExecutor` and apply the state diff to the cache state.
     fn execute_transactions(
         &mut self,
         transactions: Vec<ExecutableTxWithHash>,
@@ -196,137 +288,154 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
         let txs = transactions.clone().into_iter().map(utils::to_executor_tx).collect::<Vec<_>>();
         let results = self.executor.execute_txs(&txs);
 
-        let mut execution_results = Vec::with_capacity(results.len());
-
-        for (res, tx) in results.into_iter().zip(transactions.iter()) {
-            match res {
-                Ok(info) => {
-                    // Collect class artifacts if its a declare tx
-                    let class_decl_artifacts = if let ExecutableTx::Declare(ref tx) = tx.as_ref() {
-                        let class_hash = tx.class_hash();
-                        Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
-                    } else {
-                        None
-                    };
-
-                    let fee_type = FeeType::Eth;
-
-                    // let fee = if info.transaction_receipt.fee == Fee(0) {
-                    //     get_fee_by_gas_vector(
-                    //         self.executor.block_context.block_info(),
-                    //         info.transaction_receipt.gas,
-                    //         &fee_type,
-                    //     )
-                    // } else {
-                    //     info.transaction_receipt.fee
-                    // };
-
-                    let gas_consumed = info.transaction_receipt.gas.l1_gas;
-
-                    let (unit, gas_price) = match fee_type {
-                        FeeType::Eth => (
-                            PriceUnit::Wei,
-                            self.executor.block_context.block_info().gas_prices.eth_l1_gas_price,
-                        ),
-                        FeeType::Strk => (
-                            PriceUnit::Fri,
-                            self.executor.block_context.block_info().gas_prices.strk_l1_gas_price,
-                        ),
-                    };
-
-                    let fee_info = TxFeeInfo {
-                        gas_consumed,
-                        gas_price: gas_price.into(),
-                        unit,
-                        overall_fee: info.transaction_receipt.fee.0,
-                    };
-
-                    let trace = utils::to_exec_info(info);
-                    let receipt = build_receipt(tx.tx_ref(), fee_info, &trace);
-
-                    crate::utils::log_resources(&trace.actual_resources);
-                    crate::utils::log_events(receipt.events());
-
-                    self.stats.l1_gas_used += receipt.fee().gas_consumed;
-                    self.stats.cairo_steps_used +=
-                        receipt.resources_used().vm_resources.n_steps as u128;
-
-                    if let Some(reason) = receipt.revert_reason() {
-                        info!(target: LOG_TARGET, %reason, "Transaction reverted.");
-                    }
-
-                    if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
-                        self.state.0.lock().declared_classes.insert(class_hash, (compiled, sierra));
-                    }
-
-                    execution_results.push(ExecutionResult::new_success(receipt, trace));
-                }
-
-                Err(e) => match e {
-                    TransactionExecutorError::StateError(e) => {
-                        execution_results.push(ExecutionResult::new_failed(e));
-                    }
-
-                    TransactionExecutorError::TransactionExecutionError(e) => {
-                        execution_results.push(ExecutionResult::new_failed(e));
-                    }
-
-                    TransactionExecutorError::BlockFull => {
-                        // is_full = true;
-                        println!("block is full");
-                        break;
-                    }
-                },
-            }
-        }
-
-        // let block_context = &self.block_context;
-        // let flags = &self.simulation_flags;
-        // let mut state = self.state.0.lock();
-
-        // for exec_tx in transactions {
-        //     // Collect class artifacts if its a declare tx
-        //     let class_decl_artifacts = if let ExecutableTx::Declare(tx) = exec_tx.as_ref() {
-        //         let class_hash = tx.class_hash();
-        //         Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
-        //     } else {
-        //         None
-        //     };
-
-        //     let tx = TxWithHash::from(&exec_tx);
-        //     let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
-
-        //     match &res {
-        //         ExecutionResult::Success { receipt, trace } => {
-        //             self.stats.l1_gas_used += receipt.fee().gas_consumed;
-        //             self.stats.cairo_steps_used +=
-        //                 receipt.resources_used().vm_resources.n_steps as u128;
-
-        //             if let Some(reason) = receipt.revert_reason() {
-        //                 info!(target: LOG_TARGET, %reason, "Transaction reverted.");
-        //             }
-
-        //             if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
-        //                 state.declared_classes.insert(class_hash, (compiled, sierra));
-        //             }
-
-        //             crate::utils::log_resources(&trace.actual_resources);
-        //             crate::utils::log_events(receipt.events());
-        //         }
-
-        //         ExecutionResult::Failed { error } => {
-        //             info!(target: LOG_TARGET, %error, "Executing transaction.");
-        //         }
-        //     };
-
-        //     self.transactions.push((tx, res));
-        // }
+        let execution_results = self.process_execution_results(results, &transactions);
 
         let txs = transactions.into_iter().map(TxWithHash::from).collect::<Vec<_>>();
         self.transactions.extend(txs.into_iter().zip(execution_results));
 
         Ok(())
     }
+
+    // // bcs the executor is not writing to the CacheState directly, we need to call `.finalize()`
+    // // of the `TransactionExecutor` and apply the state diff to the cache state.
+    // fn execute_transactions(
+    //     &mut self,
+    //     transactions: Vec<ExecutableTxWithHash>,
+    // ) -> ExecutorResult<()> {
+    //     let txs = transactions.clone().into_iter().map(utils::to_executor_tx).collect::<Vec<_>>();
+    //     let results = self.executor.execute_txs(&txs);
+
+    //     let mut execution_results = Vec::with_capacity(results.len());
+
+    //     for (res, tx) in results.into_iter().zip(transactions.iter()) {
+    //         match res {
+    //             Ok(info) => {
+    //                 // Collect class artifacts if its a declare tx
+    //                 let class_decl_artifacts = if let ExecutableTx::Declare(ref tx) = tx.as_ref() {
+    //                     let class_hash = tx.class_hash();
+    //                     Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
+    //                 } else {
+    //                     None
+    //                 };
+
+    //                 let fee_type = FeeType::Eth;
+
+    //                 // let fee = if info.transaction_receipt.fee == Fee(0) {
+    //                 //     get_fee_by_gas_vector(
+    //                 //         self.executor.block_context.block_info(),
+    //                 //         info.transaction_receipt.gas,
+    //                 //         &fee_type,
+    //                 //     )
+    //                 // } else {
+    //                 //     info.transaction_receipt.fee
+    //                 // };
+
+    //                 let gas_consumed = info.transaction_receipt.gas.l1_gas;
+
+    //                 let (unit, gas_price) = match fee_type {
+    //                     FeeType::Eth => (
+    //                         PriceUnit::Wei,
+    //                         self.executor.block_context.block_info().gas_prices.eth_l1_gas_price,
+    //                     ),
+    //                     FeeType::Strk => (
+    //                         PriceUnit::Fri,
+    //                         self.executor.block_context.block_info().gas_prices.strk_l1_gas_price,
+    //                     ),
+    //                 };
+
+    //                 let fee_info = TxFeeInfo {
+    //                     gas_consumed,
+    //                     gas_price: gas_price.into(),
+    //                     unit,
+    //                     overall_fee: info.transaction_receipt.fee.0,
+    //                 };
+
+    //                 let trace = utils::to_exec_info(info);
+    //                 let receipt = build_receipt(tx.tx_ref(), fee_info, &trace);
+
+    //                 crate::utils::log_resources(&trace.actual_resources);
+    //                 crate::utils::log_events(receipt.events());
+
+    //                 self.stats.l1_gas_used += receipt.fee().gas_consumed;
+    //                 self.stats.cairo_steps_used +=
+    //                     receipt.resources_used().vm_resources.n_steps as u128;
+
+    //                 if let Some(reason) = receipt.revert_reason() {
+    //                     info!(target: LOG_TARGET, %reason, "Transaction reverted.");
+    //                 }
+
+    //                 if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
+    //                     self.state.0.lock().declared_classes.insert(class_hash, (compiled, sierra));
+    //                 }
+
+    //                 execution_results.push(ExecutionResult::new_success(receipt, trace));
+    //             }
+
+    //             Err(e) => match e {
+    //                 TransactionExecutorError::StateError(e) => {
+    //                     execution_results.push(ExecutionResult::new_failed(e));
+    //                 }
+
+    //                 TransactionExecutorError::TransactionExecutionError(e) => {
+    //                     execution_results.push(ExecutionResult::new_failed(e));
+    //                 }
+
+    //                 TransactionExecutorError::BlockFull => {
+    //                     // is_full = true;
+    //                     println!("block is full");
+    //                     break;
+    //                 }
+    //             },
+    //         }
+    //     }
+
+    //     // let block_context = &self.block_context;
+    //     // let flags = &self.simulation_flags;
+    //     // let mut state = self.state.0.lock();
+
+    //     // for exec_tx in transactions {
+    //     //     // Collect class artifacts if its a declare tx
+    //     //     let class_decl_artifacts = if let ExecutableTx::Declare(tx) = exec_tx.as_ref() {
+    //     //         let class_hash = tx.class_hash();
+    //     //         Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
+    //     //     } else {
+    //     //         None
+    //     //     };
+
+    //     //     let tx = TxWithHash::from(&exec_tx);
+    //     //     let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
+
+    //     //     match &res {
+    //     //         ExecutionResult::Success { receipt, trace } => {
+    //     //             self.stats.l1_gas_used += receipt.fee().gas_consumed;
+    //     //             self.stats.cairo_steps_used +=
+    //     //                 receipt.resources_used().vm_resources.n_steps as u128;
+
+    //     //             if let Some(reason) = receipt.revert_reason() {
+    //     //                 info!(target: LOG_TARGET, %reason, "Transaction reverted.");
+    //     //             }
+
+    //     //             if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
+    //     //                 state.declared_classes.insert(class_hash, (compiled, sierra));
+    //     //             }
+
+    //     //             crate::utils::log_resources(&trace.actual_resources);
+    //     //             crate::utils::log_events(receipt.events());
+    //     //         }
+
+    //     //         ExecutionResult::Failed { error } => {
+    //     //             info!(target: LOG_TARGET, %error, "Executing transaction.");
+    //     //         }
+    //     //     };
+
+    //     //     self.transactions.push((tx, res));
+    //     // }
+
+    //     let txs = transactions.into_iter().map(TxWithHash::from).collect::<Vec<_>>();
+    //     self.transactions.extend(txs.into_iter().zip(execution_results));
+
+    //     Ok(())
+    // }
 
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {
         let states = utils::state_update_from_cached_state(&self.state);
@@ -337,8 +446,6 @@ impl<'a> Executor<'a> for StarknetVMProcessor<'a> {
 
     fn state(&self) -> Box<dyn StateProvider + 'a> {
         Box::new(self.state.clone())
-
-        // todo!()
     }
 
     fn transactions(&self) -> &[(TxWithHash, ExecutionResult)] {
@@ -405,7 +512,5 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         let state = MutRefState::new(&mut state.inner);
         let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
         Ok(retdata)
-
-        // todo!()
     }
 }
