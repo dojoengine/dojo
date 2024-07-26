@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722029530289,
+  "lastUpdate": 1722030058042,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13057,6 +13057,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5065655,
             "range": "± 116703",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "g4titan1@gmail.com",
+            "name": "アレーク",
+            "username": "g4titanx"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea1b6a86945944ae3b1e969a29911ba17f78a7b8",
+          "message": "tests: unit tests for hash computations in transaction.rs (#2216)\n\n* tests: unit tests for hash computations in transaction.rs\r\n\r\n* unit tests for hash ccomputations\r\n\r\n* use katana's chain id\r\n\r\n* fix error\r\n\r\n* fix clippy issues\r\n\r\n* fix clippy issues\r\n\r\n* fix test error\r\n\r\n* fix invoke v3 hash computation\r\n\r\n* fix deploy account function\r\n\r\n* fix declare v3\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-07-27T05:23:12+08:00",
+          "tree_id": "73764769ebbc197b14b42aad417b758f4e66852b",
+          "url": "https://github.com/dojoengine/dojo/commit/ea1b6a86945944ae3b1e969a29911ba17f78a7b8"
+        },
+        "date": 1722030057374,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16676781,
+            "range": "± 289321",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4779904,
+            "range": "± 131778",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3217806075,
+            "range": "± 513765900",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4819098,
+            "range": "± 73413",
             "unit": "ns/iter"
           }
         ]
