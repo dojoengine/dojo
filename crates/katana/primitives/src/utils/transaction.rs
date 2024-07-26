@@ -464,7 +464,7 @@ mod tests {
         let max_fee = felt!("0x108ae97efa9f8");
         let chain_id = ChainId::MAINNET.id();
         let nonce = felt!("0xb");
-        let compiled_class_hash = felt!("0x311b6f080fd3385e7154ca3a8568eb7d6aebcb7ff627c1f5e7d2cc99aeb7741")
+        let compiled_class_hash = felt!("0x311b6f080fd3385e7154ca3a8568eb7d6aebcb7ff627c1f5e7d2cc99aeb7741");
 
         let actual_hash = compute_declare_v2_tx_hash(
             sender_address,
