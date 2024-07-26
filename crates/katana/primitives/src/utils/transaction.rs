@@ -84,18 +84,16 @@ pub fn compute_deploy_account_v3_tx_hash(
     fee_da_mode: &DataAvailabilityMode,
     is_query: bool,
 ) -> FieldElement {
-    let data_hash = poseidon_hash_many(constructor_calldata);
-
     poseidon_hash_many(&[
-        PREFIX_INVOKE,
+        PREFIX_DEPLOY_ACCOUNT,
         if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
         contract_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
         chain_id,
         nonce,
-        data_hash,
         encode_da_mode(nonce_da_mode, fee_da_mode),
+        poseidon_hash_many(constructor_calldata),
         class_hash,
         contract_address_salt,
     ])
