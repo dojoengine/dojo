@@ -398,12 +398,12 @@ mod tests {
         let contract_address_salt = felt!("0x74a02936feda8279d6df2c6ca0991281674fa028fed1990ad9ad460509fa411");
         let tip = 0;
         let l1_gas_bounds = ResourceBounds {
-            max_amount: felt!("0x29"),
-            max_price_per_unit: felt!("0x16b812d3fa41"),
+            max_amount: 0x29,
+            max_price_per_unit: 0x16b812d3fa41,
         };
         let l2_gas_bounds = ResourceBounds {
-            max_amount: felt!("0x0"),
-            max_price_per_unit: felt!("0x0"),
+            max_amount: 0x0,
+            max_price_per_unit: 0x0,
         };
         let paymaster_data = vec![];
         let chain_id = ChainId::MAINNET.id();
@@ -487,12 +487,12 @@ mod tests {
         let compiled_class_hash = felt!("0x1add56d64bebf8140f3b8a38bdf102b7874437f0c861ab4ca7526ec33b4d0f8");
         let tip = 0;
         let l1_gas_bounds = ResourceBounds {
-            max_amount: felt!("0x186a0"),
-            max_price_per_unit: felt!("0x2540be400"),
+            max_amount: 0x186a0,
+            max_price_per_unit: 0x2540be400,
         };
         let l2_gas_bounds = ResourceBounds {
-            max_amount: felt!("0x0"),
-            max_price_per_unit: felt!("0x0"),
+            max_amount: 0x0,
+            max_price_per_unit: 0x0,
         };
         let paymaster_data = vec![];
         let chain_id = ChainId::GOERLI.id();
@@ -586,12 +586,12 @@ mod tests {
         ];
         let tip = 0;
         let l1_gas_bounds = ResourceBounds {
-            max_amount: felt!("0x9b"),
-            max_price_per_unit: felt!("0x1d744c7328c8"),
+            max_amount: 0x9b,
+            max_price_per_unit: 0x1d744c7328c8,
         };
         let l2_gas_bounds = ResourceBounds {
-            max_amount: felt!("0x0"),
-            max_price_per_unit: felt!("0x0"),
+            max_amount: 0x0,
+            max_price_per_unit: 0x0,
         };
         let paymaster_data = vec![];
         let chain_id = ChainId::MAINNET.id();
