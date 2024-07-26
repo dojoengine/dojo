@@ -367,7 +367,7 @@ mod tests {
         let class_hash = felt!("0x25ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
         let salt = felt!("0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096");
         let max_fee = felt!("0x38d7ea4c68000");
-        let chain_id = ChainId::Named(SN_MAIN);
+        let chain_id = ChainId::MAINNET.id();
         let nonce = FieldElement::ZERO;
 
         let actual_hash = compute_deploy_account_v1_tx_hash(
@@ -407,7 +407,7 @@ mod tests {
             max_fee: felt!("0x0"),
         };
         let paymaster_data = vec![];
-        let chain_id = ChainId::Named(SN_MAIN);
+        let chain_id = ChainId::MAINNET.id();
         let nonce = felt!("0x0");
         let nonce_da_mode = &DataAvailabilityMode::L1;
         let fee_da_mode = &DataAvailabilityMode::L1;
@@ -439,7 +439,7 @@ mod tests {
         let sender_address = felt!("0x4d2c7d94a05cd95e08f1c135c53aa798f26ac383198d77bd37822e646cbab44");
         let class_hash = felt!("0xd0879f156c3e060638d5fb8ea1604cada1a29017988b3ee4f5f8b653279f60");
         let max_fee = felt!("0x1cfe57d53f9f");
-        let chain_id = ChainId::Named(SN_MAIN);
+        let chain_id = ChainId::MAINNET.id();
         let nonce = felt!("0xb");
 
         let actual_hash = compute_declare_v1_tx_hash(
@@ -462,7 +462,7 @@ mod tests {
         let sender_address = felt!("0x020c398d72af5efa4b63f5e3d5ad21e981d6af5f5929cfd2ab0d759ff935be53");
         let class_hash = felt!("0x0311b6f080fd3385e7154ca3a8568eb7d6aebcb7ff627c1f5e7d2cc99aeb7741");
         let max_fee = felt!("0x108ae97efa9f8");
-        let chain_id = ChainId::Named(SN_MAIN);
+        let chain_id = ChainId::MAINNET.id();
         let nonce = felt!("0xb");
         let compiled_class_hash = felt!("0x311b6f080fd3385e7154ca3a8568eb7d6aebcb7ff627c1f5e7d2cc99aeb7741")
 
@@ -496,7 +496,7 @@ mod tests {
             max_fee: felt!("0x0"),
         };
         let paymaster_data = vec![];
-        let chain_id = ChainId::Named(SN_GOERLI);
+        let chain_id = ChainId::GOERLI.id();;
         let nonce = felt!("0x1");
         let nonce_da_mode = &DataAvailabilityMode::L1;
         let fee_da_mode = &DataAvailabilityMode::L1;
@@ -551,7 +551,7 @@ mod tests {
             felt!("0x646d2c15")
         ];
         let max_fee = felt!("0x113b8bbfd40de0");
-        let chain_id = ChainId::Named(SN_MAIN);
+        let chain_id = ChainId::MAINNET.id();
         let nonce = felt!("0x1");
 
         let actual_hash = compute_invoke_v1_tx_hash(
@@ -594,7 +594,7 @@ mod tests {
             max_fee: felt!("0x0"),
         };
         let paymaster_data = vec![];
-        let chain_id = ChainId::Named(SN_MAIN);
+        let chain_id = ChainId::MAINNET.id();
         let nonce = felt!("0x761");
         let nonce_da_mode = &DataAvailabilityMode::L1;
         let fee_da_mode = &DataAvailabilityMode::L1;
@@ -634,7 +634,7 @@ mod tests {
             felt!("0x61b31ab352c0000"),
             felt!("0x0")
         ];
-        let chain_id = ChainId::Named(SN_MAIN);
+        let chain_id = ChainId::MAINNET.id();
         let nonce = felt!("0x194cb1");
 
         let actual_hash = compute_l1_handler_tx_hash(
