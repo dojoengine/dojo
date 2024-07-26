@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722010230088,
+  "lastUpdate": 1722014832106,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12961,6 +12961,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4806082,
             "range": "± 49747",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f73159756fd9b37a5807e53bfe26fd8cffef8897",
+          "message": "fix: ensure event messages are emitted with the correct selector (#2217)\n\n* fix: ensure event messages are emitted with the correct selector\r\n\r\n* fix: fmt",
+          "timestamp": "2024-07-26T11:08:29-06:00",
+          "tree_id": "6fc32be60e31be67bc5e0fcd8bda8cc8d8608a59",
+          "url": "https://github.com/dojoengine/dojo/commit/f73159756fd9b37a5807e53bfe26fd8cffef8897"
+        },
+        "date": 1722014831180,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17189484,
+            "range": "± 256825",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4715931,
+            "range": "± 129428",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3388414563,
+            "range": "± 550156483",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5248140,
+            "range": "± 182535",
             "unit": "ns/iter"
           }
         ]
