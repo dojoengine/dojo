@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721938235272,
+  "lastUpdate": 1722010230088,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -12913,6 +12913,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4819039,
             "range": "± 86188",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a21bfa2ab5085feae0776ea68d131da1638c5607",
+          "message": "refactor(katana): remove unneccessary level of abstraction due to `KatanaSequencer` (#2214)\n\n* remove the usage of the sequencer struct and flag it as deprecated\r\n\r\n* enable blockifier feature in core\r\n\r\n* make parking lot optional\r\n\r\n* add more comment for context",
+          "timestamp": "2024-07-26T23:52:35+08:00",
+          "tree_id": "94ce465ac241fb05beb136b7489b84702e0048e4",
+          "url": "https://github.com/dojoengine/dojo/commit/a21bfa2ab5085feae0776ea68d131da1638c5607"
+        },
+        "date": 1722010229392,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16942110,
+            "range": "± 257382",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4761718,
+            "range": "± 171199",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3303427198,
+            "range": "± 564648269",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4806082,
+            "range": "± 49747",
             "unit": "ns/iter"
           }
         ]
