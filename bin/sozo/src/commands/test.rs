@@ -14,9 +14,10 @@ use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
-use scarb::core::{Config, Package, PackageId, TargetKind};
+use scarb::core::{Config, Package};
 use scarb::ops::{self, CompileOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
+use smol_str::SmolStr;
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
@@ -80,25 +81,26 @@ impl TestArgs {
             ws.members().collect()
         };
 
-        let package_ids = packages.iter().map(|p| p.id).collect::<Vec<PackageId>>();
+        let package_names = packages.iter().map(|p| p.id.name.to_string()).collect::<Vec<String>>();
 
         let resolve = ops::resolve_workspace(&ws)?;
 
         let opts = CompileOpts {
-            include_target_kinds: vec![TargetKind::TEST],
+            include_target_kinds: vec![],
             exclude_target_kinds: vec![],
-            include_target_names: vec![],
+            include_target_names: package_names.into_iter().map(SmolStr::new).collect(),
             features: self.features.try_into()?,
         };
 
+        // In the way scarb generated compilation units, we want to only include
+        // the units that contains the exact same name as the package we're testing.
+        // Seems to have a <package_name>unittest compilation unit generated, which doesn't
+        // actually expand dojo macros.
+        // Using the test target actually breaks the import of some types, as we need
+        // to compile with the Dojo target to get the correct types.
         let compilation_units = ops::generate_compilation_units(&resolve, &opts.features, &ws)?
             .into_iter()
-            .filter(|cu| !opts.exclude_target_kinds.contains(&cu.main_component().target_kind()))
-            .filter(|cu| {
-                opts.include_target_kinds.is_empty()
-                    || opts.include_target_kinds.contains(&cu.main_component().target_kind())
-            })
-            .filter(|cu| package_ids.contains(&cu.main_package_id()))
+            .filter(|cu| opts.include_target_names.contains(&cu.main_component().target_name()))
             .collect::<Vec<_>>();
 
         for unit in compilation_units {
