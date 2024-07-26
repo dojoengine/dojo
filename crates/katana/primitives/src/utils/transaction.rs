@@ -160,8 +160,6 @@ pub fn compute_declare_v3_tx_hash(
     account_deployment_data: &[FieldElement],
     is_query: bool,
 ) -> FieldElement {
-    let data_hash = poseidon_hash_many(account_deployment_data);
-
     poseidon_hash_many(&[
         PREFIX_DECLARE,
         if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
@@ -170,8 +168,8 @@ pub fn compute_declare_v3_tx_hash(
         poseidon_hash_many(paymaster_data),
         chain_id,
         nonce,
-        data_hash,
         encode_da_mode(nonce_da_mode, fee_da_mode),
+        poseidon_hash_many(account_deployment_data),
         class_hash,
         compiled_class_hash,
     ])
