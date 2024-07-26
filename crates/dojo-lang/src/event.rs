@@ -82,7 +82,8 @@ pub fn handle_event_struct(
                 fn append_keys_and_data(
                     self: @$struct_name$, ref keys: Array<felt252>, ref data: Array<felt252>
                 ) {{
-                    core::array::ArrayTrait::append(ref keys, dojo::model::Model::<$struct_name$>::selector());
+                    core::array::ArrayTrait::append(ref keys, \
+                 dojo::model::Model::<$struct_name$>::selector());
                     $append_members$
                 }}
                 fn deserialize(
