@@ -15,7 +15,6 @@ common.workspace = true
 console.workspace = true
 dojo-metrics.workspace = true
 katana-core.workspace = true
-katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-primitives.workspace = true
 katana-rpc.workspace = true
 katana-rpc-api.workspace = true

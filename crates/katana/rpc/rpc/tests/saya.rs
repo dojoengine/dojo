@@ -1,9 +1,12 @@
+#![allow(deprecated)]
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use dojo_world::utils::TransactionWaiter;
 use jsonrpsee::http_client::HttpClientBuilder;
+#[allow(deprecated)]
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_rpc_api::dev::DevApiClient;

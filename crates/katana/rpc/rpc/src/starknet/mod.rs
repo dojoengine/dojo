@@ -10,7 +10,9 @@ use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::backend::Backend;
+use katana_core::pool::TransactionPool;
+use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
@@ -51,15 +53,23 @@ impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
 }
 
 struct Inner<EF: ExecutorFactory> {
-    sequencer: Arc<KatanaSequencer<EF>>,
+    pool: Arc<TransactionPool>,
+    backend: Arc<Backend<EF>>,
+    block_producer: Arc<BlockProducer<EF>>,
     blocking_task_pool: BlockingTaskPool,
 }
 
 impl<EF: ExecutorFactory> StarknetApi<EF> {
-    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
+    pub fn new(
+        backend: Arc<Backend<EF>>,
+        pool: Arc<TransactionPool>,
+        block_producer: Arc<BlockProducer<EF>>,
+    ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
-        let inner = Inner { sequencer, blocking_task_pool };
+
+        let inner = Inner { pool, backend, block_producer, blocking_task_pool };
+
         Self { inner: Arc::new(inner) }
     }
 
@@ -92,8 +102,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let env = self.block_env_at(&block_id)?;
 
         // create the executor
-        let executor =
-            self.inner.sequencer.backend().executor_factory.with_state_and_block_env(state, env);
+        let executor = self.inner.backend.executor_factory.with_state_and_block_env(state, env);
         let results = executor.estimate_fee(transactions, flags);
 
         let mut estimates = Vec::with_capacity(results.len());
@@ -120,14 +129,22 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         Ok(estimates)
     }
 
+    /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
+    fn pending_executor(&self) -> Option<PendingExecutor> {
+        match &*self.inner.block_producer.inner.read() {
+            BlockProducerMode::Instant(_) => None,
+            BlockProducerMode::Interval(producer) => Some(producer.executor()),
+        }
+    }
+
     fn state(&self, block_id: &BlockIdOrTag) -> Result<Box<dyn StateProvider>, StarknetApiError> {
-        let provider = self.inner.sequencer.backend().blockchain.provider();
+        let provider = self.inner.backend.blockchain.provider();
 
         let state = match block_id {
             BlockIdOrTag::Tag(BlockTag::Latest) => Some(provider.latest()?),
 
             BlockIdOrTag::Tag(BlockTag::Pending) => {
-                if let Some(exec) = self.inner.sequencer.pending_executor() {
+                if let Some(exec) = self.pending_executor() {
                     Some(exec.read().state())
                 } else {
                     Some(provider.latest()?)
@@ -142,11 +159,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     }
 
     fn block_env_at(&self, block_id: &BlockIdOrTag) -> Result<BlockEnv, StarknetApiError> {
-        let provider = self.inner.sequencer.backend().blockchain.provider();
+        let provider = self.inner.backend.blockchain.provider();
 
         let env = match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) => {
-                if let Some(exec) = self.inner.sequencer.pending_executor() {
+                if let Some(exec) = self.pending_executor() {
                     Some(exec.read().block_env())
                 } else {
                     let num = provider.latest_number()?;
@@ -167,7 +184,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     }
 
     fn block_hash_and_number(&self) -> Result<(BlockHash, BlockNumber), StarknetApiError> {
-        let provider = self.inner.sequencer.backend().blockchain.provider();
+        let provider = self.inner.backend.blockchain.provider();
         let hash = provider.latest_hash()?;
         let number = provider.latest_number()?;
         Ok((hash, number))
@@ -242,10 +259,10 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     }
 
     fn block_tx_count(&self, block_id: BlockIdOrTag) -> Result<u64, StarknetApiError> {
-        let provider = self.inner.sequencer.backend().blockchain.provider();
+        let provider = self.inner.backend.blockchain.provider();
 
         let block_id: BlockHashOrNumber = match block_id {
-            BlockIdOrTag::Tag(BlockTag::Pending) => match self.inner.sequencer.pending_executor() {
+            BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_executor() {
                 Some(exec) => return Ok(exec.read().transactions().len() as u64),
                 None => provider.latest_hash()?.into(),
             },
@@ -263,7 +280,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
     async fn latest_block_number(&self) -> Result<BlockNumber, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
-            Ok(this.inner.sequencer.backend().blockchain.provider().latest_number()?)
+            Ok(this.inner.backend.blockchain.provider().latest_number()?)
         })
         .await
     }
@@ -283,14 +300,13 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
     async fn transaction(&self, hash: TxHash) -> Result<TxWithHash, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
-            let tx =
-                this.inner.sequencer.backend().blockchain.provider().transaction_by_hash(hash)?;
+            let tx = this.inner.backend.blockchain.provider().transaction_by_hash(hash)?;
 
             let tx = match tx {
                 tx @ Some(_) => tx,
                 None => {
                     // check if the transaction is in the pending block
-                    this.inner.sequencer.pending_executor().as_ref().and_then(|exec| {
+                    this.pending_executor().as_ref().and_then(|exec| {
                         exec.read()
                             .transactions()
                             .iter()
@@ -314,7 +330,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> Result<EventsPage, StarknetApiError> {
-        let provider = self.inner.sequencer.backend().blockchain.provider();
+        let provider = self.inner.backend.blockchain.provider();
         let mut current_block = 0;
 
         let mut from =
@@ -417,7 +433,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         hash: TxHash,
     ) -> Result<TransactionStatus, StarknetApiError> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.inner.sequencer.backend().blockchain.provider();
+            let provider = this.inner.backend.blockchain.provider();
             let status = provider.transaction_status(hash)?;
 
             if let Some(status) = status {
@@ -442,7 +458,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             }
 
             // seach in the pending block if the transaction is not found
-            if let Some(pending_executor) = this.inner.sequencer.pending_executor() {
+            if let Some(pending_executor) = this.pending_executor() {
                 let pending_executor = pending_executor.read();
                 let pending_txs = pending_executor.transactions();
                 let (_, res) = pending_txs

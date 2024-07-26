@@ -23,6 +23,7 @@ use katana_core::constants::{
     DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_SEQUENCER_ADDRESS,
     DEFAULT_STRK_L1_GAS_PRICE, DEFAULT_VALIDATE_MAX_STEPS,
 };
+#[allow(deprecated)]
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
@@ -234,6 +235,7 @@ impl KatanaArgs {
         Ok(tracing::subscriber::set_global_default(subscriber)?)
     }
 
+    #[allow(deprecated)]
     pub fn sequencer_config(&self) -> SequencerConfig {
         SequencerConfig {
             block_time: self.block_time,

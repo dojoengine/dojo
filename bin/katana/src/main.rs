@@ -2,21 +2,16 @@
 
 use std::io;
 use std::net::SocketAddr;
-use std::sync::Arc;
 
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
 use dojo_metrics::{metrics_process, prometheus_exporter};
-use katana_core::constants::MAX_RECURSION_DEPTH;
-use katana_core::sequencer::KatanaSequencer;
-use katana_executor::SimulationFlag;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
-use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::genesis::Genesis;
-use katana_rpc::{spawn, NodeHandle};
+use katana_rpc::NodeHandle;
 use tokio::signal::ctrl_c;
 use tracing::info;
 
@@ -46,26 +41,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sequencer_config = args.sequencer_config();
     let starknet_config = args.starknet_config()?;
 
-    let cfg_env = CfgEnv {
-        chain_id: starknet_config.env.chain_id,
-        invoke_tx_max_n_steps: starknet_config.env.invoke_max_steps,
-        validate_max_n_steps: starknet_config.env.validate_max_steps,
-        max_recursion_depth: MAX_RECURSION_DEPTH,
-        fee_token_addresses: FeeTokenAddressses {
-            eth: starknet_config.genesis.fee_token.address,
-            strk: Default::default(),
-        },
-    };
-
-    let simulation_flags = SimulationFlag {
-        skip_validate: starknet_config.disable_validate,
-        skip_fee_transfer: starknet_config.disable_fee,
-        ..Default::default()
-    };
-
-    use katana_executor::implementation::blockifier::BlockifierFactory;
-    let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
-
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
@@ -78,12 +53,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     }
 
-    let sequencer =
-        Arc::new(KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await?);
-    let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
+    // build the node components
+    let components = katana_core::build_node_components(sequencer_config, starknet_config).await?;
+
+    // create rpc server
+    let NodeHandle { addr, handle, .. } =
+        katana_rpc::spawn(components.clone(), server_config).await?;
 
     if !args.silent {
-        let genesis = &sequencer.backend().config.genesis;
+        let genesis = &components.1.config.genesis;
         print_intro(&args, genesis, addr);
     }
 

@@ -2,13 +2,11 @@ use std::sync::Arc;
 
 use jsonrpsee::core::Error;
 pub use katana_core::backend::config::{Environment, StarknetConfig};
-use katana_core::constants::MAX_RECURSION_DEPTH;
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::backend::Backend;
+#[allow(deprecated)]
 pub use katana_core::sequencer::SequencerConfig;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_executor::SimulationFlag;
 use katana_primitives::chain::ChainId;
-use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::config::ServerConfig;
 use katana_rpc::{spawn, NodeHandle};
 use katana_rpc_api::ApiKind;
@@ -32,38 +30,21 @@ pub struct TestSequencer {
     url: Url,
     handle: NodeHandle,
     account: TestAccount,
-    pub sequencer: Arc<KatanaSequencer<BlockifierFactory>>,
+    backend: Arc<Backend<BlockifierFactory>>,
 }
 
 impl TestSequencer {
+    #[allow(deprecated)]
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
-        let cfg_env = CfgEnv {
-            chain_id: starknet_config.env.chain_id,
-            invoke_tx_max_n_steps: starknet_config.env.invoke_max_steps,
-            validate_max_n_steps: starknet_config.env.validate_max_steps,
-            max_recursion_depth: MAX_RECURSION_DEPTH,
-            fee_token_addresses: FeeTokenAddressses {
-                eth: starknet_config.genesis.fee_token.address,
-                strk: Default::default(),
-            },
-        };
+        let components = katana_core::build_node_components(config, starknet_config)
+            .await
+            .expect("Failed to build node components");
 
-        let simulation_flags = SimulationFlag {
-            skip_validate: starknet_config.disable_validate,
-            skip_fee_transfer: starknet_config.disable_fee,
-            ..Default::default()
-        };
-
-        let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
-
-        let sequencer = Arc::new(
-            KatanaSequencer::new(executor_factory, config, starknet_config)
-                .await
-                .expect("Failed to create sequencer"),
-        );
+        // get a reference to the backend struct
+        let backend = components.1.clone();
 
         let handle = spawn(
-            Arc::clone(&sequencer),
+            components,
             ServerConfig {
                 port: 0,
                 host: "127.0.0.1".into(),
@@ -83,13 +64,13 @@ impl TestSequencer {
 
         let url = Url::parse(&format!("http://{}", handle.addr)).expect("Failed to parse URL");
 
-        let account = sequencer.backend().config.genesis.accounts().next().unwrap();
+        let account = backend.config.genesis.accounts().next().unwrap();
         let account = TestAccount {
             private_key: Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be()),
             account_address: Felt::from_bytes_be(&account.0.to_bytes_be()),
         };
 
-        TestSequencer { sequencer, account, handle, url }
+        TestSequencer { backend, account, handle, url }
     }
 
     pub fn account(&self) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
@@ -114,7 +95,7 @@ impl TestSequencer {
         &self,
         index: usize,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
-        let accounts: Vec<_> = self.sequencer.backend().config.genesis.accounts().collect::<_>();
+        let accounts: Vec<_> = self.backend.config.genesis.accounts().collect::<_>();
 
         let account = accounts[index];
         let private_key = Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be());
