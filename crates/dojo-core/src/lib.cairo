@@ -45,7 +45,7 @@ pub mod utils {
     pub mod utils;
     pub use utils::{
         bytearray_hash, entity_id_from_keys, find_field_layout, find_model_field_layout, any_none,
-        sum, combine_key
+        sum, combine_key, selector_from_names
     };
 }
 

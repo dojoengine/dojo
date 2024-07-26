@@ -1,5 +1,5 @@
 use dojo::model::Model;
-use dojo::utils::bytearray_hash;
+use dojo::utils::{bytearray_hash, selector_from_names};
 
 #[derive(Drop, Copy, Serde)]
 #[dojo::model(namespace: "my_namespace")]
@@ -17,4 +17,12 @@ fn test_hash_computation() {
     let namespace_hash = Model::<MyModel>::namespace_hash();
 
     assert(bytearray_hash(@namespace) == namespace_hash, 'invalid computed hash');
+}
+
+#[test]
+fn test_selector_computation() {
+    let namespace = Model::<MyModel>::namespace();
+    let name = Model::<MyModel>::name();
+    let selector = selector_from_names(@namespace, @name);
+    assert(selector == Model::<MyModel>::selector(), 'invalid computed selector');
 }
