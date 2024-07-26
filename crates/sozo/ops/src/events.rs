@@ -1,15 +1,15 @@
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
 use dojo_world::contracts::naming::get_filename_from_tag;
 use dojo_world::manifest::{
-    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, MANIFESTS_DIR, TARGET_DIR,
-    WORLD_CONTRACT_TAG,
+    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, DEPLOYMENT_DIR,
+    MANIFESTS_DIR, TARGET_DIR, WORLD_CONTRACT_TAG,
 };
 use starknet::core::types::{BlockId, EventFilter, Felt};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
@@ -44,7 +44,8 @@ pub async fn parse(
     let events_map = if !json {
         let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
         let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
-        let deployed_manifest = manifest_dir.join("manifest").with_extension("toml");
+        let deployed_manifest =
+            manifest_dir.join(DEPLOYMENT_DIR).join("manifest").with_extension("toml");
 
         if !deployed_manifest.exists() {
             return Err(anyhow!("Run scarb migrate before running this command"));
@@ -52,19 +53,19 @@ pub async fn parse(
 
         Some(extract_events(
             &DeploymentManifest::load_from_path(&deployed_manifest)?,
-            &manifest_dir,
+            &project_dir,
             &target_dir,
         )?)
     } else {
         None
     };
 
-    let res = provider.get_events(event_filter, continuation_token, chunk_size).await?;
+    let res = provider.get_events(event_filter, continuation_token, chunk_size).await.unwrap();
 
     if let Some(events_map) = events_map {
-        parse_and_print_events(res, events_map)?;
+        parse_and_print_events(res, events_map).unwrap();
     } else {
-        println!("{}", serde_json::to_string_pretty(&res)?);
+        println!("{}", serde_json::to_string_pretty(&res).unwrap());
     }
     Ok(())
 }
@@ -85,7 +86,8 @@ fn extract_events(
         events: &mut HashMap<String, Vec<Token>>,
         full_abi_path: &Utf8PathBuf,
     ) -> Result<()> {
-        let abi_str = fs::read_to_string(full_abi_path)?;
+        let abi_str = fs::read_to_string(full_abi_path)
+            .with_context(|| format!("Failed to read ABI file at path: {}", full_abi_path))?;
 
         match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
             Ok(tokens) => {
@@ -139,6 +141,7 @@ fn parse_and_print_events(
     println!("Continuation token: {:?}", res.continuation_token);
     println!("----------------------------------------------");
     for event in res.events {
+        dbg!(&event, &events_map);
         let parsed_event = parse_event(event.clone(), &events_map)
             .map_err(|e| anyhow!("Error parsing event: {}", e))?;
 
@@ -182,12 +185,13 @@ fn parse_event(
 ) -> Result<Option<String>> {
     let mut data = VecDeque::from(event.data.clone());
     let mut keys = VecDeque::from(event.keys.clone());
-    let event_hash = keys.pop_front().ok_or(anyhow!("Event hash missing"))?;
+    let event_hash = keys.pop_front().ok_or(anyhow!("Event hash missing")).unwrap();
 
     let events = events_map
         .get(&event_hash.to_string())
         .ok_or(anyhow!("Events for hash not found: {:#x}", event_hash))?;
 
+    dbg!(&events);
     for e in events {
         if let Token::Composite(composite) = e {
             let processed_inners = process_inners(&composite.inners, &mut data, &mut keys)?;
@@ -218,6 +222,7 @@ fn process_inners(
             Token::Composite(c) => {
                 if c.type_path.eq("core::byte_array::ByteArray") {
                     data.push_front(value);
+                    data.make_contiguous();
                     let bytearray = ByteArray::cairo_deserialize(data.as_mut_slices().0, 0)?;
                     data.drain(0..ByteArray::cairo_serialized_size(&bytearray));
                     ByteArray::to_string(&bytearray)?
@@ -251,6 +256,7 @@ fn process_inners(
             }
             _ => return Err(anyhow!("Unsupported token type encountered")),
         };
+        dbg!(&inner.name, &formatted_value);
         ret.push_str(&format!("{}: {}\n", inner.name, formatted_value));
     }
 
