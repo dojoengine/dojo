@@ -99,7 +99,7 @@ fn extract_events(
                     }
                 }
             }
-            Err(e) => return Err(anyhow!("Error parsing ABI: {}", e)),
+            Err(e) => return Err(anyhow!("Error parsing events from ABI: {}", e)),
         }
 
         Ok(())
