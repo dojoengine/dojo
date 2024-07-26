@@ -24,8 +24,8 @@ manifest_name = "dojo-base"
 [[contracts]]
 kind = "DojoContract"
 address = "0x668a24b0352dec79bd4661685fe1b152f33989bd3dc2dbdb094491fb1bdd589"
-class_hash = "0x40a2b17006490ae06a027632f2d5ed3debe715db65ef41c6037599d0c48c303"
-original_class_hash = "0x40a2b17006490ae06a027632f2d5ed3debe715db65ef41c6037599d0c48c303"
+class_hash = "0x5d3ffcdabbf541ac1ce9df26f275d6abaec2c260d7a698e1c94a4bd1a0482b8"
+original_class_hash = "0x5d3ffcdabbf541ac1ce9df26f275d6abaec2c260d7a698e1c94a4bd1a0482b8"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-actions-40b6994c.json"
 reads = []
@@ -69,8 +69,8 @@ manifest_name = "dojo_examples-mock_token-31599eb2"
 [[contracts]]
 kind = "DojoContract"
 address = "0x2c7763f16ffa3cc9b295904051b5b362ef99bf39eb0b43969ace5547e5bd64f"
-class_hash = "0x77f7f87e45a7295b9067e6438bb41009661a4a72be944d9f40976984a7b7d37"
-original_class_hash = "0x77f7f87e45a7295b9067e6438bb41009661a4a72be944d9f40976984a7b7d37"
+class_hash = "0x647fc1b2d2e902e6304e127b36995d8f57fe45c38e38e15d8860db508dbf24a"
+original_class_hash = "0x647fc1b2d2e902e6304e127b36995d8f57fe45c38e38e15d8860db508dbf24a"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-others-61de2c18.json"
 reads = []
