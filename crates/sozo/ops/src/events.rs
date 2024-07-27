@@ -89,6 +89,7 @@ fn extract_events(
         let abi_str = fs::read_to_string(full_abi_path)
             .with_context(|| format!("Failed to read ABI file at path: {}", full_abi_path))?;
 
+        // TODO: add support for events emitted by world once its present in ABI
         match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
             Ok(tokens) => {
                 for token in tokens.structs {
