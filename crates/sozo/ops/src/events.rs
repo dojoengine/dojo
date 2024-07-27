@@ -53,7 +53,7 @@ pub async fn parse(
 
         Some(extract_events(
             &DeploymentManifest::load_from_path(&deployed_manifest)?,
-            &project_dir,
+            project_dir,
             &target_dir,
         )?)
     } else {
@@ -203,7 +203,7 @@ fn parse_event(
         }
     }
 
-    Err(anyhow!("No matching event found for {:?}", event))
+    Err(anyhow!("No matching event found in tokens {:?}", event))
 }
 
 fn process_inners(
@@ -407,12 +407,8 @@ mod tests {
              0x54657374\ncontract_address: 0x54657374\n"
         );
 
-        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
-
-        match actual_output_option {
-            Some(actual_output) => assert_eq!(actual_output, expected_output),
-            None => panic!("Expected event was not found."),
-        }
+        let actual_output = parse_event(event, &events_map).expect("Failed to parse event");
+        assert_eq!(actual_output, expected_output);
     }
 
     #[test]
@@ -472,12 +468,8 @@ mod tests {
              \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n"
         );
 
-        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
-
-        match actual_output_option {
-            Some(actual_output) => assert_eq!(actual_output, expected_output),
-            None => panic!("Expected event was not found."),
-        }
+        let actual_output = parse_event(event, &events_map).expect("Failed to parse event");
+        assert_eq!(actual_output, expected_output);
     }
 
     #[test]
@@ -547,12 +539,8 @@ mod tests {
              \"Test1\"\ndata_1: 1\ndata_2: 2\n"
         );
 
-        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
-
-        match actual_output_option {
-            Some(actual_output) => assert_eq!(actual_output, expected_output),
-            None => panic!("Expected event was not found."),
-        }
+        let actual_output = parse_event(event, &events_map).expect("Failed to parse event");
+        assert_eq!(actual_output, expected_output);
     }
 
     #[test]
@@ -612,11 +600,7 @@ mod tests {
              0x2]\n"
         );
 
-        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
-
-        match actual_output_option {
-            Some(actual_output) => assert_eq!(actual_output, expected_output),
-            None => panic!("Expected event was not found."),
-        }
+        let actual_output = parse_event(event, &events_map).expect("Failed to parse event");
+        assert_eq!(actual_output, expected_output);
     }
 }
