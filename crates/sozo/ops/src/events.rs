@@ -60,10 +60,10 @@ pub async fn parse(
         None
     };
 
-    let res = provider.get_events(event_filter, continuation_token, chunk_size).await.unwrap();
+    let res = provider.get_events(event_filter, continuation_token, chunk_size).await?;
 
     if let Some(events_map) = events_map {
-        parse_and_print_events(res, events_map).unwrap();
+        parse_and_print_events(res, events_map)?;
     } else {
         println!("{}", serde_json::to_string_pretty(&res).unwrap());
     }
@@ -140,14 +140,18 @@ fn parse_and_print_events(
 ) -> Result<()> {
     println!("Continuation token: {:?}", res.continuation_token);
     println!("----------------------------------------------");
+
     for event in res.events {
-        dbg!(&event, &events_map);
-        let parsed_event = parse_event(event.clone(), &events_map)
-            .map_err(|e| anyhow!("Error parsing event: {}", e))?;
+        let parsed_event = parse_event(event.clone(), &events_map);
 
         match parsed_event {
-            Some(e) => println!("{e}"),
-            None => return Err(anyhow!("No matching event found for {:?}", event)),
+            Ok(parsed_event) => {
+                println!("{parsed_event}");
+            }
+            Err(e) => {
+                println!("{}", e);
+                println!("Event: {}\n", serde_json::to_string_pretty(&event).unwrap());
+            }
         }
     }
     Ok(())
@@ -182,7 +186,7 @@ fn parse_core_basic(cb: &CoreBasic, value: &Felt, include_felt_string: bool) -> 
 fn parse_event(
     event: starknet::core::types::EmittedEvent,
     events_map: &HashMap<String, Vec<Token>>,
-) -> Result<Option<String>> {
+) -> Result<String> {
     let mut data = VecDeque::from(event.data.clone());
     let mut keys = VecDeque::from(event.keys.clone());
     let event_hash = keys.pop_front().ok_or(anyhow!("Event hash missing")).unwrap();
@@ -191,16 +195,15 @@ fn parse_event(
         .get(&event_hash.to_string())
         .ok_or(anyhow!("Events for hash not found: {:#x}", event_hash))?;
 
-    dbg!(&events);
     for e in events {
         if let Token::Composite(composite) = e {
             let processed_inners = process_inners(&composite.inners, &mut data, &mut keys)?;
             let ret = format!("Event name: {}\n{}", e.type_path(), processed_inners);
-            return Ok(Some(ret));
+            return Ok(ret);
         }
     }
 
-    Ok(None)
+    Err(anyhow!("No matching event found for {:?}", event))
 }
 
 fn process_inners(
@@ -256,7 +259,6 @@ fn process_inners(
             }
             _ => return Err(anyhow!("Unsupported token type encountered")),
         };
-        dbg!(&inner.name, &formatted_value);
         ret.push_str(&format!("{}: {}\n", inner.name, formatted_value));
     }
 
