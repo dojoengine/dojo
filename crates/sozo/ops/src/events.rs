@@ -270,7 +270,7 @@ fn process_inners(
 mod tests {
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
-    use dojo_world::manifest::{BaseManifest, BASE_DIR, WORLD_QUALIFIED_PATH};
+    use dojo_world::manifest::WORLD_QUALIFIED_PATH;
     use starknet::core::types::EmittedEvent;
 
     use super::*;
@@ -283,7 +283,10 @@ mod tests {
         println!("manifest_dir {:?}", manifest_dir);
         let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
         println!("target dir {:?}", target_dir);
-        let manifest = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)).unwrap().into();
+        let manifest = DeploymentManifest::load_from_path(
+            &manifest_dir.join(DEPLOYMENT_DIR).join("manifest").with_extension("toml"),
+        )
+        .unwrap();
 
         let result = extract_events(&manifest, &project_dir, &target_dir).unwrap();
 
