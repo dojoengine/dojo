@@ -33,14 +33,14 @@ use tracing::debug;
 
 /// Metrics for the RPC server.
 #[derive(Default, Clone)]
-pub(crate) struct RpcServerMetrics {
+pub struct RpcServerMetrics {
     inner: Arc<RpcServerMetricsInner>,
 }
 
 impl RpcServerMetrics {
     /// Creates a new instance of `RpcServerMetrics` for the given `RpcModule`.
     /// This will create metrics for each method in the module.
-    pub(crate) fn new(module: &RpcModule<()>) -> Self {
+    pub fn new(module: &RpcModule<()>) -> Self {
         let call_metrics = HashMap::from_iter(module.method_names().map(|method| {
             let metrics = RpcServerCallMetrics::new_with_labels(&[("method", method)]);
             (method, metrics)

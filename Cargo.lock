@@ -4330,6 +4330,7 @@ dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
  "katana-executor",
+ "katana-node",
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
@@ -7539,6 +7540,7 @@ dependencies = [
  "console",
  "dojo-metrics",
  "katana-core",
+ "katana-node",
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
@@ -7668,6 +7670,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-node"
+version = "1.0.0-alpha.3"
+dependencies = [
+ "anyhow",
+ "hyper 0.14.30",
+ "jsonrpsee 0.16.3",
+ "katana-core",
+ "katana-executor",
+ "katana-primitives",
+ "katana-provider",
+ "katana-rpc",
+ "katana-rpc-api",
+ "num-traits 0.2.19",
+ "serde_json",
+ "starknet 0.11.0",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+]
+
+[[package]]
 name = "katana-node-bindings"
 version = "1.0.0-alpha.3"
 dependencies = [
@@ -7743,11 +7767,11 @@ dependencies = [
  "dojo-test-utils",
  "dojo-world",
  "futures",
- "hyper 0.14.30",
  "jsonrpsee 0.16.3",
  "katana-cairo",
  "katana-core",
  "katana-executor",
+ "katana-node",
  "katana-primitives",
  "katana-provider",
  "katana-rpc-api",
@@ -7763,8 +7787,6 @@ dependencies = [
  "starknet 0.11.0",
  "tempfile",
  "tokio",
- "tower",
- "tower-http",
  "tracing",
  "url",
 ]
