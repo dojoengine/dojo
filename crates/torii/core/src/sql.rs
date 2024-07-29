@@ -24,6 +24,7 @@ use crate::types::{
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
 type IsEventMessage = bool;
+type IsStoreUpdateMember = bool;
 
 pub const FELT_DELIMITER: &str = "/";
 
@@ -203,7 +204,7 @@ impl Sql {
             path,
             event_id,
             (&entity_id, false),
-            &entity,
+            (&entity, false),
             block_timestamp,
             &vec![],
         );
@@ -262,7 +263,7 @@ impl Sql {
             path,
             event_id,
             (&entity_id, true),
-            &entity,
+            (&entity, false),
             block_timestamp,
             &vec![],
         );
@@ -273,34 +274,30 @@ impl Sql {
         Ok(())
     }
 
-    // pub async fn set_model_member(
-    //     &mut self,
-    //     entity_id: Felt,
-    //     is_event_message: bool,
-    //     model_tag: &str,
-    //     member: &Member,
-    //     event_id: &str,
-    //     block_timestamp: u64,
-    // ) -> Result<()> {
-    //     let entity_id = format!("{:#x}", entity_id);
-    //     let path = vec![model_tag.to_string()];
+    pub async fn set_model_member(
+        &mut self,
+        entity_id: Felt,
+        is_event_message: bool,
+        entity: &Ty,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        let entity_id = format!("{:#x}", entity_id);
+        let path = vec![entity.name()];
 
-    //     let wrapped_ty =
-    //         Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
+        // update model member
+        self.build_set_entity_queries_recursive(
+            path,
+            event_id,
+            (&entity_id, is_event_message),
+            (&wrapped_ty, true),
+            block_timestamp,
+            &vec![],
+        );
+        self.query_queue.execute_all().await?;
 
-    //     // update model member
-    //     self.build_set_entity_queries_recursive(
-    //         path,
-    //         event_id,
-    //         (&entity_id, is_event_message),
-    //         &wrapped_ty,
-    //         block_timestamp,
-    //         &vec![],
-    //     );
-    //     self.query_queue.execute_all().await?;
-
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     pub async fn delete_entity(&mut self, entity_id: Felt, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
@@ -592,11 +589,12 @@ impl Sql {
         event_id: &str,
         // The id of the entity and if the entity is an event message
         entity_id: (&str, IsEventMessage),
-        entity: &Ty,
+        entity: (&Ty, IsStoreUpdateMember),
         block_timestamp: u64,
         indexes: &Vec<i64>,
     ) {
         let (entity_id, is_event_message) = entity_id;
+        let (entity, is_store_update_member) = entity;
 
         let update_members =
             |members: &[Member], query_queue: &mut QueryQueue, indexes: &Vec<i64>| {
@@ -659,20 +657,27 @@ impl Sql {
                 }
 
                 let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-                let statement = format!(
-                    // on conflict do update to set all of the columns to the new values
-                    "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({}) ON CONFLICT(id) DO \
-                     UPDATE SET {}",
-                    columns.join(","),
-                    placeholders.join(","),
-                    // exclude the first column (id) from the update
-                    columns
-                        .iter()
-                        .skip(1)
-                        .map(|c| format!("{} = EXCLUDED.{}", c, c))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                );
+                let statement = if is_store_update_member {
+                    // row has to exist. update it directly
+                    format!(
+                        "UPDATE [{table_id}] SET {updates} WHERE entity_id = ?",
+                        table_id = table_id,
+                        updates = columns
+                            .iter()
+                            // skip id column
+                            .skip(1)
+                            .zip(placeholders.iter().skip(1))
+                            .map(|(column, placeholder)| format!("{} = {}", column, placeholder))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else {
+                    format!(
+                        "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
+                        columns.join(","),
+                        placeholders.join(",")
+                    )
+                };
 
                 query_queue.enqueue(statement, arguments);
             };
@@ -697,7 +702,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
