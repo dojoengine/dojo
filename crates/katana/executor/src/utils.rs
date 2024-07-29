@@ -1,39 +1,25 @@
-use std::collections::HashMap;
-
-use convert_case::{Case, Casing};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::receipt::{
     DeclareTxReceipt, DeployAccountTxReceipt, Event, InvokeTxReceipt, L1HandlerTxReceipt,
-    MessageToL1, Receipt, TxExecutionResources,
+    MessageToL1, Receipt,
 };
-use katana_primitives::trace::{CallInfo, TxExecInfo};
+use katana_primitives::trace::{CallInfo, TxExecInfo, TxResources};
 use katana_primitives::transaction::TxRef;
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "executor";
 
-pub fn log_resources(resources: &HashMap<String, u64>) {
-    let mut mapped_strings = resources
-        .iter()
-        .filter_map(|(k, v)| match k.as_str() {
-            "n_steps" => None,
-            "ecdsa_builtin" => Some(format!("ECDSA: {v}")),
-            "l1_gas_usage" => Some(format!("L1 Gas: {v}")),
-            "keccak_builtin" => Some(format!("Keccak: {v}")),
-            "bitwise_builtin" => Some(format!("Bitwise: {v}")),
-            "pedersen_builtin" => Some(format!("Pedersen: {v}")),
-            "range_check_builtin" => Some(format!("Range Checks: {v}")),
-            _ => Some(format!("{}: {}", k.to_case(Case::Title), v)),
-        })
-        .collect::<Vec<String>>();
+pub fn log_resources(resources: &TxResources) {
+    let mut mapped_strings = Vec::new();
+
+    for (builtin, count) in &resources.vm_resources.builtin_instance_counter {
+        mapped_strings.push(format!("{builtin}: {count}"));
+    }
 
     // Sort the strings alphabetically
     mapped_strings.sort();
-
-    // Prepend "Steps" if it exists, so it is always first
-    if let Some(steps) = resources.get("n_steps") {
-        mapped_strings.insert(0, format!("Steps: {}", steps));
-    }
+    mapped_strings.insert(0, format!("steps: {}", resources.vm_resources.n_steps));
+    mapped_strings.insert(1, format!("memory holes: {}", resources.vm_resources.n_memory_holes));
 
     trace!(target: LOG_TARGET, usage = mapped_strings.join(" | "), "Transaction resource usage.");
 }
@@ -52,7 +38,7 @@ pub(crate) fn build_receipt(tx: TxRef<'_>, fee: TxFeeInfo, info: &TxExecInfo) ->
     let events = events_from_exec_info(info);
     let revert_error = info.revert_error.clone();
     let messages_sent = l2_to_l1_messages_from_exec_info(info);
-    let actual_resources = parse_actual_resources(&info.actual_resources);
+    let actual_resources = info.actual_resources.clone();
 
     match tx {
         TxRef::Invoke(_) => Receipt::Invoke(InvokeTxReceipt {
@@ -125,21 +111,6 @@ pub fn l2_to_l1_messages_from_exec_info(info: &TxExecInfo) -> Vec<MessageToL1> {
     }
 
     messages
-}
-
-pub fn parse_actual_resources(resources: &HashMap<String, u64>) -> TxExecutionResources {
-    TxExecutionResources {
-        steps: resources.get("n_steps").copied().unwrap_or_default(),
-        memory_holes: resources.get("memory_holes").copied(),
-        ec_op_builtin: resources.get("ec_op_builtin").copied(),
-        ecdsa_builtin: resources.get("ecdsa_builtin").copied(),
-        keccak_builtin: resources.get("keccak_builtin").copied(),
-        bitwise_builtin: resources.get("bitwise_builtin").copied(),
-        pedersen_builtin: resources.get("pedersen_builtin").copied(),
-        poseidon_builtin: resources.get("poseidon_builtin").copied(),
-        range_check_builtin: resources.get("range_check_builtin").copied(),
-        segment_arena_builtin: resources.get("segment_arena_builtin").copied(),
-    }
 }
 
 fn get_events_recur(info: &CallInfo) -> Vec<Event> {

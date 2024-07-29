@@ -98,7 +98,14 @@ impl Compiler for DojoCompiler {
         let props: Props = unit.main_component().target_props()?;
         let target_dir = unit.target_dir(ws);
 
+        // TODO: if we want to output the manifests at the package level,
+        // we must iterate on the ws members, to find the location of the
+        // sole package with the `dojo` target.
+        // In this case, we can use this path to output the manifests.
+
         let compiler_config = build_compiler_config(&unit, ws);
+
+        trace!(target: LOG_TARGET, unit = %unit.name(), ?props, "Compiling unit dojo compiler.");
 
         let mut main_crate_ids = collect_main_crate_ids(&unit, db);
         let core_crate_ids: Vec<CrateId> = collect_core_crate_ids(db);
@@ -290,7 +297,8 @@ fn update_files(
 
     for crate_id in crate_ids {
         for module_id in db.crate_modules(crate_id).as_ref() {
-            let file_infos = db.module_generated_file_infos(*module_id).unwrap_or_default();
+            let file_infos =
+                db.module_generated_file_infos(*module_id).unwrap_or(std::sync::Arc::new([]));
             for aux_data in file_infos
                 .iter()
                 .skip(1)
@@ -346,10 +354,21 @@ fn update_files(
         fs::create_dir_all(contracts_dir.path_unchecked())?;
     }
 
+    // Ensure `contracts` dir exist event if no contracts are compiled
+    // to avoid errors when loading manifests.
+    let base_contracts_dir = base_manifests_dir.join(CONTRACTS_DIR);
+    let base_contracts_abis_dir = base_abis_dir.join(CONTRACTS_DIR);
+    if !base_contracts_dir.exists() {
+        std::fs::create_dir_all(&base_contracts_dir)?;
+    }
+    if !base_contracts_abis_dir.exists() {
+        std::fs::create_dir_all(&base_contracts_abis_dir)?;
+    }
+
     for (_, (manifest, class, module_id)) in contracts.iter_mut() {
         write_manifest_and_abi(
-            &base_manifests_dir.join(CONTRACTS_DIR),
-            &base_abis_dir.join(CONTRACTS_DIR),
+            &base_contracts_dir,
+            &base_contracts_abis_dir,
             &manifest_dir,
             manifest,
             &class.abi,
@@ -372,10 +391,21 @@ fn update_files(
         fs::create_dir_all(models_dir.path_unchecked())?;
     }
 
+    // Ensure `models` dir exist event if no models are compiled
+    // to avoid errors when loading manifests.
+    let base_models_dir = base_manifests_dir.join(MODELS_DIR);
+    let base_models_abis_dir = base_abis_dir.join(MODELS_DIR);
+    if !base_models_dir.exists() {
+        std::fs::create_dir_all(&base_models_dir)?;
+    }
+    if !base_models_abis_dir.exists() {
+        std::fs::create_dir_all(&base_models_abis_dir)?;
+    }
+
     for (_, (manifest, class, module_id)) in models.iter_mut() {
         write_manifest_and_abi(
-            &base_manifests_dir.join(MODELS_DIR),
-            &base_abis_dir.join(MODELS_DIR),
+            &base_models_dir,
+            &base_models_abis_dir,
             &manifest_dir,
             manifest,
             &class.abi,

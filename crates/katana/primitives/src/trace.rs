@@ -1,10 +1,14 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+
+use katana_cairo::cairo_vm::vm;
 
 use crate::class::ClassHash;
 use crate::contract::ContractAddress;
 use crate::event::OrderedEvent;
 use crate::message::OrderedL2ToL1Message;
 use crate::FieldElement;
+
+pub type ExecutionResources = vm::runners::cairo_runner::ExecutionResources;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -19,17 +23,25 @@ pub struct TxExecInfo {
     pub actual_fee: u128,
     /// Actual execution resources the transaction is charged for,
     /// including L1 gas and additional OS resources estimation.
-    pub actual_resources: HashMap<String, u64>,
+    pub actual_resources: TxResources,
     /// Error string for reverted transactions; [None] if transaction execution was successful.
     pub revert_error: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ExecutionResources {
-    pub n_steps: u64,
-    pub n_memory_holes: u64,
-    pub builtin_instance_counter: HashMap<String, u64>,
+pub struct TxResources {
+    pub n_reverted_steps: usize,
+    pub vm_resources: ExecutionResources,
+    pub data_availability: L1Gas,
+    pub total_gas_consumed: L1Gas,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct L1Gas {
+    pub l1_gas: u128,
+    pub l1_data_gas: u128,
 }
 
 /// The call type.

@@ -272,7 +272,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
                 actual_total_gas += fee.gas_consumed;
             }
             if let Some(rec) = res.receipt() {
-                actual_total_steps += rec.resources_used().steps as u128;
+                actual_total_steps += rec.resources_used().vm_resources.n_steps as u128;
             }
             tx.clone()
         })
@@ -328,23 +328,6 @@ mod blockifier {
     #[rstest::rstest]
     fn test_executor_with_valid_blocks(
         factory: BlockifierFactory,
-        #[from(state_provider)] state: Box<dyn StateProvider>,
-        #[from(valid_blocks)] blocks: [ExecutableBlock; 3],
-    ) {
-        test_executor_with_valid_blocks_impl(factory, state, blocks)
-    }
-}
-
-#[cfg(feature = "sir")]
-mod sir {
-    use fixtures::sir::factory;
-    use katana_executor::implementation::sir::NativeExecutorFactory;
-
-    use super::*;
-
-    #[rstest::rstest]
-    fn test_executor_with_valid_blocks(
-        factory: NativeExecutorFactory,
         #[from(state_provider)] state: Box<dyn StateProvider>,
         #[from(valid_blocks)] blocks: [ExecutableBlock; 3],
     ) {

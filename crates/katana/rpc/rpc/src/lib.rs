@@ -19,12 +19,14 @@ use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::backend::Backend;
+use katana_core::pool::TransactionPool;
+use katana_core::service::block_producer::BlockProducer;
 use katana_executor::ExecutorFactory;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_api::saya::SayaApiServer;
-use katana_rpc_api::starknet::StarknetApiServer;
+use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_api::ApiKind;
 use metrics::RpcServerMetrics;
@@ -37,28 +39,37 @@ use crate::starknet::StarknetApi;
 use crate::torii::ToriiApi;
 
 pub async fn spawn<EF: ExecutorFactory>(
-    sequencer: Arc<KatanaSequencer<EF>>,
+    node_components: (Arc<TransactionPool>, Arc<Backend<EF>>, Arc<BlockProducer<EF>>),
     config: ServerConfig,
 ) -> Result<NodeHandle> {
+    let (pool, backend, block_producer) = node_components;
+
     let mut methods = RpcModule::new(());
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
 
     for api in &config.apis {
         match api {
             ApiKind::Starknet => {
-                methods.merge(StarknetApi::new(sequencer.clone()).into_rpc())?;
+                // TODO: merge these into a single logic.
+                let server =
+                    StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone());
+                methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
+                methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
+                methods.merge(StarknetTraceApiServer::into_rpc(server))?;
             }
             ApiKind::Katana => {
-                methods.merge(KatanaApi::new(sequencer.clone()).into_rpc())?;
+                methods.merge(KatanaApi::new(backend.clone()).into_rpc())?;
             }
             ApiKind::Dev => {
-                methods.merge(DevApi::new(sequencer.clone()).into_rpc())?;
+                methods.merge(DevApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
             }
             ApiKind::Torii => {
-                methods.merge(ToriiApi::new(sequencer.clone()).into_rpc())?;
+                methods.merge(
+                    ToriiApi::new(backend.clone(), pool.clone(), block_producer.clone()).into_rpc(),
+                )?;
             }
             ApiKind::Saya => {
-                methods.merge(SayaApi::new(sequencer.clone()).into_rpc())?;
+                methods.merge(SayaApi::new(backend.clone(), block_producer.clone()).into_rpc())?;
             }
         }
     }

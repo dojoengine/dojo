@@ -27,7 +27,7 @@ test_manifest_file
       },
       {
         "type": "struct",
-        "name": "dojo::resource_metadata::ResourceMetadata",
+        "name": "dojo::model::resource_metadata::ResourceMetadata",
         "members": [
           {
             "name": "resource_id",
@@ -78,7 +78,7 @@ test_manifest_file
             ],
             "outputs": [
               {
-                "type": "dojo::resource_metadata::ResourceMetadata"
+                "type": "dojo::model::resource_metadata::ResourceMetadata"
               }
             ],
             "state_mutability": "view"
@@ -89,7 +89,7 @@ test_manifest_file
             "inputs": [
               {
                 "name": "metadata",
-                "type": "dojo::resource_metadata::ResourceMetadata"
+                "type": "dojo::model::resource_metadata::ResourceMetadata"
               }
             ],
             "outputs": [],
@@ -709,11 +709,11 @@ test_manifest_file
       {
         "type": "impl",
         "name": "UpgradableImpl",
-        "interface_name": "dojo::components::upgradeable::IUpgradeable"
+        "interface_name": "dojo::contract::upgradeable::IUpgradeable"
       },
       {
         "type": "interface",
-        "name": "dojo::components::upgradeable::IUpgradeable",
+        "name": "dojo::contract::upgradeable::IUpgradeable",
         "items": [
           {
             "type": "function",
@@ -736,7 +736,7 @@ test_manifest_file
       },
       {
         "type": "event",
-        "name": "dojo::components::upgradeable::upgradeable::Upgraded",
+        "name": "dojo::contract::upgradeable::upgradeable::Upgraded",
         "kind": "struct",
         "members": [
           {
@@ -748,12 +748,12 @@ test_manifest_file
       },
       {
         "type": "event",
-        "name": "dojo::components::upgradeable::upgradeable::Event",
+        "name": "dojo::contract::upgradeable::upgradeable::Event",
         "kind": "enum",
         "variants": [
           {
             "name": "Upgraded",
-            "type": "dojo::components::upgradeable::upgradeable::Upgraded",
+            "type": "dojo::contract::upgradeable::upgradeable::Upgraded",
             "kind": "nested"
           }
         ]
@@ -765,7 +765,7 @@ test_manifest_file
         "variants": [
           {
             "name": "UpgradeableEvent",
-            "type": "dojo::components::upgradeable::upgradeable::Event",
+            "type": "dojo::contract::upgradeable::upgradeable::Event",
             "kind": "nested"
           }
         ]
@@ -773,7 +773,7 @@ test_manifest_file
     ]
   },
   "resource_metadata": {
-    "name": "dojo::resource_metadata::resource_metadata",
+    "name": "dojo::model::resource_metadata::resource_metadata",
     "address": null,
     "class_hash": "0x6a2f06cde4aad60e0b6dd595edebe8dca1fbefe5b36cfc2f46a1d1159757df9",
     "abi": [
@@ -853,7 +853,7 @@ test_manifest_file
       },
       {
         "type": "struct",
-        "name": "dojo::database::introspect::Struct",
+        "name": "dojo::model::introspect::Struct",
         "members": [
           {
             "name": "name",
@@ -881,7 +881,7 @@ test_manifest_file
       },
       {
         "type": "struct",
-        "name": "dojo::database::introspect::Enum",
+        "name": "dojo::model::introspect::Enum",
         "members": [
           {
             "name": "name",
@@ -899,7 +899,7 @@ test_manifest_file
       },
       {
         "type": "enum",
-        "name": "dojo::database::introspect::Ty",
+        "name": "dojo::model::introspect::Ty",
         "variants": [
           {
             "name": "Primitive",
@@ -907,11 +907,11 @@ test_manifest_file
           },
           {
             "name": "Struct",
-            "type": "dojo::database::introspect::Struct"
+            "type": "dojo::model::introspect::Struct"
           },
           {
             "name": "Enum",
-            "type": "dojo::database::introspect::Enum"
+            "type": "dojo::model::introspect::Enum"
           },
           {
             "name": "Tuple",
@@ -929,14 +929,14 @@ test_manifest_file
         "inputs": [],
         "outputs": [
           {
-            "type": "dojo::database::introspect::Ty"
+            "type": "dojo::model::introspect::Ty"
           }
         ],
         "state_mutability": "view"
       },
       {
         "type": "struct",
-        "name": "dojo::resource_metadata::ResourceMetadata",
+        "name": "dojo::model::resource_metadata::ResourceMetadata",
         "members": [
           {
             "name": "resource_id",
@@ -954,7 +954,7 @@ test_manifest_file
         "inputs": [
           {
             "name": "model",
-            "type": "dojo::resource_metadata::ResourceMetadata"
+            "type": "dojo::model::resource_metadata::ResourceMetadata"
           }
         ],
         "outputs": [],
@@ -962,7 +962,7 @@ test_manifest_file
       },
       {
         "type": "event",
-        "name": "dojo::resource_metadata::resource_metadata::Event",
+        "name": "dojo::model::resource_metadata::resource_metadata::Event",
         "kind": "enum",
         "variants": []
       }
@@ -1161,11 +1161,11 @@ test_manifest_file
         {
           "type": "impl",
           "name": "UpgradableImpl",
-          "interface_name": "dojo::components::upgradeable::IUpgradeable"
+          "interface_name": "dojo::contract::upgradeable::IUpgradeable"
         },
         {
           "type": "interface",
-          "name": "dojo::components::upgradeable::IUpgradeable",
+          "name": "dojo::contract::upgradeable::IUpgradeable",
           "items": [
             {
               "type": "function",
@@ -1183,7 +1183,7 @@ test_manifest_file
         },
         {
           "type": "event",
-          "name": "dojo::components::upgradeable::upgradeable::Upgraded",
+          "name": "dojo::contract::upgradeable::upgradeable::Upgraded",
           "kind": "struct",
           "members": [
             {
@@ -1195,12 +1195,12 @@ test_manifest_file
         },
         {
           "type": "event",
-          "name": "dojo::components::upgradeable::upgradeable::Event",
+          "name": "dojo::contract::upgradeable::upgradeable::Event",
           "kind": "enum",
           "variants": [
             {
               "name": "Upgraded",
-              "type": "dojo::components::upgradeable::upgradeable::Upgraded",
+              "type": "dojo::contract::upgradeable::upgradeable::Upgraded",
               "kind": "nested"
             }
           ]
@@ -1229,7 +1229,7 @@ test_manifest_file
           "variants": [
             {
               "name": "UpgradeableEvent",
-              "type": "dojo::components::upgradeable::upgradeable::Event",
+              "type": "dojo::contract::upgradeable::upgradeable::Event",
               "kind": "nested"
             },
             {
@@ -1286,7 +1286,7 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::introspect::Struct",
+          "name": "dojo::model::introspect::Struct",
           "members": [
             {
               "name": "name",
@@ -1314,7 +1314,7 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::introspect::Enum",
+          "name": "dojo::model::introspect::Enum",
           "members": [
             {
               "name": "name",
@@ -1332,7 +1332,7 @@ test_manifest_file
         },
         {
           "type": "enum",
-          "name": "dojo::database::introspect::Ty",
+          "name": "dojo::model::introspect::Ty",
           "variants": [
             {
               "name": "Primitive",
@@ -1340,11 +1340,11 @@ test_manifest_file
             },
             {
               "name": "Struct",
-              "type": "dojo::database::introspect::Struct"
+              "type": "dojo::model::introspect::Struct"
             },
             {
               "name": "Enum",
-              "type": "dojo::database::introspect::Enum"
+              "type": "dojo::model::introspect::Enum"
             },
             {
               "name": "Tuple",
@@ -1410,7 +1410,7 @@ test_manifest_file
               "inputs": [],
               "outputs": [
                 {
-                  "type": "dojo::database::introspect::Ty"
+                  "type": "dojo::model::introspect::Ty"
                 }
               ],
               "state_mutability": "view"
@@ -1537,7 +1537,7 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::introspect::Struct",
+          "name": "dojo::model::introspect::Struct",
           "members": [
             {
               "name": "name",
@@ -1565,7 +1565,7 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::introspect::Enum",
+          "name": "dojo::model::introspect::Enum",
           "members": [
             {
               "name": "name",
@@ -1583,7 +1583,7 @@ test_manifest_file
         },
         {
           "type": "enum",
-          "name": "dojo::database::introspect::Ty",
+          "name": "dojo::model::introspect::Ty",
           "variants": [
             {
               "name": "Primitive",
@@ -1591,11 +1591,11 @@ test_manifest_file
             },
             {
               "name": "Struct",
-              "type": "dojo::database::introspect::Struct"
+              "type": "dojo::model::introspect::Struct"
             },
             {
               "name": "Enum",
-              "type": "dojo::database::introspect::Enum"
+              "type": "dojo::model::introspect::Enum"
             },
             {
               "name": "Tuple",
@@ -1661,7 +1661,7 @@ test_manifest_file
               "inputs": [],
               "outputs": [
                 {
-                  "type": "dojo::database::introspect::Ty"
+                  "type": "dojo::model::introspect::Ty"
                 }
               ],
               "state_mutability": "view"

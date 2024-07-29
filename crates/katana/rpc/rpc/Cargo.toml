@@ -29,6 +29,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 alloy = { git = "https://github.com/alloy-rs/alloy", features = [ "contract", "network", "node-bindings", "provider-http", "providers", "signer-local" ] }
+alloy-primitives = { workspace = true, features = [ "serde" ] }
 assert_matches.workspace = true
 cainome.workspace = true
 dojo-test-utils.workspace = true

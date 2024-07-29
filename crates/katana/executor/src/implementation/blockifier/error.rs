@@ -5,24 +5,24 @@ use blockifier::transaction::errors::{
     TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
 };
 
-use crate::implementation::blockifier::utils::{to_address, to_felt};
+use crate::implementation::blockifier::utils::to_address;
 use crate::ExecutionError;
 
 impl From<TransactionExecutionError> for ExecutionError {
     fn from(error: TransactionExecutionError) -> Self {
         match error {
             TransactionExecutionError::DeclareTransactionError { class_hash } => {
-                Self::ClassAlreadyDeclared(to_felt(class_hash.0))
+                Self::ClassAlreadyDeclared(class_hash.0)
             }
-            TransactionExecutionError::ValidateTransactionError(e) => {
-                Self::TransactionValidationFailed(Box::new(Self::from(e)))
+            TransactionExecutionError::ValidateTransactionError { error, .. } => {
+                Self::TransactionValidationFailed { reason: error.to_string() }
             }
             TransactionExecutionError::StateError(e) => Self::from(e),
             TransactionExecutionError::TransactionPreValidationError(e) => Self::from(e),
             TransactionExecutionError::TransactionFeeError(e) => Self::from(e),
-            TransactionExecutionError::ExecutionError(e) => Self::from(e),
+            TransactionExecutionError::ExecutionError { error, .. } => Self::from(error),
             TransactionExecutionError::ContractConstructorExecutionFailed(e) => {
-                Self::ConstructorExecutionFailed(Box::new(Self::from(e)))
+                Self::ConstructorExecutionFailed { reason: e.to_string() }
             }
             e => Self::Other(e.to_string()),
         }
@@ -49,9 +49,7 @@ impl From<EntryPointExecutionError> for ExecutionError {
 impl From<PreExecutionError> for ExecutionError {
     fn from(error: PreExecutionError) -> Self {
         match error {
-            PreExecutionError::EntryPointNotFound(selector) => {
-                Self::EntryPointNotFound(to_felt(selector.0))
-            }
+            PreExecutionError::EntryPointNotFound(selector) => Self::EntryPointNotFound(selector.0),
             PreExecutionError::UninitializedStorageAddress(address) => {
                 Self::ContractNotDeployed(to_address(address))
             }
@@ -68,10 +66,7 @@ impl From<TransactionPreValidationError> for ExecutionError {
                 account_nonce,
                 incoming_tx_nonce,
                 ..
-            } => Self::InvalidNonce {
-                actual: to_felt(incoming_tx_nonce.0),
-                expected: to_felt(account_nonce.0),
-            },
+            } => Self::InvalidNonce { actual: incoming_tx_nonce.0, expected: account_nonce.0 },
             TransactionPreValidationError::TransactionFeeError(e) => Self::from(e),
             TransactionPreValidationError::StateError(e) => Self::from(e),
         }
@@ -96,7 +91,7 @@ impl From<TransactionFeeError> for ExecutionError {
 impl From<StateError> for ExecutionError {
     fn from(error: StateError) -> Self {
         match error {
-            StateError::UndeclaredClassHash(hash) => Self::UndeclaredClass(to_felt(hash.0)),
+            StateError::UndeclaredClassHash(hash) => Self::UndeclaredClass(hash.0),
             e => Self::Other(e.to_string()),
         }
     }

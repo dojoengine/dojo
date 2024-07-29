@@ -8,7 +8,7 @@ abigen!(
   {
     "type": "impl",
     "name": "World",
-    "interface_name": "dojo::world::IWorld"
+    "interface_name": "dojo::world::world_contract::IWorld"
   },
   {
     "type": "struct",
@@ -30,7 +30,7 @@ abigen!(
   },
   {
     "type": "struct",
-    "name": "dojo::resource_metadata::ResourceMetadata",
+    "name": "dojo::model::metadata::ResourceMetadata",
     "members": [
       {
         "name": "resource_id",
@@ -54,7 +54,7 @@ abigen!(
   },
   {
     "type": "enum",
-    "name": "dojo::world::ModelIndex",
+    "name": "dojo::model::model::ModelIndex",
     "variants": [
       {
         "name": "Keys",
@@ -82,7 +82,7 @@ abigen!(
   },
   {
     "type": "struct",
-    "name": "dojo::database::introspect::FieldLayout",
+    "name": "dojo::model::layout::FieldLayout",
     "members": [
       {
         "name": "selector",
@@ -90,33 +90,33 @@ abigen!(
       },
       {
         "name": "layout",
-        "type": "dojo::database::introspect::Layout"
+        "type": "dojo::model::layout::Layout"
       }
     ]
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<dojo::database::introspect::FieldLayout>",
+    "name": "core::array::Span::<dojo::model::layout::FieldLayout>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<dojo::database::introspect::FieldLayout>"
+        "type": "@core::array::Array::<dojo::model::layout::FieldLayout>"
       }
     ]
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<dojo::database::introspect::Layout>",
+    "name": "core::array::Span::<dojo::model::layout::Layout>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<dojo::database::introspect::Layout>"
+        "type": "@core::array::Array::<dojo::model::layout::Layout>"
       }
     ]
   },
   {
     "type": "enum",
-    "name": "dojo::database::introspect::Layout",
+    "name": "dojo::model::layout::Layout",
     "variants": [
       {
         "name": "Fixed",
@@ -124,15 +124,15 @@ abigen!(
       },
       {
         "name": "Struct",
-        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+        "type": "core::array::Span::<dojo::model::layout::FieldLayout>"
       },
       {
         "name": "Tuple",
-        "type": "core::array::Span::<dojo::database::introspect::Layout>"
+        "type": "core::array::Span::<dojo::model::layout::Layout>"
       },
       {
         "name": "Array",
-        "type": "core::array::Span::<dojo::database::introspect::Layout>"
+        "type": "core::array::Span::<dojo::model::layout::Layout>"
       },
       {
         "name": "ByteArray",
@@ -140,7 +140,7 @@ abigen!(
       },
       {
         "name": "Enum",
-        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+        "type": "core::array::Span::<dojo::model::layout::FieldLayout>"
       }
     ]
   },
@@ -160,7 +160,7 @@ abigen!(
   },
   {
     "type": "interface",
-    "name": "dojo::world::IWorld",
+    "name": "dojo::world::world_contract::IWorld",
     "items": [
       {
         "type": "function",
@@ -173,7 +173,7 @@ abigen!(
         ],
         "outputs": [
           {
-            "type": "dojo::resource_metadata::ResourceMetadata"
+            "type": "dojo::model::metadata::ResourceMetadata"
           }
         ],
         "state_mutability": "view"
@@ -184,7 +184,7 @@ abigen!(
         "inputs": [
           {
             "name": "metadata",
-            "type": "dojo::resource_metadata::ResourceMetadata"
+            "type": "dojo::model::metadata::ResourceMetadata"
           }
         ],
         "outputs": [],
@@ -327,11 +327,11 @@ abigen!(
           },
           {
             "name": "index",
-            "type": "dojo::world::ModelIndex"
+            "type": "dojo::model::model::ModelIndex"
           },
           {
             "name": "layout",
-            "type": "dojo::database::introspect::Layout"
+            "type": "dojo::model::layout::Layout"
           }
         ],
         "outputs": [
@@ -351,7 +351,7 @@ abigen!(
           },
           {
             "name": "index",
-            "type": "dojo::world::ModelIndex"
+            "type": "dojo::model::model::ModelIndex"
           },
           {
             "name": "values",
@@ -359,7 +359,7 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "dojo::database::introspect::Layout"
+            "type": "dojo::model::layout::Layout"
           }
         ],
         "outputs": [],
@@ -375,11 +375,11 @@ abigen!(
           },
           {
             "name": "index",
-            "type": "dojo::world::ModelIndex"
+            "type": "dojo::model::model::ModelIndex"
           },
           {
             "name": "layout",
-            "type": "dojo::database::introspect::Layout"
+            "type": "dojo::model::layout::Layout"
           }
         ],
         "outputs": [],
@@ -585,11 +585,11 @@ abigen!(
   {
     "type": "impl",
     "name": "UpgradeableWorld",
-    "interface_name": "dojo::world::IUpgradeableWorld"
+    "interface_name": "dojo::world::world_contract::IUpgradeableWorld"
   },
   {
     "type": "interface",
-    "name": "dojo::world::IUpgradeableWorld",
+    "name": "dojo::world::world_contract::IUpgradeableWorld",
     "items": [
       {
         "type": "function",
@@ -608,11 +608,11 @@ abigen!(
   {
     "type": "impl",
     "name": "UpgradeableState",
-    "interface_name": "dojo::interfaces::IUpgradeableState"
+    "interface_name": "dojo::world::update::IUpgradeableState"
   },
   {
     "type": "struct",
-    "name": "dojo::interfaces::StorageUpdate",
+    "name": "dojo::world::update::StorageUpdate",
     "members": [
       {
         "name": "key",
@@ -626,17 +626,17 @@ abigen!(
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<dojo::interfaces::StorageUpdate>",
+    "name": "core::array::Span::<dojo::world::update::StorageUpdate>",
     "members": [
       {
         "name": "snapshot",
-        "type": "@core::array::Array::<dojo::interfaces::StorageUpdate>"
+        "type": "@core::array::Array::<dojo::world::update::StorageUpdate>"
       }
     ]
   },
   {
     "type": "struct",
-    "name": "dojo::interfaces::ProgramOutput",
+    "name": "dojo::world::update::ProgramOutput",
     "members": [
       {
         "name": "prev_state_root",
@@ -674,7 +674,7 @@ abigen!(
   },
   {
     "type": "interface",
-    "name": "dojo::interfaces::IUpgradeableState",
+    "name": "dojo::world::update::IUpgradeableState",
     "items": [
       {
         "type": "function",
@@ -682,11 +682,11 @@ abigen!(
         "inputs": [
           {
             "name": "new_state",
-            "type": "core::array::Span::<dojo::interfaces::StorageUpdate>"
+            "type": "core::array::Span::<dojo::world::update::StorageUpdate>"
           },
           {
             "name": "program_output",
-            "type": "dojo::interfaces::ProgramOutput"
+            "type": "dojo::world::update::ProgramOutput"
           },
           {
             "name": "program_hash",
@@ -701,11 +701,11 @@ abigen!(
   {
     "type": "impl",
     "name": "ConfigImpl",
-    "interface_name": "dojo::config::interface::IConfig"
+    "interface_name": "dojo::world::config::IConfig"
   },
   {
     "type": "interface",
-    "name": "dojo::config::interface::IConfig",
+    "name": "dojo::world::config::IConfig",
     "items": [
       {
         "type": "function",
@@ -790,7 +790,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::WorldSpawned",
+    "name": "dojo::world::world_contract::world::WorldSpawned",
     "kind": "struct",
     "members": [
       {
@@ -807,7 +807,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::ContractDeployed",
+    "name": "dojo::world::world_contract::world::ContractDeployed",
     "kind": "struct",
     "members": [
       {
@@ -839,7 +839,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::ContractUpgraded",
+    "name": "dojo::world::world_contract::world::ContractUpgraded",
     "kind": "struct",
     "members": [
       {
@@ -856,7 +856,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::WorldUpgraded",
+    "name": "dojo::world::world_contract::world::WorldUpgraded",
     "kind": "struct",
     "members": [
       {
@@ -868,7 +868,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::MetadataUpdate",
+    "name": "dojo::world::world_contract::world::MetadataUpdate",
     "kind": "struct",
     "members": [
       {
@@ -885,7 +885,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::NamespaceRegistered",
+    "name": "dojo::world::world_contract::world::NamespaceRegistered",
     "kind": "struct",
     "members": [
       {
@@ -902,7 +902,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::ModelRegistered",
+    "name": "dojo::world::world_contract::world::ModelRegistered",
     "kind": "struct",
     "members": [
       {
@@ -939,7 +939,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::StoreSetRecord",
+    "name": "dojo::world::world_contract::world::StoreSetRecord",
     "kind": "struct",
     "members": [
       {
@@ -961,7 +961,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::StoreUpdateRecord",
+    "name": "dojo::world::world_contract::world::StoreUpdateRecord",
     "kind": "struct",
     "members": [
       {
@@ -983,34 +983,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::StoreUpdateMember",
-    "kind": "struct",
-    "members": [
-      {
-        "name": "table",
-        "type": "core::felt252",
-        "kind": "data"
-      },
-      {
-        "name": "entity_id",
-        "type": "core::felt252",
-        "kind": "data"
-      },
-      {
-        "name": "member_selector",
-        "type": "core::felt252",
-        "kind": "data"
-      },
-      {
-        "name": "values",
-        "type": "core::array::Span::<core::felt252>",
-        "kind": "data"
-      }
-    ]
-  },
-  {
-    "type": "event",
-    "name": "dojo::world::world::StoreDelRecord",
+    "name": "dojo::world::world_contract::world::StoreDelRecord",
     "kind": "struct",
     "members": [
       {
@@ -1027,7 +1000,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::WriterUpdated",
+    "name": "dojo::world::world_contract::world::WriterUpdated",
     "kind": "struct",
     "members": [
       {
@@ -1049,7 +1022,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::OwnerUpdated",
+    "name": "dojo::world::world_contract::world::OwnerUpdated",
     "kind": "struct",
     "members": [
       {
@@ -1071,7 +1044,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::config::component::Config::DifferProgramHashUpdate",
+    "name": "dojo::world::config::Config::DifferProgramHashUpdate",
     "kind": "struct",
     "members": [
       {
@@ -1083,7 +1056,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::config::component::Config::MergerProgramHashUpdate",
+    "name": "dojo::world::config::Config::MergerProgramHashUpdate",
     "kind": "struct",
     "members": [
       {
@@ -1095,7 +1068,7 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::config::component::Config::FactsRegistryUpdate",
+    "name": "dojo::world::config::Config::FactsRegistryUpdate",
     "kind": "struct",
     "members": [
       {
@@ -1107,29 +1080,29 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::config::component::Config::Event",
+    "name": "dojo::world::config::Config::Event",
     "kind": "enum",
     "variants": [
       {
         "name": "DifferProgramHashUpdate",
-        "type": "dojo::config::component::Config::DifferProgramHashUpdate",
+        "type": "dojo::world::config::Config::DifferProgramHashUpdate",
         "kind": "nested"
       },
       {
         "name": "MergerProgramHashUpdate",
-        "type": "dojo::config::component::Config::MergerProgramHashUpdate",
+        "type": "dojo::world::config::Config::MergerProgramHashUpdate",
         "kind": "nested"
       },
       {
         "name": "FactsRegistryUpdate",
-        "type": "dojo::config::component::Config::FactsRegistryUpdate",
+        "type": "dojo::world::config::Config::FactsRegistryUpdate",
         "kind": "nested"
       }
     ]
   },
   {
     "type": "event",
-    "name": "dojo::world::world::StateUpdated",
+    "name": "dojo::world::world_contract::world::StateUpdated",
     "kind": "struct",
     "members": [
       {
@@ -1141,52 +1114,52 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::Event",
+    "name": "dojo::world::world_contract::world::Event",
     "kind": "enum",
     "variants": [
       {
         "name": "WorldSpawned",
-        "type": "dojo::world::world::WorldSpawned",
+        "type": "dojo::world::world_contract::world::WorldSpawned",
         "kind": "nested"
       },
       {
         "name": "ContractDeployed",
-        "type": "dojo::world::world::ContractDeployed",
+        "type": "dojo::world::world_contract::world::ContractDeployed",
         "kind": "nested"
       },
       {
         "name": "ContractUpgraded",
-        "type": "dojo::world::world::ContractUpgraded",
+        "type": "dojo::world::world_contract::world::ContractUpgraded",
         "kind": "nested"
       },
       {
         "name": "WorldUpgraded",
-        "type": "dojo::world::world::WorldUpgraded",
+        "type": "dojo::world::world_contract::world::WorldUpgraded",
         "kind": "nested"
       },
       {
         "name": "MetadataUpdate",
-        "type": "dojo::world::world::MetadataUpdate",
+        "type": "dojo::world::world_contract::world::MetadataUpdate",
         "kind": "nested"
       },
       {
         "name": "NamespaceRegistered",
-        "type": "dojo::world::world::NamespaceRegistered",
+        "type": "dojo::world::world_contract::world::NamespaceRegistered",
         "kind": "nested"
       },
       {
         "name": "ModelRegistered",
-        "type": "dojo::world::world::ModelRegistered",
+        "type": "dojo::world::world_contract::world::ModelRegistered",
         "kind": "nested"
       },
       {
         "name": "StoreSetRecord",
-        "type": "dojo::world::world::StoreSetRecord",
+        "type": "dojo::world::world_contract::world::StoreSetRecord",
         "kind": "nested"
       },
       {
         "name": "StoreUpdateRecord",
-        "type": "dojo::world::world::StoreUpdateRecord",
+        "type": "dojo::world::world_contract::world::StoreUpdateRecord",
         "kind": "nested"
       },
       {
@@ -1196,33 +1169,33 @@ abigen!(
       },
       {
         "name": "StoreDelRecord",
-        "type": "dojo::world::world::StoreDelRecord",
+        "type": "dojo::world::world_contract::world::StoreDelRecord",
         "kind": "nested"
       },
       {
         "name": "WriterUpdated",
-        "type": "dojo::world::world::WriterUpdated",
+        "type": "dojo::world::world_contract::world::WriterUpdated",
         "kind": "nested"
       },
       {
         "name": "OwnerUpdated",
-        "type": "dojo::world::world::OwnerUpdated",
+        "type": "dojo::world::world_contract::world::OwnerUpdated",
         "kind": "nested"
       },
       {
         "name": "ConfigEvent",
-        "type": "dojo::config::component::Config::Event",
+        "type": "dojo::world::config::Config::Event",
         "kind": "nested"
       },
       {
         "name": "StateUpdated",
-        "type": "dojo::world::world::StateUpdated",
+        "type": "dojo::world::world_contract::world::StateUpdated",
         "kind": "nested"
       }
     ]
   }
 ]"#,
 type_aliases {
-dojo::config::component::Config::Event as DojoConfigEvent;
+dojo::world::config::Config::Event as DojoConfigEvent;
 }
 );

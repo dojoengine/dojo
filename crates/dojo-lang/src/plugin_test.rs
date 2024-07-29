@@ -96,23 +96,23 @@ pub fn test_expand_plugin_inner(
         db.set_cfg_set(Arc::new(cfg_set));
     }
 
+    let test_id = &inputs["test_id"];
     let cairo_code = &inputs["cairo_code"];
 
     // The path as to remain the same, because diagnostics contains the path
     // of the file. Which can cause error when checked without CAIRO_FIX=1.
-    let tmp_dir = PathBuf::from("/tmp/plugin_test");
+    let tmp_dir = PathBuf::from(format!("/tmp/plugin_test/{}", test_id));
     let _ = std::fs::create_dir_all(&tmp_dir);
     let tmp_path = tmp_dir.as_path();
 
     // Create Scarb.toml file
     let scarb_toml_path = tmp_path.join("Scarb.toml");
-    // Only write if the file doesn't exist.
-    if !scarb_toml_path.exists() {
-        std::fs::write(
-            scarb_toml_path,
-            r#"
+    std::fs::write(
+        scarb_toml_path,
+        r#"
 [package]
 cairo-version = "=2.6.4"
+edition = "2024_07"
 name = "test_package"
 version = "0.7.3"
 
@@ -125,9 +125,8 @@ sierra-replace-ids = true
 namespace = { default = "test_package" }
 seed = "test_package"
 "#,
-        )
-        .expect("Failed to write Scarb.toml");
-    }
+    )
+    .expect("Failed to write Scarb.toml");
 
     // Create src directory
     let src_dir = tmp_path.join("src");
@@ -135,10 +134,7 @@ seed = "test_package"
 
     // Create lib.cairo file
     let lib_cairo_path = src_dir.join("lib.cairo");
-
-    if !lib_cairo_path.exists() {
-        std::fs::write(lib_cairo_path, cairo_code).expect("Failed to write lib.cairo");
-    }
+    std::fs::write(lib_cairo_path, cairo_code).expect("Failed to write lib.cairo");
 
     let crate_id = db.intern_crate(CrateLongId::Real("test".into()));
     let root = Directory::Real(src_dir.to_path_buf());

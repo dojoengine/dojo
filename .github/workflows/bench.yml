@@ -14,12 +14,12 @@ jobs:
   bench-katana:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-alpha.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.0-alpha.3
     steps:
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Running Katana benchmarks 
-        run: cargo bench --bench codec --bench execution -- --output-format bencher |sed 1d | tee output.txt
+      - name: Running Katana benchmarks
+        run: cargo bench --bench codec --bench execution --bench concurrent -- --output-format bencher |sed 1d | tee output.txt
       - uses: benchmark-action/github-action-benchmark@v1
         with:
           tool: "cargo"

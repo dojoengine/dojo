@@ -2,10 +2,12 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use jsonrpsee::core::{async_trait, RpcResult};
-use katana_core::sequencer::KatanaSequencer;
-use katana_core::service::block_producer::BlockProducerMode;
+use katana_core::backend::Backend;
+use katana_core::pool::TransactionPool;
+use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
 use katana_primitives::block::{BlockHashOrNumber, FinalityStatus};
+use katana_provider::traits::block::BlockNumberProvider;
 use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_types::error::torii::ToriiApiError;
@@ -18,18 +20,28 @@ const MAX_PAGE_SIZE: usize = 100;
 
 #[allow(missing_debug_implementations)]
 pub struct ToriiApi<EF: ExecutorFactory> {
-    sequencer: Arc<KatanaSequencer<EF>>,
+    backend: Arc<Backend<EF>>,
+    pool: Arc<TransactionPool>,
+    block_producer: Arc<BlockProducer<EF>>,
 }
 
 impl<EF: ExecutorFactory> Clone for ToriiApi<EF> {
     fn clone(&self) -> Self {
-        Self { sequencer: self.sequencer.clone() }
+        Self {
+            pool: Arc::clone(&self.pool),
+            backend: Arc::clone(&self.backend),
+            block_producer: Arc::clone(&self.block_producer),
+        }
     }
 }
 
 impl<EF: ExecutorFactory> ToriiApi<EF> {
-    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
-        Self { sequencer }
+    pub fn new(
+        backend: Arc<Backend<EF>>,
+        pool: Arc<TransactionPool>,
+        block_producer: Arc<BlockProducer<EF>>,
+    ) -> Self {
+        Self { pool, backend, block_producer }
     }
 
     async fn on_io_blocking_task<F, T>(&self, func: F) -> T
@@ -39,6 +51,14 @@ impl<EF: ExecutorFactory> ToriiApi<EF> {
     {
         let this = self.clone();
         TokioTaskSpawner::new().unwrap().spawn_blocking(move || func(this)).await.unwrap()
+    }
+
+    /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
+    fn pending_executor(&self) -> Option<PendingExecutor> {
+        match &*self.block_producer.inner.read() {
+            BlockProducerMode::Instant(_) => None,
+            BlockProducerMode::Interval(producer) => Some(producer.executor()),
+        }
     }
 }
 
@@ -53,9 +73,8 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                 let mut transactions = Vec::new();
                 let mut next_cursor = cursor;
 
-                let provider = this.sequencer.backend.blockchain.provider();
-                let latest_block_number =
-                    this.sequencer.block_number().map_err(ToriiApiError::from)?;
+                let provider = this.backend.blockchain.provider();
+                let latest_block_number = provider.latest_number().map_err(ToriiApiError::from)?;
 
                 if cursor.block_number > latest_block_number + 1 {
                     return Err(ToriiApiError::BlockNotFound);
@@ -100,7 +119,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                     }
                 }
 
-                if let Some(pending_executor) = this.sequencer.pending_executor() {
+                if let Some(pending_executor) = this.pending_executor() {
                     let remaining = MAX_PAGE_SIZE - transactions.len();
 
                     // If cursor is in the pending block
@@ -129,7 +148,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         // If there are no transactions after the index in the pending block
                         if pending_transactions.is_empty() {
                             // Wait for a new transaction to be executed
-                            let inner = this.sequencer.block_producer().inner.read();
+                            let inner = this.block_producer.inner.read();
                             let block_producer = match &*inner {
                                 BlockProducerMode::Interval(block_producer) => block_producer,
                                 _ => panic!(
@@ -176,7 +195,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
 
                     if transactions.is_empty() {
                         // Wait for a new transaction to be executed
-                        let inner = this.sequencer.block_producer().inner.read();
+                        let inner = this.block_producer.inner.read();
                         let block_producer = match &*inner {
                             BlockProducerMode::Instant(block_producer) => block_producer,
                             _ => {

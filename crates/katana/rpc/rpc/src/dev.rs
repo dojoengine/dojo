@@ -1,27 +1,67 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
-use katana_core::sequencer::KatanaSequencer;
+use katana_core::backend::Backend;
+use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
 use katana_primitives::FieldElement;
 use katana_rpc_api::dev::DevApiServer;
-use katana_rpc_types::error::katana::KatanaApiError;
+use katana_rpc_types::error::dev::DevApiError;
 
 #[allow(missing_debug_implementations)]
 pub struct DevApi<EF: ExecutorFactory> {
-    sequencer: Arc<KatanaSequencer<EF>>,
+    backend: Arc<Backend<EF>>,
+    block_producer: Arc<BlockProducer<EF>>,
 }
 
 impl<EF: ExecutorFactory> DevApi<EF> {
-    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
-        Self { sequencer }
+    pub fn new(backend: Arc<Backend<EF>>, block_producer: Arc<BlockProducer<EF>>) -> Self {
+        Self { backend, block_producer }
+    }
+
+    /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
+    fn pending_executor(&self) -> Option<PendingExecutor> {
+        match &*self.block_producer.inner.read() {
+            BlockProducerMode::Instant(_) => None,
+            BlockProducerMode::Interval(producer) => Some(producer.executor()),
+        }
+    }
+
+    fn has_pending_transactions(&self) -> bool {
+        if let Some(ref exec) = self.pending_executor() {
+            !exec.read().transactions().is_empty()
+        } else {
+            false
+        }
+    }
+
+    pub fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), DevApiError> {
+        if self.has_pending_transactions() {
+            return Err(DevApiError::PendingTransactions);
+        }
+
+        let mut block_context_generator = self.backend.block_context_generator.write();
+        block_context_generator.next_block_start_time = timestamp;
+
+        Ok(())
+    }
+
+    pub fn increase_next_block_timestamp(&self, offset: u64) -> Result<(), DevApiError> {
+        if self.has_pending_transactions() {
+            return Err(DevApiError::PendingTransactions);
+        }
+
+        let mut block_context_generator = self.backend.block_context_generator.write();
+        block_context_generator.block_timestamp_offset += offset as i64;
+
+        Ok(())
     }
 }
 
 #[async_trait]
 impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
     async fn generate_block(&self) -> Result<(), Error> {
-        self.sequencer.block_producer().force_mine();
+        self.block_producer.force_mine();
         Ok(())
     }
 
@@ -31,15 +71,11 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
     }
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
-        self.sequencer
-            .set_next_block_timestamp(timestamp)
-            .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
+        Ok(self.set_next_block_timestamp(timestamp)?)
     }
 
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
-        self.sequencer
-            .increase_next_block_timestamp(timestamp)
-            .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
+        Ok(self.increase_next_block_timestamp(timestamp)?)
     }
 
     async fn set_storage_at(

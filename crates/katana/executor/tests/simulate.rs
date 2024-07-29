@@ -96,22 +96,3 @@ mod blockifier {
         test_simulate_tx_impl(executor_factory, block_env, state_provider, tx, flags);
     }
 }
-
-#[cfg(feature = "sir")]
-mod sir {
-    use fixtures::sir::factory;
-    use katana_executor::implementation::sir::NativeExecutorFactory;
-
-    use super::*;
-
-    #[apply(simulate_tx)]
-    fn test_simulate_tx(
-        #[with(factory::default())] executor_factory: NativeExecutorFactory,
-        block_env: BlockEnv,
-        state_provider: Box<dyn StateProvider>,
-        #[case] tx: ExecutableTxWithHash,
-        #[case] flags: SimulationFlag,
-    ) {
-        test_simulate_tx_impl(executor_factory, block_env, state_provider, tx, flags);
-    }
-}

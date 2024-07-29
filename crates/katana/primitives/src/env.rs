@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::block::{BlockNumber, GasPrices};
 use crate::chain::ChainId;
 use crate::contract::ContractAddress;
@@ -24,8 +22,6 @@ pub struct CfgEnv {
     pub chain_id: ChainId,
     /// The contract addresses of the fee tokens.
     pub fee_token_addresses: FeeTokenAddressses,
-    /// The fee cost of the VM resources.
-    pub vm_resource_fee_cost: HashMap<String, f64>,
     /// The maximum number of steps allowed for an invoke transaction.
     pub invoke_tx_max_n_steps: u32,
     /// The maximum number of steps allowed for transaction validation.

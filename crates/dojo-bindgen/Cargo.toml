@@ -24,5 +24,7 @@ cainome.workspace = true
 dojo-world = { path = "../dojo-world", features = [ "manifest" ] }
 
 [dev-dependencies]
+assert_matches.workspace = true
 dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
 scarb = { workspace = true }
+tokio.workspace = true

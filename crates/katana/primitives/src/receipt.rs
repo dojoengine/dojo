@@ -2,6 +2,7 @@ use alloy_primitives::B256;
 
 use crate::contract::ContractAddress;
 use crate::fee::TxFeeInfo;
+use crate::trace::TxResources;
 use crate::FieldElement;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,7 +41,7 @@ pub struct InvokeTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub execution_resources: TxExecutionResources,
+    pub execution_resources: TxResources,
 }
 
 /// Receipt for a `Declare` transaction.
@@ -56,7 +57,7 @@ pub struct DeclareTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub execution_resources: TxExecutionResources,
+    pub execution_resources: TxResources,
 }
 
 /// Receipt for a `L1Handler` transaction.
@@ -74,7 +75,7 @@ pub struct L1HandlerTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub execution_resources: TxExecutionResources,
+    pub execution_resources: TxResources,
 }
 
 /// Receipt for a `DeployAccount` transaction.
@@ -90,7 +91,7 @@ pub struct DeployAccountTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub execution_resources: TxExecutionResources,
+    pub execution_resources: TxResources,
     /// Contract address of the deployed account contract.
     pub contract_address: ContractAddress,
 }
@@ -144,7 +145,7 @@ impl Receipt {
     }
 
     /// Returns the execution resources used.
-    pub fn resources_used(&self) -> &TxExecutionResources {
+    pub fn resources_used(&self) -> &TxResources {
         match self {
             Receipt::Invoke(rct) => &rct.execution_resources,
             Receipt::Declare(rct) => &rct.execution_resources,
@@ -161,32 +162,4 @@ impl Receipt {
             Receipt::DeployAccount(rct) => &rct.fee,
         }
     }
-}
-
-/// Transaction execution resources.
-///
-/// The resources consumed by a transaction during its execution.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TxExecutionResources {
-    /// The number of cairo steps used
-    pub steps: u64,
-    /// The number of unused memory cells (each cell is roughly equivalent to a step)
-    pub memory_holes: Option<u64>,
-    /// The number of range_check builtin instances
-    pub range_check_builtin: Option<u64>,
-    /// The number of pedersen builtin instances
-    pub pedersen_builtin: Option<u64>,
-    /// The number of poseidon builtin instances
-    pub poseidon_builtin: Option<u64>,
-    /// The number of ec_op builtin instances
-    pub ec_op_builtin: Option<u64>,
-    /// The number of ecdsa builtin instances
-    pub ecdsa_builtin: Option<u64>,
-    /// The number of bitwise builtin instances
-    pub bitwise_builtin: Option<u64>,
-    /// The number of keccak builtin instances
-    pub keccak_builtin: Option<u64>,
-
-    pub segment_arena_builtin: Option<u64>,
 }
