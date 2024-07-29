@@ -32,6 +32,7 @@ use jsonrpsee::RpcModule;
 use tracing::debug;
 
 /// Metrics for the RPC server.
+#[allow(missing_debug_implementations)]
 #[derive(Default, Clone)]
 pub struct RpcServerMetrics {
     inner: Arc<RpcServerMetricsInner>,
