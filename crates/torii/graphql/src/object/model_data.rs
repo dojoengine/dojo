@@ -10,8 +10,8 @@ use super::inputs::where_input::{parse_where_argument, where_argument, WhereInpu
 use super::inputs::InputObjectTrait;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    ENTITY_ID_COLUMN, ENTITY_TABLE, EVENT_ID_COLUMN, EVENT_MESSAGE_TABLE, ID_COLUMN,
-    INTERNAL_ENTITY_ID_KEY,
+    ENTITY_ID_COLUMN, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, EVENT_MESSAGE_TABLE,
+    EVENT_MESSAGE_TYPE_NAME, ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
@@ -247,7 +247,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
 }
 
 fn entity_field() -> Field {
-    Field::new("entity", TypeRef::named("World__Entity"), |ctx| {
+    Field::new("entity", TypeRef::named(ENTITY_TYPE_NAME), |ctx| {
         FieldFuture::new(async move {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
@@ -266,7 +266,7 @@ fn entity_field() -> Field {
 }
 
 fn event_message_field() -> Field {
-    Field::new("eventMessage", TypeRef::named("EventMessage"), |ctx| {
+    Field::new("eventMessage", TypeRef::named(EVENT_MESSAGE_TYPE_NAME), |ctx| {
         FieldFuture::new(async move {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
