@@ -274,7 +274,7 @@ pub mod world {
 
     #[constructor]
     fn constructor(ref self: ContractState, contract_base: ClassHash) {
-        let creator = starknet::get_tx_info().unbox().account_contract_address;
+        let creator = self.get_account_address();
         self.contract_base.write(contract_base);
 
         self.resources.write(WORLD, ResourceData::World);
@@ -568,8 +568,7 @@ pub mod world {
 
             assert(self.is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
             assert(
-                self.can_write_namespace(namespace_hash, get_caller_address()),
-                Errors::NO_NAMESPACE_WRITE_ACCESS
+                self.can_write_namespace(namespace_hash, caller), Errors::NO_NAMESPACE_WRITE_ACCESS
             );
 
             if selector.is_zero() {
