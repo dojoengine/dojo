@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // build the node and start it
     let (rpc_handle, backend) =
-        katana_node::init_node(server_config, sequencer_config, starknet_config).await?;
+        katana_node::start(server_config, sequencer_config, starknet_config).await?;
 
     if !args.silent {
         #[allow(deprecated)]

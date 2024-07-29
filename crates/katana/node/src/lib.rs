@@ -58,7 +58,7 @@ use tracing::trace;
 //
 // NOTE: Don't rely on this function as it is mainly used as a placeholder for now.
 #[allow(deprecated)]
-pub async fn init_node(
+pub async fn start(
     server_config: ServerConfig,
     sequencer_config: SequencerConfig,
     mut starknet_config: StarknetConfig,
