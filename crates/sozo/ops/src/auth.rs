@@ -155,7 +155,7 @@ where
     for new_owner in new_owners {
         let resource_selector =
             get_resource_selector(ui, world, &new_owner.resource, default_namespace).await?;
-        calls.push(world.grant_owner_getcall(&new_owner.owner.into(), &resource_selector));
+        calls.push(world.grant_owner_getcall(&resource_selector, &new_owner.owner.into()));
     }
 
     let res = world
@@ -233,7 +233,7 @@ where
     for new_owner in new_owners {
         let resource_selector =
             get_resource_selector(ui, world, &new_owner.resource, default_namespace).await?;
-        calls.push(world.revoke_owner_getcall(&new_owner.owner.into(), &resource_selector));
+        calls.push(world.revoke_owner_getcall(&resource_selector, &new_owner.owner.into()));
     }
 
     let res = world
