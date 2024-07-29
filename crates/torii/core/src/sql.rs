@@ -273,34 +273,34 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn set_model_member(
-        &mut self,
-        entity_id: Felt,
-        is_event_message: bool,
-        model_tag: &str,
-        member: &Member,
-        event_id: &str,
-        block_timestamp: u64,
-    ) -> Result<()> {
-        let entity_id = format!("{:#x}", entity_id);
-        let path = vec![model_tag.to_string()];
+    // pub async fn set_model_member(
+    //     &mut self,
+    //     entity_id: Felt,
+    //     is_event_message: bool,
+    //     model_tag: &str,
+    //     member: &Member,
+    //     event_id: &str,
+    //     block_timestamp: u64,
+    // ) -> Result<()> {
+    //     let entity_id = format!("{:#x}", entity_id);
+    //     let path = vec![model_tag.to_string()];
 
-        let wrapped_ty =
-            Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
+    //     let wrapped_ty =
+    //         Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
 
-        // update model member
-        self.build_set_entity_queries_recursive(
-            path,
-            event_id,
-            (&entity_id, is_event_message),
-            &wrapped_ty,
-            block_timestamp,
-            &vec![],
-        );
-        self.query_queue.execute_all().await?;
+    //     // update model member
+    //     self.build_set_entity_queries_recursive(
+    //         path,
+    //         event_id,
+    //         (&entity_id, is_event_message),
+    //         &wrapped_ty,
+    //         block_timestamp,
+    //         &vec![],
+    //     );
+    //     self.query_queue.execute_all().await?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     pub async fn delete_entity(&mut self, entity_id: Felt, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);

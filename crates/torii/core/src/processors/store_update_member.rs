@@ -68,8 +68,7 @@ where
                 get_selector_from_name(&c.name).expect("invalid selector for member name")
                     == member_selector
             })
-            .context("member not found")?
-            .clone();
+            .context("member not found")?;
 
         info!(
             target: LOG_TARGET,
@@ -101,7 +100,7 @@ where
 
         member.ty.deserialize(&mut values)?;
 
-        db.set_model_member(entity_id, false, &schema.name(), &member, event_id, block_timestamp)
-            .await
+        db.set_entity(schema, event_id, block_timestamp).await?;
+        Ok(())
     }
 }
