@@ -40,6 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sequencer_config = args.sequencer_config();
     let starknet_config = args.starknet_config()?;
 
+    // TODO: move to katana-node
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
