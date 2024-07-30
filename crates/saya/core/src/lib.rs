@@ -7,23 +7,26 @@ use std::ops::RangeInclusive;
 use std::sync::Arc;
 
 use anyhow::Context;
-use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
-use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
-use cairo_proof_parser::{parse, to_felts};
-use dojo_os::STARKNET_ACCOUNT;
+use cairo_proof_parser::output::ExtractOutputResult;
+use cairo_proof_parser::{to_felts, StarkProof};
+use dojo_os::piltover::starknet_apply_piltover;
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use katana_rpc_types::trace::TxExecutionInfo;
-use prover::{extract_execute_calls, HttpProverParams, ProofAndDiff, ProverIdentifier};
+use prover::{
+    extract_execute_calls, HttpProverParams, ProofAndDiff, ProveDiffProgram, ProveProgram,
+    ProverIdentifier,
+};
 pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
 use starknet::accounts::{Call, ConnectedAccount};
 use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::macros::felt;
 use starknet_crypto::poseidon_hash_many;
 use starknet_types_core::felt::Felt;
 use tokio::fs::File;
@@ -113,13 +116,6 @@ struct FetchedBlockInfo {
     exec_infos: Vec<TxExecutionInfo>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SayaMode {
-    Ephemeral,
-    Persistent,
-    PersistentMerging,
-}
-
 impl Saya {
     /// Initializes a new [`Saya`] instance from the given [`SayaConfig`].
     ///
@@ -169,7 +165,7 @@ impl Saya {
         // The structure responsible for proving.
         let mut prove_scheduler = None;
 
-        let proof = loop {
+        loop {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
@@ -179,15 +175,21 @@ impl Saya {
                 }
             };
 
-            // Wait for the end of the range if it is specified
-            let minimum_expected = self.config.block_range.1.unwrap_or(block);
+            let (minimum_expected, maximum_expected) = match self.config.mode {
+                SayaMode::Ephemeral => {
+                    let last = self.config.block_range.1.unwrap_or(block);
+                    (last, last) // Only one proof is generated, no need to fetch earlier.
+                }
+                SayaMode::PersistentMerging => (block, latest_block), // Separate proofs for each block, starting as early as possible.
+                SayaMode::Persistent => (block, latest_block), // One proof per batch, waiting until all are available.
+            };
+
             if minimum_expected > latest_block {
                 trace!(target: LOG_TARGET, block_number = latest_block + 1, "Waiting for block.");
                 tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                 continue;
             }
 
-            let maximum_expected = self.config.block_range.1.unwrap_or(latest_block);
             let (last_state_root, params) =
                 self.prefetch_blocks(block..=maximum_expected, previous_block_state_root).await?;
             previous_block_state_root = last_state_root;
@@ -196,72 +198,101 @@ impl Saya {
             // `self.blockchain` This part does no actual  proving, so should not be a
             // problem
 
-            if self.config.block_range.1.is_none() {
-                for p in params {
-                    let mut scheduler = if let Some(scheduler) = prove_scheduler {
-                        prove_scheduler = None;
-                        scheduler
-                    } else {
-                        Scheduler::new(
-                            self.config.batch_size,
-                            self.config.world_address,
-                            self.prover_identifier.clone(),
-                        )
-                    };
-
-                    if let Some((prover_input, _)) = self.process_block(block, p)? {
-                        scheduler.push_diff(prover_input)?;
-                        if scheduler.is_full() {
-                            self.process_proven(scheduler.proved().await?).await?;
+            match self.config.mode {
+                SayaMode::PersistentMerging => {
+                    for p in params {
+                        let mut scheduler = if let Some(scheduler) = prove_scheduler {
+                            prove_scheduler = None;
+                            scheduler
                         } else {
-                            prove_scheduler = Some(scheduler);
+                            Scheduler::new(
+                                self.config.batch_size,
+                                self.config.world_address,
+                                self.prover_identifier.clone(),
+                            )
+                        };
+
+                        if let Some((prover_input, _)) = self.process_block(block, p)? {
+                            scheduler.push_diff(prover_input)?;
+                            if scheduler.is_full() {
+                                self.process_proven(scheduler.proved().await?).await?;
+                            } else {
+                                prove_scheduler = Some(scheduler);
+                            }
                         }
+
+                        block += 1;
                     }
                 }
 
-                block += 1;
-            } else {
-                let calls = params
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, p)| self.process_block(block + i as u64, p))
-                    .collect::<Result<Vec<_>, _>>()?
-                    .into_iter()
-                    .filter_map(identity)
-                    .map(|(_, c)| c)
-                    .flatten()
-                    .collect::<Vec<_>>();
+                SayaMode::Persistent => {
+                    let num_blocks = params.len() as u64;
+                    let calls = params
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, p)| self.process_block(block + i as u64, p))
+                        .collect::<Result<Vec<_>, _>>()?
+                        .into_iter()
+                        .filter_map(identity)
+                        .map(|(_, c)| c)
+                        .flatten()
+                        .collect::<Vec<_>>();
 
-                // We might want to prove the signatures as well.
-                let proof = self.prover_identifier.prove_checker(calls).await?;
-                break proof;
+                    // We might want to prove the signatures as well.
+                    let proof = self.prover_identifier.prove_snos(calls).await?;
+
+                    if self.config.store_proofs {
+                        let filename = format!("proof_{}.json", block + num_blocks - 1);
+                        let mut file =
+                            File::create(filename).await.context("Failed to create proof file.")?;
+                        file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
+                    }
+
+                    let proof = StarkProof::try_from(proof.as_str())?;
+                    let program_output = proof.extract_output()?.program_output;
+
+                    self.process_proven((proof, dbg!(program_output), (block, block + num_blocks)))
+                        .await?;
+
+                    block += num_blocks;
+                    info!(target: LOG_TARGET, "Successfully processed {} blocks.", num_blocks);
+                }
+
+                SayaMode::Ephemeral => {
+                    let num_blocks = params.len() as u64;
+                    let calls = params
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, p)| self.process_block(block + i as u64, p))
+                        .collect::<Result<Vec<_>, _>>()?
+                        .into_iter()
+                        .filter_map(identity)
+                        .map(|(_, c)| c)
+                        .flatten()
+                        .collect::<Vec<_>>();
+
+                    // We might want to prove the signatures as well.
+                    let proof = self.prover_identifier.prove_checker(calls).await?;
+
+                    if self.config.store_proofs {
+                        let filename = format!("proof_{}.json", block + num_blocks - 1);
+                        let mut file =
+                            File::create(filename).await.context("Failed to create proof file.")?;
+                        file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
+                    }
+
+                    let block_range =
+                        (self.config.block_range.0, self.config.block_range.1.unwrap());
+
+                    let proof = StarkProof::try_from(proof.as_str())?;
+                    let diff = proof.extract_output()?.program_output;
+                    self.process_proven((proof, dbg!(diff), block_range)).await?;
+
+                    info!(target: LOG_TARGET, "Successfully processed all {} blocks.", block_range.1 - block_range.0 + 1);
+                    break;
+                }
             }
-        };
-
-        let block_range = (self.config.block_range.0, self.config.block_range.1.unwrap());
-        if self.config.store_proofs {
-            let filename = "checker_proof.json";
-            let mut file = File::create(filename).await.context("Failed to create proof file.")?;
-            file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
         }
-
-        let parsed_proof = parse(&proof)?;
-        let serialized_proof = to_felts(&parsed_proof).context("Failed to serialize proof.")?;
-
-        trace!(target: LOG_TARGET, "Verifying checker.");
-        let (transaction_hash, ..) = verifier::verify(
-            VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
-            serialized_proof,
-            self.config.starknet_account,
-            FieldElement::from(1u64),
-        )
-        .await?;
-        info!(target: LOG_TARGET, transaction_hash, "Checker verified.");
-
-        let ExtractOutputResult { program_output: diff, .. } = extract_output(&proof)?;
-        self.process_proven((proof, dbg!(diff), block_range)).await?;
-
-        info!(target: LOG_TARGET, "Successfully processed {} blocks.", block_range.1 - block_range.0 + 1);
 
         Ok(())
     }
@@ -416,58 +447,68 @@ impl Saya {
 
         trace!(target: LOG_TARGET, last_block, "Processing proven blocks.");
 
-        if self.config.store_proofs {
-            let filename = format!("proof_{}.json", last_block);
-            let mut file = File::create(filename).await.context("Failed to create proof file.")?;
-            file.write_all(proof.as_bytes()).await.context("Failed to write proof.")?;
-        }
+        let serialized_proof = to_felts(&proof).context("Failed to serialize proof.")?;
 
-        let parsed_proof = parse(&proof)?;
-        let serialized_proof = to_felts(&parsed_proof).context("Failed to serialize proof.")?;
-        let world_da = state_diff;
-
-        // Publish state difference if DA client is available
+        // Publish state difference if DA client is available.
         if let Some(da) = &self.da_client {
             trace!(target: LOG_TARGET, last_block, "Publishing DA.");
 
             if self.config.skip_publishing_proof {
-                da.publish_state_diff_felts(&world_da).await?;
+                da.publish_state_diff_felts(&state_diff).await?;
             } else {
-                da.publish_state_diff_and_proof_felts(&world_da, &serialized_proof).await?;
+                da.publish_state_diff_and_proof_felts(&state_diff, &serialized_proof).await?;
             }
         }
 
+        let program_hash = proof.extract_program()?.program_hash;
+        let ExtractOutputResult { program_output, program_output_hash } = proof.extract_output()?;
+        let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
+        let program = program_hash.to_string();
+        info!(target: LOG_TARGET, expected_fact, program, "Expected fact.");
+
+        // Verify the proof and register fact.
         trace!(target: LOG_TARGET, last_block, "Verifying block.");
         let (transaction_hash, nonce_after) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
             self.config.starknet_account.clone(),
-            FieldElement::from(1u64),
+            self.config.mode.to_program().cairo_version(),
         )
         .await?;
         info!(target: LOG_TARGET, last_block, transaction_hash, "Block verified.");
 
-        let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
-        let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
-        let expected_fact =
-            poseidon_hash_many(&[dbg!(program_hash), program_output_hash]).to_string();
-        info!(target: LOG_TARGET, expected_fact, "Expected fact.");
+        // Apply the diffs to the world state.
+        match self.config.mode {
+            SayaMode::Ephemeral => {
+                // Needs checker program to be verified, and set as the upgrade_state authority
+                todo!("Ephemeral mode does not support publishing updated state yet.");
+            }
+            SayaMode::Persistent => {
+                let piltover_contract =
+                    felt!("0x2e488ebbcfc05d7129a8aa8f3e8853a4413c1cfc153f03ca18cc317ebdb50e0");
 
-        // When not waiting for couple of second `apply_diffs` will sometimes fail due to reliance
-        // on registered fact
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                dbg!(state_diff);
 
-        trace!(target: LOG_TARGET, last_block, "Applying diffs.");
-        let transaction_hash = dojo_os::starknet_apply_diffs(
-            self.config.world_address,
-            world_da,
-            program_output,
-            program_hash,
-            nonce_after + Felt::ONE,
-            self.config.starknet_account.clone(),
-        )
-        .await?;
-        info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
+                starknet_apply_piltover(piltover_contract, nonce_after + 1u64.into()).await?;
+            }
+            SayaMode::PersistentMerging => {
+                // When not waiting for couple of second `apply_diffs` will sometimes fail due to reliance
+                // on registered fact
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+                trace!(target: LOG_TARGET, last_block, "Applying diffs.");
+                let transaction_hash = dojo_os::starknet_apply_diffs(
+                    self.config.world_address,
+                    state_diff,
+                    program_output,
+                    program_hash,
+                    nonce_after + 1u64.into(),
+                    self.config.starknet_account,
+                )
+                .await?;
+                info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
+            }
+        }
 
         Ok(())
     }
@@ -476,5 +517,22 @@ impl Saya {
 impl From<starknet::providers::ProviderError> for error::Error {
     fn from(e: starknet::providers::ProviderError) -> Self {
         Self::KatanaClient(format!("Katana client RPC provider error: {e}"))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SayaMode {
+    Ephemeral,
+    Persistent,
+    PersistentMerging,
+}
+
+impl SayaMode {
+    fn to_program(&self) -> ProveProgram {
+        match self {
+            SayaMode::Ephemeral => ProveProgram::Checker,
+            SayaMode::Persistent => ProveProgram::Batcher,
+            SayaMode::PersistentMerging => ProveProgram::DiffProgram(ProveDiffProgram::Merger),
+        }
     }
 }

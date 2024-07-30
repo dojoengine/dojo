@@ -10,6 +10,7 @@ use async_trait::async_trait;
 mod client;
 pub mod extract;
 mod loader;
+mod persistent;
 mod program_input;
 mod scheduler;
 pub mod state_diff;
@@ -55,9 +56,7 @@ impl ProverIdentifier {
         let program = ProveProgram::DiffProgram(program);
 
         match self {
-            ProverIdentifier::Http(params) => {
-                http_prove(params.clone(), input, program, false).await
-            }
+            ProverIdentifier::Http(params) => http_prove(params.clone(), input, program).await,
             ProverIdentifier::Stone => prove_stone(input, program).await,
             ProverIdentifier::Sharp => todo!(),
             ProverIdentifier::Platinum => todo!(),
@@ -82,11 +81,57 @@ impl ProverIdentifier {
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove(params.clone(), input, ProveProgram::Checker, true).await
+                http_prove(params.clone(), input, ProveProgram::Checker).await
             }
             ProverIdentifier::Stone => todo!(),
             ProverIdentifier::Sharp => todo!(),
             ProverIdentifier::Platinum => todo!(),
+        }
+    }
+
+    pub async fn prove_snos(&self, calls: Vec<Call>) -> anyhow::Result<String> {
+        let len = FieldElement::from(calls.len() as u64);
+        // let args = calls
+        //     .into_iter()
+        //     .map(|c| {
+        //         let mut felts =
+        //             vec![c.to, c.selector, c.calldata.len().into(), 0u64.into(), 0u64.into()];
+        //         felts.extend(c.calldata);
+        //         felts
+        //     })
+        //     .flatten()
+        //     .map(|f| f.to_string())
+        //     .collect::<Vec<_>>()
+        //     .join(" ");
+        let input = format!(
+            "[{}]",
+            [0u64, 1, 0, 52]
+                .into_iter()
+                .map(|v| FieldElement::from(v).to_string())
+                .collect::<Vec<_>>()
+                .join(" ")
+        );
+
+        // program_input":["[1 1 2 0 0 0 0 0 0]"],
+        // let input = format!("[{} {}]", len, args);
+
+        match self {
+            ProverIdentifier::Http(params) => {
+                http_prove(params.clone(), dbg!(input), ProveProgram::Batcher).await
+            }
+            ProverIdentifier::Stone => todo!(),
+            ProverIdentifier::Sharp => todo!(),
+            ProverIdentifier::Platinum => todo!(),
+        }
+    }
+}
+
+impl ProveProgram {
+    pub fn cairo_version(&self) -> FieldElement {
+        match self {
+            ProveProgram::DiffProgram(_) => FieldElement::ZERO,
+            ProveProgram::Checker => FieldElement::ONE,
+            ProveProgram::Batcher => FieldElement::ONE,
         }
     }
 }

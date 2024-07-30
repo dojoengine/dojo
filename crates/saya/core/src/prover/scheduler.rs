@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Context};
-use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
+use cairo_proof_parser::StarkProof;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use katana_primitives::state::StateUpdates;
@@ -12,7 +12,7 @@ use crate::prover::extract::program_input_from_program_output;
 use crate::prover::ProveDiffProgram;
 use crate::LOG_TARGET;
 
-type Proof = String;
+type Proof = StarkProof;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProvingState {
@@ -142,15 +142,13 @@ async fn combine_proofs(
     world: FieldElement,
     number_of_inputs: usize,
 ) -> anyhow::Result<Proof> {
-    let ExtractOutputResult { program_output: program_output1, program_output_hash: _ } =
-        extract_output(&first)?;
-    let ExtractOutputResult { program_output: program_output2, program_output_hash: _ } =
-        extract_output(&second)?;
+    let earlier_output = first.extract_output()?.program_output;
+    let later_output = second.extract_output()?.program_output;
 
     let earlier_input =
-        program_input_from_program_output(program_output1, state_updates1, world).unwrap();
+        program_input_from_program_output(earlier_output, state_updates1, world).unwrap();
     let later_input =
-        program_input_from_program_output(program_output2, state_updates2, world).unwrap();
+        program_input_from_program_output(later_output, state_updates2, world).unwrap();
 
     let world = format!("{:x}", world);
     trace!(target: LOG_TARGET, number_of_inputs, world, "Merging proofs");
@@ -159,8 +157,9 @@ async fn combine_proofs(
         serde_json::to_string(&CombinedInputs { earlier: earlier_input, later: later_input })?;
 
     let merged_proof = prover.prove_diff(prover_input, ProveDiffProgram::Merger).await?;
+    let parsed_proof = StarkProof::try_from(merged_proof.as_str())?;
 
-    Ok(merged_proof)
+    Ok(parsed_proof)
 }
 
 /// Handles the recursive proving of blocks using asynchronous futures.
@@ -183,10 +182,11 @@ fn prove_recursively(
 
             let prover_input = serde_json::to_string(&input.clone()).unwrap();
             let proof = prover.prove_diff(prover_input, ProveDiffProgram::Differ).await?;
+            let parsed_proof = StarkProof::try_from(proof.as_str())?;
 
             info!(target: LOG_TARGET, block_number, "Block proven");
             update_channel.send((block_number, ProvingState::Proved)).await.unwrap();
-            Ok((proof, input))
+            Ok((parsed_proof, input))
         } else {
             let proof_count = inputs.len();
             let last = inputs.split_off(proof_count / 2);
