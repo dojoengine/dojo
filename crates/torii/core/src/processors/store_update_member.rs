@@ -103,7 +103,8 @@ where
 
         println!("member: {:?}", member);
 
-        db.set_model_member(&schema.name(), entity_id, false, &member, event_id, block_timestamp).await?;
+        db.set_model_member(&schema.name(), entity_id, false, &member, event_id, block_timestamp)
+            .await?;
         Ok(())
     }
 }
