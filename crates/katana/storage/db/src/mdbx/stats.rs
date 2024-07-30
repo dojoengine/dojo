@@ -16,6 +16,12 @@ impl TableStat {
 
     /// Size of a database page. This is the same for all databases in the environment.
     #[inline]
+    pub fn name(&self) -> &'static str {
+        self.name
+    }
+
+    /// Size of a database page. This is the same for all databases in the environment.
+    #[inline]
     pub fn page_size(&self) -> u32 {
         self.stat.page_size()
     }
@@ -65,6 +71,11 @@ impl Stats {
         Self { table_stats, info }
     }
 
+    /// Get statistics for all tables
+    pub fn table_stats(&self) -> &[TableStat] {
+        &self.table_stats
+    }
+
     /// Get statistics for a specific table
     pub fn table_stat(&self, table_name: &str) -> Option<&TableStat> {
         self.table_stats.iter().find(|s| s.name == table_name)
@@ -83,7 +94,7 @@ impl Stats {
             .sum()
     }
 
-    /// Get the size of the memory map
+    /// Get the size of the mapped memory region
     pub fn map_size(&self) -> usize {
         self.info.map_size()
     }
