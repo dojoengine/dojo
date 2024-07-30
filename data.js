@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722329577975,
+  "lastUpdate": 1722358189318,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13297,6 +13297,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4962006,
             "range": "± 239602",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "930d0cb586d3847f7cc024db8ac3db57cd55abdb",
+          "message": "fix: ensure correct compilation unit is picked up (#2220)\n\n* fix: ensure correct compilation unit is picked up\r\n\r\n* fix: ensure target:test and test are always present for testing\r\n\r\n* chore: ensure release test profile is used\r\n\r\n* fix: add more tests",
+          "timestamp": "2024-07-30T10:31:32-06:00",
+          "tree_id": "15313f93671d4ff16e8f22bf689e2508830a9004",
+          "url": "https://github.com/dojoengine/dojo/commit/930d0cb586d3847f7cc024db8ac3db57cd55abdb"
+        },
+        "date": 1722358188602,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16994858,
+            "range": "± 274597",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 5116970,
+            "range": "± 371002",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3332964492,
+            "range": "± 695463192",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5652714,
+            "range": "± 220155",
             "unit": "ns/iter"
           }
         ]
