@@ -446,9 +446,11 @@ export function defineContractComponents(world: World) {
             try {{
                 return await provider.execute(
                     props.account,
-                    contract_name,
-                    \"{system_name}\",
-                    [{calldata}],
+                    {{
+                        contractName: contract_name,
+                        entrypoint: \"{system_name}\",
+                        calldata: [{calldata}],
+                    }},
                     \"{namespace}\"
                 );
             }} catch (error) {{
