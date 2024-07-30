@@ -55,11 +55,12 @@ impl EventsArgs {
         let provider = self.starknet.provider(env_metadata.as_ref())?;
         trace!(?provider, "Starknet RPC client provider.");
 
+        let world_address = self.world.address(env_metadata.as_ref())?;
         let event_filter = events::get_event_filter(
             self.from_block,
             self.to_block,
             self.events,
-            self.world.world_address,
+            Some(world_address),
         );
         trace!(
             from_block = self.from_block,

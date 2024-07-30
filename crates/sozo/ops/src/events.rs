@@ -1,15 +1,15 @@
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
 use dojo_world::contracts::naming::get_filename_from_tag;
 use dojo_world::manifest::{
-    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, MANIFESTS_DIR, TARGET_DIR,
-    WORLD_CONTRACT_TAG,
+    AbiFormat, DeploymentManifest, ManifestMethods, BASE_CONTRACT_TAG, DEPLOYMENT_DIR,
+    MANIFESTS_DIR, TARGET_DIR, WORLD_CONTRACT_TAG,
 };
 use starknet::core::types::{BlockId, EventFilter, Felt};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
@@ -44,7 +44,8 @@ pub async fn parse(
     let events_map = if !json {
         let manifest_dir = project_dir.join(MANIFESTS_DIR).join(profile_name);
         let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
-        let deployed_manifest = manifest_dir.join("manifest").with_extension("toml");
+        let deployed_manifest =
+            manifest_dir.join(DEPLOYMENT_DIR).join("manifest").with_extension("toml");
 
         if !deployed_manifest.exists() {
             return Err(anyhow!("Run scarb migrate before running this command"));
@@ -52,7 +53,7 @@ pub async fn parse(
 
         Some(extract_events(
             &DeploymentManifest::load_from_path(&deployed_manifest)?,
-            &manifest_dir,
+            project_dir,
             &target_dir,
         )?)
     } else {
@@ -64,7 +65,7 @@ pub async fn parse(
     if let Some(events_map) = events_map {
         parse_and_print_events(res, events_map)?;
     } else {
-        println!("{}", serde_json::to_string_pretty(&res)?);
+        println!("{}", serde_json::to_string_pretty(&res).unwrap());
     }
     Ok(())
 }
@@ -85,8 +86,10 @@ fn extract_events(
         events: &mut HashMap<String, Vec<Token>>,
         full_abi_path: &Utf8PathBuf,
     ) -> Result<()> {
-        let abi_str = fs::read_to_string(full_abi_path)?;
+        let abi_str = fs::read_to_string(full_abi_path)
+            .with_context(|| format!("Failed to read ABI file at path: {}", full_abi_path))?;
 
+        // TODO: add support for events emitted by world once its present in ABI
         match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
             Ok(tokens) => {
                 for token in tokens.structs {
@@ -97,7 +100,7 @@ fn extract_events(
                     }
                 }
             }
-            Err(e) => return Err(anyhow!("Error parsing ABI: {}", e)),
+            Err(e) => return Err(anyhow!("Error parsing events from ABI: {}", e)),
         }
 
         Ok(())
@@ -138,13 +141,18 @@ fn parse_and_print_events(
 ) -> Result<()> {
     println!("Continuation token: {:?}", res.continuation_token);
     println!("----------------------------------------------");
+
     for event in res.events {
-        let parsed_event = parse_event(event.clone(), &events_map)
-            .map_err(|e| anyhow!("Error parsing event: {}", e))?;
+        let parsed_event = parse_event(event.clone(), &events_map);
 
         match parsed_event {
-            Some(e) => println!("{e}"),
-            None => return Err(anyhow!("No matching event found for {:?}", event)),
+            Ok(parsed_event) => {
+                println!("{parsed_event}");
+            }
+            Err(e) => {
+                println!("{}", e);
+                println!("Event: {}\n", serde_json::to_string_pretty(&event).unwrap());
+            }
         }
     }
     Ok(())
@@ -179,10 +187,10 @@ fn parse_core_basic(cb: &CoreBasic, value: &Felt, include_felt_string: bool) -> 
 fn parse_event(
     event: starknet::core::types::EmittedEvent,
     events_map: &HashMap<String, Vec<Token>>,
-) -> Result<Option<String>> {
+) -> Result<String> {
     let mut data = VecDeque::from(event.data.clone());
     let mut keys = VecDeque::from(event.keys.clone());
-    let event_hash = keys.pop_front().ok_or(anyhow!("Event hash missing"))?;
+    let event_hash = keys.pop_front().ok_or(anyhow!("Event hash missing")).unwrap();
 
     let events = events_map
         .get(&event_hash.to_string())
@@ -192,11 +200,11 @@ fn parse_event(
         if let Token::Composite(composite) = e {
             let processed_inners = process_inners(&composite.inners, &mut data, &mut keys)?;
             let ret = format!("Event name: {}\n{}", e.type_path(), processed_inners);
-            return Ok(Some(ret));
+            return Ok(ret);
         }
     }
 
-    Ok(None)
+    Err(anyhow!("No matching event found in tokens {:?}", event))
 }
 
 fn process_inners(
@@ -218,6 +226,7 @@ fn process_inners(
             Token::Composite(c) => {
                 if c.type_path.eq("core::byte_array::ByteArray") {
                     data.push_front(value);
+                    data.make_contiguous();
                     let bytearray = ByteArray::cairo_deserialize(data.as_mut_slices().0, 0)?;
                     data.drain(0..ByteArray::cairo_serialized_size(&bytearray));
                     ByteArray::to_string(&bytearray)?
@@ -261,7 +270,7 @@ fn process_inners(
 mod tests {
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
-    use dojo_world::manifest::{BaseManifest, BASE_DIR, WORLD_QUALIFIED_PATH};
+    use dojo_world::manifest::WORLD_QUALIFIED_PATH;
     use starknet::core::types::EmittedEvent;
 
     use super::*;
@@ -274,7 +283,10 @@ mod tests {
         println!("manifest_dir {:?}", manifest_dir);
         let target_dir = project_dir.join(TARGET_DIR).join(profile_name);
         println!("target dir {:?}", target_dir);
-        let manifest = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR)).unwrap().into();
+        let manifest = DeploymentManifest::load_from_path(
+            &manifest_dir.join(DEPLOYMENT_DIR).join("manifest").with_extension("toml"),
+        )
+        .unwrap();
 
         let result = extract_events(&manifest, &project_dir, &target_dir).unwrap();
 
@@ -399,12 +411,8 @@ mod tests {
              0x54657374\ncontract_address: 0x54657374\n"
         );
 
-        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
-
-        match actual_output_option {
-            Some(actual_output) => assert_eq!(actual_output, expected_output),
-            None => panic!("Expected event was not found."),
-        }
+        let actual_output = parse_event(event, &events_map).expect("Failed to parse event");
+        assert_eq!(actual_output, expected_output);
     }
 
     #[test]
@@ -464,12 +472,8 @@ mod tests {
              \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n"
         );
 
-        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
-
-        match actual_output_option {
-            Some(actual_output) => assert_eq!(actual_output, expected_output),
-            None => panic!("Expected event was not found."),
-        }
+        let actual_output = parse_event(event, &events_map).expect("Failed to parse event");
+        assert_eq!(actual_output, expected_output);
     }
 
     #[test]
@@ -539,12 +543,8 @@ mod tests {
              \"Test1\"\ndata_1: 1\ndata_2: 2\n"
         );
 
-        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
-
-        match actual_output_option {
-            Some(actual_output) => assert_eq!(actual_output, expected_output),
-            None => panic!("Expected event was not found."),
-        }
+        let actual_output = parse_event(event, &events_map).expect("Failed to parse event");
+        assert_eq!(actual_output, expected_output);
     }
 
     #[test]
@@ -604,11 +604,7 @@ mod tests {
              0x2]\n"
         );
 
-        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
-
-        match actual_output_option {
-            Some(actual_output) => assert_eq!(actual_output, expected_output),
-            None => panic!("Expected event was not found."),
-        }
+        let actual_output = parse_event(event, &events_map).expect("Failed to parse event");
+        assert_eq!(actual_output, expected_output);
     }
 }
