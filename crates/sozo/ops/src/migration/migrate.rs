@@ -541,6 +541,7 @@ where
                 &migrator,
                 txn_config,
                 &contract.diff.init_calldata,
+                tag,
             )
             .await
         {
