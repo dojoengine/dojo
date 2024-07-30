@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722321072384,
+  "lastUpdate": 1722329577975,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13249,6 +13249,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5433512,
             "range": "± 207265",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3ce85631f8628b21ca1b29a6bf7ec67b44549c65",
+          "message": "fix(sozo): events subcommand (#2215)\n\n* tmp\r\n\r\n* update comment\r\n\r\n* fix: pass correct world address as filter\r\n\r\n* fix lints\r\n\r\n* add todo\r\n\r\n* update test to use deployment manifest which is what implementation use",
+          "timestamp": "2024-07-30T14:04:25+05:30",
+          "tree_id": "e1870d9b40f087937b7dabfa141c0eba5d84db25",
+          "url": "https://github.com/dojoengine/dojo/commit/3ce85631f8628b21ca1b29a6bf7ec67b44549c65"
+        },
+        "date": 1722329576638,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16926195,
+            "range": "± 236968",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4871765,
+            "range": "± 334546",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3340667074,
+            "range": "± 668112925",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4962006,
+            "range": "± 239602",
             "unit": "ns/iter"
           }
         ]
