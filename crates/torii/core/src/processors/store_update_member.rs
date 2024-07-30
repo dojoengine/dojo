@@ -1,6 +1,5 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use dojo_types::schema::Ty;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
@@ -58,21 +57,19 @@ where
         let member_selector = event.data[MEMBER_INDEX];
 
         let model = db.model(selector).await?;
-        let mut schema = model.schema().await?;
-        let struct_ = match &mut schema {
-            Ty::Struct(struct_) => Some(struct_),
-            _ => None,
-        };
+        let schema = model.schema().await?;
 
-        let member = struct_
+        let mut member = schema
+            .as_struct()
             .expect("model schema must be a struct")
             .children
-            .iter_mut()
+            .iter()
             .find(|c| {
                 get_selector_from_name(&c.name).expect("invalid selector for member name")
                     == member_selector
             })
-            .context("member not found")?;
+            .context("member not found")?
+            .clone();
 
         info!(
             target: LOG_TARGET,
@@ -104,7 +101,9 @@ where
 
         member.ty.deserialize(&mut values)?;
 
-        db.set_entity(schema, event_id, block_timestamp).await?;
+        println!("member: {:?}", member);
+
+        db.set_model_member(&schema.name(), entity_id, false, &member, event_id, block_timestamp).await?;
         Ok(())
     }
 }

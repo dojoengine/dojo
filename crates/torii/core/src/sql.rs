@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{EnumOption, Member, Ty};
+use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
@@ -276,21 +276,25 @@ impl Sql {
 
     pub async fn set_model_member(
         &mut self,
+        model_tag: &str,
         entity_id: Felt,
         is_event_message: bool,
-        entity: &Ty,
+        member: &Member,
         event_id: &str,
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
-        let path = vec![entity.name()];
+        let path = vec![model_tag.to_string()];
+
+        let wrapped_ty =
+            Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
 
         // update model member
         self.build_set_entity_queries_recursive(
             path,
             event_id,
             (&entity_id, is_event_message),
-            (&entity, true),
+            (&wrapped_ty, true),
             block_timestamp,
             &vec![],
         );
@@ -658,15 +662,19 @@ impl Sql {
 
                 let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
                 let statement = if is_store_update_member {
+                    arguments.push(Argument::String(if is_event_message {
+                        "event:".to_string() + entity_id
+                    } else {
+                        entity_id.to_string()
+                    }));
+
                     // row has to exist. update it directly
                     format!(
-                        "UPDATE [{table_id}] SET {updates} WHERE entity_id = ?",
+                        "UPDATE [{table_id}] SET {updates} WHERE id = ?",
                         table_id = table_id,
                         updates = columns
                             .iter()
-                            // skip id column
-                            .skip(1)
-                            .zip(placeholders.iter().skip(1))
+                            .zip(placeholders.iter())
                             .map(|(column, placeholder)| format!("{} = {}", column, placeholder))
                             .collect::<Vec<String>>()
                             .join(", ")
