@@ -10,14 +10,17 @@ use async_trait::async_trait;
 mod client;
 pub mod extract;
 mod loader;
-mod persistent;
+pub mod persistent;
 mod program_input;
 mod scheduler;
 pub mod state_diff;
 mod stone_image;
 mod vec252;
 
+use cairo_proof_parser::to_felts;
+use client::http_prove_felts;
 pub use client::HttpProverParams;
+use persistent::BatcherInput;
 pub use program_input::*;
 pub use scheduler::*;
 use starknet::accounts::Call;
@@ -65,7 +68,7 @@ impl ProverIdentifier {
 
     pub async fn prove_checker(&self, calls: Vec<Call>) -> anyhow::Result<String> {
         let len = FieldElement::from(calls.len() as u64);
-        let args = calls
+        let mut args = calls
             .into_iter()
             .map(|c| {
                 let mut felts = vec![c.to, c.selector, c.calldata.len().into()];
@@ -73,15 +76,12 @@ impl ProverIdentifier {
                 felts
             })
             .flatten()
-            .map(|f| f.to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
-
-        let input = format!("[{} {}]", len, args);
+            .collect::<Vec<_>>();
+        args.insert(0, len);
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove(params.clone(), input, ProveProgram::Checker).await
+                http_prove_felts(params.clone(), args, ProveProgram::Checker).await
             }
             ProverIdentifier::Stone => todo!(),
             ProverIdentifier::Sharp => todo!(),
@@ -89,35 +89,12 @@ impl ProverIdentifier {
         }
     }
 
-    pub async fn prove_snos(&self, calls: Vec<Call>) -> anyhow::Result<String> {
-        let len = FieldElement::from(calls.len() as u64);
-        // let args = calls
-        //     .into_iter()
-        //     .map(|c| {
-        //         let mut felts =
-        //             vec![c.to, c.selector, c.calldata.len().into(), 0u64.into(), 0u64.into()];
-        //         felts.extend(c.calldata);
-        //         felts
-        //     })
-        //     .flatten()
-        //     .map(|f| f.to_string())
-        //     .collect::<Vec<_>>()
-        //     .join(" ");
-        let input = format!(
-            "[{}]",
-            [0u64, 1, 0, 52]
-                .into_iter()
-                .map(|v| FieldElement::from(v).to_string())
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
-
-        // program_input":["[1 1 2 0 0 0 0 0 0]"],
-        // let input = format!("[{} {}]", len, args);
+    pub async fn prove_snos(&self, calls: BatcherInput) -> anyhow::Result<String> {
+        let calldata = to_felts(&calls)?;
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove(params.clone(), dbg!(input), ProveProgram::Batcher).await
+                http_prove_felts(params.clone(), dbg!(calldata), ProveProgram::Batcher).await
             }
             ProverIdentifier::Stone => todo!(),
             ProverIdentifier::Sharp => todo!(),
