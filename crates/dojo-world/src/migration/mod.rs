@@ -177,7 +177,7 @@ pub trait Deployable: Declarable + Sync {
         account: A,
         txn_config: &TxnConfig,
         calldata: &[String],
-        tag: Option<&String>,
+        tag: &str,
     ) -> Result<DeployOutput, MigrationError<<A as Account>::SignError>>
     where
         A: ConnectedAccount + Send + Sync,
@@ -202,7 +202,8 @@ pub trait Deployable: Declarable + Sync {
             Ok(current_class_hash) if current_class_hash != class_hash => {
                 was_upgraded = true;
 
-                let contract_selector = compute_selector_from_tag(tag.expect("expected tag!").as_ref());
+                let contract_selector = compute_selector_from_tag(tag);
+
                 Call {
                     calldata: vec![contract_selector, class_hash],
                     selector: selector!("upgrade_contract"),
