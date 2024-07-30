@@ -6,6 +6,7 @@ pub mod cursor;
 pub mod stats;
 pub mod tx;
 
+use std::collections::HashMap;
 use std::path::Path;
 
 pub use libmdbx;
@@ -106,12 +107,12 @@ impl Database for DbEnv {
 
     fn stats(&self) -> Result<Self::Stats, DatabaseError> {
         self.view(|tx| {
-            let mut table_stats = Vec::with_capacity(NUM_TABLES);
+            let mut table_stats = HashMap::with_capacity(NUM_TABLES);
 
             for table in Tables::ALL.iter() {
                 let dbi = tx.inner.open_db(Some(table.name())).map_err(DatabaseError::OpenDb)?;
                 let stat = tx.inner.db_stat(&dbi).map_err(DatabaseError::GetStats)?;
-                table_stats.push(TableStat::new(table.name(), stat));
+                table_stats.insert(table.name(), TableStat::new(stat));
             }
 
             let info = self.0.info().map_err(DatabaseError::Stat)?;

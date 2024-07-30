@@ -53,7 +53,7 @@ impl<K: TransactionKind> Tx<K> {
     pub fn stat<T: Table>(&self) -> Result<TableStat, DatabaseError> {
         let dbi = self.get_dbi::<T>()?;
         let stat = self.inner.db_stat_with_dbi(dbi).map_err(DatabaseError::Stat)?;
-        Ok(TableStat::new(T::NAME, stat))
+        Ok(TableStat::new(stat))
     }
 }
 
