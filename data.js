@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722030058042,
+  "lastUpdate": 1722301980525,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13105,6 +13105,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4819098,
             "range": "± 73413",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "260dbb8b1be1d78cfc452b4ae2c9617f4c94b0a2",
+          "message": "refactor(katana): flatten the logic of starting the node (#2232)",
+          "timestamp": "2024-07-30T08:54:50+08:00",
+          "tree_id": "a7001c3058be8a249c5f8158ac4e21efe516323e",
+          "url": "https://github.com/dojoengine/dojo/commit/260dbb8b1be1d78cfc452b4ae2c9617f4c94b0a2"
+        },
+        "date": 1722301979175,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16945872,
+            "range": "± 226844",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4829903,
+            "range": "± 160190",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3260814619,
+            "range": "± 637385073",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4875830,
+            "range": "± 29058",
             "unit": "ns/iter"
           }
         ]
