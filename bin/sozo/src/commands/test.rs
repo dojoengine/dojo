@@ -222,3 +222,36 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
 
     Ok(project_config)
 }
+
+#[cfg(test)]
+mod tests {
+    use dojo_test_utils::compiler::CompilerTestSetup;
+    use scarb::compiler::Profile;
+
+    use super::*;
+
+    #[test]
+    fn test_spawn_and_move_test() {
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+        let test_args = TestArgs {
+            filter: String::new(),
+            include_ignored: false,
+            ignored: false,
+            profiler_mode: ProfilerMode::None,
+            gas_enabled: true,
+            print_resource_usage: false,
+            features: FeaturesSpec {
+                features: vec![],
+                all_features: true,
+                no_default_features: false,
+            },
+            packages: None,
+        };
+
+        let result = test_args.run(&config);
+        assert!(result.is_ok());
+    }
+}
