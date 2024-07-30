@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722374835875,
+  "lastUpdate": 1722376920654,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13393,6 +13393,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4863733,
             "range": "± 139774",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2a07bdd5b9f19e12806f3c2bd4f78762112e6add",
+          "message": "fix(sozo): upgrade_contract use selector instead of contract_address (#2234)\n\n* sozo: upgrade_contract use selector instead of contract_address\r\n\r\n* fix: enforce tag use\r\n\r\n* fix: add test for upgrade during migration\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-07-30T15:44:13-06:00",
+          "tree_id": "a6969235bc20a9dfe5a4c0ef503e7f5e9adb9c53",
+          "url": "https://github.com/dojoengine/dojo/commit/2a07bdd5b9f19e12806f3c2bd4f78762112e6add"
+        },
+        "date": 1722376919763,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17213852,
+            "range": "± 483141",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4722616,
+            "range": "± 60742",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3216425589,
+            "range": "± 621010573",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4871300,
+            "range": "± 30606",
             "unit": "ns/iter"
           }
         ]
