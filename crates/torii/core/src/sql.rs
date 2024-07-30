@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{EnumOption, Member, Struct, Ty};
+use dojo_types::schema::{EnumOption, Member, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
@@ -290,7 +290,7 @@ impl Sql {
             path,
             event_id,
             (&entity_id, is_event_message),
-            (&wrapped_ty, true),
+            (&entity, true),
             block_timestamp,
             &vec![],
         );
@@ -693,7 +693,7 @@ impl Sql {
                         path_clone,
                         event_id,
                         (entity_id, is_event_message),
-                        &member.ty,
+                        (&member.ty, is_store_update_member),
                         block_timestamp,
                         indexes,
                     );
@@ -733,7 +733,7 @@ impl Sql {
                             path_clone,
                             event_id,
                             (entity_id, is_event_message),
-                            &option.ty,
+                            (&option.ty, is_store_update_member),
                             block_timestamp,
                             indexes,
                         );
@@ -762,7 +762,7 @@ impl Sql {
                         path_clone,
                         event_id,
                         (entity_id, is_event_message),
-                        member,
+                        (member, is_store_update_member),
                         block_timestamp,
                         indexes,
                     );
@@ -800,7 +800,7 @@ impl Sql {
                         path_clone,
                         event_id,
                         (entity_id, is_event_message),
-                        member,
+                        (member, is_store_update_member),
                         block_timestamp,
                         &indexes,
                     );
