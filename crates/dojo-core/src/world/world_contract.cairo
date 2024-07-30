@@ -38,9 +38,9 @@ pub trait IWorld<T> {
     /// In Dojo, there are 2 levels of authorization: `owner` and `writer`.
     /// Only accounts can own a resource while any contract can write to a resource,
     /// as soon as it has granted the write access from an owner of the resource.
-    fn is_owner(self: @T, address: ContractAddress, resource: felt252) -> bool;
-    fn grant_owner(ref self: T, address: ContractAddress, resource: felt252);
-    fn revoke_owner(ref self: T, address: ContractAddress, resource: felt252);
+    fn is_owner(self: @T, resource: felt252, address: ContractAddress) -> bool;
+    fn grant_owner(ref self: T, resource: felt252, address: ContractAddress);
+    fn revoke_owner(ref self: T, resource: felt252, address: ContractAddress);
 
     fn is_writer(self: @T, resource: felt252, contract: ContractAddress) -> bool;
     fn grant_writer(ref self: T, resource: felt252, contract: ContractAddress);
@@ -343,13 +343,13 @@ pub mod world {
         ///
         /// # Arguments
         ///
-        /// * `address` - The contract address.
         /// * `resource` - The resource.
+        /// * `address` - The contract address.
         ///
         /// # Returns
         ///
         /// * `bool` - True if the address is an owner of the resource, false otherwise.
-        fn is_owner(self: @ContractState, address: ContractAddress, resource: felt252) -> bool {
+        fn is_owner(self: @ContractState, resource: felt252, address: ContractAddress) -> bool {
             self.owners.read((resource, address))
         }
 
@@ -360,9 +360,9 @@ pub mod world {
         ///
         /// # Arguments
         ///
-        /// * `address` - The contract address.
         /// * `resource` - The resource.
-        fn grant_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
+        /// * `address` - The contract address.
+        fn grant_owner(ref self: ContractState, resource: felt252, address: ContractAddress) {
             assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
             assert(self.is_account_owner(resource), Errors::NOT_OWNER);
 
@@ -378,9 +378,9 @@ pub mod world {
         ///
         /// # Arguments
         ///
-        /// * `address` - The contract address.
         /// * `resource` - The resource.
-        fn revoke_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
+        /// * `address` - The contract address.
+        fn revoke_owner(ref self: ContractState, resource: felt252, address: ContractAddress) {
             assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
             assert(self.is_account_owner(resource), Errors::NOT_OWNER);
 
@@ -978,7 +978,7 @@ pub mod world {
         ///            false otherwise.
         #[inline(always)]
         fn is_account_owner(self: @ContractState, resource: felt252) -> bool {
-            IWorld::is_owner(self, self.get_account_address(), resource)
+            IWorld::is_owner(self, resource, self.get_account_address())
                 || self.is_account_world_owner()
         }
 
@@ -1004,7 +1004,7 @@ pub mod world {
         /// * `bool` - True if the calling account is the world owner, false otherwise.
         #[inline(always)]
         fn is_account_world_owner(self: @ContractState) -> bool {
-            IWorld::is_owner(self, self.get_account_address(), WORLD)
+            IWorld::is_owner(self, WORLD, self.get_account_address())
         }
 
         /// Indicates if the provided namespace is already registered

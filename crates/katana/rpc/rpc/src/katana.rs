@@ -19,6 +19,7 @@ impl<EF: ExecutorFactory> KatanaApi<EF> {
 
 #[async_trait]
 impl<EF: ExecutorFactory> KatanaApiServer for KatanaApi<EF> {
+    #[allow(deprecated)]
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
         Ok(self.backend.config.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
     }

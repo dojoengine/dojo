@@ -6,9 +6,9 @@ use katana_core::backend::Backend;
 #[allow(deprecated)]
 pub use katana_core::sequencer::SequencerConfig;
 use katana_executor::implementation::blockifier::BlockifierFactory;
+use katana_node::NodeHandle;
 use katana_primitives::chain::ChainId;
 use katana_rpc::config::ServerConfig;
-use katana_rpc::{spawn, NodeHandle};
 use katana_rpc_api::ApiKind;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
@@ -36,31 +36,23 @@ pub struct TestSequencer {
 impl TestSequencer {
     #[allow(deprecated)]
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
-        let components = katana_core::build_node_components(config, starknet_config)
+        let server_config = ServerConfig {
+            port: 0,
+            host: "127.0.0.1".into(),
+            max_connections: 100,
+            allowed_origins: None,
+            apis: vec![
+                ApiKind::Starknet,
+                ApiKind::Katana,
+                ApiKind::Dev,
+                ApiKind::Saya,
+                ApiKind::Torii,
+            ],
+        };
+
+        let (handle, backend) = katana_node::start(server_config, config, starknet_config)
             .await
             .expect("Failed to build node components");
-
-        // get a reference to the backend struct
-        let backend = components.1.clone();
-
-        let handle = spawn(
-            components,
-            ServerConfig {
-                port: 0,
-                host: "127.0.0.1".into(),
-                max_connections: 100,
-                allowed_origins: None,
-                apis: vec![
-                    ApiKind::Starknet,
-                    ApiKind::Katana,
-                    ApiKind::Dev,
-                    ApiKind::Saya,
-                    ApiKind::Torii,
-                ],
-            },
-        )
-        .await
-        .expect("Unable to spawn server");
 
         let url = Url::parse(&format!("http://{}", handle.addr)).expect("Failed to parse URL");
 
@@ -91,10 +83,15 @@ impl TestSequencer {
         JsonRpcClient::new(HttpTransport::new(self.url.clone()))
     }
 
+    pub fn backend(&self) -> &Arc<Backend<BlockifierFactory>> {
+        &self.backend
+    }
+
     pub fn account_at_index(
         &self,
         index: usize,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
+        #[allow(deprecated)]
         let accounts: Vec<_> = self.backend.config.genesis.accounts().collect::<_>();
 
         let account = accounts[index];
