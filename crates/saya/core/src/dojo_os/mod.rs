@@ -7,6 +7,8 @@
 // pub mod input;
 // pub mod transaction;
 
+pub mod piltover;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -62,10 +64,10 @@ pub async fn starknet_apply_diffs(
     starknet_account: StarknetAccountData,
 ) -> anyhow::Result<String> {
     let calldata = chain![
-        vec![Felt::from(new_state.len() as u64 / 2)].into_iter(),
+        [Felt::from(new_state.len() as u64 / 2)].into_iter(),
         new_state.clone().into_iter(),
         program_output.into_iter(),
-        vec![program_hash],
+        [program_hash],
     ]
     .collect();
 
