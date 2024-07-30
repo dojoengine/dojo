@@ -14,10 +14,11 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use alloy_primitives::U256;
-use anyhow::Result;
-use clap::{Args, Parser, Subcommand};
-use clap_complete::Shell;
+use anyhow::{Context, Result};
+use clap::{Args, Parser};
 use common::parse::parse_socket_address;
+use console::Style;
+use dojo_metrics::{metrics_process, prometheus_exporter};
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_SEQUENCER_ADDRESS,
@@ -27,21 +28,22 @@ use katana_core::constants::{
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
-use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAccountAlloc};
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::config::ServerConfig;
 use katana_rpc_api::ApiKind;
-use tracing::Subscriber;
+use tokio::signal::ctrl_c;
+use tracing::{info, Subscriber};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
 use crate::utils::{parse_genesis, parse_seed};
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-#[command(propagate_version = true)]
-pub struct KatanaArgs {
+pub struct NodeArgs {
     #[arg(long)]
     #[arg(help = "Don't print anything on startup.")]
     pub silent: bool,
@@ -110,15 +112,6 @@ pub struct KatanaArgs {
     #[command(flatten)]
     #[command(next_help_heading = "Slot options")]
     pub slot: SlotOptions,
-
-    #[command(subcommand)]
-    pub command: Option<Commands>,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum Commands {
-    #[command(about = "Generate shell completion file for specified shell")]
-    Completions { shell: Shell },
 }
 
 #[derive(Debug, Args, Clone)]
@@ -216,8 +209,54 @@ pub struct SlotOptions {
     pub controller: bool,
 }
 
-impl KatanaArgs {
-    pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) const LOG_TARGET: &str = "katana::cli";
+
+impl NodeArgs {
+    pub fn execute(self) -> Result<()> {
+        self.init_logging()?;
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .context("failed to build tokio runtime")?
+            .block_on(self.start_node())
+    }
+
+    async fn start_node(self) -> Result<()> {
+        let server_config = self.server_config();
+        let sequencer_config = self.sequencer_config();
+        let starknet_config = self.starknet_config()?;
+
+        // TODO: move to katana-node
+        if let Some(listen_addr) = self.metrics {
+            let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+
+            info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
+            prometheus_exporter::serve(
+                listen_addr,
+                prometheus_handle,
+                metrics_process::Collector::default(),
+            )
+            .await?;
+        }
+
+        // build the node and start it
+        let (rpc_handle, backend) =
+            katana_node::start(server_config, sequencer_config, starknet_config).await?;
+
+        if !self.silent {
+            #[allow(deprecated)]
+            let genesis = &backend.config.genesis;
+            print_intro(&self, genesis, rpc_handle.addr);
+        }
+
+        // Wait until Ctrl + C is pressed, then shutdown
+        ctrl_c().await?;
+        rpc_handle.handle.stop()?;
+
+        Ok(())
+    }
+
+    fn init_logging(&self) -> Result<()> {
         const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forking::backend=trace,server=debug,\
                                           katana_core=trace,blockifier=off,jsonrpsee_server=off,\
                                           hyper=off,messaging=debug,node=error";
@@ -236,7 +275,7 @@ impl KatanaArgs {
     }
 
     #[allow(deprecated)]
-    pub fn sequencer_config(&self) -> SequencerConfig {
+    fn sequencer_config(&self) -> SequencerConfig {
         SequencerConfig {
             block_time: self.block_time,
             no_mining: self.no_mining,
@@ -245,7 +284,7 @@ impl KatanaArgs {
         }
     }
 
-    pub fn server_config(&self) -> ServerConfig {
+    fn server_config(&self) -> ServerConfig {
         let mut apis = vec![ApiKind::Starknet, ApiKind::Katana, ApiKind::Torii, ApiKind::Saya];
         // only enable `katana` API in dev mode
         if self.dev {
@@ -261,7 +300,7 @@ impl KatanaArgs {
         }
     }
 
-    pub fn starknet_config(&self) -> Result<StarknetConfig> {
+    fn starknet_config(&self) -> Result<StarknetConfig> {
         let genesis = match self.starknet.genesis.clone() {
             Some(genesis) => genesis,
             None => {
@@ -307,13 +346,128 @@ impl KatanaArgs {
     }
 }
 
+fn print_intro(args: &NodeArgs, genesis: &Genesis, address: SocketAddr) {
+    let mut accounts = genesis.accounts().peekable();
+    let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
+    let seed = &args.starknet.seed;
+
+    if args.json_log {
+        info!(
+            target: LOG_TARGET,
+            "{}",
+            serde_json::json!({
+                "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),
+                "seed": format!("{}", seed),
+                "address": format!("{address}"),
+            })
+        )
+    } else {
+        println!(
+            "{}",
+            Style::new().red().apply_to(
+                r"
+
+
+██╗  ██╗ █████╗ ████████╗ █████╗ ███╗   ██╗ █████╗
+██║ ██╔╝██╔══██╗╚══██╔══╝██╔══██╗████╗  ██║██╔══██╗
+█████╔╝ ███████║   ██║   ███████║██╔██╗ ██║███████║
+██╔═██╗ ██╔══██║   ██║   ██╔══██║██║╚██╗██║██╔══██║
+██║  ██╗██║  ██║   ██║   ██║  ██║██║ ╚████║██║  ██║
+╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
+"
+            )
+        );
+
+        print_genesis_contracts(genesis, account_class_hash);
+        print_genesis_accounts(accounts);
+
+        println!(
+            r"
+
+ACCOUNTS SEED
+=============
+{seed}
+    "
+        );
+
+        let addr = format!(
+            "🚀 JSON-RPC server started: {}",
+            Style::new().red().apply_to(format!("http://{address}"))
+        );
+
+        println!("\n{addr}\n\n",);
+    }
+}
+
+fn print_genesis_contracts(genesis: &Genesis, account_class_hash: Option<ClassHash>) {
+    println!(
+        r"
+PREDEPLOYED CONTRACTS
+==================
+
+| Contract        | Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}",
+        genesis.fee_token.address, genesis.fee_token.class_hash,
+    );
+
+    if let Some(ref udc) = genesis.universal_deployer {
+        println!(
+            r"
+| Contract        | Universal Deployer
+| Address         | {}
+| Class Hash      | {:#064x}",
+            udc.address, udc.class_hash
+        )
+    }
+
+    if let Some(hash) = account_class_hash {
+        println!(
+            r"
+| Contract        | Account Contract
+| Class Hash      | {hash:#064x}"
+        )
+    }
+}
+
+fn print_genesis_accounts<'a, Accounts>(accounts: Accounts)
+where
+    Accounts: Iterator<Item = (&'a ContractAddress, &'a GenesisAccountAlloc)>,
+{
+    println!(
+        r"
+
+PREFUNDED ACCOUNTS
+=================="
+    );
+
+    for (addr, account) in accounts {
+        if let Some(pk) = account.private_key() {
+            println!(
+                r"
+| Account address |  {addr}
+| Private key     |  {pk:#x}
+| Public key      |  {:#x}",
+                account.public_key()
+            )
+        } else {
+            println!(
+                r"
+| Account address |  {addr}
+| Public key      |  {:#x}",
+                account.public_key()
+            )
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn test_starknet_config_default() {
-        let args = KatanaArgs::parse_from(["katana"]);
+        let args = NodeArgs::parse_from(["katana"]);
         let config = args.starknet_config().unwrap();
 
         assert!(!config.disable_fee);
@@ -331,7 +485,7 @@ mod test {
 
     #[test]
     fn test_starknet_config_custom() {
-        let args = KatanaArgs::parse_from([
+        let args = NodeArgs::parse_from([
             "katana",
             "--disable-fee",
             "--disable-validate",
