@@ -483,7 +483,7 @@ fn test_register_namespace() {
 
     world.register_namespace(namespace);
 
-    assert(world.is_owner(caller, hash), 'namespace not registered');
+    assert(world.is_owner(hash, caller), 'namespace not registered');
 
     assert_eq!(
         starknet::testing::pop_log(world.contract_address),
@@ -507,7 +507,7 @@ fn test_register_namespace_already_registered_same_caller() {
 
     world.register_namespace("namespace");
 
-    assert(world.is_owner(caller, hash), 'namespace not registered');
+    assert(world.is_owner(hash, caller), 'namespace not registered');
 
     let event = starknet::testing::pop_log_raw(world.contract_address);
     assert(event.is_none(), 'unexpected event');
@@ -650,7 +650,7 @@ fn test_metadata_update_owner_only() {
     let bob = starknet::contract_address_const::<0xb0b>();
     starknet::testing::set_contract_address(bob);
 
-    world.grant_owner(bob, bytearray_hash(@"dojo"));
+    world.grant_owner(bytearray_hash(@"dojo"), bob);
 
     starknet::testing::set_account_contract_address(bob);
 
@@ -667,20 +667,20 @@ fn test_owner() {
     let alice = starknet::contract_address_const::<0x1337>();
     let bob = starknet::contract_address_const::<0x1338>();
 
-    assert(!world.is_owner(alice, 0), 'should not be owner');
-    assert(!world.is_owner(bob, foo_selector), 'should not be owner');
+    assert(!world.is_owner(0, alice), 'should not be owner');
+    assert(!world.is_owner(foo_selector, bob), 'should not be owner');
 
-    world.grant_owner(alice, 0);
-    assert(world.is_owner(alice, 0), 'should be owner');
+    world.grant_owner(0, alice);
+    assert(world.is_owner(0, alice), 'should be owner');
 
-    world.grant_owner(bob, foo_selector);
-    assert(world.is_owner(bob, foo_selector), 'should be owner');
+    world.grant_owner(foo_selector, bob);
+    assert(world.is_owner(foo_selector, bob), 'should be owner');
 
-    world.revoke_owner(alice, 0);
-    assert(!world.is_owner(alice, 0), 'should not be owner');
+    world.revoke_owner(0, alice);
+    assert(!world.is_owner(0, alice), 'should not be owner');
 
-    world.revoke_owner(bob, foo_selector);
-    assert(!world.is_owner(bob, foo_selector), 'should not be owner');
+    world.revoke_owner(foo_selector, bob);
+    assert(!world.is_owner(foo_selector, bob), 'should not be owner');
 }
 
 #[test]
@@ -692,10 +692,10 @@ fn test_set_owner_fails_for_non_owner() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_account_contract_address(alice);
 
-    world.revoke_owner(alice, 0);
-    assert(!world.is_owner(alice, 0), 'should not be owner');
+    world.revoke_owner(0, alice);
+    assert(!world.is_owner(0, alice), 'should not be owner');
 
-    world.grant_owner(alice, 0);
+    world.grant_owner(0, alice);
 }
 
 #[test]
@@ -767,7 +767,7 @@ fn test_set_writer_fails_for_non_owner() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
 
-    assert(!world.is_owner(alice, 0), 'should not be owner');
+    assert(!world.is_owner(0, alice), 'should not be owner');
 
     world.grant_writer(42, 69.try_into().unwrap());
 }
@@ -1546,7 +1546,7 @@ fn test_write_model_for_namespace_owner() {
     let contract = starknet::contract_address_const::<0xdeadbeef>();
 
     // the caller account is a model namespace owner
-    world.grant_owner(account, Model::<Foo>::namespace_hash());
+    world.grant_owner(Model::<Foo>::namespace_hash(), account);
     starknet::testing::set_account_contract_address(account);
     starknet::testing::set_contract_address(contract);
 
@@ -1562,7 +1562,7 @@ fn test_write_model_for_model_owner() {
     let account = starknet::contract_address_const::<0xb0b>();
     let contract = starknet::contract_address_const::<0xdeadbeef>();
 
-    world.grant_owner(account, Model::<Foo>::selector());
+    world.grant_owner(Model::<Foo>::selector(), account);
     starknet::testing::set_account_contract_address(account);
     starknet::testing::set_contract_address(contract);
 
@@ -1610,7 +1610,7 @@ fn test_write_namespace_for_namespace_owner() {
     let account = starknet::contract_address_const::<0xb0b>();
     let contract = starknet::contract_address_const::<0xdeadbeef>();
 
-    world.grant_owner(account, Model::<Foo>::namespace_hash());
+    world.grant_owner(Model::<Foo>::namespace_hash(), account);
 
     // the account owns the Foo model namespace so it should be able to deploy
     // and register the model.
@@ -1666,7 +1666,7 @@ fn test_deploy_contract_for_namespace_owner() {
     let world = deploy_world();
 
     let account = starknet::contract_address_const::<0xb0b>();
-    world.grant_owner(account, bytearray_hash(@"dojo"));
+    world.grant_owner(bytearray_hash(@"dojo"), account);
 
     // the account owns the 'test_contract' namespace so it should be able to deploy
     // and register the model.

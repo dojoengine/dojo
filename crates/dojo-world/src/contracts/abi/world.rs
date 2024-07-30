@@ -401,12 +401,12 @@ abigen!(
         "name": "is_owner",
         "inputs": [
           {
-            "name": "address",
-            "type": "core::starknet::contract_address::ContractAddress"
-          },
-          {
             "name": "resource",
             "type": "core::felt252"
+          },
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
         "outputs": [
@@ -421,12 +421,12 @@ abigen!(
         "name": "grant_owner",
         "inputs": [
           {
-            "name": "address",
-            "type": "core::starknet::contract_address::ContractAddress"
-          },
-          {
             "name": "resource",
             "type": "core::felt252"
+          },
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
         "outputs": [],
@@ -437,12 +437,12 @@ abigen!(
         "name": "revoke_owner",
         "inputs": [
           {
-            "name": "address",
-            "type": "core::starknet::contract_address::ContractAddress"
-          },
-          {
             "name": "resource",
             "type": "core::felt252"
+          },
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
         "outputs": [],

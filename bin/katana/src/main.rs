@@ -11,7 +11,6 @@ use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::genesis::Genesis;
-use katana_rpc::NodeHandle;
 use tokio::signal::ctrl_c;
 use tracing::info;
 
@@ -41,6 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sequencer_config = args.sequencer_config();
     let starknet_config = args.starknet_config()?;
 
+    // TODO: move to katana-node
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
@@ -53,21 +53,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     }
 
-    // build the node components
-    let components = katana_core::build_node_components(sequencer_config, starknet_config).await?;
-
-    // create rpc server
-    let NodeHandle { addr, handle, .. } =
-        katana_rpc::spawn(components.clone(), server_config).await?;
+    // build the node and start it
+    let (rpc_handle, backend) =
+        katana_node::start(server_config, sequencer_config, starknet_config).await?;
 
     if !args.silent {
-        let genesis = &components.1.config.genesis;
-        print_intro(&args, genesis, addr);
+        #[allow(deprecated)]
+        let genesis = &backend.config.genesis;
+        print_intro(&args, genesis, rpc_handle.addr);
     }
 
     // Wait until Ctrl + C is pressed, then shutdown
     ctrl_c().await?;
-    handle.stop()?;
+    rpc_handle.handle.stop()?;
 
     Ok(())
 }
