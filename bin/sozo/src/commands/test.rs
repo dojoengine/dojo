@@ -11,10 +11,10 @@ use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::plugin::dojo_plugin_suite;
-use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
+use dojo_lang::scarb_internal::{crates_config_for_compilation_unit, PackageData};
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
-use scarb::core::{Config, Package, PackageId, TargetKind};
+use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::{self, CompileOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use tracing::trace;
@@ -80,8 +80,6 @@ impl TestArgs {
             ws.members().collect()
         };
 
-        let package_ids = packages.iter().map(|p| p.id).collect::<Vec<PackageId>>();
-
         let resolve = ops::resolve_workspace(&ws)?;
 
         let opts = CompileOpts {
@@ -93,16 +91,28 @@ impl TestArgs {
 
         let compilation_units = ops::generate_compilation_units(&resolve, &opts.features, &ws)?
             .into_iter()
-            .filter(|cu| !opts.exclude_target_kinds.contains(&cu.main_component().target_kind()))
             .filter(|cu| {
-                opts.include_target_kinds.is_empty()
-                    || opts.include_target_kinds.contains(&cu.main_component().target_kind())
+                let is_excluded =
+                    opts.exclude_target_kinds.contains(&cu.main_component().target_kind());
+                let is_included = opts.include_target_kinds.is_empty()
+                    || opts.include_target_kinds.contains(&cu.main_component().target_kind());
+                let is_included = is_included
+                    && (opts.include_target_names.is_empty()
+                        || cu
+                            .main_component()
+                            .targets
+                            .iter()
+                            .any(|t| opts.include_target_names.contains(&t.name)));
+
+                let is_selected = packages.iter().any(|p| p.id == cu.main_package_id());
+
+                let is_cairo_plugin = matches!(cu, CompilationUnit::ProcMacro(_));
+                is_cairo_plugin || (is_included && is_selected && !is_excluded)
             })
-            .filter(|cu| package_ids.contains(&cu.main_package_id()))
             .collect::<Vec<_>>();
 
         for unit in compilation_units {
-            let unit = if let CompilationUnit::Cairo(unit) = unit {
+            let mut unit = if let CompilationUnit::Cairo(unit) = unit {
                 unit
             } else {
                 continue;
@@ -110,8 +120,28 @@ impl TestArgs {
 
             config.ui().print(format!("testing {}", unit.name()));
 
-            // Injecting the cfg_set for the unit makes compiler panics.
-            // We rely then on the default namespace for testing...?
+            let root_package_data = PackageData::from_scarb_package(&unit.components[0].package)?;
+
+            // For each component in the compilation unit (namely, the dependencies being
+            // compiled) we inject into the `CfgSet` the component name and
+            // namespace configuration. Doing this here ensures the parsing of
+            // of the manifest is done once at compile time, and not everytime
+            // the plugin is called.
+            for c in unit.components.iter_mut() {
+                c.cfg_set = Some(dojo_lang::scarb_internal::cfg_set_from_component(
+                    c,
+                    &root_package_data,
+                    &config.ui(),
+                )?);
+
+                // As we override all the components CfgSet to ensure the namespace mapping
+                // is effective for all of them, we must also insert the "test" and "target"
+                // configs here to ensure correct testing configuration.
+                if let Some(cfg_set) = c.cfg_set.as_mut() {
+                    cfg_set.insert(Cfg::name("test"));
+                    cfg_set.insert(Cfg::kv("target", "test"));
+                }
+            }
 
             let props: Props = unit.main_component().target_props()?;
             let db = build_root_database(&unit)?;
@@ -191,4 +221,37 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
     trace!(target: LOG_TARGET, ?project_config);
 
     Ok(project_config)
+}
+
+#[cfg(test)]
+mod tests {
+    use dojo_test_utils::compiler::CompilerTestSetup;
+    use scarb::compiler::Profile;
+
+    use super::*;
+
+    #[test]
+    fn test_spawn_and_move_test() {
+        let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
+
+        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+        let test_args = TestArgs {
+            filter: String::new(),
+            include_ignored: false,
+            ignored: false,
+            profiler_mode: ProfilerMode::None,
+            gas_enabled: true,
+            print_resource_usage: false,
+            features: FeaturesSpec {
+                features: vec![],
+                all_features: true,
+                no_default_features: false,
+            },
+            packages: None,
+        };
+
+        let result = test_args.run(&config);
+        assert!(result.is_ok());
+    }
 }
