@@ -73,10 +73,10 @@ impl DbArgs {
     }
 }
 
-// Open the database at `path` in read-only mode.
-//
-// The path is expanded and resolved to an absolute path before opening the database for clearer
-// error messages.
+/// Open the database at `path` in read-only mode.
+///
+/// The path is expanded and resolved to an absolute path before opening the database for clearer
+/// error messages.
 fn open_db_ro(path: &str) -> Result<DbEnv> {
     let path = path::absolute(shellexpand::full(path)?.into_owned())?;
     DbEnv::open(&path, DbEnvKind::RO).with_context(|| {
