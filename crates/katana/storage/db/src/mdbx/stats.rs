@@ -55,13 +55,6 @@ impl TableStat {
         let total_pages = self.leaf_pages() + self.branch_pages() + self.overflow_pages();
         self.page_size() as usize * total_pages
     }
-
-    /// The total size (in bytes) of the table.
-    #[inline]
-    pub fn total_size(&self) -> usize {
-        let total_pages = self.leaf_pages() + self.branch_pages() + self.overflow_pages();
-        self.page_size() as usize * total_pages
-    }
 }
 
 /// Statistics for the entire MDBX environment.
