@@ -832,8 +832,7 @@ pub mod world {
                 ModelIndex::MemberId((
                     entity_id, member_selector
                 )) => {
-                    self.write_model_member(model_selector, entity_id, member_id, values, layout);
-                    // TODO: here we need a new event update and see how Torii can process that.
+                    self.write_model_member(model_selector, entity_id, member_selector, values, layout);
                     EventEmitter::emit(
                         ref self,
                         StoreUpdateMember {
