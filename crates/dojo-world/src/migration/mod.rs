@@ -18,6 +18,7 @@ use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
+use crate::contracts::naming::compute_selector_from_tag;
 use crate::utils::{TransactionExt, TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
@@ -167,6 +168,7 @@ pub trait Declarable {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
+    #[allow(clippy::too_many_arguments)]
     async fn deploy_dojo_contract<A>(
         &self,
         world_address: Felt,
@@ -175,6 +177,7 @@ pub trait Deployable: Declarable + Sync {
         account: A,
         txn_config: &TxnConfig,
         calldata: &[String],
+        tag: Option<&String>,
     ) -> Result<DeployOutput, MigrationError<<A as Account>::SignError>>
     where
         A: ConnectedAccount + Send + Sync,
@@ -199,8 +202,9 @@ pub trait Deployable: Declarable + Sync {
             Ok(current_class_hash) if current_class_hash != class_hash => {
                 was_upgraded = true;
 
+                let contract_selector = compute_selector_from_tag(tag.expect("expected tag!").as_ref());
                 Call {
-                    calldata: vec![contract_address, class_hash],
+                    calldata: vec![contract_selector, class_hash],
                     selector: selector!("upgrade_contract"),
                     to: world_address,
                 }

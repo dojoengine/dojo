@@ -143,6 +143,7 @@ pub async fn deploy_world(
                 &account,
                 &TxnConfig::init_wait(),
                 &contract.diff.init_calldata,
+                None,
             )
             .await
             .unwrap();
