@@ -24,8 +24,8 @@ manifest_name = "dojo-base"
 [[contracts]]
 kind = "DojoContract"
 address = "0x24d926d75cd84104c3bd24f0f79e95c273d6a99ed449f3c8b83114857020332"
-class_hash = "0x5d3ffcdabbf541ac1ce9df26f275d6abaec2c260d7a698e1c94a4bd1a0482b8"
-original_class_hash = "0x5d3ffcdabbf541ac1ce9df26f275d6abaec2c260d7a698e1c94a4bd1a0482b8"
+class_hash = "0x2a8de224c28cae3049e23b352e7fce6f26cc99884331e5f2a6aea261398a27a"
+original_class_hash = "0x2a8de224c28cae3049e23b352e7fce6f26cc99884331e5f2a6aea261398a27a"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-actions-40b6994c.json"
 reads = []
