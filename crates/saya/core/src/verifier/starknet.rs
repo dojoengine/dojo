@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use anyhow::Context;
 use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::Itertools;
@@ -8,10 +6,8 @@ use starknet::core::types::{
     Felt, InvokeTransactionResult, TransactionExecutionStatus, TransactionStatus,
 };
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
-use tokio::time::sleep;
-use tracing::{info, warn};
+use tracing::{trace, warn};
 
 use crate::dojo_os::get_starknet_account;
 use crate::StarknetAccountData;
@@ -56,7 +52,7 @@ pub async fn starknet_verify(
             .await
             .context("Failed to send `publish_fragment` transaction.")?;
 
-        info!("Sent `publish_fragment` transaction {:#x}", tx.transaction_hash);
+        trace!("Sent `publish_fragment` transaction {:#x}", tx.transaction_hash);
 
         wait_for(tx, starknet_config.clone()).await?;
 
@@ -75,7 +71,7 @@ pub async fn starknet_verify(
             to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact_from_fragments")
                 .expect("invalid selector"),
-            calldata: dbg!(calldata),
+            calldata,
         }])
         .nonce(nonce)
         .send_with_cfg(&txn_config)

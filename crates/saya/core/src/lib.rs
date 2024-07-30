@@ -8,14 +8,15 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use cairo_proof_parser::output::ExtractOutputResult;
-use cairo_proof_parser::{to_felts, StarkProof};
-use dojo_os::piltover::starknet_apply_piltover;
+use cairo_proof_parser::{from_felts, StarkProof};
+use dojo_os::piltover::{starknet_apply_piltover, PiltoverCalldata};
 use futures::future;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use katana_rpc_types::trace::TxExecutionInfo;
+use prover::persistent::{BatcherCall, BatcherInput, BatcherOutput};
 use prover::{
     extract_execute_calls, HttpProverParams, ProofAndDiff, ProveDiffProgram, ProveProgram,
     ProverIdentifier,
@@ -236,10 +237,24 @@ impl Saya {
                         .filter_map(identity)
                         .map(|(_, c)| c)
                         .flatten()
+                        .map(|c| BatcherCall {
+                            to: c.to,
+                            selector: c.selector,
+                            calldata: c.calldata,
+                            starknet_messages: Vec::new(), // TODO: Fill messages.
+                            appchain_messages: Vec::new(),
+                        })
                         .collect::<Vec<_>>();
 
+                    let input = BatcherInput {
+                        calls,
+                        block_number: FieldElement::from(block),
+                        prev_state_root: previous_block_state_root,
+                        block_hash: FieldElement::from(0u64),
+                    };
+
                     // We might want to prove the signatures as well.
-                    let proof = self.prover_identifier.prove_snos(calls).await?;
+                    let proof = self.prover_identifier.prove_snos(input).await?;
 
                     if self.config.store_proofs {
                         let filename = format!("proof_{}.json", block + num_blocks - 1);
@@ -249,10 +264,7 @@ impl Saya {
                     }
 
                     let proof = StarkProof::try_from(proof.as_str())?;
-                    let program_output = proof.extract_output()?.program_output;
-
-                    self.process_proven((proof, dbg!(program_output), (block, block + num_blocks)))
-                        .await?;
+                    self.process_proven((proof, vec![], (block, block + num_blocks))).await?;
 
                     block += num_blocks;
                     info!(target: LOG_TARGET, "Successfully processed {} blocks.", num_blocks);
@@ -447,11 +459,15 @@ impl Saya {
 
         trace!(target: LOG_TARGET, last_block, "Processing proven blocks.");
 
-        let serialized_proof = to_felts(&proof).context("Failed to serialize proof.")?;
+        let serialized_proof = proof.to_felts();
 
         // Publish state difference if DA client is available.
         if let Some(da) = &self.da_client {
             trace!(target: LOG_TARGET, last_block, "Publishing DA.");
+
+            if self.config.mode != SayaMode::Ephemeral {
+                todo!("DA publishing is not supported for non-ephemeral modes yet.");
+            }
 
             if self.config.skip_publishing_proof {
                 da.publish_state_diff_felts(&state_diff).await?;
@@ -484,10 +500,19 @@ impl Saya {
                 todo!("Ephemeral mode does not support publishing updated state yet.");
             }
             SayaMode::Persistent => {
+                let batcher_output = from_felts::<BatcherOutput>(&program_output)
+                    .context("Failed to parse program output.")?;
+
+                let piltover_calldata = PiltoverCalldata {
+                    program_output,
+                    onchain_data_hash: todo!(),
+                    onchain_data_size: todo!(),
+                };
+
                 let piltover_contract =
                     felt!("0x2e488ebbcfc05d7129a8aa8f3e8853a4413c1cfc153f03ca18cc317ebdb50e0");
 
-                dbg!(state_diff);
+                dbg!(program_output);
 
                 starknet_apply_piltover(piltover_contract, nonce_after + 1u64.into()).await?;
             }
@@ -499,7 +524,7 @@ impl Saya {
                 trace!(target: LOG_TARGET, last_block, "Applying diffs.");
                 let transaction_hash = dojo_os::starknet_apply_diffs(
                     self.config.world_address,
-                    state_diff,
+                    program_output,
                     program_output,
                     program_hash,
                     nonce_after + 1u64.into(),

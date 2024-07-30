@@ -18,6 +18,18 @@ pub struct HttpProverParams {
 
 static ONCE: OnceCell<Result<ProverSDK, ProverSdkErrors>> = OnceCell::const_new();
 
+pub async fn http_prove_felts(
+    prover_params: Arc<HttpProverParams>,
+    input: Vec<FieldElement>,
+    prove_program: ProveProgram,
+) -> anyhow::Result<String> {
+    let args =
+        input.into_iter().map(|v| FieldElement::from(v).to_string()).collect::<Vec<_>>().join(" ");
+    let input = format!("[{}]", args);
+
+    http_prove(prover_params, input, prove_program).await
+}
+
 pub async fn http_prove(
     prover_params: Arc<HttpProverParams>,
     input: String,

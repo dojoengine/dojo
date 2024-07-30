@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::StarknetAccountData;
 
 mod starknet;
+pub mod utils;
 
 /// Supported verifiers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

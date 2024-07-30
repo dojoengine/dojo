@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use cairo_proof_parser::output::extract_output;
+use cairo_proof_parser::StarkProof;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use saya_core::prover::extract::program_input_from_program_output;
@@ -107,7 +107,8 @@ async fn test_program_input_from_program_output() -> anyhow::Result<()> {
     let proof =
         prover_identifier().prove_diff(serialized_input, ProveDiffProgram::Differ).await.unwrap();
 
-    let program_output_from_proof = extract_output(&proof).unwrap().program_output;
+    let proof = StarkProof::try_from(proof.as_str()).unwrap();
+    let program_output_from_proof = proof.extract_output().unwrap().program_output;
     let program_input_from_proof = program_input_from_program_output(
         program_output_from_proof,
         input.clone().state_updates,

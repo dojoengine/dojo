@@ -1,74 +1,46 @@
-use std::time::Duration;
+use crate::verifier::utils::wait_for_sent_transaction;
 
 use super::STARKNET_ACCOUNT;
-use anyhow::{bail, Context};
+use anyhow::Context;
+use cairo_proof_parser::to_felts;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
-use starknet::accounts::{Account, Call, ConnectedAccount};
-use starknet::core::types::{FieldElement, TransactionExecutionStatus, TransactionStatus};
+use serde::Serialize;
+use starknet::accounts::{Account, Call};
+use starknet::core::types::FieldElement;
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::Provider;
-use tokio::time::sleep;
+use tracing::trace;
 
-pub struct PiltoverArgs {
-    pub contract: FieldElement,
-    pub nonce: FieldElement,
+#[derive(Serialize)]
+pub struct PiltoverCalldata {
+    pub program_output: Vec<FieldElement>,
+    pub onchain_data_hash: FieldElement,
+    pub onchain_data_size: (FieldElement, FieldElement),
 }
 
 pub async fn starknet_apply_piltover(
-    piltover_contract: FieldElement,
+    calldata: PiltoverCalldata,
+    contract: FieldElement,
     nonce: FieldElement,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<()> {
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
+
+    let calldata = to_felts(&calldata)?;
+
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
-            to: piltover_contract,
+            to: contract,
             selector: get_selector_from_name("update_state").expect("invalid selector"),
-            calldata: todo!(),
+            calldata,
         }])
         .nonce(nonce)
         .send_with_cfg(&txn_config)
         .await
         .context("Failed to send `update_state` transaction.")?;
 
-    let start_fetching = std::time::Instant::now();
-    let wait_for = Duration::from_secs(60);
-    let execution_status = loop {
-        if start_fetching.elapsed() > wait_for {
-            bail!("Transaction not mined in {} seconds.", wait_for.as_secs());
-        }
+    trace!("Sent `update_state` piltover transaction {:#x}", tx.transaction_hash);
 
-        let status =
-            match STARKNET_ACCOUNT.provider().get_transaction_status(tx.transaction_hash).await {
-                Ok(status) => status,
-                Err(_e) => {
-                    sleep(Duration::from_secs(1)).await;
-                    continue;
-                }
-            };
+    wait_for_sent_transaction(tx).await?;
 
-        break match status {
-            TransactionStatus::Received => {
-                println!("Transaction received.");
-                sleep(Duration::from_secs(1)).await;
-                continue;
-            }
-            TransactionStatus::Rejected => {
-                bail!("Transaction {:#x} rejected.", tx.transaction_hash);
-            }
-            TransactionStatus::AcceptedOnL2(execution_status) => execution_status,
-            TransactionStatus::AcceptedOnL1(execution_status) => execution_status,
-        };
-    };
-
-    match execution_status {
-        TransactionExecutionStatus::Succeeded => {
-            println!("Transaction accepted on L2.");
-        }
-        TransactionExecutionStatus::Reverted => {
-            bail!("Transaction failed with.");
-        }
-    }
-
-    Ok(format!("{:#x}", tx.transaction_hash))
+    Ok(())
 }
