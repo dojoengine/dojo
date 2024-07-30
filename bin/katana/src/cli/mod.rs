@@ -1,3 +1,4 @@
+mod db;
 mod node;
 
 use anyhow::Result;
@@ -19,6 +20,7 @@ impl Cli {
         if let Some(cmd) = self.commands {
             return match cmd {
                 Commands::Completions(args) => args.execute(),
+                Commands::Db(args) => args.execute(),
             };
         }
 
@@ -30,6 +32,9 @@ impl Cli {
 enum Commands {
     #[command(about = "Generate shell completion file for specified shell")]
     Completions(CompletionsArgs),
+
+    #[command(about = "Database utilities")]
+    Db(db::DbArgs),
 }
 
 #[derive(Debug, Args)]
