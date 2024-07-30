@@ -34,6 +34,7 @@ pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 #[derive(Debug)]
 pub struct Backend<EF: ExecutorFactory> {
     /// The config used to generate the backend.
+    #[deprecated]
     pub config: StarknetConfig,
     /// stores all block related data in memory
     pub blockchain: Blockchain,
@@ -46,7 +47,8 @@ pub struct Backend<EF: ExecutorFactory> {
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
-    pub async fn new(executor_factory: Arc<EF>, mut config: StarknetConfig) -> Self {
+    #[allow(deprecated)]
+    pub(crate) async fn new(executor_factory: Arc<EF>, mut config: StarknetConfig) -> Self {
         let block_context_generator = config.block_context_generator();
 
         let blockchain: Blockchain = if let Some(forked_url) = &config.fork_rpc_url {
