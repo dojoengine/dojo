@@ -11,13 +11,12 @@ use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::plugin::dojo_plugin_suite;
-use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
+use dojo_lang::scarb_internal::{crates_config_for_compilation_unit, PackageData};
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
-use scarb::core::{Config, Package};
+use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::{self, CompileOpts};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
-use smol_str::SmolStr;
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
@@ -81,30 +80,39 @@ impl TestArgs {
             ws.members().collect()
         };
 
-        let package_names = packages.iter().map(|p| p.id.name.to_string()).collect::<Vec<String>>();
-
         let resolve = ops::resolve_workspace(&ws)?;
 
         let opts = CompileOpts {
-            include_target_kinds: vec![],
+            include_target_kinds: vec![TargetKind::TEST],
             exclude_target_kinds: vec![],
-            include_target_names: package_names.into_iter().map(SmolStr::new).collect(),
+            include_target_names: vec![],
             features: self.features.try_into()?,
         };
 
-        // In the way scarb generated compilation units, we want to only include
-        // the units that contains the exact same name as the package we're testing.
-        // Seems to have a <package_name>unittest compilation unit generated, which doesn't
-        // actually expand dojo macros.
-        // Using the test target actually breaks the import of some types, as we need
-        // to compile with the Dojo target to get the correct types.
         let compilation_units = ops::generate_compilation_units(&resolve, &opts.features, &ws)?
             .into_iter()
-            .filter(|cu| opts.include_target_names.contains(&cu.main_component().target_name()))
+            .filter(|cu| {
+                let is_excluded =
+                    opts.exclude_target_kinds.contains(&cu.main_component().target_kind());
+                let is_included = opts.include_target_kinds.is_empty()
+                    || opts.include_target_kinds.contains(&cu.main_component().target_kind());
+                let is_included = is_included
+                    && (opts.include_target_names.is_empty()
+                        || cu
+                            .main_component()
+                            .targets
+                            .iter()
+                            .any(|t| opts.include_target_names.contains(&t.name)));
+
+                let is_selected = packages.iter().any(|p| p.id == cu.main_package_id());
+
+                let is_cairo_plugin = matches!(cu, CompilationUnit::ProcMacro(_));
+                is_cairo_plugin || (is_included && is_selected && !is_excluded)
+            })
             .collect::<Vec<_>>();
 
         for unit in compilation_units {
-            let unit = if let CompilationUnit::Cairo(unit) = unit {
+            let mut unit = if let CompilationUnit::Cairo(unit) = unit {
                 unit
             } else {
                 continue;
@@ -112,8 +120,28 @@ impl TestArgs {
 
             config.ui().print(format!("testing {}", unit.name()));
 
-            // Injecting the cfg_set for the unit makes compiler panics.
-            // We rely then on the default namespace for testing...?
+            let root_package_data = PackageData::from_scarb_package(&unit.components[0].package)?;
+
+            // For each component in the compilation unit (namely, the dependencies being
+            // compiled) we inject into the `CfgSet` the component name and
+            // namespace configuration. Doing this here ensures the parsing of
+            // of the manifest is done once at compile time, and not everytime
+            // the plugin is called.
+            for c in unit.components.iter_mut() {
+                c.cfg_set = Some(dojo_lang::scarb_internal::cfg_set_from_component(
+                    c,
+                    &root_package_data,
+                    &config.ui(),
+                )?);
+
+                // As we override all the components CfgSet to ensure the namespace mapping
+                // is effective for all of them, we must also insert the "test" and "target"
+                // configs here to ensure correct testing configuration.
+                if let Some(cfg_set) = c.cfg_set.as_mut() {
+                    cfg_set.insert(Cfg::name("test"));
+                    cfg_set.insert(Cfg::kv("target", "test"));
+                }
+            }
 
             let props: Props = unit.main_component().target_props()?;
             let db = build_root_database(&unit)?;
