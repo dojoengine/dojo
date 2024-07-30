@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722301980525,
+  "lastUpdate": 1722315347900,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13153,6 +13153,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4875830,
             "range": "± 29058",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8bcdc3b50997c67a734fd7a69396e7c5def2e20a",
+          "message": "update permission api (#2224)",
+          "timestamp": "2024-07-29T22:37:26-06:00",
+          "tree_id": "780ed4a1973effcfd602f01b93141ab78a0bab2f",
+          "url": "https://github.com/dojoengine/dojo/commit/8bcdc3b50997c67a734fd7a69396e7c5def2e20a"
+        },
+        "date": 1722315347178,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16961244,
+            "range": "± 82603",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4944542,
+            "range": "± 240714",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3496098474,
+            "range": "± 669843984",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4951675,
+            "range": "± 109545",
             "unit": "ns/iter"
           }
         ]
