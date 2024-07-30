@@ -3,6 +3,7 @@
 //! The code is adapted from `reth` mdbx implementation:  <https://github.com/paradigmxyz/reth/blob/227e1b7ad513977f4f48b18041df02686fca5f94/crates/storage/db/src/implementation/mdbx/mod.rs>
 
 pub mod cursor;
+pub mod stats;
 pub mod tx;
 
 use std::path::Path;
@@ -10,10 +11,11 @@ use std::path::Path;
 pub use libmdbx;
 use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW};
 
+use self::stats::{Stats, TableStat};
 use self::tx::Tx;
-use crate::abstraction::{Database, DbTx};
+use crate::abstraction::Database;
 use crate::error::DatabaseError;
-use crate::tables::{TableType, Tables};
+use crate::tables::{TableType, Tables, NUM_TABLES};
 use crate::utils;
 
 const GIGABYTE: usize = 1024 * 1024 * 1024;
@@ -87,23 +89,12 @@ impl DbEnv {
 
         Ok(())
     }
-
-    /// Takes a function and passes a read-write transaction into it, making sure it's always
-    /// committed in the end of the execution.
-    pub fn update<T, F>(&self, f: F) -> Result<T, DatabaseError>
-    where
-        F: FnOnce(&Tx<RW>) -> T,
-    {
-        let tx = self.tx_mut()?;
-        let res = f(&tx);
-        tx.commit()?;
-        Ok(res)
-    }
 }
 
 impl Database for DbEnv {
-    type Tx = Tx<RO>;
-    type TxMut = Tx<RW>;
+    type Tx = tx::Tx<RO>;
+    type TxMut = tx::Tx<RW>;
+    type Stats = stats::Stats;
 
     fn tx(&self) -> Result<Self::Tx, DatabaseError> {
         Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
@@ -111,6 +102,21 @@ impl Database for DbEnv {
 
     fn tx_mut(&self) -> Result<Self::TxMut, DatabaseError> {
         Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
+    }
+
+    fn stats(&self) -> Result<Self::Stats, DatabaseError> {
+        self.view(|tx| {
+            let mut table_stats = Vec::with_capacity(NUM_TABLES);
+
+            for table in Tables::ALL.iter() {
+                let dbi = tx.inner.open_db(Some(table.name())).map_err(DatabaseError::OpenDb)?;
+                let stat = tx.inner.db_stat(&dbi).map_err(DatabaseError::GetStats)?;
+                table_stats.push(TableStat::new(table.name(), stat));
+            }
+
+            let info = self.0.info().map_err(DatabaseError::Stat)?;
+            Ok(Stats::new(table_stats, info))
+        })?
     }
 }
 
@@ -147,7 +153,7 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
-    use crate::abstraction::{DbCursor, DbCursorMut, DbDupSortCursor, DbTxMut, Walker};
+    use crate::abstraction::{DbCursor, DbCursorMut, DbDupSortCursor, DbTx, DbTxMut, Walker};
     use crate::codecs::Encode;
     use crate::mdbx::test_utils::create_test_db;
     use crate::models::storage::StorageEntry;
@@ -166,6 +172,38 @@ mod tests {
     #[test]
     fn db_creation() {
         create_test_db(DbEnvKind::RW);
+    }
+
+    #[test]
+    fn db_stats() {
+        let env = create_test_db(DbEnvKind::RW);
+
+        // Insert some data to ensure non-zero stats
+        let tx = env.tx_mut().expect(ERROR_INIT_TX);
+        tx.put::<Headers>(1u64, Header::default()).expect(ERROR_PUT);
+        tx.commit().expect(ERROR_COMMIT);
+
+        // Retrieve stats
+        let stats = env.stats().expect("Failed to retrieve database stats");
+
+        // Check overall stats
+        assert!(stats.total_entries() > 0, "Total entries should be non-zero");
+        assert!(stats.total_pages() > 0, "Total pages should be non-zero");
+        assert!(stats.map_size() > 0, "Map size should be non-zero");
+
+        // Check table-specific stats
+        let headers_stat = stats.table_stat(Headers::NAME).expect("Headers table stats not found");
+        assert!(headers_stat.entries() > 0, "Headers table should have entries");
+        assert!(headers_stat.leaf_pages() > 0, "Headers table should have leaf pages");
+
+        // Verify that we can access stats for all tables
+        for table in Tables::ALL {
+            assert!(
+                stats.table_stat(table.name()).is_some(),
+                "Stats for table {} not found",
+                table.name()
+            );
+        }
     }
 
     #[test]

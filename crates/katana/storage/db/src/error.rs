@@ -38,6 +38,9 @@ pub enum DatabaseError {
 
     #[error("failed to clear db: {0}")]
     Clear(libmdbx::Error),
+
+    #[error("failed to get db stats: {0}")]
+    GetStats(libmdbx::Error),
 }
 
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]

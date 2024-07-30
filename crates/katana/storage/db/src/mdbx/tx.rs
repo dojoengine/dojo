@@ -7,6 +7,7 @@ use libmdbx::{TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
+use super::stats::TableStat;
 use crate::abstraction::{DbTx, DbTxMut};
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
@@ -24,7 +25,7 @@ pub type TxRW = Tx<libmdbx::RW>;
 #[derive(Debug)]
 pub struct Tx<K: TransactionKind> {
     /// Libmdbx-sys transaction.
-    inner: libmdbx::Transaction<K>,
+    pub(super) inner: libmdbx::Transaction<K>,
     /// Database table handle cache.
     db_handles: RwLock<[Option<DBI>; NUM_TABLES]>,
 }
@@ -46,6 +47,13 @@ impl<K: TransactionKind> Tx<K> {
         }
 
         Ok(dbi_handle.expect("is some; qed"))
+    }
+
+    /// Retrieves statistics for a specific table.
+    pub fn stat<T: Table>(&self) -> Result<TableStat, DatabaseError> {
+        let dbi = self.get_dbi::<T>()?;
+        let stat = self.inner.db_stat_with_dbi(dbi).map_err(DatabaseError::Stat)?;
+        Ok(TableStat::new(T::NAME, stat))
     }
 }
 

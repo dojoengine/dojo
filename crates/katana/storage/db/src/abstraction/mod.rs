@@ -15,6 +15,12 @@ pub trait Database: Send + Sync {
     /// Read-Write transaction
     type TxMut: DbTxMut + Send + Sync + Debug + 'static;
 
+    /// Database statistics
+    ///
+    /// The database implementation is allowed to specify whatever statistics that
+    /// make sense for it, especially from monitoring and debugging perspective.
+    type Stats: Send + Debug + 'static;
+
     /// Create and begin read-only transaction.
     #[track_caller]
     fn tx(&self) -> Result<Self::Tx, DatabaseError>;
@@ -47,4 +53,7 @@ pub trait Database: Send + Sync {
         tx.commit()?;
         Ok(res)
     }
+
+    /// Retrieve the database statistics.
+    fn stats(&self) -> Result<Self::Stats, DatabaseError>;
 }
