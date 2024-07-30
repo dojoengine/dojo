@@ -66,29 +66,35 @@ impl ResolvableObject for EventMessageObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![SubscriptionField::new(
-            "eventMessageUpdated",
-            TypeRef::named_nn(self.type_name()),
-            |ctx| {
-                SubscriptionFieldFuture::new(async move {
-                    let id = match ctx.args.get("id") {
-                        Some(id) => Some(id.string()?.to_string()),
-                        None => None,
-                    };
-                    // if id is None, then subscribe to all entities
-                    // if id is Some, then subscribe to only the entity with that id
-                    Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(move |entity: EventMessage| {
-                        if id.is_none() || id == Some(entity.id.clone()) {
-                            Some(Ok(Value::Object(EventMessageObject::value_mapping(entity))))
-                        } else {
-                            // id != entity.id , then don't send anything, still listening
-                            None
-                        }
-                    }))
-                })
-            },
-        )
-        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
+        Some(vec![
+            SubscriptionField::new(
+                "eventMessageUpdated",
+                TypeRef::named_nn(self.type_name()),
+                |ctx| {
+                    SubscriptionFieldFuture::new(async move {
+                        let id = match ctx.args.get("id") {
+                            Some(id) => Some(id.string()?.to_string()),
+                            None => None,
+                        };
+                        // if id is None, then subscribe to all entities
+                        // if id is Some, then subscribe to only the entity with that id
+                        Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(
+                            move |entity: EventMessage| {
+                                if id.is_none() || id == Some(entity.id.clone()) {
+                                    Some(Ok(Value::Object(EventMessageObject::value_mapping(
+                                        entity,
+                                    ))))
+                                } else {
+                                    // id != entity.id , then don't send anything, still listening
+                                    None
+                                }
+                            },
+                        ))
+                    })
+                },
+            )
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
     }
 }
 
@@ -185,7 +191,8 @@ pub async fn model_data_recursive_query(
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
-    let mut query = format!("SELECT * FROM [{}] WHERE event_message_id = '{}' ", table_name, entity_id);
+    let mut query =
+        format!("SELECT * FROM [{}] WHERE event_message_id = '{}' ", table_name, entity_id);
     for (column_idx, index) in indexes.iter().enumerate() {
         query.push_str(&format!("AND idx_{} = {} ", column_idx, index));
     }
