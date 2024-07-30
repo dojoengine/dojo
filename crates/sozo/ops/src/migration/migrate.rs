@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Context, Result};
 use cainome::cairo_serde::ByteArray;
@@ -10,10 +11,9 @@ use dojo_world::contracts::naming::{
 };
 use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::manifest::{
-    AbiFormat, BaseManifest, Class, ContractMetadata, DeploymentManifest, DeploymentMetadata,
-    DojoContract, DojoModel, Manifest, ManifestMethods, Operation,
-    WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR, DEPLOYMENT_DIR,
-    MANIFESTS_DIR,
+    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoModel, Manifest,
+    ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata, ABIS_DIR, BASE_DIR,
+    DEPLOYMENT_DIR, MANIFESTS_DIR,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, ResourceMetadata};
 use dojo_world::migration::class::ClassMigration;
@@ -28,7 +28,7 @@ use futures::future;
 use itertools::Itertools;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
-use starknet::accounts::ConnectedAccount;
+use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{
     BlockId, BlockTag, Felt, FunctionCall, InvokeTransactionResult, StarknetError,
 };
@@ -37,6 +37,8 @@ use starknet::core::utils::{
 };
 use starknet::providers::{Provider, ProviderError};
 use tokio::fs;
+
+use crate::auth::{get_resource_selector, ResourceType, ResourceWriter};
 
 use super::ui::{bold_message, italic_message, MigrationUi};
 use super::{
@@ -872,72 +874,85 @@ pub async fn update_manifests_and_abis(
     Ok(())
 }
 
-pub fn update_deployment_metadata(
-    manifest_dir: &Utf8PathBuf,
-    local_manifest: &BaseManifest,
+pub async fn find_authorization_diff<A>(
+    ui: &Ui,
+    world: &WorldContract<A>,
+    diff: &WorldDiff,
     migration_output: Option<&MigrationOutput>,
-) -> Result<Vec<(String, ContractMetadata)>> {
-    let deployment_dir = manifest_dir.join(DEPLOYMENT_DIR);
-    let deployment_metadata_path = deployment_dir.join("metadata").with_extension("toml");
+    default_namespace: &str,
+) -> Result<(Vec<ResourceWriter>, Vec<ResourceWriter>)>
+where
+    A: ConnectedAccount + Sync + Send,
+    <A as Account>::SignError: 'static,
+{
+    let mut grant = vec![];
+    let mut revoke = vec![];
 
-    let mut deployment_metadata = if deployment_metadata_path.exists() {
-        DeploymentMetadata::load_from_path(&deployment_metadata_path)?
-    } else {
-        DeploymentMetadata::default()
-    };
+    for c in &diff.contracts {
+        // remote is none meants its not deployed.
+        // now it could have been deployed during this run
+        // which can be checked from migration_output
+        // if c.remote_class_hash.is_none() {
+        //     continue;
+        // }
 
-    deployment_metadata.add_missing(local_manifest);
+        let mut local = HashMap::new();
+        for write in &c.local_writes {
+            let write =
+                if write.contains(':') { write.to_string() } else { format!("m:{}", write) };
 
-    let work = calculate(migration_output, &mut deployment_metadata, &local_manifest);
+            let resource = ResourceType::from_str(&write)?;
+            let selector = get_resource_selector(ui, world, &resource, default_namespace)
+                .await
+                .with_context(|| format!("Failed to get selector for {}", write))?;
 
-    deployment_metadata
-        .write_to_path_toml(&deployment_metadata_path)
-        .with_context(|| "Failed to write deployment metadata")?;
-
-    Ok(work)
-}
-
-fn calculate(
-    migration_output: Option<&MigrationOutput>,
-    deployment_metadata: &mut DeploymentMetadata,
-    local_manifest: &BaseManifest,
-) -> Vec<(String, ContractMetadata)> {
-    if let Some(migration_output) = migration_output {
-        if migration_output.world_tx_hash.is_some() {
-            deployment_metadata.world_metadata = true;
+            let resource_writer = ResourceWriter::from_str(&format!("{},{}", write, c.tag))?;
+            local.insert(selector, resource_writer);
         }
 
-        migration_output.contracts.iter().flatten().for_each(|contract_output| {
-            let name = contract_output.tag.clone();
+        for write in &c.remote_writes {
+            // This value is fetched from onchain events, so we get them as felts
+            let selector = Felt::from_str(write).with_context(|| "Expected write to be a felt")?;
+            if let Some(_) = local.remove(&selector) {
+                // do nothing for one which are already onchain
+            } else {
+                // revoke ones that are not present in local
+                assert!(Felt::from_str(write).is_ok());
+                revoke.push(ResourceWriter::from_str(&format!("s:{},{}", write, c.tag))?);
+            }
+        }
 
-            let writes = deployment_metadata
-                .contracts
-                .entry(name.clone())
-                .or_insert_with(|| HashMap::default());
-
-            // since `name` is coming from `migration_output` its safe to unwrap
-            let contract = local_manifest.contracts.iter().find(|c| c.inner.tag == name).unwrap();
-
-            contract.inner.writes.iter().for_each(|i| {
-                writes.insert(i.to_string(), Operation::Grant);
-            });
+        // apply remaining
+        local.iter().for_each(|(_, resource_writer)| {
+            grant.push(resource_writer.clone());
         });
+
+        let contract_grants: Vec<_> =
+            grant.iter().filter(|rw| rw.tag_or_address == c.tag).cloned().collect();
+        if !contract_grants.is_empty() {
+            ui.print_sub(format!(
+                "Granting write access to {} for resources: {:?}",
+                c.tag,
+                contract_grants.iter().map(|rw| rw.resource.clone()).collect::<Vec<_>>()
+            ));
+        }
+
+        let contract_revokes: Vec<_> =
+            revoke.iter().filter(|rw| rw.tag_or_address == c.tag).cloned().collect();
+        if !contract_revokes.is_empty() {
+            ui.print_sub(format!(
+                "Revoking write access to {} for resources: {:?}",
+                c.tag,
+                contract_revokes.iter().map(|rw| rw.resource.clone()).collect::<Vec<_>>()
+            ));
+        }
+
+        if !contract_grants.is_empty() || !contract_revokes.is_empty() {
+            ui.print(" ");
+        }
     }
 
-    // given deployment_metadata.contracts return only the ones that are true
-    let contracts = deployment_metadata
-        .contracts
-        .clone()
-        .into_iter()
-        .filter(|(_, v)| v.keys().len() > 0)
-        .collect::<Vec<(String, HashMap<String, Operation>)>>();
-
-    let mut work = vec![];
-    for contract in contracts {
-        work.push(contract);
-    }
-
-    work
+    Ok((grant, revoke))
 }
 
 // copy abi files from `base/abi` to `deployment/abi` and update abi path in

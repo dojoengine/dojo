@@ -74,6 +74,16 @@ impl WorldDiff {
                             .map(|r| *r.inner.class_hash())
                     }),
                     init_calldata: contract.inner.init_calldata.clone(),
+                    local_writes: contract.inner.writes.clone(),
+                    remote_writes: remote
+                        .as_ref()
+                        .and_then(|m| {
+                            m.contracts
+                                .iter()
+                                .find(|r| r.inner.class_hash() == contract.inner.class_hash())
+                                .map(|r| r.inner.writes.clone())
+                        })
+                        .unwrap_or_default(),
                 }
             })
             .collect::<Vec<_>>();
@@ -92,6 +102,8 @@ impl WorldDiff {
             base_class_hash: *local.base.inner.class_hash(),
             remote_class_hash: remote.map(|m| *m.world.inner.class_hash()),
             init_calldata: vec![],
+            local_writes: vec![],
+            remote_writes: vec![],
         };
 
         let mut diff = WorldDiff { world, base, contracts, models };

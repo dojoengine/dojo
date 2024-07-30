@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::{fs, io};
 
 use anyhow::Result;
-use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError};
+use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError, Zeroable};
 use camino::Utf8PathBuf;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -29,10 +29,9 @@ mod test;
 mod types;
 
 pub use types::{
-    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, ContractMetadata, DeploymentManifest,
-    DeploymentMetadata, DojoContract, DojoModel, Manifest, ManifestMethods, Member, Operation,
-    OverlayClass, OverlayContract, OverlayDojoContract, OverlayDojoModel, OverlayManifest,
-    WorldContract, WorldMetadata,
+    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, DeploymentManifest, DojoContract,
+    DojoModel, Manifest, ManifestMethods, Member, OverlayClass, OverlayContract,
+    OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldContract, WorldMetadata,
 };
 
 pub const WORLD_CONTRACT_TAG: &str = "dojo-world";
@@ -445,31 +444,22 @@ impl DeploymentManifest {
     }
 }
 
-impl DeploymentMetadata {
-    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
-        let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
+// impl DeploymentMetadata {
+//     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+//         let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
 
-        Ok(manifest)
-    }
+//         Ok(manifest)
+//     }
 
-    pub fn write_to_path_toml(&self, path: &Utf8PathBuf) -> Result<()> {
-        fs::create_dir_all(path.parent().unwrap())?;
+//     pub fn write_to_path_toml(&self, path: &Utf8PathBuf) -> Result<()> {
+//         fs::create_dir_all(path.parent().unwrap())?;
 
-        let deployed_manifest = toml::to_string_pretty(&self)?;
-        fs::write(path, deployed_manifest)?;
+//         let deployed_manifest = toml::to_string_pretty(&self)?;
+//         fs::write(path, deployed_manifest)?;
 
-        Ok(())
-    }
-
-    // adds any missing contracts to the metadata
-    // this is required so we add any newly added contract to the metadata
-    pub fn add_missing(&mut self, manifest: &BaseManifest) {
-        for contract in manifest.contracts.iter() {
-            let name = naming::get_tag_from_filename(&contract.manifest_name).unwrap();
-            self.contracts.entry(name).or_insert(ContractMetadata::default());
-        }
-    }
-}
+//         Ok(())
+//     }
+// }
 
 // TODO: currently implementing this method using trait is causing lifetime issue due to
 // `async_trait` macro which is hard to debug. So moved it as a async method on type itself.
@@ -494,6 +484,7 @@ where
     let registered_models_event_name = starknet_keccak("ModelRegistered".as_bytes());
     let contract_deployed_event_name = starknet_keccak("ContractDeployed".as_bytes());
     let contract_upgraded_event_name = starknet_keccak("ContractUpgraded".as_bytes());
+    let writer_updated_event_name = starknet_keccak("WriterUpdated".as_bytes());
 
     let events = get_events(
         &provider,
@@ -502,6 +493,7 @@ where
             registered_models_event_name,
             contract_deployed_event_name,
             contract_upgraded_event_name,
+            writer_updated_event_name,
         ]],
     )
     .await?;
@@ -509,6 +501,7 @@ where
     let mut registered_models_events = vec![];
     let mut contract_deployed_events = vec![];
     let mut contract_upgraded_events = vec![];
+    let mut writer_updated_events = vec![];
 
     for event in events {
         match event.keys.first() {
@@ -521,12 +514,19 @@ where
             Some(event_name) if *event_name == contract_upgraded_event_name => {
                 contract_upgraded_events.push(event)
             }
+            Some(event_name) if *event_name == writer_updated_event_name => {
+                writer_updated_events.push(event)
+            }
             _ => {}
         }
     }
 
     let models = parse_models_events(registered_models_events);
-    let mut contracts = parse_contracts_events(contract_deployed_events, contract_upgraded_events);
+    let mut contracts = parse_contracts_events(
+        contract_deployed_events,
+        contract_upgraded_events,
+        writer_updated_events,
+    );
 
     for contract in &mut contracts {
         contract.manifest_name = naming::get_filename_from_tag(&contract.inner.tag);
@@ -566,7 +566,54 @@ async fn get_events<P: Provider + Send + Sync>(
 fn parse_contracts_events(
     deployed: Vec<EmittedEvent>,
     upgraded: Vec<EmittedEvent>,
+    granted: Vec<EmittedEvent>,
 ) -> Vec<Manifest<DojoContract>> {
+    fn retain_only_latest_grant_events(events: Vec<EmittedEvent>) -> HashMap<Felt, Vec<Felt>> {
+        // create a map with some extra data which will be flattened later
+        // system -> (block_num, (resource -> perm))
+        let mut grants: HashMap<Felt, (u64, HashMap<Felt, bool>)> = HashMap::new();
+        events.into_iter().for_each(|event| {
+            let mut data = event.data.into_iter();
+            let block_num = event.block_number;
+            let resource = data.next().expect("resource is missing from event");
+            let contract = data.next().expect("contract is missing from event");
+            let value = data.next().expect("value is missing from event");
+
+            let value = if value.is_zero() { false } else { true };
+
+            // Events that do not have a block number are ignored because we are unable to evaluate
+            // whether the events happened before or after the latest event that has been processed.
+            if let Some(num) = block_num {
+                grants
+                    .entry(contract)
+                    .and_modify(|(current_block, current_resource)| {
+                        if *current_block < num {
+                            *current_block = num;
+                            current_resource.insert(resource, value);
+                        }
+                    })
+                    .or_insert((num, HashMap::from([(resource, value)])));
+            }
+        });
+
+        // flatten out the map to remove block_number information and only include resources that are true
+        // i.e. system -> [resources]
+        let ret = grants
+            .into_iter()
+            .map(|(contract, (_, resources))| {
+                (
+                    contract,
+                    resources
+                        .into_iter()
+                        .filter_map(|(resource, bool)| if bool { Some(resource) } else { None })
+                        .collect(),
+                )
+            })
+            .collect();
+        // dbg!(&ret);
+        ret
+    }
+
     fn retain_only_latest_upgrade_events(events: Vec<EmittedEvent>) -> HashMap<Felt, Felt> {
         // addr -> (block_num, class_hash)
         let mut upgrades: HashMap<Felt, (u64, Felt)> = HashMap::new();
@@ -597,6 +644,7 @@ fn parse_contracts_events(
     }
 
     let upgradeds = retain_only_latest_upgrade_events(upgraded);
+    let grants = retain_only_latest_grant_events(granted);
 
     deployed
         .into_iter()
@@ -623,12 +671,18 @@ fn parse_contracts_events(
                 class_hash = *upgrade;
             }
 
+            let mut writes = vec![];
+            if let Some(contract) = grants.get(&address) {
+                writes.extend(contract.iter().map(|f| f.to_hex_string()));
+            }
+
             Manifest::new(
                 DojoContract {
                     address: Some(address),
                     class_hash,
                     abi: None,
                     tag: tag.clone(),
+                    writes,
                     ..Default::default()
                 },
                 naming::get_filename_from_tag(&tag),

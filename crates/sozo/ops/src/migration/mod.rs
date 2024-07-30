@@ -2,9 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
 use dojo_world::contracts::WorldContract;
-use dojo_world::manifest::{
-    DeploymentMetadata, BASE_DIR, DEPLOYMENT_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
-};
+use dojo_world::manifest::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
@@ -20,11 +18,10 @@ mod ui;
 mod utils;
 
 pub use self::auto_auth::auto_authorize;
-use self::migrate::update_manifests_and_abis;
 pub use self::migrate::{
-    apply_diff, execute_strategy, prepare_migration, print_strategy, update_deployment_metadata,
-    upload_metadata,
+    apply_diff, execute_strategy, prepare_migration, print_strategy, upload_metadata,
 };
+use self::migrate::{find_authorization_diff, update_manifests_and_abis};
 use self::ui::MigrationUi;
 
 #[derive(Debug, Default, Clone)]
@@ -124,7 +121,7 @@ where
         ui.print("\n✨ No diffs found. Remote World is already up to date!");
     }
 
-    let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let strategy = prepare_migration(&target_dir, diff.clone(), name, world_address, &ui)?;
     // TODO: dry run can also show the diffs for things apart from world state
     // what new authorizations would be granted, if ipfs data would change or not,
     // etc...
@@ -183,31 +180,22 @@ where
         )
         .await?;
 
-        let work =
-            update_deployment_metadata(&manifest_dir, &local_manifest, migration_output.as_ref())?;
-
         let account = Arc::new(account);
         let world = WorldContract::new(strategy.world_address, account.clone());
 
-        match auto_authorize(ws, &world, &txn_config, &default_namespace, &work).await {
+        ui.print(" ");
+        ui.print_step(6, "🖋️", "Authorizing systems based on overlay...");
+        let (grant, revoke) = find_authorization_diff(
+            &ui,
+            &world,
+            &diff,
+            migration_output.as_ref(),
+            &default_namespace,
+        )
+        .await?;
+
+        match auto_authorize(ws, &world, &txn_config, &default_namespace, &grant, &revoke).await {
             Ok(()) => {
-                let deployment_dir = manifest_dir.join(DEPLOYMENT_DIR);
-                let deployment_metadata_path =
-                    deployment_dir.join("metadata").with_extension("toml");
-
-                // read back metadata file and update it
-                let mut deployment_metadata =
-                    DeploymentMetadata::load_from_path(&deployment_metadata_path)?;
-
-                work.iter().for_each(|(tag, _)| {
-                    let contract_metadata =
-                        deployment_metadata.contracts.get_mut(tag).expect("unexpected tag found");
-
-                    contract_metadata.clear();
-                });
-
-                deployment_metadata.write_to_path_toml(&deployment_metadata_path)?;
-
                 ui.print_sub("Auto authorize completed successfully");
             }
             Err(e) => {

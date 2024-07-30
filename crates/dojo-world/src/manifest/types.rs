@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs;
 
 use camino::Utf8PathBuf;
@@ -33,26 +32,18 @@ pub struct BaseManifest {
 pub struct DeploymentManifest {
     pub world: Manifest<WorldContract>,
     pub base: Manifest<Class>,
+    // NOTE: `writes` field in contracts is of String but we read the values which are resource hashes
+    // from the events, so needs to be handled accordingly
     pub contracts: Vec<Manifest<DojoContract>>,
     pub models: Vec<Manifest<DojoModel>>,
 }
 
-pub type ContractMetadata = HashMap<String, Operation>;
 // bool represents authorization has been done for that contract
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct DeploymentMetadata {
-    pub world_metadata: bool,
-    // tag -> ContractMetadata
-    pub contracts: HashMap<String, ContractMetadata>,
-}
-
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub enum Operation {
-    #[default]
-    Grant,
-    Revoke,
-}
+// #[derive(Default, Clone, Debug, Serialize, Deserialize)]
+// #[cfg_attr(test, derive(PartialEq))]
+// pub struct DeploymentMetadata {
+//     pub world_metadata: bool,
+// }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
