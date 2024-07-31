@@ -15,8 +15,7 @@ async fn get_contract_address_from_world() {
 
     let world = setup::setup(&sequencer).await.unwrap();
 
-    let contract_address =
-        utils::get_contract_address(&world, ACTION_CONTRACT_TAG.to_string()).await.unwrap();
+    let contract_address = utils::get_contract_address(&world, ACTION_CONTRACT_TAG).await.unwrap();
 
     assert!(contract_address != Felt::ZERO);
 }
@@ -28,7 +27,7 @@ async fn get_contract_address_from_string() {
     let account = sequencer.account(0);
     let world = WorldContract::new(Felt::ZERO, account);
 
-    let contract_address = utils::get_contract_address(&world, "0x1234".to_string()).await.unwrap();
+    let contract_address = utils::get_contract_address(&world, "0x1234").await.unwrap();
 
     assert_eq!(contract_address, Felt::from_hex("0x1234").unwrap());
 }

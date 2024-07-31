@@ -121,7 +121,7 @@ where
         let resource_selector =
             get_resource_selector(ui, world, &new_writer.resource, default_namespace).await?;
         let contract_address =
-            utils::get_contract_address(world, new_writer.tag_or_address.clone()).await?;
+            utils::get_contract_address(world, &new_writer.tag_or_address).await?;
         calls.push(world.grant_writer_getcall(&resource_selector, &contract_address.into()));
     }
 
@@ -160,8 +160,7 @@ where
 
     for new_owner in new_owners {
         let resource_selector =
-            get_resource_selector(ui, world, &new_owner.resource.clone(), default_namespace)
-                .await?;
+            get_resource_selector(ui, world, &new_owner.resource, default_namespace).await?;
         calls.push(world.grant_owner_getcall(&new_owner.owner.into(), &resource_selector));
     }
 
@@ -200,7 +199,7 @@ where
         let resource_selector =
             get_resource_selector(ui, world, &new_writer.resource, default_namespace).await?;
         let contract_address =
-            utils::get_contract_address(world, new_writer.tag_or_address.clone()).await?;
+            utils::get_contract_address(world, &new_writer.tag_or_address).await?;
         calls.push(world.revoke_writer_getcall(&resource_selector, &contract_address.into()));
     }
 
@@ -283,7 +282,7 @@ where
             } else {
                 ensure_namespace(tag_or_address, default_namespace)
             };
-            utils::get_contract_address(world, tag_or_address).await?
+            utils::get_contract_address(world, &tag_or_address).await?
         }
         ResourceType::Model(tag_or_name) => {
             // TODO: Is some models have version 0 (using the name of the struct instead of the

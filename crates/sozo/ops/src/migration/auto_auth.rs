@@ -11,8 +11,8 @@ pub async fn auto_authorize<A>(
     world: &WorldContract<A>,
     txn_config: &TxnConfig,
     default_namespace: &str,
-    grant: &Vec<ResourceWriter>,
-    revoke: &Vec<ResourceWriter>,
+    grant: &[ResourceWriter],
+    revoke: &[ResourceWriter],
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,

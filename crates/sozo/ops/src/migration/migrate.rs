@@ -873,6 +873,7 @@ pub async fn update_manifests_and_abis(
     Ok(())
 }
 
+// For now we juust handle writers, handling of owners might be added in the future
 pub async fn find_authorization_diff<A>(
     ui: &Ui,
     world: &WorldContract<A>,

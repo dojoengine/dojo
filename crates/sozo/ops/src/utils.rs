@@ -23,14 +23,14 @@ use starknet::providers::Provider;
 /// A [`Felt`] with the address of the contract on success.
 pub async fn get_contract_address<A: ConnectedAccount + Sync>(
     world: &WorldContract<A>,
-    tag_or_address: String,
+    tag_or_address: &str,
 ) -> Result<Felt> {
     if tag_or_address.starts_with("0x") {
-        Felt::from_hex(&tag_or_address).map_err(anyhow::Error::from)
+        Felt::from_hex(tag_or_address).map_err(anyhow::Error::from)
     } else {
         let contract_class_hash = world.base().call().await?;
         Ok(starknet::core::utils::get_contract_address(
-            generate_salt(&get_name_from_tag(&tag_or_address)),
+            generate_salt(&get_name_from_tag(tag_or_address)),
             contract_class_hash.into(),
             &[],
             world.address,
