@@ -265,7 +265,7 @@ async fn deploy_account_if_not_exist(
         Ok(_) => Ok(()),
 
         // if account doesn't exist, deploy it by calling `cartridge_deployController` method
-        Err(StarknetError(ContractNotFound)) => {
+        Err(err @ StarknetError(ContractNotFound)) => {
             trace!(
                 %username,
                 chain = format!("{chain_id:#}"),
@@ -275,12 +275,8 @@ async fn deploy_account_if_not_exist(
 
             // Skip deployment if the rpc_url is not a Slot instance
             if !rpc_url.host_str().map_or(false, |host| host.contains("x.cartridge.gg")) {
-                warn!(
-                    %rpc_url,
-                    "Unable to deploy Controller on non-Slot instance. Skipping deployment..."
-                );
-
-                return Ok(());
+                warn!(%rpc_url, "Unable to deploy Controller on non-Slot instance.");
+                bail!("Controller with username '{username}' does not exist: {err}");
             }
 
             let client = Client::new();
