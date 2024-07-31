@@ -17,7 +17,7 @@ use starknet::providers::Provider;
 use starknet::providers::ProviderError::StarknetError;
 use starknet::signers::SigningKey;
 use starknet_crypto::poseidon_hash_single;
-use tracing::trace;
+use tracing::{trace, warn};
 use url::Url;
 
 use super::WorldAddressOrName;
@@ -248,7 +248,7 @@ fn get_dojo_world_address(
 }
 
 /// This function will call the `cartridge_deployController` method to deploy the account if it
-/// doesn't yet exist the chain. But this JSON-RPC method is only available on Katana deployed on
+/// doesn't yet exist on the chain. But this JSON-RPC method is only available on Katana deployed on
 /// Slot. If the `rpc_url` is not a Slot url, it will return an error.
 async fn deploy_account_if_not_exist(
     rpc_url: Url,
@@ -268,14 +268,19 @@ async fn deploy_account_if_not_exist(
         Err(StarknetError(ContractNotFound)) => {
             trace!(
                 %username,
-                 chain = format!("{chain_id:#}"),
-                  address = format!("{address:#x}"),
-                "Account does not exist on chain. Deploying controller..."
+                chain = format!("{chain_id:#}"),
+                address = format!("{address:#x}"),
+                "Controller does not exist on chain. Attempting to deploy..."
             );
 
-            // Check if the provided URL is a Slot instance
+            // Skip deployment if the rpc_url is not a Slot instance
             if !rpc_url.host_str().map_or(false, |host| host.contains("x.cartridge.gg")) {
-                bail!("The provided URL is not a valid Slot instance {rpc_url}");
+                warn!(
+                    %rpc_url,
+                    "Unable to deploy Controller on non-Slot instance. Skipping deployment..."
+                );
+
+                return Ok(());
             }
 
             let client = Client::new();
