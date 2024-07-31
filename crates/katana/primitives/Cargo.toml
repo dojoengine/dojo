@@ -15,13 +15,13 @@ rand = { workspace = true, features = [ "small_rng" ] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
-starknet-crypto.workspace = true
 starknet.workspace = true
+starknet-crypto.workspace = true
 strum_macros.workspace = true
 thiserror.workspace = true
 
 alloy-primitives.workspace = true
-flate2.workspace = true
+flate2 = { workspace = true, optional = true }
 katana-cairo.workspace = true
 
 [dev-dependencies]
@@ -32,6 +32,6 @@ similar-asserts.workspace = true
 default = [ "serde" ]
 
 controller = [  ]
-rpc = [  ]
+rpc = [ "dep:flate2" ]
 serde = [ "alloy-primitives/serde" ]
 slot = [ "controller" ]
