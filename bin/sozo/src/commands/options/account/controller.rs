@@ -250,6 +250,10 @@ fn get_dojo_world_address(
 /// This function will call the `cartridge_deployController` method to deploy the account if it
 /// doesn't yet exist on the chain. But this JSON-RPC method is only available on Katana deployed on
 /// Slot. If the `rpc_url` is not a Slot url, it will return an error.
+///
+/// `cartridge_deployController` is not a method that Katana itself exposes. It's from a middleware
+/// layer that is deployed on top of the Katana deployment on Slot. This method will deploy the
+/// Contract contract of a user based on the Slot deployment.
 async fn deploy_account_if_not_exist(
     rpc_url: Url,
     provider: &impl Provider,
@@ -274,7 +278,7 @@ async fn deploy_account_if_not_exist(
             );
 
             // Skip deployment if the rpc_url is not a Slot instance
-            if !rpc_url.host_str().map_or(false, |host| host.contains("x.cartridge.gg")) {
+            if !rpc_url.host_str().map_or(false, |host| host.contains("api.cartridge.gg")) {
                 warn!(%rpc_url, "Unable to deploy Controller on non-Slot instance.");
                 bail!("Controller with username '{username}' does not exist: {err}");
             }
