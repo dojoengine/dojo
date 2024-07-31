@@ -45,7 +45,7 @@ pub fn prepare_migration_with_world_and_seed(
     world_address: Option<Felt>,
     seed: &str,
     default_namespace: &str,
-) -> Result<MigrationStrategy> {
+) -> Result<(MigrationStrategy, WorldDiff)> {
     // In testing, profile name is always dev.
     let profile_name = "dev";
 
@@ -63,5 +63,6 @@ pub fn prepare_migration_with_world_and_seed(
     let world = WorldDiff::compute(manifest, None, default_namespace)?;
 
     let seed = cairo_short_string_to_felt(seed).unwrap();
-    prepare_for_migration(world_address, seed, &target_dir, world)
+    let strat = prepare_for_migration(world_address, seed, &target_dir, world.clone())?;
+    Ok((strat, world))
 }

@@ -27,7 +27,7 @@ use starknet::providers::JsonRpcClient;
 
 use super::setup;
 use crate::migration::{
-    auto_authorize, execute_strategy, update_deployment_metadata, upload_metadata,
+    auto_authorize, execute_strategy, find_authorization_diff, upload_metadata,
 };
 use crate::utils::get_contract_address_from_reader;
 
@@ -60,7 +60,7 @@ async fn migrate_with_auto_mine() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
@@ -75,7 +75,7 @@ async fn migrate_with_block_time() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         block_time: Some(1000),
@@ -95,7 +95,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         disable_fee: true,
@@ -105,16 +105,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let account = sequencer.account(0);
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &migration,
-            &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &migration,
+        &account,
+        TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
+    )
+    .await
+    .is_err());
 }
 
 #[tokio::test]
@@ -277,7 +275,7 @@ async fn migrate_with_metadata() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
@@ -350,7 +348,7 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, diff) = setup::setup_migration(&config).unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =
@@ -375,10 +373,13 @@ async fn migrate_with_auto_authorize() {
     let world_address = migration.world_address;
     let world = WorldContract::new(world_address, account);
 
-    let work =
-        update_deployment_metadata(&manifest_base.to_path_buf(), &manifest, Some(&output)).unwrap();
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
-    let res = auto_authorize(&ws, &world, &txn_config, &manifest, &default_namespace, &work).await;
+    let (grant, revoke) =
+        find_authorization_diff(&config.ui(), &world, &diff, Some(&output), &default_namespace)
+            .await
+            .unwrap();
+
+    let res = auto_authorize(&ws, &world, &txn_config, &default_namespace, &grant, &revoke).await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();
@@ -411,7 +412,7 @@ async fn migration_with_mismatching_world_address_and_seed() {
 
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
-    let strategy = prepare_migration_with_world_and_seed(
+    let (strategy, _) = prepare_migration_with_world_and_seed(
         base_dir,
         target_dir,
         Some(Felt::ONE),

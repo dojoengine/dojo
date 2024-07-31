@@ -107,7 +107,7 @@ impl FromStr for ResourceOwner {
 pub async fn grant_writer<'a, A>(
     ui: &'a Ui,
     world: &WorldContract<A>,
-    new_writers: &Vec<ResourceWriter>,
+    new_writers: &[ResourceWriter],
     txn_config: TxnConfig,
     default_namespace: &str,
 ) -> Result<()>
@@ -149,7 +149,7 @@ where
 pub async fn grant_owner<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    new_owners: &Vec<ResourceOwner>,
+    new_owners: &[ResourceOwner],
     txn_config: TxnConfig,
     default_namespace: &str,
 ) -> Result<()>
@@ -187,7 +187,7 @@ where
 pub async fn revoke_writer<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    new_writers: &Vec<ResourceWriter>,
+    new_writers: &[ResourceWriter],
     txn_config: TxnConfig,
     default_namespace: &str,
 ) -> Result<()>
@@ -228,7 +228,7 @@ where
 pub async fn revoke_owner<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    new_owners: &Vec<ResourceOwner>,
+    new_owners: &[ResourceOwner],
     txn_config: TxnConfig,
     default_namespace: &str,
 ) -> Result<()>

@@ -18,10 +18,11 @@ mod ui;
 mod utils;
 
 pub use self::auto_auth::auto_authorize;
+use self::migrate::update_manifests_and_abis;
 pub use self::migrate::{
-    apply_diff, execute_strategy, prepare_migration, print_strategy, upload_metadata,
+    apply_diff, execute_strategy, find_authorization_diff, prepare_migration, print_strategy,
+    upload_metadata,
 };
-use self::migrate::{find_authorization_diff, update_manifests_and_abis};
 use self::ui::MigrationUi;
 
 #[derive(Debug, Default, Clone)]

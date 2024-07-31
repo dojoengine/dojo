@@ -136,7 +136,7 @@ fn parse_deployed_contracts_events_without_upgrade() {
         build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3", "c3"),
     ];
 
-    let actual_contracts = parse_contracts_events(events, vec![]);
+    let actual_contracts = parse_contracts_events(events, vec![], vec![]);
     assert_eq!(actual_contracts, expected_contracts);
 }
 
@@ -213,7 +213,7 @@ fn parse_deployed_contracts_events_with_upgrade() {
         },
     ];
 
-    let actual_contracts = parse_contracts_events(deployed_events, upgrade_events);
+    let actual_contracts = parse_contracts_events(deployed_events, upgrade_events, vec![]);
     similar_asserts::assert_eq!(actual_contracts, expected_contracts);
 }
 
@@ -293,7 +293,7 @@ fn events_without_block_number_arent_parsed() {
         },
     ];
 
-    let actual_contracts = parse_contracts_events(deployed_events, upgrade_events);
+    let actual_contracts = parse_contracts_events(deployed_events, upgrade_events, vec![]);
     similar_asserts::assert_eq!(actual_contracts, expected_contracts);
 }
 

@@ -139,7 +139,6 @@ pub fn prepare_for_migration(
     }
 
     // If world address is not provided, then we expect the world to be migrated.
-    // TODO: see if there are any case where world_address is not provided and `world` is none
     let world_address = world_address.unwrap_or_else(|| world.as_ref().unwrap().contract_address);
 
     let mut migration =

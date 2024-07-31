@@ -72,7 +72,7 @@ async fn test_load_from_remote() {
         &ws,
         None,
         sequencer.url().to_string(),
-        &account,
+        account,
         "dojo_examples",
         false,
         TxnConfig::init_wait(),
@@ -82,6 +82,7 @@ async fn test_load_from_remote() {
     .unwrap()
     .unwrap();
 
+    let account = sequencer.account(0);
     // spawn
     let tx = &account
         .execute_v1(vec![Call {
@@ -204,7 +205,7 @@ async fn test_load_from_remote_del() {
         &ws,
         None,
         sequencer.url().to_string(),
-        &account,
+        account,
         "dojo_examples",
         false,
         TxnConfig::init_wait(),
@@ -214,6 +215,7 @@ async fn test_load_from_remote_del() {
     .unwrap()
     .unwrap();
 
+    let account = sequencer.account(0);
     // spawn
     account
         .execute_v1(vec![Call {
@@ -316,7 +318,7 @@ async fn test_get_entity_keys() {
         &ws,
         None,
         sequencer.url().to_string(),
-        &account,
+        account,
         "dojo_examples",
         false,
         TxnConfig::init_wait(),
@@ -326,6 +328,7 @@ async fn test_get_entity_keys() {
     .unwrap()
     .unwrap();
 
+    let account = sequencer.account(0);
     // spawn
     account
         .execute_v1(vec![Call {

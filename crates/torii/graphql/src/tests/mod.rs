@@ -285,7 +285,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         &ws,
         None,
         sequencer.url().to_string(),
-        &account,
+        account,
         "types_test",
         false,
         TxnConfig::init_wait(),
@@ -295,6 +295,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     .unwrap()
     .unwrap();
 
+    let account = sequencer.account(0);
     //  Execute `create` and insert 11 records into storage
     let records_contract = migration_output
         .contracts

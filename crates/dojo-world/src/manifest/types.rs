@@ -38,13 +38,6 @@ pub struct DeploymentManifest {
     pub models: Vec<Manifest<DojoModel>>,
 }
 
-// bool represents authorization has been done for that contract
-// #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-// #[cfg_attr(test, derive(PartialEq))]
-// pub struct DeploymentMetadata {
-//     pub world_metadata: bool,
-// }
-
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayManifest {

@@ -44,7 +44,7 @@ async fn auth_grant_writer_ok() {
     auth::grant_writer(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        vec![moves_mc, position_mc],
+        &[moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
@@ -86,7 +86,7 @@ async fn auth_revoke_writer_ok() {
     auth::grant_writer(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        vec![moves_mc.clone(), position_mc.clone()],
+        &[moves_mc.clone(), position_mc.clone()],
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
@@ -100,7 +100,7 @@ async fn auth_revoke_writer_ok() {
     auth::revoke_writer(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        vec![moves_mc, position_mc],
+        &[moves_mc, position_mc],
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
@@ -141,7 +141,7 @@ async fn auth_grant_owner_ok() {
     auth::grant_owner(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        vec![moves, position],
+        &[moves, position],
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
@@ -181,7 +181,7 @@ async fn auth_revoke_owner_ok() {
     auth::grant_owner(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        vec![moves.clone(), position.clone()],
+        &[moves.clone(), position.clone()],
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
@@ -193,7 +193,7 @@ async fn auth_revoke_owner_ok() {
     auth::revoke_owner(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        vec![moves, position],
+        &[moves, position],
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
