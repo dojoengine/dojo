@@ -1,4 +1,6 @@
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::{anyhow, bail, Context, Result};
 use cainome::cairo_serde::ByteArray;
@@ -26,7 +28,7 @@ use futures::future;
 use itertools::Itertools;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
-use starknet::accounts::ConnectedAccount;
+use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{
     BlockId, BlockTag, Felt, FunctionCall, InvokeTransactionResult, StarknetError,
 };
@@ -37,9 +39,11 @@ use starknet::providers::{Provider, ProviderError};
 use tokio::fs;
 
 use super::ui::{bold_message, italic_message, MigrationUi};
+use super::utils::generate_resource_map;
 use super::{
     ContractDeploymentOutput, ContractMigrationOutput, ContractUpgradeOutput, MigrationOutput,
 };
+use crate::auth::{get_resource_selector, ResourceType, ResourceWriter};
 
 pub fn prepare_migration(
     target_dir: &Utf8PathBuf,
@@ -71,7 +75,7 @@ pub async fn apply_diff<A>(
     ws: &Workspace<'_>,
     account: A,
     txn_config: TxnConfig,
-    strategy: &mut MigrationStrategy,
+    strategy: &MigrationStrategy,
 ) -> Result<MigrationOutput>
 where
     A: ConnectedAccount + Sync + Send,
@@ -93,27 +97,18 @@ where
             ui.print(format!(
                 "\n🎉 Successfully migrated World on block #{} at address {}\n",
                 block_number,
-                bold_message(format!(
-                    "{:#x}",
-                    strategy.world_address().expect("world address must exist")
-                ))
+                bold_message(format!("{:#x}", strategy.world_address))
             ));
         } else {
             ui.print(format!(
                 "\n🎉 Successfully migrated World at address {}\n",
-                bold_message(format!(
-                    "{:#x}",
-                    strategy.world_address().expect("world address must exist")
-                ))
+                bold_message(format!("{:#x}", strategy.world_address))
             ));
         }
     } else {
         ui.print(format!(
             "\n🚨 Partially migrated World at address {}",
-            bold_message(format!(
-                "{:#x}",
-                strategy.world_address().expect("world address must exist")
-            ))
+            bold_message(format!("{:#x}", strategy.world_address))
         ));
     }
 
@@ -207,16 +202,15 @@ where
         None => {}
     };
 
+    let world_address = strategy.world_address;
     let mut migration_output = MigrationOutput {
-        world_address: strategy.world_address()?,
+        world_address,
         world_tx_hash,
         world_block_number,
         full: false,
         models: vec![],
         contracts: vec![],
     };
-
-    let world_address = strategy.world_address()?;
 
     // register namespaces
     let mut namespaces =
@@ -261,13 +255,13 @@ where
 /// into the Dojo resource registry.
 ///
 /// # Arguments
-/// * `element_name` - fully qualified name of the element linked to the metadata
-/// * `resource_id` - the id of the resource to create.
-/// * `artifact` - the artifact to upload on IPFS.
+/// * `ui` - The user interface object for displaying information
+/// * `resource_id` - The id of the resource to create
+/// * `metadata` - The ResourceMetadata object containing the metadata to upload
 ///
 /// # Returns
-/// A [`ResourceData`] object to register in the Dojo resource register
-/// on success.
+/// A [`world::ResourceMetadata`] object to register in the Dojo resource register
+/// on success, or an error if the upload fails.
 async fn upload_on_ipfs_and_create_resource(
     ui: &Ui,
     resource_id: Felt,
@@ -701,42 +695,38 @@ pub fn handle_artifact_error(ui: &Ui, artifact_path: &Path, error: anyhow::Error
 pub async fn get_contract_operation_name<P>(
     provider: P,
     contract: &ContractMigration,
-    world_address: Option<Felt>,
+    world_address: Felt,
 ) -> String
 where
     P: Provider + Sync + Send,
 {
-    if let Some(world_address) = world_address {
-        if let Ok(base_class_hash) = provider
-            .call(
-                FunctionCall {
-                    contract_address: world_address,
-                    calldata: vec![],
-                    entry_point_selector: get_selector_from_name("base").unwrap(),
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await
-        {
-            let contract_address =
-                get_contract_address(contract.salt, base_class_hash[0], &[], world_address);
+    if let Ok(base_class_hash) = provider
+        .call(
+            FunctionCall {
+                contract_address: world_address,
+                calldata: vec![],
+                entry_point_selector: get_selector_from_name("base").unwrap(),
+            },
+            BlockId::Tag(BlockTag::Pending),
+        )
+        .await
+    {
+        let contract_address =
+            get_contract_address(contract.salt, base_class_hash[0], &[], world_address);
 
-            match provider
-                .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
-                .await
-            {
-                Ok(current_class_hash) if current_class_hash != contract.diff.local_class_hash => {
-                    return format!("{}: Upgrade", contract.diff.tag);
-                }
-                Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                    return format!("{}: Deploy", contract.diff.tag);
-                }
-                Ok(_) => return "Already Deployed".to_string(),
-                Err(_) => return format!("{}: Deploy", contract.diff.tag),
+        match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address).await {
+            Ok(current_class_hash) if current_class_hash != contract.diff.local_class_hash => {
+                format!("{}: Upgrade", contract.diff.tag)
             }
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                format!("{}: Deploy", contract.diff.tag)
+            }
+            Ok(_) => "Already Deployed".to_string(),
+            Err(_) => format!("{}: Deploy", contract.diff.tag),
         }
+    } else {
+        format!("{}: Deploy", contract.diff.tag)
     }
-    format!("deploy {}", contract.diff.tag)
 }
 
 pub async fn print_strategy<P>(
@@ -831,6 +821,8 @@ pub async fn update_manifests_and_abis(
     // when the migration has not been applied because in `plan` mode or because of an error,
     // the `migration_output` is empty.
     if let Some(migration_output) = migration_output {
+        // update world deployment transaction hash or block number if they are present in the
+        // migration output
         if migration_output.world_tx_hash.is_some() {
             local_manifest.world.inner.transaction_hash = migration_output.world_tx_hash;
         }
@@ -841,7 +833,7 @@ pub async fn update_manifests_and_abis(
         migration_output.contracts.iter().for_each(|contract_output| {
             // ignore failed migration which are represented by None
             if let Some(output) = contract_output {
-                // find the contract in local manifest and update its address and base class hash
+                // find the contract in local manifest and update its base class hash
                 let local = local_manifest
                     .contracts
                     .iter_mut()
@@ -853,6 +845,8 @@ pub async fn update_manifests_and_abis(
         });
     }
 
+    // compute contract addresses and update them in the manifest for contracts
+    // that have a base class hash set.
     local_manifest.contracts.iter_mut().for_each(|contract| {
         if contract.inner.base_class_hash != Felt::ZERO {
             let salt = generate_salt(&get_name_from_tag(&contract.inner.tag));
@@ -865,8 +859,6 @@ pub async fn update_manifests_and_abis(
         }
     });
 
-    // copy abi files from `base/abi` to `deployment/abi` and update abi path in
-    // local_manifest
     update_manifest_abis(&mut local_manifest, manifest_dir, profile_name).await;
 
     local_manifest
@@ -883,6 +875,135 @@ pub async fn update_manifests_and_abis(
     Ok(())
 }
 
+// For now we juust handle writers, handling of owners might be added in the future
+pub async fn find_authorization_diff<A>(
+    ui: &Ui,
+    world: &WorldContract<A>,
+    diff: &WorldDiff,
+    migration_output: Option<&MigrationOutput>,
+    default_namespace: &str,
+) -> Result<(Vec<ResourceWriter>, Vec<ResourceWriter>)>
+where
+    A: ConnectedAccount + Sync + Send,
+    <A as Account>::SignError: 'static,
+{
+    let mut grant = vec![];
+    let mut revoke = vec![];
+
+    let mut recently_migrated = HashSet::new();
+
+    if let Some(migration_output) = migration_output {
+        recently_migrated = migration_output
+            .contracts
+            .iter()
+            .flatten()
+            .map(|m| m.tag.clone())
+            .collect::<HashSet<_>>()
+    }
+
+    // Generate a map of `Felt` (resource selector) -> `ResourceType` that are available locally
+    // so we can check if the resource being revoked is known locally.
+    //
+    // if the selector is not found in the map we just print its selector
+    let resource_map = generate_resource_map(ui, world, diff).await?;
+
+    for c in &diff.contracts {
+        // remote is none meants it was not previously deployed.
+        // but if it didn't get deployed even during this run we should skip migration for it
+        if c.remote_class_hash.is_none() && !recently_migrated.contains(&c.tag) {
+            ui.print_sub(format!("Skipping migration for contract {}", c.tag));
+            continue;
+        }
+
+        let mut local = HashMap::new();
+        for write in &c.local_writes {
+            let write =
+                if write.contains(':') { write.to_string() } else { format!("m:{}", write) };
+
+            let resource = ResourceType::from_str(&write)?;
+            let selector = get_resource_selector(ui, world, &resource, default_namespace)
+                .await
+                .with_context(|| format!("Failed to get selector for {}", write))?;
+
+            let resource_writer = ResourceWriter::from_str(&format!("{},{}", write, c.tag))?;
+            local.insert(selector, resource_writer);
+        }
+
+        for write in &c.remote_writes {
+            // This value is fetched from onchain events, so we get them as felts
+            let selector = Felt::from_str(write).with_context(|| "Expected write to be a felt")?;
+            if local.remove(&selector).is_some() {
+                // do nothing for one which are already onchain
+            } else {
+                // revoke ones that are not present in local
+                assert!(Felt::from_str(write).is_ok());
+                revoke.push(ResourceWriter::from_str(&format!("s:{},{}", write, c.tag))?);
+            }
+        }
+
+        // apply remaining
+        local.iter().for_each(|(_, resource_writer)| {
+            grant.push(resource_writer.clone());
+        });
+
+        let contract_grants: Vec<_> =
+            grant.iter().filter(|rw| rw.tag_or_address == c.tag).cloned().collect();
+        if !contract_grants.is_empty() {
+            ui.print_sub(format!(
+                "Granting write access to {} for resources: {:?}",
+                c.tag,
+                contract_grants
+                    .iter()
+                    .map(|rw| {
+                        let resource = &rw.resource;
+                        match resource {
+                            // Replace selector with appropriate resource type if present in
+                            // resource_map
+                            ResourceType::Selector(s) => resource_map
+                                .get(&s.to_hex_string())
+                                .cloned()
+                                .unwrap_or_else(|| rw.resource.clone()),
+                            _ => resource.clone(),
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            ));
+        }
+
+        let contract_revokes: Vec<_> =
+            revoke.iter().filter(|rw| rw.tag_or_address == c.tag).cloned().collect();
+        if !contract_revokes.is_empty() {
+            ui.print_sub(format!(
+                "Revoking write access to {} for resources: {:?}",
+                c.tag,
+                contract_revokes
+                    .iter()
+                    .map(|rw| {
+                        let resource = &rw.resource;
+                        match resource {
+                            // Replace selector with appropriate resource type if present in
+                            // resource_map
+                            ResourceType::Selector(s) => resource_map
+                                .get(&s.to_hex_string())
+                                .cloned()
+                                .unwrap_or_else(|| rw.resource.clone()),
+                            _ => resource.clone(),
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            ));
+        }
+
+        if !contract_grants.is_empty() || !contract_revokes.is_empty() {
+            ui.print(" ");
+        }
+    }
+
+    Ok((grant, revoke))
+}
+
+// copy abi files from `base/abi` to `deployment/abi` and update abi path in
+// local_manifest
 async fn update_manifest_abis(
     local_manifest: &mut DeploymentManifest,
     manifest_dir: &Utf8PathBuf,

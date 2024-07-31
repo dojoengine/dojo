@@ -22,7 +22,7 @@ pub enum MigrationMetadata {
 
 #[derive(Debug, Clone)]
 pub struct MigrationStrategy {
-    pub world_address: Option<Felt>,
+    pub world_address: Felt,
     pub world: Option<ContractMigration>,
     pub base: Option<ClassMigration>,
     pub contracts: Vec<ContractMigration>,
@@ -37,13 +37,6 @@ pub struct MigrationItemsInfo {
 }
 
 impl MigrationStrategy {
-    pub fn world_address(&self) -> Result<Felt> {
-        match &self.world {
-            Some(c) => Ok(c.contract_address),
-            None => self.world_address.ok_or(anyhow!("World address not found")),
-        }
-    }
-
     pub fn info(&self) -> MigrationItemsInfo {
         let mut new = 0;
         let mut update = 0;
@@ -145,7 +138,15 @@ pub fn prepare_for_migration(
         world.contract_address = generated_world_address;
     }
 
-    Ok(MigrationStrategy { world_address, world, base, contracts, models, metadata })
+    // If world address is not provided, then we expect the world to be migrated.
+    let world_address = world_address.unwrap_or_else(|| world.as_ref().unwrap().contract_address);
+
+    let mut migration =
+        MigrationStrategy { world_address, world, base, contracts, models, metadata };
+
+    migration.resolve_variable(world_address)?;
+
+    Ok(migration)
 }
 
 fn evaluate_models_to_migrate(

@@ -26,7 +26,9 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
 use super::setup;
-use crate::migration::{auto_authorize, execute_strategy, upload_metadata};
+use crate::migration::{
+    auto_authorize, execute_strategy, find_authorization_diff, upload_metadata,
+};
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -58,7 +60,7 @@ async fn migrate_with_auto_mine() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
@@ -73,7 +75,7 @@ async fn migrate_with_block_time() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         block_time: Some(1000),
@@ -93,7 +95,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         disable_fee: true,
@@ -136,7 +138,7 @@ async fn metadata_calculated_properly() {
         manifest.merge(overlay_manifest);
     }
 
-    let world = WorldDiff::compute(manifest, None);
+    let world = WorldDiff::compute(manifest, None, "dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,
@@ -175,7 +177,7 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     )
     .unwrap();
 
-    let world = WorldDiff::compute(manifest.clone(), None);
+    let world = WorldDiff::compute(manifest.clone(), None, "dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,
@@ -188,7 +190,7 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     let migration_output =
         execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
 
-    // first time others will fail due to calldata error
+    // first time DojoContract named `others` will fail due to calldata error
     assert!(!migration_output.full);
 
     let world_address = migration_output.world_address;
@@ -207,17 +209,16 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     }
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
-    let mut world = WorldDiff::compute(manifest, Some(remote_manifest));
-    world.update_order(&default_namespace).expect("Failed to update order");
+    let world = WorldDiff::compute(manifest, Some(remote_manifest), &default_namespace)
+        .expect("failed to update order");
 
-    let mut migration = prepare_for_migration(
+    let migration = prepare_for_migration(
         Some(world_address),
         felt!("0x12345"),
         &Utf8Path::new(&target_dir).to_path_buf(),
         world,
     )
     .unwrap();
-    migration.resolve_variable(migration.world_address().unwrap()).expect("Failed to resolve");
 
     let migration_output =
         execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
@@ -243,7 +244,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    let world = WorldDiff::compute(manifest, None);
+    let world = WorldDiff::compute(manifest, None, "dojo-test").unwrap();
 
     let migration = prepare_for_migration(
         None,
@@ -262,7 +263,7 @@ async fn migration_from_remote() {
 
     let remote_manifest = DeploymentManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
-        migration.world_address().unwrap(),
+        migration.world_address,
     )
     .await
     .unwrap();
@@ -276,7 +277,7 @@ async fn migrate_with_metadata() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let migration = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
@@ -349,8 +350,7 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let mut migration = setup::setup_migration(&config).unwrap();
-    migration.resolve_variable(migration.world_address().unwrap()).unwrap();
+    let (migration, diff) = setup::setup_migration(&config).unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =
@@ -372,12 +372,16 @@ async fn migrate_with_auto_authorize() {
 
     let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
 
-    let world_address = migration.world_address().expect("must be present");
+    let world_address = migration.world_address;
     let world = WorldContract::new(world_address, account);
 
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
-    let res =
-        auto_authorize(&ws, &world, &txn_config, &manifest, &output, &default_namespace).await;
+    let (grant, revoke) =
+        find_authorization_diff(&config.ui(), &world, &diff, Some(&output), &default_namespace)
+            .await
+            .unwrap();
+
+    let res = auto_authorize(&ws, &world, &txn_config, &default_namespace, &grant, &revoke).await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();
@@ -410,7 +414,7 @@ async fn migration_with_mismatching_world_address_and_seed() {
 
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
-    let strategy = prepare_migration_with_world_and_seed(
+    let (strategy, _) = prepare_migration_with_world_and_seed(
         base_dir,
         target_dir,
         Some(Felt::ONE),
@@ -421,7 +425,7 @@ async fn migration_with_mismatching_world_address_and_seed() {
 
     // The strategy.world has it's address set with the seed directly, and not
     // from the world address provided by the user.
-    assert_ne!(strategy.world_address.unwrap(), strategy.world.unwrap().contract_address);
+    assert_ne!(strategy.world_address, strategy.world.unwrap().contract_address);
 }
 
 /// Get the hash from a IPFS URI

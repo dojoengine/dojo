@@ -20,6 +20,8 @@ pub enum ResourceType {
     Contract(String),
     Namespace(String),
     Model(String),
+    // this can be a selector for any other resource type
+    Selector(Felt),
 }
 
 impl FromStr for ResourceType {
@@ -35,10 +37,14 @@ impl FromStr for ResourceType {
             Some(("namespace", name)) | Some(("ns", name)) => {
                 ResourceType::Namespace(name.to_string())
             }
-            _ => anyhow::bail!(
+            Some(("selector", name)) | Some(("s", name)) => {
+                ResourceType::Selector(Felt::from_str(name)?)
+            }
+            _ => anyhow::bail!(format!(
                 "Resource is expected to be in the format `resource_type:resource_name`: `sozo \
-                 auth grant owner resource_type:resource_name,0x1234`"
-            ),
+                 auth grant owner resource_type:resource_name,0x1234`, Found: {}.",
+                s
+            )),
         };
         Ok(resource)
     }
@@ -101,7 +107,7 @@ impl FromStr for ResourceOwner {
 pub async fn grant_writer<'a, A>(
     ui: &'a Ui,
     world: &WorldContract<A>,
-    new_writers: Vec<ResourceWriter>,
+    new_writers: &[ResourceWriter],
     txn_config: TxnConfig,
     default_namespace: &str,
 ) -> Result<()>
@@ -115,7 +121,7 @@ where
         let resource_selector =
             get_resource_selector(ui, world, &new_writer.resource, default_namespace).await?;
         let contract_address =
-            utils::get_contract_address(world, new_writer.tag_or_address).await?;
+            utils::get_contract_address(world, &new_writer.tag_or_address).await?;
         calls.push(world.grant_writer_getcall(&resource_selector, &contract_address.into()));
     }
 
@@ -143,7 +149,7 @@ where
 pub async fn grant_owner<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    new_owners: Vec<ResourceOwner>,
+    new_owners: &[ResourceOwner],
     txn_config: TxnConfig,
     default_namespace: &str,
 ) -> Result<()>
@@ -180,7 +186,7 @@ where
 pub async fn revoke_writer<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    new_writers: Vec<ResourceWriter>,
+    new_writers: &[ResourceWriter],
     txn_config: TxnConfig,
     default_namespace: &str,
 ) -> Result<()>
@@ -193,7 +199,7 @@ where
         let resource_selector =
             get_resource_selector(ui, world, &new_writer.resource, default_namespace).await?;
         let contract_address =
-            utils::get_contract_address(world, new_writer.tag_or_address).await?;
+            utils::get_contract_address(world, &new_writer.tag_or_address).await?;
         calls.push(world.revoke_writer_getcall(&resource_selector, &contract_address.into()));
     }
 
@@ -221,7 +227,7 @@ where
 pub async fn revoke_owner<A>(
     ui: &Ui,
     world: &WorldContract<A>,
-    new_owners: Vec<ResourceOwner>,
+    new_owners: &[ResourceOwner],
     txn_config: TxnConfig,
     default_namespace: &str,
 ) -> Result<()>
@@ -255,7 +261,7 @@ where
     Ok(())
 }
 
-async fn get_resource_selector<A>(
+pub async fn get_resource_selector<A>(
     ui: &Ui,
     world: &WorldContract<A>,
     resource: &ResourceType,
@@ -275,7 +281,7 @@ where
             } else {
                 ensure_namespace(tag_or_address, default_namespace)
             };
-            utils::get_contract_address(world, tag_or_address).await?
+            utils::get_contract_address(world, &tag_or_address).await?
         }
         ResourceType::Model(tag_or_name) => {
             // TODO: Is some models have version 0 (using the name of the struct instead of the
@@ -297,6 +303,7 @@ where
             compute_selector_from_tag(&tag)
         }
         ResourceType::Namespace(name) => compute_bytearray_hash(name),
+        ResourceType::Selector(selector) => *selector,
     };
 
     Ok(resource_selector)

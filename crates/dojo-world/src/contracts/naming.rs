@@ -68,6 +68,18 @@ pub fn get_filename_from_tag(tag: &str) -> String {
     format!("{tag}{TAG_SEPARATOR}{selector}")
 }
 
+pub fn get_tag_from_filename(filename: &str) -> Result<String> {
+    let parts: Vec<&str> = filename.split(TAG_SEPARATOR).collect();
+    if parts.len() != 3 {
+        return Err(anyhow!(
+            "Unexpected filename. Expected format: \
+             <NAMESPACE>{TAG_SEPARATOR}<NAME>{TAG_SEPARATOR}<SELECTOR>"
+        ));
+    }
+
+    Ok(format!("{}{TAG_SEPARATOR}{}", parts[0], parts[1]))
+}
+
 pub fn compute_bytearray_hash(value: &str) -> Felt {
     let ba = ByteArray::from_string(value).unwrap();
     poseidon_hash_many(&ByteArray::cairo_serialize(&ba))

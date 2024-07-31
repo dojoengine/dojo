@@ -20,7 +20,8 @@ mod utils;
 pub use self::auto_auth::auto_authorize;
 use self::migrate::update_manifests_and_abis;
 pub use self::migrate::{
-    apply_diff, execute_strategy, prepare_migration, print_strategy, upload_metadata,
+    apply_diff, execute_strategy, find_authorization_diff, prepare_migration, print_strategy,
+    upload_metadata,
 };
 use self::ui::MigrationUi;
 
@@ -56,7 +57,7 @@ pub async fn migrate<A>(
     skip_manifests: Option<Vec<String>>,
 ) -> Result<Option<MigrationOutput>>
 where
-    A: ConnectedAccount + Sync + Send,
+    A: ConnectedAccount + Sync + Send + 'static,
     A::Provider: Send,
     A::SignError: 'static,
 {
@@ -108,23 +109,26 @@ where
 
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
-    let mut diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
-    diff.update_order(&default_namespace)?;
+    let diff =
+        WorldDiff::compute(local_manifest.clone(), remote_manifest.clone(), &default_namespace)?;
 
     let total_diffs = diff.count_diffs();
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
 
     if total_diffs == 0 {
-        ui.print("\n✨ No changes to be made. Remote World is already up to date!");
-        return Ok(None);
+        ui.print("\n✨ No diffs found. Remote World is already up to date!");
     }
 
-    let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
-    let world_address = strategy.world_address().expect("world address must exist");
-    strategy.resolve_variable(world_address)?;
-
+    let strategy = prepare_migration(&target_dir, diff.clone(), name, world_address, &ui)?;
+    // TODO: dry run can also show the diffs for things apart from world state
+    // what new authorizations would be granted, if ipfs data would change or not,
+    // etc...
     if dry_run {
-        print_strategy(&ui, account.provider(), &strategy, world_address).await;
+        if total_diffs == 0 {
+            return Ok(None);
+        }
+
+        print_strategy(&ui, account.provider(), &strategy, strategy.world_address).await;
 
         update_manifests_and_abis(
             ws,
@@ -132,7 +136,7 @@ where
             &manifest_dir,
             &profile_name,
             &rpc_url,
-            world_address,
+            strategy.world_address,
             None,
             name,
         )
@@ -140,23 +144,26 @@ where
 
         Ok(None)
     } else {
-        // Migrate according to the diff.
-        let migration_output = match apply_diff(ws, &account, txn_config, &mut strategy).await {
-            Ok(migration_output) => Some(migration_output),
-            Err(e) => {
-                update_manifests_and_abis(
-                    ws,
-                    local_manifest,
-                    &manifest_dir,
-                    &profile_name,
-                    &rpc_url,
-                    world_address,
-                    None,
-                    name,
-                )
-                .await?;
-                return Err(e)?;
+        let migration_output = if total_diffs != 0 {
+            match apply_diff(ws, &account, txn_config, &strategy).await {
+                Ok(migration_output) => Some(migration_output),
+                Err(e) => {
+                    update_manifests_and_abis(
+                        ws,
+                        local_manifest,
+                        &manifest_dir,
+                        &profile_name,
+                        &rpc_url,
+                        strategy.world_address,
+                        None,
+                        name,
+                    )
+                    .await?;
+                    return Err(e)?;
+                }
             }
+        } else {
+            None
         };
 
         update_manifests_and_abis(
@@ -165,34 +172,36 @@ where
             &manifest_dir,
             &profile_name,
             &rpc_url,
-            world_address,
+            strategy.world_address,
             migration_output.clone(),
             name,
         )
         .await?;
 
         let account = Arc::new(account);
-        let world = WorldContract::new(world_address, account.clone());
-        if let Some(migration_output) = &migration_output {
-            match auto_authorize(
-                ws,
-                &world,
-                &txn_config,
-                &local_manifest,
-                migration_output,
-                &default_namespace,
-            )
-            .await
-            {
-                Ok(()) => {
-                    ui.print_sub("Auto authorize completed successfully");
-                }
-                Err(e) => {
-                    ui.print_sub(format!("Failed to auto authorize with error: {e}"));
-                }
-            };
+        let world = WorldContract::new(strategy.world_address, account.clone());
 
-            //
+        ui.print(" ");
+        ui.print_step(6, "🖋️", "Authorizing systems based on overlay...");
+        let (grant, revoke) = find_authorization_diff(
+            &ui,
+            &world,
+            &diff,
+            migration_output.as_ref(),
+            &default_namespace,
+        )
+        .await?;
+
+        match auto_authorize(ws, &world, &txn_config, &default_namespace, &grant, &revoke).await {
+            Ok(()) => {
+                ui.print_sub("Auto authorize completed successfully");
+            }
+            Err(e) => {
+                ui.print_sub(format!("Failed to auto authorize with error: {e}"));
+            }
+        };
+
+        if let Some(migration_output) = &migration_output {
             if !ws.config().offline() {
                 upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
             }

@@ -32,6 +32,8 @@ pub struct BaseManifest {
 pub struct DeploymentManifest {
     pub world: Manifest<WorldContract>,
     pub base: Manifest<Class>,
+    // NOTE: `writes` field in contracts is of String but we read the values which are resource
+    // hashes from the events, so needs to be handled accordingly
     pub contracts: Vec<Manifest<DojoContract>>,
     pub models: Vec<Manifest<DojoModel>>,
 }

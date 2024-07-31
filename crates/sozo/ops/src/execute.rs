@@ -20,7 +20,7 @@ pub async fn execute<A>(
 where
     A: ConnectedAccount + Sync + Send + 'static,
 {
-    let contract_address = utils::get_contract_address(world, tag_or_address).await?;
+    let contract_address = utils::get_contract_address(world, &tag_or_address).await?;
     let res = world
         .account
         .execute_v1(vec![Call {

@@ -124,7 +124,7 @@ async fn call_with_contract_address() {
 
     let contract_address = utils::get_contract_address::<
         SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    >(&world, CONTRACT_TAG.to_string())
+    >(&world, CONTRACT_TAG)
     .await
     .unwrap();
 

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::{fs, io};
 
 use anyhow::Result;
-use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError};
+use cainome::cairo_serde::{ByteArray, CairoSerde, Error as CainomeError, Zeroable};
 use camino::Utf8PathBuf;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -132,6 +132,24 @@ impl BaseManifest {
         self.models.retain(|model| !tags.contains(&model.inner.tag));
     }
 
+    /// Generates a map of `tag -> ManifestKind`
+    pub fn build_kind_from_tags(&self) -> HashMap<String, ManifestKind> {
+        let mut kind_from_tags = HashMap::<String, ManifestKind>::new();
+
+        kind_from_tags.insert(WORLD_CONTRACT_TAG.to_string(), ManifestKind::WorldClass);
+        kind_from_tags.insert(BASE_CONTRACT_TAG.to_string(), ManifestKind::BaseClass);
+
+        for model in self.models.as_slice() {
+            kind_from_tags.insert(model.inner.tag.clone(), ManifestKind::Model);
+        }
+
+        for contract in self.contracts.as_slice() {
+            kind_from_tags.insert(contract.inner.tag.clone(), ManifestKind::Contract);
+        }
+
+        kind_from_tags
+    }
+
     pub fn merge(&mut self, overlay: OverlayManifest) {
         let mut base_map = HashMap::new();
 
@@ -161,7 +179,7 @@ impl BaseManifest {
 }
 
 #[derive(Clone, Debug, Copy)]
-enum ManifestKind {
+pub enum ManifestKind {
     BaseClass,
     WorldClass,
     Contract,
@@ -169,23 +187,6 @@ enum ManifestKind {
 }
 
 impl OverlayManifest {
-    fn build_kind_from_tags(base_manifest: &BaseManifest) -> HashMap<String, ManifestKind> {
-        let mut kind_from_tags = HashMap::<String, ManifestKind>::new();
-
-        kind_from_tags.insert(WORLD_CONTRACT_TAG.to_string(), ManifestKind::WorldClass);
-        kind_from_tags.insert(BASE_CONTRACT_TAG.to_string(), ManifestKind::BaseClass);
-
-        for model in base_manifest.models.as_slice() {
-            kind_from_tags.insert(model.inner.tag.clone(), ManifestKind::Model);
-        }
-
-        for contract in base_manifest.contracts.as_slice() {
-            kind_from_tags.insert(contract.inner.tag.clone(), ManifestKind::Contract);
-        }
-
-        kind_from_tags
-    }
-
     fn load_overlay(
         path: &PathBuf,
         kind: ManifestKind,
@@ -219,7 +220,7 @@ impl OverlayManifest {
     ) -> Result<Self, AbstractManifestError> {
         fs::create_dir_all(path)?;
 
-        let kind_from_tags = Self::build_kind_from_tags(base_manifest);
+        let kind_from_tags = base_manifest.build_kind_from_tags();
         let mut loaded_tags = HashMap::<String, bool>::new();
         let mut overlays = OverlayManifest::default();
 
@@ -360,6 +361,7 @@ impl DeploymentManifest {
         Ok(())
     }
 
+    // Writes the Deployment manifest in JSON format, with ABIs embedded.
     pub fn write_to_path_json(&self, path: &Utf8PathBuf, root_dir: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
@@ -442,6 +444,23 @@ impl DeploymentManifest {
     }
 }
 
+// impl DeploymentMetadata {
+//     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+//         let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
+
+//         Ok(manifest)
+//     }
+
+//     pub fn write_to_path_toml(&self, path: &Utf8PathBuf) -> Result<()> {
+//         fs::create_dir_all(path.parent().unwrap())?;
+
+//         let deployed_manifest = toml::to_string_pretty(&self)?;
+//         fs::write(path, deployed_manifest)?;
+
+//         Ok(())
+//     }
+// }
+
 // TODO: currently implementing this method using trait is causing lifetime issue due to
 // `async_trait` macro which is hard to debug. So moved it as a async method on type itself.
 // #[async_trait]
@@ -465,6 +484,7 @@ where
     let registered_models_event_name = starknet_keccak("ModelRegistered".as_bytes());
     let contract_deployed_event_name = starknet_keccak("ContractDeployed".as_bytes());
     let contract_upgraded_event_name = starknet_keccak("ContractUpgraded".as_bytes());
+    let writer_updated_event_name = starknet_keccak("WriterUpdated".as_bytes());
 
     let events = get_events(
         &provider,
@@ -473,6 +493,7 @@ where
             registered_models_event_name,
             contract_deployed_event_name,
             contract_upgraded_event_name,
+            writer_updated_event_name,
         ]],
     )
     .await?;
@@ -480,6 +501,7 @@ where
     let mut registered_models_events = vec![];
     let mut contract_deployed_events = vec![];
     let mut contract_upgraded_events = vec![];
+    let mut writer_updated_events = vec![];
 
     for event in events {
         match event.keys.first() {
@@ -492,12 +514,19 @@ where
             Some(event_name) if *event_name == contract_upgraded_event_name => {
                 contract_upgraded_events.push(event)
             }
+            Some(event_name) if *event_name == writer_updated_event_name => {
+                writer_updated_events.push(event)
+            }
             _ => {}
         }
     }
 
     let models = parse_models_events(registered_models_events);
-    let mut contracts = parse_contracts_events(contract_deployed_events, contract_upgraded_events);
+    let mut contracts = parse_contracts_events(
+        contract_deployed_events,
+        contract_upgraded_events,
+        writer_updated_events,
+    );
 
     for contract in &mut contracts {
         contract.manifest_name = naming::get_filename_from_tag(&contract.inner.tag);
@@ -537,7 +566,52 @@ async fn get_events<P: Provider + Send + Sync>(
 fn parse_contracts_events(
     deployed: Vec<EmittedEvent>,
     upgraded: Vec<EmittedEvent>,
+    granted: Vec<EmittedEvent>,
 ) -> Vec<Manifest<DojoContract>> {
+    fn retain_only_latest_grant_events(events: Vec<EmittedEvent>) -> HashMap<Felt, Vec<Felt>> {
+        // create a map with some extra data which will be flattened later
+        // system -> (block_num, (resource -> perm))
+        let mut grants: HashMap<Felt, (u64, HashMap<Felt, bool>)> = HashMap::new();
+        events.into_iter().for_each(|event| {
+            let mut data = event.data.into_iter();
+            let block_num = event.block_number;
+            let resource = data.next().expect("resource is missing from event");
+            let contract = data.next().expect("contract is missing from event");
+            let value = data.next().expect("value is missing from event");
+
+            let value = !value.is_zero();
+
+            // Events that do not have a block number are ignored because we are unable to evaluate
+            // whether the events happened before or after the latest event that has been processed.
+            if let Some(num) = block_num {
+                grants
+                    .entry(contract)
+                    .and_modify(|(current_block, current_resource)| {
+                        if *current_block < num {
+                            *current_block = num;
+                            current_resource.insert(resource, value);
+                        }
+                    })
+                    .or_insert((num, HashMap::from([(resource, value)])));
+            }
+        });
+
+        // flatten out the map to remove block_number information and only include resources that
+        // are true i.e. system -> [resources]
+        grants
+            .into_iter()
+            .map(|(contract, (_, resources))| {
+                (
+                    contract,
+                    resources
+                        .into_iter()
+                        .filter_map(|(resource, bool)| if bool { Some(resource) } else { None })
+                        .collect(),
+                )
+            })
+            .collect()
+    }
+
     fn retain_only_latest_upgrade_events(events: Vec<EmittedEvent>) -> HashMap<Felt, Felt> {
         // addr -> (block_num, class_hash)
         let mut upgrades: HashMap<Felt, (u64, Felt)> = HashMap::new();
@@ -568,6 +642,7 @@ fn parse_contracts_events(
     }
 
     let upgradeds = retain_only_latest_upgrade_events(upgraded);
+    let grants = retain_only_latest_grant_events(granted);
 
     deployed
         .into_iter()
@@ -594,12 +669,18 @@ fn parse_contracts_events(
                 class_hash = *upgrade;
             }
 
+            let mut writes = vec![];
+            if let Some(contract) = grants.get(&address) {
+                writes.extend(contract.iter().map(|f| f.to_hex_string()));
+            }
+
             Manifest::new(
                 DojoContract {
                     address: Some(address),
                     class_hash,
                     abi: None,
                     tag: tag.clone(),
+                    writes,
                     ..Default::default()
                 },
                 naming::get_filename_from_tag(&tag),

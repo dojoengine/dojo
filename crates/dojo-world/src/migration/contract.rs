@@ -18,6 +18,8 @@ pub struct ContractDiff {
     pub base_class_hash: Felt,
     pub remote_class_hash: Option<Felt>,
     pub init_calldata: Vec<String>,
+    pub local_writes: Vec<String>,
+    pub remote_writes: Vec<String>,
 }
 
 impl StateDiff for ContractDiff {

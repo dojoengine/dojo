@@ -75,14 +75,12 @@ pub async fn deploy_world(
         manifest.merge(overlay_manifest);
     }
 
-    let mut world = WorldDiff::compute(manifest.clone(), None);
-    world.update_order(default_namespace).unwrap();
+    let world = WorldDiff::compute(manifest.clone(), None, default_namespace).unwrap();
 
     let account = sequencer.account(0);
 
-    let mut strategy =
+    let strategy =
         prepare_for_migration(None, Felt::from_hex("0x12345").unwrap(), target_dir, world).unwrap();
-    strategy.resolve_variable(strategy.world_address().unwrap()).unwrap();
 
     let base_class_hash =
         strategy.base.unwrap().declare(&account, &TxnConfig::init_wait()).await.unwrap().class_hash;

@@ -156,7 +156,7 @@ pub async fn grant(
                 contracts=?models_contracts,
                 "Granting Writer permissions."
             );
-            auth::grant_writer(ui, &world, models_contracts, transaction.into(), default_namespace)
+            auth::grant_writer(ui, &world, &models_contracts, transaction.into(), default_namespace)
                 .await
         }
         AuthKind::Owner { owners_resources } => {
@@ -164,7 +164,7 @@ pub async fn grant(
                 resources=?owners_resources,
                 "Granting Owner permissions."
             );
-            auth::grant_owner(ui, &world, owners_resources, transaction.into(), default_namespace)
+            auth::grant_owner(ui, &world, &owners_resources, transaction.into(), default_namespace)
                 .await
         }
     }
@@ -192,15 +192,21 @@ pub async fn revoke(
                 contracts=?models_contracts,
                 "Revoking Writer permissions."
             );
-            auth::revoke_writer(ui, &world, models_contracts, transaction.into(), default_namespace)
-                .await
+            auth::revoke_writer(
+                ui,
+                &world,
+                &models_contracts,
+                transaction.into(),
+                default_namespace,
+            )
+            .await
         }
         AuthKind::Owner { owners_resources } => {
             trace!(
                 resources=?owners_resources,
                 "Revoking Owner permissions."
             );
-            auth::revoke_owner(ui, &world, owners_resources, transaction.into(), default_namespace)
+            auth::revoke_owner(ui, &world, &owners_resources, transaction.into(), default_namespace)
                 .await
         }
     }

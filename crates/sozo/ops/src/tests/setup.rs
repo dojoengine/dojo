@@ -4,6 +4,7 @@ use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::strategy::MigrationStrategy;
+use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
@@ -49,7 +50,7 @@ pub fn setup_ws(config: &Config) -> Workspace<'_> {
 /// # Returns
 ///
 /// A [`MigrationStrategy`] to execute to migrate the full spawn-and-moves project.
-pub fn setup_migration(config: &Config) -> Result<MigrationStrategy> {
+pub fn setup_migration(config: &Config) -> Result<(MigrationStrategy, WorldDiff)> {
     let ws = setup_ws(config);
 
     let manifest_path = config.manifest_path();
@@ -83,9 +84,7 @@ pub async fn setup(
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration(&config)?;
-    let _ =
-        migration.resolve_variable(migration.world_address().expect("world address must exist"));
+    let (migration, _) = setup_migration(&config)?;
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -97,6 +96,7 @@ pub async fn setup(
         TxnConfig { wait: true, ..Default::default() },
     )
     .await?;
+    // TODO: do we need to do authorization in setup?
     let world = WorldContract::new(output.world_address, account)
         .with_block(BlockId::Tag(BlockTag::Pending));
 
