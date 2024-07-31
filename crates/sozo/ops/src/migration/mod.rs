@@ -44,9 +44,6 @@ pub struct ContractMigrationOutput {
     pub base_class_hash: Felt,
 }
 
-// TODO: read deployment manifest to find diff in `writes` for auto authorize
-// TODO: add tests
-// TODO: general cleanup
 #[allow(clippy::too_many_arguments)]
 pub async fn migrate<A>(
     ws: &Workspace<'_>,

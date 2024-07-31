@@ -579,7 +579,7 @@ fn parse_contracts_events(
             let contract = data.next().expect("contract is missing from event");
             let value = data.next().expect("value is missing from event");
 
-            let value = if value.is_zero() { false } else { true };
+            let value = !value.is_zero();
 
             // Events that do not have a block number are ignored because we are unable to evaluate
             // whether the events happened before or after the latest event that has been processed.
@@ -596,9 +596,9 @@ fn parse_contracts_events(
             }
         });
 
-        // flatten out the map to remove block_number information and only include resources that are true
-        // i.e. system -> [resources]
-        let ret = grants
+        // flatten out the map to remove block_number information and only include resources that
+        // are true i.e. system -> [resources]
+        grants
             .into_iter()
             .map(|(contract, (_, resources))| {
                 (
@@ -609,9 +609,7 @@ fn parse_contracts_events(
                         .collect(),
                 )
             })
-            .collect();
-        // dbg!(&ret);
-        ret
+            .collect()
     }
 
     fn retain_only_latest_upgrade_events(events: Vec<EmittedEvent>) -> HashMap<Felt, Felt> {

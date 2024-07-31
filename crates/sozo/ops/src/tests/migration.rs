@@ -105,14 +105,16 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let account = sequencer.account(0);
 
-    assert!(execute_strategy(
-        &ws,
-        &migration,
-        &account,
-        TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
-    )
-    .await
-    .is_err());
+    assert!(
+        execute_strategy(
+            &ws,
+            &migration,
+            &account,
+            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
+        )
+        .await
+        .is_err()
+    );
 }
 
 #[tokio::test]

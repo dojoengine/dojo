@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::str::FromStr;
 
@@ -38,12 +38,11 @@ use starknet::core::utils::{
 use starknet::providers::{Provider, ProviderError};
 use tokio::fs;
 
-use crate::auth::{get_resource_selector, ResourceType, ResourceWriter};
-
 use super::ui::{bold_message, italic_message, MigrationUi};
 use super::{
     ContractDeploymentOutput, ContractMigrationOutput, ContractUpgradeOutput, MigrationOutput,
 };
+use crate::auth::{get_resource_selector, ResourceType, ResourceWriter};
 
 pub fn prepare_migration(
     target_dir: &Utf8PathBuf,
@@ -888,13 +887,24 @@ where
     let mut grant = vec![];
     let mut revoke = vec![];
 
+    let mut recently_migrated = HashSet::new();
+
+    if let Some(migration_output) = migration_output {
+        recently_migrated = migration_output
+            .contracts
+            .iter()
+            .flatten()
+            .map(|m| m.tag.clone())
+            .collect::<HashSet<_>>()
+    }
+
     for c in &diff.contracts {
-        // remote is none meants its not deployed.
-        // now it could have been deployed during this run
-        // which can be checked from migration_output
-        // if c.remote_class_hash.is_none() {
-        //     continue;
-        // }
+        // remote is none meants it was not previously deployed.
+        // but if it didn't get deployed even during this run we should skip migration for it
+        if c.remote_class_hash.is_none() && !recently_migrated.contains(&c.tag) {
+            ui.print_sub(format!("Skipping migration for contract {}", c.tag));
+            continue;
+        }
 
         let mut local = HashMap::new();
         for write in &c.local_writes {
@@ -913,7 +923,7 @@ where
         for write in &c.remote_writes {
             // This value is fetched from onchain events, so we get them as felts
             let selector = Felt::from_str(write).with_context(|| "Expected write to be a felt")?;
-            if let Some(_) = local.remove(&selector) {
+            if local.remove(&selector).is_some() {
                 // do nothing for one which are already onchain
             } else {
                 // revoke ones that are not present in local
