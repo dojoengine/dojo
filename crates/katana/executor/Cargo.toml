@@ -10,19 +10,13 @@ version.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 
-parking_lot.workspace = true
+parking_lot = { workspace = true, optional = true }
 starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
 blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "cairo-2.7", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
-
-# Disable SIR for now until they support Cairo 2.6.3
-# # starknet_in_rust deps
-# cairo-lang-sierra = { workspace = true, optional = true }
-# sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "601a65e", optional = true }
-# starknet-types-core = { version = "0.0.9", optional = true }
 
 [dev-dependencies]
 alloy-primitives.workspace = true
@@ -42,10 +36,13 @@ pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 rayon.workspace = true
 
 [features]
-blockifier = [ "dep:blockifier", "dep:katana-cairo", "dep:starknet" ]
+blockifier = [
+	"dep:blockifier",
+	"dep:katana-cairo",
+	"dep:parking_lot",
+	"dep:starknet",
+]
 default = [ "blockifier" ]
-# native = [ "sir", "sir/cairo-native" ]
-# sir = [ "dep:sir", "dep:starknet-types-core" ]
 
 [[bench]]
 harness = false

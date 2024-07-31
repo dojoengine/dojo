@@ -7,6 +7,14 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+katana-core.workspace = true
+katana-db.workspace = true
+katana-node.workspace = true
+katana-primitives.workspace = true
+katana-rpc.workspace = true
+katana-rpc-api.workspace = true
+katana-slot-controller = { workspace = true, optional = true }
+
 alloy-primitives.workspace = true
 anyhow.workspace = true
 clap.workspace = true
@@ -14,31 +22,22 @@ clap_complete.workspace = true
 common.workspace = true
 console.workspace = true
 dojo-metrics.workspace = true
-katana-core.workspace = true
-katana-executor.workspace = true
-katana-primitives.workspace = true
-katana-rpc-api.workspace = true
-katana-rpc.workspace = true
 serde_json.workspace = true
 shellexpand = "3.1.0"
 tokio.workspace = true
-tracing-subscriber.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true
 url.workspace = true
-
-katana-slot-controller = { workspace = true, optional = true }
+comfy-table = "7.1.1"
+byte-unit = "5.1.4"
 
 [dev-dependencies]
 assert_matches.workspace = true
 
 [features]
-default = [ "blockifier", "jemalloc", "messaging", "slot" ]
-
-blockifier = [ "katana-executor/blockifier" ]
-# Disable until SIR support Cairo 2.6.3
-#sir = [ "katana-executor/sir" ]
+default = [ "jemalloc", "messaging", "slot" ]
 
 jemalloc = [ "dojo-metrics/jemalloc" ]
-messaging = [ "katana-core/messaging" ]
+messaging = [ "katana-node/messaging" ]
 slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
-starknet-messaging = [ "katana-core/starknet-messaging", "messaging" ]
+starknet-messaging = [ "katana-node/starknet-messaging" ]

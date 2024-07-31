@@ -37,8 +37,8 @@ pub use types::{
 pub const WORLD_CONTRACT_TAG: &str = "dojo-world";
 pub const BASE_CONTRACT_TAG: &str = "dojo-base";
 
-pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world";
-pub const BASE_QUALIFIED_PATH: &str = "dojo::base::base";
+pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world_contract::world";
+pub const BASE_QUALIFIED_PATH: &str = "dojo::contract::base_contract::base";
 
 pub const MANIFESTS_DIR: &str = "manifests";
 pub const DEPLOYMENT_DIR: &str = "deployment";

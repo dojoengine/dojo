@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -134,7 +136,7 @@ async fn test_get_transactions() {
     let max_retry = 10;
     let mut attempt = 0;
     loop {
-        match client.transaction_status(last_tx_hash).await {
+        match client.get_transaction_status(last_tx_hash).await {
             Ok(s) => {
                 if s != TransactionStatus::Received {
                     break;

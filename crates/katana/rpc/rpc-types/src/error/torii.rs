@@ -2,7 +2,6 @@ use futures::channel::mpsc::Receiver;
 use jsonrpsee::core::Error;
 use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
-use katana_core::sequencer_error::SequencerError;
 use katana_core::service::block_producer::TxWithOutcome;
 use katana_provider::error::ProviderError;
 
@@ -44,15 +43,6 @@ impl ToriiApiError {
 impl From<ProviderError> for ToriiApiError {
     fn from(value: ProviderError) -> Self {
         ToriiApiError::UnexpectedError { reason: value.to_string() }
-    }
-}
-
-impl From<SequencerError> for ToriiApiError {
-    fn from(value: SequencerError) -> Self {
-        match value {
-            SequencerError::BlockNotFound(_) => ToriiApiError::BlockNotFound,
-            err => ToriiApiError::UnexpectedError { reason: err.to_string() },
-        }
     }
 }
 

@@ -2,45 +2,46 @@
 resolver = "2"
 
 members = [
-    "bin/dojo-language-server",
-    "bin/katana",
-    "bin/saya",
-    "bin/scheduler",
-    "bin/sozo",
-    "bin/torii",
-    "crates/benches",
-    "crates/common",
-    "crates/dojo-bindgen",
-    "crates/dojo-core",
-    "crates/dojo-lang",
-    "crates/dojo-test-utils",
-    "crates/dojo-types",
-    "crates/dojo-world",
-    "crates/dojo-world/abigen",
-    "crates/katana/controller",
-    "crates/katana/core",
-    "crates/katana/executor",
-    "crates/katana/node-bindings",
-    "crates/katana/primitives",
-    "crates/katana/rpc/rpc",
-    "crates/katana/rpc/rpc-api",
-    "crates/katana/rpc/rpc-types",
-    "crates/katana/rpc/rpc-types-builder",
-    "crates/katana/runner",
-    "crates/katana/runner/runner-macro",
-    "crates/katana/storage/codecs",
-    "crates/katana/storage/codecs/derive",
-    "crates/katana/storage/db",
-    "crates/katana/storage/provider",
-    "crates/katana/tasks",
-    "crates/metrics",
-    "crates/saya/core",
-    "crates/saya/provider",
-    "crates/sozo/signers",
-    "crates/torii/client",
-    "crates/torii/server",
-    "crates/torii/types-test",
-    "examples/spawn-and-move",
+	"bin/dojo-language-server",
+	"bin/katana",
+	"bin/saya",
+	"bin/scheduler",
+	"bin/sozo",
+	"bin/torii",
+	"crates/benches",
+	"crates/common",
+	"crates/dojo-bindgen",
+	"crates/dojo-core",
+	"crates/dojo-lang",
+	"crates/dojo-test-utils",
+	"crates/dojo-types",
+	"crates/dojo-world",
+	"crates/dojo-world/abigen",
+	"crates/katana/controller",
+	"crates/katana/core",
+	"crates/katana/executor",
+	"crates/katana/node",
+	"crates/katana/node-bindings",
+	"crates/katana/primitives",
+	"crates/katana/rpc/rpc",
+	"crates/katana/rpc/rpc-api",
+	"crates/katana/rpc/rpc-types",
+	"crates/katana/rpc/rpc-types-builder",
+	"crates/katana/runner",
+	"crates/katana/runner/runner-macro",
+	"crates/katana/storage/codecs",
+	"crates/katana/storage/codecs/derive",
+	"crates/katana/storage/db",
+	"crates/katana/storage/provider",
+	"crates/katana/tasks",
+	"crates/metrics",
+	"crates/saya/core",
+	"crates/saya/provider",
+	"crates/sozo/signers",
+	"crates/torii/client",
+	"crates/torii/server",
+	"crates/torii/types-test",
+	"examples/spawn-and-move",
 ]
 
 [workspace.package]
@@ -48,7 +49,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.0-alpha.2"
+version = "1.0.0-alpha.3"
 
 [profile.performance]
 codegen-units = 1
@@ -57,7 +58,7 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.0", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.2", features = [ "abigen-rs" ] }
 common = { path = "crates/common" }
 
 # metrics
@@ -81,10 +82,11 @@ katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor", default-features = false }
+katana-node = { path = "crates/katana/node", default-features = false }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }
-katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
+katana-rpc-api = { path = "crates/katana/rpc/rpc-api", default-features = false }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
@@ -231,9 +233,7 @@ slot = { git = "https://github.com/cartridge-gg/slot", rev = "4c1165d" }
 alloy-contract = { version = "0.2", default-features = false }
 alloy-json-rpc = { version = "0.2", default-features = false }
 alloy-network = { version = "0.2", default-features = false }
-alloy-provider = { version = "0.2", default-features = false, features = [
-    "reqwest",
-] }
+alloy-provider = { version = "0.2", default-features = false, features = [ "reqwest" ] }
 alloy-rpc-types-eth = { version = "0.2", default-features = false }
 alloy-signer = { version = "0.2", default-features = false }
 alloy-transport = { version = "0.2", default-features = false }

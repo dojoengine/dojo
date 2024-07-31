@@ -1,5 +1,5 @@
 #[derive(Drop, Serde)]
-#[dojo::model(namespace: "bestiary")]
+#[dojo::model]
 pub struct RiverSkale {
     #[key]
     pub id: u32,

@@ -19,12 +19,13 @@ dojo-world = { path = "../dojo-world", features = [ "manifest", "migration" ] }
 jsonrpsee = { workspace = true, features = [ "server" ] }
 katana-core = { path = "../katana/core" }
 katana-executor = { workspace = true, features = [ "blockifier" ] }
+katana-node.workspace = true
 katana-primitives = { path = "../katana/primitives" }
 katana-rpc = { path = "../katana/rpc/rpc" }
 katana-rpc-api = { path = "../katana/rpc/rpc-api" }
 katana-starknet = { package = "starknet", version = "=0.10.0" }
-scarb-ui.workspace = true
 scarb.workspace = true
+scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
@@ -40,8 +41,8 @@ url.workspace = true
 assert_fs.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
-scarb-ui.workspace = true
 scarb.workspace = true
+scarb-ui.workspace = true
 
 [features]
 build-examples = [  ]

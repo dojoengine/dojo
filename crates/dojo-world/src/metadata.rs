@@ -2,17 +2,20 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
+use cairo_lang_filesystem::cfg::CfgSet;
 use camino::Utf8PathBuf;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use regex::Regex;
-use scarb::core::{ManifestMetadata, Workspace};
+use scarb::core::{ManifestMetadata, Package, TargetKind, Workspace};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
 
 use crate::contracts::naming;
 use crate::manifest::{BaseManifest, CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
+
+const LOG_TARGET: &str = "dojo_world::metadata";
 
 #[cfg(test)]
 #[path = "metadata_test.rs"]
@@ -26,24 +29,8 @@ pub const IPFS_PASSWORD: &str = "12290b883db9138a8ae3363b6739d220";
 pub const MANIFESTS_DIR: &str = "manifests";
 pub const ABIS_DIR: &str = "abis";
 pub const BASE_DIR: &str = "base";
-
-fn build_artifact_from_filename(
-    abi_dir: &Utf8PathBuf,
-    source_dir: &Utf8PathBuf,
-    filename: &str,
-) -> ArtifactMetadata {
-    let abi_file = abi_dir.join(format!("{filename}.json"));
-    let src_file = source_dir.join(format!("{filename}.cairo"));
-
-    ArtifactMetadata {
-        abi: if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None },
-        source: if src_file.exists() {
-            Some(Uri::File(src_file.into_std_path_buf()))
-        } else {
-            None
-        },
-    }
-}
+pub const NAMESPACE_CFG_PREFIX: &str = "nm|";
+pub const DEFAULT_NAMESPACE_CFG_KEY: &str = "namespace_default";
 
 /// Get the default namespace from the workspace.
 ///
@@ -96,43 +83,89 @@ pub fn project_to_world_metadata(m: ProjectWorldMetadata) -> WorldMetadata {
     }
 }
 
-/// Collect metadata from the project configuration and from the workspace.
-///
-/// # Arguments
-/// `ws`: the workspace.
-///
-/// # Returns
-/// A [`DojoMetadata`] object containing all Dojo metadata.
+pub fn dojo_metadata_from_package(package: &Package, ws: &Workspace<'_>) -> Result<DojoMetadata> {
+    tracing::debug!(target: LOG_TARGET, package_id = package.id.to_string(), "Collecting Dojo metadata from package.");
+
+    // If it's a lib, we can try to extract dojo data. If failed -> then we can return default.
+    // But like so, if some metadata are here, we get them.
+    // [[target.dojo]] shouldn't be used with [lib] as no files will be deployed.
+    let is_lib = package.target(&TargetKind::new("lib")).is_some();
+    let is_dojo = package.target(&TargetKind::new("dojo")).is_some();
+
+    if is_lib && is_dojo {
+        return Err(anyhow::anyhow!("[lib] package cannot have [[target.dojo]]."));
+    }
+
+    let project_metadata = match package.manifest.metadata.dojo() {
+        Ok(m) => Ok(m),
+        Err(e) => {
+            if is_lib || !is_dojo {
+                Ok(ProjectMetadata::default())
+            } else {
+                Err(anyhow::anyhow!(
+                    "In manifest {} [dojo] package must have [[target.dojo]]: {}.",
+                    ws.manifest_path(),
+                    e
+                ))
+            }
+        }
+    }?;
+
+    let mut dojo_metadata = DojoMetadata {
+        env: project_metadata.env.clone(),
+        skip_migration: project_metadata.skip_migration.clone(),
+        world: project_to_world_metadata(project_metadata.world),
+        ..Default::default()
+    };
+
+    metadata_artifacts_load(&mut dojo_metadata, ws)?;
+
+    tracing::trace!(target: LOG_TARGET, ?dojo_metadata);
+
+    Ok(dojo_metadata)
+}
+
 pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> {
+    let dojo_packages: Vec<Package> = ws
+        .members()
+        .filter(|package| {
+            package.target(&TargetKind::new("dojo")).is_some()
+                && package.target(&TargetKind::new("lib")).is_none()
+        })
+        .collect();
+
+    match dojo_packages.len() {
+        0 => {
+            ws.config().ui().warn(
+                "No package with dojo target found in workspace. If your package is a [lib] with \
+                 [[target.dojo]], you can ignore this warning.",
+            );
+            Ok(DojoMetadata::default())
+        }
+        1 => {
+            let dojo_package =
+                dojo_packages.into_iter().next().expect("Package must exist as len is 1.");
+            Ok(dojo_metadata_from_package(&dojo_package, ws)?)
+        }
+        _ => Err(anyhow::anyhow!(
+            "Multiple packages with dojo target found in workspace. Please specify a package \
+             using --package option or maybe one of them must be declared as a [lib]."
+        )),
+    }
+}
+
+/// Loads the artifacts metadata for the world.
+/// TODO: if the compiler supports to output the data to the package level,
+/// we should also pass the package to use it's path instead of the WS root.
+fn metadata_artifacts_load(dojo_metadata: &mut DojoMetadata, ws: &Workspace<'_>) -> Result<()> {
     let profile = ws.config().profile();
 
+    // Use package.manifest_path() if supported by the compiler.
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
     let manifest_dir = manifest_dir.join(MANIFESTS_DIR).join(profile.as_str());
     let abi_dir = manifest_dir.join(BASE_DIR).join(ABIS_DIR);
     let source_dir = ws.target_dir().path_existent().unwrap();
     let source_dir = source_dir.join(profile.as_str());
-
-    let project_metadata = if let Ok(current_package) = ws.current_package() {
-        current_package
-            .manifest
-            .metadata
-            .dojo()
-            .with_context(|| format!("Error parsing manifest file `{}`", ws.manifest_path()))?
-    } else {
-        // On workspaces, dojo metadata are not accessible because if no current package is defined
-        // (being the only package or using --package).
-        return Err(anyhow!(
-            "No current package with dojo metadata found, virtual manifest in workspace are not \
-             supported. Until package compilation is supported, you will have to provide the path \
-             to the Scarb.toml file using the --manifest-path option."
-        ));
-    };
-
-    let mut dojo_metadata = DojoMetadata {
-        env: project_metadata.env.clone(),
-        skip_migration: project_metadata.skip_migration.clone(),
-        ..Default::default()
-    };
 
     let world_artifact = build_artifact_from_filename(
         &abi_dir,
@@ -140,8 +173,6 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
         &naming::get_filename_from_tag(WORLD_CONTRACT_TAG),
     );
 
-    // inialize Dojo world metadata with world metadata coming from project configuration
-    dojo_metadata.world = project_to_world_metadata(project_metadata.world);
     dojo_metadata.world.artifacts = world_artifact;
 
     // load models and contracts metadata
@@ -183,7 +214,25 @@ pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Result<DojoMetadata> 
         }
     }
 
-    Ok(dojo_metadata)
+    Ok(())
+}
+
+fn build_artifact_from_filename(
+    abi_dir: &Utf8PathBuf,
+    source_dir: &Utf8PathBuf,
+    filename: &str,
+) -> ArtifactMetadata {
+    let abi_file = abi_dir.join(format!("{filename}.json"));
+    let src_file = source_dir.join(format!("{filename}.cairo"));
+
+    ArtifactMetadata {
+        abi: if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None },
+        source: if src_file.exists() {
+            Some(Uri::File(src_file.into_std_path_buf()))
+        } else {
+            None
+        },
+    }
 }
 
 /// Metadata coming from project configuration (Scarb.toml)
@@ -276,18 +325,31 @@ pub struct NamespaceConfig {
 }
 
 impl NamespaceConfig {
-    /// Create a new namespace configuration with a default namespace.
+    /// Creates a new namespace configuration with a default namespace.
     pub fn new(default: &str) -> Self {
         NamespaceConfig { default: default.to_string(), mappings: None }
     }
 
-    /// Add mappings to the namespace configuration.
+    /// Adds mappings to the namespace configuration.
     pub fn with_mappings(mut self, mappings: HashMap<String, String>) -> Self {
         self.mappings = Some(mappings);
         self
     }
 
-    /// Get the namespace for a given tag or namespace, or return the default
+    /// Displays the namespace mappings as a string.
+    pub fn display_mappings(&self) -> String {
+        if let Some(mappings) = &self.mappings {
+            let mut result = String::from("\n-- Mappings --\n");
+            for (k, v) in mappings.iter() {
+                result += &format!("{} -> {}\n", k, v);
+            }
+            result
+        } else {
+            "No mapping to apply".to_string()
+        }
+    }
+
+    /// Gets the namespace for a given tag or namespace, or return the default
     /// namespace if no mapping was found.
     ///
     /// If the input is a tag, a first perfect match is checked. If no match
@@ -351,6 +413,30 @@ impl NamespaceConfig {
         }
 
         Ok(self)
+    }
+}
+
+impl From<&CfgSet> for NamespaceConfig {
+    fn from(cfg_set: &CfgSet) -> Self {
+        let mut default = "".to_string();
+        let mut mappings = HashMap::new();
+
+        for cfg in cfg_set.into_iter() {
+            if cfg.key == DEFAULT_NAMESPACE_CFG_KEY {
+                if let Some(v) = &cfg.value {
+                    default = v.to_string();
+                }
+            } else if cfg.key.starts_with(NAMESPACE_CFG_PREFIX) {
+                let key = cfg.key.replace(NAMESPACE_CFG_PREFIX, "");
+                if let Some(v) = &cfg.value {
+                    mappings.insert(key, v.to_string());
+                }
+            }
+        }
+
+        let mappings = if mappings.is_empty() { None } else { Some(mappings) };
+
+        NamespaceConfig { default: default.to_string(), mappings }
     }
 }
 
@@ -563,6 +649,9 @@ impl MetadataExt for ManifestMetadata {
 
 #[cfg(test)]
 mod tests {
+    use cairo_lang_filesystem::cfg::Cfg;
+    use smol_str::SmolStr;
+
     use super::*;
 
     #[test]
@@ -646,5 +735,33 @@ mod tests {
         assert!(!is_name_valid("invalid.name"));
         assert!(!is_name_valid("invalid!name"));
         assert!(!is_name_valid(""));
+    }
+
+    #[test]
+    fn test_namespace_config_from_cfg_set() {
+        let mut cfg_set = CfgSet::new();
+        cfg_set.insert(Cfg::kv(DEFAULT_NAMESPACE_CFG_KEY, SmolStr::from("default_namespace")));
+        cfg_set
+            .insert(Cfg::kv(format!("{}tag1", NAMESPACE_CFG_PREFIX), SmolStr::from("namespace1")));
+        cfg_set
+            .insert(Cfg::kv(format!("{}tag2", NAMESPACE_CFG_PREFIX), SmolStr::from("namespace2")));
+
+        let namespace_config = NamespaceConfig::from(&cfg_set);
+
+        assert_eq!(namespace_config.default, "default_namespace");
+        assert_eq!(
+            namespace_config.mappings,
+            Some(HashMap::from([
+                ("tag1".to_string(), "namespace1".to_string()),
+                ("tag2".to_string(), "namespace2".to_string()),
+            ]))
+        );
+
+        // Test with empty CfgSet
+        let empty_cfg_set = CfgSet::new();
+        let empty_namespace_config = NamespaceConfig::from(&empty_cfg_set);
+
+        assert_eq!(empty_namespace_config.default, "");
+        assert_eq!(empty_namespace_config.mappings, None);
     }
 }
