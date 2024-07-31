@@ -957,13 +957,12 @@ where
                     .map(|rw| {
                         let resource = &rw.resource;
                         match resource {
-                            ResourceType::Selector(s) => {
-                                if let Some(r) = resource_map.get(&s.to_hex_string()) {
-                                    r.clone()
-                                } else {
-                                    resource.clone()
-                                }
-                            }
+                            // Replace selector with appropriate resource type if present in
+                            // resource_map
+                            ResourceType::Selector(s) => resource_map
+                                .get(&s.to_hex_string())
+                                .cloned()
+                                .unwrap_or_else(|| rw.resource.clone()),
                             _ => resource.clone(),
                         }
                     })
@@ -984,13 +983,10 @@ where
                         match resource {
                             // Replace selector with appropriate resource type if present in
                             // resource_map
-                            ResourceType::Selector(s) => {
-                                if let Some(r) = resource_map.get(&s.to_hex_string()) {
-                                    r.clone()
-                                } else {
-                                    resource.clone()
-                                }
-                            }
+                            ResourceType::Selector(s) => resource_map
+                                .get(&s.to_hex_string())
+                                .cloned()
+                                .unwrap_or_else(|| rw.resource.clone()),
                             _ => resource.clone(),
                         }
                     })
