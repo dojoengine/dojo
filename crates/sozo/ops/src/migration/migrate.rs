@@ -39,6 +39,7 @@ use starknet::providers::{Provider, ProviderError};
 use tokio::fs;
 
 use super::ui::{bold_message, italic_message, MigrationUi};
+use super::utils::generate_resource_map;
 use super::{
     ContractDeploymentOutput, ContractMigrationOutput, ContractUpgradeOutput, MigrationOutput,
 };
@@ -900,6 +901,12 @@ where
             .collect::<HashSet<_>>()
     }
 
+    // Generate a map of `Felt` (resource selector) -> `ResourceType` that are available locally
+    // so we can check if the resource being revoked is known locally.
+    //
+    // if the selector is not found in the map we just print its selector
+    let resource_map = generate_resource_map(ui, world, diff).await?;
+
     for c in &diff.contracts {
         // remote is none meants it was not previously deployed.
         // but if it didn't get deployed even during this run we should skip migration for it
@@ -945,7 +952,22 @@ where
             ui.print_sub(format!(
                 "Granting write access to {} for resources: {:?}",
                 c.tag,
-                contract_grants.iter().map(|rw| rw.resource.clone()).collect::<Vec<_>>()
+                contract_grants
+                    .iter()
+                    .map(|rw| {
+                        let resource = &rw.resource;
+                        match resource {
+                            ResourceType::Selector(s) => {
+                                if let Some(r) = resource_map.get(&s.to_hex_string()) {
+                                    r.clone()
+                                } else {
+                                    resource.clone()
+                                }
+                            }
+                            _ => resource.clone(),
+                        }
+                    })
+                    .collect::<Vec<_>>()
             ));
         }
 
@@ -955,7 +977,24 @@ where
             ui.print_sub(format!(
                 "Revoking write access to {} for resources: {:?}",
                 c.tag,
-                contract_revokes.iter().map(|rw| rw.resource.clone()).collect::<Vec<_>>()
+                contract_revokes
+                    .iter()
+                    .map(|rw| {
+                        let resource = &rw.resource;
+                        match resource {
+                            // Replace selector with appropriate resource type if present in
+                            // resource_map
+                            ResourceType::Selector(s) => {
+                                if let Some(r) = resource_map.get(&s.to_hex_string()) {
+                                    r.clone()
+                                } else {
+                                    resource.clone()
+                                }
+                            }
+                            _ => resource.clone(),
+                        }
+                    })
+                    .collect::<Vec<_>>()
             ));
         }
 
