@@ -1,6 +1,5 @@
 use account_sdk::account::session::hash::{AllowedMethod, Session};
 use account_sdk::account::session::SessionAccount;
-use account_sdk::deploy_contract::UDC_ADDRESS;
 use account_sdk::signers::HashSigner;
 use anyhow::{Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -12,7 +11,7 @@ use slot::session::Policy;
 use starknet::core::types::contract::{AbiEntry, StateMutability};
 use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
-use starknet::macros::short_string;
+use starknet::macros::{felt, short_string};
 use starknet::providers::Provider;
 use starknet::signers::SigningKey;
 use starknet_crypto::poseidon_hash_single;
@@ -174,7 +173,9 @@ fn collect_policies_from_base_manifest(
 
     // for deploying using udc
     let method = "deployContract".to_string();
-    policies.push(Policy { target: *UDC_ADDRESS, method });
+    const UDC_ADDRESS: Felt =
+        felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
+    policies.push(Policy { target: UDC_ADDRESS, method });
     trace!("Adding UDC deployment policy");
 
     Ok(policies)

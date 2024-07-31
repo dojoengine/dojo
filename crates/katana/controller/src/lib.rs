@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use account_sdk::abigen::controller::{Signer, SignerType};
+use account_sdk::abigen::controller::Signer;
 use account_sdk::signers::webauthn::{DeviceSigner, WebauthnAccountSigner};
 use account_sdk::signers::SignerTrait;
 use account_sdk::wasm_webauthn::CredentialID;
@@ -47,7 +47,7 @@ fn add_controller_account_inner(genesis: &mut Genesis, user: slot::account::Acco
             nonce: None,
             balance: Some(U256::from(0xfffffffffffffffu128)),
             class_hash: Some(CONTROLLER_ACCOUNT_CONTRACT_CLASS_HASH),
-            storage: Some(get_contract_storage(credential_id, public_key, SignerType::Webauthn)?),
+            storage: Some(get_contract_storage(credential_id, public_key)?),
         };
 
         let address = ContractAddress::from(FieldElement::from_bytes_be(
@@ -99,11 +99,7 @@ pub mod json {
                 nonce: None,
                 balance: None,
                 class: Some(ClassNameOrHash::Name(CONTROLLER_CLASS_NAME.to_string())),
-                storage: Some(get_contract_storage(
-                    credential_id,
-                    public_key,
-                    SignerType::Webauthn,
-                )?),
+                storage: Some(get_contract_storage(credential_id, public_key)?),
             };
 
             let address = ContractAddress::from(FieldElement::from_bytes_be(
@@ -137,15 +133,7 @@ pub mod json {
 fn get_contract_storage(
     credential_id: CredentialID,
     public_key: CoseKey,
-    signer_type: SignerType,
 ) -> Result<HashMap<StorageKey, StorageValue>> {
-    let type_value: u16 = match signer_type {
-        SignerType::Starknet => 0,
-        SignerType::Secp256k1 => 1,
-        SignerType::Webauthn => 4,
-        SignerType::Unimplemented => 999,
-    };
-
     let signer = DeviceSigner::new(
         WEBAUTHN_RP_ID.to_string(),
         WEBAUTHN_ORIGIN.to_string(),
@@ -157,11 +145,10 @@ fn get_contract_storage(
     let guid = signer.guid();
 
     // the storage variable name for webauthn signer
-    const NON_STARK_OWNER_VAR_NAME: &str = "_owner_non_stark";
-    let type_value = FieldElement::from(type_value);
-    let storage = get_storage_var_address(NON_STARK_OWNER_VAR_NAME, &[type_value])?;
+    const MULTIPLE_OWNERS_COMPONENT_SUB_STORAGE: &str = "owners";
+    let storage = get_storage_var_address(MULTIPLE_OWNERS_COMPONENT_SUB_STORAGE, &[guid])?;
 
-    Ok(HashMap::from([(storage, guid)]))
+    Ok(HashMap::from([(storage, FieldElement::ONE)]))
 }
 
 #[cfg(test)]
@@ -174,13 +161,12 @@ mod tests {
     // Test data for Controller with WebAuthn Signer.
     //
     // Username: johnsmith
-    // Controller address: 0x0260ab0352da372054ed9dc586f024f6a259b9ea64a8e09b16147201220f88d2
-    // <https://sepolia.starkscan.co/contract/0x0260ab0352da372054ed9dc586f024f6a259b9ea64a8e09b16147201220f88d2#overview>
+    // Controller address: 0x02f5fd1892492ca8106f14ff3bb8400f104dd2327068d2572e31d5b21fc5c4cc
+    // <https://sepolia.starkscan.co/contract/0x02f5fd1892492ca8106f14ff3bb8400f104dd2327068d2572e31d5b21fc5c4cc#contract-storage>
 
     const STORAGE_KEY: FieldElement =
-        felt!("0x058c7ee1e9bb09b0d728314f36629772ef7a3c6773a823064d5a7e5651bcb890");
-    const STORAGE_VALUE: FieldElement =
-        felt!("0x5d7709b0a485e64a549ada9bd14d30419364127dfd351e01f38871c82500cd7");
+        felt!("0x023d8ecd0d641047a8d21e3cd8016377ed5c9cd9009539cd92b73adb8c023f10");
+    const STORAGE_VALUE: FieldElement = felt!("0x1");
 
     const WEBAUTHN_CREDENTIAL_ID: &str = "ja0NkHny-dlfPnClYECdmce0xTCuGT0xFjeuStaVqCI";
     const WEBAUTHN_PUBLIC_KEY: &str = "pQECAyYgASFYIBLHWNmpxCtO47cfOXw9nFCGftMq57xhvQC98aY_zQchIlggIgGHmWwQe1_FGi9GYqcYYpoPC9mkkf0f1rVD5UoGPEA";
@@ -216,9 +202,7 @@ mod tests {
         let credential_id = webauthn::credential::from_base64(WEBAUTHN_CREDENTIAL_ID).unwrap();
         let public_key = webauthn::cose_key::from_base64(WEBAUTHN_PUBLIC_KEY).unwrap();
 
-        let storage =
-            get_contract_storage(credential_id.clone(), public_key.clone(), SignerType::Webauthn)
-                .unwrap();
+        let storage = get_contract_storage(credential_id.clone(), public_key.clone()).unwrap();
 
         assert_eq!(storage.len(), 1);
         assert_eq!(storage.get(&STORAGE_KEY), Some(&STORAGE_VALUE));
