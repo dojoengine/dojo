@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722396607848,
+  "lastUpdate": 1722456617024,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13537,6 +13537,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4885161,
             "range": "± 32143",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86c554c3b179a431d3b5919cf17e7dc52665eb8c",
+          "message": "refactor(sozo): fetch `writes` from events and calculate diff for that + some refactor (#2203)\n\n* refactor: make `build_kind_from_tags` a method on `BaseManifest`\r\n\r\n* initial implementation\r\n\r\n* tmp\r\n\r\n* refactor: update the order in `compute` itself\r\n\r\n* refactor: resolve variables in `prepare_for_migration` itself\r\n\r\n* refactor: separate out updating manifest and deployment metadata\r\n\r\n* fix tests\r\n\r\n* fix lints\r\n\r\n* update implementation\r\n\r\n* update message\r\n\r\n* update implementation to read writes data while loading remote manifest\r\n\r\n* use migration_output to migrate when contract was actually deployed\r\n\r\n* fix tests\r\n\r\n* make suggested changes\r\n\r\n* fix formatting\r\n\r\n* map selector resource type to other resource type where possible\r\n\r\n* make code more idiomatic",
+          "timestamp": "2024-08-01T01:22:07+05:30",
+          "tree_id": "96442250e6305661304d27782cdd5fd80fd7c566",
+          "url": "https://github.com/dojoengine/dojo/commit/86c554c3b179a431d3b5919cf17e7dc52665eb8c"
+        },
+        "date": 1722456616286,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16424932,
+            "range": "± 204578",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4768403,
+            "range": "± 504823",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3329580237,
+            "range": "± 652121566",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4945540,
+            "range": "± 123658",
             "unit": "ns/iter"
           }
         ]
