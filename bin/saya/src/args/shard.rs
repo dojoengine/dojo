@@ -1,6 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
 use clap::{builder::PossibleValue, Args, ValueEnum};
+use katana_primitives::FieldElement;
 use saya_core::SayaMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +12,10 @@ pub struct ShardOptions {
     #[arg(help = "Choose either ephemeral or persistent saya mode.")]
     #[arg(long = "mode")]
     pub saya_mode: SayaModeArg,
+
+    #[arg(help = "Piltover contract address.")]
+    #[arg(long = "piltover")]
+    pub piltover: FieldElement,
 }
 
 impl Default for SayaModeArg {

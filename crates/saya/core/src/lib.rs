@@ -25,11 +25,9 @@ pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use starknet::accounts::{Call, ConnectedAccount};
+use starknet::accounts::Call;
 use starknet::core::utils::cairo_short_string_to_felt;
-use starknet::macros::felt;
 use starknet_crypto::poseidon_hash_many;
-use starknet_types_core::felt::Felt;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
@@ -58,6 +56,8 @@ pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub prover_url: Url,
     pub prover_key: ProverAccessKey,
+    pub mode: SayaMode,
+    pub piltover_contract: FieldElement,
     pub store_proofs: bool,
     pub block_range: (u64, Option<u64>),
     pub batch_size: usize,
@@ -504,22 +504,18 @@ impl Saya {
                 let batcher_output = from_felts::<BatcherOutput>(&serialized_output)
                     .context("Failed to parse program output.")?;
 
-                dbg!(&batcher_output);
-
                 let piltover_calldata = PiltoverCalldata {
                     program_output: serialized_output,
                     onchain_data_hash: batcher_output.new_state_root,
                     onchain_data_size: (FieldElement::ZERO, FieldElement::ZERO),
                 };
 
-                let piltover_contract =
-                    felt!("0xe5073fa16b3d48438440d3825a320a8ad97e66fe85fc5b46a9233ad47109d8");
-
                 let expected_state_root = batcher_output.prev_state_root.to_string();
                 let expected_block_number = (batcher_output.block_number - 1u64.into()).to_string();
                 info!(target: LOG_TARGET, last_block, expected_state_root, expected_block_number, "Applying snos to piltover.");
 
-                starknet_apply_piltover(piltover_calldata, piltover_contract, nonce).await?;
+                starknet_apply_piltover(piltover_calldata, self.config.piltover_contract, nonce)
+                    .await?;
             }
             SayaMode::PersistentMerging => {
                 // When not waiting for couple of second `apply_diffs` will sometimes fail due to reliance
