@@ -283,8 +283,7 @@ async fn deploy_account_if_not_exist(
                 bail!("Controller with username '{username}' does not exist: {err}");
             }
 
-            let client = Client::new();
-            let response = client
+            let response = Client::new()
                 .post(rpc_url)
                 .json(&json!({
                     "id": 1,
