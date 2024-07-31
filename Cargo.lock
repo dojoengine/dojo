@@ -15,11 +15,11 @@ dependencies = [
 [[package]]
 name = "account_sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/controller?rev=199d87d#199d87d1ac2139bbb5748fc9897a640f17ef84c3"
+source = "git+https://github.com/cartridge-gg/controller?rev=512ff89#512ff894dadfa747c270c1be54ef82c223e9faa0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.21.7",
+ "base64 0.22.1",
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?rev=e67d925)",
  "coset",
  "ecdsa",
@@ -30,7 +30,6 @@ dependencies = [
  "num-traits 0.2.19",
  "p256",
  "primitive-types",
- "rand_core",
  "serde",
  "serde_json",
  "sha2 0.10.8",
