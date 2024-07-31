@@ -661,7 +661,7 @@ impl Sql {
                 }
 
                 let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-                let statement = if is_store_update_member && !indexes.is_empty() {
+                let statement = if is_store_update_member && indexes.is_empty() {
                     arguments.push(Argument::String(if is_event_message {
                         "event:".to_string() + entity_id
                     } else {
