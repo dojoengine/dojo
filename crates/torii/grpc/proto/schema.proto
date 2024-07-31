@@ -2,22 +2,22 @@ syntax = "proto3";
 package types;
 
 enum PrimitiveType {
-    I8 = 0;
-    I16 = 1;
-    I32 = 2;
-    I64 = 3;
-    I128 = 4;
-    U8 = 5;
-    U16 = 6;
-    U32 = 7;
-    U64 = 8;
-    U128 = 9;
-    U256 = 10;
-    USIZE = 11;
-    BOOL = 12;
-    FELT252 = 13;
-    CLASS_HASH = 14;
-    CONTRACT_ADDRESS = 15;
+    U8 = 0;
+    U16 = 1;
+    U32 = 2;
+    U64 = 3;
+    U128 = 4;
+    U256 = 5;
+    USIZE = 6;
+    BOOL = 7;
+    FELT252 = 8;
+    CLASS_HASH = 9;
+    CONTRACT_ADDRESS = 10;
+    I8 = 11;
+    I16 = 12;
+    I32 = 13;
+    I64 = 14;
+    I128 = 15;
 }
 
 message EnumOption {
