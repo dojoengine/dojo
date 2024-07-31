@@ -11,10 +11,10 @@ use cairo_proof_parser::output::ExtractOutputResult;
 use cairo_proof_parser::{from_felts, StarkProof};
 use dojo_os::piltover::{starknet_apply_piltover, PiltoverCalldata};
 use futures::future;
+use itertools::Itertools;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::Tx;
-use katana_primitives::FieldElement;
 use katana_rpc_types::trace::TxExecutionInfo;
 use prover::persistent::{BatcherCall, BatcherInput, BatcherOutput};
 use prover::{
@@ -484,7 +484,7 @@ impl Saya {
 
         // Verify the proof and register fact.
         trace!(target: LOG_TARGET, last_block, "Verifying block.");
-        let (transaction_hash, nonce_after) = verifier::verify(
+        let (transaction_hash, nonce) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
             self.config.starknet_account.clone(),
@@ -500,21 +500,26 @@ impl Saya {
                 todo!("Ephemeral mode does not support publishing updated state yet.");
             }
             SayaMode::Persistent => {
-                let batcher_output = from_felts::<BatcherOutput>(&program_output)
+                let serialized_output = program_output.iter().skip(2).copied().collect_vec();
+                let batcher_output = from_felts::<BatcherOutput>(&serialized_output)
                     .context("Failed to parse program output.")?;
 
+                dbg!(&batcher_output);
+
                 let piltover_calldata = PiltoverCalldata {
-                    program_output,
-                    onchain_data_hash: todo!(),
-                    onchain_data_size: todo!(),
+                    program_output: serialized_output,
+                    onchain_data_hash: batcher_output.new_state_root,
+                    onchain_data_size: (FieldElement::ZERO, FieldElement::ZERO),
                 };
 
                 let piltover_contract =
-                    felt!("0x2e488ebbcfc05d7129a8aa8f3e8853a4413c1cfc153f03ca18cc317ebdb50e0");
+                    felt!("0xe5073fa16b3d48438440d3825a320a8ad97e66fe85fc5b46a9233ad47109d8");
 
-                dbg!(program_output);
+                let expected_state_root = batcher_output.prev_state_root.to_string();
+                let expected_block_number = (batcher_output.block_number - 1u64.into()).to_string();
+                info!(target: LOG_TARGET, last_block, expected_state_root, expected_block_number, "Applying snos to piltover.");
 
-                starknet_apply_piltover(piltover_contract, nonce_after + 1u64.into()).await?;
+                starknet_apply_piltover(piltover_calldata, piltover_contract, nonce).await?;
             }
             SayaMode::PersistentMerging => {
                 // When not waiting for couple of second `apply_diffs` will sometimes fail due to reliance
@@ -524,10 +529,10 @@ impl Saya {
                 trace!(target: LOG_TARGET, last_block, "Applying diffs.");
                 let transaction_hash = dojo_os::starknet_apply_diffs(
                     self.config.world_address,
-                    program_output,
+                    state_diff,
                     program_output,
                     program_hash,
-                    nonce_after + 1u64.into(),
+                    nonce_after,
                     self.config.starknet_account,
                 )
                 .await?;

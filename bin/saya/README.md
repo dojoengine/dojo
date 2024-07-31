@@ -61,7 +61,7 @@ cargo run -r --bin sozo -- \
 
 Once the migration is done, please take note of the address of the world as it will be re-used in the commands below.
 
-1. Set world configs
+3. Set world configs
 
 ```bash
 cargo run -r --bin sozo -- \
@@ -98,7 +98,40 @@ cargo run -r --bin sozo -- \
     --wait
 ```
 
-4. Start katana
+4. Prepare piltover contract (only for persistent mode)
+
+Piltover check whether it's internal state is consistent with incoming updates. Because of it new contract has to be deployed and initialized for each appchain.
+
+- <STATE_ROOT> can be read from logs, when saya is running.
+- <CONFIG_HASH> Using a mock value of `42` at this time.
+
+````bash
+
+sncast \
+    --account <SNCAST_ACCOUNT_NAME> \
+    --url <SEPOLIA_ENDPOINT> \
+    deploy \
+    --class-hash 0x6b71b95e47818934fbbda5ea18fe6838d01012217e5d9825e4d08f42d5349d6 \
+    -c <SEPOLIA_ACCOUNT_ADDRESS> \
+    <STATE_ROOT> <FORKED_BLOCK_PLUS_1> 0
+
+sncast \
+    --account <SNCAST_ACCOUNT_NAME> \
+    --url <SEPOLIA_ENDPOINT> \
+    invoke \
+    --function set_program_info \
+    -c 0x042066b8031c907125abd1acb9265ad2ad4b141858d1e1e3caafb411d9ab71cc <CONFIG_HASH>
+
+sncast \
+    --account <SNCAST_ACCOUNT_NAME> \
+    --url <SEPOLIA_ENDPOINT> \
+    invoke \
+    --function set_facts_registry \
+    -c 0x216a9754a38e86a09261ee424012b97d498a0f4ca81653bd4be269d583c7ec9
+
+```
+
+5. Start katana
 
 Start a local instance of Katana configured to work with the newly deployed contract. You should wait your world to be integrated into the latest block (and not the pending).
 Once block in which the transaction that deploys the world is mined, you can start `katana` in forking mode.
@@ -109,7 +142,7 @@ cargo run -r --bin katana -- \
     --fork-block-number <LATEST_BLOCK>
 ```
 
-5. Run transactions on `katana`
+6. Run transactions on `katana`
 
 Finally, modify the state of the world using specific actions:
 
@@ -155,7 +188,7 @@ cargo run -r --bin sozo -- model get Position <ACCOUNT_ADDRESS> \
 }
 ```
 
-6. Run saya
+7. Run saya
 
 The <PROVER_URL> could be `http://prover.visoft.dev:3618` if you have a registered key or a link to a self hosted instance of `https://github.com/neotheprogramist/http-prover`.
 The <PROVER_KEY> is the private key produced by `keygen` installed with `cargo install --git https://github.com/neotheprogramist/http-prover keygen`. Pass the public key to server operator or the prover program.
@@ -186,3 +219,4 @@ After this command, Saya will pick up the blocks with transactions, generate the
 Once the world on Sepolia is updated, you can issue again the `model get` command as seen before, and you should see the `katana` shard state reflected on Sepolia.
 
 Ensure to replace placeholders (`<>`) with appropriate values for your configuration and environment. This documentation provides a comprehensive overview for developers and operators to effectively utilize the Saya service in blockchain applications.
+````

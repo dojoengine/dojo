@@ -7,7 +7,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
-use tracing::{trace, warn};
+use tracing::trace;
 
 use crate::dojo_os::get_starknet_account;
 use crate::StarknetAccountData;
@@ -19,7 +19,7 @@ pub async fn starknet_verify(
     starknet_config: StarknetAccountData,
 ) -> anyhow::Result<(String, Felt)> {
     if serialized_proof.len() > 2000 {
-        warn!(
+        trace!(
             "Calldata too long at: {} felts, transaction could fail, splitting it.",
             serialized_proof.len()
         );
