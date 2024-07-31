@@ -94,7 +94,7 @@ impl ProverIdentifier {
 
         match self {
             ProverIdentifier::Http(params) => {
-                http_prove_felts(params.clone(), dbg!(calldata), ProveProgram::Batcher).await
+                http_prove_felts(params.clone(), calldata, ProveProgram::Batcher).await
             }
             ProverIdentifier::Stone => todo!(),
             ProverIdentifier::Sharp => todo!(),

@@ -1,16 +1,16 @@
-use cairo_proof_parser::to_felts;
+use cairo_proof_parser::{from_felts, to_felts};
 use serde::{Deserialize, Serialize};
 use starknet_crypto::FieldElement;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct BatcherOutput {
-    prev_state_root: FieldElement,
-    new_state_root: FieldElement,
-    block_number: FieldElement,
-    block_hash: FieldElement,
-    config_hash: FieldElement,
-    message_to_starknet_segment: Vec<FieldElement>,
-    message_to_appchain_segment: Vec<FieldElement>,
+    pub prev_state_root: FieldElement,
+    pub new_state_root: FieldElement,
+    pub block_number: FieldElement,
+    pub block_hash: FieldElement,
+    pub config_hash: FieldElement,
+    pub message_to_starknet_segment: Vec<FieldElement>,
+    pub message_to_appchain_segment: Vec<FieldElement>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -65,4 +65,23 @@ fn test_batcher_args_single_call() {
         .map(FieldElement::from)
         .collect::<Vec<_>>();
     assert_eq!(serialized, expected);
+}
+
+#[test]
+fn test_parse_program_output() {
+    let output =
+        [0, 1, 2, 0x34, 0x2a, 0, 0u64].into_iter().map(FieldElement::from).collect::<Vec<_>>();
+
+    let parsed = from_felts::<BatcherOutput>(&output).unwrap();
+    let expected = BatcherOutput {
+        prev_state_root: FieldElement::from(0u64),
+        new_state_root: FieldElement::from(1u64),
+        block_number: FieldElement::from(2u64),
+        block_hash: FieldElement::from(52u64),
+        config_hash: FieldElement::from(42u64),
+        message_to_starknet_segment: vec![],
+        message_to_appchain_segment: vec![],
+    };
+
+    assert_eq!(parsed, expected);
 }
