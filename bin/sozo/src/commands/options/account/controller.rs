@@ -1,7 +1,7 @@
 use account_sdk::account::session::hash::{AllowedMethod, Session};
 use account_sdk::account::session::SessionAccount;
 use account_sdk::signers::HashSigner;
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, DojoContract, Manifest};
@@ -9,10 +9,12 @@ use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
 use slot::session::Policy;
 use starknet::core::types::contract::{AbiEntry, StateMutability};
-use starknet::core::types::Felt;
+use starknet::core::types::StarknetError::ContractNotFound;
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::{felt, short_string};
 use starknet::providers::Provider;
+use starknet::providers::ProviderError::StarknetError;
 use starknet::signers::SigningKey;
 use starknet_crypto::poseidon_hash_single;
 use tracing::trace;
@@ -61,7 +63,9 @@ where
 
             // Perform policies diff check. For security reasons, we will always create a new
             // session here if the current policies are different from the existing
-            // session. TODO(kariy): maybe don't need to update if current policies is a
+            // session.
+            //
+            // TODO(kariy): maybe don't need to update if current policies is a
             // subset of the existing policies.
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
 
@@ -72,7 +76,7 @@ where
                     "Policies have changed. Creating new session."
                 );
 
-                let session = slot::session::create(rpc_url, &policies).await?;
+                let session = slot::session::create(rpc_url.clone(), &policies).await?;
                 slot::session::store(chain_id, &session)?;
                 session
             } else {
@@ -84,7 +88,7 @@ where
         None => {
             trace!(%username, chain = format!("{chain_id:#}"), "Creating new session.");
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
-            let session = slot::session::create(rpc_url, &policies).await?;
+            let session = slot::session::create(rpc_url.clone(), &policies).await?;
             slot::session::store(chain_id, &session)?;
             session
         }
@@ -102,6 +106,11 @@ where
     // TODO(kariy): make `expires_at` a `u64` type in the session struct
     let expires_at = session_details.expires_at.parse::<u64>()?;
     let session = Session::new(methods, expires_at, &signer.signer())?;
+
+    // make sure account exist on the provided chain, if not, we deploy it first before proceeding
+    deploy_account_if_not_exist(rpc_url, &provider, chain_id, contract_address, &username)
+        .await
+        .with_context(|| format!("Deploying Controller account on chain {chain_id}"))?;
 
     let session_account = SessionAccount::new(
         provider,
@@ -235,5 +244,59 @@ fn get_dojo_world_address(
             );
             Ok(address)
         }
+    }
+}
+
+/// This function will call the `cartridge_deployController` method to deploy the account if it
+/// doesn't yet exist the chain. But this JSON-RPC method is only available on Katana deployed on
+/// Slot. If the `rpc_url` is not a Slot url, it will return an error.
+async fn deploy_account_if_not_exist(
+    rpc_url: Url,
+    provider: &impl Provider,
+    chain_id: Felt,
+    address: Felt,
+    username: &str,
+) -> Result<()> {
+    use reqwest::Client;
+    use serde_json::json;
+
+    // Check if the account exists on the chain
+    match provider.get_class_at(BlockId::Tag(BlockTag::Pending), address).await {
+        Ok(_) => Ok(()),
+
+        // if account doesn't exist, deploy it by calling `cartridge_deployController` method
+        Err(StarknetError(ContractNotFound)) => {
+            trace!(
+                %username,
+                 chain = format!("{chain_id:#}"),
+                  address = format!("{address:#x}"),
+                "Account does not exist on chain. Deploying controller..."
+            );
+
+            // Check if the provided URL is a Slot instance
+            if !rpc_url.host_str().map_or(false, |host| host.contains("x.cartridge.gg")) {
+                bail!("The provided URL is not a valid Slot instance {rpc_url}");
+            }
+
+            let client = Client::new();
+            let response = client
+                .post(rpc_url)
+                .json(&json!({
+                    "id": 1,
+                    "jsonrpc": "2.0",
+                    "method": "cartridge_deployController",
+                    "params": { "id": username },
+                }))
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                bail!("Failed to deploy controller: {}", response.status());
+            }
+
+            Ok(())
+        }
+
+        Err(e) => bail!(e),
     }
 }
