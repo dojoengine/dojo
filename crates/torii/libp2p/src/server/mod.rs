@@ -536,6 +536,18 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
         },
         PrimitiveType::Number(number) => match ty {
             Ty::Primitive(primitive) => match *primitive {
+                Primitive::I8(ref mut i8) => {
+                    *i8 = Some(number.as_i64().unwrap() as i8);
+                }
+                Primitive::I16(ref mut i16) => {
+                    *i16 = Some(number.as_i64().unwrap() as i16);
+                }
+                Primitive::I32(ref mut i32) => {
+                    *i32 = Some(number.as_i64().unwrap() as i32);
+                }
+                Primitive::I64(ref mut i64) => {
+                    *i64 = Some(number.as_i64().unwrap());
+                }
                 Primitive::U8(ref mut u8) => {
                     *u8 = Some(number.as_u64().unwrap() as u8);
                 }
@@ -545,11 +557,11 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 Primitive::U32(ref mut u32) => {
                     *u32 = Some(number.as_u64().unwrap() as u32);
                 }
-                Primitive::USize(ref mut usize) => {
-                    *usize = Some(number.as_u64().unwrap() as u32);
-                }
                 Primitive::U64(ref mut u64) => {
                     *u64 = Some(number.as_u64().unwrap());
+                }
+                Primitive::USize(ref mut usize) => {
+                    *usize = Some(number.as_u64().unwrap() as u32);
                 }
                 _ => {
                     return Err(Error::InvalidMessageError(format!(
@@ -570,6 +582,21 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
         }
         PrimitiveType::String(string) => match ty {
             Ty::Primitive(primitive) => match primitive {
+                Primitive::I8(v) => {
+                    *v = Some(i8::from_str(string).unwrap());
+                }
+                Primitive::I16(v) => {
+                    *v = Some(i16::from_str(string).unwrap());
+                }
+                Primitive::I32(v) => {
+                    *v = Some(i32::from_str(string).unwrap());
+                }
+                Primitive::I64(v) => {
+                    *v = Some(i64::from_str(string).unwrap());
+                }
+                Primitive::I128(v) => {
+                    *v = Some(i128::from_str(string).unwrap());
+                }
                 Primitive::U8(v) => {
                     *v = Some(u8::from_str(string).unwrap());
                 }
@@ -579,14 +606,14 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 Primitive::U32(v) => {
                     *v = Some(u32::from_str(string).unwrap());
                 }
-                Primitive::USize(v) => {
-                    *v = Some(u32::from_str(string).unwrap());
-                }
                 Primitive::U64(v) => {
                     *v = Some(u64::from_str(string).unwrap());
                 }
                 Primitive::U128(v) => {
                     *v = Some(u128::from_str(string).unwrap());
+                }
+                Primitive::USize(v) => {
+                    *v = Some(u32::from_str(string).unwrap());
                 }
                 Primitive::Felt252(v) => {
                     *v = Some(Felt::from_str(string).unwrap());
