@@ -159,6 +159,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 block_range: (args.start_block, args.end_block),
                 batch_size: args.batch_size,
                 mode: args.shard.saya_mode.0,
+                piltover_contract: args.shard.piltover,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
                 fact_registry_address: args.proof.fact_registry_address,
@@ -172,6 +173,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
 #[cfg(test)]
 mod tests {
     use saya_core::SayaMode;
+    use starknet_crypto::FieldElement;
 
     use super::*;
     use crate::args::data_availability::CelestiaOptions;
@@ -192,7 +194,13 @@ mod tests {
             start_block: 0,
             end_block: None,
             batch_size: 4,
-            shard: ShardOptions { saya_mode: shard::SayaModeArg(SayaMode::Persistent) },
+            shard: ShardOptions {
+                saya_mode: shard::SayaModeArg(SayaMode::Persistent),
+                piltover: FieldElement::from_hex_be(
+                    "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4",
+                )
+                .unwrap(),
+            },
             data_availability: DataAvailabilityOptions {
                 da_chain: None,
                 celestia: CelestiaOptions {
@@ -229,6 +237,10 @@ mod tests {
         assert!(!config.store_proofs);
         assert!(config.skip_publishing_proof);
         assert_eq!(config.mode, SayaMode::Persistent);
+        assert_eq!(
+            config.piltover_contract.to_string().as_str(),
+            "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4"
+        );
 
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");
