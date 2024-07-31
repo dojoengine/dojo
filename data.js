@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722469594063,
+  "lastUpdate": 1722469612141,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13633,6 +13633,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4809390,
             "range": "± 47942",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5bd7f21e576b1e2158a3806ea97561097a5a8a09",
+          "message": "Bump `account_sdk` to rev `512ff89` (#2240)",
+          "timestamp": "2024-08-01T07:28:34+08:00",
+          "tree_id": "e15c5dbc5613e4407b533ee9842fbcebe3d8a52c",
+          "url": "https://github.com/dojoengine/dojo/commit/5bd7f21e576b1e2158a3806ea97561097a5a8a09"
+        },
+        "date": 1722469611249,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16487974,
+            "range": "± 324482",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4784846,
+            "range": "± 162022",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3453231719,
+            "range": "± 599495334",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5138126,
+            "range": "± 175031",
             "unit": "ns/iter"
           }
         ]
