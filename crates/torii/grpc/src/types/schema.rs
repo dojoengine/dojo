@@ -182,18 +182,12 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                 match proto::types::PrimitiveType::from_i32(primitive_type) {
                     Some(proto::types::PrimitiveType::I128) => {
                         Primitive::I128(Some(i128::from_be_bytes(
-                            bytes
-                                .as_slice()
-                                .try_into()
-                                .map_err(ParseError::FromSlice)?,
+                            bytes.as_slice().try_into().map_err(ParseError::FromSlice)?,
                         )))
                     }
                     Some(proto::types::PrimitiveType::U128) => {
                         Primitive::U128(Some(u128::from_be_bytes(
-                            bytes
-                                .as_slice()
-                                .try_into()
-                                .map_err(ParseError::FromSlice)?,
+                            bytes.as_slice().try_into().map_err(ParseError::FromSlice)?,
                         )))
                     }
                     Some(proto::types::PrimitiveType::U256) => {
@@ -246,9 +240,9 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                     Some(proto::types::PrimitiveType::Usize) => {
                         Primitive::USize(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
-                    Some(proto::types::PrimitiveType::Felt252) => Primitive::Felt252(Some(
-                        Felt::from_str(str).map_err(ParseError::FromStr)?,
-                    )),
+                    Some(proto::types::PrimitiveType::Felt252) => {
+                        Primitive::Felt252(Some(Felt::from_str(str).map_err(ParseError::FromStr)?))
+                    }
                     Some(proto::types::PrimitiveType::ClassHash) => Primitive::ClassHash(Some(
                         Felt::from_str(str).map_err(ParseError::FromStr)?,
                     )),

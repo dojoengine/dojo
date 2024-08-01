@@ -215,9 +215,9 @@ impl Primitive {
             | Primitive::Bool(_) => Ok(format!("{}", value[0])),
 
             // formatted in hex
-            Primitive::ContractAddress(_)
-            | Primitive::ClassHash(_)
-            | Primitive::Felt252(_) => Ok(format!("0x{:064x}", value[0])),
+            Primitive::ContractAddress(_) | Primitive::ClassHash(_) | Primitive::Felt252(_) => {
+                Ok(format!("0x{:064x}", value[0]))
+            }
 
             Primitive::U256(_) => {
                 if value.len() < 2 {
