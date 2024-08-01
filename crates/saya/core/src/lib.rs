@@ -25,11 +25,16 @@ pub use prover_sdk::ProverAccessKey;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use starknet::accounts::Call;
+use starknet::accounts::{Call, ExecutionEncoding, SingleOwnerAccount};
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::cairo_short_string_to_felt;
-use starknet_crypto::poseidon_hash_many;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
+use starknet::signers::{LocalWallet, SigningKey};
+use starknet_crypto::{poseidon_hash_many, Felt};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::{Mutex, OnceCell};
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
@@ -57,26 +62,18 @@ pub struct SayaConfig {
     pub prover_url: Url,
     pub prover_key: ProverAccessKey,
     pub mode: SayaMode,
-    pub piltover_contract: FieldElement,
+    pub piltover_contract: Felt,
     pub store_proofs: bool,
     pub block_range: (u64, Option<u64>),
     pub batch_size: usize,
     pub data_availability: Option<DataAvailabilityConfig>,
-    pub world_address: FieldElement,
-    pub fact_registry_address: FieldElement,
+    pub world_address: Felt,
+    pub fact_registry_address: Felt,
     pub skip_publishing_proof: bool,
     pub starknet_account: StarknetAccountData,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct StarknetAccountData {
-    #[serde(deserialize_with = "url_deserializer")]
-    pub starknet_url: Url,
-    #[serde(deserialize_with = "felt_string_deserializer")]
-    pub chain_id: FieldElement,
-    pub signer_address: FieldElement,
-    pub signer_key: FieldElement,
-}
+type SayaStarknetAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
 pub fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
 where
@@ -86,7 +83,7 @@ where
     Url::parse(&s).map_err(serde::de::Error::custom)
 }
 
-pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<FieldElement, D::Error>
+pub fn felt_string_deserializer<'de, D>(deserializer: D) -> Result<Felt, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -112,7 +109,7 @@ pub struct Saya {
 struct FetchedBlockInfo {
     block_number: BlockNumber,
     block: SealedBlock,
-    prev_state_root: FieldElement,
+    prev_state_root: Felt,
     state_updates: StateUpdatesWithDeclaredClasses,
     exec_infos: Vec<TxExecutionInfo>,
 }
@@ -248,9 +245,9 @@ impl Saya {
 
                     let input = BatcherInput {
                         calls,
-                        block_number: FieldElement::from(block),
+                        block_number: Felt::from(block),
                         prev_state_root: previous_block_state_root,
-                        block_hash: FieldElement::from(0u64),
+                        block_hash: Felt::from(0u64),
                     };
 
                     // We might want to prove the signatures as well.
@@ -312,8 +309,8 @@ impl Saya {
     async fn prefetch_blocks(
         &mut self,
         block_numbers: RangeInclusive<BlockNumber>,
-        previous_block_state_root: FieldElement,
-    ) -> SayaResult<(FieldElement, Vec<FetchedBlockInfo>)> {
+        previous_block_state_root: Felt,
+    ) -> SayaResult<(Felt, Vec<FetchedBlockInfo>)> {
         // Fetch all blocks from the current block to the latest block
         let fetched_blocks = future::try_join_all(
             block_numbers.clone().map(|block_number| self.provider.fetch_block(block_number)),
@@ -431,7 +428,7 @@ impl Saya {
             prev_state_root,
             block_number,
             block_hash: block.block.header.hash,
-            config_hash: FieldElement::from(0u64),
+            config_hash: Felt::from(0u64),
             message_to_starknet_segment,
             message_to_appchain_segment,
             state_updates: state_updates_to_prove,
@@ -482,12 +479,14 @@ impl Saya {
         let program = program_hash.to_string();
         info!(target: LOG_TARGET, expected_fact, program, "Expected fact.");
 
+        let starknet_account = self.config.starknet_account.get_starknet_account()?;
+
         // Verify the proof and register fact.
         trace!(target: LOG_TARGET, last_block, "Verifying block.");
         let (transaction_hash, nonce) = verifier::verify(
             VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
             serialized_proof,
-            self.config.starknet_account.clone(),
+            &starknet_account,
             self.config.mode.to_program().cairo_version(),
         )
         .await?;
@@ -507,15 +506,21 @@ impl Saya {
                 let piltover_calldata = PiltoverCalldata {
                     program_output: serialized_output,
                     onchain_data_hash: batcher_output.new_state_root,
-                    onchain_data_size: (FieldElement::ZERO, FieldElement::ZERO),
+                    onchain_data_size: (Felt::ZERO, Felt::ZERO),
                 };
 
                 let expected_state_root = batcher_output.prev_state_root.to_string();
-                let expected_block_number = (batcher_output.block_number - 1u64.into()).to_string();
+                let expected_block_number =
+                    (batcher_output.block_number - &1u64.into()).to_string();
                 info!(target: LOG_TARGET, last_block, expected_state_root, expected_block_number, "Applying snos to piltover.");
 
-                starknet_apply_piltover(piltover_calldata, self.config.piltover_contract, nonce)
-                    .await?;
+                starknet_apply_piltover(
+                    piltover_calldata,
+                    self.config.piltover_contract,
+                    &starknet_account,
+                    nonce,
+                )
+                .await?;
             }
             SayaMode::PersistentMerging => {
                 // When not waiting for couple of second `apply_diffs` will sometimes fail due to reliance
@@ -528,8 +533,8 @@ impl Saya {
                     state_diff,
                     program_output,
                     program_hash,
-                    nonce_after,
-                    self.config.starknet_account,
+                    &starknet_account,
+                    nonce,
                 )
                 .await?;
                 info!(target: LOG_TARGET, last_block, transaction_hash, "Diffs applied.");
@@ -560,5 +565,33 @@ impl SayaMode {
             SayaMode::Persistent => ProveProgram::Batcher,
             SayaMode::PersistentMerging => ProveProgram::DiffProgram(ProveDiffProgram::Merger),
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StarknetAccountData {
+    #[serde(deserialize_with = "url_deserializer")]
+    pub starknet_url: Url,
+    #[serde(deserialize_with = "felt_string_deserializer")]
+    pub chain_id: Felt,
+    pub signer_address: Felt,
+    pub signer_key: Felt,
+}
+
+impl StarknetAccountData {
+    pub fn get_starknet_account(&self) -> anyhow::Result<SayaStarknetAccount> {
+        let provider = JsonRpcClient::new(HttpTransport::new(self.starknet_url.clone()));
+        let signer = LocalWallet::from(SigningKey::from_secret_scalar(self.signer_key));
+
+        let mut account = SingleOwnerAccount::new(
+            provider,
+            signer,
+            self.signer_address,
+            self.chain_id,
+            ExecutionEncoding::New,
+        );
+
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+        Ok(account)
     }
 }

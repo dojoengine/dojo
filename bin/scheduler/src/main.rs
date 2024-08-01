@@ -29,7 +29,7 @@ fn program_input_from_json(json_data: Value) -> ProgramInput {
     serde_json::from_value(json_data).unwrap()
 }
 
-async fn prove_to_json(result: Vec<String>) {
+async fn _prove_to_json(result: Vec<String>) {
     let mut file = File::create("result.json").await.expect("Failed to create file");
 
     let mut json_map = Map::new();
@@ -46,7 +46,7 @@ async fn prove_to_json(result: Vec<String>) {
 // Entry point of the program with async main function to handle I/O operations.
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<String> {
     use url::Url;
     let args = CliInput::parse(); // Parse CLI arguments.
     if args.files.is_empty() {
@@ -72,7 +72,11 @@ async fn main() {
         prover_key: ProverAccessKey::from_hex_string(&args.key).unwrap(),
     });
 
-    let result =
+    let (proof, _) =
         Scheduler::merge(inputs, args.world, ProverIdentifier::Http(prover_params)).await.unwrap();
-    prove_to_json(vec![result.0]).await;
+
+    let proof =
+        proof.to_felts().into_iter().map(|f| f.to_hex_string()).collect::<Vec<_>>().join(" ");
+
+    Ok(proof)
 }

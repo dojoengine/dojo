@@ -24,7 +24,7 @@ use persistent::BatcherInput;
 pub use program_input::*;
 pub use scheduler::*;
 use starknet::accounts::Call;
-use starknet_crypto::FieldElement;
+use starknet_crypto::Felt;
 pub use stone_image::*;
 
 use self::client::http_prove;
@@ -67,7 +67,7 @@ impl ProverIdentifier {
     }
 
     pub async fn prove_checker(&self, calls: Vec<Call>) -> anyhow::Result<String> {
-        let len = FieldElement::from(calls.len() as u64);
+        let len = Felt::from(calls.len() as u64);
         let mut args = calls
             .into_iter()
             .map(|c| {
@@ -104,11 +104,11 @@ impl ProverIdentifier {
 }
 
 impl ProveProgram {
-    pub fn cairo_version(&self) -> FieldElement {
+    pub fn cairo_version(&self) -> Felt {
         match self {
-            ProveProgram::DiffProgram(_) => FieldElement::ZERO,
-            ProveProgram::Checker => FieldElement::ONE,
-            ProveProgram::Batcher => FieldElement::ONE,
+            ProveProgram::DiffProgram(_) => Felt::ZERO,
+            ProveProgram::Checker => Felt::ONE,
+            ProveProgram::Batcher => Felt::ONE,
         }
     }
 }

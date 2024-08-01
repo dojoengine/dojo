@@ -49,7 +49,7 @@ if [[ -z "${SAYA_WORLD_ADDRESS}" ]]; then
         --name $SAYA_WORLD_NAME
 
 
-    exit 0  
+    exit 0
 
 else
   echo "Using world: $SAYA_WORLD_ADDRESS"
@@ -57,7 +57,7 @@ fi
 
 if [[ -z "${SAYA_WORLD_PREPARED}" ]]; then
     echo "World not prepared: PREPARING WORLD"
-    
+
     sozo \
         execute $SAYA_WORLD_ADDRESS set_differ_program_hash \
         -c 2265722951651489608338464389196546125983429710081933755514038580032192121109 \
@@ -121,7 +121,7 @@ fi
 
 
 if [[ -z "${SAYA_SKIP_MAKING_TRANSACTIONS}" ]]; then
-    cargo run -r --bin sozo -- execute shard_dungeon::systems::metagame::metagame register_player \
+    sozo execute shard_dungeon::systems::metagame::metagame register_player \
         -c str:mateo \
         --manifest-path $SAYA_MANIFEST_PATH \
         --rpc-url http://localhost:5050 \
@@ -130,7 +130,7 @@ if [[ -z "${SAYA_SKIP_MAKING_TRANSACTIONS}" ]]; then
         --world $SAYA_WORLD_ADDRESS \
         --wait
 
-    cargo run -r --bin sozo -- execute shard_dungeon::systems::hazard_hall::hazard_hall enter_dungeon \
+    sozo execute shard_dungeon::systems::hazard_hall::hazard_hall enter_dungeon \
         --manifest-path $SAYA_MANIFEST_PATH \
         --rpc-url http://localhost:5050 \
         --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
@@ -138,7 +138,7 @@ if [[ -z "${SAYA_SKIP_MAKING_TRANSACTIONS}" ]]; then
         --world $SAYA_WORLD_ADDRESS \
         --wait
 
-    cargo run -r --bin sozo -- execute shard_dungeon::systems::hazard_hall::hazard_hall fate_strike \
+    sozo execute shard_dungeon::systems::hazard_hall::hazard_hall fate_strike \
         --manifest-path $SAYA_MANIFEST_PATH \
         --rpc-url http://localhost:5050 \
         --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
@@ -146,7 +146,7 @@ if [[ -z "${SAYA_SKIP_MAKING_TRANSACTIONS}" ]]; then
         --world $SAYA_WORLD_ADDRESS \
         --wait
 
-    cargo run -r --bin sozo -- execute shard_dungeon::systems::hazard_hall::hazard_hall fate_strike \
+    sozo execute shard_dungeon::systems::hazard_hall::hazard_hall fate_strike \
         --manifest-path $SAYA_MANIFEST_PATH \
         --rpc-url http://localhost:5050 \
         --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
@@ -167,8 +167,11 @@ cargo run -r --bin saya -- \
     --registry $SAYA_FACT_REGISTRY \
     --piltover $SAYA_PILTOVER_ADDRESS \
     --world $SAYA_WORLD_ADDRESS \
-    --url $SAYA_PROVER_URL \
+    --prover-url $SAYA_PROVER_URL \
     --store-proofs \
+    --starknet-url $SAYA_SEPOLIA_ENDPOINT \
+    --signer-key $SAYA_SEPOLIA_PRIVATE_KEY \
+    --signer-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
     --private-key $SAYA_PROVER_KEY \
-    --start-block $(expr $SAYA_FORK_BLOCK_NUMBER + 1) 
+    --start-block $(expr $SAYA_FORK_BLOCK_NUMBER + 1)
     # --end-block $(expr $SAYA_FORK_BLOCK_NUMBER + 4)

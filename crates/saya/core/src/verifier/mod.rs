@@ -10,7 +10,7 @@
 use ::starknet::core::types::Felt;
 use serde::{Deserialize, Serialize};
 
-use crate::StarknetAccountData;
+use crate::{SayaStarknetAccount, StarknetAccountData};
 
 mod starknet;
 pub mod utils;
@@ -26,16 +26,16 @@ pub enum VerifierIdentifier {
 pub async fn verify(
     verifier: VerifierIdentifier,
     serialized_proof: Vec<Felt>,
-    account: StarknetAccountData,
-    cairo_version: FieldElement,
+    account: &SayaStarknetAccount,
+    cairo_version: Felt,
 ) -> anyhow::Result<(String, Felt)> {
     match verifier {
         VerifierIdentifier::HerodotusStarknetSepolia(fact_registry_address) => {
             starknet::starknet_verify(
                 fact_registry_address,
                 serialized_proof,
-                account,
                 cairo_version,
+                account,
             )
             .await
         }

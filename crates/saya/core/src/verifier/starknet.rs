@@ -9,14 +9,15 @@ use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
 use tracing::trace;
 
-use crate::dojo_os::get_starknet_account;
-use crate::StarknetAccountData;
+use crate::SayaStarknetAccount;
+
+use super::utils::wait_for_sent_transaction;
 
 pub async fn starknet_verify(
     fact_registry_address: Felt,
     serialized_proof: Vec<Felt>,
     cairo_version: Felt,
-    starknet_config: StarknetAccountData,
+    account: &SayaStarknetAccount,
 ) -> anyhow::Result<(String, Felt)> {
     if serialized_proof.len() > 2000 {
         trace!(
@@ -24,11 +25,8 @@ pub async fn starknet_verify(
             serialized_proof.len()
         );
     }
-    let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
 
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
-    let account = get_starknet_account(starknet_config)?;
-    let account = account.lock().await;
 
     let mut nonce = account.get_nonce().await?;
     let mut hashes = Vec::new();
@@ -54,7 +52,7 @@ pub async fn starknet_verify(
 
         trace!("Sent `publish_fragment` transaction {:#x}", tx.transaction_hash);
 
-        wait_for(tx, starknet_config.clone()).await?;
+        wait_for_sent_transaction(tx, account).await?;
 
         nonce += &1u64.into();
     }
@@ -79,7 +77,7 @@ pub async fn starknet_verify(
         .context("Failed to send `verify_and_register_fact_from_fragments` transaction.")?;
 
     let transaction_hash = format!("{:#x}", tx.transaction_hash);
-    wait_for(tx, starknet_config).await?;
+    wait_for_sent_transaction(tx, account).await?;
 
     Ok((transaction_hash, nonce + &1u64.into()))
 }

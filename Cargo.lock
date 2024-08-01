@@ -2957,19 +2957,20 @@ dependencies = [
 
 [[package]]
 name = "cairo-proof-parser"
-version = "0.3.0"
-source = "git+https://github.com/cartridge-gg/cairo-proof-parser?branch=v0.3.0/new-felt#c2b95715c053c2ab81ae605ab30527ecbafa4f03"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cairo-proof-parser?rev=dd9274e5c48f60282a8d001014d2c807574a3dc5#dd9274e5c48f60282a8d001014d2c807574a3dc5"
 dependencies = [
  "anyhow",
  "clap",
  "itertools 0.12.1",
  "num-bigint",
+ "prefix-hex",
  "regex",
  "serde",
+ "serde-felt",
  "serde_json",
  "starknet 0.11.0",
  "starknet-crypto 0.7.1",
- "starknet-types-core",
  "tokio",
  "url",
 ]
@@ -12177,6 +12178,7 @@ dependencies = [
 name = "scheduler"
 version = "1.0.0-alpha.9"
 dependencies = [
+ "anyhow",
  "clap",
  "katana-primitives",
  "saya-core",
@@ -12349,6 +12351,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc76f558e0cbb2a839d37354c575f1dc3fdc6546b5be373ba43d95f231bf7c12"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-felt"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cairo-proof-parser?rev=dd9274e5c48f60282a8d001014d2c807574a3dc5#dd9274e5c48f60282a8d001014d2c807574a3dc5"
+dependencies = [
+ "serde",
+ "starknet-crypto 0.7.1",
+ "starknet-ff",
 ]
 
 [[package]]

@@ -1,35 +1,35 @@
 use crate::verifier::utils::wait_for_sent_transaction;
-use crate::LOG_TARGET;
+use crate::{SayaStarknetAccount, LOG_TARGET};
 
-use super::STARKNET_ACCOUNT;
 use anyhow::Context;
 use cairo_proof_parser::to_felts;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use serde::Serialize;
 use starknet::accounts::{Account, Call};
-use starknet::core::types::FieldElement;
 use starknet::core::utils::get_selector_from_name;
+use starknet_crypto::Felt;
 use tracing::trace;
 
 #[derive(Debug, Serialize)]
 pub struct PiltoverCalldata {
-    pub program_output: Vec<FieldElement>,
-    pub onchain_data_hash: FieldElement,
-    pub onchain_data_size: (FieldElement, FieldElement), // U256
+    pub program_output: Vec<Felt>,
+    pub onchain_data_hash: Felt,
+    pub onchain_data_size: (Felt, Felt), // U256
 }
 
 pub async fn starknet_apply_piltover(
     calldata: PiltoverCalldata,
-    contract: FieldElement,
-    nonce: FieldElement,
+    contract: Felt,
+    account: &SayaStarknetAccount,
+    nonce: Felt,
 ) -> anyhow::Result<()> {
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
 
     let calldata = to_felts(&calldata)?;
 
-    let tx = STARKNET_ACCOUNT
-        .execute(vec![Call {
+    let tx = account
+        .execute_v1(vec![Call {
             to: contract,
             selector: get_selector_from_name("update_state").expect("invalid selector"),
             calldata,
@@ -41,7 +41,7 @@ pub async fn starknet_apply_piltover(
 
     trace!(target: LOG_TARGET,  "Sent `update_state` piltover transaction {:#x}", tx.transaction_hash);
 
-    wait_for_sent_transaction(tx).await?;
+    wait_for_sent_transaction(tx, account).await?;
 
     Ok(())
 }
