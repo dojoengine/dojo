@@ -10,14 +10,16 @@ version.workspace = true
 katana-primitives = { workspace = true }
 
 anyhow.workspace = true
+dojo-metrics.workspace = true
+metrics.workspace = true
 page_size = "0.6.0"
 parking_lot.workspace = true
+roaring = { version = "0.10.3", features = [ "serde" ] }
 serde.workspace = true
 serde_json.workspace = true
 tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
-
-roaring = { version = "0.10.3", features = [ "serde" ] }
+tracing.workspace = true
 
 # codecs
 [dependencies.postcard]

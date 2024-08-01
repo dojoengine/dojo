@@ -50,7 +50,7 @@ impl TestSequencer {
             ],
         };
 
-        let (handle, backend) = katana_node::start(server_config, config, starknet_config)
+        let (handle, backend, _) = katana_node::start(server_config, config, starknet_config)
             .await
             .expect("Failed to build node components");
 

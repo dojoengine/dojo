@@ -226,6 +226,10 @@ impl NodeArgs {
         let sequencer_config = self.sequencer_config();
         let starknet_config = self.starknet_config()?;
 
+        // build the node and start it
+        let (rpc_handle, backend, _) =
+            katana_node::start(server_config, sequencer_config, starknet_config).await?;
+
         // TODO: move to katana-node
         if let Some(listen_addr) = self.metrics {
             let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
@@ -235,13 +239,10 @@ impl NodeArgs {
                 listen_addr,
                 prometheus_handle,
                 metrics_process::Collector::default(),
+                Vec::new(),
             )
             .await?;
         }
-
-        // build the node and start it
-        let (rpc_handle, backend) =
-            katana_node::start(server_config, sequencer_config, starknet_config).await?;
 
         if !self.silent {
             #[allow(deprecated)]

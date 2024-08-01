@@ -21,6 +21,7 @@ use katana_core::service::block_producer::BlockProducer;
 #[cfg(feature = "messaging")]
 use katana_core::service::messaging::MessagingService;
 use katana_core::service::{NodeService, TransactionMiner};
+use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_primitives::block::FinalityStatus;
@@ -62,7 +63,7 @@ pub async fn start(
     server_config: ServerConfig,
     sequencer_config: SequencerConfig,
     mut starknet_config: StarknetConfig,
-) -> anyhow::Result<(NodeHandle, Arc<Backend<BlockifierFactory>>)> {
+) -> anyhow::Result<(NodeHandle, Arc<Backend<BlockifierFactory>>, Option<DbEnv>)> {
     // --- build executor factory
 
     let cfg_env = CfgEnv {
@@ -86,7 +87,7 @@ pub async fn start(
 
     // --- build backend
 
-    let blockchain = if let Some(forked_url) = &starknet_config.fork_rpc_url {
+    let (blockchain, db) = if let Some(forked_url) = &starknet_config.fork_rpc_url {
         let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
         let forked_chain_id = provider.chain_id().await.unwrap();
 
@@ -132,11 +133,13 @@ pub async fn start(
         )?;
 
         starknet_config.env.chain_id = forked_chain_id.into();
-        blockchain
+
+        (blockchain, None)
     } else if let Some(db_path) = &starknet_config.db_dir {
-        Blockchain::new_with_db(db_path, &starknet_config.genesis)?
+        let db = katana_db::init_db(db_path)?;
+        (Blockchain::new_with_db(db.clone(), &starknet_config.genesis)?, Some(db))
     } else {
-        Blockchain::new_with_genesis(InMemoryProvider::new(), &starknet_config.genesis)?
+        (Blockchain::new_with_genesis(InMemoryProvider::new(), &starknet_config.genesis)?, None)
     };
 
     let chain_id = starknet_config.env.chain_id;
@@ -191,7 +194,7 @@ pub async fn start(
     let node_components = (pool, backend.clone(), block_producer);
     let rpc_handle = spawn(node_components, server_config).await?;
 
-    Ok((rpc_handle, backend))
+    Ok((rpc_handle, backend, db))
 }
 
 // Moved from `katana_rpc` crate
