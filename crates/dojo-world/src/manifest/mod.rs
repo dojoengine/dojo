@@ -587,7 +587,7 @@ fn parse_contracts_events(
                 grants
                     .entry(contract)
                     .and_modify(|(current_block, current_resource)| {
-                        if *current_block < num {
+                        if *current_block <= num {
                             *current_block = num;
                             current_resource.insert(resource, value);
                         }
@@ -629,7 +629,7 @@ fn parse_contracts_events(
                 upgrades
                     .entry(address)
                     .and_modify(|(current_block, current_class_hash)| {
-                        if *current_block < num {
+                        if *current_block <= num {
                             *current_block = num;
                             *current_class_hash = class_hash;
                         }
