@@ -60,17 +60,24 @@ impl TableStat {
 /// Statistics for the entire MDBX environment.
 pub struct Stats {
     /// Statistics for individual tables in the environment
-    table_stats: HashMap<&'static str, TableStat>,
+    pub(super) table_stats: HashMap<&'static str, TableStat>,
     /// Overall environment information
-    info: Info,
+    pub(super) info: Info,
+    /// Number of pages in the MDBX's freelist database.
+    ///
+    /// In MDBX, the freelist is a [special table] that keeps track of a list of potentially
+    /// recyclable pages due to deletions/modifications.
+    ///
+    /// For further reference, see Erigon's writing on [LMBD Freelist] or Reth's discussion on the
+    /// [freelist issue].
+    ///
+    /// [special table]: https://github.com/paradigmxyz/reth/blob/d16ec0de5109098b5d19bf4ca9c33b16aa3e34eb/crates/storage/libmdbx-rs/mdbx-sys/libmdbx/mdbx.c#L2768
+    /// [LMDB Freelist]: https://github.com/erigontech/erigon/wiki/LMDB-freelist
+    /// [freelist issue]: https://github.com/paradigmxyz/reth/issues/5228
+    pub(super) freelist: usize,
 }
 
 impl Stats {
-    /// Creates a new Stats instance
-    pub(super) fn new(table_stats: HashMap<&'static str, TableStat>, info: libmdbx::Info) -> Self {
-        Self { table_stats, info }
-    }
-
     /// Get statistics for all tables
     pub fn table_stats(&self) -> &HashMap<&'static str, TableStat> {
         &self.table_stats
@@ -117,6 +124,11 @@ impl Stats {
     /// Get the number of reader slots currently in use
     pub fn current_readers(&self) -> usize {
         self.info.num_readers()
+    }
+
+    /// Get the number of pages in the freelist
+    pub fn freelist(&self) -> usize {
+        self.freelist
     }
 }
 

@@ -116,7 +116,8 @@ impl Database for DbEnv {
             }
 
             let info = self.0.info().map_err(DatabaseError::Stat)?;
-            Ok(Stats::new(table_stats, info))
+            let freelist = self.0.freelist().map_err(DatabaseError::Stat)?;
+            Ok(Stats { table_stats, info, freelist })
         })?
     }
 }
