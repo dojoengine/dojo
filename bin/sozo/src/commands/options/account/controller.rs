@@ -1,21 +1,23 @@
 use account_sdk::account::session::hash::{AllowedMethod, Session};
 use account_sdk::account::session::SessionAccount;
 use account_sdk::signers::HashSigner;
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_world::contracts::naming::get_name_from_tag;
-use dojo_world::manifest::{BaseManifest, DojoContract, Manifest};
+use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
 use slot::session::Policy;
 use starknet::core::types::contract::{AbiEntry, StateMutability};
-use starknet::core::types::Felt;
+use starknet::core::types::StarknetError::ContractNotFound;
+use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::{felt, short_string};
 use starknet::providers::Provider;
+use starknet::providers::ProviderError::StarknetError;
 use starknet::signers::SigningKey;
 use starknet_crypto::poseidon_hash_single;
-use tracing::trace;
+use tracing::{trace, warn};
 use url::Url;
 
 use super::WorldAddressOrName;
@@ -61,7 +63,9 @@ where
 
             // Perform policies diff check. For security reasons, we will always create a new
             // session here if the current policies are different from the existing
-            // session. TODO(kariy): maybe don't need to update if current policies is a
+            // session.
+            //
+            // TODO(kariy): maybe don't need to update if current policies is a
             // subset of the existing policies.
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
 
@@ -72,7 +76,7 @@ where
                     "Policies have changed. Creating new session."
                 );
 
-                let session = slot::session::create(rpc_url, &policies).await?;
+                let session = slot::session::create(rpc_url.clone(), &policies).await?;
                 slot::session::store(chain_id, &session)?;
                 session
             } else {
@@ -84,7 +88,7 @@ where
         None => {
             trace!(%username, chain = format!("{chain_id:#}"), "Creating new session.");
             let policies = collect_policies(world_addr_or_name, contract_address, config)?;
-            let session = slot::session::create(rpc_url, &policies).await?;
+            let session = slot::session::create(rpc_url.clone(), &policies).await?;
             slot::session::store(chain_id, &session)?;
             session
         }
@@ -102,6 +106,11 @@ where
     // TODO(kariy): make `expires_at` a `u64` type in the session struct
     let expires_at = session_details.expires_at.parse::<u64>()?;
     let session = Session::new(methods, expires_at, &signer.signer())?;
+
+    // make sure account exist on the provided chain, if not, we deploy it first before proceeding
+    deploy_account_if_not_exist(rpc_url, &provider, chain_id, contract_address, &username)
+        .await
+        .with_context(|| format!("Deploying Controller account on chain {chain_id}"))?;
 
     let session_account = SessionAccount::new(
         provider,
@@ -154,7 +163,7 @@ fn collect_policies_from_base_manifest(
 
     // get methods from all project contracts
     for contract in manifest.contracts {
-        let contract_address = get_dojo_contract_address(world_address, &contract);
+        let contract_address = get_dojo_contract_address(world_address, &contract, &manifest.base);
         let abis = contract.inner.abi.unwrap().load_abi_string(&base_path)?;
         let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
         policies_from_abis(&mut policies, &contract.inner.tag, contract_address, &abis);
@@ -209,12 +218,24 @@ fn policies_from_abis(
     }
 }
 
-fn get_dojo_contract_address(world_address: Felt, manifest: &Manifest<DojoContract>) -> Felt {
-    if let Some(address) = manifest.inner.address {
+fn get_dojo_contract_address(
+    world_address: Felt,
+    contract: &Manifest<DojoContract>,
+    base_class: &Manifest<Class>,
+) -> Felt {
+    // The `base_class_hash` field in the Contract's base manifest is initially set to ZERO,
+    // so we need to use the `class_hash` from the base class manifest instead.
+    let base_class_hash = if contract.inner.base_class_hash != Felt::ZERO {
+        contract.inner.base_class_hash
+    } else {
+        base_class.inner.class_hash
+    };
+
+    if let Some(address) = contract.inner.address {
         address
     } else {
-        let salt = generate_salt(&get_name_from_tag(&manifest.inner.tag));
-        get_contract_address(salt, manifest.inner.base_class_hash, &[], world_address)
+        let salt = generate_salt(&get_name_from_tag(&contract.inner.tag));
+        get_contract_address(salt, base_class_hash, &[], world_address)
     }
 }
 
@@ -235,5 +256,93 @@ fn get_dojo_world_address(
             );
             Ok(address)
         }
+    }
+}
+
+/// This function will call the `cartridge_deployController` method to deploy the account if it
+/// doesn't yet exist on the chain. But this JSON-RPC method is only available on Katana deployed on
+/// Slot. If the `rpc_url` is not a Slot url, it will return an error.
+///
+/// `cartridge_deployController` is not a method that Katana itself exposes. It's from a middleware
+/// layer that is deployed on top of the Katana deployment on Slot. This method will deploy the
+/// contract of a user based on the Slot deployment.
+async fn deploy_account_if_not_exist(
+    rpc_url: Url,
+    provider: &impl Provider,
+    chain_id: Felt,
+    address: Felt,
+    username: &str,
+) -> Result<()> {
+    use reqwest::Client;
+    use serde_json::json;
+
+    // Check if the account exists on the chain
+    match provider.get_class_at(BlockId::Tag(BlockTag::Pending), address).await {
+        Ok(_) => Ok(()),
+
+        // if account doesn't exist, deploy it by calling `cartridge_deployController` method
+        Err(err @ StarknetError(ContractNotFound)) => {
+            trace!(
+                %username,
+                chain = format!("{chain_id:#}"),
+                address = format!("{address:#x}"),
+                "Controller does not exist on chain. Attempting to deploy..."
+            );
+
+            // Skip deployment if the rpc_url is not a Slot instance
+            if !rpc_url.host_str().map_or(false, |host| host.contains("api.cartridge.gg")) {
+                warn!(%rpc_url, "Unable to deploy Controller on non-Slot instance.");
+                bail!("Controller with username '{username}' does not exist: {err}");
+            }
+
+            let body = json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "params": { "id": username },
+                "method": "cartridge_deployController",
+            });
+
+            let _ = Client::new()
+                .post(rpc_url)
+                .json(&body)
+                .send()
+                .await?
+                .error_for_status()
+                .with_context(|| "Failed to deploy controller")?;
+
+            Ok(())
+        }
+
+        Err(e) => bail!(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use dojo_test_utils::compiler::CompilerTestSetup;
+    use scarb::compiler::Profile;
+    use starknet::macros::felt;
+
+    use super::{collect_policies, Policy};
+    use crate::commands::options::account::WorldAddressOrName;
+
+    #[test]
+    fn collect_policies_from_project() {
+        let config = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/")
+            .build_test_config("spawn-and-move", Profile::DEV);
+
+        let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");
+        let user_addr = felt!("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03");
+
+        let policies =
+            collect_policies(WorldAddressOrName::Address(world_addr), user_addr, &config).unwrap();
+
+        // Get test data
+        let test_data = include_str!("../../../../tests/test_data/policies.json");
+        let expected_policies: Vec<Policy> = serde_json::from_str(test_data).unwrap();
+
+        // Compare the collected policies with the test data
+        assert_eq!(policies.len(), expected_policies.len());
+        expected_policies.iter().for_each(|p| assert!(policies.contains(p)));
     }
 }
