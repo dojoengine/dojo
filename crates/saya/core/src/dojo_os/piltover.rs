@@ -1,6 +1,3 @@
-use crate::verifier::utils::wait_for_sent_transaction;
-use crate::{SayaStarknetAccount, LOG_TARGET};
-
 use anyhow::Context;
 use cairo_proof_parser::to_felts;
 use dojo_world::migration::TxnConfig;
@@ -10,6 +7,9 @@ use starknet::accounts::{Account, Call};
 use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::Felt;
 use tracing::trace;
+
+use crate::verifier::utils::wait_for_sent_transaction;
+use crate::{SayaStarknetAccount, LOG_TARGET};
 
 #[derive(Debug, Serialize)]
 pub struct PiltoverCalldata {

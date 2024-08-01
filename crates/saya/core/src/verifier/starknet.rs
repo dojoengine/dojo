@@ -2,16 +2,13 @@ use anyhow::Context;
 use dojo_utils::{TransactionExt, TxnConfig};
 use itertools::Itertools;
 use starknet::accounts::{Account, Call, ConnectedAccount};
-use starknet::core::types::{
-    Felt, InvokeTransactionResult, TransactionExecutionStatus, TransactionStatus,
-};
+use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
 use tracing::trace;
 
-use crate::SayaStarknetAccount;
-
 use super::utils::wait_for_sent_transaction;
+use crate::SayaStarknetAccount;
 
 pub async fn starknet_verify(
     fact_registry_address: Felt,
@@ -54,7 +51,7 @@ pub async fn starknet_verify(
 
         wait_for_sent_transaction(tx, account).await?;
 
-        nonce += &1u64.into();
+        nonce += Felt::ONE;
     }
 
     let calldata = [Felt::from(hashes.len() as u64)]
@@ -79,7 +76,7 @@ pub async fn starknet_verify(
     let transaction_hash = format!("{:#x}", tx.transaction_hash);
     wait_for_sent_transaction(tx, account).await?;
 
-    Ok((transaction_hash, nonce + &1u64.into()))
+    Ok((transaction_hash, nonce + Felt::ONE))
 }
 
 async fn wait_for(

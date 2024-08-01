@@ -70,12 +70,11 @@ impl ProverIdentifier {
         let len = Felt::from(calls.len() as u64);
         let mut args = calls
             .into_iter()
-            .map(|c| {
+            .flat_map(|c| {
                 let mut felts = vec![c.to, c.selector, c.calldata.len().into()];
                 felts.extend(c.calldata);
                 felts
             })
-            .flatten()
             .collect::<Vec<_>>();
         args.insert(0, len);
 

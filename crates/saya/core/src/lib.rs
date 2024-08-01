@@ -2,7 +2,6 @@
 
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-use std::convert::identity;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
@@ -34,7 +33,6 @@ use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::{poseidon_hash_many, Felt};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::{Mutex, OnceCell};
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
@@ -155,11 +153,6 @@ impl Saya {
         let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
-        let prover_identifier = ProverIdentifier::Http(Arc::new(HttpProverParams {
-            prover_url: self.config.prover_url.clone(),
-            prover_key: self.config.prover_key.clone(),
-        }));
-
         // The structure responsible for proving.
         let mut prove_scheduler = None;
 
@@ -178,8 +171,10 @@ impl Saya {
                     let last = self.config.block_range.1.unwrap_or(block);
                     (last, last) // Only one proof is generated, no need to fetch earlier.
                 }
-                SayaMode::PersistentMerging => (block, latest_block), // Separate proofs for each block, starting as early as possible.
-                SayaMode::Persistent => (block, latest_block), // One proof per batch, waiting until all are available.
+                // Separate proofs for each block, starting as early as possible.
+                SayaMode::PersistentMerging => (block, latest_block),
+                // One proof per batch, waiting until all are available.
+                SayaMode::Persistent => (block, latest_block),
             };
 
             if minimum_expected > latest_block {
@@ -231,9 +226,8 @@ impl Saya {
                         .map(|(i, p)| self.process_block(block + i as u64, p))
                         .collect::<Result<Vec<_>, _>>()?
                         .into_iter()
-                        .filter_map(identity)
-                        .map(|(_, c)| c)
                         .flatten()
+                        .flat_map(|(_, c)| c)
                         .map(|c| BatcherCall {
                             to: c.to,
                             selector: c.selector,
@@ -275,9 +269,8 @@ impl Saya {
                         .map(|(i, p)| self.process_block(block + i as u64, p))
                         .collect::<Result<Vec<_>, _>>()?
                         .into_iter()
-                        .filter_map(identity)
-                        .map(|(_, c)| c)
                         .flatten()
+                        .flat_map(|(_, c)| c)
                         .collect::<Vec<_>>();
 
                     // We might want to prove the signatures as well.
@@ -510,8 +503,7 @@ impl Saya {
                 };
 
                 let expected_state_root = batcher_output.prev_state_root.to_string();
-                let expected_block_number =
-                    (batcher_output.block_number - &1u64.into()).to_string();
+                let expected_block_number = (batcher_output.block_number - Felt::ONE).to_string();
                 info!(target: LOG_TARGET, last_block, expected_state_root, expected_block_number, "Applying snos to piltover.");
 
                 starknet_apply_piltover(
@@ -523,8 +515,8 @@ impl Saya {
                 .await?;
             }
             SayaMode::PersistentMerging => {
-                // When not waiting for couple of second `apply_diffs` will sometimes fail due to reliance
-                // on registered fact
+                // When not waiting for couple of second `apply_diffs` will sometimes fail due to
+                // reliance on registered fact
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
                 trace!(target: LOG_TARGET, last_block, "Applying diffs.");
@@ -559,7 +551,7 @@ pub enum SayaMode {
 }
 
 impl SayaMode {
-    fn to_program(&self) -> ProveProgram {
+    fn to_program(self) -> ProveProgram {
         match self {
             SayaMode::Ephemeral => ProveProgram::Checker,
             SayaMode::Persistent => ProveProgram::Batcher,
