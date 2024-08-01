@@ -10,5 +10,8 @@ pub mod register;
 pub mod statistics;
 pub mod utils;
 
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
+
 #[cfg(test)]
 pub mod tests;

@@ -1,3 +1,5 @@
+use crate::test_utils::setup;
+use crate::{execute, model};
 use dojo_world::contracts::abi::model::{FieldLayout, Layout};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
@@ -5,9 +7,6 @@ use katana_runner::KatanaRunner;
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::Account;
 use starknet::core::types::Felt;
-
-use super::setup;
-use crate::{execute, model};
 
 // Test model ops in the same to avoid spinning up several katana with full
 // migration for now. Should be replaced by individual tests once Katana spinning up is enhanced.

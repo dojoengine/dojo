@@ -178,7 +178,13 @@ pub async fn start(
     let block_producer = Arc::new(block_producer);
 
     // TODO: avoid dangling task, or at least store the handle to the NodeService
-    tokio::spawn(NodeService::new(Arc::clone(&pool), miner, block_producer.clone(), messaging));
+    tokio::spawn(NodeService::new(
+        Arc::clone(&pool),
+        miner,
+        block_producer.clone(),
+        #[cfg(feature = "messaging")]
+        messaging,
+    ));
 
     // --- spawn rpc server
 

@@ -1,11 +1,10 @@
+use crate::test_utils::setup;
+use crate::utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
 use katana_runner::KatanaRunner;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, Felt};
-
-use super::setup;
-use crate::utils;
 
 const ACTION_CONTRACT_TAG: &str = "dojo_examples-actions";
 
