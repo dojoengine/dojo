@@ -33,6 +33,7 @@ use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::{poseidon_hash_many, Felt};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::{Mutex, OnceCell};
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
