@@ -17,6 +17,16 @@ pub enum Error {
     PrimitiveError(#[from] PrimitiveError),
     #[error(transparent)]
     EnumError(#[from] EnumError),
+    #[error(transparent)]
+    SchemaError(#[from] SchemaError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SchemaError {
+    #[error("Missing expected data")]
+    MissingExpectedData,
+    #[error("Unsupported type")]
+    UnsupportedType,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -33,6 +43,8 @@ pub enum ParseError {
     CairoSerdeError(#[from] cainome::cairo_serde::Error),
     #[error(transparent)]
     FromJsonStr(#[from] serde_json::Error),
+    #[error(transparent)]
+    FromSlice(#[from] std::array::TryFromSliceError),
 }
 
 #[derive(Debug, thiserror::Error)]

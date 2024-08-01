@@ -4,6 +4,7 @@ use std::num::ParseIntError;
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
+use torii_core::error::SchemaError;
 
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
@@ -11,7 +12,7 @@ use crate::proto::world::{
     SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse,
     SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest,
 };
-use crate::types::schema::{self, Entity, SchemaError};
+use crate::types::schema::Entity;
 use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
@@ -26,7 +27,7 @@ pub enum Error {
     #[error(transparent)]
     Transport(tonic::transport::Error),
     #[error(transparent)]
-    Schema(#[from] schema::SchemaError),
+    Schema(#[from] SchemaError),
 }
 
 #[derive(Debug)]

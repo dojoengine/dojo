@@ -4,23 +4,10 @@ use crypto_bigint::{Encoding, U256};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{Felt, FromStrError};
+use starknet::core::types::Felt;
+use torii_core::error::{Error, ParseError, SchemaError};
 
 use crate::proto::{self};
-
-#[derive(Debug, thiserror::Error)]
-pub enum SchemaError {
-    #[error("Missing expected data")]
-    MissingExpectedData,
-    #[error("Unsupported type")]
-    UnsupportedType,
-    #[error("Parsing string into integer: {0}")]
-    ParseIntError(#[from] std::num::ParseIntError),
-    #[error("Parsing string into felt: {0}")]
-    ParseFeltError(#[from] FromStrError),
-    #[error("Incorrect byte length")]
-    IncorrectByteLength,
-}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Entity {
@@ -29,7 +16,7 @@ pub struct Entity {
 }
 
 impl TryFrom<proto::types::Entity> for Entity {
-    type Error = SchemaError;
+    type Error = Error;
     fn try_from(entity: proto::types::Entity) -> Result<Self, Self::Error> {
         Ok(Self {
             hashed_keys: Felt::from_bytes_be_slice(&entity.hashed_keys),
@@ -62,7 +49,7 @@ impl From<Ty> for proto::types::Ty {
 }
 
 impl TryFrom<proto::types::Member> for Member {
-    type Error = SchemaError;
+    type Error = Error;
     fn try_from(member: proto::types::Member) -> Result<Self, Self::Error> {
         Ok(Member {
             name: member.name,
@@ -79,7 +66,7 @@ impl From<Member> for proto::types::Member {
 }
 
 impl TryFrom<proto::types::EnumOption> for EnumOption {
-    type Error = SchemaError;
+    type Error = Error;
     fn try_from(option: proto::types::EnumOption) -> Result<Self, Self::Error> {
         Ok(EnumOption {
             name: option.name,
@@ -95,7 +82,7 @@ impl From<EnumOption> for proto::types::EnumOption {
 }
 
 impl TryFrom<proto::types::Enum> for Enum {
-    type Error = SchemaError;
+    type Error = Error;
     fn try_from(r#enum: proto::types::Enum) -> Result<Self, Self::Error> {
         Ok(Enum {
             name: r#enum.name.clone(),
@@ -120,7 +107,7 @@ impl From<Enum> for proto::types::Enum {
 }
 
 impl TryFrom<proto::types::Struct> for Struct {
-    type Error = SchemaError;
+    type Error = Error;
     fn try_from(r#struct: proto::types::Struct) -> Result<Self, Self::Error> {
         Ok(Struct {
             name: r#struct.name,
@@ -148,7 +135,7 @@ impl From<Struct> for proto::types::Struct {
 // warning.
 #[allow(deprecated)]
 impl TryFrom<proto::types::Primitive> for Primitive {
-    type Error = SchemaError;
+    type Error = Error;
     fn try_from(primitive: proto::types::Primitive) -> Result<Self, Self::Error> {
         let primitive_type = primitive.r#type;
         let value_type = primitive
@@ -172,7 +159,7 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                     Some(proto::types::PrimitiveType::U64) => Primitive::U64(Some(*int)),
                     Some(proto::types::PrimitiveType::U128) => Primitive::U128(Some(*int as u128)),
                     Some(proto::types::PrimitiveType::Usize) => Primitive::USize(Some(*int as u32)),
-                    _ => return Err(SchemaError::UnsupportedType),
+                    _ => return Err(Error::SchemaError(SchemaError::UnsupportedType)),
                 }
             }
             proto::types::value::ValueType::IntValue(int) => {
@@ -188,7 +175,7 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                     Some(proto::types::PrimitiveType::U64) => Primitive::U64(Some(*int as u64)),
                     Some(proto::types::PrimitiveType::U128) => Primitive::U128(Some(*int as u128)),
                     Some(proto::types::PrimitiveType::Usize) => Primitive::USize(Some(*int as u32)),
-                    _ => return Err(SchemaError::UnsupportedType),
+                    _ => return Err(Error::SchemaError(SchemaError::UnsupportedType)),
                 }
             }
             proto::types::value::ValueType::ByteValue(bytes) => {
@@ -198,7 +185,7 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                             bytes
                                 .as_slice()
                                 .try_into()
-                                .map_err(|_| SchemaError::IncorrectByteLength)?,
+                                .map_err(ParseError::FromSlice)?,
                         )))
                     }
                     Some(proto::types::PrimitiveType::U128) => {
@@ -206,7 +193,7 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                             bytes
                                 .as_slice()
                                 .try_into()
-                                .map_err(|_| SchemaError::IncorrectByteLength)?,
+                                .map_err(ParseError::FromSlice)?,
                         )))
                     }
                     Some(proto::types::PrimitiveType::U256) => {
@@ -221,54 +208,56 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                     Some(proto::types::PrimitiveType::ContractAddress) => {
                         Primitive::ContractAddress(Some(Felt::from_bytes_be_slice(bytes)))
                     }
-                    _ => return Err(SchemaError::UnsupportedType),
+                    _ => return Err(Error::SchemaError(SchemaError::UnsupportedType)),
                 }
             }
             proto::types::value::ValueType::StringValue(str) => {
                 match proto::types::PrimitiveType::from_i32(primitive_type) {
                     Some(proto::types::PrimitiveType::I8) => {
-                        Primitive::I8(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::I8(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::I16) => {
-                        Primitive::I16(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::I16(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::I32) => {
-                        Primitive::I32(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::I32(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::I64) => {
-                        Primitive::I64(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::I64(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::I128) => {
-                        Primitive::I128(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::I128(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::U8) => {
-                        Primitive::U8(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::U8(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::U16) => {
-                        Primitive::U16(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::U16(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::U32) => {
-                        Primitive::U32(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::U32(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::U64) => {
-                        Primitive::U64(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::U64(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::U128) => {
-                        Primitive::U128(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::U128(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::Usize) => {
-                        Primitive::USize(Some(str.parse().map_err(SchemaError::ParseIntError)?))
+                        Primitive::USize(Some(str.parse().map_err(ParseError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::Felt252) => Primitive::Felt252(Some(
-                        Felt::from_str(str).map_err(SchemaError::ParseFeltError)?,
+                        Felt::from_str(str).map_err(ParseError::FromStr)?,
                     )),
-                    Some(proto::types::PrimitiveType::ClassHash) => {
-                        Primitive::ClassHash(Some(Felt::from_str(str).map_err(SchemaError::ParseFeltError)?))
-                    }
+                    Some(proto::types::PrimitiveType::ClassHash) => Primitive::ClassHash(Some(
+                        Felt::from_str(str).map_err(ParseError::FromStr)?,
+                    )),
                     Some(proto::types::PrimitiveType::ContractAddress) => {
-                        Primitive::ContractAddress(Some(Felt::from_str(str).map_err(SchemaError::ParseFeltError)?))
+                        Primitive::ContractAddress(Some(
+                            Felt::from_str(str).map_err(ParseError::FromStr)?,
+                        ))
                     }
-                    _ => return Err(SchemaError::UnsupportedType),
+                    _ => return Err(Error::SchemaError(SchemaError::UnsupportedType)),
                 }
             }
         };
@@ -321,7 +310,7 @@ impl From<Primitive> for proto::types::Primitive {
 }
 
 impl TryFrom<proto::types::Ty> for Ty {
-    type Error = SchemaError;
+    type Error = Error;
     fn try_from(ty: proto::types::Ty) -> Result<Self, Self::Error> {
         match ty.ty_type.ok_or(SchemaError::MissingExpectedData)? {
             proto::types::ty::TyType::Primitive(primitive) => {

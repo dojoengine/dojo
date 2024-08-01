@@ -12,6 +12,7 @@ use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
@@ -476,13 +477,10 @@ impl DojoWorld {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
-        let value_type = member_clause
-            .value
-            .ok_or(QueryError::MissingParam("value".into()))?
-            .value_type
-            .ok_or(QueryError::MissingParam("value_type".into()))?;
+        let primitive: Primitive =
+            member_clause.value.ok_or(QueryError::MissingParam("value".into()))?.try_into()?;
 
-        let comparison_value = value_to_string(&value_type)?;
+        let comparison_value = primitive.to_sql_value()?;
 
         let (namespace, model) = member_clause
             .model
@@ -582,8 +580,8 @@ impl DojoWorld {
                     let comparison_operator =
                         ComparisonOperator::from_repr(member.operator as usize)
                             .expect("invalid comparison operator");
-                    let value = member.value.unwrap().value_type.unwrap();
-                    let comparison_value = value_to_string(&value)?;
+                    let value: Primitive = member.value.unwrap().try_into()?;
+                    let comparison_value = value.to_sql_value()?;
 
                     let column_name = format!("external_{}", member.member);
 
@@ -1000,18 +998,6 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
     keys_pattern += "/$";
 
     Ok(keys_pattern)
-}
-
-fn value_to_string(value: &proto::types::value::ValueType) -> Result<String, Error> {
-    match value {
-        proto::types::value::ValueType::StringValue(string) => Ok(string.clone()),
-        proto::types::value::ValueType::IntValue(int) => Ok(int.to_string()),
-        proto::types::value::ValueType::UintValue(uint) => Ok(uint.to_string()),
-        proto::types::value::ValueType::BoolValue(bool) => {
-            Ok(if *bool { "1".to_string() } else { "0".to_string() })
-        }
-        _ => Err(QueryError::UnsupportedQuery.into()),
-    }
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
