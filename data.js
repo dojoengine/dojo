@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722544892725,
+  "lastUpdate": 1722547781250,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13873,6 +13873,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4853799,
             "range": "± 37413",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f4902226553ec1db5d3d806ffbacd2b061f3992b",
+          "message": "feat(torii-core): store update member (#2182)\n\n* feat(torii-core): store update member\r\n\r\n* feat; add set_model_member for updating specific member\r\n\r\n* chore: format\r\n\r\n* chore: update log to include member nname\r\n\r\n* fmt\r\n\r\n* refactor: clean code & add is event message\r\n\r\n* fmt\r\n\r\n* chore\r\n\r\n* feat: emit the store member update from the world\r\n\r\n* fix: ensure event messages are emitted with the correct selector\r\n\r\n* fix: cairo fmt\r\n\r\n* fix: fix test typo\r\n\r\n* wip:\r\n\r\n* fix: simple types model memebr update\r\n\r\n* chore; pass memmber type to func\r\n\r\n* chore: clean code\r\n\r\n* fmt\r\n\r\n* wip\r\n\r\n* fix: upsert to avoid constraint CHECK failing\r\n\r\n* fmt\r\n\r\n* fix: figure out way to fix upsert issue to reuse func\r\n\r\n* refactor: refactor recursive set to handle store update member\r\n\r\n* fix: fix world typo and merge\r\n\r\n* fix: struct from ty as mutable\r\n\r\n* fix: compilable torii\r\n\r\n* feat: wrap up store update member\r\n\r\n* fmt\r\n\r\n* fix fmt\r\n\r\n* fmt\r\n\r\n* cairo fmt\r\n\r\n* fix: update example to set array with new model API\r\n\r\n* fix: handle arrays\r\n\r\n* fix: correctly handle arrays\r\n\r\n* chore\r\n\r\n* fix: test\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-01T17:11:09-04:00",
+          "tree_id": "237a00094d20043ff9c252b7fe319efcfd3d8653",
+          "url": "https://github.com/dojoengine/dojo/commit/f4902226553ec1db5d3d806ffbacd2b061f3992b"
+        },
+        "date": 1722547779884,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16520538,
+            "range": "± 196797",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4895997,
+            "range": "± 200202",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3305975828,
+            "range": "± 595141673",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5063898,
+            "range": "± 88276",
             "unit": "ns/iter"
           }
         ]
