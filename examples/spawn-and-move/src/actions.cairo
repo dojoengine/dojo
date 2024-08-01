@@ -1,4 +1,4 @@
-use dojo_examples::models::{Direction, Position, Vec2};
+use dojo_examples::models::{Direction, Position, Vec2, PlayerItem};
 
 #[dojo::interface]
 pub trait IActions {
@@ -7,7 +7,7 @@ pub trait IActions {
     fn set_player_config(ref world: IWorldDispatcher, name: ByteArray);
     fn get_player_position(world: @IWorldDispatcher) -> Position;
     fn update_player_name(ref world: IWorldDispatcher, name: ByteArray);
-    fn update_player_name_value(ref world: IWorldDispatcher, name: ByteArray);
+    fn update_player_items(ref world: IWorldDispatcher, items: Array<PlayerItem>);
     fn reset_player_config(ref world: IWorldDispatcher);
     fn set_player_server_profile(ref world: IWorldDispatcher, server_id: u32, name: ByteArray);
     #[cfg(feature: 'dungeon')]
@@ -28,7 +28,7 @@ pub mod actions {
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{
         Position, Moves, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile, PositionStore,
-        MovesStore, MovesEntityStore, PlayerConfigStore, PlayerConfigEntityStore
+        MovesStore, MovesEntityStore, PlayerConfigStore, PlayerConfigEntityStore,
     };
     use dojo_examples::utils::next_position;
 
@@ -177,15 +177,22 @@ pub mod actions {
             assert(new_name == name, 'unable to change name');
         }
 
-        fn update_player_name_value(ref world: IWorldDispatcher, name: ByteArray) {
+        fn update_player_items(ref world: IWorldDispatcher, items: Array<PlayerItem>) {
             let player = get_caller_address();
             let config_id = PlayerConfigStore::entity_id_from_keys(player);
 
-            let config = PlayerConfigEntityStore::get(world, config_id);
-            config.set_name(world, name.clone());
+            let items_clone = items.clone();
 
-            let new_name = PlayerConfigEntityStore::get_name(world, config_id);
-            assert(new_name == name, 'unable to change name');
+            let config = PlayerConfigEntityStore::get(world, config_id);
+            config.set_items(world, items);
+
+            let new_items = PlayerConfigEntityStore::get_items(world, config_id);
+            let mut size = items_clone.len();
+
+            while size > 0 {
+                assert(new_items.at(size - 1) == items_clone.at(size - 1), 'item not found');
+                size -= 1;
+            }
         }
     }
 

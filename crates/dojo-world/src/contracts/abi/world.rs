@@ -983,6 +983,33 @@ abigen!(
   },
   {
     "type": "event",
+    "name": "dojo::world::world_contract::world::StoreUpdateMember",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "table",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "entity_id",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "member_selector",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "values",
+        "type": "core::array::Span::<core::felt252>",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
     "name": "dojo::world::world_contract::world::StoreDelRecord",
     "kind": "struct",
     "members": [
@@ -1160,6 +1187,11 @@ abigen!(
       {
         "name": "StoreUpdateRecord",
         "type": "dojo::world::world_contract::world::StoreUpdateRecord",
+        "kind": "nested"
+      },
+      {
+        "name": "StoreUpdateMember",
+        "type": "dojo::world::world_contract::world::StoreUpdateMember",
         "kind": "nested"
       },
       {

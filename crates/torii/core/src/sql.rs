@@ -4,7 +4,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{EnumOption, Member, Ty};
+use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
@@ -22,6 +22,9 @@ use crate::types::{
     Model as ModelRegistered,
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
+
+type IsEventMessage = bool;
+type IsStoreUpdateMember = bool;
 
 pub const FELT_DELIMITER: &str = "/";
 
@@ -201,7 +204,7 @@ impl Sql {
             path,
             event_id,
             (&entity_id, false),
-            &entity,
+            (&entity, false),
             block_timestamp,
             &vec![],
         );
@@ -260,13 +263,42 @@ impl Sql {
             path,
             event_id,
             (&entity_id, true),
-            &entity,
+            (&entity, false),
             block_timestamp,
             &vec![],
         );
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(event_message_updated);
+
+        Ok(())
+    }
+
+    pub async fn set_model_member(
+        &mut self,
+        model_tag: &str,
+        entity_id: Felt,
+        is_event_message: bool,
+        member: &Member,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        let entity_id = format!("{:#x}", entity_id);
+        let path = vec![model_tag.to_string()];
+
+        let wrapped_ty =
+            Ty::Struct(Struct { name: model_tag.to_string(), children: vec![member.clone()] });
+
+        // update model member
+        self.build_set_entity_queries_recursive(
+            path,
+            event_id,
+            (&entity_id, is_event_message),
+            (&wrapped_ty, true),
+            block_timestamp,
+            &vec![],
+        );
+        self.query_queue.execute_all().await?;
 
         Ok(())
     }
@@ -383,14 +415,13 @@ impl Sql {
         Ok(keys)
     }
 
-    pub async fn entity(&self, model: String, key: Felt) -> Result<Vec<Felt>> {
-        let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ? WHERE id = ?")
-            .bind(model)
-            .bind(format!("{:#x}", key));
+    pub async fn does_entity_exist(&self, model: String, key: Felt) -> Result<bool> {
+        let sql = format!("SELECT COUNT(*) FROM [{model}] WHERE id = ?");
 
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let row: (i32, String, String) = query.fetch_one(&mut *conn).await?;
-        Ok(serde_json::from_str(&row.2).unwrap())
+        let count: i64 =
+            sqlx::query_scalar(&sql).bind(format!("{:#x}", key)).fetch_one(&self.pool).await?;
+
+        Ok(count > 0)
     }
 
     pub async fn entities(&self, model: String) -> Result<Vec<Vec<Felt>>> {
@@ -561,12 +592,13 @@ impl Sql {
         path: Vec<String>,
         event_id: &str,
         // The id of the entity and if the entity is an event message
-        entity_id: (&str, bool),
-        entity: &Ty,
+        entity_id: (&str, IsEventMessage),
+        entity: (&Ty, IsStoreUpdateMember),
         block_timestamp: u64,
         indexes: &Vec<i64>,
     ) {
         let (entity_id, is_event_message) = entity_id;
+        let (entity, is_store_update_member) = entity;
 
         let update_members =
             |members: &[Member], query_queue: &mut QueryQueue, indexes: &Vec<i64>| {
@@ -629,11 +661,31 @@ impl Sql {
                 }
 
                 let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-                let statement = format!(
-                    "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
-                    columns.join(","),
-                    placeholders.join(",")
-                );
+                let statement = if is_store_update_member && indexes.is_empty() {
+                    arguments.push(Argument::String(if is_event_message {
+                        "event:".to_string() + entity_id
+                    } else {
+                        entity_id.to_string()
+                    }));
+
+                    // row has to exist. update it directly
+                    format!(
+                        "UPDATE [{table_id}] SET {updates} WHERE id = ?",
+                        table_id = table_id,
+                        updates = columns
+                            .iter()
+                            .zip(placeholders.iter())
+                            .map(|(column, placeholder)| format!("{} = {}", column, placeholder))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else {
+                    format!(
+                        "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
+                        columns.join(","),
+                        placeholders.join(",")
+                    )
+                };
 
                 query_queue.enqueue(statement, arguments);
             };
@@ -649,7 +701,7 @@ impl Sql {
                         path_clone,
                         event_id,
                         (entity_id, is_event_message),
-                        &member.ty,
+                        (&member.ty, is_store_update_member),
                         block_timestamp,
                         indexes,
                     );
@@ -685,7 +737,7 @@ impl Sql {
                             path_clone,
                             event_id,
                             (entity_id, is_event_message),
-                            &option.ty,
+                            (&option.ty, is_store_update_member),
                             block_timestamp,
                             indexes,
                         );
@@ -714,7 +766,7 @@ impl Sql {
                         path_clone,
                         event_id,
                         (entity_id, is_event_message),
-                        member,
+                        (member, is_store_update_member),
                         block_timestamp,
                         indexes,
                     );
@@ -752,7 +804,7 @@ impl Sql {
                         path_clone,
                         event_id,
                         (entity_id, is_event_message),
-                        member,
+                        (member, is_store_update_member),
                         block_timestamp,
                         &indexes,
                     );
