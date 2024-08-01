@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722537499335,
+  "lastUpdate": 1722541922631,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13777,6 +13777,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4839337,
             "range": "± 28520",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "665ef438da3a6fea708f1f5b7b22e0f7bd6f188f",
+          "message": "fix(sozo): block can contain multiple event of same type for same address (#2245)",
+          "timestamp": "2024-08-01T13:33:51-06:00",
+          "tree_id": "2cdcb10ce851e496059c88b49041c5230471c8b1",
+          "url": "https://github.com/dojoengine/dojo/commit/665ef438da3a6fea708f1f5b7b22e0f7bd6f188f"
+        },
+        "date": 1722541921859,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16442183,
+            "range": "± 508992",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4754550,
+            "range": "± 129244",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3353528590,
+            "range": "± 581900706",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4914706,
+            "range": "± 252999",
             "unit": "ns/iter"
           }
         ]
