@@ -31,8 +31,9 @@ pub struct BatcherInput {
 
 #[cfg(test)]
 mod batcher_args_tests {
-    use super::*;
     use cairo_proof_parser::{from_felts, to_felts};
+
+    use super::*;
 
     #[test]
     fn test_batcher_args_no_calls() {

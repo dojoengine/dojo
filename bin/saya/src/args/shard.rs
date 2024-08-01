@@ -1,6 +1,8 @@
-use std::{fmt::Display, str::FromStr};
+use std::fmt::Display;
+use std::str::FromStr;
 
-use clap::{builder::PossibleValue, Args, ValueEnum};
+use clap::builder::PossibleValue;
+use clap::{Args, ValueEnum};
 use katana_primitives::FieldElement;
 use saya_core::SayaMode;
 

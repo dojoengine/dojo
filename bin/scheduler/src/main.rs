@@ -46,7 +46,7 @@ async fn _prove_to_json(result: Vec<String>) {
 // Entry point of the program with async main function to handle I/O operations.
 
 #[tokio::main]
-async fn main() -> anyhow::Result<String> {
+async fn main() {
     use url::Url;
     let args = CliInput::parse(); // Parse CLI arguments.
     if args.files.is_empty() {
@@ -78,5 +78,5 @@ async fn main() -> anyhow::Result<String> {
     let proof =
         proof.to_felts().into_iter().map(|f| f.to_hex_string()).collect::<Vec<_>>().join(" ");
 
-    Ok(proof)
+    println!("{}", proof);
 }
