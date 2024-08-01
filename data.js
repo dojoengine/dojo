@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722469612141,
+  "lastUpdate": 1722481234646,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -13681,6 +13681,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5138126,
             "range": "± 175031",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "566ad6c11be19eb8b506c51008f58e212da7cd9e",
+          "message": "katana: include freelist in stats (#2243)",
+          "timestamp": "2024-08-01T10:42:48+08:00",
+          "tree_id": "00b72c88d708672bf1e863b616f0de887e4b159f",
+          "url": "https://github.com/dojoengine/dojo/commit/566ad6c11be19eb8b506c51008f58e212da7cd9e"
+        },
+        "date": 1722481233916,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16480234,
+            "range": "± 113633",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4703871,
+            "range": "± 159198",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3246624789,
+            "range": "± 640720408",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4861368,
+            "range": "± 57317",
             "unit": "ns/iter"
           }
         ]
