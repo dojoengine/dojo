@@ -25,10 +25,10 @@ use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use super::setup;
 use crate::migration::{
     auto_authorize, execute_strategy, find_authorization_diff, upload_metadata,
 };
+use crate::test_utils::setup;
 use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]

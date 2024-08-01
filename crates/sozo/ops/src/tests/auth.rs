@@ -7,9 +7,9 @@ use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag};
 
-use super::setup;
 use crate::auth::{self, ResourceOwner, ResourceType, ResourceWriter};
 use crate::execute;
+use crate::test_utils::setup;
 
 const ACTION_CONTRACT_NAME: &str = "dojo_examples-actions";
 const DEFAULT_NAMESPACE: &str = "dojo_examples";

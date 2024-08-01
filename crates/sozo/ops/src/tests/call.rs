@@ -6,7 +6,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
 
-use super::setup;
+use crate::test_utils::setup;
 use crate::{call, utils};
 
 const CONTRACT_TAG: &str = "dojo_examples-actions";

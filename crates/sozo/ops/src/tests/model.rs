@@ -6,7 +6,7 @@ use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::Account;
 use starknet::core::types::Felt;
 
-use super::setup;
+use crate::test_utils::setup;
 use crate::{execute, model};
 
 // Test model ops in the same to avoid spinning up several katana with full
