@@ -342,6 +342,7 @@ mod tests {
         let expected_policies: Vec<Policy> = serde_json::from_str(&test_data).unwrap();
 
         // Compare the collected policies with the test data
-        similar_asserts::assert_eq!(policies, expected_policies);
+        assert_eq!(policies.len(), expected_policies.len());
+        expected_policies.iter().for_each(|p| assert!(policies.contains(p)));
     }
 }

@@ -65,7 +65,6 @@ reqwest = { workspace = true, features = [ "json" ], optional = true }
 assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner.workspace = true
-similar-asserts.workspace = true
 snapbox = "0.4.6"
 
 [features]

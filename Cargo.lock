@@ -12737,7 +12737,6 @@ dependencies = [
  "semver 1.0.23",
  "serde",
  "serde_json",
- "similar-asserts",
  "slot",
  "smol_str",
  "snapbox",
