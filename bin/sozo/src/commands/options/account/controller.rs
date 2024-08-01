@@ -339,7 +339,7 @@ mod tests {
 
         // Get test data
         let test_data = include_str!("../../../../tests/test_data/policies.json");
-        let expected_policies: Vec<Policy> = serde_json::from_str(&test_data).unwrap();
+        let expected_policies: Vec<Policy> = serde_json::from_str(test_data).unwrap();
 
         // Compare the collected policies with the test data
         assert_eq!(policies.len(), expected_policies.len());
