@@ -1,5 +1,3 @@
-use crate::test_utils::setup;
-use crate::{call, utils};
 use dojo_world::contracts::WorldContractReader;
 use katana_runner::KatanaRunner;
 use starknet::accounts::SingleOwnerAccount;
@@ -7,6 +5,9 @@ use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
+
+use crate::test_utils::setup;
+use crate::{call, utils};
 
 const CONTRACT_TAG: &str = "dojo_examples-actions";
 const ENTRYPOINT: &str = "get_player_position";
@@ -22,15 +23,17 @@ async fn call_with_bad_address() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
-    assert!(call::call(
-        world_reader,
-        "0xBadCoffeeBadCode".to_string(),
-        ENTRYPOINT.to_string(),
-        vec![Felt::ZERO, Felt::ZERO],
-        None
-    )
-    .await
-    .is_err());
+    assert!(
+        call::call(
+            world_reader,
+            "0xBadCoffeeBadCode".to_string(),
+            ENTRYPOINT.to_string(),
+            vec![Felt::ZERO, Felt::ZERO],
+            None
+        )
+        .await
+        .is_err()
+    );
 }
 
 #[tokio::test]
@@ -41,15 +44,17 @@ async fn call_with_bad_name() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
-    assert!(call::call(
-        world_reader,
-        "BadName".to_string(),
-        ENTRYPOINT.to_string(),
-        vec![Felt::ZERO, Felt::ZERO],
-        None
-    )
-    .await
-    .is_err());
+    assert!(
+        call::call(
+            world_reader,
+            "BadName".to_string(),
+            ENTRYPOINT.to_string(),
+            vec![Felt::ZERO, Felt::ZERO],
+            None
+        )
+        .await
+        .is_err()
+    );
 }
 
 #[tokio::test]
@@ -60,15 +65,17 @@ async fn call_with_bad_entrypoint() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
-    assert!(call::call(
-        world_reader,
-        CONTRACT_TAG.to_string(),
-        "BadEntryPoint".to_string(),
-        vec![Felt::ZERO, Felt::ZERO],
-        None
-    )
-    .await
-    .is_err());
+    assert!(
+        call::call(
+            world_reader,
+            CONTRACT_TAG.to_string(),
+            "BadEntryPoint".to_string(),
+            vec![Felt::ZERO, Felt::ZERO],
+            None
+        )
+        .await
+        .is_err()
+    );
 }
 
 #[tokio::test]
@@ -79,15 +86,17 @@ async fn call_with_bad_calldata() {
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
-    assert!(call::call(
-        world_reader,
-        CONTRACT_TAG.to_string(),
-        ENTRYPOINT.to_string(),
-        vec![Felt::ZERO],
-        None
-    )
-    .await
-    .is_err());
+    assert!(
+        call::call(
+            world_reader,
+            CONTRACT_TAG.to_string(),
+            ENTRYPOINT.to_string(),
+            vec![Felt::ZERO],
+            None
+        )
+        .await
+        .is_err()
+    );
 }
 
 #[tokio::test]
@@ -119,13 +128,15 @@ async fn call_with_contract_address() {
     .await
     .unwrap();
 
-    assert!(call::call(
-        world_reader,
-        format!("{:#x}", contract_address),
-        ENTRYPOINT.to_string(),
-        vec![],
-        None,
-    )
-    .await
-    .is_ok());
+    assert!(
+        call::call(
+            world_reader,
+            format!("{:#x}", contract_address),
+            ENTRYPOINT.to_string(),
+            vec![],
+            None,
+        )
+        .await
+        .is_ok()
+    );
 }

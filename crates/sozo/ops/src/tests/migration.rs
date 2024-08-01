@@ -1,11 +1,6 @@
 #![allow(dead_code)]
 use std::str;
 
-use crate::migration::{
-    auto_authorize, execute_strategy, find_authorization_diff, upload_metadata,
-};
-use crate::test_utils::setup;
-use crate::utils::get_contract_address_from_reader;
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
@@ -29,6 +24,12 @@ use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+
+use crate::migration::{
+    auto_authorize, execute_strategy, find_authorization_diff, upload_metadata,
+};
+use crate::test_utils::setup;
+use crate::utils::get_contract_address_from_reader;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn default_migrate_no_dry_run() {
@@ -104,14 +105,16 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let account = sequencer.account(0);
 
-    assert!(execute_strategy(
-        &ws,
-        &migration,
-        &account,
-        TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
-    )
-    .await
-    .is_err());
+    assert!(
+        execute_strategy(
+            &ws,
+            &migration,
+            &account,
+            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
+        )
+        .await
+        .is_err()
+    );
 }
 
 #[tokio::test]
