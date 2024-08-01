@@ -167,15 +167,21 @@ impl TryFrom<proto::types::Primitive> for Primitive {
             }
             proto::types::value::ValueType::ByteValue(bytes) => {
                 match proto::types::PrimitiveType::from_i32(primitive_type) {
-                    Some(proto::types::PrimitiveType::U128)
-                    | Some(proto::types::PrimitiveType::Felt252)
+                    Some(proto::types::PrimitiveType::I128) => Primitive::I128(Some(
+                        i128::from_be_bytes(bytes.as_slice().try_into().expect("16 bytes")),
+                    )),
+                    Some(proto::types::PrimitiveType::U128) => Primitive::U128(Some(
+                        u128::from_be_bytes(bytes.as_slice().try_into().expect("16 bytes")),
+                    )),
+                    Some(proto::types::PrimitiveType::U256) => {
+                        Primitive::U256(Some(U256::from_be_slice(bytes)))
+                    }
+                    Some(proto::types::PrimitiveType::Felt252)
                     | Some(proto::types::PrimitiveType::ClassHash)
                     | Some(proto::types::PrimitiveType::ContractAddress) => {
                         Primitive::Felt252(Some(Felt::from_bytes_be_slice(bytes)))
                     }
-                    Some(proto::types::PrimitiveType::U256) => {
-                        Primitive::U256(Some(U256::from_be_slice(bytes)))
-                    }
+
                     _ => return Err(SchemaError::UnsupportedType),
                 }
             }

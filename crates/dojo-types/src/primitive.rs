@@ -166,19 +166,24 @@ impl Primitive {
 
     pub fn to_sql_type(&self) -> SqlType {
         match self {
+            // sqlite integer is 64-bit signed integer
             Primitive::I8(_)
             | Primitive::I16(_)
             | Primitive::I32(_)
             | Primitive::I64(_)
-            | Primitive::I128(_)
             | Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::USize(_)
             | Primitive::Bool(_) => SqlType::Integer,
 
+            // u64 cannot fit into a i64, so we use text
+            // dec
             Primitive::U64(_)
+            | Primitive::I128(_)
             | Primitive::U128(_)
+
+            // hex
             | Primitive::U256(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
@@ -194,6 +199,7 @@ impl Primitive {
         }
 
         match self {
+            // formatted in decimal
             Primitive::I8(_) => Ok(format!("{}", try_from_felt::<i8>(value[0])?)),
             Primitive::I16(_) => Ok(format!("{}", try_from_felt::<i16>(value[0])?)),
             Primitive::I32(_) => Ok(format!("{}", try_from_felt::<i32>(value[0])?)),
@@ -203,12 +209,13 @@ impl Primitive {
             Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
+            | Primitive::U64(_)
+            | Primitive::U128(_)
             | Primitive::USize(_)
             | Primitive::Bool(_) => Ok(format!("{}", value[0])),
 
-            Primitive::U64(_)
-            | Primitive::U128(_)
-            | Primitive::ContractAddress(_)
+            // formatted in hex
+            Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
             | Primitive::Felt252(_) => Ok(format!("0x{:064x}", value[0])),
 
