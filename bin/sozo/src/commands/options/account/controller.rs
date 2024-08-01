@@ -253,7 +253,7 @@ fn get_dojo_world_address(
 ///
 /// `cartridge_deployController` is not a method that Katana itself exposes. It's from a middleware
 /// layer that is deployed on top of the Katana deployment on Slot. This method will deploy the
-/// Contract contract of a user based on the Slot deployment.
+/// contract of a user based on the Slot deployment.
 async fn deploy_account_if_not_exist(
     rpc_url: Url,
     provider: &impl Provider,
