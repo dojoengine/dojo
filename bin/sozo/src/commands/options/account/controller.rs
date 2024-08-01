@@ -319,6 +319,8 @@ async fn deploy_account_if_not_exist(
 
 #[cfg(test)]
 mod tests {
+    use dojo_test_utils::compiler::CompilerTestSetup;
+    use scarb::compiler::Profile;
     use starknet::macros::felt;
 
     use super::{collect_policies, Policy};
@@ -326,17 +328,20 @@ mod tests {
 
     #[test]
     fn collect_policies_from_project() {
+        let config = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/")
+            .build_test_config("spawn-and-move", Profile::DEV);
+
         let world_addr = felt!("0x74c73d35df54ddc53bcf34aab5e0dbb09c447e99e01f4d69535441253c9571a");
-        let user_addr = felt!("0x2f5fd1892492ca8106f14ff3bb8400f104dd2327068d2572e31d5b21fc5c4cc");
+        let user_addr = felt!("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03");
 
         let policies =
-            collect_policies(WorldAddressOrName::Address(world_addr), user_addr, todo!()).unwrap();
+            collect_policies(WorldAddressOrName::Address(world_addr), user_addr, &config).unwrap();
 
         // Get test data
         let test_data = include_str!("../../../../tests/test_data/policies.json");
         let expected_policies: Vec<Policy> = serde_json::from_str(&test_data).unwrap();
 
         // Compare the collected policies with the test data
-        assert_eq!(policies, expected_policies);
+        similar_asserts::assert_eq!(policies, expected_policies);
     }
 }
