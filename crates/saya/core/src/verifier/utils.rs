@@ -8,9 +8,12 @@ use starknet::{
 use tokio::time::sleep;
 use tracing::trace;
 
-use crate::dojo_os::STARKNET_ACCOUNT;
+use crate::SayaStarknetAccount;
 
-pub async fn wait_for_sent_transaction(tx: InvokeTransactionResult) -> anyhow::Result<()> {
+pub async fn wait_for_sent_transaction(
+    tx: InvokeTransactionResult,
+    account: &SayaStarknetAccount,
+) -> anyhow::Result<()> {
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);
     let execution_status = loop {
@@ -18,14 +21,13 @@ pub async fn wait_for_sent_transaction(tx: InvokeTransactionResult) -> anyhow::R
             anyhow::bail!("Transaction not mined in {} seconds.", wait_for.as_secs());
         }
 
-        let status =
-            match STARKNET_ACCOUNT.provider().get_transaction_status(tx.transaction_hash).await {
-                Ok(status) => status,
-                Err(_e) => {
-                    sleep(Duration::from_secs(1)).await;
-                    continue;
-                }
-            };
+        let status = match account.provider().get_transaction_status(tx.transaction_hash).await {
+            Ok(status) => status,
+            Err(_e) => {
+                sleep(Duration::from_secs(1)).await;
+                continue;
+            }
+        };
 
         break match status {
             TransactionStatus::Received => {

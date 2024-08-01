@@ -173,7 +173,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
 #[cfg(test)]
 mod tests {
     use saya_core::SayaMode;
-    use starknet_crypto::FieldElement;
+    use starknet_crypto::Felt;
 
     use super::*;
     use crate::args::data_availability::CelestiaOptions;
@@ -196,7 +196,7 @@ mod tests {
             batch_size: 4,
             shard: ShardOptions {
                 saya_mode: shard::SayaModeArg(SayaMode::Persistent),
-                piltover: FieldElement::from_hex_be(
+                piltover: Felt::from_hex(
                     "0x65c0d01ef63197f00372cbb93bb32a7c49b70d3e82c5e0880d7912f4421e1c4",
                 )
                 .unwrap(),
@@ -252,12 +252,12 @@ mod tests {
 
         let expected = StarknetAccountData {
             starknet_url: Url::parse("http://localhost:5030").unwrap(),
-            chain_id: FieldElement::from_hex("0x534e5f5345504f4c4941").unwrap(),
-            signer_address: FieldElement::from_hex(
+            chain_id: Felt::from_hex("0x534e5f5345504f4c4941").unwrap(),
+            signer_address: Felt::from_hex(
                 "0x3aa0a12c62a46a200b1a1211e8cd09b520164104e76d79648ca459cf05db94",
             )
             .unwrap(),
-            signer_key: FieldElement::from_hex(
+            signer_key: Felt::from_hex(
                 "0x6b41bfa82e791a8b4e6b3ee058cb25b89714e4a23bd9a1ad6e6ba0bbc0b145b",
             )
             .unwrap(),
