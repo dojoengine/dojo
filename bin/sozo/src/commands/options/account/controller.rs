@@ -4,7 +4,7 @@ use account_sdk::signers::HashSigner;
 use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use dojo_world::contracts::naming::get_name_from_tag;
-use dojo_world::manifest::{BaseManifest, DojoContract, Manifest};
+use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
 use scarb::core::Config;
 use slot::session::Policy;
@@ -163,7 +163,7 @@ fn collect_policies_from_base_manifest(
 
     // get methods from all project contracts
     for contract in manifest.contracts {
-        let contract_address = get_dojo_contract_address(world_address, &contract);
+        let contract_address = get_dojo_contract_address(world_address, &contract, &manifest.base);
         let abis = contract.inner.abi.unwrap().load_abi_string(&base_path)?;
         let abis = serde_json::from_str::<Vec<AbiEntry>>(&abis)?;
         policies_from_abis(&mut policies, &contract.inner.tag, contract_address, &abis);
@@ -218,12 +218,24 @@ fn policies_from_abis(
     }
 }
 
-fn get_dojo_contract_address(world_address: Felt, manifest: &Manifest<DojoContract>) -> Felt {
-    if let Some(address) = manifest.inner.address {
+fn get_dojo_contract_address(
+    world_address: Felt,
+    contract: &Manifest<DojoContract>,
+    base_class: &Manifest<Class>,
+) -> Felt {
+    // The `base_class_hash` field in the Contract's base manifest is initially set to ZERO,
+    // so we need to use the `class_hash` from the base class manifest instead.
+    let base_class_hash = if contract.inner.base_class_hash != Felt::ZERO {
+        contract.inner.base_class_hash
+    } else {
+        base_class.inner.class_hash
+    };
+
+    if let Some(address) = contract.inner.address {
         address
     } else {
-        let salt = generate_salt(&get_name_from_tag(&manifest.inner.tag));
-        get_contract_address(salt, manifest.inner.base_class_hash, &[], world_address)
+        let salt = generate_salt(&get_name_from_tag(&contract.inner.tag));
+        get_contract_address(salt, base_class_hash, &[], world_address)
     }
 }
 
