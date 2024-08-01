@@ -295,20 +295,20 @@ async fn deploy_account_if_not_exist(
                 bail!("Controller with username '{username}' does not exist: {err}");
             }
 
-            let response = Client::new()
-                .post(rpc_url)
-                .json(&json!({
-                    "id": 1,
-                    "jsonrpc": "2.0",
-                    "method": "cartridge_deployController",
-                    "params": { "id": username },
-                }))
-                .send()
-                .await?;
+            let body = json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "params": { "id": username },
+                "method": "cartridge_deployController",
+            });
 
-            if !response.status().is_success() {
-                bail!("Failed to deploy controller: {}", response.status());
-            }
+            let _ = Client::new()
+                .post(rpc_url)
+                .json(&body)
+                .send()
+                .await?
+                .error_for_status()
+                .with_context(|| "Failed to deploy controller")?;
 
             Ok(())
         }
