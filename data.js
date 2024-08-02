@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722630874714,
+  "lastUpdate": 1722642771130,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14113,6 +14113,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5189634,
             "range": "± 234815",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "e1c9597cd06143b34e47976e861a0b208b1eb505",
+          "message": "devcontainer: bump to 1.80",
+          "timestamp": "2024-08-02T17:34:07-06:00",
+          "tree_id": "021adb413e243cccede1b61e42913a01bca52761",
+          "url": "https://github.com/dojoengine/dojo/commit/e1c9597cd06143b34e47976e861a0b208b1eb505"
+        },
+        "date": 1722642769807,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17261973,
+            "range": "± 97793",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4830071,
+            "range": "± 71828",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3197307942,
+            "range": "± 606201338",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4832797,
+            "range": "± 63026",
             "unit": "ns/iter"
           }
         ]
