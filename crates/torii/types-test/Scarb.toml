@@ -1,8 +1,8 @@
 [package]
-cairo-version = "=2.7.0-rc.3"
+cairo-version = "=2.7.0"
 edition = "2024_07"
 name = "types_test"
-version = "0.7.3"
+version = "1.0.0-alpha.4"
 
 [cairo]
 sierra-replace-ids = true
