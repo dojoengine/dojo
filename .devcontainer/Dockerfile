@@ -37,7 +37,7 @@ RUN rustup toolchain install $(cat rust_toolchain_version) && \
     rustup component add rustfmt
 
 RUN rustup toolchain install nightly && \
-    rustup component add rustfmt --toolchain nightly
+    rustup component add clippy rustfmt --toolchain nightly
 
 RUN rustup target add x86_64-pc-windows-msvc && \
     rustup target add wasm32-unknown-unknown
