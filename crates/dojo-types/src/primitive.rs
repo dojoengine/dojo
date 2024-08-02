@@ -55,6 +55,8 @@ pub enum PrimitiveError {
     NotEnoughFieldElements,
     #[error("Unsupported CairoType for SQL formatting")]
     UnsupportedType,
+    #[error("Invalid byte length: {0}. expected {1}")]
+    InvalidByteLength(usize, usize),
     #[error("Set value type mismatch")]
     TypeMismatch,
     #[error("Felt value ({value:#x}) out of range for {r#type}")]

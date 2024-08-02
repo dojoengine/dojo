@@ -12,7 +12,7 @@ use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use dojo_types::primitive::Primitive;
+use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
@@ -61,9 +61,9 @@ impl From<SchemaError> for Error {
     fn from(err: SchemaError) -> Self {
         match err {
             SchemaError::MissingExpectedData(data) => QueryError::MissingParam(data).into(),
-            SchemaError::UnsupportedType(data) => QueryError::UnsupportedType(data).into(),
+            SchemaError::UnsupportedType(data) => QueryError::UnsupportedValue(data).into(),
             SchemaError::InvalidByteLength(got, expected) => {
-                QueryError::InvalidByteLength(got, expected).into()
+                PrimitiveError::InvalidByteLength(got, expected).into()
             }
             SchemaError::ParseIntError(err) => ParseError::ParseIntError(err).into(),
             SchemaError::FromSlice(err) => ParseError::FromSlice(err).into(),
