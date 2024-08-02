@@ -114,8 +114,8 @@ where
 ///
 /// # Arguments
 ///
-/// * `block_str` - a string representing a block ID. It could be a
-///   block hash starting with 0x, a block number, 'pending' or 'latest'.
+/// * `block_str` - a string representing a block ID. It could be a block hash starting with 0x, a
+///   block number, 'pending' or 'latest'.
 ///
 /// # Returns
 ///
