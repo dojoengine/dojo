@@ -18,8 +18,6 @@ use anyhow::{Context, Result};
 use clap::{Args, Parser};
 use common::parse::parse_socket_address;
 use console::Style;
-use dojo_metrics::Report;
-use dojo_metrics::{metrics_process, prometheus_exporter};
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_SEQUENCER_ADDRESS,
@@ -228,24 +226,8 @@ impl NodeArgs {
         let starknet_config = self.starknet_config()?;
 
         // build the node and start it
-        let (rpc_handle, backend, db) =
+        let (rpc_handle, backend) =
             katana_node::start(server_config, sequencer_config, starknet_config).await?;
-
-        // TODO: move to katana-node
-        if let Some(listen_addr) = self.metrics {
-            let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
-
-            let db = db.unwrap();
-
-            info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
-            prometheus_exporter::serve(
-                listen_addr,
-                prometheus_handle,
-                metrics_process::Collector::default(),
-                vec![Box::new(db) as Box<dyn Report>],
-            )
-            .await?;
-        }
 
         if !self.silent {
             #[allow(deprecated)]
@@ -297,6 +279,7 @@ impl NodeArgs {
 
         ServerConfig {
             apis,
+            metrics: self.metrics,
             port: self.server.port,
             host: self.server.host.clone().unwrap_or("0.0.0.0".into()),
             max_connections: self.server.max_connections,

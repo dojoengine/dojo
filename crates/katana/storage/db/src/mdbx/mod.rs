@@ -6,14 +6,14 @@ pub mod cursor;
 pub mod stats;
 pub mod tx;
 
-use dojo_metrics::metrics::gauge;
-use metrics::{describe_gauge, Label};
 use std::collections::HashMap;
 use std::path::Path;
-use tracing::error;
 
+use dojo_metrics::metrics::gauge;
 pub use libmdbx;
 use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW};
+use metrics::{describe_gauge, Label};
+use tracing::error;
 
 use self::stats::{Stats, TableStat};
 use self::tx::Tx;

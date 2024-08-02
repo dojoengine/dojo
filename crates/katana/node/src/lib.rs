@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
@@ -21,7 +22,6 @@ use katana_core::service::block_producer::BlockProducer;
 #[cfg(feature = "messaging")]
 use katana_core::service::messaging::MessagingService;
 use katana_core::service::{NodeService, TransactionMiner};
-use katana_db::mdbx::DbEnv;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_primitives::block::FinalityStatus;
@@ -47,7 +47,7 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::trace;
+use tracing::{info, trace};
 
 /// Build the core Katana components from the given configurations and start running the node.
 // TODO: placeholder until we implement a dedicated class that encapsulate building the node
@@ -63,7 +63,7 @@ pub async fn start(
     server_config: ServerConfig,
     sequencer_config: SequencerConfig,
     mut starknet_config: StarknetConfig,
-) -> anyhow::Result<(NodeHandle, Arc<Backend<BlockifierFactory>>, Option<DbEnv>)> {
+) -> anyhow::Result<(NodeHandle, Arc<Backend<BlockifierFactory>>)> {
     // --- build executor factory
 
     let cfg_env = CfgEnv {
@@ -169,6 +169,25 @@ pub async fn start(
         BlockProducer::instant(Arc::clone(&backend))
     };
 
+    // --- build metrics service
+
+    // Metrics recorder must be initialized before calling any of the metrics macros, in order for
+    // it to be registered.
+    if let Some(addr) = server_config.metrics {
+        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+        let db = db.unwrap();
+
+        prometheus_exporter::serve(
+            addr,
+            prometheus_handle,
+            metrics_process::Collector::default(),
+            vec![Box::new(db) as Box<dyn Report>],
+        )
+        .await?;
+
+        info!(%addr, "Metrics endpoint started.");
+    }
+
     // --- build messaging service
 
     #[cfg(feature = "messaging")]
@@ -194,7 +213,7 @@ pub async fn start(
     let node_components = (pool, backend.clone(), block_producer);
     let rpc_handle = spawn(node_components, server_config).await?;
 
-    Ok((rpc_handle, backend, db))
+    Ok((rpc_handle, backend))
 }
 
 // Moved from `katana_rpc` crate

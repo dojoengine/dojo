@@ -15,6 +15,7 @@ katana-rpc.workspace = true
 katana-rpc-api.workspace = true
 
 anyhow.workspace = true
+dojo-metrics.workspace = true
 hyper.workspace = true
 jsonrpsee.workspace = true
 num-traits.workspace = true

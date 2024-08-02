@@ -7743,7 +7743,6 @@ dependencies = [
  "comfy-table",
  "common 1.0.0-alpha.4",
  "console",
- "dojo-metrics",
  "katana-core",
  "katana-db",
  "katana-node",
@@ -7883,6 +7882,7 @@ name = "katana-node"
 version = "1.0.0-alpha.4"
 dependencies = [
  "anyhow",
+ "dojo-metrics",
  "hyper 0.14.30",
  "jsonrpsee 0.16.3",
  "katana-core",

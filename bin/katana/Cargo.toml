@@ -21,7 +21,6 @@ clap.workspace = true
 clap_complete.workspace = true
 common.workspace = true
 console.workspace = true
-dojo-metrics.workspace = true
 serde_json.workspace = true
 shellexpand = "3.1.0"
 tokio.workspace = true
@@ -37,7 +36,7 @@ assert_matches.workspace = true
 [features]
 default = [ "jemalloc", "messaging", "slot" ]
 
-jemalloc = [ "dojo-metrics/jemalloc" ]
+jemalloc = []
 messaging = [ "katana-node/messaging" ]
 slot = [ "dep:katana-slot-controller", "katana-primitives/slot" ]
 starknet-messaging = [ "katana-node/starknet-messaging" ]
