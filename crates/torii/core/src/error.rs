@@ -17,17 +17,8 @@ pub enum Error {
     PrimitiveError(#[from] PrimitiveError),
     #[error(transparent)]
     EnumError(#[from] EnumError),
-    #[error(transparent)]
-    SchemaError(#[from] SchemaError),
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum SchemaError {
-    #[error("Missing expected data")]
-    MissingExpectedData,
-    #[error("Unsupported type")]
-    UnsupportedType,
-}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
@@ -53,10 +44,14 @@ pub enum QueryError {
     UnsupportedQuery,
     #[error("missing param: {0}")]
     MissingParam(String),
+    #[error("unsupported type for {0}")]
+    UnsupportedType(String),
     #[error("model not found: {0}")]
     ModelNotFound(String),
     #[error("exceeds sqlite `JOIN` limit (64)")]
     SqliteJoinLimit,
     #[error("invalid namespaced model: {0}")]
     InvalidNamespacedModel(String),
+    #[error("invalid byte length: {0}. expected {1}")]
+    InvalidByteLength(usize, usize),
 }

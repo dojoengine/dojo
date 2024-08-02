@@ -4,7 +4,6 @@ use std::num::ParseIntError;
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
-use torii_core::error::SchemaError;
 
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
@@ -12,7 +11,7 @@ use crate::proto::world::{
     SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse,
     SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest,
 };
-use crate::types::schema::Entity;
+use crate::types::schema::{Entity, SchemaError};
 use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
@@ -69,7 +68,9 @@ impl WorldClient {
             .await
             .map_err(Error::Grpc)
             .and_then(|res| {
-                res.into_inner().metadata.ok_or(Error::Schema(SchemaError::MissingExpectedData))
+                res.into_inner()
+                    .metadata
+                    .ok_or(Error::Schema(SchemaError::MissingExpectedData("metadata".to_string())))
             })
             .and_then(|metadata| metadata.try_into().map_err(Error::ParseStr))
     }

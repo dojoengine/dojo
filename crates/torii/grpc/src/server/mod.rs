@@ -46,6 +46,7 @@ use crate::proto::world::{
     SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
 };
 use crate::proto::{self};
+use crate::types::schema::SchemaError;
 use crate::types::ComparisonOperator;
 
 pub(crate) static ENTITIES_TABLE: &str = "entities";
@@ -55,6 +56,21 @@ pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
 pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
 pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+
+impl From<SchemaError> for Error {
+    fn from(err: SchemaError) -> Self {
+        match err {
+            SchemaError::MissingExpectedData(data) => QueryError::MissingParam(data).into(),
+            SchemaError::UnsupportedType(data) => QueryError::UnsupportedType(data).into(),
+            SchemaError::InvalidByteLength(got, expected) => {
+                QueryError::InvalidByteLength(got, expected).into()
+            }
+            SchemaError::ParseIntError(err) => ParseError::ParseIntError(err).into(),
+            SchemaError::FromSlice(err) => ParseError::FromSlice(err).into(),
+            SchemaError::FromStr(err) => ParseError::FromStr(err).into(),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct DojoWorld {
