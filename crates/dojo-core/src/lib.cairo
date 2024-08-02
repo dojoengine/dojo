@@ -76,6 +76,12 @@ mod tests {
     }
     mod base;
     mod benchmarks;
-    mod world;
+    mod helpers;
+    mod world {
+        mod acl;
+        mod entities;
+        mod resources;
+        mod world;
+    }
     mod utils;
 }

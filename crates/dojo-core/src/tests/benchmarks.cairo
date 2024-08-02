@@ -15,8 +15,9 @@ use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
 use dojo::model::{Model, Layout};
 use dojo::model::introspect::Introspect;
 use dojo::storage::{database, storage};
+
+use dojo::tests::helpers::{Foo, Sword, Case, Character, Abilities, Stats, Weapon};
 use dojo::utils::test::GasCounterTrait;
-use dojo::tests::world::Foo;
 
 #[test]
 #[available_gas(1000000000)]
@@ -240,21 +241,6 @@ fn test_struct_with_many_fields_fixed() {
     gas.end("pos db get");
 }
 
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-pub struct Sword {
-    pub swordsmith: ContractAddress,
-    pub damage: u32,
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-#[dojo::model]
-pub struct Case {
-    #[key]
-    pub owner: ContractAddress,
-    pub sword: Sword,
-    pub material: felt252,
-}
-
 // TODO: this test should be adapted to benchmark the new layout system
 #[test]
 #[ignore]
@@ -301,47 +287,6 @@ fn bench_nested_struct_packed() {
     let gas = GasCounterTrait::start();
     database::get('cases', '42', layout);
     gas.end("case db get");
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-#[dojo::model]
-pub struct Character {
-    #[key]
-    pub caller: ContractAddress,
-    pub heigth: felt252,
-    pub abilities: Abilities,
-    pub stats: Stats,
-    pub weapon: Weapon,
-    pub gold: u32,
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-pub struct Abilities {
-    pub strength: u8,
-    pub dexterity: u8,
-    pub constitution: u8,
-    pub intelligence: u8,
-    pub wisdom: u8,
-    pub charisma: u8,
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-pub struct Stats {
-    pub kills: u128,
-    pub deaths: u16,
-    pub rests: u32,
-    pub hits: u64,
-    pub blocks: u32,
-    pub walked: felt252,
-    pub runned: felt252,
-    pub finished: bool,
-    pub romances: u16,
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-pub enum Weapon {
-    DualWield: (Sword, Sword),
-    Fists: (Sword, Sword), // Introspect requires same arms
 }
 
 // TODO: this test should be adapted to benchmark the new layout system

@@ -5,6 +5,6 @@ pub mod mock_token {
 
     fn dojo_init(world: @IWorldDispatcher) {
         let account: ContractAddress = get_caller_address();
-        set!(world, MockToken { account: account, amount: 1000 });
+        set!(world, MockToken { account, amount: 1000 });
     }
 }
