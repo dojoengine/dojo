@@ -206,7 +206,7 @@ impl Service {
                 Some("event_messages.id = ?"),
                 Some("event_messages.id = ?"),
                 None,
-                None
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(&entity.id).fetch_one(&pool).await?;

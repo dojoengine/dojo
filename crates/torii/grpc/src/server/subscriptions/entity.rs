@@ -227,7 +227,7 @@ impl Service {
                 Some("entities.id = ?"),
                 Some("entities.id = ?"),
                 None,
-                None
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(&entity.id).fetch_one(&pool).await?;

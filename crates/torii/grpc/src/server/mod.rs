@@ -711,7 +711,7 @@ impl DojoWorld {
                 Some(&format!("[{table}].id = ?")),
                 Some(&format!("[{table}].id = ?")),
                 None,
-                None
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
