@@ -425,6 +425,7 @@ pub fn map_row_to_ty(
     arrays_rows: &HashMap<String, Vec<SqliteRow>>,
 ) -> Result<(), Error> {
     let column_name = format!("{}.{}", path, name);
+
     match ty {
         Ty::Primitive(primitive) => {
             match &primitive {
@@ -500,7 +501,7 @@ pub fn map_row_to_ty(
                 }
                 Primitive::ClassHash(_) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    primitive.set_contract_address(Some(
+                    primitive.set_class_hash(Some(
                         Felt::from_str(&value).map_err(ParseError::FromStr)?,
                     ))?;
                 }
@@ -513,11 +514,15 @@ pub fn map_row_to_ty(
             };
         }
         Ty::Enum(enum_ty) => {
-            let option = row.try_get::<String, &str>(&column_name)?;
-            enum_ty.set_option(&option)?;
+            let option_name = row.try_get::<String, &str>(&column_name)?;
+            enum_ty.set_option(&option_name)?;
 
             let path = [path, name].join("$");
             for option in &mut enum_ty.options {
+                if option.name != option_name {
+                    continue;
+                }
+
                 map_row_to_ty(&path, &option.name, &mut option.ty, row, arrays_rows)?;
             }
         }
