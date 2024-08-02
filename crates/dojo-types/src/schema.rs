@@ -55,15 +55,8 @@ impl Ty {
             Ty::Primitive(c) => c.to_string(),
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.replace(
-                "<T>",
-                &e.options
-                    .iter()
-                    .map(|o| {
-                        let t = o.ty.name().replace("()", "");
-                        format!("<{}>", t)
-                    })
-                    .unique()
-                    .join(""),
+                "T",
+                &e.options.iter().map(|o| o.ty.name().replace("()", "")).unique().join(""),
             ),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
             Ty::Array(ty) => format!("Array<{}>", ty[0].name()),
