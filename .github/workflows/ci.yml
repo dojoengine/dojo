@@ -73,6 +73,9 @@ jobs:
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.github_token }}
+      - uses: ilammy/setup-nasm@v1
+        with:
+          version: "2.15.05"
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   # This job is used to ensure the built katana image doesn't depend on any
