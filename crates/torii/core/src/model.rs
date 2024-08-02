@@ -418,7 +418,7 @@ pub fn build_sql_query(
         query = format!("{} OFFSET {}", query, offset);
     }
 
-    query += "ORDER BY {table}.event_id DESC";
+    query += " ORDER BY {table}.event_id DESC";
 
     if let Some(where_clause_arrays) = where_clause_arrays {
         for (_, formatted_query) in formatted_arrays_queries.iter_mut() {
