@@ -75,7 +75,7 @@ jobs:
           repo-token: ${{ secrets.github_token }}
       - name: Download and Install NASM
         run: |
-          Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/$nasm_version/win64/nasm-2.15.05-win64.zip" -OutFile "nasm.zip"
+          Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-win64.zip" -OutFile "nasm.zip"
           Expand-Archive -Path "nasm.zip" -DestinationPath "C:\Program Files\"
           Rename-Item -Path "C:\Program Files\nasm-2.15.05" -NewName "nasm"
           setx PATH "C:\Program Files\nasm-2.15.05;%PATH%"
