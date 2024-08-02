@@ -407,7 +407,7 @@ pub fn build_sql_query(
         query += &format!(" WHERE {}", where_clause);
         count_query += &format!(" WHERE {}", where_clause);
     }
-    query += &format!(" ORDER BY {entities_table}.id DESC");
+    query += &format!(" ORDER BY {entities_table}.event_id DESC");
 
     if let Some(limit) = limit {
         query += &format!(" LIMIT {}", limit);
