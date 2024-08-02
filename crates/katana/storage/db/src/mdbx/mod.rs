@@ -7,7 +7,7 @@ pub mod stats;
 pub mod tx;
 
 use dojo_metrics::metrics::gauge;
-use metrics::Label;
+use metrics::{describe_gauge, Label};
 use std::collections::HashMap;
 use std::path::Path;
 use tracing::error;
@@ -73,7 +73,7 @@ impl DbEnv {
             })
             .set_max_readers(DEFAULT_MAX_READERS);
 
-        Ok(DbEnv(builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?))
+        Ok(DbEnv(builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?).with_metrics())
     }
 
     /// Creates all the defined tables in [`Tables`], if necessary.
@@ -92,6 +92,14 @@ impl DbEnv {
         tx.commit().map_err(DatabaseError::Commit)?;
 
         Ok(())
+    }
+
+    fn with_metrics(self) -> Self {
+        describe_gauge!("db.table_size", metrics::Unit::Bytes, "Total size of the table");
+        describe_gauge!("db.table_pages", metrics::Unit::Count, "Number of pages in the table");
+        describe_gauge!("db.table_entries", metrics::Unit::Count, "Number of entries in the table");
+        describe_gauge!("db.freelist", metrics::Unit::Bytes, "Size of the database freelist");
+        self
     }
 }
 
@@ -129,109 +137,46 @@ impl dojo_metrics::Report for DbEnv {
     fn report(&self) {
         match self.stats() {
             Ok(stats) => {
+                let mut pgsize = 0;
+
                 for (table, stat) in stats.table_stats() {
-                    let a = gauge!("db.table_size", vec![Label::new("table", table)]);
+                    gauge!("db.table_size", vec![Label::new("table", *table)])
+                        .set(stat.total_size() as f64);
+
+                    gauge!(
+                        "db.table_pages",
+                        vec![Label::new("table", *table), Label::new("type", "leaf")]
+                    )
+                    .set(stat.leaf_pages() as f64);
+
+                    gauge!(
+                        "db.table_pages",
+                        vec![Label::new("table", *table), Label::new("type", "branch")]
+                    )
+                    .set(stat.branch_pages() as f64);
+
+                    gauge!(
+                        "db.table_pages",
+                        vec![Label::new("table", *table), Label::new("type", "overflow")]
+                    )
+                    .set(stat.overflow_pages() as f64);
+
+                    gauge!("db.table_entries", vec![Label::new("table", *table)])
+                        .set(stat.entries() as f64);
+
+                    if pgsize == 0 {
+                        pgsize = stat.page_size() as usize;
+                    }
                 }
-                // gauge!(
-                //     "db.table_pages",
-                //     leaf_pages as f64,
-                //     vec![Label::new("table", table), Label::new("type", "leaf")]
-                // );
-                // gauge!(
-                //     "db.table_pages",
-                //     branch_pages as f64,
-                //     vec![Label::new("table", table), Label::new("type", "branch")]
-                // );
-                // gauge!(
-                //     "db.table_pages",
-                //     overflow_pages as f64,
-                //     vec![Label::new("table", table), Label::new("type", "overflow")]
-                // );
-                // gauge!("db.table_entries", entries as f64, vec![Label::new("table", table)]);
+
+                gauge!("db.freelist").set((stats.freelist() * pgsize) as f64);
             }
 
             Err(error) => {
-                error!(%error, "Reading database stats.");
+                error!(%error, "Failed to read database stats.");
             }
         }
     }
-
-    // fn report_metrics(&self) {
-    //     for (name, value, labels) in self.gauge_metrics() {
-    //         gauge!(name, labels).set(value);
-    //     }
-    // }
-
-    // fn gauge_metrics(&self) -> Vec<(&'static str, f64, Vec<Label>)> {
-    //       let mut metrics = Vec::new();
-
-    //       let _ = self
-    //           .view(|tx| {
-    //               for table in Tables::ALL.iter().map(Tables::name) {
-    //                   let table_db = tx.inner.open_db(Some(table)).wrap_err("Could not open db.")?;
-
-    //                   let stats = tx
-    //                       .inner
-    //                       .db_stat(&table_db)
-    //                       .wrap_err(format!("Could not find table: {table}"))?;
-
-    //                   let page_size = stats.page_size() as usize;
-    //                   let leaf_pages = stats.leaf_pages();
-    //                   let branch_pages = stats.branch_pages();
-    //                   let overflow_pages = stats.overflow_pages();
-    //                   let num_pages = leaf_pages + branch_pages + overflow_pages;
-    //                   let table_size = page_size * num_pages;
-    //                   let entries = stats.entries();
-
-    //                   metrics.push((
-    //                       "db.table_size",
-    //                       table_size as f64,
-    //                       vec![Label::new("table", table)],
-    //                   ));
-    //                   metrics.push((
-    //                       "db.table_pages",
-    //                       leaf_pages as f64,
-    //                       vec![Label::new("table", table), Label::new("type", "leaf")],
-    //                   ));
-    //                   metrics.push((
-    //                       "db.table_pages",
-    //                       branch_pages as f64,
-    //                       vec![Label::new("table", table), Label::new("type", "branch")],
-    //                   ));
-    //                   metrics.push((
-    //                       "db.table_pages",
-    //                       overflow_pages as f64,
-    //                       vec![Label::new("table", table), Label::new("type", "overflow")],
-    //                   ));
-    //                   metrics.push((
-    //                       "db.table_entries",
-    //                       entries as f64,
-    //                       vec![Label::new("table", table)],
-    //                   ));
-    //               }
-
-    //               Ok::<(), eyre::Report>(())
-    //           })
-    //           .map_err(|error| error!(%error, "Failed to read db table stats"));
-
-    //       if let Ok(freelist) =
-    //           self.freelist().map_err(|error| error!(%error, "Failed to read db.freelist"))
-    //       {
-    //           metrics.push(("db.freelist", freelist as f64, vec![]));
-    //       }
-
-    //       if let Ok(stat) = self.stat().map_err(|error| error!(%error, "Failed to read db.stat")) {
-    //           metrics.push(("db.page_size", stat.page_size() as f64, vec![]));
-    //       }
-
-    //       metrics.push((
-    //           "db.timed_out_not_aborted_transactions",
-    //           self.timed_out_not_aborted_transactions() as f64,
-    //           vec![],
-    //       ));
-
-    //       metrics
-    //   }
 }
 
 #[cfg(any(test, feature = "test-utils"))]

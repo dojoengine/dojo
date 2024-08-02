@@ -18,6 +18,7 @@ use anyhow::{Context, Result};
 use clap::{Args, Parser};
 use common::parse::parse_socket_address;
 use console::Style;
+use dojo_metrics::Report;
 use dojo_metrics::{metrics_process, prometheus_exporter};
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
@@ -227,19 +228,21 @@ impl NodeArgs {
         let starknet_config = self.starknet_config()?;
 
         // build the node and start it
-        let (rpc_handle, backend, _) =
+        let (rpc_handle, backend, db) =
             katana_node::start(server_config, sequencer_config, starknet_config).await?;
 
         // TODO: move to katana-node
         if let Some(listen_addr) = self.metrics {
             let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
+            let db = db.unwrap();
+
             info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
             prometheus_exporter::serve(
                 listen_addr,
                 prometheus_handle,
                 metrics_process::Collector::default(),
-                Vec::new(),
+                vec![Box::new(db) as Box<dyn Report>],
             )
             .await?;
         }
