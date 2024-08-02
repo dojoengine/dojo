@@ -75,10 +75,11 @@ jobs:
           repo-token: ${{ secrets.github_token }}
       - name: Download and Install NASM
         run: |
-          Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-win64.zip" -OutFile "nasm.zip"
+          $nasm_version = "2.15.05"
+          Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/$nasm_version/win64/nasm-$nasm_version-win64.zip" -OutFile "nasm.zip"
           Expand-Archive -Path "nasm.zip" -DestinationPath "C:\Program Files\"
-          Rename-Item -Path "C:\Program Files\nasm-2.15.05" -NewName "NASM"
-          set PATH="C:\Program Files\NASM;%PATH%"
+          Rename-Item -Path "C:\Program Files\nasm-$nasm_version" -NewName "nasm"
+          setx PATH "C:\Program Files\nasm;%PATH%"
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   # This job is used to ensure the built katana image doesn't depend on any
