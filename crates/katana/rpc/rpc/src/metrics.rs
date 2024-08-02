@@ -44,7 +44,6 @@ impl RpcServerMetrics {
     pub fn new(module: &RpcModule<()>) -> Self {
         let call_metrics = HashMap::from_iter(module.method_names().map(|method| {
             let metrics = RpcServerCallMetrics::new_with_labels(&[("method", method)]);
-            RpcServerCallMetrics::describe();
             (method, metrics)
         }));
 
