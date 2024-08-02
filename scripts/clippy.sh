@@ -8,7 +8,7 @@ set -x
 set -o pipefail
 
 run_clippy() {
-  cargo clippy --all-targets "$@" -- -D warnings -D future-incompatible -D nonstandard-style -D rust-2018-idioms -D unused -D missing-debug-implementations
+  cargo +nightly clippy --all-targets "$@" -- -D warnings -D future-incompatible -D nonstandard-style -D rust-2018-idioms -D unused -D missing-debug-implementations
 }
 
 run_clippy --all-features --workspace --exclude katana --exclude katana-executor

@@ -8,6 +8,7 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 /// Parameters:
 /// * db: The semantic database.
 /// * struct_ast: The AST of the model struct.
+///
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn handle_print_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {
@@ -47,6 +48,7 @@ impl $type_name$StructPrintImpl of core::debug::PrintTrait<$type_name$> {
 /// Parameters:
 /// * db: The semantic database.
 /// * enum_ast: The AST of the model enum.
+///
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNode {
