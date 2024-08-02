@@ -73,12 +73,9 @@ jobs:
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.github_token }}
-      - name: Download and Install NASM
-        run: |
-          Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-win64.zip" -OutFile "nasm.zip"
-          Expand-Archive -Path "nasm.zip" -DestinationPath "C:\Program Files\"
-          Rename-Item -Path "C:\Program Files\nasm-2.15.05" -NewName "nasm"
-          setx PATH "C:\Program Files\nasm-2.15.05;%PATH%"
+      - uses: ilammy/setup-nasm@v1
+        with:
+          version: "2.15.05"
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   # This job is used to ensure the built katana image doesn't depend on any
