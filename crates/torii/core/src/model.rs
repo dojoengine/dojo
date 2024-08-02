@@ -400,25 +400,22 @@ pub fn build_sql_query(
         "SELECT {entities_table}.id, {entities_table}.keys, {selections_clause} FROM \
          {entities_table}{join_clause}"
     );
-    let mut count_query = format!(
-        "SELECT COUNT({entities_table}.id) FROM {entities_table}{join_clause}",
-    );
-    
+    let mut count_query =
+        format!("SELECT COUNT({entities_table}.id) FROM {entities_table}{join_clause}",);
 
     if let Some(where_clause) = where_clause {
-        query = format!("{} WHERE {}", query, where_clause);
-        count_query = format!("{} WHERE {}", count_query, where_clause);
+        query += &format!(" WHERE {}", where_clause);
+        count_query += &format!(" WHERE {}", where_clause);
     }
+    query += &format!(" ORDER BY {entities_table}.id DESC");
 
     if let Some(limit) = limit {
-        query = format!("{} LIMIT {}", query, limit);
+        query += &format!(" LIMIT {}", limit);
     }
 
     if let Some(offset) = offset {
-        query = format!("{} OFFSET {}", query, offset);
+        query += &format!(" OFFSET {}", offset);
     }
-
-    query += " ORDER BY {table}.event_id DESC";
 
     if let Some(where_clause_arrays) = where_clause_arrays {
         for (_, formatted_query) in formatted_arrays_queries.iter_mut() {
@@ -1009,9 +1006,16 @@ mod tests {
             ],
         });
 
-        let query =
-            build_sql_query(&vec![position, player_config], "entities", "entity_id", None, None, None, None)
-                .unwrap();
+        let query = build_sql_query(
+            &vec![position, player_config],
+            "entities",
+            "entity_id",
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
 
         let expected_query =
             "SELECT entities.id, entities.keys, [Test-Position].external_player AS \
