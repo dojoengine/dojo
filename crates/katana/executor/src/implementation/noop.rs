@@ -10,7 +10,7 @@ use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
 
 use crate::abstraction::{
-    BlockExecutor, EntryPointCall, ExecutionOutput, ExecutionResult, ExecutorExt, ExecutorFactory,
+    EntryPointCall, ExecutionOutput, ExecutionResult, Executor, ExecutorExt, ExecutorFactory,
     ExecutorResult, ResultAndStates, SimulationFlag,
 };
 use crate::ExecutionError;
@@ -29,7 +29,7 @@ impl NoopExecutorFactory {
 }
 
 impl ExecutorFactory for NoopExecutorFactory {
-    fn with_state<'a, P>(&self, state: P) -> Box<dyn BlockExecutor<'a> + 'a>
+    fn with_state<'a, P>(&self, state: P) -> Box<dyn Executor<'a> + 'a>
     where
         P: StateProvider + 'a,
     {
@@ -41,7 +41,7 @@ impl ExecutorFactory for NoopExecutorFactory {
         &self,
         state: P,
         block_env: BlockEnv,
-    ) -> Box<dyn BlockExecutor<'a> + 'a>
+    ) -> Box<dyn Executor<'a> + 'a>
     where
         P: StateProvider + 'a,
     {
@@ -87,7 +87,7 @@ impl ExecutorExt for NoopExecutor {
     }
 }
 
-impl<'a> BlockExecutor<'a> for NoopExecutor {
+impl<'a> Executor<'a> for NoopExecutor {
     fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()> {
         let _ = block;
         Ok(())

@@ -15,7 +15,8 @@ starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
-blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "cairo-2.7", features = [ "testing" ], optional = true }
+# blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "cairo-2.7", features = [ "testing" ], optional = true }
+blockifier = { path = "../../../../blockifier/crates/blockifier", features = [ "testing" ], optional = true }
 katana-cairo = { workspace = true, optional = true }
 
 [dev-dependencies]

@@ -3,6 +3,7 @@ use std::num::NonZeroU128;
 use std::sync::Arc;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
+use blockifier::bouncer::BouncerConfig;
 use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
@@ -13,8 +14,8 @@ use blockifier::execution::contract_class::{
 };
 use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
-use blockifier::state::cached_state;
-use blockifier::state::state_api::StateReader;
+use blockifier::state::cached_state::{self, CommitmentStateDiff};
+use blockifier::state::state_api::{DojoStateAdapter, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::objects::{
     DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo,
@@ -48,7 +49,7 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
-    DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
+    DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, TxWithHash,
 };
 use katana_primitives::{class, event, message, trace, FieldElement};
 use katana_provider::traits::contract::ContractClassProvider;
@@ -173,7 +174,7 @@ pub fn call<S: StateReader>(
     Ok(res.execution.retdata.0)
 }
 
-fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
+pub(super) fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
     let hash = tx.hash;
 
     match tx.transaction {
@@ -386,7 +387,7 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     versioned_constants.validate_max_n_steps = cfg_env.validate_max_n_steps;
     versioned_constants.invoke_tx_max_n_steps = cfg_env.invoke_tx_max_n_steps;
 
-    BlockContext::new(block_info, chain_info, versioned_constants, Default::default())
+    BlockContext::new(block_info, chain_info, versioned_constants, BouncerConfig::max())
 }
 
 pub(super) fn state_update_from_cached_state<S: StateDb>(
@@ -492,7 +493,7 @@ fn to_api_resource_bounds(
 
 /// Get the fee type of a transaction. The fee type determines the token used to pay for the
 /// transaction.
-fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
+pub(super) fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
     match transaction {
         Transaction::AccountTransaction(tx) => tx.fee_type(),
         Transaction::L1HandlerTransaction(tx) => tx.fee_type(),
