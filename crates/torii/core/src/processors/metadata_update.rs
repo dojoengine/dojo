@@ -69,7 +69,7 @@ where
         let db = db.clone();
         let resource = *resource;
 
-        // Should we only call this when resource is 0, i.e. the World?
+        // Only retrieve metadata for the World contract.
         if resource.is_zero() {
             tokio::spawn(async move {
                 try_retrieve(db, resource, uri_str).await;
