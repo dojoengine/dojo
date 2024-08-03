@@ -27,6 +27,7 @@ use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::erc20_transfer::Erc20TransferProcessor;
 use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
@@ -120,6 +121,17 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+
+    // TODO: see where to get this addresses from, cli? config?
+    let addresses = [(Felt::from_str("0x123").unwrap(), 0), (Felt::from_str("0x345").unwrap(), 0)];
+    let mut start_block = args.start_block;
+
+    for address in &addresses {
+        if address.1 < start_block {
+            start_block = address.1;
+        }
+    }
+
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
 
@@ -174,6 +186,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(EventMessageProcessor),
             Box::new(StoreUpdateRecordProcessor),
             Box::new(StoreUpdateMemberProcessor),
+            Box::new(Erc20TransferProcessor),
         ],
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
@@ -187,13 +200,14 @@ async fn main() -> anyhow::Result<()> {
         &provider,
         processors,
         EngineConfig {
-            start_block: args.start_block,
+            start_block,
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,
             ..Default::default()
         },
         shutdown_tx.clone(),
         Some(block_tx),
+        addresses.iter().map(|(address, _)| *address).collect(),
     );
 
     let shutdown_rx = shutdown_tx.subscribe();

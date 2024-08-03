@@ -4,13 +4,14 @@ use std::time::Duration;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
+use futures_util::future::join_all;
 use starknet::core::types::{
-    BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
+    BlockId, BlockTag, Event, EventFilter, EventsPage, Felt, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs, ReceiptBlock, Transaction, TransactionReceipt,
     TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::Provider;
+use starknet::providers::{Provider, SequencerGatewayProviderError};
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
@@ -61,6 +62,8 @@ pub struct Engine<P: Provider + Sync> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
+    // ERC20 tokens to index
+    tokens: Vec<Felt>,
 }
 
 struct UnprocessedEvent {
@@ -77,8 +80,18 @@ impl<P: Provider + Sync> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
+        tokens: Vec<Felt>,
     ) -> Self {
-        Self { world, db, provider: Box::new(provider), processors, config, shutdown_tx, block_tx }
+        Self {
+            world,
+            db,
+            provider: Box::new(provider),
+            processors,
+            config,
+            shutdown_tx,
+            block_tx,
+            tokens,
+        }
     }
 
     pub async fn start(&mut self) -> Result<()> {
@@ -211,29 +224,45 @@ impl<P: Provider + Sync> Engine<P> {
         to: u64,
         pending_block_tx: Option<Felt>,
     ) -> Result<Option<Felt>> {
-        // Process all blocks from current to latest.
-        let get_events = |token: Option<String>| {
-            self.provider.get_events(
-                EventFilter {
-                    from_block: Some(BlockId::Number(from)),
-                    to_block: Some(BlockId::Number(to)),
-                    address: Some(self.world.address),
-                    keys: None,
-                },
-                token,
-                self.config.events_chunk_size,
-            )
-        };
+        // Fetch all events and collect them using `get_events` method on provider
 
         // handle next events pages
-        let mut events_pages = vec![get_events(None).await?];
+        let mut fetch_all_events_tasks = vec![];
 
-        while let Some(token) = &events_pages.last().unwrap().continuation_token {
-            events_pages.push(get_events(Some(token.clone())).await?);
+        let events_filter = EventFilter {
+            from_block: Some(BlockId::Number(from)),
+            to_block: Some(BlockId::Number(to)),
+            address: Some(self.world.address),
+            keys: None,
+        };
+
+        let world_events_pages =
+            get_all_events(&self.provider, events_filter, self.config.events_chunk_size);
+        fetch_all_events_tasks.push(world_events_pages);
+
+        for token in &self.tokens {
+            let events_filter = EventFilter {
+                from_block: Some(BlockId::Number(from)),
+                to_block: Some(BlockId::Number(to)),
+                address: Some(*token),
+                keys: None,
+            };
+
+            let erc20_events_pages =
+                get_all_events(&self.provider, events_filter, self.config.events_chunk_size);
+
+            fetch_all_events_tasks.push(erc20_events_pages);
+        }
+
+        // wait for all events tasks to complete
+        let task_result = join_all(fetch_all_events_tasks).await;
+
+        let mut events_pages = vec![];
+        for result in task_result {
+            events_pages.extend(result?);
         }
 
         // Transactions & blocks to process
-        let mut last_block = 0_u64;
         let mut blocks = BTreeMap::new();
 
         // Flatten events pages and events according to the pending block cursor
@@ -267,12 +296,10 @@ impl<P: Provider + Sync> Engine<P> {
                     }
                 };
 
-                // Keep track of last block number and fetch block timestamp
-                if block_number > last_block {
+                // Fetch block timestamp if not already fetched and inserts into the map
+                if !blocks.contains_key(&block_number) {
                     let block_timestamp = self.get_block_timestamp(block_number).await?;
                     blocks.insert(block_number, block_timestamp);
-
-                    last_block = block_number;
                 }
 
                 // Then we skip all transactions until we reach the last pending processed
@@ -485,4 +512,31 @@ impl<P: Provider + Sync> Engine<P> {
         }
         Ok(())
     }
+}
+
+async fn get_all_events<P>(
+    provider: &P,
+    events_filter: EventFilter,
+    events_chunk_size: u64,
+) -> Result<Vec<EventsPage>>
+where
+    P: Provider + Sync,
+{
+    let mut events_pages = Vec::new();
+    let mut continuation_token = None;
+
+    loop {
+        let events_page = provider
+            .get_events(events_filter.clone(), continuation_token.clone(), events_chunk_size)
+            .await?;
+
+        continuation_token = events_page.continuation_token.clone();
+        events_pages.push(events_page);
+
+        if continuation_token.is_none() {
+            break;
+        }
+    }
+
+    Ok(events_pages)
 }
