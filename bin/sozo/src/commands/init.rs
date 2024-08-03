@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
-use anyhow::{ensure, Result};
+use anyhow::{ensure, Context, Result};
 use clap::Args;
 use scarb::core::Config;
 use tracing::trace;
@@ -54,7 +54,10 @@ impl InitArgs {
             "https://github.com/".to_string() + &template
         };
 
-        let sozo_version = get_sozo_version().unwrap();
+        let sozo_version = match get_sozo_version() {
+            Ok(version) => version,
+            Err(e) => return Err(e.context("Failed to get Sozo version")),
+        };
 
         clone_repo(&repo_url, &target_dir, &sozo_version, config)?;
 
@@ -82,9 +85,13 @@ impl InitArgs {
 }
 
 fn get_sozo_version() -> Result<String> {
-    let output = Command::new("sozo").arg("--version").output()?;
+    let output = Command::new("sozo")
+        .arg("--version")
+        .output()
+        .context("Failed to execute `sozo --version` command")?;
 
-    let version_string = String::from_utf8(output.stdout)?;
+    let version_string = String::from_utf8(output.stdout)
+        .context("Failed to parse `sozo --version` output as UTF-8")?;
 
     if let Some(first_line) = version_string.lines().next() {
         if let Some(version) = first_line.split_whitespace().nth(1) {
@@ -97,7 +104,7 @@ fn get_sozo_version() -> Result<String> {
 
 fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<()> {
     config.ui().print(format!("Cloning project template from {}...", url));
-    Command::new("git")
+    let output = Command::new("git")
         .args([
             "clone",
             "--branch",
@@ -108,6 +115,12 @@ fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<
             path.to_str().unwrap(),
         ])
         .output()?;
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
+            "Failed to clone repository: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
     trace!("Repository cloned successfully.");
     Ok(())
 }
