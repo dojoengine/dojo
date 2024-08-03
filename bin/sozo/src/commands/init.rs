@@ -54,7 +54,9 @@ impl InitArgs {
             "https://github.com/".to_string() + &template
         };
 
-        clone_repo(&repo_url, &target_dir, config)?;
+        let sozo_version = get_sozo_version().unwrap();
+
+        clone_repo(&repo_url, &target_dir, &sozo_version, config)?;
 
         // Navigate to the newly cloned repo.
         let initial_dir = current_dir()?;
@@ -79,9 +81,33 @@ impl InitArgs {
     }
 }
 
-fn clone_repo(url: &str, path: &Path, config: &Config) -> Result<()> {
+fn get_sozo_version() -> Result<String> {
+    let output = Command::new("sozo").arg("--version").output()?;
+
+    let version_string = String::from_utf8(output.stdout)?;
+
+    if let Some(first_line) = version_string.lines().next() {
+        if let Some(version) = first_line.split_whitespace().nth(1) {
+            return Ok(version.to_string());
+        }
+    }
+
+    Err(anyhow::anyhow!("Failed to parse sozo version"))
+}
+
+fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<()> {
     config.ui().print(format!("Cloning project template from {}...", url));
-    Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
+    Command::new("git")
+        .args([
+            "clone",
+            "--branch",
+            &format!("v{}", version),
+            "--single-branch",
+            "--recursive",
+            url,
+            path.to_str().unwrap(),
+        ])
+        .output()?;
     trace!("Repository cloned successfully.");
     Ok(())
 }
