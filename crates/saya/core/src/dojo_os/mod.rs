@@ -7,71 +7,38 @@
 // pub mod input;
 // pub mod transaction;
 
-use std::sync::Arc;
+pub mod piltover;
+
 use std::time::Duration;
 
 use anyhow::{bail, Context};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use itertools::chain;
-use once_cell::sync::OnceCell;
-use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{
-    BlockId, BlockTag, Felt, TransactionExecutionStatus, TransactionStatus,
-};
+use starknet::accounts::{Account, Call, ConnectedAccount};
+use starknet::core::types::{Felt, TransactionExecutionStatus, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
-use starknet::signers::{LocalWallet, SigningKey};
-use tokio::sync::Mutex;
+use starknet::providers::Provider;
 use tokio::time::sleep;
 
-use crate::StarknetAccountData;
-
-type AccountType = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
-
-pub static STARKNET_ACCOUNT: OnceCell<Arc<Mutex<AccountType>>> = OnceCell::new();
-
-pub fn get_starknet_account(
-    config: StarknetAccountData,
-) -> anyhow::Result<Arc<Mutex<AccountType>>> {
-    Ok(STARKNET_ACCOUNT
-        .get_or_init(|| {
-            let provider = JsonRpcClient::new(HttpTransport::new(config.starknet_url));
-            let signer = LocalWallet::from(SigningKey::from_secret_scalar(config.signer_key));
-
-            let mut account = SingleOwnerAccount::new(
-                provider,
-                signer,
-                config.signer_address,
-                config.chain_id,
-                ExecutionEncoding::New,
-            );
-            account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
-            Arc::new(Mutex::new(account))
-        })
-        .clone())
-}
+use crate::SayaStarknetAccount;
 
 pub async fn starknet_apply_diffs(
     world: Felt,
     new_state: Vec<Felt>,
     program_output: Vec<Felt>,
     program_hash: Felt,
+    account: &SayaStarknetAccount,
     nonce: Felt,
-    starknet_account: StarknetAccountData,
 ) -> anyhow::Result<String> {
     let calldata = chain![
-        vec![Felt::from(new_state.len() as u64 / 2)].into_iter(),
+        [Felt::from(new_state.len() as u64 / 2)].into_iter(),
         new_state.clone().into_iter(),
         program_output.into_iter(),
-        vec![program_hash],
+        [program_hash],
     ]
     .collect();
 
-    let account = get_starknet_account(starknet_account)?;
-    let account = account.lock().await;
     let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let tx = account
         .execute_v1(vec![Call {

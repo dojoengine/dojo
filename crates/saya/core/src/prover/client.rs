@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use anyhow::Context;
+use katana_primitives::FieldElement;
 use prover_sdk::{ProverSDK, ProverSdkErrors};
 use tokio::sync::OnceCell;
-use tracing::trace;
 use url::Url;
 
+use super::loader::prepare_input_cairo1;
 use super::ProveProgram;
 use crate::prover::loader::prepare_input_cairo0;
-use crate::LOG_TARGET;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HttpProverParams {
@@ -18,6 +18,17 @@ pub struct HttpProverParams {
 
 static ONCE: OnceCell<Result<ProverSDK, ProverSdkErrors>> = OnceCell::const_new();
 
+pub async fn http_prove_felts(
+    prover_params: Arc<HttpProverParams>,
+    input: Vec<FieldElement>,
+    prove_program: ProveProgram,
+) -> anyhow::Result<String> {
+    let args = input.into_iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ");
+    let input = format!("[{}]", args);
+
+    http_prove(prover_params, input, prove_program).await
+}
+
 pub async fn http_prove(
     prover_params: Arc<HttpProverParams>,
     input: String,
@@ -25,12 +36,16 @@ pub async fn http_prove(
 ) -> anyhow::Result<String> {
     let prover = ONCE
         .get_or_init(|| async {
-            trace!(target: LOG_TARGET, "Proving with cairo0.");
             ProverSDK::new(prover_params.prover_key.clone(), prover_params.prover_url.clone()).await
         })
         .await;
     let prover = prover.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-    let input = prepare_input_cairo0(input, prove_program).await?;
-    prover.prove_cairo0(input).await.context("Failed to prove using the http prover")
+    if prove_program.cairo_version() == FieldElement::ONE {
+        let input = prepare_input_cairo1(input, prove_program).await?;
+        prover.prove_cairo1(input).await.context("Failed to prove using the http prover")
+    } else {
+        let input = prepare_input_cairo0(input, prove_program).await?;
+        prover.prove_cairo0(input).await.context("Failed to prove using the http prover")
+    }
 }

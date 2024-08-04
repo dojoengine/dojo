@@ -3,12 +3,12 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use cairo_proof_parser::output::extract_output;
+use cairo_proof_parser::StarkProof;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use saya_core::prover::extract::program_input_from_program_output;
 use saya_core::prover::{
-    prove_diff, HttpProverParams, MessageToAppchain, MessageToStarknet, ProgramInput, ProveProgram,
+    HttpProverParams, MessageToAppchain, MessageToStarknet, ProgramInput, ProveDiffProgram,
     ProverIdentifier, ProvingState, Scheduler,
 };
 use saya_core::ProverAccessKey;
@@ -105,9 +105,10 @@ async fn test_program_input_from_program_output() -> anyhow::Result<()> {
 
     let serialized_input = serde_json::to_string(&input).unwrap();
     let proof =
-        prove_diff(serialized_input, prover_identifier(), ProveProgram::Differ).await.unwrap();
+        prover_identifier().prove_diff(serialized_input, ProveDiffProgram::Differ).await.unwrap();
 
-    let program_output_from_proof = extract_output(&proof).unwrap().program_output;
+    let proof = StarkProof::try_from(proof.as_str()).unwrap();
+    let program_output_from_proof = proof.extract_output().unwrap().program_output;
     let program_input_from_proof = program_input_from_program_output(
         program_output_from_proof,
         input.clone().state_updates,
@@ -273,8 +274,9 @@ async fn test_combine_proofs() {
     assert_eq!(scheduler.query(103).await.unwrap(), ProvingState::Proving);
 
     let (_, output, block_range) = scheduler.proved().await.unwrap();
-    let expected: ProgramInput = serde_json::from_str(expected).unwrap();
-    assert_eq!(output, expected);
+    let mut expected: ProgramInput = serde_json::from_str(expected).unwrap();
+    expected.fill_da(world);
+    assert_eq!(output, expected.world_da.unwrap());
     assert_eq!(block_range, (102, 103));
 }
 
