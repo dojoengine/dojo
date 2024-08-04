@@ -160,7 +160,7 @@ impl TryFrom<proto::types::Primitive> for Primitive {
             .ok_or(SchemaError::MissingExpectedData("value_type".to_string()))?;
 
         let primitive = match &value_type {
-            proto::types::value::ValueType::BoolValue(bool) => Primitive::Bool(Some(bool.clone())),
+            proto::types::value::ValueType::BoolValue(bool) => Primitive::Bool(Some(*bool)),
             proto::types::value::ValueType::UintValue(int) => {
                 match proto::types::PrimitiveType::from_i32(primitive_type) {
                     Some(proto::types::PrimitiveType::I8) => Primitive::I8(Some(*int as i8)),
