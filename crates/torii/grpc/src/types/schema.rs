@@ -290,14 +290,14 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                         Primitive::USize(Some(str.parse().map_err(SchemaError::ParseIntError)?))
                     }
                     Some(proto::types::PrimitiveType::Felt252) => Primitive::Felt252(Some(
-                        Felt::from_str(&str).map_err(SchemaError::FromStr)?,
+                        Felt::from_str(str).map_err(SchemaError::FromStr)?,
                     )),
                     Some(proto::types::PrimitiveType::ClassHash) => Primitive::ClassHash(Some(
-                        Felt::from_str(&str).map_err(SchemaError::FromStr)?,
+                        Felt::from_str(str).map_err(SchemaError::FromStr)?,
                     )),
                     Some(proto::types::PrimitiveType::ContractAddress) => {
                         Primitive::ContractAddress(Some(
-                            Felt::from_str(&str).map_err(SchemaError::FromStr)?,
+                            Felt::from_str(str).map_err(SchemaError::FromStr)?,
                         ))
                     }
                     _ => return Err(SchemaError::UnsupportedType("StringValue".to_string())),
