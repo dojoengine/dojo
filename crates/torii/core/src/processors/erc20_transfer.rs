@@ -4,12 +4,11 @@ use cainome::cairo_serde::{CairoSerde, U256};
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
 use starknet::providers::Provider;
-use tracing::info;
 
 use super::EventProcessor;
 use crate::sql::Sql;
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc20_transfer";
+// pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc20_transfer";
 
 #[derive(Default, Debug)]
 pub struct Erc20TransferProcessor;
@@ -24,22 +23,13 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
+        // key: [hash(Transfer), from, to]
+        // data: [value.0, value.1]
         if event.keys.len() == 3 && event.data.len() == 2 {
             return true;
-        } else if event.keys.len() == 1 && event.data.len() == 4 {
-            // Legacy `Transfer` event which will be processed by `Erc20TransferLegacyProcessor`
-            // we only do this here only to avoid printing `info` trace more than once.
-            return false;
-        } else {
-            // If its neither print and error
-            info!(
-                target: LOG_TARGET,
-                event_key = %<Erc20TransferProcessor as EventProcessor<P>>::event_key(self),
-                invalid_keys = %<Erc20TransferProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
-                "Invalid event keys."
-            );
-            return false;
         }
+
+        false
     }
 
     async fn process(
@@ -56,7 +46,7 @@ where
         let to = event.keys[2];
 
         let value = U256::cairo_deserialize(&event.data, 0)?;
-        println!("from: {:?}, to: {:?}, value: {:?}", from, to, value);
+        println!("ERC20 Transfer from: {:?}, to: {:?}, value: {:?}", from, to, value);
 
         Ok(())
     }

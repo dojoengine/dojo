@@ -29,6 +29,7 @@ use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use torii_core::processors::erc20_transfer::Erc20TransferProcessor;
+use torii_core::processors::erc721_transfer::Erc721TransferProcessor;
 use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
@@ -193,6 +194,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(StoreUpdateMemberProcessor),
             Box::new(Erc20TransferProcessor),
             Box::new(Erc20LegacyTransferProcessor),
+            Box::new(Erc721TransferProcessor),
         ],
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()

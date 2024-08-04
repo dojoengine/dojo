@@ -8,13 +8,13 @@ use starknet::providers::Provider;
 use super::EventProcessor;
 use crate::sql::Sql;
 
-// pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc20_legacy_transfer";
+// pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_transfer";
 
 #[derive(Default, Debug)]
-pub struct Erc20LegacyTransferProcessor;
+pub struct Erc721TransferProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for Erc20LegacyTransferProcessor
+impl<P> EventProcessor<P> for Erc721TransferProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
@@ -23,9 +23,10 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        // key: [hash(Transfer)]
-        // data: [from, to, value.0, value.1]
-        if event.keys.len() == 1 && event.data.len() == 4 {
+        // ref: https://github.com/OpenZeppelin/cairo-contracts/blob/eabfa029b7b681d9e83bf171f723081b07891016/packages/token/src/erc721/erc721.cairo#L44-L53
+        // key: [hash(Transfer), from, to, token_id.low, token_id.high]
+        // data: []
+        if event.keys.len() == 5 && event.data.len() == 0 {
             return true;
         }
 
@@ -42,11 +43,11 @@ where
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let from = event.data[0];
-        let to = event.data[1];
+        let from = event.keys[1];
+        let to = event.keys[2];
 
-        let value = U256::cairo_deserialize(&event.data, 2)?;
-        println!("ERC20 Legacy Transfer from: {:?}, to: {:?}, value: {:?}", from, to, value);
+        let token_id = U256::cairo_deserialize(&event.keys, 3)?;
+        println!("ERC721 Transfer from: {:?}, to: {:?}, value: {:?}", from, to, token_id);
 
         Ok(())
     }

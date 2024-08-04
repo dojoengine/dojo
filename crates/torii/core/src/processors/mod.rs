@@ -6,9 +6,9 @@ use starknet::providers::Provider;
 
 use crate::sql::Sql;
 
-pub mod erc20_approval;
 pub mod erc20_legacy_transfer;
 pub mod erc20_transfer;
+pub mod erc721_transfer;
 pub mod event_message;
 pub mod metadata_update;
 pub mod register_model;
