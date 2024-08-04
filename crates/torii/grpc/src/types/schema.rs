@@ -164,64 +164,32 @@ impl TryFrom<proto::types::Primitive> for Primitive {
             proto::types::value::ValueType::UintValue(int) => {
                 match proto::types::PrimitiveType::from_i32(primitive_type) {
                     Some(proto::types::PrimitiveType::I8) => Primitive::I8(Some(*int as i8)),
-                    Some(proto::types::PrimitiveType::I16) => {
-                        Primitive::I16(Some(*int as i16))
-                    }
-                    Some(proto::types::PrimitiveType::I32) => {
-                        Primitive::I32(Some(*int as i32))
-                    }
-                    Some(proto::types::PrimitiveType::I64) => {
-                        Primitive::I64(Some(*int as i64))
-                    }
-                    Some(proto::types::PrimitiveType::I128) => {
-                        Primitive::I128(Some(*int as i128))
-                    }
+                    Some(proto::types::PrimitiveType::I16) => Primitive::I16(Some(*int as i16)),
+                    Some(proto::types::PrimitiveType::I32) => Primitive::I32(Some(*int as i32)),
+                    Some(proto::types::PrimitiveType::I64) => Primitive::I64(Some(*int as i64)),
+                    Some(proto::types::PrimitiveType::I128) => Primitive::I128(Some(*int as i128)),
                     Some(proto::types::PrimitiveType::U8) => Primitive::U8(Some(*int as u8)),
-                    Some(proto::types::PrimitiveType::U16) => {
-                        Primitive::U16(Some(*int as u16))
-                    }
-                    Some(proto::types::PrimitiveType::U32) => {
-                        Primitive::U32(Some(*int as u32))
-                    }
+                    Some(proto::types::PrimitiveType::U16) => Primitive::U16(Some(*int as u16)),
+                    Some(proto::types::PrimitiveType::U32) => Primitive::U32(Some(*int as u32)),
                     Some(proto::types::PrimitiveType::U64) => Primitive::U64(Some(*int)),
-                    Some(proto::types::PrimitiveType::U128) => {
-                        Primitive::U128(Some(*int as u128))
-                    }
-                    Some(proto::types::PrimitiveType::Usize) => {
-                        Primitive::USize(Some(*int as u32))
-                    }
+                    Some(proto::types::PrimitiveType::U128) => Primitive::U128(Some(*int as u128)),
+                    Some(proto::types::PrimitiveType::Usize) => Primitive::USize(Some(*int as u32)),
                     _ => return Err(SchemaError::UnsupportedType("UintValue".to_string())),
                 }
             }
             proto::types::value::ValueType::IntValue(int) => {
                 match proto::types::PrimitiveType::from_i32(primitive_type) {
                     Some(proto::types::PrimitiveType::I8) => Primitive::I8(Some(*int as i8)),
-                    Some(proto::types::PrimitiveType::I16) => {
-                        Primitive::I16(Some(*int as i16))
-                    }
-                    Some(proto::types::PrimitiveType::I32) => {
-                        Primitive::I32(Some(*int as i32))
-                    }
+                    Some(proto::types::PrimitiveType::I16) => Primitive::I16(Some(*int as i16)),
+                    Some(proto::types::PrimitiveType::I32) => Primitive::I32(Some(*int as i32)),
                     Some(proto::types::PrimitiveType::I64) => Primitive::I64(Some(*int)),
-                    Some(proto::types::PrimitiveType::I128) => {
-                        Primitive::I128(Some(*int as i128))
-                    }
+                    Some(proto::types::PrimitiveType::I128) => Primitive::I128(Some(*int as i128)),
                     Some(proto::types::PrimitiveType::U8) => Primitive::U8(Some(*int as u8)),
-                    Some(proto::types::PrimitiveType::U16) => {
-                        Primitive::U16(Some(*int as u16))
-                    }
-                    Some(proto::types::PrimitiveType::U32) => {
-                        Primitive::U32(Some(*int as u32))
-                    }
-                    Some(proto::types::PrimitiveType::U64) => {
-                        Primitive::U64(Some(*int as u64))
-                    }
-                    Some(proto::types::PrimitiveType::U128) => {
-                        Primitive::U128(Some(*int as u128))
-                    }
-                    Some(proto::types::PrimitiveType::Usize) => {
-                        Primitive::USize(Some(*int as u32))
-                    }
+                    Some(proto::types::PrimitiveType::U16) => Primitive::U16(Some(*int as u16)),
+                    Some(proto::types::PrimitiveType::U32) => Primitive::U32(Some(*int as u32)),
+                    Some(proto::types::PrimitiveType::U64) => Primitive::U64(Some(*int as u64)),
+                    Some(proto::types::PrimitiveType::U128) => Primitive::U128(Some(*int as u128)),
+                    Some(proto::types::PrimitiveType::Usize) => Primitive::USize(Some(*int as u32)),
                     _ => return Err(SchemaError::UnsupportedType("IntValue".to_string())),
                 }
             }
@@ -289,9 +257,9 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                     Some(proto::types::PrimitiveType::Usize) => {
                         Primitive::USize(Some(str.parse().map_err(SchemaError::ParseIntError)?))
                     }
-                    Some(proto::types::PrimitiveType::Felt252) => Primitive::Felt252(Some(
-                        Felt::from_str(str).map_err(SchemaError::FromStr)?,
-                    )),
+                    Some(proto::types::PrimitiveType::Felt252) => {
+                        Primitive::Felt252(Some(Felt::from_str(str).map_err(SchemaError::FromStr)?))
+                    }
                     Some(proto::types::PrimitiveType::ClassHash) => Primitive::ClassHash(Some(
                         Felt::from_str(str).map_err(SchemaError::FromStr)?,
                     )),
