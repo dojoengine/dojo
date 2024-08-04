@@ -27,6 +27,7 @@ use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use torii_core::processors::erc20_transfer::Erc20TransferProcessor;
 use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
@@ -123,7 +124,11 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     // TODO: see where to get this addresses from, cli? config?
-    let addresses = [(Felt::from_str("0x123").unwrap(), 0), (Felt::from_str("0x345").unwrap(), 0)];
+    let addresses = [(
+        Felt::from_str("0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
+            .unwrap(),
+        0,
+    )];
     let mut start_block = args.start_block;
 
     for address in &addresses {
@@ -187,6 +192,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(StoreUpdateRecordProcessor),
             Box::new(StoreUpdateMemberProcessor),
             Box::new(Erc20TransferProcessor),
+            Box::new(Erc20LegacyTransferProcessor),
         ],
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()

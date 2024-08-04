@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt::Debug;
 use std::time::Duration;
 
@@ -11,7 +11,7 @@ use starknet::core::types::{
     TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::{Provider, SequencerGatewayProviderError};
+use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
@@ -63,7 +63,7 @@ pub struct Engine<P: Provider + Sync> {
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
     // ERC20 tokens to index
-    tokens: Vec<Felt>,
+    tokens: HashSet<Felt>,
 }
 
 struct UnprocessedEvent {
@@ -80,7 +80,7 @@ impl<P: Provider + Sync> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
-        tokens: Vec<Felt>,
+        tokens: HashSet<Felt>,
     ) -> Self {
         Self {
             world,
@@ -236,9 +236,8 @@ impl<P: Provider + Sync> Engine<P> {
             keys: None,
         };
 
-        let world_events_pages =
-            get_all_events(&self.provider, events_filter, self.config.events_chunk_size);
-        fetch_all_events_tasks.push(world_events_pages);
+        let _ = get_all_events(&self.provider, events_filter, self.config.events_chunk_size);
+        // fetch_all_events_tasks.push(world_events_pages);
 
         for token in &self.tokens {
             let events_filter = EventFilter {
@@ -392,7 +391,9 @@ impl<P: Provider + Sync> Engine<P> {
         if let Some(events) = events {
             let mut world_event = false;
             for (event_idx, event) in events.iter().enumerate() {
-                if event.from_address != self.world.address {
+                if event.from_address != self.world.address
+                    && !self.tokens.contains(&event.from_address)
+                {
                     continue;
                 }
 

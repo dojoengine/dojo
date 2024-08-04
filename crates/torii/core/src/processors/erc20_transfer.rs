@@ -24,7 +24,14 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() == 3 {
+        if event.keys.len() == 3 && event.data.len() == 2 {
+            return true;
+        } else if event.keys.len() == 1 && event.data.len() == 4 {
+            // Legacy `Transfer` event which will be processed by `Erc20TransferLegacyProcessor`
+            // we only do this here only to avoid printing `info` trace more than once.
+            return false;
+        } else {
+            // If its neither print and error
             info!(
                 target: LOG_TARGET,
                 event_key = %<Erc20TransferProcessor as EventProcessor<P>>::event_key(self),
@@ -33,7 +40,6 @@ where
             );
             return false;
         }
-        true
     }
 
     async fn process(
