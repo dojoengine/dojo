@@ -235,7 +235,7 @@ mod tests {
 
         // where filter EQ on u64 (string)
         let records =
-            records_model_query(&schema, &format!("(where: {{ type_u64: \"{}\" }})", felt_str_0x5))
+            records_model_query(&schema, &format!("(where: {{ type_u64: \"{}\" }})", felt_int_5))
                 .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
@@ -244,7 +244,7 @@ mod tests {
         // where filter GTE on u128 (string)
         let records = records_model_query(
             &schema,
-            &format!("(where: {{ type_u128GTE: \"{}\" }})", felt_str_0x5),
+            &format!("(where: {{ type_u128GTE: \"{}\" }})", felt_int_5),
         )
         .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
