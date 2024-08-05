@@ -221,19 +221,25 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
             Ok(Ty::Struct(Struct { name, children }))
         }
         abigen::model::Ty::Enum(enum_) => {
-            let name = parse_cairo_short_string(&enum_.name)?;
+            let mut name = parse_cairo_short_string(&enum_.name)?;
 
             let options = enum_
                 .children
                 .iter()
-                .map(|(name, ty)| {
-                    // strip of the type (T) of the enum variant for now
+                .map(|(variant_name, ty)| {
+                    // strip "(T)" of the type of the enum variant for now
                     // breaks the db queries
-                    let name =
-                        parse_cairo_short_string(name)?.split('(').next().unwrap().to_string();
-                    let ty = parse_schema(ty)?;
+                    // Some(T) => Some
+                    let mut variant_name = parse_cairo_short_string(variant_name)?;
 
-                    Ok(EnumOption { name, ty })
+                    let ty = parse_schema(ty)?;
+                    // generalize this for any generic name?
+                    if variant_name.ends_with("(T)") {
+                        variant_name = variant_name.trim_end_matches("(T)").to_string();
+                        name = name.replace("<T>", format!("<{}>", ty.name()).as_str());
+                    }
+
+                    Ok(EnumOption { name: variant_name, ty })
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
