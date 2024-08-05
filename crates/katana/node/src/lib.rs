@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
@@ -46,7 +47,7 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::trace;
+use tracing::{info, trace};
 
 /// Build the core Katana components from the given configurations and start running the node.
 // TODO: placeholder until we implement a dedicated class that encapsulate building the node
@@ -86,7 +87,7 @@ pub async fn start(
 
     // --- build backend
 
-    let blockchain = if let Some(forked_url) = &starknet_config.fork_rpc_url {
+    let (blockchain, db) = if let Some(forked_url) = &starknet_config.fork_rpc_url {
         let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
         let forked_chain_id = provider.chain_id().await.unwrap();
 
@@ -132,11 +133,13 @@ pub async fn start(
         )?;
 
         starknet_config.env.chain_id = forked_chain_id.into();
-        blockchain
+
+        (blockchain, None)
     } else if let Some(db_path) = &starknet_config.db_dir {
-        Blockchain::new_with_db(db_path, &starknet_config.genesis)?
+        let db = katana_db::init_db(db_path)?;
+        (Blockchain::new_with_db(db.clone(), &starknet_config.genesis)?, Some(db))
     } else {
-        Blockchain::new_with_genesis(InMemoryProvider::new(), &starknet_config.genesis)?
+        (Blockchain::new_with_genesis(InMemoryProvider::new(), &starknet_config.genesis)?, None)
     };
 
     let chain_id = starknet_config.env.chain_id;
@@ -165,6 +168,25 @@ pub async fn start(
     } else {
         BlockProducer::instant(Arc::clone(&backend))
     };
+
+    // --- build metrics service
+
+    // Metrics recorder must be initialized before calling any of the metrics macros, in order for
+    // it to be registered.
+    if let Some(addr) = server_config.metrics {
+        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+        let db = db.unwrap();
+
+        prometheus_exporter::serve(
+            addr,
+            prometheus_handle,
+            metrics_process::Collector::default(),
+            vec![Box::new(db) as Box<dyn Report>],
+        )
+        .await?;
+
+        info!(%addr, "Metrics endpoint started.");
+    }
 
     // --- build messaging service
 

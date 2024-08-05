@@ -104,8 +104,8 @@ impl<EF: ExecutorFactory> Backend<EF> {
             config.env.chain_id = forked_chain_id.into();
             blockchain
         } else if let Some(db_path) = &config.db_dir {
-            Blockchain::new_with_db(db_path, &config.genesis)
-                .expect("able to create blockchain from db")
+            let db = katana_db::init_db(db_path).expect("failed to initialize db");
+            Blockchain::new_with_db(db, &config.genesis).expect("able to create blockchain from db")
         } else {
             Blockchain::new_with_genesis(InMemoryProvider::new(), &config.genesis)
                 .expect("able to create blockchain from genesis block")

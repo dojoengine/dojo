@@ -127,7 +127,7 @@ impl Sql {
              executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             // this is temporary until the model hash is precomputed
-            .bind(&format!("{:#x}", selector))
+            .bind(format!("{:#x}", selector))
             .bind(namespace)
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
