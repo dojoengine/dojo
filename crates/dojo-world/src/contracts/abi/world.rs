@@ -167,7 +167,7 @@ abigen!(
         "name": "metadata",
         "inputs": [
           {
-            "name": "resource_id",
+            "name": "resource_selector",
             "type": "core::felt252"
           }
         ],

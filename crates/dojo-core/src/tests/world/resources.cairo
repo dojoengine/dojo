@@ -92,7 +92,7 @@ fn test_set_metadata_not_possible_for_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
 fn test_set_metadata_through_malicious_contract() {
     let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
 
@@ -267,7 +267,7 @@ fn test_register_model_with_unregistered_namespace() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
 fn test_register_model_through_malicious_contract() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let malicious_contract = starknet::contract_address_const::<0xdead>();
@@ -345,7 +345,7 @@ fn test_register_namespace_already_registered_other_caller() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
 fn test_register_namespace_is_not_a_direct_call_from_account() {
     let world = deploy_world();
 
@@ -432,7 +432,7 @@ fn test_deploy_contract_with_unregistered_namespace() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
 fn test_deploy_contract_through_malicious_contract() {
     let world = deploy_world();
 
@@ -524,7 +524,7 @@ fn test_upgrade_contract_from_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
 fn test_upgrade_contract_through_malicious_contract() {
     let world = deploy_world();
     let class_hash = test_contract::TEST_CLASS_HASH.try_into().unwrap();

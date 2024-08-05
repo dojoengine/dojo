@@ -1,10 +1,10 @@
 [world]
 kind = "WorldContract"
-class_hash = "0x1db59a0fd87ee3d652bac8f77386c0d26fd4d8fac8745c12f171ebcbe4dce88"
-original_class_hash = "0x1db59a0fd87ee3d652bac8f77386c0d26fd4d8fac8745c12f171ebcbe4dce88"
+class_hash = "0x27845f1b684041a2dcbba9960206ab0be559dc6acbc324bd1cba7918887e813"
+original_class_hash = "0x27845f1b684041a2dcbba9960206ab0be559dc6acbc324bd1cba7918887e813"
 abi = "manifests/dev/deployment/abis/dojo-world.json"
-address = "0x2991ea3ac9399ef3b6f924e426b48c0d160ee440da165cd8004891077664677"
-transaction_hash = "0xc295ecabd96dbe8431c96493e6ed9c44236c64ef31eef177d53813b40b30c6"
+address = "0x7ddf8574c8715a8e0ca352860099315a7a2f39597ff733f1df479760561a218"
+transaction_hash = "0x59bb050f12bdb14186e69c139e5da50a9f60b0d55acd349727b5ac847d2d706"
 block_number = 3
 seed = "dojo_examples"
 manifest_name = "dojo-world"
@@ -23,16 +23,10 @@ manifest_name = "dojo-base"
 
 [[contracts]]
 kind = "DojoContract"
-<<<<<<< HEAD
-address = "0x66221f204a50d51e28d03bc1578bc1845371cd0f0932666b507cd9721c183ec"
+address = "0x7f130e487fae5d3b9d947aa2f2002897361f957f3eb38a3c0ea4fa3b06f662c"
 class_hash = "0xc0a5037a6fdc0b374b270ca5e9f3bd76200d73d01f409749b7006b3cd6c03d"
 original_class_hash = "0xc0a5037a6fdc0b374b270ca5e9f3bd76200d73d01f409749b7006b3cd6c03d"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
-=======
-class_hash = "0x2a8de224c28cae3049e23b352e7fce6f26cc99884331e5f2a6aea261398a27a"
-original_class_hash = "0x2a8de224c28cae3049e23b352e7fce6f26cc99884331e5f2a6aea261398a27a"
-base_class_hash = "0x0"
->>>>>>> 295501f7 (rework ACL owner/writer roles)
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-actions-40b6994c.json"
 reads = []
 writes = [
@@ -46,13 +40,10 @@ manifest_name = "dojo_examples-actions-40b6994c"
 
 [[contracts]]
 kind = "DojoContract"
-<<<<<<< HEAD
-address = "0x71e9522f412f3458a3508d0449f8f3a4e1662da382c86393b3abb193d2968b5"
-=======
->>>>>>> 295501f7 (rework ACL owner/writer roles)
+address = "0x50edd2f7b372b0551edacf628064e4eb8ac44150697ae9159ee2a130a532fac"
 class_hash = "0x45ad5a298db270a9c3ee439b7a7a008e3219b70937cfaa144589866442f3908"
 original_class_hash = "0x45ad5a298db270a9c3ee439b7a7a008e3219b70937cfaa144589866442f3908"
-base_class_hash = "0x0"
+base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-dungeon-6620e0e6.json"
 reads = []
 writes = []
@@ -63,13 +54,10 @@ manifest_name = "dojo_examples-dungeon-6620e0e6"
 
 [[contracts]]
 kind = "DojoContract"
-<<<<<<< HEAD
-address = "0x33a28bd8c06940892f49b8d9211ddc5165ec9316087c1fa563e56152f95d429"
-=======
->>>>>>> 295501f7 (rework ACL owner/writer roles)
-class_hash = "0x3daab1621bba5f43f0d84f8f68ee7a5dfa4d83f98f746e2e9dcd3a848233e35"
-original_class_hash = "0x3daab1621bba5f43f0d84f8f68ee7a5dfa4d83f98f746e2e9dcd3a848233e35"
-base_class_hash = "0x0"
+address = "0x2730055c4af418e11c058e318ac7668179b2ee60c814041d139f8784ea687cb"
+class_hash = "0x2cc02e47b1f2e767ced0fa64afcc481e7e2ad9fad7a8e66921f8452cc44071c"
+original_class_hash = "0x2cc02e47b1f2e767ced0fa64afcc481e7e2ad9fad7a8e66921f8452cc44071c"
+base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-mock_token-31599eb2.json"
 reads = []
 writes = []
@@ -80,13 +68,10 @@ manifest_name = "dojo_examples-mock_token-31599eb2"
 
 [[contracts]]
 kind = "DojoContract"
-<<<<<<< HEAD
-address = "0x4de3cf22c1348202eaf06464aa308d1cbe8e6fea755ce4f0598a00d0e860886"
-=======
->>>>>>> 295501f7 (rework ACL owner/writer roles)
+address = "0x263a9083ee28ba1b521b21b33b7588405b4dc484048ef1355c9e2e66a13e500"
 class_hash = "0x647fc1b2d2e902e6304e127b36995d8f57fe45c38e38e15d8860db508dbf24a"
 original_class_hash = "0x647fc1b2d2e902e6304e127b36995d8f57fe45c38e38e15d8860db508dbf24a"
-base_class_hash = "0x0"
+base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-others-61de2c18.json"
 reads = []
 writes = []

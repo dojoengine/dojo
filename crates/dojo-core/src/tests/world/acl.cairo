@@ -42,7 +42,7 @@ fn test_grant_owner_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED'))]
 fn test_grant_owner_through_malicious_contract() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -77,7 +77,7 @@ fn test_grant_owner_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED'))]
 fn test_revoke_owner_through_malicious_contract() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -140,7 +140,7 @@ fn test_writer_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED'))]
 fn test_grant_writer_through_malicious_contract() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -175,7 +175,7 @@ fn test_grant_writer_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('not a direct call', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED'))]
 fn test_revoke_writer_through_malicious_contract() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());

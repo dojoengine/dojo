@@ -8,7 +8,7 @@ use dojo::utils::bytearray_hash;
 
 #[starknet::interface]
 pub trait IWorld<T> {
-    fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
+    fn metadata(self: @T, resource_selector: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
     fn model(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
     fn contract(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
@@ -58,7 +58,7 @@ pub trait IWorldProvider<T> {
 }
 
 pub mod Errors {
-    pub const NOT_A_DIRECT_CALL: felt252 = 'not a direct call';
+    pub const CALLER_NOT_ACCOUNT: felt252 = 'caller not account';
     pub const NOT_OWNER: felt252 = 'not owner';
     pub const NO_MODEL_WRITE_ACCESS: felt252 = 'no model write access';
     pub const NO_NAMESPACE_WRITE_ACCESS: felt252 = 'no namespace write access';
@@ -303,16 +303,16 @@ pub mod world {
         ///
         /// # Arguments
         ///
-        /// `resource_id` - The resource id.
-        fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
+        /// `resource_selector` - The resource selector.
+        fn metadata(self: @ContractState, resource_selector: felt252) -> ResourceMetadata {
             let mut values = self
                 .read_model_entity(
                     Model::<ResourceMetadata>::selector(),
-                    entity_id_from_keys(array![resource_id].span()),
+                    entity_id_from_keys(array![resource_selector].span()),
                     Model::<ResourceMetadata>::layout()
                 );
 
-            ResourceMetadataTrait::from_values(resource_id, ref values)
+            ResourceMetadataTrait::from_values(resource_selector, ref values)
         }
 
         /// Sets the metadata of the resource.
@@ -321,8 +321,8 @@ pub mod world {
         ///
         /// `metadata` - The metadata content for the resource.
         fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
-            self.must_be_a_direct_call_from_account();
-            self.must_be_resource_owner(metadata.resource_id);
+            self.assert_caller_is_account();
+            self.assert_resource_owner(metadata.resource_id);
 
             self
                 .write_model_entity(
@@ -362,10 +362,10 @@ pub mod world {
         /// * `resource` - The resource.
         /// * `address` - The contract address.
         fn grant_owner(ref self: ContractState, resource: felt252, address: ContractAddress) {
-            self.must_be_a_direct_call_from_account();
+            self.assert_caller_is_account();
 
             assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
-            self.must_be_resource_owner(resource);
+            self.assert_resource_owner(resource);
 
             self.owners.write((resource, address), true);
 
@@ -382,10 +382,10 @@ pub mod world {
         /// * `resource` - The resource.
         /// * `address` - The contract address.
         fn revoke_owner(ref self: ContractState, resource: felt252, address: ContractAddress) {
-            self.must_be_a_direct_call_from_account();
+            self.assert_caller_is_account();
 
             assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
-            self.must_be_resource_owner(resource);
+            self.assert_resource_owner(resource);
 
             self.owners.write((resource, address), false);
 
@@ -416,10 +416,10 @@ pub mod world {
         /// * `resource` - The hash of the resource name.
         /// * `contract` - The name of the contract.
         fn grant_writer(ref self: ContractState, resource: felt252, contract: ContractAddress) {
-            self.must_be_a_direct_call_from_account();
+            self.assert_caller_is_account();
 
             assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
-            self.must_be_resource_owner(resource);
+            self.assert_resource_owner(resource);
 
             self.writers.write((resource, contract), true);
 
@@ -436,10 +436,10 @@ pub mod world {
         /// * `model` - The name of the model.
         /// * `contract` - The name of the contract.
         fn revoke_writer(ref self: ContractState, resource: felt252, contract: ContractAddress) {
-            self.must_be_a_direct_call_from_account();
+            self.assert_caller_is_account();
 
             assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
-            self.must_be_resource_owner(resource);
+            self.assert_resource_owner(resource);
 
             self.writers.write((resource, contract), false);
 
@@ -453,7 +453,7 @@ pub mod world {
         ///
         /// * `class_hash` - The class hash of the model to be registered.
         fn register_model(ref self: ContractState, class_hash: ClassHash) {
-            self.must_be_a_direct_call_from_account();
+            self.assert_caller_is_account();
 
             let caller = get_caller_address();
 
@@ -471,7 +471,7 @@ pub mod world {
             );
 
             assert(self.is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
-            self.must_have_namespace_write_access(namespace_hash);
+            self.assert_namespace_write_access(namespace_hash);
 
             if selector.is_zero() {
                 core::panic_with_felt252(Errors::INVALID_MODEL_NAME);
@@ -508,7 +508,7 @@ pub mod world {
         ///
         /// * `namespace` - The name of the namespace to be registered.
         fn register_namespace(ref self: ContractState, namespace: ByteArray) {
-            self.must_be_a_direct_call_from_account();
+            self.assert_caller_is_account();
 
             let caller = get_caller_address();
 
@@ -572,7 +572,7 @@ pub mod world {
             class_hash: ClassHash,
             init_calldata: Span<felt252>,
         ) -> ContractAddress {
-            self.must_be_a_direct_call_from_account();
+            self.assert_caller_is_account();
 
             let caller = get_caller_address();
 
@@ -589,7 +589,7 @@ pub mod world {
             let name = dispatcher.contract_name();
             let namespace_hash = dispatcher.namespace_hash();
             assert(self.is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
-            self.must_have_namespace_write_access(namespace_hash);
+            self.assert_namespace_write_access(namespace_hash);
 
             let selector = dispatcher.selector();
 
@@ -628,8 +628,8 @@ pub mod world {
         fn upgrade_contract(
             ref self: ContractState, selector: felt252, class_hash: ClassHash
         ) -> ClassHash {
-            self.must_be_a_direct_call_from_account();
-            self.must_be_resource_owner(selector);
+            self.assert_caller_is_account();
+            self.assert_resource_owner(selector);
 
             let (_, contract_address) = self.contract(selector);
             IUpgradeableDispatcher { contract_address }.upgrade(class_hash);
@@ -707,7 +707,7 @@ pub mod world {
             values: Span<felt252>,
             layout: Layout
         ) {
-            self.must_have_model_write_access(model_selector);
+            self.assert_model_write_access(model_selector);
 
             match index {
                 ModelIndex::Keys(keys) => {
@@ -751,7 +751,7 @@ pub mod world {
         fn delete_entity(
             ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
         ) {
-            self.must_have_model_write_access(model_selector);
+            self.assert_model_write_access(model_selector);
 
             match index {
                 ModelIndex::Keys(keys) => {
@@ -792,7 +792,7 @@ pub mod world {
         ///
         /// * `new_class_hash` - The new world class hash.
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
-            self.must_be_a_direct_call_from_account();
+            self.assert_caller_is_account();
 
             assert(new_class_hash.is_non_zero(), 'invalid class_hash');
             assert(self.is_caller_world_owner(), Errors::OWNER_ONLY_UPGRADE);
@@ -878,21 +878,22 @@ pub mod world {
         /// example), to avoid any malicious contract between the account and the world to be able
         /// to call some functions with account privileges.
         #[inline(always)]
-        fn must_be_a_direct_call_from_account(self: @ContractState) {
+        fn assert_caller_is_account(self: @ContractState) {
             let caller = get_caller_address();
             let account = get_tx_info().unbox().account_contract_address;
 
-            assert(caller == account, Errors::NOT_A_DIRECT_CALL);
+            assert(caller == account, Errors::CALLER_NOT_ACCOUNT);
         }
 
         /// Panic if the caller is NOT an owner of the resource.
         ///
         /// # Arguments
-        ///   * `resource_id` - the id of the resource.
+        ///   * `resource_selector` - the selector of the resource.
         #[inline(always)]
-        fn must_be_resource_owner(self: @ContractState, resource_id: felt252) {
+        fn assert_resource_owner(self: @ContractState, resource_selector: felt252) {
             assert(
-                self.is_caller_world_owner() || self.is_owner(resource_id, get_caller_address()),
+                self.is_owner(resource_selector, get_caller_address())
+                    || self.is_caller_world_owner(),
                 Errors::NOT_OWNER
             );
         }
@@ -902,12 +903,12 @@ pub mod world {
         /// # Arguments
         ///   * `namespace_hash` - the hash of the namespace.
         #[inline(always)]
-        fn must_have_namespace_write_access(self: @ContractState, namespace_hash: felt252) {
+        fn assert_namespace_write_access(self: @ContractState, namespace_hash: felt252) {
             let caller = get_caller_address();
             assert(
-                self.is_caller_world_owner()
+                self.is_writer(namespace_hash, caller)
                     || self.is_owner(namespace_hash, caller)
-                    || self.is_writer(namespace_hash, caller),
+                    || self.is_caller_world_owner(),
                 Errors::NO_NAMESPACE_WRITE_ACCESS
             );
         }
@@ -917,26 +918,30 @@ pub mod world {
         /// # Arguments
         ///   * `model_selector` - the selector of the model.
         #[inline(always)]
-        fn must_have_model_write_access(self: @ContractState, model_selector: felt252) {
+        fn assert_model_write_access(self: @ContractState, model_selector: felt252) {
             let caller = get_caller_address();
 
-            // must have owner or writer role on the model ...
-            if !self.is_caller_world_owner()
-                && !self.is_owner(model_selector, caller)
-                && !self.is_writer(model_selector, caller) {
-                // ... or on the model namespace
-                match self.resources.read(model_selector) {
-                    ResourceData::Model((
-                        _, model_address
-                    )) => {
-                        let model = IModelDispatcher { contract_address: model_address };
-                        if !self.is_owner(model.namespace_hash(), caller)
-                            && !self.is_writer(model.namespace_hash(), caller) {
-                            core::panic_with_felt252(Errors::NO_MODEL_WRITE_ACCESS);
-                        }
-                    },
-                    _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
-                }
+            // must have owner or writer role on the namespace or on the model
+            match self.resources.read(model_selector) {
+                ResourceData::Model((
+                    _, model_address
+                )) => {
+                    let model = IModelDispatcher { contract_address: model_address };
+                    let namespace_selector = model.namespace_hash();
+
+                    // - use a "if or" instead of "if not/and" so once a condition is met,
+                    // the function returns.
+                    // - sort conditions by order of probability
+                    if self.is_writer(namespace_selector, caller)
+                        || self.is_writer(model_selector, caller)
+                        || self.is_owner(namespace_selector, caller)
+                        || self.is_owner(model_selector, caller)
+                        || self.is_caller_world_owner() {
+                        return;
+                    }
+                    core::panic_with_felt252(Errors::NO_MODEL_WRITE_ACCESS)
+                },
+                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
 
