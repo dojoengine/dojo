@@ -7758,7 +7758,6 @@ dependencies = [
  "comfy-table",
  "common 1.0.0-alpha.4",
  "console",
- "dojo-metrics",
  "katana-core",
  "katana-db",
  "katana-node",
@@ -7851,7 +7850,9 @@ version = "1.0.0-alpha.4"
 dependencies = [
  "anyhow",
  "criterion",
+ "dojo-metrics",
  "katana-primitives",
+ "metrics",
  "page_size",
  "parking_lot 0.12.3",
  "postcard",
@@ -7862,6 +7863,7 @@ dependencies = [
  "starknet 0.11.0",
  "tempfile",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]
@@ -7895,9 +7897,11 @@ name = "katana-node"
 version = "1.0.0-alpha.4"
 dependencies = [
  "anyhow",
+ "dojo-metrics",
  "hyper 0.14.30",
  "jsonrpsee 0.16.3",
  "katana-core",
+ "katana-db",
  "katana-executor",
  "katana-primitives",
  "katana-provider",

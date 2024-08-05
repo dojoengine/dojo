@@ -249,6 +249,7 @@ async fn main() -> anyhow::Result<()> {
             listen_addr,
             prometheus_handle,
             metrics_process::Collector::default(),
+            Vec::new(),
         )
         .await?;
     }

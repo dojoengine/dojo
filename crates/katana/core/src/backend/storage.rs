@@ -1,7 +1,5 @@
-use std::path::Path;
-
 use anyhow::{anyhow, Result};
-use katana_db::init_db;
+use katana_db::mdbx::DbEnv;
 use katana_primitives::block::{BlockHash, FinalityStatus, SealedBlockWithStatus};
 use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
@@ -98,10 +96,8 @@ impl Blockchain {
     }
 
     /// Creates a new [Blockchain] from a database at `path` and `genesis` state.
-    pub fn new_with_db(db_path: impl AsRef<Path>, genesis: &Genesis) -> Result<Self> {
-        let db = init_db(db_path)?;
-        let provider = DbProvider::new(db);
-        Self::new_with_genesis(provider, genesis)
+    pub fn new_with_db(db: DbEnv, genesis: &Genesis) -> Result<Self> {
+        Self::new_with_genesis(DbProvider::new(db), genesis)
     }
 
     /// Builds a new blockchain with a forked block.
@@ -251,7 +247,8 @@ mod tests {
         let genesis = Genesis::default();
 
         {
-            let blockchain = Blockchain::new_with_db(&db_path, &genesis)
+            let db = katana_db::init_db(&db_path).expect("Failed to init database");
+            let blockchain = Blockchain::new_with_db(db, &genesis)
                 .expect("Failed to create db-backed blockchain storage");
 
             blockchain
@@ -297,7 +294,8 @@ mod tests {
         // re open the db and assert the state is the same and not overwritten
 
         {
-            let blockchain = Blockchain::new_with_db(&db_path, &genesis)
+            let db = katana_db::init_db(db_path).expect("Failed to init database");
+            let blockchain = Blockchain::new_with_db(db, &genesis)
                 .expect("Failed to create db-backed blockchain storage");
 
             // assert genesis state is correct
