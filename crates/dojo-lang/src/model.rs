@@ -118,8 +118,8 @@ fn get_model_namespace(
 /// * diagnostics: vector of compiler diagnostics.
 ///
 /// Returns:
-/// * A [`ModelParameters`] object containing all the dojo::model parameters with their
-/// default values if not set in the code.
+/// * A [`ModelParameters`] object containing all the dojo::model parameters with their default
+///   values if not set in the code.
 fn get_model_parameters(
     db: &dyn SyntaxGroup,
     struct_ast: ItemStruct,
@@ -198,6 +198,7 @@ fn get_model_parameters(
 /// Parameters:
 /// * db: The semantic database.
 /// * struct_ast: The AST of the model struct.
+///
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn handle_model_struct(

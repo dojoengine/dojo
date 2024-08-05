@@ -454,7 +454,6 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
 
         for field in &token.inners {
             let mapped = TypeScriptV2Plugin::map_type(&field.token);
-            format!("{}: {};", field.name, mapped);
             native_fields.push(format!("{}: {};", field.name, mapped));
         }
 

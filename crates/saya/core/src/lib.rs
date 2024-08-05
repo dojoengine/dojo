@@ -274,7 +274,7 @@ impl Saya {
     /// * `prove_scheduler` - A parallel prove scheduler.
     /// * `block_number` - The block number.
     /// * `block_info` - The block to process, along with the state roots of the previous block and
-    /// the genesis block.
+    ///   the genesis block.
     fn process_block(
         &mut self,
         prove_scheduler: &mut Scheduler,
