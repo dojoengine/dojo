@@ -124,7 +124,7 @@ impl Service {
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-            if !sub.clauses.iter().any(|clause| match clause {
+            if !sub.clauses.is_empty() && !sub.clauses.iter().any(|clause| match clause {
                 EntityKeysClause::HashedKeys(hashed_keys) => {
                     hashed_keys.is_empty() || hashed_keys.contains(&hashed)
                 }
@@ -181,7 +181,8 @@ impl Service {
                         }
                     });
                 }
-            }) {
+            })
+            {
                 continue;
             }
 
