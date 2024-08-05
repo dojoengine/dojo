@@ -102,25 +102,53 @@ fn get_sozo_version() -> Result<String> {
     Err(anyhow::anyhow!("Failed to parse sozo version"))
 }
 
+fn check_tag_exists(url: &str, version: &str) -> Result<bool> {
+    let output = Command::new("git").args(["ls-remote", "--tags", url]).output()?;
+
+    let output_str = String::from_utf8(output.stdout)?;
+    let tag_exists = output_str.contains(&format!("refs/tags/v{}", version));
+
+    Ok(tag_exists)
+}
+
 fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<()> {
-    config.ui().print(format!("Cloning project template from {}...", url));
-    let output = Command::new("git")
-        .args([
-            "clone",
-            "--branch",
-            &format!("v{}", version),
-            "--single-branch",
-            "--recursive",
-            url,
-            path.to_str().unwrap(),
-        ])
-        .output()?;
-    if !output.status.success() {
-        return Err(anyhow::anyhow!(
-            "Failed to clone repository: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
+    // Check if the version tag exists in the repository
+    let tag_exists = check_tag_exists(url, version)?;
+
+    if tag_exists {
+        config.ui().print(format!("Cloning project template from {}...", url));
+        let output = Command::new("git")
+            .args([
+                "clone",
+                "--branch",
+                &format!("v{}", version),
+                "--single-branch",
+                "--recursive",
+                url,
+                path.to_str().unwrap(),
+            ])
+            .output()?;
+        if !output.status.success() {
+            return Err(anyhow::anyhow!(
+                "Failed to clone repository: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+    } else {
+        config
+            .ui()
+            .warn(format!("Version {} not found. Cloning the latest version instead.", version));
+        let output = Command::new("git")
+            .args(["clone", "--recursive", url, path.to_str().unwrap()])
+            .output()?;
+        if !output.status.success() {
+            return Err(anyhow::anyhow!(
+                "Failed to clone repository: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
     }
+
     trace!("Repository cloned successfully.");
     Ok(())
 }
