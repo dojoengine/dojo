@@ -4,4 +4,3 @@ extern crate wasm_prost as prost;
 extern crate wasm_tonic as tonic;
 
 pub mod client;
-pub mod utils;
