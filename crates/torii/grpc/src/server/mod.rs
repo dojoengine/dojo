@@ -516,7 +516,7 @@ impl DojoWorld {
             table,
             entity_relation_column,
             Some(&format!(
-                "{table_name}.{column_name} {comparison_operator} ? ORDER BY {table}.event_id \
+                "[{table_name}].{column_name} {comparison_operator} ? ORDER BY {table}.event_id \
                  DESC LIMIT ? OFFSET ?"
             )),
             None,
