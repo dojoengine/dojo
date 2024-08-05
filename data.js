@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722881973678,
+  "lastUpdate": 1722882999370,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14257,6 +14257,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 5569016,
             "range": "± 244312",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "705ebad22543e3146af416b84cf6e7d25e9842e4",
+          "message": "feat: stabilize cairo to `2.7.0` (#2257)\n\n* bump to cairo 2.7.0 stable\r\n\r\n* chore: bump blockifier\r\n\r\n* add missing feature\r\n\r\n* fix: ensure every project is using cairo 2.7.0\r\n\r\n* fix: fix tests and clippy\r\n\r\n* fix: fmt\r\n\r\n* devcontainer: add clippy in nightly toolchain to match rustfmt\r\n\r\n* ci: adjust devcontainter image\r\n\r\n* ci: use 2.7.0 stable\r\n\r\n* fix: update clippy version\r\n\r\n* fix: fix tests\r\n\r\n* fix: fix tests\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-08-05T14:17:32-04:00",
+          "tree_id": "650b2555497893d04002ccaaa80936191dae37bd",
+          "url": "https://github.com/dojoengine/dojo/commit/705ebad22543e3146af416b84cf6e7d25e9842e4"
+        },
+        "date": 1722882998141,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17222127,
+            "range": "± 218591",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4721517,
+            "range": "± 139902",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3440565646,
+            "range": "± 559207566",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4818997,
+            "range": "± 48158",
             "unit": "ns/iter"
           }
         ]
