@@ -10,8 +10,8 @@ use super::inputs::where_input::{parse_where_argument, where_argument, WhereInpu
 use super::inputs::InputObjectTrait;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    ENTITY_ID_COLUMN, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, EVENT_MESSAGE_TABLE,
-    EVENT_MESSAGE_TYPE_NAME, ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
+    ENTITY_ID_COLUMN, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN,
+    EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
@@ -213,7 +213,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                                     &entity_id,
                                 )
                                 .await?;
-                                let result = value_mapping_from_row(&data, &nested_mapping, true)?;
+                                let result = value_mapping_from_row(&data, ENTITY_ID_COLUMN, &nested_mapping, true)?;
 
                                 Ok(Some(Value::Object(result)))
                             }
@@ -255,7 +255,12 @@ fn entity_field() -> Field {
                     let entity_id = utils::extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
                     let data =
                         fetch_single_row(&mut conn, ENTITY_TABLE, ID_COLUMN, &entity_id).await?;
-                    let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
+                    let entity = value_mapping_from_row(
+                        &data,
+                        ENTITY_ID_COLUMN,
+                        &ENTITY_TYPE_MAPPING,
+                        false,
+                    )?;
 
                     Ok(Some(Value::Object(entity)))
                 }
@@ -275,7 +280,12 @@ fn event_message_field() -> Field {
                     let data =
                         fetch_single_row(&mut conn, EVENT_MESSAGE_TABLE, ID_COLUMN, &entity_id)
                             .await?;
-                    let event_message = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
+                    let event_message = value_mapping_from_row(
+                        &data,
+                        EVENT_MESSAGE_ID_COLUMN,
+                        &ENTITY_TYPE_MAPPING,
+                        false,
+                    )?;
 
                     Ok(Some(Value::Object(event_message)))
                 }

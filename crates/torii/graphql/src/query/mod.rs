@@ -10,7 +10,7 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, SqliteConnection};
 use torii_core::sql::FELT_DELIMITER;
 
-use crate::constants::{BOOLEAN_TRUE, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
+use crate::constants::{BOOLEAN_TRUE, INTERNAL_ENTITY_ID_KEY};
 use crate::object::model_data::ModelMember;
 use crate::types::{TypeData, TypeMapping, ValueMapping};
 
@@ -167,6 +167,7 @@ fn remove_hex_leading_zeros(value: Value) -> Value {
 
 pub fn value_mapping_from_row(
     row: &SqliteRow,
+    entity_id_column: &str,
     types: &TypeMapping,
     is_external: bool,
 ) -> sqlx::Result<ValueMapping> {
@@ -193,7 +194,7 @@ pub fn value_mapping_from_row(
         .collect::<sqlx::Result<ValueMapping>>()?;
 
     // entity_id is not part of a model's type_mapping but needed to relate to parent entity
-    if let Ok(entity_id) = row.try_get::<String, &str>(ENTITY_ID_COLUMN) {
+    if let Ok(entity_id) = row.try_get::<String, &str>(entity_id_column) {
         value_mapping.insert(Name::new(INTERNAL_ENTITY_ID_KEY), Value::from(entity_id));
     }
 
