@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722884429852,
+  "lastUpdate": 1722899772524,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14353,6 +14353,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3928735,
             "range": "± 75980",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2b09547fb16c8f539d4f439b3029cf06cc51bda3",
+          "message": "fix(torii): member clause escaped table name (#2255)",
+          "timestamp": "2024-08-05T18:57:42-04:00",
+          "tree_id": "beac2d436c2541f9e87b9f05d594fa5207384fd2",
+          "url": "https://github.com/dojoengine/dojo/commit/2b09547fb16c8f539d4f439b3029cf06cc51bda3"
+        },
+        "date": 1722899771642,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16414511,
+            "range": "± 440017",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3579340,
+            "range": "± 92996",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3545491625,
+            "range": "± 831307261",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3717048,
+            "range": "± 92552",
             "unit": "ns/iter"
           }
         ]
