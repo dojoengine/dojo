@@ -3,23 +3,18 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
-use async_recursion::async_recursion;
-use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Sqlite};
-use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::EventMessage;
 
+use super::entity::model_data_recursive_query;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_NAMES, EVENT_MESSAGE_TABLE,
-    EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
+    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, EVENT_MESSAGE_NAMES, EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
-use crate::query::{type_mapping_query, value_mapping_from_row};
-use crate::types::TypeData;
+use crate::query::type_mapping_query;
 use crate::utils;
 
 #[derive(Debug)]
@@ -66,35 +61,31 @@ impl ResolvableObject for EventMessageObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new(
-                "eventMessageUpdated",
-                TypeRef::named_nn(self.type_name()),
-                |ctx| {
-                    SubscriptionFieldFuture::new(async move {
-                        let id = match ctx.args.get("id") {
-                            Some(id) => Some(id.string()?.to_string()),
-                            None => None,
-                        };
-                        // if id is None, then subscribe to all entities
-                        // if id is Some, then subscribe to only the entity with that id
-                        Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(
-                            move |entity: EventMessage| {
-                                if id.is_none() || id == Some(entity.id.clone()) {
-                                    Some(Ok(Value::Object(EventMessageObject::value_mapping(
-                                        entity,
-                                    ))))
-                                } else {
-                                    // id != entity.id , then don't send anything, still listening
-                                    None
-                                }
-                            },
-                        ))
-                    })
-                },
-            )
-            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
-        ])
+        Some(vec![SubscriptionField::new(
+            "eventMessageUpdated",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
+                SubscriptionFieldFuture::new(async move {
+                    let id = match ctx.args.get("id") {
+                        Some(id) => Some(id.string()?.to_string()),
+                        None => None,
+                    };
+                    // if id is None, then subscribe to all entities
+                    // if id is Some, then subscribe to only the entity with that id
+                    Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(
+                        move |entity: EventMessage| {
+                            if id.is_none() || id == Some(entity.id.clone()) {
+                                Some(Ok(Value::Object(EventMessageObject::value_mapping(entity))))
+                            } else {
+                                // id != entity.id , then don't send anything, still listening
+                                None
+                            }
+                        },
+                    ))
+                })
+            },
+        )
+        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
     }
 }
 
@@ -152,6 +143,7 @@ fn model_union_field() -> Field {
                         // but the table name for the model data is the unhashed model name
                         let data: ValueMapping = match model_data_recursive_query(
                             &mut conn,
+                            EVENT_MESSAGE_ID_COLUMN,
                             vec![format!("{namespace}-{name}")],
                             &entity_id,
                             &[],
@@ -176,114 +168,4 @@ fn model_union_field() -> Field {
             }
         })
     })
-}
-
-// TODO: flatten query
-#[async_recursion]
-pub async fn model_data_recursive_query(
-    conn: &mut PoolConnection<Sqlite>,
-    path_array: Vec<String>,
-    entity_id: &str,
-    indexes: &[i64],
-    type_mapping: &TypeMapping,
-    is_list: bool,
-) -> sqlx::Result<Value> {
-    // For nested types, we need to remove prefix in path array
-    let namespace = format!("{}_", path_array[0]);
-    let table_name = &path_array.join("$").replace(&namespace, "");
-    let mut query =
-        format!("SELECT * FROM [{}] WHERE event_message_id = '{}' ", table_name, entity_id);
-    for (column_idx, index) in indexes.iter().enumerate() {
-        query.push_str(&format!("AND idx_{} = {} ", column_idx, index));
-    }
-
-    let rows = sqlx::query(&query).fetch_all(conn.as_mut()).await?;
-    if rows.is_empty() {
-        return Ok(Value::List(vec![]));
-    }
-
-    let value_mapping: Value;
-    let mut nested_value_mappings = Vec::new();
-
-    for (idx, row) in rows.iter().enumerate() {
-        let mut nested_value_mapping = value_mapping_from_row(row, type_mapping, true)?;
-
-        for (field_name, type_data) in type_mapping {
-            if let TypeData::Nested((_, nested_mapping)) = type_data {
-                let mut nested_path = path_array.clone();
-                nested_path.push(field_name.to_string());
-
-                let nested_values = model_data_recursive_query(
-                    conn,
-                    nested_path,
-                    entity_id,
-                    &if is_list {
-                        let mut indexes = indexes.to_vec();
-                        indexes.push(idx as i64);
-                        indexes
-                    } else {
-                        indexes.to_vec()
-                    },
-                    nested_mapping,
-                    false,
-                )
-                .await?;
-
-                nested_value_mapping.insert(Name::new(field_name), nested_values);
-            } else if let TypeData::List(inner) = type_data {
-                let mut nested_path = path_array.clone();
-                nested_path.push(field_name.to_string());
-
-                let data = match model_data_recursive_query(
-                    conn,
-                    nested_path,
-                    entity_id,
-                    // this might need to be changed to support 2d+ arrays
-                    &if is_list {
-                        let mut indexes = indexes.to_vec();
-                        indexes.push(idx as i64);
-                        indexes
-                    } else {
-                        indexes.to_vec()
-                    },
-                    &IndexMap::from([(Name::new("data"), *inner.clone())]),
-                    true,
-                )
-                .await?
-                {
-                    // map our list which uses a data field as a place holder
-                    // for all elements to get the elemnt directly
-                    Value::List(data) => data
-                        .iter()
-                        .map(|v| match v {
-                            Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
-                            ty => unreachable!(
-                                "Expected Value::Object for list \"data\" field, got {:?}",
-                                ty
-                            ),
-                        })
-                        .collect(),
-                    Value::Object(map) => map.get(&Name::new("data")).unwrap().clone(),
-                    ty => {
-                        unreachable!(
-                            "Expected Value::List or Value::Object for list, got {:?}",
-                            ty
-                        );
-                    }
-                };
-
-                nested_value_mapping.insert(Name::new(field_name), data);
-            }
-        }
-
-        nested_value_mappings.push(Value::Object(nested_value_mapping));
-    }
-
-    if is_list {
-        value_mapping = Value::List(nested_value_mappings);
-    } else {
-        value_mapping = nested_value_mappings.pop().unwrap();
-    }
-
-    Ok(value_mapping)
 }

@@ -13,7 +13,7 @@ use torii_core::types::Entity;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    DATETIME_FORMAT, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN,
+    DATETIME_FORMAT, ENTITY_ID_COLUMN, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
@@ -143,6 +143,7 @@ fn model_union_field() -> Field {
                         // but the table name for the model data is the unhashed model name
                         let data: ValueMapping = match model_data_recursive_query(
                             &mut conn,
+                            ENTITY_ID_COLUMN,
                             vec![format!("{namespace}-{name}")],
                             &entity_id,
                             &[],
@@ -173,6 +174,7 @@ fn model_union_field() -> Field {
 #[async_recursion]
 pub async fn model_data_recursive_query(
     conn: &mut PoolConnection<Sqlite>,
+    entity_id_column: &str,
     path_array: Vec<String>,
     entity_id: &str,
     indexes: &[i64],
@@ -182,7 +184,8 @@ pub async fn model_data_recursive_query(
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
-    let mut query = format!("SELECT * FROM [{}] WHERE entity_id = '{}' ", table_name, entity_id);
+    let mut query =
+        format!("SELECT * FROM [{}] WHERE {entity_id_column} = '{}' ", table_name, entity_id);
     for (column_idx, index) in indexes.iter().enumerate() {
         query.push_str(&format!("AND idx_{} = {} ", column_idx, index));
     }
@@ -196,7 +199,7 @@ pub async fn model_data_recursive_query(
     let mut nested_value_mappings = Vec::new();
 
     for (idx, row) in rows.iter().enumerate() {
-        let mut nested_value_mapping = value_mapping_from_row(row, type_mapping, true)?;
+        let mut nested_value_mapping = value_mapping_from_row(row, entity_id_column, type_mapping, true)?;
 
         for (field_name, type_data) in type_mapping {
             if let TypeData::Nested((_, nested_mapping)) = type_data {
@@ -205,6 +208,7 @@ pub async fn model_data_recursive_query(
 
                 let nested_values = model_data_recursive_query(
                     conn,
+                    entity_id_column,
                     nested_path,
                     entity_id,
                     &if is_list {
@@ -226,6 +230,7 @@ pub async fn model_data_recursive_query(
 
                 let data = match model_data_recursive_query(
                     conn,
+                    entity_id_column,
                     nested_path,
                     entity_id,
                     // this might need to be changed to support 2d+ arrays
