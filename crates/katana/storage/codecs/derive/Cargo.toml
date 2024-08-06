@@ -16,3 +16,6 @@ syn = { version = "2.0.41", features = [ "extra-traits", "full" ] }
 
 [package.metadata.cargo-udeps.ignore]
 normal = [ "serde" ]
+
+[features]
+postcard = [  ]

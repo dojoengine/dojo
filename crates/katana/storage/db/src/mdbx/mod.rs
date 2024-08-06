@@ -9,8 +9,11 @@ pub mod tx;
 use std::collections::HashMap;
 use std::path::Path;
 
+use dojo_metrics::metrics::gauge;
 pub use libmdbx;
 use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW};
+use metrics::{describe_gauge, Label};
+use tracing::error;
 
 use self::stats::{Stats, TableStat};
 use self::tx::Tx;
@@ -35,7 +38,7 @@ pub enum DbEnvKind {
 }
 
 /// Wrapper for `libmdbx-sys` environment.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DbEnv(libmdbx::Environment);
 
 impl DbEnv {
@@ -70,7 +73,7 @@ impl DbEnv {
             })
             .set_max_readers(DEFAULT_MAX_READERS);
 
-        Ok(DbEnv(builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?))
+        Ok(DbEnv(builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?).with_metrics())
     }
 
     /// Creates all the defined tables in [`Tables`], if necessary.
@@ -89,6 +92,14 @@ impl DbEnv {
         tx.commit().map_err(DatabaseError::Commit)?;
 
         Ok(())
+    }
+
+    fn with_metrics(self) -> Self {
+        describe_gauge!("db.table_size", metrics::Unit::Bytes, "Total size of the table");
+        describe_gauge!("db.table_pages", metrics::Unit::Count, "Number of pages in the table");
+        describe_gauge!("db.table_entries", metrics::Unit::Count, "Number of entries in the table");
+        describe_gauge!("db.freelist", metrics::Unit::Bytes, "Size of the database freelist");
+        self
     }
 }
 
@@ -119,6 +130,52 @@ impl Database for DbEnv {
             let freelist = self.0.freelist().map_err(DatabaseError::Stat)?;
             Ok(Stats { table_stats, info, freelist })
         })?
+    }
+}
+
+impl dojo_metrics::Report for DbEnv {
+    fn report(&self) {
+        match self.stats() {
+            Ok(stats) => {
+                let mut pgsize = 0;
+
+                for (table, stat) in stats.table_stats() {
+                    gauge!("db.table_size", vec![Label::new("table", *table)])
+                        .set(stat.total_size() as f64);
+
+                    gauge!(
+                        "db.table_pages",
+                        vec![Label::new("table", *table), Label::new("type", "leaf")]
+                    )
+                    .set(stat.leaf_pages() as f64);
+
+                    gauge!(
+                        "db.table_pages",
+                        vec![Label::new("table", *table), Label::new("type", "branch")]
+                    )
+                    .set(stat.branch_pages() as f64);
+
+                    gauge!(
+                        "db.table_pages",
+                        vec![Label::new("table", *table), Label::new("type", "overflow")]
+                    )
+                    .set(stat.overflow_pages() as f64);
+
+                    gauge!("db.table_entries", vec![Label::new("table", *table)])
+                        .set(stat.entries() as f64);
+
+                    if pgsize == 0 {
+                        pgsize = stat.page_size() as usize;
+                    }
+                }
+
+                gauge!("db.freelist").set((stats.freelist() * pgsize) as f64);
+            }
+
+            Err(error) => {
+                error!(%error, "Failed to read database stats.");
+            }
+        }
     }
 }
 

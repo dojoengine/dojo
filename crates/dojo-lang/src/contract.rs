@@ -646,7 +646,7 @@ fn get_contract_namespace(
 ///
 /// Returns:
 /// * A [`ContractParameters`] object containing all the dojo::contract parameters with their
-/// default values if not set in the code.
+///   default values if not set in the code.
 fn get_parameters(
     db: &dyn SyntaxGroup,
     module_ast: &ast::ItemModule,

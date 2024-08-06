@@ -38,6 +38,7 @@ impl TestSequencer {
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
         let server_config = ServerConfig {
             port: 0,
+            metrics: None,
             host: "127.0.0.1".into(),
             max_connections: 100,
             allowed_origins: None,

@@ -12,6 +12,8 @@ use metrics::{describe_gauge, gauge};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use metrics_util::layers::{PrefixLayer, Stack};
 
+use crate::Report;
+
 pub(crate) const LOG_TARGET: &str = "metrics::prometheus_exporter";
 
 pub(crate) trait Hook: Fn() + Send + Sync {}
@@ -39,11 +41,19 @@ pub async fn serve(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
     process: metrics_process::Collector,
+    reports: Vec<Box<dyn Report>>,
 ) -> Result<()> {
     // Clone `process` to move it into the hook and use the original `process` for describe below.
     let cloned_process = process.clone();
-    let hooks: Vec<Box<dyn Hook<Output = ()>>> =
+
+    let mut hooks: Vec<Box<dyn Hook<Output = ()>>> =
         vec![Box::new(move || cloned_process.collect()), Box::new(collect_memory_stats)];
+
+    let report_hooks =
+        reports.into_iter().map(|r| Box::new(move || r.report()) as Box<dyn Hook<Output = ()>>);
+
+    hooks.extend(report_hooks);
+
     serve_with_hooks(listen_addr, handle, hooks).await?;
 
     process.describe();
@@ -121,7 +131,7 @@ fn collect_memory_stats() {
             "Read jemalloc.stats.active."
         )
     }) {
-        gauge!("jemalloc.active", value as f64);
+        gauge!("jemalloc.active").increment(value as f64);
     }
 
     if let Ok(value) = stats::allocated::read().map_err(|error| {
@@ -131,7 +141,7 @@ fn collect_memory_stats() {
             "Read jemalloc.stats.allocated."
         )
     }) {
-        gauge!("jemalloc.allocated", value as f64);
+        gauge!("jemalloc.allocated").increment(value as f64);
     }
 
     if let Ok(value) = stats::mapped::read().map_err(|error| {
@@ -141,7 +151,7 @@ fn collect_memory_stats() {
             "Read jemalloc.stats.mapped."
         )
     }) {
-        gauge!("jemalloc.mapped", value as f64);
+        gauge!("jemalloc.mapped").increment(value as f64);
     }
 
     if let Ok(value) = stats::metadata::read().map_err(|error| {
@@ -151,7 +161,7 @@ fn collect_memory_stats() {
             "Read jemalloc.stats.metadata."
         )
     }) {
-        gauge!("jemalloc.metadata", value as f64);
+        gauge!("jemalloc.metadata").increment(value as f64);
     }
 
     if let Ok(value) = stats::resident::read().map_err(|error| {
@@ -161,7 +171,7 @@ fn collect_memory_stats() {
             "Read jemalloc.stats.resident."
         )
     }) {
-        gauge!("jemalloc.resident", value as f64);
+        gauge!("jemalloc.resident").increment(value as f64);
     }
 
     if let Ok(value) = stats::retained::read().map_err(|error| {
@@ -171,7 +181,7 @@ fn collect_memory_stats() {
             "Read jemalloc.stats.retained."
         )
     }) {
-        gauge!("jemalloc.retained", value as f64);
+        gauge!("jemalloc.retained").increment(value as f64);
     }
 }
 

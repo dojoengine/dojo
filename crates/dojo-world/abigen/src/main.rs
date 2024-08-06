@@ -104,13 +104,13 @@ fn compile_dojo_core() {
         file,
         r#"
 [package]
-cairo-version = "2.7.0-rc.3"
+cairo-version = "2.7.0"
 edition = "2024_07"
 name = "dojo"
-version = "0.7.3"
+version = "1.0.0-alpha.4"
 
 [dependencies]
-starknet = "2.7.0-rc.3"
+starknet = "2.7.0"
 
 [[target.starknet-contract]]
 sierra = true

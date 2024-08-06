@@ -189,36 +189,31 @@ impl From<Primitive> for proto::types::Primitive {
         use proto::types::value::ValueType;
 
         let value_type = match primitive {
-            Primitive::I8(i8) => i8.map(|val| ValueType::IntValue(val as i64)),
-            Primitive::I16(i16) => i16.map(|val| ValueType::IntValue(val as i64)),
-            Primitive::I32(i32) => i32.map(|val| ValueType::IntValue(val as i64)),
-            Primitive::I64(i64) => i64.map(ValueType::IntValue),
+            Primitive::I8(i8) => ValueType::IntValue(i8.unwrap_or_default() as i64),
+            Primitive::I16(i16) => ValueType::IntValue(i16.unwrap_or_default() as i64),
+            Primitive::I32(i32) => ValueType::IntValue(i32.unwrap_or_default() as i64),
+            Primitive::I64(i64) => ValueType::IntValue(i64.unwrap_or_default()),
             Primitive::I128(i128) => {
-                i128.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
+                ValueType::ByteValue(i128.unwrap_or_default().to_be_bytes().to_vec())
             }
-            Primitive::U8(u8) => u8.map(|val| ValueType::UintValue(val as u64)),
-            Primitive::U16(u16) => u16.map(|val| ValueType::UintValue(val as u64)),
-            Primitive::U32(u32) => u32.map(|val| ValueType::UintValue(val as u64)),
-            Primitive::U64(u64) => u64.map(ValueType::UintValue),
+            Primitive::U8(u8) => ValueType::UintValue(u8.unwrap_or_default() as u64),
+            Primitive::U16(u16) => ValueType::UintValue(u16.unwrap_or_default() as u64),
+            Primitive::U32(u32) => ValueType::UintValue(u32.unwrap_or_default() as u64),
+            Primitive::U64(u64) => ValueType::UintValue(u64.unwrap_or_default()),
             Primitive::U128(u128) => {
-                u128.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
+                ValueType::ByteValue(u128.unwrap_or_default().to_be_bytes().to_vec())
             }
             Primitive::U256(u256) => {
-                u256.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
+                ValueType::ByteValue(u256.unwrap_or_default().to_be_bytes().to_vec())
             }
-            Primitive::USize(usize) => usize.map(|val| ValueType::UintValue(val as u64)),
-            Primitive::Bool(bool) => bool.map(ValueType::BoolValue),
-            Primitive::Felt252(felt) => {
-                felt.map(|val| ValueType::ByteValue(val.to_bytes_be().to_vec()))
+            Primitive::USize(usize) => ValueType::UintValue(usize.unwrap_or_default() as u64),
+            Primitive::Bool(bool) => ValueType::BoolValue(bool.unwrap_or_default()),
+            Primitive::Felt252(felt)
+            | Primitive::ClassHash(felt)
+            | Primitive::ContractAddress(felt) => {
+                ValueType::ByteValue(felt.unwrap_or_default().to_bytes_be().to_vec())
             }
-            Primitive::ClassHash(class) => {
-                class.map(|val| ValueType::ByteValue(val.to_bytes_be().to_vec()))
-            }
-            Primitive::ContractAddress(contract) => {
-                contract.map(|val| ValueType::ByteValue(val.to_bytes_be().to_vec()))
-            }
-        }
-        .expect("value expected");
+        };
 
         proto::types::Primitive {
             value: Some(proto::types::Value { value_type: Some(value_type) }),
