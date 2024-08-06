@@ -13,7 +13,11 @@ pub struct InitArgs {
     #[arg(help = "Target directory")]
     path: Option<PathBuf>,
 
-    #[arg(help = "Parse a full git url or a url path", default_value = "dojoengine/dojo-starter")]
+    #[arg(
+        long,
+        help = "Parse a full git url or a url path",
+        default_value = "dojoengine/dojo-starter"
+    )]
     template: String,
 
     #[arg(long, help = "Initialize a new Git repository")]
