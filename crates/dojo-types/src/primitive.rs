@@ -211,13 +211,12 @@ impl Primitive {
             | Primitive::Bool(_) => Ok(format!("{}", value[0])),
 
             // Hex string
-            Primitive::U64(_) | Primitive::I128(_) => {
-                Ok(format!("{}", try_from_felt::<i128>(value[0])?))
-            }
+            Primitive::I128(_) => Ok(format!("{:#064x}", try_from_felt::<i128>(value[0])?)),
             Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
             | Primitive::Felt252(_)
-            | Primitive::U128(_) => Ok(format!("0x{:064x}", value[0])),
+            | Primitive::U128(_)
+            | Primitive::U64(_) => Ok(format!("{:#064x}", value[0])),
 
             Primitive::U256(_) => {
                 if value.len() < 2 {
