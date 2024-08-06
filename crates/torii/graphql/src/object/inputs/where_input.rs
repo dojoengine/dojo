@@ -145,7 +145,11 @@ fn parse_integer(
     }
 }
 
-fn parse_string(input: ValueAccessor<'_>, type_name: &str, primitive: Primitive) -> Result<FilterValue> {
+fn parse_string(
+    input: ValueAccessor<'_>,
+    type_name: &str,
+    primitive: Primitive,
+) -> Result<FilterValue> {
     match input.string() {
         Ok(i) => match i.starts_with("0x") {
             true => Ok(FilterValue::String(format!("0x{:0>64}", i.strip_prefix("0x").unwrap()))), /* safe to unwrap since we know it starts with 0x */
@@ -154,13 +158,13 @@ fn parse_string(input: ValueAccessor<'_>, type_name: &str, primitive: Primitive)
                 Primitive::U128(_) => match i.parse::<u128>() {
                     Ok(i) => Ok(FilterValue::String(i.to_string())),
                     Err(_) => Ok(FilterValue::String(i.to_string())),
-                }
+                },
                 // signed and unsigned integers
                 _ => match i.parse::<i128>() {
                     Ok(i) => Ok(FilterValue::String(i.to_string())),
                     Err(_) => Ok(FilterValue::String(i.to_string())),
-                }
-            }
+                },
+            },
         },
         Err(_) => Err(GqlError::new(format!("Expected string on field {}", type_name))),
     }
