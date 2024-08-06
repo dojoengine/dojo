@@ -1,14 +1,15 @@
 use anyhow::Error;
 use async_trait::async_trait;
-use cainome::cairo_serde::{CairoSerde, U256};
+use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
+use starknet::core::types::{Event, TransactionReceiptWithBlockInfo, U256};
 use starknet::providers::Provider;
+use tracing::info;
 
 use super::EventProcessor;
 use crate::sql::Sql;
 
-// pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_transfer";
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_transfer";
 
 #[derive(Default, Debug)]
 pub struct Erc721TransferProcessor;
@@ -36,18 +37,22 @@ where
     async fn process(
         &self,
         _world: &WorldContractReader<P>,
-        _db: &mut Sql,
+        db: &mut Sql,
         _block_number: u64,
         _block_timestamp: u64,
         _transaction_receipt: &TransactionReceiptWithBlockInfo,
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
+        let token_address = event.from_address;
         let from = event.keys[1];
         let to = event.keys[2];
 
-        let token_id = U256::cairo_deserialize(&event.keys, 3)?;
-        println!("ERC721 Transfer from: {:?}, to: {:?}, value: {:?}", from, to, token_id);
+        let token_id = U256Cainome::cairo_deserialize(&event.keys, 3)?;
+        let token_id = U256::from_words(token_id.low, token_id.high);
+
+        db.handle_erc721_transfer(token_address, from, to, token_id).await?;
+        info!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer");
 
         Ok(())
     }

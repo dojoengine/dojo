@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::ops::{Add, Sub};
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
@@ -8,9 +9,10 @@ use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
+use num_traits::{FromPrimitive, ToPrimitive};
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Row, Sqlite};
-use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
+use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction, U256};
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -127,7 +129,7 @@ impl Sql {
              executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             // this is temporary until the model hash is precomputed
-            .bind(format!("{:#x}", selector))
+            .bind(&format!("{:#x}", selector))
             .bind(namespace)
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
@@ -710,7 +712,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
@@ -1130,9 +1136,219 @@ impl Sql {
 
         Ok(())
     }
+
+    // Registers a new ERC20 contract in erc20_contracts table
+    pub fn register_erc20(
+        &mut self,
+        address: Felt,
+        decimals: u8,
+        name: String,
+        symbol: String,
+        total_supply: U256,
+    ) -> Result<()> {
+        let insert_query = "INSERT INTO erc20_contracts (token_address, name, symbol, decimals \
+                            total_supply) VALUES (?, ?, ?, ?, ?)";
+
+        self.query_queue.enqueue(
+            insert_query,
+            vec![
+                Argument::FieldElement(address),
+                Argument::String(name),
+                Argument::String(symbol),
+                Argument::Int(decimals.into()),
+                Argument::String(u256_to_sql_string(&total_supply)),
+            ],
+        );
+
+        Ok(())
+    }
+
+    pub fn register_erc721(
+        &mut self,
+        token_address: Felt,
+        name: String,
+        symbol: String,
+        total_supply: U256,
+    ) -> Result<()> {
+        let insert_query = "INSERT INTO erc721_contracts (token_address, name, symbol, \
+                            total_supply) VALUES (?, ?, ?, ?)";
+
+        self.query_queue.enqueue(
+            insert_query,
+            vec![
+                Argument::FieldElement(token_address),
+                Argument::String(name),
+                Argument::String(symbol),
+                Argument::String(u256_to_sql_string(&total_supply)),
+            ],
+        );
+
+        Ok(())
+    }
+
+    pub async fn handle_erc20_transfer(
+        &mut self,
+        token_address: Felt,
+        from: Felt,
+        to: Felt,
+        amount: U256,
+    ) -> Result<()> {
+        // Insert transfer event to erc20_transfers table
+        {
+            let insert_query =
+                "INSERT INTO erc20_transfers (token_address, from, to, amount) VALUES (?, ?, ?, ?)";
+
+            self.query_queue.enqueue(
+                insert_query,
+                vec![
+                    Argument::FieldElement(token_address),
+                    Argument::FieldElement(from),
+                    Argument::FieldElement(to),
+                    Argument::String(u256_to_sql_string(&amount)),
+                ],
+            );
+        }
+
+        // Update balances in erc20_balance table
+        {
+            // NOTE: formatting here should match the format we use for Argument type in QueryQueue
+            // TODO: abstract this so they cannot mismatch
+
+            // Since balance are stored as TEXT in db, we cannot directly use INSERT OR UPDATE
+            // statements.
+            // Fetch balances for both `from` and `to` addresses, update them and write back to db
+            let query = sqlx::query_as::<_, (String, String)>(
+                "SELECT address, balance FROM erc20_balances WHERE token_address = ? AND address \
+                 IN (?, ?)",
+            )
+            .bind(format!("{:#x}", token_address))
+            .bind(format!("{:#x}", from))
+            .bind(format!("{:#x}", to));
+
+            // (address, balance)
+            let balances: Vec<(String, String)> = query.fetch_all(&self.pool).await?;
+            // (address, balance) is primary key in DB, and we are fetching for 2 addresses so there
+            // should be at most 2 rows returned
+            assert!(balances.len() <= 2);
+
+            let from_balance = balances
+                .iter()
+                .find(|(address, _)| address == &format!("{:#x}", from))
+                .map(|(_, balance)| balance.clone())
+                .unwrap_or_else(|| format!("0x0{}0x0", FELT_DELIMITER));
+
+            let to_balance = balances
+                .iter()
+                .find(|(address, _)| address == &format!("{:#x}", to))
+                .map(|(_, balance)| balance.clone())
+                .unwrap_or_else(|| format!("0x0{}0x0", FELT_DELIMITER));
+
+            let from_balance = sql_string_to_u256(&from_balance);
+            let to_balance = sql_string_to_u256(&to_balance);
+
+            let new_from_balance =
+                if from != Felt::ZERO { from_balance.sub(amount) } else { from_balance };
+            let new_to_balance = if to != Felt::ZERO { to_balance.add(amount) } else { to_balance };
+
+            let update_query = "
+            INSERT INTO erc20_balances (address, token_address, balance)
+            VALUES (?, ?, ?)
+            ON CONFLICT (address, token_address) 
+            DO UPDATE SET balance = excluded.balance";
+
+            self.query_queue.enqueue(
+                update_query,
+                vec![
+                    Argument::FieldElement(from),
+                    Argument::FieldElement(token_address),
+                    Argument::String(u256_to_sql_string(&new_from_balance)),
+                ],
+            );
+
+            self.query_queue.enqueue(
+                update_query,
+                vec![
+                    Argument::FieldElement(to),
+                    Argument::FieldElement(token_address),
+                    Argument::String(u256_to_sql_string(&new_to_balance)),
+                ],
+            );
+        }
+        self.query_queue.execute_all().await?;
+
+        Ok(())
+    }
+
+    pub async fn handle_erc721_transfer(
+        &mut self,
+        token_address: Felt,
+        from: Felt,
+        to: Felt,
+        token_id: U256,
+    ) -> Result<()> {
+        // Insert transfer event to erc721_transfers table
+        {
+            let insert_query = "INSERT INTO erc721_transfers (token_address, from, to, token_id) \
+                                VALUES (?, ?, ?, ?)";
+
+            self.query_queue.enqueue(
+                insert_query,
+                vec![
+                    Argument::FieldElement(token_address),
+                    Argument::FieldElement(from),
+                    Argument::FieldElement(to),
+                    Argument::String(u256_to_sql_string(&token_id)),
+                ],
+            );
+        }
+
+        // Update balances in erc721_balances table
+        {
+            if from != Felt::ZERO {
+                self.query_queue.enqueue(
+                "DELETE FROM erc721_balances WHERE address = ? AND token_address = ? AND token_id = ?",
+                vec![
+                    Argument::FieldElement(from),
+                    Argument::FieldElement(token_address),
+                    Argument::String(u256_to_sql_string(&token_id)),
+                ],
+                );
+            }
+
+            if to != Felt::ZERO {
+                self.query_queue.enqueue(
+                "INSERT INTO erc721_balances (address, token_address, token_id) VALUES (?, ?, ?)",
+                vec![
+                    Argument::FieldElement(to),
+                    Argument::FieldElement(token_address),
+                    Argument::String(u256_to_sql_string(&token_id)),
+                ],
+                );
+            }
+        }
+        self.query_queue.execute_all().await?;
+
+        Ok(())
+    }
 }
 
 fn felts_sql_string(felts: &[Felt]) -> String {
     felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(FELT_DELIMITER)
         + FELT_DELIMITER
+}
+
+fn u256_to_sql_string(u256: &U256) -> String {
+    let felts = [u256.low(), u256.high()].map(|i| Felt::from_u128(i).unwrap());
+    felts_sql_string(&felts)
+}
+
+fn sql_string_to_u256(sql_string: &str) -> U256 {
+    let low_high =
+        sql_string.split(FELT_DELIMITER).map(|s| Felt::from_str(s).unwrap()).collect::<Vec<Felt>>();
+
+    assert!(low_high.len() == 2);
+    let low = low_high[0].to_u128().unwrap();
+    let high = low_high[1].to_u128().unwrap();
+
+    U256::from_words(low, high)
 }
