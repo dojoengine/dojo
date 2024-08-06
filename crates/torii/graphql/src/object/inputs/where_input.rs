@@ -151,11 +151,12 @@ fn parse_string(input: ValueAccessor<'_>, type_name: &str, primitive: Primitive)
             true => Ok(FilterValue::String(format!("0x{:0>64}", i.strip_prefix("0x").unwrap()))), /* safe to unwrap since we know it starts with 0x */
             false => match primitive {
                 // would overflow i128
-                Primitive::I128(_) => match i.parse::<i128>() {
+                Primitive::U128(_) => match i.parse::<u128>() {
                     Ok(i) => Ok(FilterValue::String(i.to_string())),
                     Err(_) => Ok(FilterValue::String(i.to_string())),
                 }
-                _ => match i.parse::<u128>() {
+                // signed and unsigned integers
+                _ => match i.parse::<i128>() {
                     Ok(i) => Ok(FilterValue::String(i.to_string())),
                     Err(_) => Ok(FilterValue::String(i.to_string())),
                 }
