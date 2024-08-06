@@ -104,8 +104,6 @@ pub fn parse_where_argument(
                             SqlType::Text => parse_string(input, type_name, primitive)?,
                         };
 
-                        println!("filter_value for {}: {:?}", type_name, filter_value);
-
                         Ok(Some(parse_filter(type_name, filter_value)))
                     }
                     TypeData::List(inner) => {
