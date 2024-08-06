@@ -45,8 +45,8 @@ pub struct KatanaRunnerConfig {
     pub log_path: Option<PathBuf>,
     /// The messaging config file
     pub messaging: Option<String>,
-/// The path to the database dir.
-    pub db_dir : Option<PathBuf>
+    /// The path to the database dir.
+    pub db_dir: Option<PathBuf>,
 }
 
 impl Default for KatanaRunnerConfig {
@@ -102,7 +102,7 @@ impl KatanaRunner {
             builder = builder.messaging(messaging_file);
         }
 
-        if let Some(path) = config.db_dir{
+        if let Some(path) = config.db_dir {
             builder = builder.db_dir(path);
         }
 
@@ -170,11 +170,7 @@ impl KatanaRunner {
 /// Determines the default program path for the katana runner based on the KATANA_RUNNER_BIN
 /// environment variable. If not set, try to to use katana from the PATH.
 fn determine_default_program_path() -> String {
-    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") {
-        bin
-    } else {
-        "katana".to_string()
-    }
+    if let Ok(bin) = std::env::var("KATANA_RUNNER_BIN") { bin } else { "katana".to_string() }
 }
 
 #[cfg(test)]

@@ -1,12 +1,12 @@
+use std::path::PathBuf;
+use std::process::Command;
+
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_world::migration::TxnConfig;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
-use sozo_ops::{
-    migration::{self, MigrationOutput},
-    test_utils,
-};
-use std::{path::PathBuf, process::Command};
+use sozo_ops::migration::{self, MigrationOutput};
+use sozo_ops::test_utils;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
