@@ -100,7 +100,7 @@ cargo run -r --bin sozo -- \
 
 4. Prepare piltover contract (only for persistent mode)
 
-Piltover check whether it's internal state is consistent with incoming updates. Because of it new contract has to be deployed and initialized for each appchain.
+Piltover checks whether its internal state is consistent with incoming updates. Because of it new contract has to be deployed and initialized for each appchain.
 
 - <STATE_ROOT> can be read from logs, when saya is running.
 - <CONFIG_HASH> Using a mock value of `42` at this time.
