@@ -7931,6 +7931,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-pool"
+version = "1.0.0-alpha.4"
+dependencies = [
+ "katana-primitives",
+]
+
+[[package]]
 name = "katana-primitives"
 version = "1.0.0-alpha.4"
 dependencies = [

@@ -1,5 +1,3 @@
-// Code adapted from Foundry's Anvil
-
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::FieldElement;
