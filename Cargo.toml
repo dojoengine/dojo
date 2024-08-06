@@ -22,6 +22,7 @@ members = [
 	"crates/katana/executor",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
+	"crates/katana/pool",
 	"crates/katana/primitives",
 	"crates/katana/rpc/rpc",
 	"crates/katana/rpc/rpc-api",
