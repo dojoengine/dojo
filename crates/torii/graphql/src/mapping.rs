@@ -143,4 +143,14 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
         ),
     ]);
+    pub static ref ERC20_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("balance"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("tokenAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+    ]);
+    pub static ref ERC721_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("balance"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("tokenId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+    ]);
 }
