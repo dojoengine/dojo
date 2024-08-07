@@ -13,6 +13,11 @@ enum PrimitiveType {
     FELT252 = 8;
     CLASS_HASH = 9;
     CONTRACT_ADDRESS = 10;
+    I8 = 11;
+    I16 = 12;
+    I32 = 13;
+    I64 = 14;
+    I128 = 15;
 }
 
 message EnumOption {

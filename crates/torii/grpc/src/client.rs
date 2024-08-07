@@ -11,7 +11,7 @@ use crate::proto::world::{
     SubscribeEntityResponse, SubscribeEventsRequest, SubscribeEventsResponse,
     SubscribeModelsRequest, SubscribeModelsResponse, UpdateEntitiesSubscriptionRequest,
 };
-use crate::types::schema::{self, Entity, SchemaError};
+use crate::types::schema::{Entity, SchemaError};
 use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
@@ -26,7 +26,7 @@ pub enum Error {
     #[error(transparent)]
     Transport(tonic::transport::Error),
     #[error(transparent)]
-    Schema(#[from] schema::SchemaError),
+    Schema(#[from] SchemaError),
 }
 
 #[derive(Debug)]
@@ -68,7 +68,9 @@ impl WorldClient {
             .await
             .map_err(Error::Grpc)
             .and_then(|res| {
-                res.into_inner().metadata.ok_or(Error::Schema(SchemaError::MissingExpectedData))
+                res.into_inner()
+                    .metadata
+                    .ok_or(Error::Schema(SchemaError::MissingExpectedData("metadata".to_string())))
             })
             .and_then(|metadata| metadata.try_into().map_err(Error::ParseStr))
     }
