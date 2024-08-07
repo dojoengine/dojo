@@ -101,7 +101,7 @@ pub fn parse_where_argument(
                         let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
                         let filter_value = match primitive.to_sql_type() {
                             SqlType::Integer => parse_integer(input, type_name, primitive)?,
-                            SqlType::Text => parse_string(input, type_name)?,
+                            SqlType::Text => parse_string(input, type_name, primitive)?,
                         };
 
                         Ok(Some(parse_filter(type_name, filter_value)))
@@ -114,7 +114,7 @@ pub fn parse_where_argument(
                                 let primitive = Primitive::from_str(&inner.type_ref().to_string())?;
                                 match primitive.to_sql_type() {
                                     SqlType::Integer => parse_integer(value, type_name, primitive),
-                                    SqlType::Text => parse_string(value, type_name),
+                                    SqlType::Text => parse_string(value, type_name, primitive),
                                 }
                             })
                             .collect::<Result<Vec<_>>>()?;
@@ -145,13 +145,25 @@ fn parse_integer(
     }
 }
 
-fn parse_string(input: ValueAccessor<'_>, type_name: &str) -> Result<FilterValue> {
+fn parse_string(
+    input: ValueAccessor<'_>,
+    type_name: &str,
+    primitive: Primitive,
+) -> Result<FilterValue> {
     match input.string() {
         Ok(i) => match i.starts_with("0x") {
             true => Ok(FilterValue::String(format!("0x{:0>64}", i.strip_prefix("0x").unwrap()))), /* safe to unwrap since we know it starts with 0x */
-            false => match i.parse::<u128>() {
-                Ok(val) => Ok(FilterValue::String(format!("0x{:0>64x}", val))),
-                Err(_) => Ok(FilterValue::String(i.to_string())),
+            false => match primitive {
+                // would overflow i128
+                Primitive::U128(_) => match i.parse::<u128>() {
+                    Ok(i) => Ok(FilterValue::String(format!("0x{:0>64x}", i))),
+                    Err(_) => Ok(FilterValue::String(i.to_string())),
+                },
+                // signed and unsigned integers
+                _ => match i.parse::<i128>() {
+                    Ok(i) => Ok(FilterValue::String(format!("0x{:0>64x}", i))),
+                    Err(_) => Ok(FilterValue::String(i.to_string())),
+                },
             },
         },
         Err(_) => Err(GqlError::new(format!("Expected string on field {}", type_name))),

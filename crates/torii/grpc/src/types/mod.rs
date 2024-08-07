@@ -59,7 +59,7 @@ pub struct MemberClause {
     pub model: String,
     pub member: String,
     pub operator: ComparisonOperator,
-    pub value: Value,
+    pub value: Primitive,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
