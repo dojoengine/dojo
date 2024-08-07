@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722911783786,
+  "lastUpdate": 1723001306962,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14545,6 +14545,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3961501,
             "range": "± 106548",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f1c521451eab22d240ae378f8b2a9c6ae981375f",
+          "message": "feat(torii-grpc): add signed integers to grpc proto (#2239)\n\n* feat(torii-grpc): add signed integers to grpc proto\r\n\r\n* feat: add support to libp2p\r\n\r\n* refactor: correct order for proto primitive\r\n\r\n* refactor: specific formatting rules for primitives\r\n\r\n* feat: cover all correct primitive types for proto\r\n\r\n* feat: cast primitive to correct sql value for comparison & fix errors\r\n\r\n* fmt\r\n\r\n* feat: better error handling\r\n\r\n* fmt\r\n\r\n* chore: deref\r\n\r\n* chore: str ref\r\n\r\n* fmt\r\n\r\n* bool deref\r\n\r\n* fix: test\r\n\r\n* fix: graphql\r\n\r\n* fix: correct parsing\r\n\r\n* fmt\r\n\r\n* feat: all primitive strings are hex\r\n\r\n* chore: revert test\r\n\r\n* revert: where input\r\n\r\n* fix: where & ordering\r\n\r\n* remove print\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-06T23:08:26-04:00",
+          "tree_id": "e780d470a5fada21c757a23e3aa7f28437331d15",
+          "url": "https://github.com/dojoengine/dojo/commit/f1c521451eab22d240ae378f8b2a9c6ae981375f"
+        },
+        "date": 1723001305840,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17516971,
+            "range": "± 197378",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4494885,
+            "range": "± 418789",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 4031367815,
+            "range": "± 914976162",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4387174,
+            "range": "± 343349",
             "unit": "ns/iter"
           }
         ]
