@@ -7,10 +7,10 @@ use crate::PoolTransaction;
 // the pool.
 pub trait PoolOrd {
     type Tx: PoolTransaction;
-
+    /// The priority value type whose [Ord] implementation is used to order the transaction in the pool.
     type PriorityValue: Ord;
 
-    // returns the priority value of a transaction
+    /// returns the priority value for the given transaction
     fn priority(&self, tx: &Self::Tx) -> Self::PriorityValue;
 }
 
@@ -45,10 +45,6 @@ pub struct SubmissionNonce(u64);
 impl SubmissionNonce {
     fn new() -> Self {
         SubmissionNonce::default()
-    }
-
-    fn next(&self) -> Self {
-        SubmissionNonce(self.0 + 1)
     }
 }
 
