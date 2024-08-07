@@ -1,5 +1,3 @@
-pub mod stateful;
-
 use std::marker::PhantomData;
 
 use katana_executor::ExecutionError;
@@ -8,7 +6,7 @@ use katana_primitives::transaction::TxHash;
 use crate::tx::PoolTransaction;
 
 #[derive(Debug, thiserror::Error)]
-#[error("Transaction validation failed: {error}")]
+#[error("{error}")]
 pub struct Error {
     /// The hash of the transaction that failed validation.
     pub hash: TxHash,
@@ -38,8 +36,10 @@ pub trait Validator {
 // the tx should be inserted into.
 #[derive(Debug)]
 pub enum ValidationOutcome<T> {
+    /// tx that is or may eventually be valid after some nonce changes.
     Valid(T),
-    Invalid { tx: T, error: ExecutionError }, // aka rejected in starknet terms
+    /// tx that will never be valid, eg. due to invalid signature, nonce lower than current, etc.
+    Invalid { tx: T, error: ExecutionError },
 }
 
 /// A no-op validator that does nothing and assume all incoming transactions are valid.

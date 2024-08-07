@@ -33,38 +33,38 @@ impl<T: PoolTransaction> Fcfs<T> {
 
 impl<T: PoolTransaction> PoolOrd for Fcfs<T> {
     type Transaction = T;
-    type PriorityValue = SubmissionNonce;
+    type PriorityValue = TxSubmissionNonce;
 
     fn priority(&self, _: &Self::Transaction) -> Self::PriorityValue {
-        SubmissionNonce(self.nonce.fetch_add(1, AtomicOrdering::Relaxed))
+        TxSubmissionNonce(self.nonce.fetch_add(1, AtomicOrdering::Relaxed))
     }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct SubmissionNonce(u64);
+pub struct TxSubmissionNonce(u64);
 
-impl SubmissionNonce {
+impl TxSubmissionNonce {
     fn new() -> Self {
-        SubmissionNonce::default()
+        TxSubmissionNonce::default()
     }
 }
 
-impl Ord for SubmissionNonce {
+impl Ord for TxSubmissionNonce {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Reverse the ordering so lower values have higher priority
         other.0.cmp(&self.0)
     }
 }
 
-impl Eq for SubmissionNonce {}
+impl Eq for TxSubmissionNonce {}
 
-impl PartialOrd for SubmissionNonce {
+impl PartialOrd for TxSubmissionNonce {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialEq for SubmissionNonce {
+impl PartialEq for TxSubmissionNonce {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }

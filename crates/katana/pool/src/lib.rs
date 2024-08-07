@@ -53,7 +53,7 @@ struct Inner<T, V, O: PoolOrd> {
     /// The order of the txs in the btree is determined by the priority values.
     pending_txs: RwLock<BinaryHeap<ValidPoolTx<T, O>>>,
     /// list of all invalid (aka rejected) txs in the pool
-    rejected_txs: RwLock<BTreeMap<TxId, InvalidPoolTx<T>>>,
+    rejected_txs: RwLock<BTreeMap<TxHash, InvalidPoolTx<T>>>,
     /// the tx validator
     validator: V,
     /// the ordering mechanism used to order the txs in the pool
@@ -102,15 +102,18 @@ where
 
                         // TODO: convert the base tx into a pool tx with the priority value attached
                         let pool_tx = ValidPoolTx::new(id.clone(), tx, priority);
+                        let hash = *pool_tx.tx.hash();
 
                         self.inner.valid_txs.write().insert(id, pool_tx.clone());
                         self.inner.pending_txs.write().push(pool_tx);
-                        self.notify_listener(TxHash::default());
+                        self.notify_listener(hash);
                     }
 
                     ValidationOutcome::Invalid { tx, error } => {
+                        let hash = *tx.hash();
                         let tx = InvalidPoolTx::new(tx, error);
-                        self.inner.rejected_txs.write().insert(id, tx);
+
+                        self.inner.rejected_txs.write().insert(hash, tx);
                         // TODO: notify listeners
                     }
                 }
@@ -122,10 +125,11 @@ where
         }
     }
 
-    // returns transactions that are ready and valid to be included in the next block.
+    // takes the transactions that are ready and valid to be included in the next block,
+    // from the pool.
     //
     // best transactions must be ordered by the ordering mechanism used.
-    pub fn best_transactions(&self) -> impl Iterator<Item = ValidPoolTx<T, O>> {
+    pub fn take_best_transactions(&self) -> impl Iterator<Item = ValidPoolTx<T, O>> {
         BestTransactions {
             all: self.inner.valid_txs.read().clone(),
             pending: self.inner.pending_txs.read().clone(),
