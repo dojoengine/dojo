@@ -7935,6 +7935,8 @@ name = "katana-pool"
 version = "1.0.0-alpha.4"
 dependencies = [
  "katana-primitives",
+ "parking_lot 0.12.3",
+ "tracing",
 ]
 
 [[package]]

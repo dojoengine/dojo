@@ -8,3 +8,5 @@ version.workspace = true
 
 [dependencies]
 katana-primitives.workspace = true
+parking_lot.workspace = true
+tracing.workspace = true
