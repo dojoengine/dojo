@@ -10,7 +10,8 @@
 // - valid txs must be valid against all the txs in the pool as well, not just the one in the
 //   pending block
 
-// - use a time-based cache for a rejected txs pool (txs that gets rejected by the TxValidator trait)
+// - use a cache with timeout eviction policy for the rejected txs pool (txs that gets rejected by the TxValidator
+//   trait)
 
 // ### State Changes
 //
@@ -19,38 +20,48 @@
 //   - remove mined transactions
 //
 
-pub mod tx;
 pub mod ordering;
+pub mod tx;
 pub mod validation;
 
-use std::{collections::{BTreeMap, BinaryHeap}, sync::Arc};
+use std::collections::{BTreeMap, BinaryHeap};
+use std::sync::Arc;
 
-use tracing::error;
+use futures::channel::mpsc::{channel, Receiver, Sender};
+use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::transaction::TxHash;
 use ordering::PoolOrd;
 use parking_lot::RwLock;
-use tx::{PoolTransaction, TxId};
+use tracing::{error, warn};
+use tx::{PoolTransaction, PoolTx, TxId};
 use validation::{ValidationOutcome, Validator};
 
-#[derive(Debug, Clone)]
-pub struct TxPool<T, V, O> {
+#[derive(Clone)]
+pub struct TxPool<T, V, O>
+where
+    T: PoolTransaction,
+    V: Validator<Tx = T>,
+    O: PoolOrd<Tx = T>,
+{
     inner: Arc<Inner<T, V, O>>,
 }
 
-#[derive(Debug)]
-struct Inner<T, V, O> {
+struct Inner<T, V, O: PoolOrd> {
     /// list of all valid txs in the pool
-    valid_txs: RwLock<BTreeMap<TxId, T>>,
+    valid_txs: RwLock<BTreeMap<TxId, PoolTx<T, O>>>,
     /// List of independent txs that can be included.
     ///
     /// The order of the txs in the btree is determined by the priority values.
-    pending_txs: RwLock<BinaryHeap<T>>,
+    pending_txs: RwLock<BinaryHeap<PoolTx<T, O>>>,
     /// list of all invalid (aka rejected) txs in the pool
-    rejected_txs: RwLock<BTreeMap<TxId, T>>,
+    rejected_txs: RwLock<BTreeMap<TxId, PoolTx<T, O>>>,
     /// the tx validator
     validator: V,
     /// the ordering mechanism used to order the txs in the pool
     ordering: O,
+    /// listeners for incoming txs
+    // TODO: add listeners for different pools
+    listeners: RwLock<Vec<Sender<TxHash>>>,
 }
 
 impl<T, V, O> TxPool<T, V, O>
@@ -59,34 +70,52 @@ where
     V: Validator<Tx = T>,
     O: PoolOrd<Tx = T>,
 {
+    pub fn new(validator: V, ordering: O) -> Self {
+        Self {
+            inner: Arc::new(Inner {
+                ordering,
+                validator,
+                listeners: Default::default(),
+                valid_txs: Default::default(),
+                pending_txs: Default::default(),
+                rejected_txs: Default::default(),
+            }),
+        }
+    }
+
     /// add tx to the pool
     ///
     /// steps that must be taken before putting tx into the pool:
     /// 1. validate using the pool's [TxValidator](crate::validation::TxValidator)
-    /// 2. if valid, assign a priority value to the tx using the ordering implementation. then insert to the all/pending tx.
+    /// 2. if valid, assign a priority value to the tx using the ordering implementation. then
+    ///    insert to the all/pending tx.
     /// 3. f not valid, insert to the rejected pool
-    /// 
-    // TODO: the API should accept raw tx type, the PoolTransaction should only be used for in the 
+    //
+    // TODO: the API should accept raw tx type, the PoolTransaction should only be used for in the
     // pool scope.
     pub fn add_transaction(&self, tx: T) {
         match self.inner.validator.validate(tx) {
             Ok(outcome) => {
                 match outcome {
-                    ValidationOutcome::Valid { tx, .. } => {
+                    ValidationOutcome::Valid(tx) => {
                         let priority = self.inner.ordering.priority(&tx);
 
                         // TODO: convert the base tx into a pool tx with the priority value attached
+                        let id = TxId::new(ContractAddress::default(), Nonce::default());
+                        let pool_tx = PoolTx::new(id.clone(), tx, priority);
 
-                        // self.all_txs.write().insert(tx.id().clone(), tx.clone());
-                        // self.pending_txs.write().push(tx);
-                    },
+                        self.inner.valid_txs.write().insert(id, pool_tx.clone());
+                        self.inner.pending_txs.write().push(pool_tx);
+
+                        // TODO: notify listeners
+                        self.notify_listener(TxHash::default());
+                    }
+
                     ValidationOutcome::Invalid { tx, .. } => {
                         todo!("insert into the rejected pool");
-                    },
+                    }
                 }
-
-                // TODO: notify listeners
-            },
+            }
 
             Err(e) => {
                 error!(e);
@@ -98,7 +127,7 @@ where
     //
     // best transactions must be ordered by the ordering mechanism used.
     pub fn best_transactions(&self) -> impl Iterator<Item = T> {
-        BestTxs {
+        BestTransactions {
             all: self.inner.valid_txs.read().clone(),
             pending: self.inner.pending_txs.read().clone(),
         }
@@ -120,17 +149,51 @@ where
     pub fn remove_transactions(&mut self, hashes: &[TxHash]) {
         todo!()
     }
+
+    pub fn add_listener(&self) -> Receiver<TxHash> {
+        const TX_LISTENER_BUFFER_SIZE: usize = 2048;
+        let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
+        self.inner.listeners.write().push(tx);
+        rx
+    }
+
+    /// notifies all listeners about the transaction
+    fn notify_listener(&self, hash: TxHash) {
+        let mut listener = self.inner.listeners.write();
+        // this is basically a retain but with mut reference
+        for n in (0..listener.len()).rev() {
+            let mut listener_tx = listener.swap_remove(n);
+            let retain = match listener_tx.try_send(hash) {
+                Ok(()) => true,
+                Err(e) => {
+                    if e.is_full() {
+                        warn!(
+                            hash = ?format!("\"{hash:#x}\""),
+                            "Unable to send tx notification because channel is full."
+                        );
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+
+            if retain {
+                listener.push(listener_tx)
+            }
+        }
+    }
 }
 
 /// an iterator that yields transactions from the pool that can be included in a block, sorted by
 /// by its priority.
 #[derive(Debug)]
-struct BestTxs<T> {
+struct BestTransactions<T> {
     all: BTreeMap<TxId, T>,
     pending: BinaryHeap<T>,
 }
 
-impl<T> Iterator for BestTxs<T>
+impl<T> Iterator for BestTransactions<T>
 where
     T: PoolTransaction + Clone,
 {
