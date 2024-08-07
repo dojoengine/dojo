@@ -9,7 +9,6 @@ CREATE TABLE erc721_balances (
     address TEXT NOT NULL,
     token_address TEXT NOT NULL,
     token_id TEXT NOT NULL,
-    token_uri TEXT,
     PRIMARY KEY (address, token_address, token_id)
 );
 
