@@ -60,7 +60,7 @@ async fn migrate_with_auto_mine() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
@@ -75,7 +75,7 @@ async fn migrate_with_block_time() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         block_time: Some(1000),
@@ -95,7 +95,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         disable_fee: true,
@@ -277,7 +277,7 @@ async fn migrate_with_metadata() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _, _) = setup::setup_migration(&config).unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
@@ -350,7 +350,7 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, diff) = setup::setup_migration(&config).unwrap();
+    let (migration, diff, _) = setup::setup_migration(&config).unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =
@@ -414,7 +414,7 @@ async fn migration_with_mismatching_world_address_and_seed() {
 
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
-    let (strategy, _) = prepare_migration_with_world_and_seed(
+    let (strategy, _, _) = prepare_migration_with_world_and_seed(
         base_dir,
         target_dir,
         Some(Felt::ONE),
