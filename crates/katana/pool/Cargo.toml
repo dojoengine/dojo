@@ -13,3 +13,4 @@ parking_lot.workspace = true
 tracing.workspace = true
 blockifier.workspace = true
 futures.workspace = true
+thiserror.workspace = true

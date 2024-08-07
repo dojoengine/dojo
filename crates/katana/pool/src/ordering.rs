@@ -6,13 +6,13 @@ use crate::PoolTransaction;
 // evaluates the priority of a transaction which would be used to determine how txs are ordered in
 // the pool.
 pub trait PoolOrd {
-    type Tx;
+    type Transaction;
     /// The priority value type whose [Ord] implementation is used to order the transaction in the
     /// pool.
     type PriorityValue: Ord + Clone;
 
     /// returns the priority value for the given transaction
-    fn priority(&self, tx: &Self::Tx) -> Self::PriorityValue;
+    fn priority(&self, tx: &Self::Transaction) -> Self::PriorityValue;
 }
 
 /// First-come-first-serve ordering implementation.
@@ -32,10 +32,10 @@ impl<T: PoolTransaction> Fcfs<T> {
 }
 
 impl<T: PoolTransaction> PoolOrd for Fcfs<T> {
-    type Tx = T;
+    type Transaction = T;
     type PriorityValue = SubmissionNonce;
 
-    fn priority(&self, _: &Self::Tx) -> Self::PriorityValue {
+    fn priority(&self, _: &Self::Transaction) -> Self::PriorityValue {
         SubmissionNonce(self.nonce.fetch_add(1, AtomicOrdering::Relaxed))
     }
 }
