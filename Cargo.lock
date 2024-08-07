@@ -7939,6 +7939,7 @@ dependencies = [
  "katana-executor",
  "katana-primitives",
  "parking_lot 0.12.3",
+ "thiserror",
  "tracing",
 ]
 

@@ -1,21 +1,35 @@
 pub mod stateful;
 
-use crate::tx::PoolTransaction;
-use katana_executor::ExecutionError;
 use std::marker::PhantomData;
 
+use katana_executor::ExecutionError;
+use katana_primitives::transaction::TxHash;
+
+use crate::tx::PoolTransaction;
+
+#[derive(Debug, thiserror::Error)]
+#[error("Transaction validation failed: {error}")]
+pub struct Error {
+    /// The hash of the transaction that failed validation.
+    pub hash: TxHash,
+    /// The error that caused the transaction to fail validation.
+    pub error: ExecutionError,
+}
+
+pub type ValidationResult<T> = Result<ValidationOutcome<T>, Error>;
+
+/// A trait for validating transactions before they are added to the transaction pool.
 pub trait Validator {
-    type Tx: PoolTransaction;
+    type Transaction: PoolTransaction;
 
-    fn validate(
-        &self,
-        tx: Self::Tx,
-    ) -> Result<ValidationOutcome<Self::Tx>, Box<dyn std::error::Error>>;
+    /// Validate a transaction.
+    fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction>;
 
+    /// Validate a batch of transactions.
     fn validate_all(
         &self,
-        txs: Vec<Self::Tx>,
-    ) -> Vec<Result<ValidationOutcome<Self::Tx>, Box<dyn std::error::Error>>> {
+        txs: Vec<Self::Transaction>,
+    ) -> Vec<ValidationResult<Self::Transaction>> {
         txs.into_iter().map(|tx| self.validate(tx)).collect()
     }
 }
@@ -32,13 +46,10 @@ pub enum ValidationOutcome<T> {
 #[derive(Debug)]
 pub struct NoopValidator<T>(PhantomData<T>);
 
-impl<T> Validator for NoopValidator<T> {
-    type Tx = T;
+impl<T: PoolTransaction> Validator for NoopValidator<T> {
+    type Transaction = T;
 
-    fn validate(
-        &self,
-        tx: Self::Tx,
-    ) -> Result<ValidationOutcome<Self::Tx>, Box<dyn std::error::Error>> {
-        Ok(ValidationOutcome::Valid(tx))
+    fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
+        ValidationResult::Ok(ValidationOutcome::Valid(tx))
     }
 }
