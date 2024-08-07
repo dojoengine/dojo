@@ -117,7 +117,7 @@ fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<
 
     if tag_exists {
         config.ui().print(format!("Cloning project template from {}...", url));
-        let output = Command::new("git")
+        Command::new("git")
             .args([
                 "clone",
                 "--branch",
@@ -128,25 +128,11 @@ fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<
                 path.to_str().unwrap(),
             ])
             .output()?;
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to clone repository: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
     } else {
-        config
-            .ui()
-            .warn(format!("Version {} not found. Cloning the latest version instead.", version));
-        let output = Command::new("git")
-            .args(["clone", "--recursive", url, path.to_str().unwrap()])
-            .output()?;
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to clone repository: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
+        config.ui().warn(
+            "No version matched your current sozo version. Cloning the latest version instead.",
+        );
+        Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
     }
 
     trace!("Repository cloned successfully.");
