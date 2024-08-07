@@ -65,6 +65,13 @@ impl Default for KatanaRunnerConfig {
     }
 }
 
+impl KatanaRunnerConfig {
+    pub fn with_db_dir(mut self, db_dir: &str) -> Self {
+        self.db_dir = Some(PathBuf::from(db_dir));
+        self
+    }
+}
+
 impl KatanaRunner {
     /// Creates a new KatanaRunner with default values.
     pub fn new() -> Result<Self> {

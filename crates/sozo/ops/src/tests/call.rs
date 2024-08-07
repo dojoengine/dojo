@@ -1,5 +1,5 @@
 use dojo_world::contracts::WorldContractReader;
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -12,14 +12,12 @@ use crate::{call, utils};
 const CONTRACT_TAG: &str = "dojo_examples-actions";
 const ENTRYPOINT: &str = "get_player_position";
 
-// TODO: we should work on a lazy static init for the runner for all the call tests,
-// as the state will not change, we only read and check the result.
-
 #[tokio::test]
 async fn call_with_bad_address() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -38,9 +36,10 @@ async fn call_with_bad_address() {
 
 #[tokio::test]
 async fn call_with_bad_name() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -59,9 +58,10 @@ async fn call_with_bad_name() {
 
 #[tokio::test]
 async fn call_with_bad_entrypoint() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -80,9 +80,10 @@ async fn call_with_bad_entrypoint() {
 
 #[tokio::test]
 async fn call_with_bad_calldata() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -101,9 +102,10 @@ async fn call_with_bad_calldata() {
 
 #[tokio::test]
 async fn call_with_contract_name() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 
@@ -116,9 +118,10 @@ async fn call_with_contract_name() {
 
 #[tokio::test]
 async fn call_with_contract_address() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
     let provider = sequencer.provider();
     let world_reader = WorldContractReader::new(world.address, provider);
 

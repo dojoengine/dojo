@@ -12865,6 +12865,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "prettytable-rs",
+ "regex",
  "reqwest 0.12.5",
  "rpassword",
  "scarb",

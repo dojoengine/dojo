@@ -2,14 +2,14 @@ use std::time::Duration;
 
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
-use katana_runner::KatanaRunner;
+use dojo_test_utils::migration::{copy_test_db, prepare_migration_with_world_and_seed};
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 
 use super::{WorldContract, WorldContractReader};
 use crate::manifest::{BaseManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
-use crate::metadata::dojo_metadata_from_workspace;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
 use crate::migration::{Declarable, Deployable, TxnConfig};
@@ -17,37 +17,30 @@ use crate::utils::TransactionExt;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
-    let runner = KatanaRunner::new().expect("Fail to set runner");
-
     let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-
-    let default_namespace = ws.current_package().unwrap().id.name.to_string();
 
     let manifest_dir = config.manifest_path().parent().unwrap();
     let target_dir = manifest_dir.join("target").join("dev");
 
-    let mut account = runner.account(0);
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
+
+    let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let provider = account.provider();
 
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let dojo_metadata =
-        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
-
-    let world_address = deploy_world(
-        &runner,
-        &manifest_dir.to_path_buf(),
-        &target_dir.to_path_buf(),
-        dojo_metadata.skip_migration,
-        &default_namespace,
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_dir.to_path_buf(),
+        target_dir.to_path_buf(),
+        None,
+        "dojo_examples",
+        "dojo_examples",
     )
-    .await;
+    .unwrap();
 
-    let _world = WorldContractReader::new(world_address, provider);
+    let _world = WorldContractReader::new(strat.world_address, provider);
 }
 
 pub async fn deploy_world(
