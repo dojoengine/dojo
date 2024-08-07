@@ -1243,8 +1243,8 @@
     {
       "kind": "DojoContract",
       "address": "0x66221f204a50d51e28d03bc1578bc1845371cd0f0932666b507cd9721c183ec",
-      "class_hash": "0xc0a5037a6fdc0b374b270ca5e9f3bd76200d73d01f409749b7006b3cd6c03d",
-      "original_class_hash": "0xc0a5037a6fdc0b374b270ca5e9f3bd76200d73d01f409749b7006b3cd6c03d",
+      "class_hash": "0x61b852936c676b98c95d18b5719ca51c9e6a71a160e26b79cb1a9cd0ae4c161",
+      "original_class_hash": "0x61b852936c676b98c95d18b5719ca51c9e6a71a160e26b79cb1a9cd0ae4c161",
       "base_class_hash": "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2",
       "abi": [
         {
@@ -1376,77 +1376,6 @@
         },
         {
           "type": "impl",
-          "name": "ActionsComputedImpl",
-          "interface_name": "dojo_examples::actions::IActionsComputed"
-        },
-        {
-          "type": "struct",
-          "name": "dojo_examples::models::Vec2",
-          "members": [
-            {
-              "name": "x",
-              "type": "core::integer::u32"
-            },
-            {
-              "name": "y",
-              "type": "core::integer::u32"
-            }
-          ]
-        },
-        {
-          "type": "struct",
-          "name": "dojo_examples::models::Position",
-          "members": [
-            {
-              "name": "player",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
-            {
-              "name": "vec",
-              "type": "dojo_examples::models::Vec2"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo_examples::actions::IActionsComputed",
-          "items": [
-            {
-              "type": "function",
-              "name": "tile_terrain",
-              "inputs": [
-                {
-                  "name": "vec",
-                  "type": "dojo_examples::models::Vec2"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::felt252"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "quadrant",
-              "inputs": [
-                {
-                  "name": "pos",
-                  "type": "dojo_examples::models::Position"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::integer::u8"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "impl",
           "name": "ActionsImpl",
           "interface_name": "dojo_examples::actions::IActions"
         },
@@ -1473,6 +1402,34 @@
             {
               "name": "Down",
               "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Vec2",
+          "members": [
+            {
+              "name": "x",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "y",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Position",
+          "members": [
+            {
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "vec",
+              "type": "dojo_examples::models::Vec2"
             }
           ]
         },
@@ -1684,7 +1641,6 @@
         "dojo_examples-Moves",
         "dojo_examples-Position"
       ],
-      "computed": [],
       "init_calldata": [],
       "tag": "dojo_examples-actions",
       "manifest_name": "dojo_examples-actions-40b6994c"
@@ -1921,7 +1877,6 @@
       ],
       "reads": [],
       "writes": [],
-      "computed": [],
       "init_calldata": [],
       "tag": "dojo_examples-dungeon",
       "manifest_name": "dojo_examples-dungeon-6620e0e6"
@@ -2140,7 +2095,6 @@
       ],
       "reads": [],
       "writes": [],
-      "computed": [],
       "init_calldata": [],
       "tag": "dojo_examples-mock_token",
       "manifest_name": "dojo_examples-mock_token-31599eb2"
@@ -2372,7 +2326,6 @@
       ],
       "reads": [],
       "writes": [],
-      "computed": [],
       "init_calldata": [
         "$contract_address:dojo_examples-actions",
         "$class_hash:dojo_examples-actions",
