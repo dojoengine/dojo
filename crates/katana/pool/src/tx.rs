@@ -44,53 +44,64 @@ impl TxId {
 }
 
 #[derive(Debug)]
-pub struct ValidPoolTx<T, O: PoolOrd> {
-    pub id: TxId,
+pub struct ValidTx<T, O: PoolOrd> {
     pub tx: Arc<T>,
     pub priority: O::PriorityValue,
 }
 
-impl<T, O: PoolOrd> ValidPoolTx<T, O> {
-    pub fn new(id: TxId, tx: T, priority: O::PriorityValue) -> Self {
-        Self { id, tx: Arc::new(tx), priority }
+impl<T, O: PoolOrd> Clone for ValidTx<T, O> {
+    fn clone(&self) -> Self {
+        Self { tx: Arc::clone(&self.tx), priority: self.priority.clone() }
     }
 }
 
-impl<T, O> Clone for ValidPoolTx<T, O>
+#[derive(Debug)]
+pub struct PendingTx<T, O: PoolOrd> {
+    pub id: TxId,
+    pub tx: ValidTx<T, O>,
+}
+
+impl<T, O: PoolOrd> PendingTx<T, O> {
+    pub fn new(id: TxId, tx: ValidTx<T, O>) -> Self {
+        Self { id, tx }
+    }
+}
+
+impl<T, O> Clone for PendingTx<T, O>
 where
     O: PoolOrd,
 {
     fn clone(&self) -> Self {
-        Self { id: self.id.clone(), tx: Arc::clone(&self.tx), priority: self.priority.clone() }
+        Self { id: self.id.clone(), tx: self.tx.clone() }
     }
 }
 
-impl<T, O: PoolOrd> PartialEq for ValidPoolTx<T, O> {
+impl<T, O: PoolOrd> PartialEq for PendingTx<T, O> {
     fn eq(&self, other: &Self) -> bool {
         self.priority == other.priority
     }
 }
 
-impl<T, O: PoolOrd> Eq for ValidPoolTx<T, O> {}
+impl<T, O: PoolOrd> Eq for PendingTx<T, O> {}
 
-impl<T, O: PoolOrd> PartialOrd for ValidPoolTx<T, O> {
+impl<T, O: PoolOrd> PartialOrd for PendingTx<T, O> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<T, O: PoolOrd> Ord for ValidPoolTx<T, O> {
+impl<T, O: PoolOrd> Ord for PendingTx<T, O> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.priority.cmp(&other.priority)
     }
 }
 
-pub struct InvalidPoolTx<T> {
+pub struct InvalidTx<T> {
     pub tx: Arc<T>,
     pub error: ExecutionError,
 }
 
-impl<T> InvalidPoolTx<T> {
+impl<T> InvalidTx<T> {
     pub fn new(tx: T, error: ExecutionError) -> Self {
         Self { tx: Arc::new(tx), error }
     }
