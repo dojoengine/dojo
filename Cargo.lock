@@ -7934,6 +7934,9 @@ dependencies = [
 name = "katana-pool"
 version = "1.0.0-alpha.4"
 dependencies = [
+ "blockifier",
+ "futures",
+ "katana-executor",
  "katana-primitives",
  "parking_lot 0.12.3",
  "tracing",

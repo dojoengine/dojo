@@ -8,5 +8,8 @@ description = "Transaction pool abstraction and implementation for Katana"
 
 [dependencies]
 katana-primitives.workspace = true
+katana-executor.workspace = true
 parking_lot.workspace = true
 tracing.workspace = true
+blockifier.workspace = true
+futures.workspace = true
