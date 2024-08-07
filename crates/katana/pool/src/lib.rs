@@ -32,7 +32,7 @@ use katana_primitives::transaction::TxHash;
 use ordering::PoolOrd;
 use parking_lot::RwLock;
 use tracing::{error, warn};
-use tx::{InvalidPoolTx, PoolTransaction, TxId, ValidPoolTx};
+use tx::{InvalidTx, PendingTx, PoolTransaction, TxId, ValidTx};
 use validation::{ValidationOutcome, Validator};
 
 #[derive(Clone)]
@@ -46,21 +46,29 @@ where
 }
 
 struct Inner<T, V, O: PoolOrd> {
-    /// list of all valid txs in the pool
-    valid_txs: RwLock<BTreeMap<TxId, ValidPoolTx<T, O>>>,
-    /// List of independent txs that can be included.
+    /// List of all valid txs mapped by their hash.
+    valid_ids_by_hash: RwLock<BTreeMap<TxHash, TxId>>,
+
+    /// List of all valid txs in the pool
+    valid_txs: RwLock<BTreeMap<TxId, ValidTx<T, O>>>,
+
+    /// List of independent txs that can be included. A subset of the valid txs.
     ///
-    /// The order of the txs in the btree is determined by the priority values.
-    pending_txs: RwLock<BinaryHeap<ValidPoolTx<T, O>>>,
+    /// The txs are sorted by the priority values.
+    pending_txs: RwLock<BinaryHeap<PendingTx<T, O>>>,
+
     /// list of all invalid (aka rejected) txs in the pool
-    rejected_txs: RwLock<BTreeMap<TxHash, InvalidPoolTx<T>>>,
-    /// the tx validator
-    validator: V,
-    /// the ordering mechanism used to order the txs in the pool
-    ordering: O,
+    rejected_txs: RwLock<BTreeMap<TxHash, InvalidTx<T>>>,
+
     /// listeners for incoming txs
     // TODO: add listeners for different pools
     listeners: RwLock<Vec<Sender<TxHash>>>,
+
+    /// the tx validator
+    validator: V,
+
+    /// the ordering mechanism used to order the txs in the pool
+    ordering: O,
 }
 
 impl<T, V, O> TxPool<T, V, O>
@@ -78,6 +86,7 @@ where
                 valid_txs: Default::default(),
                 pending_txs: Default::default(),
                 rejected_txs: Default::default(),
+                valid_ids_by_hash: Default::default(),
             }),
         }
     }
@@ -101,7 +110,7 @@ where
                         let priority = self.inner.ordering.priority(&tx);
 
                         // TODO: convert the base tx into a pool tx with the priority value attached
-                        let pool_tx = ValidPoolTx::new(id.clone(), tx, priority);
+                        let pool_tx = PendingTx::new(id.clone(), tx, priority);
                         let hash = *pool_tx.tx.hash();
 
                         self.inner.valid_txs.write().insert(id, pool_tx.clone());
@@ -111,7 +120,7 @@ where
 
                     ValidationOutcome::Invalid { tx, error } => {
                         let hash = *tx.hash();
-                        let tx = InvalidPoolTx::new(tx, error);
+                        let tx = InvalidTx::new(tx, error);
 
                         self.inner.rejected_txs.write().insert(hash, tx);
                         // TODO: notify listeners
@@ -119,8 +128,8 @@ where
                 }
             }
 
-            Err(validation::Error { hash, error }) => {
-                error!(hash = format!("{hash:#x}"), %error, "Invalid transaction");
+            Err(error @ validation::Error { hash, .. }) => {
+                error!(hash = format!("{hash:#x}"), %error, "Failed to validate transaction");
             }
         }
     }
@@ -129,7 +138,7 @@ where
     // from the pool.
     //
     // best transactions must be ordered by the ordering mechanism used.
-    pub fn take_best_transactions(&self) -> impl Iterator<Item = ValidPoolTx<T, O>> {
+    pub fn take_best_transactions(&self) -> impl Iterator<Item = PendingTx<T, O>> {
         BestTransactions {
             all: self.inner.valid_txs.read().clone(),
             pending: self.inner.pending_txs.read().clone(),
@@ -138,11 +147,27 @@ where
 
     // check if a tx is in the pool
     pub fn contains(&self, hash: TxHash) -> bool {
-        self.find(hash).is_some()
+        self.get(hash).is_some()
     }
 
-    pub fn find(&self, hash: TxHash) -> Option<T> {
-        todo!()
+    pub fn get(&self, hash: TxHash) -> Option<Arc<T>> {
+        // check in the valid list
+        if let Some(tx) = self
+            .inner
+            .valid_ids_by_hash
+            .read()
+            .get(&hash)
+            .and_then(|id| self.inner.valid_txs.read().get(id).map(|tx| tx.tx.clone()))
+        {
+            return Some(tx);
+        }
+
+        // if not found, check in the rejected list
+        if let Some(tx) = self.inner.rejected_txs.read().get(&hash).map(|tx| tx.tx.clone()) {
+            return Some(tx);
+        }
+
+        None
     }
 
     // to be used for removing transactions that have been included in a block, and no longer
@@ -191,8 +216,8 @@ where
 /// an iterator that yields transactions from the pool that can be included in a block, sorted by
 /// by its priority.
 struct BestTransactions<T, O: PoolOrd> {
-    all: BTreeMap<TxId, ValidPoolTx<T, O>>,
-    pending: BinaryHeap<ValidPoolTx<T, O>>,
+    all: BTreeMap<TxId, ValidTx<T, O>>,
+    pending: BinaryHeap<PendingTx<T, O>>,
 }
 
 impl<T, O> Iterator for BestTransactions<T, O>
@@ -200,14 +225,17 @@ where
     T: PoolTransaction + Clone,
     O: PoolOrd<Transaction = T>,
 {
-    type Item = ValidPoolTx<T, O>;
+    type Item = PendingTx<T, O>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(tx) = self.pending.pop() {
             // check if there's a dependent tx that gets unlocked by this tx
-            if let Some(depedent) = self.all.get(&tx.id.descendent()) {
-                self.pending.push(depedent.clone());
+            let unlocked_id = tx.id.descendent();
+            if let Some(tx) = self.all.get(&unlocked_id) {
+                // insert the unlocked tx to the pending pool
+                self.pending.push(PendingTx::from((unlocked_id, tx.clone())));
             }
+
             Some(tx)
         } else {
             None

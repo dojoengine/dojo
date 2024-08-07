@@ -1,3 +1,4 @@
+use std::fmt;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 
@@ -9,7 +10,7 @@ pub trait PoolOrd {
     type Transaction;
     /// The priority value type whose [Ord] implementation is used to order the transaction in the
     /// pool.
-    type PriorityValue: Ord + Clone;
+    type PriorityValue: Ord + Clone + fmt::Debug;
 
     /// returns the priority value for the given transaction
     fn priority(&self, tx: &Self::Transaction) -> Self::PriorityValue;
@@ -42,12 +43,6 @@ impl<T: PoolTransaction> PoolOrd for Fcfs<T> {
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TxSubmissionNonce(u64);
-
-impl TxSubmissionNonce {
-    fn new() -> Self {
-        TxSubmissionNonce::default()
-    }
-}
 
 impl Ord for TxSubmissionNonce {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
