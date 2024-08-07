@@ -4,7 +4,7 @@ use anyhow::Result;
 use async_graphql::dynamic::Schema;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
-use dojo_test_utils::migration::{copy_test_db, prepare_migration_with_world_and_seed};
+use dojo_test_utils::migration::{copy_types_test_db, prepare_migration_with_world_and_seed};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
@@ -281,10 +281,27 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_types_test_db().as_str());
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let account = sequencer.account(0);
+
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path,
+        target_dir,
+        None,
+        "types_test",
+        "types_test",
+    )
+    .unwrap();
+
+    let records = strat.contracts.first().unwrap();
+    let records_address = get_contract_address(
+        records.salt,
+        strat.base.as_ref().unwrap().diff.local_class_hash,
+        &[],
+        strat.world_address,
+    );
 
     let InvokeTransactionResult { transaction_hash } = account
         .execute_v1(vec![Call {

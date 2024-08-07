@@ -1,4 +1,4 @@
-use dojo_test_utils::migration::copy_test_db;
+use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_world::contracts::abi::model::{FieldLayout, Layout};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
@@ -14,7 +14,7 @@ use crate::{execute, model};
 // migration for now. Should be replaced by individual tests once Katana spinning up is enhanced.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model_ops() {
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();

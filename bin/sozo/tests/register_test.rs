@@ -1,8 +1,8 @@
 mod utils;
 
 use camino::Utf8PathBuf;
-use dojo_test_utils::migration::{copy_test_db, prepare_migration_with_world_and_seed};
 use dojo_test_utils::compiler::CompilerTestSetup;
+use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use scarb::ops;
@@ -22,7 +22,7 @@ async fn reregister_models() {
     let target_path =
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
 
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let (strat, _) = prepare_migration_with_world_and_seed(
@@ -43,8 +43,7 @@ async fn reregister_models() {
         &format!("0x{:x}", sequencer.account_data(0).private_key.as_ref().unwrap().secret_scalar());
     let rpc_url = &sequencer.url().to_string();
 
-    let moves_model =
-        strat.models.iter().find(|m| m.diff.tag == "dojo_examples-Moves").unwrap();
+    let moves_model = strat.models.iter().find(|m| m.diff.tag == "dojo_examples-Moves").unwrap();
     let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local_class_hash);
     let args_vec = [
         "register",

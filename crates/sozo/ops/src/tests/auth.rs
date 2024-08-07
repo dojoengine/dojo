@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use dojo_test_utils::migration::copy_test_db;
+use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
@@ -17,7 +17,7 @@ const DEFAULT_NAMESPACE: &str = "dojo_examples";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_writer_ok() {
-    let config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -58,7 +58,7 @@ async fn auth_grant_writer_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_writer_ok() {
-    let config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -116,7 +116,7 @@ async fn auth_revoke_writer_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_owner_ok() {
-    let config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -157,7 +157,7 @@ async fn auth_grant_owner_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_owner_ok() {
-    let config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();

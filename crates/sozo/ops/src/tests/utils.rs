@@ -1,4 +1,4 @@
-use dojo_test_utils::migration::copy_test_db;
+use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
@@ -12,7 +12,7 @@ const ACTION_CONTRACT_TAG: &str = "dojo_examples-actions";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_world() {
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -36,7 +36,7 @@ async fn get_contract_address_from_string() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_world_with_world_reader() {
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();

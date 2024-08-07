@@ -7,13 +7,19 @@ use starknet::core::types::Felt;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::macros::felt;
 
-pub const SPAWN_AND_MOVE_TEST_DB_DIR: &str = "/tmp/spawn-and-move-test-db";
+pub const SPAWN_AND_MOVE_TEST_DB_DIR: &str = "/tmp/spawn-and-move-db";
 pub const TYPES_TEST_DB_DIR: &str = "/tmp/types-test-db";
 
-/// Copies the test database to a temporary directory and returns the path to the temporary
+/// Copies the spawn and move test database to a temporary directory and returns the path to the
+/// temporary directory. Must be used if the test is going to modify the database.
+pub fn copy_spawn_and_move_db() -> Utf8PathBuf {
+    crate::compiler::copy_tmp_dir(&Utf8PathBuf::from(SPAWN_AND_MOVE_TEST_DB_DIR))
+}
+
+/// Copies the types test database to a temporary directory and returns the path to the temporary
 /// directory. Must be used if the test is going to modify the database.
-pub fn copy_test_db() -> Utf8PathBuf {
-    crate::compiler::copy_tmp_dir(&Utf8PathBuf::from(TEST_DB_DIR))
+pub fn copy_types_test_db() -> Utf8PathBuf {
+    crate::compiler::copy_tmp_dir(&Utf8PathBuf::from(TYPES_TEST_DB_DIR))
 }
 
 pub fn prepare_migration(

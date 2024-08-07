@@ -58,7 +58,8 @@ async fn main() -> Result<()> {
     let types_test_compressed_path = "types-test-db.tar.gz";
 
     // Ensures the db-dir is clean before we start to not include old data.
-    // `let _` is used to ignore the result of the remove_dir_all call as it may fail if the directory does not exist.
+    // `let _` is used to ignore the result of the remove_dir_all call as it may fail if the
+    // directory does not exist.
     let _ = fs::remove_dir_all(&spawn_and_move_db_path);
     fs::create_dir_all(&spawn_and_move_db_path)?;
     let _ = fs::remove_dir_all(&types_test_db_path);

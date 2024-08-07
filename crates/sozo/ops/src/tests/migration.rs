@@ -3,7 +3,7 @@ use std::str;
 
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
-use dojo_test_utils::migration::{copy_test_db, prepare_migration_with_world_and_seed};
+use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
 use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
@@ -97,7 +97,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_test_db().as_str());
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Fail to start runner");
 
     let account = sequencer.account(0);
@@ -107,7 +107,11 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
             &ws,
             &migration,
             &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.0000000000000001), wait: true, ..Default::default() },
+            TxnConfig {
+                fee_estimate_multiplier: Some(0.0000000000000001),
+                wait: true,
+                ..Default::default()
+            },
         )
         .await
         .is_err()
