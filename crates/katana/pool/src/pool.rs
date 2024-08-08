@@ -377,4 +377,26 @@ mod tests {
         assert!(pool.inner.rejected_txs.read().is_empty());
         assert!(txs.iter().all(|tx| pool.get(tx.hash()).is_none()));
     }
+
+    #[test]
+    fn tx_listeners() {
+        let txs = [
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+        ];
+
+        let pool = mock_pool();
+        let listener = pool.add_listener();
+
+        // spawn a thread that listens to the pool and keep track of a counter that increments everytime a tx is added
+        std::thread::scope(|s| s.spawn(|| {}));
+
+        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+    }
 }
