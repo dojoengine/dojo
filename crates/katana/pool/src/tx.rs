@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use katana_primitives::contract::{ContractAddress, Nonce};
-use katana_primitives::transaction::{DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, TxHash};
+use katana_primitives::transaction::{
+    DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, TxHash,
+};
 
 use crate::ordering::PoolOrd;
 
@@ -18,7 +20,7 @@ pub trait PoolTransaction: Clone {
     fn sender(&self) -> ContractAddress;
 
     /// return the max fee that tx is willing to pay.
-    fn max_fee(&self) -> u64;
+    fn max_fee(&self) -> u128;
 
     /// return the tx tip.
     fn tip(&self) -> u64;

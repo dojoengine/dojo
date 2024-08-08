@@ -248,6 +248,7 @@ where
 #[cfg(test)]
 mod tests {
     use katana_primitives::contract::{ContractAddress, Nonce};
+    use katana_primitives::transaction::ExecutableTxWithHash;
     use katana_primitives::FieldElement;
     use rand::Rng;
 
@@ -266,7 +267,7 @@ mod tests {
     #[derive(Clone)]
     struct PoolTx {
         hash: TxHash,
-        max_fee: u64,
+        max_fee: u128,
         nonce: Nonce,
         sender: ContractAddress,
         tip: u64,
@@ -292,7 +293,7 @@ mod tests {
             self.hash
         }
 
-        fn max_fee(&self) -> u64 {
+        fn max_fee(&self) -> u128 {
             self.max_fee
         }
 
@@ -333,6 +334,7 @@ mod tests {
         let pending_txs: Vec<_> = pool.pending_transactions().collect();
         assert_eq!(pending_txs.len(), txs.len());
 
+        // bcs we're using fcfs, the order should be the same as the order of the txs submission
         for (pending_tx, original_tx) in pending_txs.iter().zip(txs.iter()) {
             assert_eq!(pending_tx.tx.hash(), original_tx.hash());
             assert_eq!(pending_tx.tx.max_fee(), original_tx.max_fee());
