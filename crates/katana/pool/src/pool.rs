@@ -259,7 +259,6 @@ where
 #[cfg(test)]
 mod tests {
     use katana_primitives::contract::{ContractAddress, Nonce};
-    use katana_primitives::transaction::ExecutableTxWithHash;
     use katana_primitives::FieldElement;
     use rand::Rng;
 

@@ -25,7 +25,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(tx));
             let tx_hash = tx.hash;
 
-            this.inner.new_pool.add_transaction(tx);
+            this.inner.pool.add_transaction(tx);
             Ok(tx_hash.into())
         })
         .await
@@ -48,7 +48,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let tx = ExecutableTxWithHash::new(ExecutableTx::Declare(tx));
             let tx_hash = tx.hash;
 
-            this.inner.new_pool.add_transaction(tx);
+            this.inner.pool.add_transaction(tx);
             Ok((tx_hash, class_hash).into())
         })
         .await
@@ -69,7 +69,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let tx = ExecutableTxWithHash::new(ExecutableTx::DeployAccount(tx));
             let tx_hash = tx.hash;
 
-            this.inner.new_pool.add_transaction(tx);
+            this.inner.pool.add_transaction(tx);
             Ok((tx_hash, contract_address).into())
         })
         .await

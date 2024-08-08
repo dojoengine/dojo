@@ -55,6 +55,6 @@ pub trait TransactionPool {
 
     fn add_listener(&self) -> Receiver<TxHash>;
 
-    /// get the total number of transactions in the pool.
+    /// Get the total number of transactions in the pool.
     fn size(&self) -> usize;
 }

@@ -3,8 +3,8 @@ use std::sync::Arc;
 use futures::StreamExt;
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::backend::Backend;
-use katana_core::pool::TransactionPool;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
+use katana_core::service::TxPool;
 use katana_executor::ExecutorFactory;
 use katana_primitives::block::{BlockHashOrNumber, FinalityStatus};
 use katana_provider::traits::block::BlockNumberProvider;
@@ -21,14 +21,14 @@ const MAX_PAGE_SIZE: usize = 100;
 #[allow(missing_debug_implementations)]
 pub struct ToriiApi<EF: ExecutorFactory> {
     backend: Arc<Backend<EF>>,
-    pool: Arc<TransactionPool>,
+    pool: TxPool,
     block_producer: Arc<BlockProducer<EF>>,
 }
 
 impl<EF: ExecutorFactory> Clone for ToriiApi<EF> {
     fn clone(&self) -> Self {
         Self {
-            pool: Arc::clone(&self.pool),
+            pool: self.pool.clone(),
             backend: Arc::clone(&self.backend),
             block_producer: Arc::clone(&self.block_producer),
         }
@@ -38,7 +38,7 @@ impl<EF: ExecutorFactory> Clone for ToriiApi<EF> {
 impl<EF: ExecutorFactory> ToriiApi<EF> {
     pub fn new(
         backend: Arc<Backend<EF>>,
-        pool: Arc<TransactionPool>,
+        pool: TxPool,
         block_producer: Arc<BlockProducer<EF>>,
     ) -> Self {
         Self { pool, backend, block_producer }
