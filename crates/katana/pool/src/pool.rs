@@ -248,7 +248,8 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod test_utils {
+
     use katana_primitives::contract::{ContractAddress, Nonce};
     use katana_primitives::FieldElement;
     use rand::Rng;
@@ -257,7 +258,6 @@ mod tests {
     use crate::ordering::Fcfs;
     use crate::tx::PoolTransaction;
     use crate::validation::NoopValidator;
-    use crate::TransactionPool;
 
     fn random_bytes<const SIZE: usize>() -> [u8; SIZE] {
         let mut bytes = [0u8; SIZE];
@@ -265,8 +265,8 @@ mod tests {
         bytes
     }
 
-    #[derive(Clone)]
-    struct PoolTx {
+    #[derive(Clone, Debug)]
+    pub struct PoolTx {
         tip: u64,
         nonce: Nonce,
         hash: TxHash,
@@ -275,7 +275,7 @@ mod tests {
     }
 
     impl PoolTx {
-        fn new() -> Self {
+        pub fn new() -> Self {
             Self {
                 tip: rand::thread_rng().gen(),
                 max_fee: rand::thread_rng().gen(),
@@ -286,6 +286,11 @@ mod tests {
                     ContractAddress::from(felt)
                 },
             }
+        }
+
+        pub fn with_tip(mut self, tip: u64) -> Self {
+            self.tip = tip;
+            self
         }
     }
 
@@ -311,12 +316,20 @@ mod tests {
         }
     }
 
-    type MockTxPool<V, O> = Pool<PoolTx, V, O>;
+    pub type MockTxPool<V, O> = Pool<PoolTx, V, O>;
 
     /// Create a tx pool that uses a noop validator and a first-come-first-serve ordering.
-    fn mock_pool() -> MockTxPool<NoopValidator<PoolTx>, Fcfs<PoolTx>> {
+    pub fn mock_pool() -> MockTxPool<NoopValidator<PoolTx>, Fcfs<PoolTx>> {
         MockTxPool::new(NoopValidator::new(), Fcfs::new())
     }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::test_utils::*;
+    use crate::tx::PoolTransaction;
+    use crate::TransactionPool;
 
     #[test]
     fn pool_operations() {
