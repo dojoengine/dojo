@@ -29,6 +29,10 @@ pub struct BuildArgs {
     pub typescript_v2: bool,
 
     #[arg(long)]
+    #[arg(help = "Generate Typescript scaffolding files.")]
+    pub scaffold: bool,
+
+    #[arg(long)]
     #[arg(help = "Generate Unity bindings.")]
     pub unity: bool,
 
@@ -85,6 +89,10 @@ impl BuildArgs {
 
         if self.typescript {
             builtin_plugins.push(BuiltinPlugins::Typescript);
+        }
+
+        if self.scaffold {
+            builtin_plugins.push(BuiltinPlugins::TypescriptScaffold);
         }
 
         if self.typescript_v2 {
@@ -162,6 +170,7 @@ impl Default for BuildArgs {
             bindings_output: "bindings".to_string(),
             stats: false,
             packages: None,
+            scaffold: false,
         }
     }
 }
