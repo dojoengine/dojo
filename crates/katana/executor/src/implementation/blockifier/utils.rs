@@ -693,7 +693,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "The blockifier chain id conversion adds bytes for chain ids which don't have a valid utf8 representation"]
+    #[ignore = "The blockifier chain id conversion adds bytes for chain ids which don't have a \
+                valid utf8 representation"]
     fn failing_blockifier_chain_id_conversion() {
         let id = felt!("0xc72dd9d5e883e");
 
@@ -708,7 +709,6 @@ mod tests {
 
         assert_eq!(actual_id, id)
     }
-
 
     fn create_blockifier_call_info() -> CallInfo {
         let top_events = vec![OrderedEvent {
