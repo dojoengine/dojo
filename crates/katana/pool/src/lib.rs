@@ -287,50 +287,62 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{
         ordering::Fcfs, tx::PoolTransaction, validation::NoopValidator, TransactionPool, TxPool,
     };
+    use katana_primitives::{
+        contract::{ContractAddress, Nonce},
+        FieldElement,
+    };
+    use rand::Rng;
+
+    fn random_bytes<const SIZE: usize>() -> [u8; SIZE] {
+        let mut bytes = [0u8; SIZE];
+        rand::thread_rng().fill(&mut bytes[..]);
+        bytes
+    }
 
     #[derive(Clone)]
     struct PoolTx;
 
     impl PoolTransaction for PoolTx {
-        fn hash(&self) -> katana_primitives::transaction::TxHash {
-            todo!()
-        }
-
-        fn id(&self) -> &crate::tx::TxId {
-            todo!()
+        fn hash(&self) -> TxHash {
+            TxHash::from_bytes_be(&random_bytes::<32>())
         }
 
         fn max_fee(&self) -> u64 {
-            todo!()
+            rand::thread_rng().gen()
         }
 
-        fn nonce(&self) -> katana_primitives::contract::Nonce {
-            todo!()
+        fn nonce(&self) -> Nonce {
+            Nonce::from_bytes_be(&random_bytes::<32>())
         }
 
         fn sender(&self) -> katana_primitives::contract::ContractAddress {
-            todo!()
+            let felt = FieldElement::from_bytes_be(&random_bytes::<32>());
+            ContractAddress::from(felt)
         }
 
         fn tip(&self) -> u64 {
-            todo!()
+            rand::thread_rng().gen()
         }
     }
 
     type MockTxPool<V, O> = TxPool<PoolTx, V, O>;
 
     #[test]
-    fn add_dependent_txs_in_parallel() {
+    fn add_txs() {
         let pool = MockTxPool::new(NoopValidator::new(), Fcfs::new());
         pool.add_transaction(PoolTx);
         pool.add_transaction(PoolTx);
         pool.add_transaction(PoolTx);
         pool.add_transaction(PoolTx);
         pool.add_transaction(PoolTx);
+        pool.add_transaction(PoolTx);
+        pool.add_transaction(PoolTx);
+        pool.add_transaction(PoolTx);
 
-        assert_eq!(pool.size(), 5);
+        assert_eq!(pool.size(), 8);
     }
 }

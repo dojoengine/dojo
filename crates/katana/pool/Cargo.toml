@@ -1,16 +1,18 @@
 [package]
+description = "Transaction pool abstraction and implementation for Katana"
 edition.workspace = true
 license.workspace = true
 name = "katana-pool"
 repository.workspace = true
 version.workspace = true
-description = "Transaction pool abstraction and implementation for Katana"
 
 [dependencies]
-katana-primitives.workspace = true
-katana-executor.workspace = true
-parking_lot.workspace = true
-tracing.workspace = true
-blockifier.workspace = true
 futures.workspace = true
+katana-executor.workspace = true
+katana-primitives.workspace = true
+parking_lot.workspace = true
 thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+rand.workspace = true
