@@ -28,6 +28,7 @@ pub mod validation;
 use std::collections::{BTreeMap, BinaryHeap};
 use std::sync::Arc;
 
+use futures::channel::mpsc::Receiver;
 use katana_primitives::transaction::TxHash;
 use ordering::PoolOrd;
 use tx::{PendingTx, PoolTransaction};

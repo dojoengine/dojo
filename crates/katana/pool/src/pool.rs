@@ -1,14 +1,16 @@
 use std::collections::{BTreeMap, BinaryHeap};
 use std::sync::Arc;
 
-use api::TransactionPool;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::TxHash;
-use ordering::PoolOrd;
 use parking_lot::RwLock;
 use tracing::{error, info, warn};
-use tx::{PendingTx, PoolTransaction, TxId};
-use validation::{ValidationOutcome, Validator};
+
+use crate::ordering::PoolOrd;
+use crate::tx::TxId;
+use crate::tx::{PendingTx, PoolTransaction};
+use crate::validation::{ValidationOutcome, Validator};
+use crate::TransactionPool;
 
 #[derive(Clone)]
 pub struct Pool<T, V, O>
@@ -144,7 +146,7 @@ where
                 info!(hash = format!("\"{hash:#x}\""), "Transaction added to pool");
             }
 
-            Err(error @ validation::Error { hash, .. }) => {
+            Err(error @ crate::validation::Error { hash, .. }) => {
                 error!(hash = format!("{hash:#x}"), %error, "Failed to validate transaction");
             }
         }
@@ -191,6 +193,11 @@ where
     //
     // should remove from all the pools.
     fn remove_transactions(&mut self, hashes: &[TxHash]) {
+        let ids = hashes
+            .iter()
+            .filter_map(|hash| self.inner.valid_ids_by_hash.read().get(hash).cloned())
+            .collect::<Vec<TxId>>();
+
         todo!()
     }
 
@@ -237,9 +244,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        ordering::Fcfs, tx::PoolTransaction, validation::NoopValidator, Pool, TransactionPool,
-    };
+    use crate::{ordering::Fcfs, tx::PoolTransaction, validation::NoopValidator, TransactionPool};
     use katana_primitives::{
         contract::{ContractAddress, Nonce},
         FieldElement,
@@ -253,28 +258,48 @@ mod tests {
     }
 
     #[derive(Clone)]
-    struct PoolTx;
+    struct PoolTx {
+        hash: TxHash,
+        max_fee: u64,
+        nonce: Nonce,
+        sender: ContractAddress,
+        tip: u64,
+    }
+
+    impl PoolTx {
+        fn new() -> Self {
+            Self {
+                hash: TxHash::from_bytes_be(&random_bytes::<32>()),
+                max_fee: rand::thread_rng().gen(),
+                nonce: Nonce::from_bytes_be(&random_bytes::<32>()),
+                tip: rand::thread_rng().gen(),
+                sender: {
+                    let felt = FieldElement::from_bytes_be(&random_bytes::<32>());
+                    ContractAddress::from(felt)
+                },
+            }
+        }
+    }
 
     impl PoolTransaction for PoolTx {
         fn hash(&self) -> TxHash {
-            TxHash::from_bytes_be(&random_bytes::<32>())
+            self.hash
         }
 
         fn max_fee(&self) -> u64 {
-            rand::thread_rng().gen()
+            self.max_fee
         }
 
         fn nonce(&self) -> Nonce {
-            Nonce::from_bytes_be(&random_bytes::<32>())
+            self.nonce
         }
 
         fn sender(&self) -> katana_primitives::contract::ContractAddress {
-            let felt = FieldElement::from_bytes_be(&random_bytes::<32>());
-            ContractAddress::from(felt)
+            self.sender
         }
 
         fn tip(&self) -> u64 {
-            rand::thread_rng().gen()
+            self.tip
         }
     }
 
@@ -283,15 +308,31 @@ mod tests {
     #[test]
     fn add_txs() {
         let pool = MockTxPool::new(NoopValidator::new(), Fcfs::new());
-        pool.add_transaction(PoolTx);
-        pool.add_transaction(PoolTx);
-        pool.add_transaction(PoolTx);
-        pool.add_transaction(PoolTx);
-        pool.add_transaction(PoolTx);
-        pool.add_transaction(PoolTx);
-        pool.add_transaction(PoolTx);
-        pool.add_transaction(PoolTx);
+        let txs = [
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+            PoolTx::new(),
+        ];
 
-        assert_eq!(pool.size(), 8);
+        for tx in &txs {
+            pool.add_transaction(tx.clone());
+        }
+        assert_eq!(pool.size(), txs.len());
+
+        let pending_txs: Vec<_> = pool.pending_transactions().collect();
+        assert_eq!(pending_txs.len(), txs.len());
+
+        for (pending_tx, original_tx) in pending_txs.iter().zip(txs.iter()) {
+            assert_eq!(pending_tx.tx.hash(), original_tx.hash());
+            assert_eq!(pending_tx.tx.max_fee(), original_tx.max_fee());
+            assert_eq!(pending_tx.tx.nonce(), original_tx.nonce());
+            assert_eq!(pending_tx.tx.sender(), original_tx.sender());
+            assert_eq!(pending_tx.tx.tip(), original_tx.tip());
+        }
     }
 }
