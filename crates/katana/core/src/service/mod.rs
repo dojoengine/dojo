@@ -114,7 +114,7 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                 }
             }
 
-            if let Poll::Ready(transactions) = pin.miner.poll_new(&pin.pool, cx) {
+            if let Poll::Ready(transactions) = pin.miner.poll(&pin.pool, cx) {
                 // miner returned a set of transaction that we feed to the producer
                 pin.block_producer.queue(transactions);
             } else {

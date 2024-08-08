@@ -15,7 +15,6 @@ use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::BlockContextGenerator;
-use katana_core::pool::TransactionPool as OldPool;
 #[allow(deprecated)]
 use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
@@ -157,9 +156,8 @@ pub async fn start(
 
     // --- build transaction pool and miner
 
-    let pool = Arc::new(OldPool::new());
-    let new_pool = TxPool::new(NoopValidator::new(), Fcfs::new());
-    let miner = TransactionMiner::new(new_pool.add_listener());
+    let pool = TxPool::new(NoopValidator::new(), Fcfs::new());
+    let miner = TransactionMiner::new(pool.add_listener());
 
     // --- build block producer service
 
@@ -196,7 +194,7 @@ pub async fn start(
 
     #[cfg(feature = "messaging")]
     let messaging = if let Some(config) = sequencer_config.messaging.clone() {
-        MessagingService::new(config, Arc::clone(&pool), Arc::clone(&backend)).await.ok()
+        MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await.ok()
     } else {
         None
     };
@@ -205,8 +203,7 @@ pub async fn start(
 
     // TODO: avoid dangling task, or at least store the handle to the NodeService
     tokio::spawn(NodeService::new(
-        Arc::clone(&pool),
-        new_pool.clone(),
+        pool.clone(),
         miner,
         block_producer.clone(),
         #[cfg(feature = "messaging")]
@@ -215,7 +212,7 @@ pub async fn start(
 
     // --- spawn rpc server
 
-    let node_components = (pool, new_pool, backend.clone(), block_producer);
+    let node_components = (pool, backend.clone(), block_producer);
     let rpc_handle = spawn(node_components, server_config).await?;
 
     Ok((rpc_handle, backend))
@@ -223,10 +220,10 @@ pub async fn start(
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (Arc<OldPool>, TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>),
+    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>),
     config: ServerConfig,
 ) -> Result<NodeHandle> {
-    let (pool, new_pool, backend, block_producer) = node_components;
+    let (pool, backend, block_producer) = node_components;
 
     let mut methods = RpcModule::new(());
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
@@ -235,12 +232,8 @@ pub async fn spawn<EF: ExecutorFactory>(
         match api {
             ApiKind::Starknet => {
                 // TODO: merge these into a single logic.
-                let server = StarknetApi::new(
-                    backend.clone(),
-                    pool.clone(),
-                    new_pool.clone(),
-                    block_producer.clone(),
-                );
+                let server =
+                    StarknetApi::new(backend.clone(), pool.clone(), block_producer.clone());
                 methods.merge(StarknetApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetWriteApiServer::into_rpc(server.clone()))?;
                 methods.merge(StarknetTraceApiServer::into_rpc(server))?;
