@@ -11,6 +11,7 @@ use error::BindgenResult;
 
 mod plugins;
 use plugins::typescript::TypescriptPlugin;
+use plugins::typescript_scaffold::TypescriptScaffoldPlugin;
 use plugins::typescript_v2::TypeScriptV2Plugin;
 use plugins::unity::UnityPlugin;
 use plugins::BuiltinPlugin;
@@ -88,6 +89,7 @@ impl PluginManager {
                 BuiltinPlugins::Typescript => Box::new(TypescriptPlugin::new()),
                 BuiltinPlugins::Unity => Box::new(UnityPlugin::new()),
                 BuiltinPlugins::TypeScriptV2 => Box::new(TypeScriptV2Plugin::new()),
+                BuiltinPlugins::TypescriptScaffold => Box::new(TypescriptScaffoldPlugin::new()),
             };
 
             let files = builder.generate_code(&data).await?;
