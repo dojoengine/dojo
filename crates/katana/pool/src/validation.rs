@@ -1,9 +1,7 @@
-use std::marker::PhantomData;
-
 use katana_executor::ExecutionError;
 use katana_primitives::transaction::TxHash;
 
-use crate::tx::{InvalidTx, PoolTransaction, ValidTx};
+use crate::tx::PoolTransaction;
 
 #[derive(Debug, thiserror::Error)]
 #[error("{error}")]
@@ -37,14 +35,20 @@ pub trait Validator {
 #[derive(Debug)]
 pub enum ValidationOutcome<T> {
     /// tx that is or may eventually be valid after some nonce changes.
-    Valid(ValidTx<T>),
+    Valid(T),
     /// tx that will never be valid, eg. due to invalid signature, nonce lower than current, etc.
-    Invalid { tx: InvalidTx<T>, error: ExecutionError },
+    Invalid { tx: T, error: ExecutionError },
 }
 
 /// A no-op validator that does nothing and assume all incoming transactions are valid.
 #[derive(Debug)]
-pub struct NoopValidator<T>(PhantomData<T>);
+pub struct NoopValidator<T>(std::marker::PhantomData<T>);
+
+impl<T> NoopValidator<T> {
+    pub fn new() -> Self {
+        Self(std::marker::PhantomData)
+    }
+}
 
 impl<T: PoolTransaction> Validator for NoopValidator<T> {
     type Transaction = T;

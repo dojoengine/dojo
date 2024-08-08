@@ -7,7 +7,7 @@ use crate::PoolTransaction;
 // evaluates the priority of a transaction which would be used to determine how txs are ordered in
 // the pool.
 pub trait PoolOrd {
-    type Transaction;
+    type Transaction: PoolTransaction;
     /// The priority value type whose [Ord] implementation is used to order the transaction in the
     /// pool.
     type PriorityValue: Ord + Clone + fmt::Debug;
