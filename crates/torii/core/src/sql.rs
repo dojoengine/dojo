@@ -19,6 +19,7 @@ use super::World;
 use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
+use crate::sql;
 use crate::types::{
     Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
     Model as ModelRegistered,
@@ -1235,13 +1236,13 @@ impl Sql {
                 .iter()
                 .find(|(address, _)| address == &format!("{:#x}", from))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("0x0{}0x0", FELT_DELIMITER));
+                .unwrap_or_else(|| format!("0x0"));
 
             let to_balance = balances
                 .iter()
                 .find(|(address, _)| address == &format!("{:#x}", to))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("0x0{}0x0", FELT_DELIMITER));
+                .unwrap_or_else(|| format!("0x0"));
 
             let from_balance = sql_string_to_u256(&from_balance);
             let to_balance = sql_string_to_u256(&to_balance);
@@ -1338,17 +1339,10 @@ fn felts_sql_string(felts: &[Felt]) -> String {
 }
 
 fn u256_to_sql_string(u256: &U256) -> String {
-    let felts = [u256.low(), u256.high()].map(|i| Felt::from_u128(i).unwrap());
-    felts_sql_string(&felts)
+    format!("{:#x}", u256)
 }
 
 fn sql_string_to_u256(sql_string: &str) -> U256 {
-    let low_high =
-        sql_string.split(FELT_DELIMITER).map(|s| Felt::from_str(s).unwrap()).collect::<Vec<Felt>>();
-
-    assert!(low_high.len() == 2);
-    let low = low_high[0].to_u128().unwrap();
-    let high = low_high[1].to_u128().unwrap();
-
-    U256::from_words(low, high)
+    let sql_string = sql_string.strip_prefix("0x").unwrap_or(sql_string);
+    U256::from(crypto_bigint::U256::from_be_hex(sql_string))
 }
