@@ -13,6 +13,7 @@ use anyhow::Result;
 use katana_core::backend::Backend;
 use katana_core::pool::TransactionPool;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
+use katana_core::service::TxPool;
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
@@ -54,6 +55,7 @@ impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
 
 struct Inner<EF: ExecutorFactory> {
     pool: Arc<TransactionPool>,
+    new_pool: TxPool,
     backend: Arc<Backend<EF>>,
     block_producer: Arc<BlockProducer<EF>>,
     blocking_task_pool: BlockingTaskPool,
@@ -63,12 +65,13 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     pub fn new(
         backend: Arc<Backend<EF>>,
         pool: Arc<TransactionPool>,
+        new_pool: TxPool,
         block_producer: Arc<BlockProducer<EF>>,
     ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
 
-        let inner = Inner { pool, backend, block_producer, blocking_task_pool };
+        let inner = Inner { pool, new_pool, backend, block_producer, blocking_task_pool };
 
         Self { inner: Arc::new(inner) }
     }

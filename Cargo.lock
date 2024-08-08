@@ -1883,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.8.0-dev.2"
-source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7#24029ba460e6a4304f5ca59dacd3cabd7bc34212"
+source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7#5e6e47ea47eeca12316d4a0e3394f38aa4870c71"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -6725,7 +6725,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.7",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -7826,6 +7826,7 @@ dependencies = [
  "hex",
  "katana-db",
  "katana-executor",
+ "katana-pool",
  "katana-primitives",
  "katana-provider",
  "katana-tasks",
@@ -7903,6 +7904,7 @@ dependencies = [
  "katana-core",
  "katana-db",
  "katana-executor",
+ "katana-pool",
  "katana-primitives",
  "katana-provider",
  "katana-rpc",
@@ -8010,6 +8012,7 @@ dependencies = [
  "katana-core",
  "katana-executor",
  "katana-node",
+ "katana-pool",
  "katana-primitives",
  "katana-provider",
  "katana-rpc-api",

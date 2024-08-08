@@ -11,7 +11,6 @@ use crate::tx::{PendingTx, PoolTransaction, TxId};
 use crate::validation::{ValidationOutcome, Validator};
 use crate::TransactionPool;
 
-#[derive(Clone)]
 pub struct Pool<T, V, O>
 where
     T: PoolTransaction,
@@ -19,6 +18,17 @@ where
     O: PoolOrd<Transaction = T>,
 {
     inner: Arc<Inner<T, V, O>>,
+}
+
+impl<T, V, O> Clone for Pool<T, V, O>
+where
+    T: PoolTransaction,
+    V: Validator<Transaction = T>,
+    O: PoolOrd<Transaction = T>,
+{
+    fn clone(&self) -> Self {
+        Self { inner: Arc::clone(&self.inner) }
+    }
 }
 
 struct Inner<T, V, O: PoolOrd> {
@@ -79,7 +89,7 @@ where
                 Err(e) => {
                     if e.is_full() {
                         warn!(
-                            hash = ?format!("\"{hash:#x}\""),
+                            hash = format!("{hash:#x}"),
                             "Unable to send tx notification because channel is full."
                         );
                         true
@@ -126,6 +136,7 @@ where
                         let pool_tx = PendingTx::new(id.clone(), tx, priority);
                         let hash = pool_tx.tx.hash();
 
+                        self.inner.valid_ids_by_hash.write().insert(hash, id.clone());
                         self.inner.valid_txs.write().insert(id, pool_tx.clone());
                         self.inner.pending_txs.write().push(pool_tx);
                         self.notify_listener(hash);
@@ -140,7 +151,7 @@ where
                     }
                 };
 
-                info!(hash = format!("\"{hash:#x}\""), "Transaction added to pool");
+                info!(hash = format!("{hash:#x}"), "Transaction added to pool");
             }
 
             Err(error @ crate::validation::Error { hash, .. }) => {

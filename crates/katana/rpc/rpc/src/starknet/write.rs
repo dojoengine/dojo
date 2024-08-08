@@ -1,5 +1,6 @@
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_executor::ExecutorFactory;
+use katana_pool::TransactionPool;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
 use katana_rpc_api::starknet::StarknetWriteApiServer;
 use katana_rpc_types::error::starknet::StarknetApiError;
@@ -24,7 +25,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(tx));
             let tx_hash = tx.hash;
 
-            this.inner.pool.add_transaction(tx);
+            this.inner.new_pool.add_transaction(tx);
             Ok(tx_hash.into())
         })
         .await
@@ -47,7 +48,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let tx = ExecutableTxWithHash::new(ExecutableTx::Declare(tx));
             let tx_hash = tx.hash;
 
-            this.inner.pool.add_transaction(tx);
+            this.inner.new_pool.add_transaction(tx);
             Ok((tx_hash, class_hash).into())
         })
         .await
@@ -68,7 +69,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let tx = ExecutableTxWithHash::new(ExecutableTx::DeployAccount(tx));
             let tx_hash = tx.hash;
 
-            this.inner.pool.add_transaction(tx);
+            this.inner.new_pool.add_transaction(tx);
             Ok((tx_hash, contract_address).into())
         })
         .await
