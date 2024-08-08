@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723001306962,
+  "lastUpdate": 1723144033885,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14593,6 +14593,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4387174,
             "range": "± 343349",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2842c75cd89989cf8a1d3cba8062c7fc51f8426e",
+          "message": "chore(katana): remove unused sequencer code (#2279)",
+          "timestamp": "2024-08-09T02:47:43+08:00",
+          "tree_id": "fddbbb26e4de17be7f28b4d747c9e55356568d11",
+          "url": "https://github.com/dojoengine/dojo/commit/2842c75cd89989cf8a1d3cba8062c7fc51f8426e"
+        },
+        "date": 1723144033010,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17267016,
+            "range": "± 256866",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3763414,
+            "range": "± 75599",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3816777904,
+            "range": "± 792962735",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3979682,
+            "range": "± 38022",
             "unit": "ns/iter"
           }
         ]
