@@ -13,6 +13,7 @@ futures.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
 katana-core.workspace = true
 katana-executor.workspace = true
+katana-pool.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 katana-rpc-api.workspace = true

@@ -12,7 +12,7 @@ use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFa
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
-use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
+use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
@@ -45,6 +45,7 @@ pub enum BlockProductionError {
 #[derive(Debug, Clone)]
 pub struct MinedBlockOutcome {
     pub block_number: u64,
+    pub txs: Vec<TxHash>,
     pub stats: ExecutionStats,
 }
 
