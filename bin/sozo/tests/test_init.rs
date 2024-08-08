@@ -12,7 +12,7 @@ fn test_init() {
     let output = format!("{:#?}", assert.get_output());
 
     if output.contains(
-        "warn: No version matched your current sozo version. Cloning the latest version instead.",
+        "Couldn't find template for your current sozo version. Getting the latest version instead.",
     ) {
         assert.stdout_eq(expected_stdout("init_default"));
     } else {

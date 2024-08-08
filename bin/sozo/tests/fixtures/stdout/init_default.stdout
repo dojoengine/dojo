@@ -3,7 +3,7 @@
  ⛩️ ====== STARTING ====== ⛩️ 
 
 Setting up project directory tree...
-warn: No version matched your current sozo version. Cloning the latest version instead.
+warn: Couldn't find template for your current sozo version. Getting the latest version instead.
 
 🎉 Successfully created a new ⛩️ Dojo project!
 

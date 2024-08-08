@@ -134,7 +134,7 @@ fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<
             .output()?;
     } else {
         config.ui().warn(
-            "No version matched your current sozo version. Cloning the latest version instead.",
+            "Couldn't find template for your current sozo version. Getting the latest version instead.",
         );
         Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
     }
