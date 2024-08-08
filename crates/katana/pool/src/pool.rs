@@ -7,8 +7,7 @@ use parking_lot::RwLock;
 use tracing::{error, info, warn};
 
 use crate::ordering::PoolOrd;
-use crate::tx::TxId;
-use crate::tx::{PendingTx, PoolTransaction};
+use crate::tx::{PendingTx, PoolTransaction, TxId};
 use crate::validation::{ValidationOutcome, Validator};
 use crate::TransactionPool;
 
@@ -243,13 +242,15 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{ordering::Fcfs, tx::PoolTransaction, validation::NoopValidator, TransactionPool};
-    use katana_primitives::{
-        contract::{ContractAddress, Nonce},
-        FieldElement,
-    };
+    use katana_primitives::contract::{ContractAddress, Nonce};
+    use katana_primitives::FieldElement;
     use rand::Rng;
+
+    use super::*;
+    use crate::ordering::Fcfs;
+    use crate::tx::PoolTransaction;
+    use crate::validation::NoopValidator;
+    use crate::TransactionPool;
 
     fn random_bytes<const SIZE: usize>() -> [u8; SIZE] {
         let mut bytes = [0u8; SIZE];
