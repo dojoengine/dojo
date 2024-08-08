@@ -21,7 +21,7 @@
 //
 
 pub mod ordering;
-mod pool;
+pub mod pool;
 pub mod tx;
 pub mod validation;
 
