@@ -10,7 +10,7 @@ use super::object::model_data::ModelDataObject;
 use super::types::ScalarType;
 use super::utils;
 use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
-use crate::object::erc20_balance::Erc20Balance;
+// use crate::object::erc20_balance::Erc20Balance;
 use crate::object::event_message::EventMessageObject;
 use crate::object::metadata::content::ContentObject;
 use crate::object::metadata::social::SocialObject;
@@ -113,7 +113,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Resolvable(Box::new(MetadataObject)),
         ObjectVariant::Resolvable(Box::new(ModelObject)),
         ObjectVariant::Resolvable(Box::new(TransactionObject)),
-        ObjectVariant::Resolvable(Box::new(Erc20Balance)),
+        // ObjectVariant::Resolvable(Box::new(Erc20Balance)),
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),
         ObjectVariant::Basic(Box::new(PageInfoObject)),
