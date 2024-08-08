@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BinaryHeap};
+use std::collections::{BTreeMap, BinaryHeap, HashMap};
 use std::sync::Arc;
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
@@ -23,7 +23,7 @@ where
 
 struct Inner<T, V, O: PoolOrd> {
     /// List of all valid txs mapped by their hash.
-    valid_ids_by_hash: RwLock<BTreeMap<TxHash, TxId>>,
+    valid_ids_by_hash: RwLock<HashMap<TxHash, TxId>>,
 
     /// List of all valid txs in the pool
     valid_txs: RwLock<BTreeMap<TxId, PendingTx<T, O>>>,
@@ -113,8 +113,6 @@ where
     /// 2. if valid, assign a priority value to the tx using the ordering implementation. then
     ///    insert to the all/pending tx.
     /// 3. f not valid, insert to the rejected pool
-    // TODO: the API should accept raw tx type, the PoolTransaction should only be used for in the
-    // pool scope.
     fn add_transaction(&self, tx: T) {
         let id = TxId::new(tx.sender(), tx.nonce());
 
@@ -191,13 +189,20 @@ where
     // needs to be kept around in the pool.
     //
     // should remove from all the pools.
-    fn remove_transactions(&mut self, hashes: &[TxHash]) {
+    fn remove_transactions(&self, hashes: &[TxHash]) {
         let ids = hashes
             .iter()
             .filter_map(|hash| self.inner.valid_ids_by_hash.read().get(hash).cloned())
             .collect::<Vec<TxId>>();
 
-        todo!()
+        // get the locks on all the pools first
+        let mut all = self.inner.valid_txs.write();
+        let mut pending = self.inner.pending_txs.write();
+
+        for id in ids {
+            all.remove(&id);
+            pending.retain(|tx| tx.id != id);
+        }
     }
 
     fn add_listener(&self) -> Receiver<TxHash> {
@@ -334,6 +339,12 @@ mod tests {
             assert_eq!(pending_tx.tx.nonce(), original_tx.nonce());
             assert_eq!(pending_tx.tx.sender(), original_tx.sender());
             assert_eq!(pending_tx.tx.tip(), original_tx.tip());
+        }
+
+        // remove all the transactions from the pool
+        pool.remove_transactions(&txs.iter().map(|tx| tx.hash()).collect::<Vec<_>>());
+        for tx in &txs {
+            assert!(pool.get(tx.hash()).is_none());
         }
     }
 }

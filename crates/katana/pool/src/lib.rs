@@ -52,7 +52,7 @@ pub trait TransactionPool {
 
     fn get(&self, hash: TxHash) -> Option<Arc<Self::Transaction>>;
 
-    fn remove_transactions(&mut self, hashes: &[TxHash]);
+    fn remove_transactions(&self, hashes: &[TxHash]);
 
     fn add_listener(&self) -> Receiver<TxHash>;
 
