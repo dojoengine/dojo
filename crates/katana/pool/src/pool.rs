@@ -319,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn simple_pool_operations() {
+    fn pool_operations() {
         let txs = [
             PoolTx::new(),
             PoolTx::new(),
@@ -405,6 +405,7 @@ mod tests {
             assert!(txs.iter().find(|tx| tx.hash() == hash).is_some());
         }
 
+        // we should be notified exactly the same number of txs as we added
         assert_eq!(counter, txs.len());
     }
 }
