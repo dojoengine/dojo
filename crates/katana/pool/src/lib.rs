@@ -37,22 +37,30 @@ use validation::Validator;
 
 /// Represents a complete transaction pool.
 pub trait TransactionPool {
+    /// The pool's transaction type.
     type Transaction: PoolTransaction;
 
+    /// The ordering mechanism to use. This is used to determine
+    /// how transactions are being ordered within the pool.
     type Ordering: PoolOrd<Transaction = Self::Transaction>;
 
+    /// Transaction validation before adding to the pool.
     type Validator: Validator<Transaction = Self::Transaction>;
 
+    /// Add a new transaction to the pool.
     fn add_transaction(&self, tx: Self::Transaction);
 
     fn pending_transactions(
         &self,
     ) -> impl Iterator<Item = PendingTx<Self::Transaction, Self::Ordering>>;
 
+    /// Check if the pool contains a transaction with the given hash.
     fn contains(&self, hash: TxHash) -> bool;
 
+    /// Get a transaction from the pool by its hash.
     fn get(&self, hash: TxHash) -> Option<Arc<Self::Transaction>>;
 
+    /// Remove a transaction from the pool.
     fn remove_transactions(&self, hashes: &[TxHash]);
 
     fn add_listener(&self) -> Receiver<TxHash>;
