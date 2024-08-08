@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
 // - txs of the same sender must be ordered by nonce (so needs some form of tx ordering mechanism)
 // - gets notification something happen to a transaction (new, removed, executed, etc).
 // - being able to send transactions (that are valid) but with incremented nonce. allowing for
