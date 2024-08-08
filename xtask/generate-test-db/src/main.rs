@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use dojo_test_utils::compiler::CompilerTestSetup;
@@ -11,8 +11,8 @@ use sozo_ops::test_utils;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-async fn migrate_spawn_and_move(db_path: &PathBuf) -> Result<MigrationOutput> {
-    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.clone()), ..Default::default() };
+async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
+    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), ..Default::default() };
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // migrate the example project
@@ -30,8 +30,8 @@ async fn migrate_spawn_and_move(db_path: &PathBuf) -> Result<MigrationOutput> {
     Ok(output)
 }
 
-async fn migrate_types_test(db_path: &PathBuf) -> Result<MigrationOutput> {
-    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.clone()), ..Default::default() };
+async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
+    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), ..Default::default() };
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // migrate the example project
@@ -74,8 +74,8 @@ async fn main() -> Result<()> {
     assert!(spawn_and_move_db_path.exists(), "spawn-and-move-db directory does not exist");
     assert!(types_test_db_path.exists(), "types-test-db directory does not exist");
 
-    compress_db(&spawn_and_move_db_path, &spawn_and_move_compressed_path);
-    compress_db(&types_test_db_path, &types_test_compressed_path);
+    compress_db(&spawn_and_move_db_path, spawn_and_move_compressed_path);
+    compress_db(&types_test_db_path, types_test_compressed_path);
 
     assert!(
         PathBuf::from(spawn_and_move_compressed_path).exists(),
@@ -90,9 +90,9 @@ async fn main() -> Result<()> {
 }
 
 /// Compresses the given db-path to a .tar.gz file.
-fn compress_db(db_path: &PathBuf, compressed_path: &str) {
+fn compress_db(db_path: &Path, compressed_path: &str) {
     Command::new("tar")
-        .args(["-czf", compressed_path, "-C", ".", &db_path.to_string_lossy().to_string()])
+        .args(["-czf", compressed_path, "-C", ".", db_path.to_string_lossy().as_ref()])
         .status()
         .expect("Failed to compress test-db directory");
 }
