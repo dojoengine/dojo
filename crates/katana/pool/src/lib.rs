@@ -25,14 +25,13 @@ pub mod pool;
 pub mod tx;
 pub mod validation;
 
-use std::collections::{BTreeMap, BinaryHeap};
 use std::sync::Arc;
 
 use futures::channel::mpsc::Receiver;
 use katana_primitives::transaction::TxHash;
 use ordering::PoolOrd;
 use tx::{PendingTx, PoolTransaction};
-use validation::{ValidationOutcome, Validator};
+use validation::Validator;
 
 /// Represents a complete transaction pool.
 pub trait TransactionPool {
