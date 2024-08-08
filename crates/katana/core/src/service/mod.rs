@@ -18,7 +18,6 @@ use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
 use self::metrics::{BlockProducerMetrics, ServiceMetrics};
-use crate::pool::TransactionPool as OldPool;
 
 pub mod block_producer;
 #[cfg(feature = "messaging")]
@@ -41,9 +40,7 @@ pub(crate) const LOG_TARGET: &str = "node";
 #[allow(missing_debug_implementations)]
 pub struct NodeService<EF: ExecutorFactory> {
     /// the pool that holds all transactions
-    pub(crate) pool: Arc<OldPool>,
-
-    pub(crate) new_pool: TxPool,
+    pub(crate) pool: TxPool,
     /// creates new blocks
     pub(crate) block_producer: Arc<BlockProducer<EF>>,
     /// the miner responsible to select transactions from the `pool´
@@ -57,8 +54,7 @@ pub struct NodeService<EF: ExecutorFactory> {
 
 impl<EF: ExecutorFactory> NodeService<EF> {
     pub fn new(
-        pool: Arc<OldPool>,
-        new_pool: TxPool,
+        pool: TxPool,
         miner: TransactionMiner,
         block_producer: Arc<BlockProducer<EF>>,
         #[cfg(feature = "messaging")] messaging: Option<MessagingService<EF>>,
@@ -67,7 +63,6 @@ impl<EF: ExecutorFactory> NodeService<EF> {
 
         Self {
             pool,
-            new_pool,
             miner,
             block_producer,
             metrics,
@@ -104,7 +99,7 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                 match res {
                     Ok(outcome) => {
                         info!(target: LOG_TARGET, block_number = %outcome.block_number, "Mined block.");
-                        pin.new_pool.remove_transactions(&outcome.txs);
+                        pin.pool.remove_transactions(&outcome.txs);
 
                         let metrics = &pin.metrics.block_producer;
                         let gas_used = outcome.stats.l1_gas_used;
@@ -119,11 +114,7 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                 }
             }
 
-            // if should_panic {
-            //     panic!("Block producer returned a block, but it should not have.");
-            // }
-
-            if let Poll::Ready(transactions) = pin.miner.poll_new(&pin.new_pool, cx) {
+            if let Poll::Ready(transactions) = pin.miner.poll_new(&pin.pool, cx) {
                 // miner returned a set of transaction that we feed to the producer
                 pin.block_producer.queue(transactions);
             } else {
@@ -150,31 +141,7 @@ impl TransactionMiner {
         Self { rx: rx.fuse(), has_pending_txs: None }
     }
 
-    fn poll(
-        &mut self,
-        pool: &Arc<OldPool>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Vec<ExecutableTxWithHash>> {
-        // drain the notification stream
-        while let Poll::Ready(Some(_)) = Pin::new(&mut self.rx).poll_next(cx) {
-            self.has_pending_txs = Some(true);
-        }
-
-        if self.has_pending_txs == Some(false) {
-            return Poll::Pending;
-        }
-
-        // take all the transactions from the pool
-        let transactions = pool.get_transactions();
-
-        if transactions.is_empty() {
-            return Poll::Pending;
-        }
-
-        Poll::Ready(transactions)
-    }
-
-    fn poll_new(&mut self, pool: &TxPool, cx: &mut Context<'_>) -> Poll<Vec<ExecutableTxWithHash>> {
+    fn poll(&mut self, pool: &TxPool, cx: &mut Context<'_>) -> Poll<Vec<ExecutableTxWithHash>> {
         // drain the notification stream
         while let Poll::Ready(Some(_)) = Pin::new(&mut self.rx).poll_next(cx) {
             self.has_pending_txs = Some(true);
