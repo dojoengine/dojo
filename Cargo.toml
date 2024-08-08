@@ -240,8 +240,6 @@ alloy-rpc-types-eth = { version = "0.2", default-features = false }
 alloy-signer = { version = "0.2", default-features = false }
 alloy-transport = { version = "0.2", default-features = false }
 
-blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "cairo-2.7", features = [ "testing" ] }
-
 [patch.crates-io]
 # Remove this patch once the following PR is merged: <https://github.com/xJonathanLEI/starknet-rs/pull/615>
 #
