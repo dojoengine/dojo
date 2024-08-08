@@ -35,6 +35,32 @@ use tracing::{error, info, warn};
 use tx::{PendingTx, PoolTransaction, TxId};
 use validation::{ValidationOutcome, Validator};
 
+/// Represents a complete transaction pool.
+pub trait TransactionPool {
+    type Transaction: PoolTransaction;
+
+    type Ordering: PoolOrd<Transaction = Self::Transaction>;
+
+    type Validator: Validator<Transaction = Self::Transaction>;
+
+    fn add_transaction(&self, tx: Self::Transaction);
+
+    fn pending_transactions(
+        &self,
+    ) -> impl Iterator<Item = PendingTx<Self::Transaction, Self::Ordering>>;
+
+    fn contains(&self, hash: TxHash) -> bool;
+
+    fn get(&self, hash: TxHash) -> Option<Arc<Self::Transaction>>;
+
+    fn remove_transactions(&mut self, hashes: &[TxHash]);
+
+    fn add_listener(&self) -> Receiver<TxHash>;
+
+    /// get the total number of transactions in the pool.
+    fn size(&self) -> usize;
+}
+
 #[derive(Clone)]
 pub struct TxPool<T, V, O>
 where
@@ -92,6 +118,44 @@ where
         }
     }
 
+    /// notifies all listeners about the transaction
+    fn notify_listener(&self, hash: TxHash) {
+        let mut listener = self.inner.listeners.write();
+        // this is basically a retain but with mut reference
+        for n in (0..listener.len()).rev() {
+            let mut listener_tx = listener.swap_remove(n);
+            let retain = match listener_tx.try_send(hash) {
+                Ok(()) => true,
+                Err(e) => {
+                    if e.is_full() {
+                        warn!(
+                            hash = ?format!("\"{hash:#x}\""),
+                            "Unable to send tx notification because channel is full."
+                        );
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+
+            if retain {
+                listener.push(listener_tx)
+            }
+        }
+    }
+}
+
+impl<T, V, O> TransactionPool for TxPool<T, V, O>
+where
+    T: PoolTransaction,
+    V: Validator<Transaction = T>,
+    O: PoolOrd<Transaction = T>,
+{
+    type Transaction = T;
+    type Validator = V;
+    type Ordering = O;
+
     /// add tx to the pool
     ///
     /// steps that must be taken before putting tx into the pool:
@@ -101,7 +165,7 @@ where
     /// 3. f not valid, insert to the rejected pool
     // TODO: the API should accept raw tx type, the PoolTransaction should only be used for in the
     // pool scope.
-    pub fn add_transaction(&self, tx: T) {
+    fn add_transaction(&self, tx: T) {
         let id = TxId::new(tx.sender(), tx.nonce());
 
         match self.inner.validator.validate(tx) {
@@ -141,7 +205,7 @@ where
     // from the pool.
     //
     // best transactions must be ordered by the ordering mechanism used.
-    pub fn take_pending_transactions(&self) -> impl Iterator<Item = PendingTx<T, O>> {
+    fn pending_transactions(&self) -> impl Iterator<Item = PendingTx<T, O>> {
         PendingTransactions {
             all: self.inner.valid_txs.read().clone(),
             pending: self.inner.pending_txs.read().clone(),
@@ -149,11 +213,11 @@ where
     }
 
     // check if a tx is in the pool
-    pub fn contains(&self, hash: TxHash) -> bool {
+    fn contains(&self, hash: TxHash) -> bool {
         self.get(hash).is_some()
     }
 
-    pub fn get(&self, hash: TxHash) -> Option<Arc<T>> {
+    fn get(&self, hash: TxHash) -> Option<Arc<T>> {
         // check in the valid list
         if let Some(tx) = self
             .inner
@@ -177,42 +241,19 @@ where
     // needs to be kept around in the pool.
     //
     // should remove from all the pools.
-    pub fn remove_transactions(&mut self, hashes: &[TxHash]) {
+    fn remove_transactions(&mut self, hashes: &[TxHash]) {
         todo!()
     }
 
-    pub fn add_listener(&self) -> Receiver<TxHash> {
+    fn add_listener(&self) -> Receiver<TxHash> {
         const TX_LISTENER_BUFFER_SIZE: usize = 2048;
         let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
         self.inner.listeners.write().push(tx);
         rx
     }
 
-    /// notifies all listeners about the transaction
-    fn notify_listener(&self, hash: TxHash) {
-        let mut listener = self.inner.listeners.write();
-        // this is basically a retain but with mut reference
-        for n in (0..listener.len()).rev() {
-            let mut listener_tx = listener.swap_remove(n);
-            let retain = match listener_tx.try_send(hash) {
-                Ok(()) => true,
-                Err(e) => {
-                    if e.is_full() {
-                        warn!(
-                            hash = ?format!("\"{hash:#x}\""),
-                            "Unable to send tx notification because channel is full."
-                        );
-                        true
-                    } else {
-                        false
-                    }
-                }
-            };
-
-            if retain {
-                listener.push(listener_tx)
-            }
-        }
+    fn size(&self) -> usize {
+        self.inner.valid_txs.read().len() + self.inner.rejected_txs.read().len()
     }
 }
 
@@ -246,7 +287,50 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        ordering::Fcfs, tx::PoolTransaction, validation::NoopValidator, TransactionPool, TxPool,
+    };
+
+    #[derive(Clone)]
+    struct PoolTx;
+
+    impl PoolTransaction for PoolTx {
+        fn hash(&self) -> katana_primitives::transaction::TxHash {
+            todo!()
+        }
+
+        fn id(&self) -> &crate::tx::TxId {
+            todo!()
+        }
+
+        fn max_fee(&self) -> u64 {
+            todo!()
+        }
+
+        fn nonce(&self) -> katana_primitives::contract::Nonce {
+            todo!()
+        }
+
+        fn sender(&self) -> katana_primitives::contract::ContractAddress {
+            todo!()
+        }
+
+        fn tip(&self) -> u64 {
+            todo!()
+        }
+    }
+
+    type MockTxPool<V, O> = TxPool<PoolTx, V, O>;
 
     #[test]
-    fn add_dependent_txs_in_parallel() {}
+    fn add_dependent_txs_in_parallel() {
+        let pool = MockTxPool::new(NoopValidator::new(), Fcfs::new());
+        pool.add_transaction(PoolTx);
+        pool.add_transaction(PoolTx);
+        pool.add_transaction(PoolTx);
+        pool.add_transaction(PoolTx);
+        pool.add_transaction(PoolTx);
+
+        assert_eq!(pool.size(), 5);
+    }
 }

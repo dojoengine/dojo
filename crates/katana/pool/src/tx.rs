@@ -7,7 +7,7 @@ use crate::ordering::PoolOrd;
 
 // the transaction type is recommended to implement a cheap clone (eg ref-counting) so that it
 // can be cloned around to different pools as necessary.
-pub trait PoolTransaction: Ord + Clone {
+pub trait PoolTransaction: Clone {
     /// return the id of this pool txn.
     fn id(&self) -> &TxId;
 
