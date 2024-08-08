@@ -62,6 +62,9 @@ impl<T, O: PoolOrd> PendingTx<T, O> {
     }
 }
 
+// We can't just derive these traits because the derive implementation would require that
+// the generics also implement these traits, which is not necessary.
+
 impl<T, O: PoolOrd> Clone for PendingTx<T, O> {
     fn clone(&self) -> Self {
         Self { id: self.id.clone(), tx: Arc::clone(&self.tx), priority: self.priority.clone() }
