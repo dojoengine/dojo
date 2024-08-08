@@ -277,10 +277,10 @@ mod tests {
     impl PoolTx {
         fn new() -> Self {
             Self {
-                hash: TxHash::from_bytes_be(&random_bytes::<32>()),
-                max_fee: rand::thread_rng().gen(),
-                nonce: Nonce::from_bytes_be(&random_bytes::<32>()),
                 tip: rand::thread_rng().gen(),
+                max_fee: rand::thread_rng().gen(),
+                hash: TxHash::from_bytes_be(&random_bytes::<32>()),
+                nonce: Nonce::from_bytes_be(&random_bytes::<32>()),
                 sender: {
                     let felt = FieldElement::from_bytes_be(&random_bytes::<32>());
                     ContractAddress::from(felt)
@@ -302,7 +302,7 @@ mod tests {
             self.nonce
         }
 
-        fn sender(&self) -> katana_primitives::contract::ContractAddress {
+        fn sender(&self) -> ContractAddress {
             self.sender
         }
 
@@ -378,8 +378,8 @@ mod tests {
         assert!(txs.iter().all(|tx| pool.get(tx.hash()).is_none()));
     }
 
-    #[test]
-    fn tx_listeners() {
+    #[tokio::test]
+    async fn tx_listeners() {
         let txs = [
             PoolTx::new(),
             PoolTx::new(),
@@ -392,11 +392,19 @@ mod tests {
         ];
 
         let pool = mock_pool();
-        let listener = pool.add_listener();
+        // register a listener for incoming txs
+        let mut listener = pool.add_listener();
 
-        // spawn a thread that listens to the pool and keep track of a counter that increments everytime a tx is added
-        std::thread::scope(|s| s.spawn(|| {}));
-
+        // start adding txs to the pool
         txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+
+        // the channel should contain all the added txs
+        let mut counter = 0;
+        while let Ok(Some(hash)) = listener.try_next() {
+            counter += 1;
+            assert!(txs.iter().find(|tx| tx.hash() == hash).is_some());
+        }
+
+        assert_eq!(counter, txs.len());
     }
 }
