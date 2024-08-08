@@ -16,3 +16,4 @@ tracing.workspace = true
 
 [dev-dependencies]
 rand.workspace = true
+tokio.workspace = true
