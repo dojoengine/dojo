@@ -5,7 +5,6 @@ base_class_hash = "0x0"
 abi = "manifests/dev/base/abis/contracts/dojo_examples-dungeon-6620e0e6.json"
 reads = []
 writes = []
-computed = []
 init_calldata = []
 tag = "dojo_examples-dungeon"
 manifest_name = "dojo_examples-dungeon-6620e0e6"

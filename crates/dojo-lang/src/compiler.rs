@@ -22,9 +22,9 @@ use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 use dojo_world::manifest::{
-    AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
-    ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
-    MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
+    AbiFormat, Class, DojoContract, DojoModel, Manifest, ManifestMethods, ABIS_DIR,
+    BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
+    WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
 use dojo_world::metadata::get_namespace_config_from_ws;
 use itertools::Itertools;
@@ -40,7 +40,7 @@ use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
 use crate::inline_macros::utils::{SYSTEM_READS, SYSTEM_WRITES};
-use crate::plugin::{ComputedValuesAuxData, DojoAuxData, Model};
+use crate::plugin::{DojoAuxData, Model};
 use crate::semantics::utils::find_module_rw;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
@@ -288,7 +288,6 @@ fn update_files(
 
     let mut models = BTreeMap::new();
     let mut contracts = BTreeMap::new();
-    let mut computed = BTreeMap::new();
 
     if let Some(external_contracts) = external_contracts {
         let external_crate_ids = collect_external_crate_ids(db, external_contracts);
@@ -305,9 +304,7 @@ fn update_files(
                 .filter_map(|info| info.as_ref().map(|i| &i.aux_data))
                 .filter_map(|aux_data| aux_data.as_ref().map(|aux_data| aux_data.0.as_any()))
             {
-                if let Some(aux_data) = aux_data.downcast_ref::<ComputedValuesAuxData>() {
-                    get_dojo_computed_values(db, module_id, aux_data, &mut computed);
-                } else if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
+                if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
                     for system in &dojo_aux_data.systems {
                         contracts.extend(get_dojo_contract_artifacts(
                             db,
@@ -334,16 +331,6 @@ fn update_files(
             }
         }
     }
-
-    // `get_dojo_computed_values()` uses the module name as contract name to build the `computed`
-    // variable. That means, the namespace of the contract is not taken into account,
-    // but should be retrieved from the dojo::contract attribute.
-    computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
-        let contract_data = contracts
-            .get_mut(&contract.to_string())
-            .expect("Error: Computed value contract doesn't exist.");
-        contract_data.0.inner.computed = computed_value_entrypoint;
-    });
 
     for model in &models {
         contracts.remove(model.0.as_str());
@@ -466,28 +453,6 @@ fn get_dojo_model_artifacts(
     }
 
     Ok(models)
-}
-
-fn get_dojo_computed_values(
-    db: &RootDatabase,
-    module_id: &ModuleId,
-    aux_data: &ComputedValuesAuxData,
-    computed_values: &mut BTreeMap<SmolStr, Vec<ComputedValueEntrypoint>>,
-) {
-    if let ModuleId::Submodule(_) = module_id {
-        let module_name = module_id.full_path(db);
-        let module_name = SmolStr::from(module_name);
-
-        if !computed_values.contains_key(&module_name) {
-            computed_values.insert(module_name.clone(), vec![]);
-        }
-        let computed_vals = computed_values.get_mut(&module_name).unwrap();
-        computed_vals.push(ComputedValueEntrypoint {
-            contract: module_name,
-            entrypoint: aux_data.entrypoint.clone(),
-            tag: aux_data.tag.clone(),
-        })
-    }
 }
 
 #[allow(clippy::type_complexity)]

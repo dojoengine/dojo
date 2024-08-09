@@ -29,9 +29,9 @@ mod test;
 mod types;
 
 pub use types::{
-    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, DeploymentManifest, DojoContract,
-    DojoModel, Manifest, ManifestMethods, Member, OverlayClass, OverlayContract,
-    OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldContract, WorldMetadata,
+    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoModel, Manifest,
+    ManifestMethods, Member, OverlayClass, OverlayContract, OverlayDojoContract, OverlayDojoModel,
+    OverlayManifest, WorldContract, WorldMetadata,
 };
 
 pub const WORLD_CONTRACT_TAG: &str = "dojo-world";

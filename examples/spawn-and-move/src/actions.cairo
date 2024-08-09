@@ -14,16 +14,9 @@ pub trait IActions {
     fn enter_dungeon(ref world: IWorldDispatcher, dungeon_address: starknet::ContractAddress);
 }
 
-#[dojo::interface]
-pub trait IActionsComputed {
-    fn tile_terrain(vec: Vec2) -> felt252;
-    fn quadrant(pos: Position) -> u8;
-}
-
 #[dojo::contract]
 pub mod actions {
     use super::IActions;
-    use super::IActionsComputed;
 
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{
@@ -48,32 +41,6 @@ pub mod actions {
         #[key]
         pub player: ContractAddress,
         pub direction: Direction,
-    }
-
-    #[abi(embed_v0)]
-    impl ActionsComputedImpl of IActionsComputed<ContractState> {
-        #[computed]
-        fn tile_terrain(vec: Vec2) -> felt252 {
-            'land'
-        }
-
-        #[computed(Position)]
-        fn quadrant(pos: Position) -> u8 {
-            // 10 is zero
-            if pos.vec.x < 10 {
-                if pos.vec.y < 10 {
-                    3 // Quadrant - -
-                } else {
-                    4 // Quadrant - +
-                }
-            } else {
-                if pos.vec.y < 10 {
-                    2 // Quadrant + -
-                } else {
-                    1 // Quadrant + +
-                }
-            }
-        }
     }
 
     // impl: implement functions specified in trait
