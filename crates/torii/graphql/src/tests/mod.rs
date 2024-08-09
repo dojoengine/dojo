@@ -2,22 +2,23 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
+use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
+use dojo_test_utils::migration::{copy_types_test_db, prepare_migration_with_world_and_seed};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::WorldContractReader;
-use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use serde::Deserialize;
 use serde_json::Value;
-use sozo_ops::migration;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{Felt, InvokeTransactionResult};
+use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
@@ -277,38 +278,35 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let config = setup.build_test_config("types-test", Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
+    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_types_test_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
+
     let account = sequencer.account(0);
 
-    let migration_output = migration::migrate(
-        &ws,
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path,
+        target_dir,
         None,
-        sequencer.url().to_string(),
-        account,
         "types_test",
-        false,
-        TxnConfig::init_wait(),
-        None,
+        "types_test",
     )
-    .await
-    .unwrap()
     .unwrap();
 
-    let account = sequencer.account(0);
-    //  Execute `create` and insert 11 records into storage
-    let records_contract = migration_output
-        .contracts
-        .iter()
-        .find(|contract| contract.as_ref().unwrap().tag.eq("types_test-records"))
-        .unwrap();
-
-    let record_contract_address = records_contract.as_ref().unwrap().contract_address;
+    let records = strat.contracts.first().unwrap();
+    let records_address = get_contract_address(
+        records.salt,
+        strat.base.as_ref().unwrap().diff.local_class_hash,
+        &[],
+        strat.world_address,
+    );
 
     let InvokeTransactionResult { transaction_hash } = account
         .execute_v1(vec![Call {
             calldata: vec![Felt::from_str("0xa").unwrap()],
-            to: record_contract_address,
+            to: records_address,
             selector: selector!("create"),
         }])
         .send()
@@ -321,7 +319,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let InvokeTransactionResult { transaction_hash } = account
         .execute_v1(vec![Call {
             calldata: vec![Felt::from_str("0x14").unwrap()],
-            to: record_contract_address,
+            to: records_address,
             selector: selector!("delete"),
         }])
         .send()
@@ -330,9 +328,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     TransactionWaiter::new(transaction_hash, &account.provider()).await?;
 
-    let world = WorldContractReader::new(migration_output.world_address, account.provider());
+    let world = WorldContractReader::new(strat.world_address, account.provider());
 
-    let db = Sql::new(pool.clone(), migration_output.world_address, Felt::ZERO).await.unwrap();
+    let db = Sql::new(pool.clone(), strat.world_address, Felt::ZERO).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(

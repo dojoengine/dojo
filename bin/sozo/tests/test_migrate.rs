@@ -1,7 +1,8 @@
 use std::fs;
 
 use dojo_test_utils::compiler::CompilerTestSetup;
-use katana_runner::KatanaRunner;
+use dojo_test_utils::migration::copy_spawn_and_move_db;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
@@ -55,32 +56,13 @@ async fn test_migrate_then_upgrade() {
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
     let tmp_dir = config.manifest_path().parent().unwrap();
 
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let account_address = &format!("0x{:x}", account.address());
-    let private_key =
-        &format!("0x{:x}", sequencer.account_data(0).private_key.as_ref().unwrap().secret_scalar());
     let rpc_url = &sequencer.url().to_string();
-
-    let args_vec = [
-        "migrate",
-        "apply",
-        "--account-address",
-        account_address,
-        "--rpc-url",
-        rpc_url,
-        "--private-key",
-        private_key,
-        "--manifest-path",
-        config.manifest_path().as_ref(),
-    ];
-
-    get_snapbox().args(args_vec.iter()).assert().success();
-
-    println!("tmp_dir: {:?}", tmp_dir);
 
     // Modify the actions contracts to have a new class hash.
     let actions_path = tmp_dir.join("src/actions.cairo");
@@ -92,8 +74,17 @@ async fn test_migrate_then_upgrade() {
 
     get_snapbox().args(build_vec.iter()).assert().success();
 
-    let assert = get_snapbox().args(args_vec.iter()).assert().success();
-    let output = format!("{:#?}", assert.get_output());
+    let plan_args = [
+        "migrate",
+        "plan",
+        "--rpc-url",
+        rpc_url,
+        "--manifest-path",
+        config.manifest_path().as_ref(),
+    ];
 
-    assert!(output.contains("Contracts (1)"));
+    let plan_assert = get_snapbox().args(plan_args.iter()).assert().success();
+    let plan_output = format!("{:#?}", plan_assert.get_output());
+
+    assert!(plan_output.contains("Contracts (1)"));
 }
