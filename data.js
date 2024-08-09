@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723234157276,
+  "lastUpdate": 1723247010152,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14881,6 +14881,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3954179,
             "range": "± 182422",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7461b53ef85e0497b15863dff6472e20b049965b",
+          "message": "expose resources through resource() function in world API (#2266)\n\n* expose resources through resource() function in world API\r\n\r\n* add a test to improve code coverage\r\n\r\n* fix: add script to build spawn and move only\r\n\r\n* fix: adjustement for dev pipeline\r\n\r\n* fix: add missing sozo exec permission\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-09T19:24:17-04:00",
+          "tree_id": "53818fbffbf53aa675acdea7ec5d2e34c54304a9",
+          "url": "https://github.com/dojoengine/dojo/commit/7461b53ef85e0497b15863dff6472e20b049965b"
+        },
+        "date": 1723247009321,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17579171,
+            "range": "± 282734",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3794234,
+            "range": "± 121095",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3921118490,
+            "range": "± 814335660",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3949440,
+            "range": "± 64664",
             "unit": "ns/iter"
           }
         ]
