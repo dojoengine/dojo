@@ -67,4 +67,7 @@ pub trait TransactionPool {
 
     /// Get the total number of transactions in the pool.
     fn size(&self) -> usize;
+
+    /// Get a reference to the pool's validator.
+    fn validator(&self) -> &Self::Validator;
 }
