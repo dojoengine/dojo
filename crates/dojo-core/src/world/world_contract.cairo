@@ -6,12 +6,20 @@ use dojo::model::{ModelIndex, ResourceMetadata};
 use dojo::model::{Layout};
 use dojo::utils::bytearray_hash;
 
+#[derive(Drop, starknet::Store, Serde, Default, Debug)]
+pub enum Resource {
+    Model: (ClassHash, ContractAddress),
+    Contract: (ClassHash, ContractAddress),
+    Namespace,
+    World,
+    #[default]
+    Unregistered,
+}
+
 #[starknet::interface]
 pub trait IWorld<T> {
     fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
-    fn model(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
-    fn contract(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
     fn register_namespace(ref self: T, namespace: ByteArray);
     fn deploy_contract(
@@ -34,6 +42,7 @@ pub trait IWorld<T> {
     fn delete_entity(ref self: T, model_selector: felt252, index: ModelIndex, layout: Layout);
 
     fn base(self: @T) -> ClassHash;
+    fn resource(self: @T, selector: felt252) -> Resource;
 
     /// In Dojo, there are 2 levels of authorization: `owner` and `writer`.
     /// Only accounts can own a resource while any contract can write to a resource,
@@ -120,7 +129,8 @@ pub mod world {
     use dojo::utils::{entity_id_from_keys, bytearray_hash};
 
     use super::{
-        Errors, ModelIndex, IWorldDispatcher, IWorldDispatcherTrait, IWorld, IUpgradeableWorld
+        Errors, ModelIndex, IWorldDispatcher, IWorldDispatcherTrait, IWorld, IUpgradeableWorld,
+        Resource
     };
 
     const WORLD: felt252 = 0;
@@ -253,7 +263,7 @@ pub mod world {
         contract_base: ClassHash,
         nonce: usize,
         models_count: usize,
-        resources: Map::<felt252, ResourceData>,
+        resources: Map::<felt252, Resource>,
         owners: Map::<(felt252, ContractAddress), bool>,
         writers: Map::<(felt252, ContractAddress), bool>,
         #[substorage(v0)]
@@ -261,21 +271,11 @@ pub mod world {
         initialized_contract: Map::<felt252, bool>,
     }
 
-    #[derive(Drop, starknet::Store, Default, Debug)]
-    pub enum ResourceData {
-        Model: (ClassHash, ContractAddress),
-        Contract: (ClassHash, ContractAddress),
-        Namespace,
-        World,
-        #[default]
-        None,
-    }
-
     #[generate_trait]
-    impl ResourceDataIsNoneImpl of ResourceDataIsNoneTrait {
-        fn is_none(self: @ResourceData) -> bool {
+    impl ResourceIsNoneImpl of ResourceIsNoneTrait {
+        fn is_none(self: @Resource) -> bool {
             match self {
-                ResourceData::None => true,
+                Resource::Unregistered => true,
                 _ => false
             }
         }
@@ -286,18 +286,18 @@ pub mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
 
-        self.resources.write(WORLD, ResourceData::World);
+        self.resources.write(WORLD, Resource::World);
         self
             .resources
             .write(
                 Model::<ResourceMetadata>::selector(),
-                ResourceData::Model((metadata::initial_class_hash(), metadata::initial_address()))
+                Resource::Model((metadata::initial_class_hash(), metadata::initial_address()))
             );
         self.owners.write((WORLD, creator), true);
 
         let dojo_namespace_hash = bytearray_hash(@"__DOJO__");
 
-        self.resources.write(dojo_namespace_hash, ResourceData::Namespace);
+        self.resources.write(dojo_namespace_hash, Resource::Namespace);
         self.owners.write((dojo_namespace_hash, creator), true);
 
         self.config.initializer(creator);
@@ -472,13 +472,15 @@ pub mod world {
             self: @ContractState, resource_id: felt252, contract: ContractAddress
         ) -> bool {
             match self.resources.read(resource_id) {
-                ResourceData::Model((_, model_address)) => self
+                Resource::Model((_, model_address)) => self
                     .check_model_write_access(resource_id, model_address, contract),
-                ResourceData::Contract((_, contract_address)) => self
+                Resource::Contract((_, contract_address)) => self
                     .check_contract_write_access(resource_id, contract_address, contract),
-                ResourceData::Namespace => self.check_basic_write_access(resource_id, contract),
-                ResourceData::World => self.check_basic_write_access(WORLD, contract),
-                ResourceData::None => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+                Resource::Namespace => self.check_basic_write_access(resource_id, contract),
+                Resource::World => self.check_basic_write_access(WORLD, contract),
+                Resource::Unregistered => core::panic_with_felt252(
+                    Errors::INVALID_RESOURCE_SELECTOR
+                )
             }
         }
 
@@ -500,7 +502,7 @@ pub mod world {
             self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
             match self.resources.read(selector) {
-                ResourceData::Model((_, model_address)) => self
+                Resource::Model((_, model_address)) => self
                     .check_model_write_access(selector, model_address, contract),
                 _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
@@ -524,7 +526,7 @@ pub mod world {
             self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
             match self.resources.read(selector) {
-                ResourceData::Contract((_, contract_address)) => self
+                Resource::Contract((_, contract_address)) => self
                     .check_contract_write_access(selector, contract_address, contract),
                 _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
@@ -548,7 +550,7 @@ pub mod world {
             self: @ContractState, selector: felt252, contract: ContractAddress
         ) -> bool {
             match self.resources.read(selector) {
-                ResourceData::Namespace => self.check_basic_write_access(selector, contract),
+                Resource::Namespace => self.check_basic_write_access(selector, contract),
                 _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
             }
         }
@@ -587,7 +589,7 @@ pub mod world {
 
             match self.resources.read(selector) {
                 // If model is already registered, validate permission to update.
-                ResourceData::Model((
+                Resource::Model((
                     model_hash, model_address
                 )) => {
                     assert(self.is_account_owner(selector), Errors::OWNER_ONLY_UPDATE);
@@ -595,13 +597,13 @@ pub mod world {
                     prev_address = model_address;
                 },
                 // new model
-                ResourceData::None => { self.owners.write((selector, caller), true); },
+                Resource::Unregistered => { self.owners.write((selector, caller), true); },
                 // Avoids a model name to conflict with already registered resource,
                 // which can cause ACL issue with current ACL implementation.
                 _ => core::panic_with_felt252(Errors::INVALID_MODEL_NAME)
             };
 
-            self.resources.write(selector, ResourceData::Model((class_hash, address)));
+            self.resources.write(selector, Resource::Model((class_hash, address)));
             EventEmitter::emit(
                 ref self,
                 ModelRegistered {
@@ -621,44 +623,19 @@ pub mod world {
             let hash = bytearray_hash(@namespace);
 
             match self.resources.read(hash) {
-                ResourceData::Namespace => {
+                Resource::Namespace => {
                     if !self.is_account_owner(hash) {
                         core::panic_with_felt252(Errors::NAMESPACE_ALREADY_REGISTERED);
                     }
                 },
-                ResourceData::None => {
-                    self.resources.write(hash, ResourceData::Namespace);
+                Resource::Unregistered => {
+                    self.resources.write(hash, Resource::Namespace);
                     self.owners.write((hash, caller_account), true);
 
                     EventEmitter::emit(ref self, NamespaceRegistered { namespace, hash });
                 },
                 _ => { core::panic_with_felt252(Errors::INVALID_NAMESPACE_NAME); }
             };
-        }
-
-
-        /// Gets the class hash of a registered model.
-        ///
-        /// # Arguments
-        ///
-        /// * `selector` - The keccak(name) of the model.
-        ///
-        /// # Returns
-        ///
-        /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the
-        /// model.
-        fn model(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
-            match self.resources.read(selector) {
-                ResourceData::Model(m) => m,
-                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
-            }
-        }
-
-        fn contract(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
-            match self.resources.read(selector) {
-                ResourceData::Contract(c) => c,
-                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
-            }
         }
 
         /// Deploys a contract associated with the world.
@@ -710,7 +687,7 @@ pub mod world {
 
             self.owners.write((selector, get_caller_address()), true);
 
-            self.resources.write(selector, ResourceData::Contract((class_hash, contract_address)));
+            self.resources.write(selector, Resource::Contract((class_hash, contract_address)));
 
             EventEmitter::emit(
                 ref self,
@@ -734,12 +711,16 @@ pub mod world {
             ref self: ContractState, selector: felt252, class_hash: ClassHash
         ) -> ClassHash {
             assert(self.is_account_owner(selector), Errors::NOT_OWNER);
-            let (_, contract_address) = self.contract(selector);
-            IUpgradeableDispatcher { contract_address }.upgrade(class_hash);
-            EventEmitter::emit(
-                ref self, ContractUpgraded { class_hash, address: contract_address }
-            );
-            class_hash
+
+            if let Resource::Contract((_, contract_address)) = self.resources.read(selector) {
+                IUpgradeableDispatcher { contract_address }.upgrade(class_hash);
+                EventEmitter::emit(
+                    ref self, ContractUpgraded { class_hash, address: contract_address }
+                );
+                class_hash
+            } else {
+                core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+            }
         }
 
         /// Issues an autoincremented id to the caller.
@@ -890,6 +871,17 @@ pub mod world {
         fn base(self: @ContractState) -> ClassHash {
             self.contract_base.read()
         }
+
+        /// Gets resource data from its selector.
+        ///
+        /// # Arguments
+        ///   * `selector` - the resource selector
+        ///
+        /// # Returns
+        ///   * `Resource` - the resource data associated with the selector.
+        fn resource(self: @ContractState, selector: felt252) -> Resource {
+            self.resources.read(selector)
+        }
     }
 
 
@@ -1028,7 +1020,7 @@ pub mod world {
         #[inline(always)]
         fn is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
             match self.resources.read(namespace_hash) {
-                ResourceData::Namespace => true,
+                Resource::Namespace => true,
                 _ => false
             }
         }

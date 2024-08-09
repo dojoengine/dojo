@@ -56,7 +56,7 @@ pub mod world {
     mod world_contract;
     pub use world_contract::{
         world, IWorld, IWorldDispatcher, IWorldDispatcherTrait, IWorldProvider,
-        IWorldProviderDispatcher, IWorldProviderDispatcherTrait
+        IWorldProviderDispatcher, IWorldProviderDispatcherTrait, Resource
     };
     pub(crate) use world_contract::{
         IUpgradeableWorld, IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait
