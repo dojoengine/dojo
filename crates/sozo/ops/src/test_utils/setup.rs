@@ -2,7 +2,6 @@ use anyhow::Result;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::manifest::BaseManifest;
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::strategy::MigrationStrategy;
 use dojo_world::migration::world::WorldDiff;
@@ -17,7 +16,6 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
 
-use crate::auth::{grant_writer, ResourceType, ResourceWriter};
 use crate::migration;
 
 /// Load the spawn-and-moves project configuration from a copy of the project
@@ -52,7 +50,7 @@ pub fn setup_ws(config: &Config) -> Workspace<'_> {
 /// # Returns
 ///
 /// A [`MigrationStrategy`] to execute to migrate the full spawn-and-moves project.
-pub fn setup_migration(config: &Config) -> Result<(MigrationStrategy, WorldDiff, BaseManifest)> {
+pub fn setup_migration(config: &Config) -> Result<(MigrationStrategy, WorldDiff)> {
     let ws = setup_ws(config);
 
     let manifest_path = config.manifest_path();
@@ -87,7 +85,7 @@ pub async fn setup(
     let ws = setup_ws(&config);
     let ui = config.ui();
 
-    let (migration, _, manifest) = setup_migration(&config)?;
+    let (migration, diff) = setup_migration(&config)?;
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let mut account = sequencer.account(0);
@@ -104,41 +102,17 @@ pub async fn setup(
     let world = WorldContract::new(output.world_address, account)
         .with_block(BlockId::Tag(BlockTag::Pending));
 
-    // Authorize contracts to write on required models (based on manifest)
-    let writes_map: std::collections::HashMap<String, Vec<String>> = manifest
-        .contracts
-        .iter()
-        .filter_map(|m| {
-            if m.inner.writes.is_empty() {
-                None
-            } else {
-                Some((m.inner.tag.clone(), m.inner.writes.clone()))
-            }
-        })
-        .collect();
+    let (grant, revoke) =
+        migration::find_authorization_diff(&ui, &world, &diff, Some(&output), &default_namespace)
+            .await?;
 
-    let mut new_writers = vec![];
-
-    for c in output.contracts.into_iter().flatten() {
-        if let Some(writes) = writes_map.get(&c.tag) {
-            new_writers.extend(
-                writes
-                    .iter()
-                    .map(|w| ResourceWriter {
-                        resource: ResourceType::Model(w.clone()),
-                        tag_or_address: c.tag.clone(),
-                    })
-                    .collect::<Vec<_>>(),
-            );
-        };
-    }
-
-    grant_writer(
-        &ui,
+    migration::auto_authorize(
+        &ws,
         &world,
-        &new_writers,
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
         &default_namespace,
+        &grant,
+        &revoke,
     )
     .await?;
 
