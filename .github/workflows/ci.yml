@@ -40,6 +40,7 @@ jobs:
           name: dojo-bins
           path: /tmp/bins
       - run: |
+          bash scripts/build_spawn_and_move.sh /tmp/bins/sozo
           tar -xzf spawn-and-move-db.tar.gz -C /tmp/
           tar -xzf types-test-db.tar.gz -C /tmp/
           chmod +x /tmp/bins/katana
