@@ -11,6 +11,7 @@ use crate::tx::{PendingTx, PoolTransaction, TxId};
 use crate::validation::{ValidationOutcome, Validator};
 use crate::TransactionPool;
 
+#[derive(Debug)]
 pub struct Pool<T, V, O>
 where
     T: PoolTransaction,
@@ -20,6 +21,7 @@ where
     inner: Arc<Inner<T, V, O>>,
 }
 
+#[derive(Debug)]
 struct Inner<T, V, O: PoolOrd> {
     /// List of all valid txs mapped by their hash.
     valid_ids_by_hash: RwLock<HashMap<TxHash, TxId>>,
@@ -279,6 +281,7 @@ pub(crate) mod test_utils {
     }
 
     impl PoolTx {
+        #[allow(clippy::new_without_default)]
         pub fn new() -> Self {
             Self {
                 tip: rand::thread_rng().gen(),
@@ -463,7 +466,7 @@ mod tests {
         let mut counter = 0;
         while let Ok(Some(hash)) = listener.try_next() {
             counter += 1;
-            assert!(txs.iter().find(|tx| tx.hash() == hash).is_some());
+            assert!(txs.iter().any(|tx| tx.hash() == hash));
         }
 
         // we should be notified exactly the same number of txs as we added
@@ -490,7 +493,7 @@ mod tests {
             .validator()
             .validate_all(all.to_vec())
             .into_iter()
-            .filter_map(|res| res.ok().map(|o| o))
+            .filter_map(|res| res.ok())
             .fold((Vec::new(), Vec::new()), |mut acc, res| match res {
                 ValidationOutcome::Valid(tx) => {
                     acc.0.push(tx);
