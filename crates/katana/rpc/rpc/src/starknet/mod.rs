@@ -12,8 +12,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
-use katana_core::service::TxPool;
 use katana_executor::{ExecutionResult, ExecutorFactory};
+use katana_pool::TxPool;
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
 };

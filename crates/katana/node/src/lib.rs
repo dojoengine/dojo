@@ -20,12 +20,12 @@ use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
 #[cfg(feature = "messaging")]
 use katana_core::service::messaging::MessagingService;
-use katana_core::service::{NodeService, TransactionMiner, TxPool};
+use katana_core::service::{NodeService, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_pool::ordering::Fcfs;
 use katana_pool::validation::NoopValidator;
-use katana_pool::TransactionPool;
+use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_provider::providers::fork::ForkedProvider;

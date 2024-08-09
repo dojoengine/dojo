@@ -30,10 +30,15 @@ pub mod validation;
 use std::sync::Arc;
 
 use futures::channel::mpsc::Receiver;
-use katana_primitives::transaction::TxHash;
-use ordering::PoolOrd;
+use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
+use ordering::{Fcfs, PoolOrd};
+use pool::Pool;
 use tx::{PendingTx, PoolTransaction};
-use validation::Validator;
+use validation::{NoopValidator, Validator};
+
+/// Katana default transacstion pool type.
+pub type TxPool =
+    Pool<ExecutableTxWithHash, NoopValidator<ExecutableTxWithHash>, Fcfs<ExecutableTxWithHash>>;
 
 /// Represents a complete transaction pool.
 pub trait TransactionPool {

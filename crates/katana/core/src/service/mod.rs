@@ -8,10 +8,7 @@ use std::task::{Context, Poll};
 use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
 use katana_executor::ExecutorFactory;
-use katana_pool::ordering::Fcfs;
-use katana_pool::pool::Pool;
-use katana_pool::validation::NoopValidator;
-use katana_pool::TransactionPool;
+use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::FieldElement;
 use tracing::{error, info};
@@ -26,9 +23,6 @@ mod metrics;
 
 #[cfg(feature = "messaging")]
 use self::messaging::{MessagingOutcome, MessagingService};
-
-pub type TxPool =
-    Pool<ExecutableTxWithHash, NoopValidator<ExecutableTxWithHash>, Fcfs<ExecutableTxWithHash>>;
 
 pub(crate) const LOG_TARGET: &str = "node";
 
