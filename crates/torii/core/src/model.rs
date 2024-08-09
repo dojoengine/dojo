@@ -231,7 +231,9 @@ pub fn build_sql_query(
     entity_relation_column: &str,
     where_clause: Option<&str>,
     where_clause_arrays: Option<&str>,
-) -> Result<(String, HashMap<String, String>), Error> {
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<(String, HashMap<String, String>, String), Error> {
     fn parse_ty(
         path: &str,
         name: &str,
@@ -398,9 +400,21 @@ pub fn build_sql_query(
         "SELECT {entities_table}.id, {entities_table}.keys, {selections_clause} FROM \
          {entities_table}{join_clause}"
     );
+    let mut count_query =
+        format!("SELECT COUNT({entities_table}.id) FROM {entities_table}{join_clause}",);
 
     if let Some(where_clause) = where_clause {
-        query = format!("{} WHERE {}", query, where_clause);
+        query += &format!(" WHERE {}", where_clause);
+        count_query += &format!(" WHERE {}", where_clause);
+    }
+    query += &format!(" ORDER BY {entities_table}.event_id DESC");
+
+    if let Some(limit) = limit {
+        query += &format!(" LIMIT {}", limit);
+    }
+
+    if let Some(offset) = offset {
+        query += &format!(" OFFSET {}", offset);
     }
 
     if let Some(where_clause_arrays) = where_clause_arrays {
@@ -409,7 +423,7 @@ pub fn build_sql_query(
         }
     }
 
-    Ok((query, formatted_arrays_queries))
+    Ok((query, formatted_arrays_queries, count_query))
 }
 
 /// Populate the values of a Ty (schema) from SQLite row.
@@ -992,9 +1006,16 @@ mod tests {
             ],
         });
 
-        let query =
-            build_sql_query(&vec![position, player_config], "entities", "entity_id", None, None)
-                .unwrap();
+        let query = build_sql_query(
+            &vec![position, player_config],
+            "entities",
+            "entity_id",
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
 
         let expected_query =
             "SELECT entities.id, entities.keys, [Test-Position].external_player AS \
@@ -1006,7 +1027,7 @@ mod tests {
              entities.id = [Test-Position$vec].entity_id  JOIN [Test-Position] ON entities.id = \
              [Test-Position].entity_id  JOIN [Test-PlayerConfig$favorite_item] ON entities.id = \
              [Test-PlayerConfig$favorite_item].entity_id  JOIN [Test-PlayerConfig] ON entities.id \
-             = [Test-PlayerConfig].entity_id";
+             = [Test-PlayerConfig].entity_id ORDER BY entities.event_id DESC";
         // todo: completely tests arrays
         assert_eq!(query.0, expected_query);
     }
