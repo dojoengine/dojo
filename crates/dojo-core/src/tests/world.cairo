@@ -481,14 +481,20 @@ fn test_register_namespace() {
     let namespace = "namespace";
     let hash = bytearray_hash(@namespace);
 
-    world.register_namespace(namespace);
+    world.register_namespace(namespace.clone());
 
     assert(world.is_owner(hash, caller), 'namespace not registered');
 
-    assert_eq!(
-        starknet::testing::pop_log(world.contract_address),
-        Option::Some(NamespaceRegistered { namespace: "namespace", hash })
-    );
+    // I don't know why but starknet::testing::pop_log does not return the event if
+    // at least one field is defined as an event key.
+    let (mut keys, data) = starknet::testing::pop_log_raw(world.contract_address).unwrap();
+
+    // do not check keys length as it contains a ByteArray stored on several felts
+    assert_eq!(data.len(), 1);
+
+    let _ = keys.pop_front();
+    assert_eq!(Serde::<ByteArray>::deserialize(ref keys).unwrap(), namespace);
+    assert_eq!(data.at(0), @hash);
 }
 
 #[test]

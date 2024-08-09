@@ -161,6 +161,7 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct WorldSpawned {
         pub address: ContractAddress,
+        #[key]
         pub creator: ContractAddress
     }
 
@@ -172,33 +173,41 @@ pub mod world {
     #[derive(Drop, starknet::Event)]
     pub struct ContractDeployed {
         pub salt: felt252,
+        #[key]
         pub class_hash: ClassHash,
         pub address: ContractAddress,
+        #[key]
         pub namespace: ByteArray,
+        #[key]
         pub name: ByteArray
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct ContractUpgraded {
+        #[key]
         pub class_hash: ClassHash,
         pub address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct MetadataUpdate {
+        #[key]
         pub resource: felt252,
         pub uri: ByteArray
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct NamespaceRegistered {
+        #[key]
         pub namespace: ByteArray,
         pub hash: felt252
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct ModelRegistered {
+        #[key]
         pub name: ByteArray,
+        #[key]
         pub namespace: ByteArray,
         pub class_hash: ClassHash,
         pub prev_class_hash: ClassHash,
@@ -208,42 +217,55 @@ pub mod world {
 
     #[derive(Drop, starknet::Event)]
     pub struct StoreSetRecord {
+        #[key]
         pub table: felt252,
+        #[key]
         pub keys: Span<felt252>,
         pub values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct StoreUpdateRecord {
+        #[key]
         pub table: felt252,
+        #[key]
         pub entity_id: felt252,
         pub values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct StoreUpdateMember {
+        #[key]
         pub table: felt252,
+        #[key]
         pub entity_id: felt252,
+        #[key]
         pub member_selector: felt252,
         pub values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct StoreDelRecord {
+        #[key]
         pub table: felt252,
+        #[key]
         pub entity_id: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct WriterUpdated {
+        #[key]
         pub resource: felt252,
+        #[key]
         pub contract: ContractAddress,
         pub value: bool
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct OwnerUpdated {
+        #[key]
         pub address: ContractAddress,
+        #[key]
         pub resource: felt252,
         pub value: bool,
     }
