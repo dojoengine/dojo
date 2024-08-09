@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723146026737,
+  "lastUpdate": 1723188847862,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14689,6 +14689,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4010777,
             "range": "± 332884",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ejembioche50@gmail.com",
+            "name": "Oche",
+            "username": "EjembiEmmanuel"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39f60a88b7140d94c577e9dd50a680d107f8f28d",
+          "message": "feat: implement sozo init versioning (#2262)\n\n* feat: implement sozo init versioning\r\n\r\n* refac: improve error handling\r\n\r\n* feat: fallback to latest version if specific tag is unavailable\r\n\r\n* fix: require specifying argument for `template`\r\n\r\n* test: refact sozo test_init\r\n\r\n* refac: change init warning msg\r\n\r\n* fix: fix linting isuues\r\n\r\n* fix: fix linting issues\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-08-09T12:44:40+05:30",
+          "tree_id": "3a90154704861a053591f97e8309b8a52b55d27b",
+          "url": "https://github.com/dojoengine/dojo/commit/39f60a88b7140d94c577e9dd50a680d107f8f28d"
+        },
+        "date": 1723188847033,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17364857,
+            "range": "± 604776",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3775002,
+            "range": "± 141882",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 4042616349,
+            "range": "± 840669117",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4045404,
+            "range": "± 116571",
             "unit": "ns/iter"
           }
         ]
