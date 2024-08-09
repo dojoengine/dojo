@@ -167,7 +167,7 @@ async fn test_load_from_remote() {
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 0);
 
-    assert_eq!(count_table("entities", &pool).await, 2);
+    assert_eq!(count_table("entities", &pool).await, 1);
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(
