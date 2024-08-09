@@ -55,6 +55,8 @@ pub enum PrimitiveError {
     NotEnoughFieldElements,
     #[error("Unsupported CairoType for SQL formatting")]
     UnsupportedType,
+    #[error("Invalid byte length: {0}. expected {1}")]
+    InvalidByteLength(usize, usize),
     #[error("Set value type mismatch")]
     TypeMismatch,
     #[error("Felt value ({value:#x}) out of range for {r#type}")]
@@ -166,18 +168,20 @@ impl Primitive {
 
     pub fn to_sql_type(&self) -> SqlType {
         match self {
+            // sqlite integer is 64-bit signed integer
             Primitive::I8(_)
             | Primitive::I16(_)
             | Primitive::I32(_)
             | Primitive::I64(_)
-            | Primitive::I128(_)
             | Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::USize(_)
             | Primitive::Bool(_) => SqlType::Integer,
 
+            // u64 cannot fit into a i64, so we use text
             Primitive::U64(_)
+            | Primitive::I128(_)
             | Primitive::U128(_)
             | Primitive::U256(_)
             | Primitive::ContractAddress(_)
@@ -194,11 +198,11 @@ impl Primitive {
         }
 
         match self {
+            // Integers
             Primitive::I8(_) => Ok(format!("{}", try_from_felt::<i8>(value[0])?)),
             Primitive::I16(_) => Ok(format!("{}", try_from_felt::<i16>(value[0])?)),
             Primitive::I32(_) => Ok(format!("{}", try_from_felt::<i32>(value[0])?)),
             Primitive::I64(_) => Ok(format!("{}", try_from_felt::<i64>(value[0])?)),
-            Primitive::I128(_) => Ok(format!("{}", try_from_felt::<i128>(value[0])?)),
 
             Primitive::U8(_)
             | Primitive::U16(_)
@@ -206,11 +210,13 @@ impl Primitive {
             | Primitive::USize(_)
             | Primitive::Bool(_) => Ok(format!("{}", value[0])),
 
-            Primitive::U64(_)
-            | Primitive::U128(_)
-            | Primitive::ContractAddress(_)
+            // Hex string
+            Primitive::I128(_) => Ok(format!("{:#064x}", try_from_felt::<i128>(value[0])?)),
+            Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
-            | Primitive::Felt252(_) => Ok(format!("0x{:064x}", value[0])),
+            | Primitive::Felt252(_)
+            | Primitive::U128(_)
+            | Primitive::U64(_) => Ok(format!("{:#064x}", value[0])),
 
             Primitive::U256(_) => {
                 if value.len() < 2 {

@@ -3,8 +3,9 @@ use std::io::Write;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
+use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
 use dojo_test_utils::rpc::MockJsonRpcTransport;
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
@@ -18,7 +19,6 @@ use super::{
     OverlayManifest,
 };
 use crate::contracts::naming::{get_filename_from_tag, get_tag};
-use crate::contracts::world::test::deploy_world;
 use crate::manifest::{
     parse_models_events, AbstractManifestError, DeploymentManifest, Manifest, OverlayClass,
     OverlayDojoModel, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
@@ -299,9 +299,10 @@ fn events_without_block_number_arent_parsed() {
 
 #[test]
 fn fetch_remote_manifest() {
-    let runner = KatanaRunner::new().expect("Fail to set runner");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
-    let account = runner.account(0);
+    let account = sequencer.account(0);
     let provider = account.provider();
 
     let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
@@ -309,27 +310,22 @@ fn fetch_remote_manifest() {
     let profile_name = Profile::DEV.to_string();
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
+    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
     let dojo_metadata =
         dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
-    let temp_project_dir = config.manifest_path().parent().unwrap();
-    let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
-
-    let default_namespace = ws.current_package().unwrap().id.name.to_string();
-
-    let world_address = config.tokio_handle().block_on(async {
-        deploy_world(
-            &runner,
-            &temp_project_dir.to_path_buf(),
-            &artifacts_path.to_path_buf(),
-            dojo_metadata.skip_migration.clone(),
-            &default_namespace,
-        )
-        .await
-    });
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path.clone(),
+        target_dir,
+        None,
+        "dojo_examples",
+        "dojo_examples",
+    )
+    .unwrap();
 
     let mut local_manifest = BaseManifest::load_from_path(
-        &temp_project_dir.join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
+        &manifest_path.join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
 
@@ -337,7 +333,7 @@ fn fetch_remote_manifest() {
         local_manifest.remove_tags(skip_manifests);
     }
 
-    let overlay_dir = temp_project_dir.join(OVERLAYS_DIR).join(&profile_name);
+    let overlay_dir = manifest_path.join(OVERLAYS_DIR).join(&profile_name);
     if overlay_dir.exists() {
         let overlay_manifest =
             OverlayManifest::load_from_path(&overlay_dir, &local_manifest).unwrap();
@@ -346,7 +342,7 @@ fn fetch_remote_manifest() {
     }
 
     let remote_manifest = config.tokio_handle().block_on(async {
-        DeploymentManifest::load_from_remote(provider, world_address).await.unwrap()
+        DeploymentManifest::load_from_remote(provider, strat.world_address).await.unwrap()
     });
 
     assert_eq!(local_manifest.models.len(), 10);

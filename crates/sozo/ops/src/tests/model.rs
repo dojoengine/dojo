@@ -1,7 +1,8 @@
+use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_world::contracts::abi::model::{FieldLayout, Layout};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::Account;
 use starknet::core::types::Felt;
@@ -13,9 +14,10 @@ use crate::{execute, model};
 // migration for now. Should be replaced by individual tests once Katana spinning up is enhanced.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model_ops() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
     assert_eq!(
         model::model_class_hash(
@@ -37,7 +39,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x7e8a5a21642b9dee8359abc31f941bfe5d5cc56a06d0c20a95386e8adcf3082")
+        Felt::from_hex("0x4d5b174443cebee9e7c7c812b427b7d7bb3c8f57cd3742f66eabda68212bd50")
             .unwrap()
     );
 

@@ -29,5 +29,12 @@ cargo run -r --bin sozo -- build --manifest-path examples/spawn-and-move/Scarb.t
 cargo run -r --bin sozo -- build --manifest-path crates/torii/types-test/Scarb.toml
 cargo run -r --bin sozo -- build --manifest-path crates/dojo-lang/src/manifest_test_data/compiler_cairo/Scarb.toml
 
-# Finally, to include all the examples manifest, you should re-deploy the examples.
+# Generates the database for testing by migrating the spawn and move example.
+cargo generate-test-db
+# Ensure the user has locally the db dir in /tmp.
+rm -rf /tmp/spawn-and-move-db
+rm -rf /tmp/types-test-db
+tar xzf spawn-and-move-db.tar.gz -C /tmp/
+tar xzf types-test-db.tar.gz -C /tmp/
+
 cargo run -r --bin sozo -- --offline migrate apply --manifest-path examples/spawn-and-move/Scarb.toml

@@ -7,7 +7,7 @@ use starknet::core::utils::{CairoShortStringToFeltError, NonAsciiNameError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("parsing error: {0}")]
+    #[error("Parsing error: {0}")]
     Parse(#[from] ParseError),
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
@@ -33,18 +33,22 @@ pub enum ParseError {
     CairoSerdeError(#[from] cainome::cairo_serde::Error),
     #[error(transparent)]
     FromJsonStr(#[from] serde_json::Error),
+    #[error(transparent)]
+    FromSlice(#[from] std::array::TryFromSliceError),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum QueryError {
-    #[error("unsupported query")]
+    #[error("Unsupported query")]
     UnsupportedQuery,
-    #[error("missing param: {0}")]
+    #[error("Missing param: {0}")]
     MissingParam(String),
-    #[error("model not found: {0}")]
+    #[error("Unsupported value for primitive: {0}")]
+    UnsupportedValue(String),
+    #[error("Model not found: {0}")]
     ModelNotFound(String),
-    #[error("exceeds sqlite `JOIN` limit (64)")]
+    #[error("Exceeds sqlite `JOIN` limit (64)")]
     SqliteJoinLimit,
-    #[error("invalid namespaced model: {0}")]
+    #[error("Invalid namespaced model: {0}")]
     InvalidNamespacedModel(String),
 }
