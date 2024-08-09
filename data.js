@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723229762396,
+  "lastUpdate": 1723234157276,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14833,6 +14833,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3922330,
             "range": "± 59009",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f15def330c0d099e79351d11c197f63e8cc1ff36",
+          "message": "remove computed attribute (#2272)\n\n* remove computed attribute\r\n\r\n* fix: update test databases\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-09T15:49:41-04:00",
+          "tree_id": "6f4c2fc376c37ff57fb143d766ffb61561fb0021",
+          "url": "https://github.com/dojoengine/dojo/commit/f15def330c0d099e79351d11c197f63e8cc1ff36"
+        },
+        "date": 1723234156244,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17338864,
+            "range": "± 200580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3848667,
+            "range": "± 522691",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 4035516628,
+            "range": "± 793238228",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3954179,
+            "range": "± 182422",
             "unit": "ns/iter"
           }
         ]
