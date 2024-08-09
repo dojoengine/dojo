@@ -163,12 +163,12 @@ pub async fn start(
 
     let block_producer = if sequencer_config.block_time.is_some() || sequencer_config.no_mining {
         if let Some(interval) = sequencer_config.block_time {
-            BlockProducer::interval(Arc::clone(&backend), interval)
+            BlockProducer::interval(pool.clone(), Arc::clone(&backend), interval)
         } else {
-            BlockProducer::on_demand(Arc::clone(&backend))
+            BlockProducer::on_demand(pool.clone(), Arc::clone(&backend))
         }
     } else {
-        BlockProducer::instant(Arc::clone(&backend))
+        BlockProducer::instant(pool.clone(), Arc::clone(&backend))
     };
 
     // --- build metrics service
