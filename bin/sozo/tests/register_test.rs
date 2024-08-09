@@ -27,7 +27,7 @@ async fn reregister_models() {
 
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
-    let migration = prepare_migration(
+    let (migration, _) = prepare_migration(
         config.manifest_path().parent().unwrap().into(),
         target_path,
         dojo_metadata.skip_migration,

@@ -161,7 +161,7 @@ impl DojoContract {
                 node: Box::new(RewriteNode::interpolate_patched(
                     "
                 #[starknet::contract]
-                mod $name$ {
+                pub mod $name$ {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;

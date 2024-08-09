@@ -3,14 +3,14 @@ use std::sync::Arc;
 
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::prepare_migration;
-use dojo_world::contracts::WorldContractReader;
+use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::metadata::{dojo_metadata_from_workspace, get_default_namespace_from_ws};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
 use scarb::ops;
-use sozo_ops::migration::execute_strategy;
+use sozo_ops::migration::{auto_authorize, execute_strategy, find_authorization_diff};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
 use starknet::core::types::{BlockId, BlockTag};
@@ -39,6 +39,7 @@ async fn test_entities_queries() {
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+    let ui = config.ui();
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
@@ -49,7 +50,7 @@ async fn test_entities_queries() {
 
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
-    let migration = prepare_migration(
+    let (migration, diff) = prepare_migration(
         config.manifest_path().parent().unwrap().into(),
         target_path,
         dojo_metadata.skip_migration,
@@ -58,19 +59,30 @@ async fn test_entities_queries() {
     .unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
-
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
-
-    let world = WorldContractReader::new(migration.world_address, &provider);
-
     let account = sequencer.account(0);
 
+    let world_reader = WorldContractReader::new(migration.world_address, &provider);
+    let world = WorldContract::new(migration.world_address, sequencer.account(0))
+        .with_block(BlockId::Tag(BlockTag::Pending));
+
     let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+        execute_strategy(&ws, &migration, sequencer.account(0), TxnConfig::init_wait())
+            .await
+            .unwrap();
 
     let world_address = migration_output.world_address;
 
     println!("output {:?}", migration_output);
+
+    let (grant, revoke) =
+        find_authorization_diff(&ui, &world, &diff, Some(&migration_output), &default_namespace)
+            .await
+            .unwrap();
+
+    auto_authorize(&ws, &world, &TxnConfig::init_wait(), &default_namespace, &grant, &revoke)
+        .await
+        .unwrap();
 
     // spawn
     let tx = account
@@ -101,7 +113,7 @@ async fn test_entities_queries() {
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
-        world,
+        world_reader,
         db.clone(),
         &provider,
         Processors {

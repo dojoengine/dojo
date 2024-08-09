@@ -1,11 +1,8 @@
 use dojo::model::{Model, ModelEntity};
-use dojo::utils::test::{spawn_test_world};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-// Utils
-fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world("dojo", array![])
-}
+use dojo::tests::helpers::{deploy_world};
+use dojo::utils::test::{spawn_test_world};
 
 #[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
