@@ -96,4 +96,3 @@ fn compress_db(db_path: &Path, compressed_path: &str) {
         .status()
         .expect("Failed to compress test-db directory");
 }
-
