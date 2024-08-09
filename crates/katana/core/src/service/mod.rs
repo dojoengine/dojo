@@ -99,6 +99,7 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                 match res {
                     Ok(outcome) => {
                         info!(target: LOG_TARGET, block_number = %outcome.block_number, "Mined block.");
+                        // remove transactions that have been included in the block from the pool
                         pin.pool.remove_transactions(&outcome.txs);
 
                         let metrics = &pin.metrics.block_producer;
