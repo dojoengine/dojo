@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723213823927,
+  "lastUpdate": 1723229762396,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14785,6 +14785,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4701260,
             "range": "± 594260",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c6a41ac9c4a2ebfc8205d083bcc2e64458c5ff9b",
+          "message": "xtask: generate katana test db (#2271)\n\n* wip\r\n\r\n* wip\r\n\r\n* fix: revamp testing to use prefilled database\r\n\r\n* fix: keep refactoring tests\r\n\r\n* fix: fix name of spawn and move db\r\n\r\n* fix: fix clippy and fmt\r\n\r\n* fix: fix tests\r\n\r\n* fix: fix test setup\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-09T14:36:34-04:00",
+          "tree_id": "0b59c652681acc7bf790e85d89742c00f64690a6",
+          "url": "https://github.com/dojoengine/dojo/commit/c6a41ac9c4a2ebfc8205d083bcc2e64458c5ff9b"
+        },
+        "date": 1723229761384,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17299078,
+            "range": "± 271898",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3795005,
+            "range": "± 69833",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3851402327,
+            "range": "± 784121411",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3922330,
+            "range": "± 59009",
             "unit": "ns/iter"
           }
         ]
