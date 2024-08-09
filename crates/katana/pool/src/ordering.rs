@@ -26,7 +26,7 @@ pub struct Fcfs<T> {
     _tx: PhantomData<T>,
 }
 
-impl<T: PoolTransaction> Fcfs<T> {
+impl<T> Fcfs<T> {
     pub fn new() -> Self {
         Self { nonce: AtomicU64::new(0), _tx: PhantomData }
     }
@@ -38,6 +38,12 @@ impl<T: PoolTransaction> PoolOrd for Fcfs<T> {
 
     fn priority(&self, _: &Self::Transaction) -> Self::PriorityValue {
         TxSubmissionNonce(self.nonce.fetch_add(1, AtomicOrdering::Relaxed))
+    }
+}
+
+impl<T> Default for Fcfs<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -72,7 +78,7 @@ impl PartialEq for TxSubmissionNonce {
 #[derive(Debug)]
 pub struct Tip<T>(PhantomData<T>);
 
-impl<T: PoolTransaction> Tip<T> {
+impl<T> Tip<T> {
     pub fn new() -> Self {
         Self(PhantomData)
     }
@@ -84,5 +90,11 @@ impl<T: PoolTransaction> PoolOrd for Tip<T> {
 
     fn priority(&self, tx: &Self::Transaction) -> Self::PriorityValue {
         tx.tip()
+    }
+}
+
+impl<T> Default for Tip<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }

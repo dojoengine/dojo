@@ -9,7 +9,7 @@ pub struct Error {
     /// The hash of the transaction that failed validation.
     pub hash: TxHash,
     /// The error that caused the transaction to fail validation.
-    pub error: ExecutionError,
+    pub error: Box<ExecutionError>,
 }
 
 pub type ValidationResult<T> = Result<ValidationOutcome<T>, Error>;
@@ -55,5 +55,11 @@ impl<T: PoolTransaction> Validator for NoopValidator<T> {
 
     fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
         ValidationResult::Ok(ValidationOutcome::Valid(tx))
+    }
+}
+
+impl<T> Default for NoopValidator<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -102,13 +102,13 @@ impl PoolTransaction for ExecutableTxWithHash {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
                 InvokeTx::V1(v1) => v1.nonce,
-                InvokeTx::V3(v3) => v3.nonce.into(),
+                InvokeTx::V3(v3) => v3.nonce,
             },
             ExecutableTx::L1Handler(tx) => tx.nonce,
             ExecutableTx::Declare(tx) => match &tx.transaction {
-                DeclareTx::V1(v1) => v1.nonce.into(),
-                DeclareTx::V2(v2) => v2.nonce.into(),
-                DeclareTx::V3(v3) => v3.nonce.into(),
+                DeclareTx::V1(v1) => v1.nonce,
+                DeclareTx::V2(v2) => v2.nonce,
+                DeclareTx::V3(v3) => v3.nonce,
             },
             ExecutableTx::DeployAccount(tx) => match tx {
                 DeployAccountTx::V1(v1) => v1.nonce,
