@@ -534,7 +534,7 @@ mod tests {
     }
 
     #[test]
-    fn tip_ordering() {
+    fn txs_ordering() {
         // Create mock transactions with different tips and in random order
         let txs = [
             PoolTx::new().with_tip(1),
