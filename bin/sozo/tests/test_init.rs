@@ -9,5 +9,11 @@ fn test_init() {
 
     let assert = get_snapbox().arg("init").current_dir(&pt).assert().success();
 
-    assert.stdout_eq(expected_stdout("init"));
+    let output = format!("{:#?}", assert.get_output());
+
+    if output.contains("Couldn't find template for your current sozo version.") {
+        assert.stdout_eq(expected_stdout("init_default"));
+    } else {
+        assert.stdout_eq(expected_stdout("init"));
+    }
 }

@@ -50,7 +50,7 @@ pub fn setup_ws(config: &Config) -> Workspace<'_> {
 /// # Returns
 ///
 /// A [`MigrationStrategy`] to execute to migrate the full spawn-and-moves project.
-pub fn setup_migration(config: &Config) -> Result<(MigrationStrategy, WorldDiff)> {
+pub fn setup_migration(config: &Config, seed: &str) -> Result<(MigrationStrategy, WorldDiff)> {
     let ws = setup_ws(config);
 
     let manifest_path = config.manifest_path();
@@ -63,7 +63,7 @@ pub fn setup_migration(config: &Config) -> Result<(MigrationStrategy, WorldDiff)
         base_dir.into(),
         target_dir.into(),
         None,
-        "sozo_test",
+        seed,
         &default_namespace,
     )
 }
@@ -84,7 +84,7 @@ pub async fn setup(
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let (migration, _) = setup_migration(&config)?;
+    let (migration, _) = setup_migration(&config, "dojo_examples")?;
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -98,6 +98,32 @@ pub async fn setup(
     .await?;
     // TODO: do we need to do authorization in setup?
     let world = WorldContract::new(output.world_address, account)
+        .with_block(BlockId::Tag(BlockTag::Pending));
+
+    Ok(world)
+}
+
+/// Setups the project from an runner starting with an existing world.
+///
+/// # Arguments
+///
+/// * `sequencer` - The sequencer used for tests.
+///
+/// # Returns
+///
+/// A [`WorldContract`] initialized with the migrator account,
+/// the account 0 of the sequencer.
+pub async fn setup_with_world(
+    sequencer: &KatanaRunner,
+) -> Result<WorldContract<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>> {
+    let config = load_config();
+
+    let (migration, _) = setup_migration(&config, "dojo_examples")?;
+
+    let mut account = sequencer.account(0);
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+    let world = WorldContract::new(migration.world_address, account)
         .with_block(BlockId::Tag(BlockTag::Pending));
 
     Ok(world)
