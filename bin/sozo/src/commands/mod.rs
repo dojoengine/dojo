@@ -21,6 +21,7 @@ pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod print_env;
 pub(crate) mod register;
+pub(crate) mod selector;
 pub(crate) mod test;
 
 use account::AccountArgs;
@@ -68,6 +69,8 @@ pub enum Commands {
     Model(ModelArgs),
     #[command(about = "Register new models")]
     Register(RegisterArgs),
+    #[command(about = "Select a model")]
+    Selector(selector::SelectorArgs),
     #[command(about = "Queries world events")]
     Events(EventsArgs),
     #[command(about = "Manage world authorization")]
@@ -93,6 +96,7 @@ impl fmt::Display for Commands {
             Commands::Call(_) => write!(f, "Call"),
             Commands::Model(_) => write!(f, "Model"),
             Commands::Register(_) => write!(f, "Register"),
+            Commands::Selector(_) => write!(f, "Selector"),
             Commands::Events(_) => write!(f, "Events"),
             Commands::Auth(_) => write!(f, "Auth"),
             Commands::Completions(_) => write!(f, "Completions"),
@@ -120,6 +124,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Call(args) => args.run(config),
         Commands::Model(args) => args.run(config),
         Commands::Register(args) => args.run(config),
+        Commands::Selector(args) => args.run(config),
         Commands::Events(args) => args.run(config),
         Commands::PrintEnv(args) => args.run(config),
         Commands::Completions(args) => args.run(),
