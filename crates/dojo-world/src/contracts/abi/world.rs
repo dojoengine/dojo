@@ -146,6 +146,32 @@ abigen!(
   },
   {
     "type": "enum",
+    "name": "dojo::world::world_contract::Resource",
+    "variants": [
+      {
+        "name": "Model",
+        "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
+      },
+      {
+        "name": "Contract",
+        "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
+      },
+      {
+        "name": "Namespace",
+        "type": "()"
+      },
+      {
+        "name": "World",
+        "type": "()"
+      },
+      {
+        "name": "Unregistered",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "enum",
     "name": "core::bool",
     "variants": [
       {
@@ -189,38 +215,6 @@ abigen!(
         ],
         "outputs": [],
         "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "model",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "contract",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
-          }
-        ],
-        "state_mutability": "view"
       },
       {
         "type": "function",
@@ -392,6 +386,22 @@ abigen!(
         "outputs": [
           {
             "type": "core::starknet::class_hash::ClassHash"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "resource",
+        "inputs": [
+          {
+            "name": "selector",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "dojo::world::world_contract::Resource"
           }
         ],
         "state_mutability": "view"

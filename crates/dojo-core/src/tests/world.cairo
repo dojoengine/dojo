@@ -19,7 +19,7 @@ use dojo::utils::test::{spawn_test_world, deploy_with_world_address, assert_arra
 use dojo::utils::entity_id_from_keys;
 use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
-    IUpgradeableWorldDispatcherTrait
+    IUpgradeableWorldDispatcherTrait, Resource
 };
 use dojo::world::world::NamespaceRegistered;
 
@@ -441,11 +441,15 @@ fn test_contract_getter() {
             'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
         );
 
-    let (class_hash, _) = world.contract(selector_from_tag!("dojo-test_contract"));
-    assert(
-        class_hash == test_contract::TEST_CLASS_HASH.try_into().unwrap(),
-        'invalid contract class hash'
-    );
+    if let Resource::Contract((class_hash, _)) = world
+        .resource(selector_from_tag!("dojo-test_contract")) {
+        assert(
+            class_hash == test_contract::TEST_CLASS_HASH.try_into().unwrap(),
+            'invalid contract class hash'
+        );
+    } else {
+        core::panic_with_felt252('invalid resource type');
+    }
 }
 
 #[test]
@@ -454,8 +458,11 @@ fn test_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let (foo_class_hash, _) = world.model(Model::<Foo>::selector());
-    assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+    if let Resource::Model((foo_class_hash, _)) = world.resource(Model::<Foo>::selector()) {
+        assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+    } else {
+        core::panic_with_felt252('invalid resource type');
+    }
 }
 
 #[test]
@@ -465,8 +472,11 @@ fn test_legacy_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let (foo_class_hash, _) = world.model('Foo');
-    assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+    if let Resource::Model((foo_class_hash, _)) = world.resource(Model::<Foo>::selector()) {
+        assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+    } else {
+        core::panic_with_felt252('invalid resource type');
+    }
 }
 
 #[test]

@@ -80,6 +80,10 @@ async fn test_model() {
         felt!("0x5af60d63e6a1d25fc117fde1fa7e1d628adc46a52c3d007541ed6dd369e8ea")
     );
 
+    // accessing to an unknown model should return an error
+    let res = world.model_reader("dojo_examples", "UnknownModel").await;
+    assert!(res.is_err());
+
     let moves = world.model_reader("dojo_examples", "Moves").await.unwrap();
     let schema = moves.schema().await.unwrap();
 
