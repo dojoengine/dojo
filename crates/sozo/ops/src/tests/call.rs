@@ -14,7 +14,7 @@ const ENTRYPOINT: &str = "get_player_position";
 
 #[tokio::test]
 async fn call_with_bad_address() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -36,7 +36,7 @@ async fn call_with_bad_address() {
 
 #[tokio::test]
 async fn call_with_bad_name() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -58,7 +58,7 @@ async fn call_with_bad_name() {
 
 #[tokio::test]
 async fn call_with_bad_entrypoint() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -80,7 +80,7 @@ async fn call_with_bad_entrypoint() {
 
 #[tokio::test]
 async fn call_with_bad_calldata() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -102,7 +102,7 @@ async fn call_with_bad_calldata() {
 
 #[tokio::test]
 async fn call_with_contract_name() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -118,7 +118,7 @@ async fn call_with_contract_name() {
 
 #[tokio::test]
 async fn call_with_contract_address() {
-    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/test-db");
+    let config = KatanaRunnerConfig::default().with_db_dir("/tmp/spawn-and-move-db");
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
