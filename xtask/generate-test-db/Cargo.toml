@@ -1,0 +1,14 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "xtask-generate-test-db"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+dojo-test-utils.workspace = true
+dojo-world = { workspace = true, features = [ "migration" ] }
+katana-runner.workspace = true
+scarb.workspace = true
+sozo-ops = { workspace = true, features = [ "test-utils" ] }
+tokio.workspace = true

@@ -68,6 +68,41 @@ impl CompilerTestSetup {
     }
 }
 
+/// Copies a directory into a temporary directory.
+///
+/// # Returns
+///
+/// A [`Utf8PathBuf`] object pointing to the copied directory.
+pub fn copy_tmp_dir(source_dir: &Utf8PathBuf) -> Utf8PathBuf {
+    let temp_project_dir = Utf8PathBuf::from(
+        assert_fs::TempDir::new().unwrap().to_path_buf().to_string_lossy().to_string(),
+    );
+
+    fn copy_dir_recursively(src: &PathBuf, dst: &PathBuf) -> io::Result<()> {
+        if src.is_dir() {
+            fs::create_dir_all(dst)?;
+            for entry in fs::read_dir(src)? {
+                let entry = entry?;
+                let path = entry.path();
+                let dst_path = dst.join(path.file_name().unwrap());
+                if path.is_dir() {
+                    copy_dir_recursively(&path, &dst_path)?;
+                } else {
+                    fs::copy(&path, &dst_path)?;
+                }
+            }
+        } else {
+            fs::copy(src, dst)?;
+        }
+        Ok(())
+    }
+
+    copy_dir_recursively(&source_dir.to_path_buf().into(), &temp_project_dir.to_path_buf().into())
+        .unwrap_or_else(|e| panic!("Failed to copy directory: {}", e));
+
+    temp_project_dir
+}
+
 /// Copies a project into a temporary directory and loads a config from the copied project.
 ///
 /// # Returns

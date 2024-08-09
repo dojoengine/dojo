@@ -1,8 +1,9 @@
 use std::str::FromStr;
 
+use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag};
@@ -16,9 +17,10 @@ const DEFAULT_NAMESPACE: &str = "dojo_examples";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_writer_ok() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
     // Shouldn't have any permission at this point.
     let account2 = sequencer.account(1);
@@ -56,9 +58,10 @@ async fn auth_grant_writer_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_writer_ok() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
     // Shouldn't have any permission at this point.
     let account2 = sequencer.account(1);
@@ -113,9 +116,10 @@ async fn auth_revoke_writer_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_owner_ok() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
     // Shouldn't have any permission at this point.
     let account_2 = sequencer.account(1);
@@ -153,9 +157,10 @@ async fn auth_grant_owner_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_owner_ok() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
     // Shouldn't have any permission at this point.
     let account_2 = sequencer.account(1);
@@ -222,8 +227,6 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
         &TxnConfig::init_wait(),
     )
     .await;
-
-    println!("ERR {:?}", r);
 
     r.is_ok()
 }

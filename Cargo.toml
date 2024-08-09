@@ -42,6 +42,7 @@ members = [
 	"crates/torii/server",
 	"crates/torii/types-test",
 	"examples/spawn-and-move",
+	"xtask/generate-test-db",
 ]
 
 [workspace.package]

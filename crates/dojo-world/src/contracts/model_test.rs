@@ -1,20 +1,22 @@
+use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
+use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use starknet::accounts::ConnectedAccount;
 use starknet::macros::felt;
 
 use crate::contracts::model::ModelReader;
-use crate::contracts::world::test::deploy_world;
 use crate::contracts::world::WorldContractReader;
-use crate::metadata::dojo_metadata_from_workspace;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model() {
-    let runner = KatanaRunner::new().expect("Fail to set runner");
-    let account = runner.account(0);
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
+
+    let account = sequencer.account(0);
     let provider = account.provider();
 
     let setup = CompilerTestSetup::from_examples("../dojo-core", "../../examples/");
@@ -23,22 +25,16 @@ async fn test_model() {
     let manifest_dir = config.manifest_path().parent().unwrap();
     let target_dir = manifest_dir.join("target").join("dev");
 
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let dojo_metadata =
-        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
-
-    let default_namespace = ws.current_package().unwrap().id.name.to_string();
-
-    let world_address = deploy_world(
-        &runner,
-        &manifest_dir.into(),
-        &target_dir,
-        dojo_metadata.skip_migration,
-        &default_namespace,
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        Utf8PathBuf::from(&manifest_dir),
+        Utf8PathBuf::from(&target_dir),
+        None,
+        "dojo_examples",
+        "dojo_examples",
     )
-    .await;
+    .unwrap();
 
-    let world = WorldContractReader::new(world_address, provider);
+    let world = WorldContractReader::new(strat.world_address, provider);
     let position = world.model_reader("dojo_examples", "Position").await.unwrap();
     let schema = position.schema().await.unwrap();
 

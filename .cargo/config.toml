@@ -1,0 +1,2 @@
+[alias]
+generate-test-db = "run --manifest-path ./xtask/generate-test-db/Cargo.toml --"

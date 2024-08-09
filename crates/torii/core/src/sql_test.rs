@@ -1,17 +1,18 @@
 use std::str::FromStr;
 
+use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
+use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
-use sozo_ops::migration;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
-use starknet::core::utils::get_selector_from_name;
+use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
@@ -64,35 +65,34 @@ async fn test_load_from_remote() {
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
+    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
 
-    let migration_output = migration::migrate(
-        &ws,
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path,
+        target_dir,
         None,
-        sequencer.url().to_string(),
-        account,
         "dojo_examples",
-        false,
-        TxnConfig::init_wait(),
-        None,
+        "dojo_examples",
     )
-    .await
-    .unwrap()
     .unwrap();
 
-    let account = sequencer.account(0);
+    let actions = strat.contracts.first().unwrap();
+    let actions_address = get_contract_address(
+        actions.salt,
+        strat.base.as_ref().unwrap().diff.local_class_hash,
+        &[],
+        strat.world_address,
+    );
+
     // spawn
     let tx = &account
         .execute_v1(vec![Call {
-            to: migration_output
-                .contracts
-                .first()
-                .expect("shouldn't be empty")
-                .as_ref()
-                .expect("should be deployed")
-                .contract_address,
+            to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
         }])
@@ -102,7 +102,7 @@ async fn test_load_from_remote() {
 
     TransactionWaiter::new(tx.transaction_hash, &account.provider()).await.unwrap();
 
-    let world_reader = WorldContractReader::new(migration_output.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
     let mut db = Sql::new(
         pool.clone(),
@@ -197,35 +197,33 @@ async fn test_load_from_remote_del() {
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
+    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
 
-    let migration_output = migration::migrate(
-        &ws,
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path,
+        target_dir,
         None,
-        sequencer.url().to_string(),
-        account,
         "dojo_examples",
-        false,
-        TxnConfig::init_wait(),
-        None,
+        "dojo_examples",
     )
-    .await
-    .unwrap()
     .unwrap();
+    let actions = strat.contracts.first().unwrap();
+    let actions_address = get_contract_address(
+        actions.salt,
+        strat.base.as_ref().unwrap().diff.local_class_hash,
+        &[],
+        strat.world_address,
+    );
 
-    let account = sequencer.account(0);
     // spawn
     account
         .execute_v1(vec![Call {
-            to: migration_output
-                .contracts
-                .first()
-                .expect("shouldn't be empty")
-                .as_ref()
-                .expect("should be deployed")
-                .contract_address,
+            to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
         }])
@@ -238,13 +236,7 @@ async fn test_load_from_remote_del() {
     // Set player config.
     account
         .execute_v1(vec![Call {
-            to: migration_output
-                .contracts
-                .first()
-                .expect("shouldn't be empty")
-                .as_ref()
-                .expect("should be deployed")
-                .contract_address,
+            to: actions_address,
             selector: get_selector_from_name("set_player_config").unwrap(),
             // Empty ByteArray.
             calldata: vec![Felt::ZERO, Felt::ZERO, Felt::ZERO],
@@ -257,13 +249,7 @@ async fn test_load_from_remote_del() {
 
     account
         .execute_v1(vec![Call {
-            to: migration_output
-                .contracts
-                .first()
-                .expect("shouldn't be empty")
-                .as_ref()
-                .expect("should be deployed")
-                .contract_address,
+            to: actions_address,
             selector: get_selector_from_name("reset_player_config").unwrap(),
             calldata: vec![],
         }])
@@ -273,7 +259,7 @@ async fn test_load_from_remote_del() {
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    let world_reader = WorldContractReader::new(migration_output.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
     let mut db = Sql::new(
         pool.clone(),
@@ -310,35 +296,34 @@ async fn test_get_entity_keys() {
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
 
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
+    let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
-    let account = sequencer.account(0);
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
-    let migration_output = migration::migrate(
-        &ws,
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path,
+        target_dir,
         None,
-        sequencer.url().to_string(),
-        account,
         "dojo_examples",
-        false,
-        TxnConfig::init_wait(),
-        None,
+        "dojo_examples",
     )
-    .await
-    .unwrap()
     .unwrap();
+
+    let actions = strat.contracts.first().unwrap();
+    let actions_address = get_contract_address(
+        actions.salt,
+        strat.base.as_ref().unwrap().diff.local_class_hash,
+        &[],
+        strat.world_address,
+    );
 
     let account = sequencer.account(0);
     // spawn
     account
         .execute_v1(vec![Call {
-            to: migration_output
-                .contracts
-                .first()
-                .expect("shouldn't be empty")
-                .as_ref()
-                .expect("should be deployed")
-                .contract_address,
+            to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
         }])
@@ -348,7 +333,7 @@ async fn test_get_entity_keys() {
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    let world_reader = WorldContractReader::new(migration_output.world_address, account.provider());
+    let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
     let mut db = Sql::new(
         pool.clone(),

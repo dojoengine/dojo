@@ -1,6 +1,7 @@
+use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 
@@ -11,9 +12,10 @@ const ACTION_CONTRACT_TAG: &str = "dojo_examples-actions";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_world() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
     let contract_address = utils::get_contract_address(&world, ACTION_CONTRACT_TAG).await.unwrap();
 
@@ -34,9 +36,10 @@ async fn get_contract_address_from_string() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn get_contract_address_from_world_with_world_reader() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
     let account = sequencer.account(0);
     let provider = account.provider();
     let world_reader = WorldContractReader::new(world.address, provider);

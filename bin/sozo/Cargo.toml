@@ -41,6 +41,7 @@ notify = "6.0.1"
 num-bigint = "0.4.3"
 num-integer = "0.1.45"
 prettytable-rs = "0.10.0"
+regex.workspace = true
 rpassword.workspace = true
 scarb-ui.workspace = true
 scarb.workspace = true

@@ -105,6 +105,8 @@ mod tests {
 
         let temp_project_dir = config.manifest_path().parent().unwrap().to_path_buf();
 
+        println!("temp_project_dir: {:?}", temp_project_dir);
+
         let clean_cmd = CleanArgs { full: false, all_profiles: false };
         clean_cmd.run(&config).unwrap();
 
@@ -143,7 +145,7 @@ mod tests {
         );
         assert!(
             fs::read_dir(&dev_manifests_abis_depl_dir).is_ok(),
-            "Expected 'manifests/dev/deployment/abis' to not be empty"
+            "Expected 'manifests/dev/deployment/abis' to be non empty"
         );
 
         // we expect release profile to be not affected
@@ -214,7 +216,7 @@ mod tests {
         );
         assert!(
             fs::read_dir(&dev_manifests_abis_depl_dir).is_ok(),
-            "Expected 'manifests/dev/deployment/abis' to not be empty"
+            "Expected 'manifests/dev/deployment/abis' to be empty"
         );
 
         assert!(
