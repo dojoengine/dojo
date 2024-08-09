@@ -14,6 +14,7 @@ pub(crate) mod completions;
 pub(crate) mod dev;
 pub(crate) mod events;
 pub(crate) mod execute;
+pub(crate) mod hash;
 pub(crate) mod init;
 pub(crate) mod keystore;
 pub(crate) mod migrate;
@@ -21,7 +22,6 @@ pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod print_env;
 pub(crate) mod register;
-pub(crate) mod selector;
 pub(crate) mod test;
 
 use account::AccountArgs;
@@ -70,7 +70,7 @@ pub enum Commands {
     #[command(about = "Register new models")]
     Register(RegisterArgs),
     #[command(about = "Select a model")]
-    Selector(selector::SelectorArgs),
+    Hash(hash::HashArgs),
     #[command(about = "Queries world events")]
     Events(EventsArgs),
     #[command(about = "Manage world authorization")]
@@ -96,7 +96,7 @@ impl fmt::Display for Commands {
             Commands::Call(_) => write!(f, "Call"),
             Commands::Model(_) => write!(f, "Model"),
             Commands::Register(_) => write!(f, "Register"),
-            Commands::Selector(_) => write!(f, "Selector"),
+            Commands::Hash(_) => write!(f, "Hash"),
             Commands::Events(_) => write!(f, "Events"),
             Commands::Auth(_) => write!(f, "Auth"),
             Commands::Completions(_) => write!(f, "Completions"),
@@ -109,6 +109,9 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
     let name = command.to_string();
     let span = info_span!("Subcommand", name);
     let _span = span.enter();
+
+    // use `.map(|_| ())` to avoid returning a value here but still
+    // useful to write tests for each command.
 
     match command {
         Commands::Account(args) => args.run(config),
@@ -124,7 +127,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Call(args) => args.run(config),
         Commands::Model(args) => args.run(config),
         Commands::Register(args) => args.run(config),
-        Commands::Selector(args) => args.run(config),
+        Commands::Hash(args) => args.run().map(|_| ()),
         Commands::Events(args) => args.run(config),
         Commands::PrintEnv(args) => args.run(config),
         Commands::Completions(args) => args.run(),
