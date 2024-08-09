@@ -20,6 +20,7 @@ pub const INTERNAL_ENTITY_ID_KEY: &str = "$entity_id$";
 
 // objects namespaced to avoid conflicts with user models
 pub const ENTITY_TYPE_NAME: &str = "World__Entity";
+pub const ERC20_BALANCE_TYPE_NAME: &str = "World__Erc20Balance";
 pub const EVENT_MESSAGE_TYPE_NAME: &str = "World__EventMessage";
 pub const MODEL_TYPE_NAME: &str = "World__Model";
 pub const EVENT_TYPE_NAME: &str = "World__Event";
@@ -43,6 +44,8 @@ pub const CONTENT_NAMES: (&str, &str) = ("content", "contents");
 pub const METADATA_NAMES: (&str, &str) = ("metadata", "metadatas");
 pub const TRANSACTION_NAMES: (&str, &str) = ("transaction", "transactions");
 pub const PAGE_INFO_NAMES: (&str, &str) = ("pageInfo", "");
+pub const ERC20_BALANCE_NAMES: (&str, &str) = ("erc20Balance", "erc20Balances");
+pub const ERC721_BALANCE_NAMES: (&str, &str) = ("erc721Balance", "erc721Balances");
 
 // misc
 pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";
