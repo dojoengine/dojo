@@ -206,6 +206,10 @@ where
     fn size(&self) -> usize {
         self.inner.valid_txs.read().len() + self.inner.rejected_txs.read().len()
     }
+
+    fn validator(&self) -> &Self::Validator {
+        &self.inner.validator
+    }
 }
 
 impl<T, V, O> Clone for Pool<T, V, O>
@@ -250,14 +254,14 @@ where
 #[cfg(test)]
 pub(crate) mod test_utils {
 
+    use katana_executor::ExecutionError;
     use katana_primitives::contract::{ContractAddress, Nonce};
     use katana_primitives::FieldElement;
     use rand::Rng;
 
     use super::*;
-    use crate::ordering::Fcfs;
     use crate::tx::PoolTransaction;
-    use crate::validation::NoopValidator;
+    use crate::validation::{ValidationOutcome, ValidationResult, Validator};
 
     fn random_bytes<const SIZE: usize>() -> [u8; SIZE] {
         let mut bytes = [0u8; SIZE];
@@ -292,6 +296,16 @@ pub(crate) mod test_utils {
             self.tip = tip;
             self
         }
+
+        pub fn with_sender(mut self, sender: ContractAddress) -> Self {
+            self.sender = sender;
+            self
+        }
+
+        pub fn with_nonce(mut self, nonce: Nonce) -> Self {
+            self.nonce = nonce;
+            self
+        }
     }
 
     impl PoolTransaction for PoolTx {
@@ -316,11 +330,31 @@ pub(crate) mod test_utils {
         }
     }
 
-    pub type MockTxPool<V, O> = Pool<PoolTx, V, O>;
+    /// A tip-based validator that flags transactions as invalid if they have less than 10 tip.
+    pub struct TipValidator<T> {
+        threshold: u64,
+        t: std::marker::PhantomData<T>,
+    }
 
-    /// Create a tx pool that uses a noop validator and a first-come-first-serve ordering.
-    pub fn mock_pool() -> MockTxPool<NoopValidator<PoolTx>, Fcfs<PoolTx>> {
-        MockTxPool::new(NoopValidator::new(), Fcfs::new())
+    impl<T> TipValidator<T> {
+        pub fn new(threshold: u64) -> Self {
+            Self { threshold, t: std::marker::PhantomData }
+        }
+    }
+
+    impl<T: PoolTransaction> Validator for TipValidator<T> {
+        type Transaction = T;
+
+        fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
+            if tx.tip() < self.threshold {
+                return ValidationResult::Ok(ValidationOutcome::Invalid {
+                    tx,
+                    error: ExecutionError::Other("tip too low".to_string()),
+                });
+            }
+
+            ValidationResult::Ok(ValidationOutcome::Valid(tx))
+        }
     }
 }
 
@@ -328,8 +362,21 @@ pub(crate) mod test_utils {
 mod tests {
 
     use super::test_utils::*;
+    use super::Pool;
+    use crate::ordering::{self, Fcfs};
+    use crate::pool::test_utils;
     use crate::tx::PoolTransaction;
+    use crate::validation::{NoopValidator, ValidationOutcome, Validator};
     use crate::TransactionPool;
+
+    /// Tx pool that uses a noop validator and a first-come-first-serve ordering.
+    type TestPool = Pool<PoolTx, NoopValidator<PoolTx>, Fcfs<PoolTx>>;
+
+    impl TestPool {
+        fn test() -> Self {
+            Pool::new(NoopValidator::new(), Fcfs::new())
+        }
+    }
 
     #[test]
     fn pool_operations() {
@@ -344,7 +391,7 @@ mod tests {
             PoolTx::new(),
         ];
 
-        let pool = mock_pool();
+        let pool = TestPool::test();
 
         // initially pool should be empty
         assert!(pool.size() == 0);
@@ -366,12 +413,13 @@ mod tests {
         assert_eq!(pendings.len(), txs.len());
 
         // bcs we're using fcfs, the order should be the same as the order of the txs submission
-        for (pending, original) in pendings.iter().zip(txs.iter()) {
-            assert_eq!(pending.tx.tip(), original.tip());
-            assert_eq!(pending.tx.hash(), original.hash());
-            assert_eq!(pending.tx.nonce(), original.nonce());
-            assert_eq!(pending.tx.sender(), original.sender());
-            assert_eq!(pending.tx.max_fee(), original.max_fee());
+        // (position in the array)
+        for (actual, expected) in pendings.iter().zip(txs.iter()) {
+            assert_eq!(actual.tx.tip(), expected.tip());
+            assert_eq!(actual.tx.hash(), expected.hash());
+            assert_eq!(actual.tx.nonce(), expected.nonce());
+            assert_eq!(actual.tx.sender(), expected.sender());
+            assert_eq!(actual.tx.max_fee(), expected.max_fee());
         }
 
         // the txs list in valid_txs must be a superset of the pending_txs
@@ -404,7 +452,7 @@ mod tests {
             PoolTx::new(),
         ];
 
-        let pool = mock_pool();
+        let pool = TestPool::test();
         // register a listener for incoming txs
         let mut listener = pool.add_listener();
 
@@ -420,5 +468,97 @@ mod tests {
 
         // we should be notified exactly the same number of txs as we added
         assert_eq!(counter, txs.len());
+    }
+
+    #[test]
+    fn transactions_rejected() {
+        let all = [
+            PoolTx::new().with_tip(5),
+            PoolTx::new().with_tip(0),
+            PoolTx::new().with_tip(15),
+            PoolTx::new().with_tip(8),
+            PoolTx::new().with_tip(12),
+            PoolTx::new().with_tip(10),
+            PoolTx::new().with_tip(1),
+        ];
+
+        // create a pool with a validator that rejects txs with tip < 10
+        let pool = Pool::new(test_utils::TipValidator::new(10), Fcfs::new());
+
+        // Extract the expected valid and invalid transactions from the all list
+        let (expected_valids, expected_invalids) = pool
+            .validator()
+            .validate_all(all.to_vec())
+            .into_iter()
+            .filter_map(|res| res.ok().map(|o| o))
+            .fold((Vec::new(), Vec::new()), |mut acc, res| match res {
+                ValidationOutcome::Valid(tx) => {
+                    acc.0.push(tx);
+                    acc
+                }
+
+                ValidationOutcome::Invalid { tx, .. } => {
+                    acc.1.push(tx);
+                    acc
+                }
+            });
+
+        assert_eq!(expected_valids.len(), 3);
+        assert_eq!(expected_invalids.len(), 4);
+
+        // Add all transactions to the pool
+        all.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+
+        // Check that all transactions should be in the pool regardless of validity
+        assert!(all.iter().all(|tx| pool.get(tx.hash()).is_some()));
+        assert_eq!(pool.size(), all.len());
+
+        // Pending transactions should only contain the valid transactions
+        let pendings = pool.pending_transactions().collect::<Vec<_>>();
+        assert_eq!(pendings.len(), expected_valids.len());
+
+        // bcs its a fcfs pool, the order of the pending txs should be the as its order of insertion
+        // (position in the array)
+        for (actual, expected) in pendings.iter().zip(expected_valids.iter()) {
+            assert_eq!(actual.tx.hash(), expected.hash());
+        }
+
+        // rejected_txs should contain all the invalid txs
+        assert_eq!(pool.inner.rejected_txs.read().len(), expected_invalids.len());
+        for tx in expected_invalids.iter() {
+            assert!(pool.inner.rejected_txs.read().contains_key(&tx.hash()));
+        }
+    }
+
+    #[test]
+    fn tip_ordering() {
+        // Create mock transactions with different tips and in random order
+        let txs = [
+            PoolTx::new().with_tip(1),
+            PoolTx::new().with_tip(6),
+            PoolTx::new().with_tip(3),
+            PoolTx::new().with_tip(2),
+            PoolTx::new().with_tip(5),
+            PoolTx::new().with_tip(4),
+            PoolTx::new().with_tip(7),
+        ];
+
+        // Create a pool with tip-based ordering
+        let pool = Pool::new(NoopValidator::new(), ordering::Tip::new());
+
+        // Add transactions to the pool
+        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+
+        // Get pending transactions
+        let pending = pool.pending_transactions().collect::<Vec<_>>();
+
+        // Assert that the transactions are ordered by tip (highest to lowest)
+        assert_eq!(pending[0].tx.tip(), 7);
+        assert_eq!(pending[1].tx.tip(), 6);
+        assert_eq!(pending[2].tx.tip(), 5);
+        assert_eq!(pending[3].tx.tip(), 4);
+        assert_eq!(pending[4].tx.tip(), 3);
+        assert_eq!(pending[5].tx.tip(), 2);
+        assert_eq!(pending[6].tx.tip(), 1);
     }
 }
