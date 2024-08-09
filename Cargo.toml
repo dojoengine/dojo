@@ -210,10 +210,10 @@ warp = "0.3"
 
 # gRPC
 prost = "0.12"
-tonic = "0.10"
-tonic-build = "0.10.1"
-tonic-reflection = "0.10.1"
-tonic-web = "0.10.1"
+tonic = { version = "0.11", features = [ "tls", "tls-roots" ] }
+tonic-build = "0.11"
+tonic-reflection = "0.11"
+tonic-web = "0.11"
 
 # WASM-compatible gRPC deps
 tonic-web-wasm-client = "0.4.0"
