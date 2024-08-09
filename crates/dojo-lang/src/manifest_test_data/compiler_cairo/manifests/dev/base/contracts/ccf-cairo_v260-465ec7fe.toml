@@ -5,7 +5,6 @@ base_class_hash = "0x0"
 abi = "manifests/dev/base/abis/contracts/ccf-cairo_v260-465ec7fe.json"
 reads = []
 writes = []
-computed = []
 init_calldata = []
 tag = "ccf-cairo_v260"
 manifest_name = "ccf-cairo_v260-465ec7fe"

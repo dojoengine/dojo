@@ -7,6 +7,8 @@
 # A Katana instance must be running on http://localhost:8000.
 # cargo run --bin katana
 
+cargo build -r --bin sozo
+
 # Cleanup
 rm -rf examples/spawn-and-move/target
 rm -rf examples/spawn-and-move/manifests/
@@ -24,10 +26,10 @@ CAIRO_FIX_TESTS=1 cargo test --package dojo-lang plugin && \
 CAIRO_FIX_TESTS=1 cargo test --package dojo-lang semantics
 
 # Re-run the minimal tests, this will re-build the projects + generate the build artifacts.
-cargo run -r --bin sozo -- build --manifest-path examples/spawn-and-move/Scarb.toml
-cargo run -r --bin sozo -- build --manifest-path examples/spawn-and-move/Scarb.toml -P release
-cargo run -r --bin sozo -- build --manifest-path crates/torii/types-test/Scarb.toml
-cargo run -r --bin sozo -- build --manifest-path crates/dojo-lang/src/manifest_test_data/compiler_cairo/Scarb.toml
+./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml
+./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml -P release
+./target/release/sozo build --manifest-path crates/torii/types-test/Scarb.toml
+./target/release/sozo build --manifest-path crates/dojo-lang/src/manifest_test_data/compiler_cairo/Scarb.toml
 
 # Generates the database for testing by migrating the spawn and move example.
 cargo generate-test-db
@@ -37,4 +39,4 @@ rm -rf /tmp/types-test-db
 tar xzf spawn-and-move-db.tar.gz -C /tmp/
 tar xzf types-test-db.tar.gz -C /tmp/
 
-cargo run -r --bin sozo -- --offline migrate apply --manifest-path examples/spawn-and-move/Scarb.toml
+./target/release/sozo --offline migrate apply --manifest-path examples/spawn-and-move/Scarb.toml

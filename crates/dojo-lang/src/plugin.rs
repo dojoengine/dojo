@@ -16,7 +16,6 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_types::system::Dependency;
-use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
 use dojo_world::metadata::NamespaceConfig;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
@@ -80,24 +79,6 @@ impl GeneratedFileAuxData for DojoAuxData {
     }
 }
 
-/// Dojo related auxiliary data of the Dojo plugin.
-#[derive(Debug, Default, PartialEq)]
-pub struct ComputedValuesAuxData {
-    // Name of entrypoint to get computed value
-    pub entrypoint: SmolStr,
-    // Model to bind to
-    pub tag: Option<String>,
-}
-
-impl GeneratedFileAuxData for ComputedValuesAuxData {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
-    }
-}
-
 #[cfg(test)]
 #[path = "plugin_test.rs"]
 mod test;
@@ -133,98 +114,6 @@ impl BuiltinDojoPlugin {
         }
 
         PluginResult::default()
-    }
-
-    fn result_with_diagnostic(
-        &self,
-        stable_ptr: SyntaxStablePtrId,
-        message: String,
-    ) -> PluginResult {
-        PluginResult {
-            code: None,
-            diagnostics: vec![PluginDiagnostic { stable_ptr, message, severity: Severity::Error }],
-            remove_original_item: false,
-        }
-    }
-
-    fn handle_fn(
-        &self,
-        db: &dyn SyntaxGroup,
-        fn_ast: ast::FunctionWithBody,
-        namespace_config: &NamespaceConfig,
-    ) -> PluginResult {
-        let attrs = fn_ast.attributes(db).query_attr(db, "computed");
-        if attrs.is_empty() {
-            return PluginResult::default();
-        }
-        if attrs.len() != 1 {
-            return self.result_with_diagnostic(
-                attrs[0].attr(db).stable_ptr().0,
-                format!("Expected one computed macro per function, got {:?}.", attrs.len()),
-            );
-        }
-        let attr = attrs[0].clone().structurize(db);
-        let args = attr.args;
-        if args.len() > 1 {
-            return self.result_with_diagnostic(
-                attr.args_stable_ptr.0,
-                "Expected one arg for computed macro.\nUsage: #[computed(Position)]".into(),
-            );
-        }
-        let fn_decl = fn_ast.declaration(db);
-        let fn_name = fn_decl.name(db).text(db);
-        let params = fn_decl.signature(db).parameters(db);
-        let param_els = params.elements(db);
-        let mut tag = None;
-        if args.len() == 1 {
-            let model_name = args[0].text(db);
-            tag = Some(naming::get_tag(&model_name, &namespace_config.default));
-
-            let model_type_node = param_els[1].type_clause(db).ty(db);
-            if let ast::Expr::Path(model_type_path) = model_type_node {
-                let model_type = model_type_path
-                    .elements(db)
-                    .iter()
-                    .last()
-                    .unwrap()
-                    .as_syntax_node()
-                    .get_text(db);
-                if model_type != model_name.clone() {
-                    return self.result_with_diagnostic(
-                        model_type_path.stable_ptr().0,
-                        "Computed functions second parameter should be the model.".into(),
-                    );
-                }
-            } else {
-                return self.result_with_diagnostic(
-                    params.stable_ptr().0,
-                    format!(
-                        "Computed function parameter node of unsupported type {:?}.",
-                        model_type_node.as_syntax_node().get_text(db)
-                    ),
-                );
-            }
-            if param_els.len() != 2 {
-                return self.result_with_diagnostic(
-                    params.stable_ptr().0,
-                    "Computed function should take 2 parameters, contract state and model.".into(),
-                );
-            }
-        }
-
-        PluginResult {
-            code: Some(PluginGeneratedFile {
-                name: fn_name.clone(),
-                content: "".into(),
-                aux_data: Some(DynGeneratedFileAuxData::new(ComputedValuesAuxData {
-                    tag,
-                    entrypoint: fn_name,
-                })),
-                code_mappings: vec![],
-            }),
-            diagnostics: vec![],
-            remove_original_item: false,
-        }
     }
 }
 
@@ -538,7 +427,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     remove_original_item: false,
                 }
             }
-            ast::ModuleItem::FreeFunction(fn_ast) => self.handle_fn(db, fn_ast, &namespace_config),
             _ => PluginResult::default(),
         }
     }
@@ -550,7 +438,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
             DOJO_EVENT_ATTR.to_string(),
             DOJO_MODEL_ATTR.to_string(),
             "key".to_string(),
-            "computed".to_string(),
         ]
     }
 
