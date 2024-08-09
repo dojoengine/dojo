@@ -4,7 +4,7 @@ use dojo::model::{Model, ResourceMetadata};
 use dojo::utils::{bytearray_hash, entity_id_from_keys};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::world::world::{
-    NamespaceRegistered, ModelRegistered, ModelUpgraded, MetadataUpdate, ContractDeployed,
+    Event, NamespaceRegistered, ModelRegistered, ModelUpgraded, MetadataUpdate, ContractDeployed,
     ContractUpgraded
 };
 use dojo::contract::{IContractDispatcher, IContractDispatcherTrait};
@@ -51,7 +51,11 @@ fn test_set_metadata_resource_owner() {
 
     assert_eq!(
         starknet::testing::pop_log(world.contract_address),
-        Option::Some(MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri })
+        Option::Some(
+            Event::MetadataUpdate(
+                MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri }
+            )
+        )
     );
 }
 
@@ -137,17 +141,22 @@ fn test_register_model_for_namespace_owner() {
     starknet::testing::set_contract_address(bob);
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let event = starknet::testing::pop_log::<ModelRegistered>(world.contract_address);
+    let event = starknet::testing::pop_log::<Event>(world.contract_address);
+    assert(event.is_some(), 'no event)');
 
-    assert(event.is_some(), 'no ModelRegistered event');
-    let event = event.unwrap();
-    assert(event.name == Model::<Foo>::name(), 'bad model name');
-    assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
-    assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
-    assert(
-        event.address != core::num::traits::Zero::<ContractAddress>::zero(),
-        'bad model prev address'
-    );
+    if let Event::ModelRegistered(event) = event.unwrap() {
+        assert(event.name == Model::<Foo>::name(), 'bad model name');
+        assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
+        assert(
+            event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash'
+        );
+        assert(
+            event.address != core::num::traits::Zero::<ContractAddress>::zero(),
+            'bad model prev address'
+        );
+    } else {
+        core::panic_with_felt252('no ModelRegistered event');
+    }
 
     assert(world.is_owner(Model::<Foo>::selector(), bob), 'bob is not the owner');
 }
@@ -165,17 +174,22 @@ fn test_register_model_for_namespace_writer() {
     starknet::testing::set_contract_address(bob);
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let event = starknet::testing::pop_log::<ModelRegistered>(world.contract_address);
+    let event = starknet::testing::pop_log::<Event>(world.contract_address);
+    assert(event.is_some(), 'no event)');
 
-    assert(event.is_some(), 'no ModelRegistered event');
-    let event = event.unwrap();
-    assert(event.name == Model::<Foo>::name(), 'bad model name');
-    assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
-    assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
-    assert(
-        event.address != core::num::traits::Zero::<ContractAddress>::zero(),
-        'bad model prev address'
-    );
+    if let Event::ModelRegistered(event) = event.unwrap() {
+        assert(event.name == Model::<Foo>::name(), 'bad model name');
+        assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
+        assert(
+            event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash'
+        );
+        assert(
+            event.address != core::num::traits::Zero::<ContractAddress>::zero(),
+            'bad model prev address'
+        );
+    } else {
+        core::panic_with_felt252('no ModelRegistered event');
+    }
 
     assert(world.is_owner(Model::<Foo>::selector(), bob), 'bob is not the owner');
 }
@@ -195,17 +209,22 @@ fn test_upgrade_model_from_model_owner() {
 
     world.upgrade_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let event = starknet::testing::pop_log::<ModelUpgraded>(world.contract_address);
+    let event = starknet::testing::pop_log::<Event>(world.contract_address);
+    assert(event.is_some(), 'no event)');
 
-    assert(event.is_some(), 'no ModelRegistered event');
-    let event = event.unwrap();
-    assert(event.name == Model::<Foo>::name(), 'bad model name');
-    assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
-    assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
-    assert(
-        event.address != core::num::traits::Zero::<ContractAddress>::zero(),
-        'bad model prev address'
-    );
+    if let Event::ModelUpgraded(event) = event.unwrap() {
+        assert(event.name == Model::<Foo>::name(), 'bad model name');
+        assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
+        assert(
+            event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash'
+        );
+        assert(
+            event.address != core::num::traits::Zero::<ContractAddress>::zero(),
+            'bad model prev address'
+        );
+    } else {
+        core::panic_with_felt252('no ModelRegistered event');
+    }
 
     assert(world.is_owner(Model::<Foo>::selector(), bob), 'bob is not the owner');
 }
@@ -295,9 +314,12 @@ fn test_register_namespace() {
 
     assert(world.is_owner(hash, bob), 'namespace not registered');
 
+    let expected_event = NamespaceRegistered { namespace, hash };
     assert_eq!(
         starknet::testing::pop_log(world.contract_address),
-        Option::Some(NamespaceRegistered { namespace: "namespace", hash })
+        Option::Some(
+            Event::NamespaceRegistered(Event::NamespaceRegistered(NamespaceRegistered))
+        )
     );
 }
 
@@ -349,16 +371,21 @@ fn test_deploy_contract_for_namespace_owner() {
     let contract_address = world.deploy_contract('salt1', class_hash);
     let dispatcher = IContractDispatcher { contract_address };
 
-    let event = starknet::testing::pop_log::<ContractDeployed>(world.contract_address);
-    assert(event.is_some(), 'no ContractDeployed event');
-    let event = event.unwrap();
-    assert(event.salt == 'salt1', 'bad event salt');
-    assert(event.class_hash == class_hash, 'bad class_hash');
-    assert(event.name == dispatcher.contract_name(), 'bad contract name');
-    assert(event.namespace == dispatcher.namespace(), 'bad namespace');
-    assert(
-        event.address != core::num::traits::Zero::<ContractAddress>::zero(), 'bad contract address'
-    );
+    let event = starknet::testing::pop_log::<Event>(world.contract_address);
+    assert(event.is_some(), 'no event)');
+
+    if let Event::ContractDeployed(event) = event.unwrap() {
+        assert(event.salt == 'salt1', 'bad event salt');
+        assert(event.class_hash == class_hash, 'bad class_hash');
+        assert(event.name == dispatcher.contract_name(), 'bad contract name');
+        assert(event.namespace == dispatcher.namespace(), 'bad namespace');
+        assert(
+            event.address != core::num::traits::Zero::<ContractAddress>::zero(),
+            'bad contract address'
+        );
+    } else {
+        core::panic_with_felt252('no ContractDeployed event');
+    };
 }
 
 #[test]
@@ -437,13 +464,18 @@ fn test_upgrade_contract_from_resource_owner() {
 
     world.upgrade_contract(dispatcher.selector(), class_hash);
 
-    let event = starknet::testing::pop_log::<ContractUpgraded>(world.contract_address);
-    assert(event.is_some(), 'no ContractUpgraded event');
-    let event = event.unwrap();
-    assert(event.class_hash == class_hash, 'bad class_hash');
-    assert(
-        event.address != core::num::traits::Zero::<ContractAddress>::zero(), 'bad contract address'
-    );
+    let event = starknet::testing::pop_log::<Event>(world.contract_address);
+    assert(event.is_some(), 'no event)');
+
+    if let Event::ContractUpgraded(event) = event.unwrap() {
+        assert(event.class_hash == class_hash, 'bad class_hash');
+        assert(
+            event.address != core::num::traits::Zero::<ContractAddress>::zero(),
+            'bad contract address'
+        );
+    } else {
+        core::panic_with_felt252('no ContractUpgraded event');
+    };
 }
 
 #[test]

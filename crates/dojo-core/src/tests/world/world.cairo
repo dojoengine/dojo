@@ -9,6 +9,7 @@ use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
     IUpgradeableWorldDispatcherTrait
 };
+use dojo::world::world::Event;
 use dojo::tests::helpers::{
     IbarDispatcher, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, foo, bar,
     Character, character, test_contract, test_contract_with_dojo_init_args
@@ -310,9 +311,12 @@ fn test_differ_program_hash_event_emit() {
 
     config.set_differ_program_hash(program_hash: 98758347158781475198374598718743);
 
+    let expected_event = Event::DifferProgramHashUpdate(
+        DifferProgramHashUpdate { program_hash: 98758347158781475198374598718743 }
+    );
     assert_eq!(
         starknet::testing::pop_log(world.contract_address),
-        Option::Some(DifferProgramHashUpdate { program_hash: 98758347158781475198374598718743 })
+        Option::Some(Event::DifferProgramHashUpdate(expected_event))
     );
 }
 
@@ -325,9 +329,10 @@ fn test_facts_registry_event_emit() {
 
     config.set_facts_registry(contract_address_const::<0x12>());
 
+    let expected_event = FactsRegistryUpdate { address: contract_address_const::<0x12>() };
     assert_eq!(
         starknet::testing::pop_log(world.contract_address),
-        Option::Some(FactsRegistryUpdate { address: contract_address_const::<0x12>() })
+        Option::Some(Event::FactsRegistryUpdate(expected_event))
     );
 }
 

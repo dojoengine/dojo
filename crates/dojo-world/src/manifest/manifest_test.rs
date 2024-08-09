@@ -119,9 +119,9 @@ fn parse_deployed_contracts_events_without_upgrade() {
     ];
 
     let events = vec![
-        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1", "c1"),
-        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2", "c2"),
-        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3", "c3"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x123")], felt!("0x1"), "ns1", "c1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x456")], felt!("0x2"), "ns2", "c2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x789")], felt!("0x3"), "ns3", "c3"),
     ];
 
     let actual_contracts = parse_contracts_events(events, vec![], vec![]);
@@ -161,39 +161,39 @@ fn parse_deployed_contracts_events_with_upgrade() {
     ];
 
     let deployed_events = vec![
-        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1", "c1"),
-        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2", "c2"),
-        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3", "c3"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x123")], felt!("0x1"), "ns1", "c1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x456")], felt!("0x2"), "ns2", "c2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x789")], felt!("0x3"), "ns3", "c3"),
     ];
 
     let upgrade_events = vec![
         EmittedEvent {
-            data: vec![felt!("0x66"), felt!("0x123")],
-            keys: vec![],
+            data: vec![felt!("0x123")],
+            keys: vec![felt!("0x66")],
             block_number: Some(2),
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![felt!("0x69"), felt!("0x123")],
-            keys: vec![],
+            data: vec![felt!("0x123")],
+            keys: vec![felt!("0x69")],
             block_number: Some(9),
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![felt!("0x77"), felt!("0x123")],
-            keys: vec![],
+            data: vec![felt!("0x123")],
+            keys: vec![felt!("0x77")],
             block_number: Some(5),
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![felt!("0x88"), felt!("0x789")],
-            keys: vec![],
+            data: vec![felt!("0x789")],
+            keys: vec![felt!("0x88")],
             block_number: Some(5),
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -238,9 +238,9 @@ fn events_without_block_number_arent_parsed() {
     ];
 
     let deployed_events = vec![
-        build_deploy_event(vec![felt!("0x0"), felt!("0x1"), felt!("0x123")], "ns1", "c1"),
-        build_deploy_event(vec![felt!("0x0"), felt!("0x2"), felt!("0x456")], "ns2", "c2"),
-        build_deploy_event(vec![felt!("0x0"), felt!("0x3"), felt!("0x789")], "ns3", "c3"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x123")], felt!("0x1"), "ns1", "c1"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x456")], felt!("0x2"), "ns2", "c2"),
+        build_deploy_event(vec![felt!("0x0"), felt!("0x789")], felt!("0x3"), "ns3", "c3"),
     ];
 
     // only the first upgrade event has a block number and is parsed
@@ -248,32 +248,32 @@ fn events_without_block_number_arent_parsed() {
     // and are not evaluated when parsing the remote contracts
     let upgrade_events = vec![
         EmittedEvent {
-            data: vec![felt!("0x66"), felt!("0x123")],
-            keys: vec![],
+            data: vec![felt!("0x123")],
+            keys: vec![felt!("0x66")],
             block_number: Some(2),
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![felt!("0x69"), felt!("0x123")],
-            keys: vec![],
+            data: vec![felt!("0x123")],
+            keys: vec![felt!("0x69")],
             block_number: None,
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![felt!("0x77"), felt!("0x123")],
-            keys: vec![],
+            data: vec![felt!("0x123")],
+            keys: vec![felt!("0x77")],
             block_number: None,
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![felt!("0x88"), felt!("0x789")],
-            keys: vec![],
+            data: vec![felt!("0x789")],
+            keys: vec![felt!("0x88")],
             block_number: None,
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -618,13 +618,13 @@ fn serialize_bytearray(s: &str) -> Vec<Felt> {
 }
 
 fn build_model_registered_event(values: Vec<Felt>, namespace: &str, model: &str) -> EmittedEvent {
-    let mut data = ByteArray::cairo_serialize(&ByteArray::from_string(model).unwrap());
-    data.extend(ByteArray::cairo_serialize(&ByteArray::from_string(namespace).unwrap()));
-    data.extend(values);
+    let mut keys = vec![selector!("ModelRegistered")];
+    keys.extend(ByteArray::cairo_serialize(&ByteArray::from_string(model).unwrap()));
+    keys.extend(ByteArray::cairo_serialize(&ByteArray::from_string(namespace).unwrap()));
 
     EmittedEvent {
-        data,
-        keys: vec![selector!("ModelRegistered")],
+        data: values,
+        keys,
         block_hash: Default::default(),
         from_address: Default::default(),
         block_number: Default::default(),
@@ -632,14 +632,14 @@ fn build_model_registered_event(values: Vec<Felt>, namespace: &str, model: &str)
     }
 }
 
-fn build_deploy_event(values: Vec<Felt>, ns: &str, name: &str) -> EmittedEvent {
-    let mut data = values.to_vec();
-    data.extend(serialize_bytearray(ns).iter());
-    data.extend(serialize_bytearray(name).iter());
+fn build_deploy_event(values: Vec<Felt>, class_hash: Felt, ns: &str, name: &str) -> EmittedEvent {
+    let mut keys = vec![class_hash];
+    keys.extend(serialize_bytearray(ns).iter());
+    keys.extend(serialize_bytearray(name).iter());
 
     EmittedEvent {
-        data,
-        keys: vec![],
+        data: values,
+        keys,
         block_hash: Default::default(),
         from_address: Default::default(),
         block_number: Default::default(),

@@ -755,7 +755,7 @@ abigen!(
       {
         "name": "creator",
         "type": "core::starknet::contract_address::ContractAddress",
-        "kind": "data"
+        "kind": "key"
       }
     ]
   },
@@ -772,7 +772,7 @@ abigen!(
       {
         "name": "class_hash",
         "type": "core::starknet::class_hash::ClassHash",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "address",
@@ -782,12 +782,12 @@ abigen!(
       {
         "name": "namespace",
         "type": "core::byte_array::ByteArray",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "name",
         "type": "core::byte_array::ByteArray",
-        "kind": "data"
+        "kind": "key"
       }
     ]
   },
@@ -799,7 +799,7 @@ abigen!(
       {
         "name": "class_hash",
         "type": "core::starknet::class_hash::ClassHash",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "address",
@@ -845,7 +845,7 @@ abigen!(
       {
         "name": "resource",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "uri",
@@ -862,7 +862,7 @@ abigen!(
       {
         "name": "namespace",
         "type": "core::byte_array::ByteArray",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "hash",
@@ -879,12 +879,12 @@ abigen!(
       {
         "name": "name",
         "type": "core::byte_array::ByteArray",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "namespace",
         "type": "core::byte_array::ByteArray",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "class_hash",
@@ -943,12 +943,12 @@ abigen!(
       {
         "name": "table",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "keys",
         "type": "core::array::Span::<core::felt252>",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "values",
@@ -965,12 +965,12 @@ abigen!(
       {
         "name": "table",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "entity_id",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "values",
@@ -987,17 +987,17 @@ abigen!(
       {
         "name": "table",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "entity_id",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "member_selector",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "values",
@@ -1014,12 +1014,12 @@ abigen!(
       {
         "name": "table",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "entity_id",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       }
     ]
   },
@@ -1031,12 +1031,12 @@ abigen!(
       {
         "name": "resource",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "contract",
         "type": "core::starknet::contract_address::ContractAddress",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "value",
@@ -1053,12 +1053,12 @@ abigen!(
       {
         "name": "address",
         "type": "core::starknet::contract_address::ContractAddress",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "resource",
         "type": "core::felt252",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "value",

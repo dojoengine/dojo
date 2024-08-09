@@ -140,7 +140,7 @@ pub mod world {
     impl ConfigInternalImpl = Config::InternalImpl<ContractState>;
 
     #[event]
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub enum Event {
         WorldSpawned: WorldSpawned,
         ContractDeployed: ContractDeployed,
@@ -161,18 +161,19 @@ pub mod world {
         StateUpdated: StateUpdated
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct StateUpdated {
         pub da_hash: felt252,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct WorldSpawned {
         pub address: ContractAddress,
+        #[key]
         pub creator: ContractAddress
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct WorldUpgraded {
         pub class_hash: ClassHash,
     }
@@ -180,14 +181,18 @@ pub mod world {
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct ContractDeployed {
         pub salt: felt252,
+        #[key]
         pub class_hash: ClassHash,
         pub address: ContractAddress,
+        #[key]
         pub namespace: ByteArray,
+        #[key]
         pub name: ByteArray
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct ContractUpgraded {
+        #[key]
         pub class_hash: ClassHash,
         pub address: ContractAddress,
     }
@@ -200,19 +205,23 @@ pub mod world {
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct MetadataUpdate {
+        #[key]
         pub resource: felt252,
         pub uri: ByteArray
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct NamespaceRegistered {
+        #[key]
         pub namespace: ByteArray,
         pub hash: felt252
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct ModelRegistered {
+        #[key]
         pub name: ByteArray,
+        #[key]
         pub namespace: ByteArray,
         pub class_hash: ClassHash,
         pub address: ContractAddress,
@@ -228,44 +237,57 @@ pub mod world {
         pub prev_address: ContractAddress,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct StoreSetRecord {
+        #[key]
         pub table: felt252,
+        #[key]
         pub keys: Span<felt252>,
         pub values: Span<felt252>,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct StoreUpdateRecord {
+        #[key]
         pub table: felt252,
+        #[key]
         pub entity_id: felt252,
         pub values: Span<felt252>,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct StoreUpdateMember {
+        #[key]
         pub table: felt252,
+        #[key]
         pub entity_id: felt252,
+        #[key]
         pub member_selector: felt252,
         pub values: Span<felt252>,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct StoreDelRecord {
+        #[key]
         pub table: felt252,
+        #[key]
         pub entity_id: felt252,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct WriterUpdated {
+        #[key]
         pub resource: felt252,
+        #[key]
         pub contract: ContractAddress,
         pub value: bool
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct OwnerUpdated {
+        #[key]
         pub address: ContractAddress,
+        #[key]
         pub resource: felt252,
         pub value: bool,
     }

@@ -573,10 +573,13 @@ fn parse_contracts_events(
         // system -> (block_num, (resource -> perm))
         let mut grants: HashMap<Felt, (u64, HashMap<Felt, bool>)> = HashMap::new();
         events.into_iter().for_each(|event| {
+            let mut keys = event.keys.into_iter();
             let mut data = event.data.into_iter();
             let block_num = event.block_number;
-            let resource = data.next().expect("resource is missing from event");
-            let contract = data.next().expect("contract is missing from event");
+
+            let resource = keys.next().expect("resource is missing from event");
+            let contract = keys.next().expect("contract is missing from event");
+
             let value = data.next().expect("value is missing from event");
 
             let value = !value.is_zero();
@@ -618,9 +621,11 @@ fn parse_contracts_events(
 
         events.into_iter().for_each(|event| {
             let mut data = event.data.into_iter();
+            let mut keys = event.keys.into_iter();
 
             let block_num = event.block_number;
-            let class_hash = data.next().expect("qed; missing class hash");
+            let class_hash = keys.next().expect("qed; missing class hash");
+
             let address = data.next().expect("qed; missing address");
 
             // Events that do not have a block number are ignored because we are unable to evaluate
@@ -648,12 +653,13 @@ fn parse_contracts_events(
         .into_iter()
         .map(|event| {
             let mut data = event.data.into_iter();
+            let mut keys = event.keys.into_iter();
 
             let _ = data.next().expect("salt is missing from event");
-            let mut class_hash = data.next().expect("class hash is missing from event");
-            let address = data.next().expect("addresss is missing from event");
+            let address = data.next().expect("address is missing from event");
 
-            let str_data = data.as_slice();
+            let mut class_hash = keys.next().expect("class hash is missing from event");
+            let str_data = keys.as_slice();
             let namespace =
                 ByteArray::cairo_deserialize(str_data, 0).expect("namespace is missing from event");
             let offset = ByteArray::cairo_serialized_size(&namespace);
