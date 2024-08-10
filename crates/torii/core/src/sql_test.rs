@@ -92,10 +92,11 @@ async fn test_load_from_remote() {
 
     let world = WorldContract::new(strat.world_address, &account);
 
-    world.grant_writer(
-        &compute_bytearray_hash("dojo_examples"),
-        &ContractAddress(actions_address),
-    ).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
@@ -232,10 +233,11 @@ async fn test_load_from_remote_del() {
 
     let world = WorldContract::new(strat.world_address, &account);
 
-    world.grant_writer(
-        &compute_bytearray_hash("dojo_examples"),
-        &ContractAddress(actions_address),
-    ).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
