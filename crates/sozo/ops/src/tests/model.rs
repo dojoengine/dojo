@@ -1,7 +1,11 @@
+use dojo_test_utils::migration::copy_spawn_and_move_db;
 use dojo_world::contracts::abi::model::{FieldLayout, Layout};
+use dojo_world::contracts::abi::world::Resource;
+use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
-use katana_runner::KatanaRunner;
+use dojo_world::utils::TransactionExt;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::Account;
 use starknet::core::types::Felt;
@@ -13,9 +17,25 @@ use crate::{execute, model};
 // migration for now. Should be replaced by individual tests once Katana spinning up is enhanced.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model_ops() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
+
+    let action_address = if let Resource::Contract((_, address)) =
+        world.resource(&compute_selector_from_tag("dojo_examples-actions")).call().await.unwrap()
+    {
+        address
+    } else {
+        panic!("No action contract found in world");
+    };
+
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &action_address)
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     assert_eq!(
         model::model_class_hash(
@@ -37,7 +57,8 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0xbdf702718132a1a95b58cdf6aa0df5459ae110da1ae03be4b25de554691709").unwrap()
+        Felt::from_hex("0x7b1928f3bfe269f123ed7673830f5d2c3bd6a1909e0ea3e6443c3a113c7547c")
+            .unwrap()
     );
 
     let layout =

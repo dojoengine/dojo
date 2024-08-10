@@ -294,12 +294,14 @@ impl DojoWorld {
                 .map_err(ParseError::FromStr)?;
             let schemas = self.model_cache.schemas(&model_ids).await?;
 
-            let (entity_query, arrays_queries) = build_sql_query(
+            let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
                 Some(&format!("{table}.id = ?")),
                 Some(&format!("{table}.id = ?")),
+                None,
+                None,
             )?;
 
             let row =
@@ -433,12 +435,14 @@ impl DojoWorld {
                 .map_err(ParseError::FromStr)?;
             let schemas = self.model_cache.schemas(&model_ids).await?;
 
-            let (entity_query, arrays_queries) = build_sql_query(
+            let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
                 Some(&format!("{table}.id = ?")),
                 Some(&format!("{table}.id = ?")),
+                None,
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
@@ -525,16 +529,20 @@ impl DojoWorld {
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
-        let (entity_query, arrays_queries) = build_sql_query(
+        let (entity_query, arrays_queries, count_query) = build_sql_query(
             &schemas,
             table,
             entity_relation_column,
-            Some(&format!(
-                "[{table_name}].{column_name} {comparison_operator} ? ORDER BY {table}.event_id \
-                 DESC LIMIT ? OFFSET ?"
-            )),
+            Some(&format!("[{table_name}].{column_name} {comparison_operator} ?")),
             None,
+            limit,
+            offset,
         )?;
+
+        let total_count = sqlx::query_scalar(&count_query)
+            .bind(comparison_value.clone())
+            .fetch_one(&self.pool)
+            .await?;
 
         let db_entities = sqlx::query(&entity_query)
             .bind(comparison_value.clone())
@@ -553,8 +561,6 @@ impl DojoWorld {
             .iter()
             .map(|row| map_row_to_entity(row, &arrays_rows, schemas.clone()))
             .collect::<Result<Vec<_>, Error>>()?;
-        // Since there is not limit and offset, total_count is same as number of entities
-        let total_count = entities_collection.len() as u32;
         Ok((entities_collection, total_count))
     }
 
@@ -698,12 +704,14 @@ impl DojoWorld {
                 .map_err(ParseError::FromStr)?;
             let schemas = self.model_cache.schemas(&model_ids).await?;
 
-            let (entity_query, arrays_queries) = build_sql_query(
+            let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
                 Some(&format!("[{table}].id = ?")),
                 Some(&format!("[{table}].id = ?")),
+                None,
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;

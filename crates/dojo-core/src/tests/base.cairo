@@ -226,7 +226,9 @@ mod invalid_model_world {
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(expected: ('invalid model name', 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: ("Resource `dojo-invalid_model` is already registered", 'ENTRYPOINT_FAILED',)
+)]
 fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
@@ -238,7 +240,7 @@ fn test_deploy_from_world_invalid_model() {
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(expected: ('invalid model name', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Invalid resource selector `0`", 'ENTRYPOINT_FAILED',))]
 fn test_deploy_from_world_invalid_model_world() {
     let world = deploy_world();
     world.register_model(invalid_model_world::TEST_CLASS_HASH.try_into().unwrap());

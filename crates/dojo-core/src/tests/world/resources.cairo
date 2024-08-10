@@ -4,7 +4,8 @@ use dojo::model::{Model, ResourceMetadata};
 use dojo::utils::{bytearray_hash, entity_id_from_keys};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::world::world::{
-    NamespaceRegistered, ModelRegistered, MetadataUpdate, ContractDeployed, ContractUpgraded
+    NamespaceRegistered, ModelRegistered, ModelUpgraded, MetadataUpdate, ContractDeployed,
+    ContractUpgraded
 };
 use dojo::contract::{IContractDispatcher, IContractDispatcherTrait};
 
@@ -55,7 +56,12 @@ fn test_set_metadata_resource_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('not owner', 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: (
+        "Caller `2827` is not the owner of the resource `3123252206139358744730647958636922105676576163624049771737508399526017186883`",
+        'ENTRYPOINT_FAILED',
+    )
+)]
 fn test_set_metadata_not_possible_for_resource_writer() {
     let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
 
@@ -74,7 +80,9 @@ fn test_set_metadata_not_possible_for_resource_writer() {
 }
 
 #[test]
-#[should_panic(expected: ('not owner', 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: ("Caller `2827` is not the owner of the resource `0`", 'ENTRYPOINT_FAILED',)
+)]
 fn test_set_metadata_not_possible_for_random_account() {
     let world = deploy_world();
 
@@ -92,7 +100,7 @@ fn test_set_metadata_not_possible_for_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
 fn test_set_metadata_through_malicious_contract() {
     let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
 
@@ -132,15 +140,7 @@ fn test_register_model_for_namespace_owner() {
     assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
     assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
     assert(
-        event.prev_class_hash == core::num::traits::Zero::<ClassHash>::zero(),
-        'bad model prev class_hash'
-    );
-    assert(
         event.address != core::num::traits::Zero::<ContractAddress>::zero(),
-        'bad model prev address'
-    );
-    assert(
-        event.prev_address == core::num::traits::Zero::<ContractAddress>::zero(),
         'bad model prev address'
     );
 
@@ -168,15 +168,7 @@ fn test_register_model_for_namespace_writer() {
     assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
     assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
     assert(
-        event.prev_class_hash == core::num::traits::Zero::<ClassHash>::zero(),
-        'bad model prev class_hash'
-    );
-    assert(
         event.address != core::num::traits::Zero::<ContractAddress>::zero(),
-        'bad model prev address'
-    );
-    assert(
-        event.prev_address == core::num::traits::Zero::<ContractAddress>::zero(),
         'bad model prev address'
     );
 
@@ -196,9 +188,9 @@ fn test_upgrade_model_from_model_owner() {
 
     drop_all_events(world.contract_address);
 
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.upgrade_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let event = starknet::testing::pop_log::<ModelRegistered>(world.contract_address);
+    let event = starknet::testing::pop_log::<ModelUpgraded>(world.contract_address);
 
     assert(event.is_some(), 'no ModelRegistered event');
     let event = event.unwrap();
@@ -206,15 +198,7 @@ fn test_upgrade_model_from_model_owner() {
     assert(event.namespace == Model::<Foo>::namespace(), 'bad model namespace');
     assert(event.class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'bad model class_hash');
     assert(
-        event.prev_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(),
-        'bad model prev class_hash'
-    );
-    assert(
         event.address != core::num::traits::Zero::<ContractAddress>::zero(),
-        'bad model prev address'
-    );
-    assert(
-        event.prev_address != core::num::traits::Zero::<ContractAddress>::zero(),
         'bad model prev address'
     );
 
@@ -222,18 +206,25 @@ fn test_upgrade_model_from_model_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('only owner can update', 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: (
+        "Caller `2827` cannot upgrade the resource `3123252206139358744730647958636922105676576163624049771737508399526017186883` (not owner)",
+        'ENTRYPOINT_FAILED',
+    )
+)]
 fn test_upgrade_model_from_model_writer() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let alice = starknet::contract_address_const::<0xa11ce>();
 
     let world = deploy_world();
+    world.register_namespace(Model::<Foo>::namespace());
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
     world.grant_owner(Model::<Foo>::namespace_hash(), bob);
     world.grant_writer(Model::<Foo>::namespace_hash(), alice);
 
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.upgrade_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     starknet::testing::set_account_contract_address(alice);
     starknet::testing::set_contract_address(alice);
@@ -241,7 +232,7 @@ fn test_upgrade_model_from_model_writer() {
 }
 
 #[test]
-#[should_panic(expected: ('only owner can update', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Resource `dojo-Foo` is already registered", 'ENTRYPOINT_FAILED',))]
 fn test_upgrade_model_from_random_account() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let alice = starknet::contract_address_const::<0xa11ce>();
@@ -260,14 +251,14 @@ fn test_upgrade_model_from_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('namespace not registered', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Namespace `another_namespace` is not registered", 'ENTRYPOINT_FAILED',))]
 fn test_register_model_with_unregistered_namespace() {
     let world = deploy_world();
     world.register_model(buzz::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
 fn test_register_model_through_malicious_contract() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let malicious_contract = starknet::contract_address_const::<0xdead>();
@@ -327,7 +318,7 @@ fn test_register_namespace_already_registered_same_caller() {
 }
 
 #[test]
-#[should_panic(expected: ('namespace already registered', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Namespace `namespace` is already registered", 'ENTRYPOINT_FAILED',))]
 fn test_register_namespace_already_registered_other_caller() {
     let world = deploy_world();
 
@@ -345,7 +336,7 @@ fn test_register_namespace_already_registered_other_caller() {
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Caller `48879` is not an account", 'ENTRYPOINT_FAILED',))]
 fn test_register_namespace_is_not_a_direct_call_from_account() {
     let world = deploy_world();
 
@@ -407,7 +398,12 @@ fn test_deploy_contract_for_namespace_writer() {
 
 
 #[test]
-#[should_panic(expected: ('no namespace write access', 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: (
+        "Caller `2827` has no write access on namespace `1374390215641666319136539165206515249533397964515542652183446950829433832442`",
+        'ENTRYPOINT_FAILED',
+    )
+)]
 fn test_deploy_contract_no_namespace_write_access() {
     let world = deploy_world();
 
@@ -422,7 +418,7 @@ fn test_deploy_contract_no_namespace_write_access() {
 }
 
 #[test]
-#[should_panic(expected: ('namespace not registered', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Namespace `buzz_namespace` is not registered", 'ENTRYPOINT_FAILED',))]
 fn test_deploy_contract_with_unregistered_namespace() {
     let world = deploy_world();
     world
@@ -432,7 +428,7 @@ fn test_deploy_contract_with_unregistered_namespace() {
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
 fn test_deploy_contract_through_malicious_contract() {
     let world = deploy_world();
 
@@ -481,7 +477,12 @@ fn test_upgrade_contract_from_resource_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('not owner', 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: (
+        "Caller `659918` is not the owner of the resource `2368393732245529956313345237151518608283468650081902115301417183793437311044`",
+        'ENTRYPOINT_FAILED',
+    )
+)]
 fn test_upgrade_contract_from_resource_writer() {
     let world = deploy_world();
     let class_hash = test_contract::TEST_CLASS_HASH.try_into().unwrap();
@@ -507,7 +508,12 @@ fn test_upgrade_contract_from_resource_writer() {
 }
 
 #[test]
-#[should_panic(expected: ('not owner', 'ENTRYPOINT_FAILED',))]
+#[should_panic(
+    expected: (
+        "Caller `659918` is not the owner of the resource `2368393732245529956313345237151518608283468650081902115301417183793437311044`",
+        'ENTRYPOINT_FAILED',
+    )
+)]
 fn test_upgrade_contract_from_random_account() {
     let world = deploy_world();
     let class_hash = test_contract::TEST_CLASS_HASH.try_into().unwrap();
@@ -524,7 +530,7 @@ fn test_upgrade_contract_from_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
 fn test_upgrade_contract_through_malicious_contract() {
     let world = deploy_world();
     let class_hash = test_contract::TEST_CLASS_HASH.try_into().unwrap();

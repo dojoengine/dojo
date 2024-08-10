@@ -1,5 +1,6 @@
 use starknet::{contract_address_const, ContractAddress, get_caller_address};
 
+use dojo::world::Resource;
 use dojo::world::config::Config::{DifferProgramHashUpdate, FactsRegistryUpdate};
 use dojo::world::config::{IConfigDispatcher, IConfigDispatcherTrait};
 use dojo::model::{Model, ResourceMetadata};
@@ -96,11 +97,13 @@ fn test_contract_getter() {
             'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
         );
 
-    let (class_hash, _) = world.contract(selector_from_tag!("dojo-test_contract"));
-    assert(
-        class_hash == test_contract::TEST_CLASS_HASH.try_into().unwrap(),
-        'invalid contract class hash'
-    );
+    if let Resource::Contract((class_hash, _)) = world
+        .resource(selector_from_tag!("dojo-test_contract")) {
+        assert(
+            class_hash == test_contract::TEST_CLASS_HASH.try_into().unwrap(),
+            'invalid contract class hash'
+        );
+    }
 }
 
 #[test]
@@ -109,8 +112,11 @@ fn test_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let (foo_class_hash, _) = world.model(Model::<Foo>::selector());
-    assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+    if let Resource::Model((class_hash, _)) = world.resource(Model::<Foo>::selector()) {
+        assert(class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+    } else {
+        panic!("Foo model not found");
+    };
 }
 
 #[test]
@@ -120,8 +126,11 @@ fn test_legacy_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let (foo_class_hash, _) = world.model('Foo');
-    assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+    if let Resource::Model((class_hash, _)) = world.resource('Foo') {
+        assert(class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+    } else {
+        panic!("Foo model not found");
+    };
 }
 
 #[test]
@@ -277,7 +286,9 @@ fn test_upgradeable_world_with_class_hash_zero() {
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic(expected: ('only owner can upgrade', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: ("Caller `4919` cannot upgrade the resource `0` (not owner)", 'ENTRYPOINT_FAILED')
+)]
 fn test_upgradeable_world_from_non_owner() {
     // Deploy world contract
     let world = deploy_world();

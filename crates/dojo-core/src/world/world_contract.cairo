@@ -6,18 +6,31 @@ use dojo::model::{ModelIndex, ResourceMetadata};
 use dojo::model::{Layout};
 use dojo::utils::bytearray_hash;
 
+#[derive(Drop, starknet::Store, Serde, Default, Debug)]
+pub enum Resource {
+    Model: (ClassHash, ContractAddress),
+    Contract: (ClassHash, ContractAddress),
+    Namespace,
+    World,
+    #[default]
+    Unregistered,
+}
+
 #[starknet::interface]
 pub trait IWorld<T> {
     fn metadata(self: @T, resource_selector: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
-    fn model(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
-    fn contract(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
-    fn register_model(ref self: T, class_hash: ClassHash);
+
     fn register_namespace(ref self: T, namespace: ByteArray);
+
+    fn register_model(ref self: T, class_hash: ClassHash);
+    fn upgrade_model(ref self: T, class_hash: ClassHash);
+
     fn deploy_contract(
         ref self: T, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>
     ) -> ContractAddress;
     fn upgrade_contract(ref self: T, selector: felt252, class_hash: ClassHash) -> ClassHash;
+
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
 
@@ -34,6 +47,7 @@ pub trait IWorld<T> {
     fn delete_entity(ref self: T, model_selector: felt252, index: ModelIndex, layout: Layout);
 
     fn base(self: @T) -> ClassHash;
+    fn resource(self: @T, selector: felt252) -> Resource;
 
     /// In Dojo, there are 2 levels of authorization: `owner` and `writer`.
     /// Only accounts can own a resource while any contract can write to a resource,
@@ -57,22 +71,6 @@ pub trait IWorldProvider<T> {
     fn world(self: @T) -> IWorldDispatcher;
 }
 
-pub mod Errors {
-    pub const CALLER_NOT_ACCOUNT: felt252 = 'caller not account';
-    pub const NOT_OWNER: felt252 = 'not owner';
-    pub const NO_MODEL_WRITE_ACCESS: felt252 = 'no model write access';
-    pub const NO_NAMESPACE_WRITE_ACCESS: felt252 = 'no namespace write access';
-    pub const NAMESPACE_NOT_REGISTERED: felt252 = 'namespace not registered';
-    pub const NOT_REGISTERED: felt252 = 'resource not registered';
-    pub const INVALID_MODEL_NAME: felt252 = 'invalid model name';
-    pub const INVALID_NAMESPACE_NAME: felt252 = 'invalid namespace name';
-    pub const INVALID_RESOURCE_SELECTOR: felt252 = 'invalid resource selector';
-    pub const OWNER_ONLY_UPGRADE: felt252 = 'only owner can upgrade';
-    pub const OWNER_ONLY_UPDATE: felt252 = 'only owner can update';
-    pub const NAMESPACE_ALREADY_REGISTERED: felt252 = 'namespace already registered';
-    pub const DELETE_ENTITY_MEMBER: felt252 = 'cannot delete entity member';
-}
-
 #[starknet::contract]
 pub mod world {
     use core::array::{ArrayTrait, SpanTrait};
@@ -85,6 +83,8 @@ pub mod world {
     use core::to_byte_array::FormatAsByteArray;
     use core::traits::TryInto;
     use core::traits::Into;
+    use core::panic_with_felt252;
+    use core::panics::panic_with_byte_array;
 
     use starknet::event::EventEmitter;
     use starknet::{
@@ -97,6 +97,7 @@ pub mod world {
         StoragePointerWriteAccess
     };
 
+    use dojo::world::errors;
     use dojo::world::config::{Config, IConfig};
     use dojo::contract::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::contract::{IContractDispatcher, IContractDispatcherTrait};
@@ -112,7 +113,7 @@ pub mod world {
     use dojo::utils::{entity_id_from_keys, bytearray_hash};
 
     use super::{
-        Errors, ModelIndex, IWorldDispatcher, IWorldDispatcherTrait, IWorld, IUpgradeableWorld
+        ModelIndex, IWorldDispatcher, IWorldDispatcherTrait, IWorld, IUpgradeableWorld, Resource
     };
 
     const WORLD: felt252 = 0;
@@ -135,6 +136,7 @@ pub mod world {
         MetadataUpdate: MetadataUpdate,
         NamespaceRegistered: NamespaceRegistered,
         ModelRegistered: ModelRegistered,
+        ModelUpgraded: ModelUpgraded,
         StoreSetRecord: StoreSetRecord,
         StoreUpdateRecord: StoreUpdateRecord,
         StoreUpdateMember: StoreUpdateMember,
@@ -193,6 +195,14 @@ pub mod world {
         pub name: ByteArray,
         pub namespace: ByteArray,
         pub class_hash: ClassHash,
+        pub address: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
+    pub struct ModelUpgraded {
+        pub name: ByteArray,
+        pub namespace: ByteArray,
+        pub class_hash: ClassHash,
         pub prev_class_hash: ClassHash,
         pub address: ContractAddress,
         pub prev_address: ContractAddress,
@@ -244,8 +254,8 @@ pub mod world {
     struct Storage {
         contract_base: ClassHash,
         nonce: usize,
-        models_count: usize,
-        resources: Map::<felt252, ResourceData>,
+        models_salt: usize,
+        resources: Map::<felt252, Resource>,
         owners: Map::<(felt252, ContractAddress), bool>,
         writers: Map::<(felt252, ContractAddress), bool>,
         #[substorage(v0)]
@@ -253,21 +263,11 @@ pub mod world {
         initialized_contract: Map::<felt252, bool>,
     }
 
-    #[derive(Drop, starknet::Store, Default, Debug)]
-    pub enum ResourceData {
-        Model: (ClassHash, ContractAddress),
-        Contract: (ClassHash, ContractAddress),
-        Namespace,
-        World,
-        #[default]
-        None,
-    }
-
     #[generate_trait]
-    impl ResourceDataIsNoneImpl of ResourceDataIsNoneTrait {
-        fn is_none(self: @ResourceData) -> bool {
+    impl ResourceIsNoneImpl of ResourceIsNoneTrait {
+        fn is_unregistered(self: @Resource) -> bool {
             match self {
-                ResourceData::None => true,
+                Resource::Unregistered => true,
                 _ => false
             }
         }
@@ -278,18 +278,18 @@ pub mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
 
-        self.resources.write(WORLD, ResourceData::World);
+        self.resources.write(WORLD, Resource::World);
         self
             .resources
             .write(
                 Model::<ResourceMetadata>::selector(),
-                ResourceData::Model((metadata::initial_class_hash(), metadata::initial_address()))
+                Resource::Model((metadata::initial_class_hash(), metadata::initial_address()))
             );
         self.owners.write((WORLD, creator), true);
 
         let dojo_namespace_hash = bytearray_hash(@"__DOJO__");
 
-        self.resources.write(dojo_namespace_hash, ResourceData::Namespace);
+        self.resources.write(dojo_namespace_hash, Resource::Namespace);
         self.owners.write((dojo_namespace_hash, creator), true);
 
         self.config.initializer(creator);
@@ -364,7 +364,10 @@ pub mod world {
         fn grant_owner(ref self: ContractState, resource: felt252, address: ContractAddress) {
             self.assert_caller_is_account();
 
-            assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
+            if self.resources.read(resource).is_unregistered() {
+                panic_with_byte_array(@errors::resource_not_registered(resource));
+            }
+
             self.assert_resource_owner(resource);
 
             self.owners.write((resource, address), true);
@@ -384,7 +387,10 @@ pub mod world {
         fn revoke_owner(ref self: ContractState, resource: felt252, address: ContractAddress) {
             self.assert_caller_is_account();
 
-            assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
+            if self.resources.read(resource).is_unregistered() {
+                panic_with_byte_array(@errors::resource_not_registered(resource));
+            }
+
             self.assert_resource_owner(resource);
 
             self.owners.write((resource, address), false);
@@ -418,7 +424,10 @@ pub mod world {
         fn grant_writer(ref self: ContractState, resource: felt252, contract: ContractAddress) {
             self.assert_caller_is_account();
 
-            assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
+            if self.resources.read(resource).is_unregistered() {
+                panic_with_byte_array(@errors::resource_not_registered(resource));
+            }
+
             self.assert_resource_owner(resource);
 
             self.writers.write((resource, contract), true);
@@ -438,7 +447,10 @@ pub mod world {
         fn revoke_writer(ref self: ContractState, resource: felt252, contract: ContractAddress) {
             self.assert_caller_is_account();
 
-            assert(!self.resources.read(resource).is_none(), Errors::NOT_REGISTERED);
+            if self.resources.read(resource).is_unregistered() {
+                panic_with_byte_array(@errors::resource_not_registered(resource));
+            }
+
             self.assert_resource_owner(resource);
 
             self.writers.write((resource, contract), false);
@@ -457,46 +469,86 @@ pub mod world {
 
             let caller = get_caller_address();
 
-            let salt = self.models_count.read();
+            let salt = self.models_salt.read();
             let (address, name, selector, namespace, namespace_hash) =
                 dojo::model::deploy_and_get_metadata(
                 salt.into(), class_hash
             )
                 .unwrap_syscall();
-            self.models_count.write(salt + 1);
+            self.models_salt.write(salt + 1);
 
-            let (mut prev_class_hash, mut prev_address) = (
-                core::num::traits::Zero::<ClassHash>::zero(),
-                core::num::traits::Zero::<ContractAddress>::zero(),
-            );
+            if selector.is_zero() {
+                panic_with_byte_array(@errors::invalid_resource_selector(selector));
+            }
 
-            assert(self.is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
+            if !self.is_namespace_registered(namespace_hash) {
+                panic_with_byte_array(@errors::namespace_not_registered(namespace));
+            }
+
+            self.assert_namespace_write_access(namespace_hash);
+
+            let model = self.resources.read(selector);
+            if !model.is_unregistered() {
+                panic_with_byte_array(@errors::model_already_registered(namespace, name));
+            }
+
+            self.resources.write(selector, Resource::Model((class_hash, address)));
+            self.owners.write((selector, caller), true);
+
+            EventEmitter::emit(ref self, ModelRegistered { name, namespace, address, class_hash });
+        }
+
+        fn upgrade_model(ref self: ContractState, class_hash: ClassHash) {
+            self.assert_caller_is_account();
+
+            let caller = get_caller_address();
+
+            let salt = self.models_salt.read();
+            let (address, name, selector, namespace, namespace_hash) =
+                dojo::model::deploy_and_get_metadata(
+                salt.into(), class_hash
+            )
+                .unwrap_syscall();
+            self.models_salt.write(salt + 1);
+
+            if !self.is_namespace_registered(namespace_hash) {
+                panic_with_byte_array(@errors::namespace_not_registered(namespace));
+            }
+
             self.assert_namespace_write_access(namespace_hash);
 
             if selector.is_zero() {
-                core::panic_with_felt252(Errors::INVALID_MODEL_NAME);
+                panic_with_byte_array(@errors::invalid_resource_selector(selector));
             }
+
+            let mut prev_class_hash = core::num::traits::Zero::<ClassHash>::zero();
+            let mut prev_address = core::num::traits::Zero::<ContractAddress>::zero();
 
             match self.resources.read(selector) {
                 // If model is already registered, validate permission to update.
-                ResourceData::Model((
+                Resource::Model((
                     model_hash, model_address
                 )) => {
-                    assert(self.is_owner(selector, caller), Errors::OWNER_ONLY_UPDATE);
+                    if !self.is_owner(selector, caller) {
+                        panic_with_byte_array(@errors::not_owner_upgrade(caller, selector));
+                    }
+
                     prev_class_hash = model_hash;
                     prev_address = model_address;
                 },
-                // new model
-                ResourceData::None => { self.owners.write((selector, caller), true); },
-                // Avoids a model name to conflict with already registered resource,
-                // which can cause ACL issue with current ACL implementation.
-                _ => core::panic_with_felt252(Errors::INVALID_MODEL_NAME)
+                Resource::Unregistered => {
+                    panic_with_byte_array(@errors::model_not_registered(namespace, name))
+                },
+                _ => panic_with_byte_array(
+                    @errors::resource_conflict(format!("{}-{}", namespace, name), "model")
+                )
             };
 
-            self.resources.write(selector, ResourceData::Model((class_hash, address)));
+            self.resources.write(selector, Resource::Model((class_hash, address)));
+
             EventEmitter::emit(
                 ref self,
-                ModelRegistered {
+                ModelUpgraded {
                     name, namespace, prev_address, address, class_hash, prev_class_hash
                 }
             );
@@ -515,44 +567,19 @@ pub mod world {
             let hash = bytearray_hash(@namespace);
 
             match self.resources.read(hash) {
-                ResourceData::Namespace => {
+                Resource::Namespace => {
                     if !self.is_owner(hash, caller) {
-                        core::panic_with_felt252(Errors::NAMESPACE_ALREADY_REGISTERED);
+                        panic_with_byte_array(@errors::namespace_already_registered(namespace));
                     }
                 },
-                ResourceData::None => {
-                    self.resources.write(hash, ResourceData::Namespace);
+                Resource::Unregistered => {
+                    self.resources.write(hash, Resource::Namespace);
                     self.owners.write((hash, caller), true);
 
                     EventEmitter::emit(ref self, NamespaceRegistered { namespace, hash });
                 },
-                _ => { core::panic_with_felt252(Errors::INVALID_NAMESPACE_NAME); }
+                _ => { panic_with_byte_array(@errors::resource_conflict(namespace, "namespace")); }
             };
-        }
-
-
-        /// Gets the class hash of a registered model.
-        ///
-        /// # Arguments
-        ///
-        /// * `selector` - The keccak(name) of the model.
-        ///
-        /// # Returns
-        ///
-        /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the
-        /// model.
-        fn model(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
-            match self.resources.read(selector) {
-                ResourceData::Model(m) => m,
-                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
-            }
-        }
-
-        fn contract(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
-            match self.resources.read(selector) {
-                ResourceData::Contract(c) => c,
-                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
-            }
         }
 
         /// Deploys a contract associated with the world.
@@ -588,7 +615,11 @@ pub mod world {
             let namespace = dispatcher.namespace();
             let name = dispatcher.contract_name();
             let namespace_hash = dispatcher.namespace_hash();
-            assert(self.is_namespace_registered(namespace_hash), Errors::NAMESPACE_NOT_REGISTERED);
+
+            if !self.is_namespace_registered(namespace_hash) {
+                panic_with_byte_array(@errors::namespace_not_registered(namespace));
+            }
+
             self.assert_namespace_write_access(namespace_hash);
 
             let selector = dispatcher.selector();
@@ -605,7 +636,7 @@ pub mod world {
 
             self.owners.write((selector, caller), true);
 
-            self.resources.write(selector, ResourceData::Contract((class_hash, contract_address)));
+            self.resources.write(selector, Resource::Contract((class_hash, contract_address)));
 
             EventEmitter::emit(
                 ref self,
@@ -631,12 +662,15 @@ pub mod world {
             self.assert_caller_is_account();
             self.assert_resource_owner(selector);
 
-            let (_, contract_address) = self.contract(selector);
-            IUpgradeableDispatcher { contract_address }.upgrade(class_hash);
-            EventEmitter::emit(
-                ref self, ContractUpgraded { class_hash, address: contract_address }
-            );
-            class_hash
+            if let Resource::Contract((_, contract_address)) = self.resources.read(selector) {
+                IUpgradeableDispatcher { contract_address }.upgrade(class_hash);
+                EventEmitter::emit(
+                    ref self, ContractUpgraded { class_hash, address: contract_address }
+                );
+                class_hash
+            } else {
+                panic_with_byte_array(@errors::invalid_resource_selector(selector))
+            }
         }
 
         /// Issues an autoincremented id to the caller.
@@ -767,9 +801,7 @@ pub mod world {
                         ref self, StoreDelRecord { table: model_selector, entity_id }
                     );
                 },
-                ModelIndex::MemberId(_) => {
-                    core::panic_with_felt252(Errors::DELETE_ENTITY_MEMBER);
-                }
+                ModelIndex::MemberId(_) => { panic_with_felt252(errors::DELETE_ENTITY_MEMBER); }
             }
         }
 
@@ -780,6 +812,17 @@ pub mod world {
         /// * `ClassHash` - The class_hash of the contract_base contract.
         fn base(self: @ContractState) -> ClassHash {
             self.contract_base.read()
+        }
+
+        /// Gets resource data from its selector.
+        ///
+        /// # Arguments
+        ///   * `selector` - the resource selector
+        ///
+        /// # Returns
+        ///   * `Resource` - the resource data associated with the selector.
+        fn resource(self: @ContractState, selector: felt252) -> Resource {
+            self.resources.read(selector)
         }
     }
 
@@ -795,7 +838,10 @@ pub mod world {
             self.assert_caller_is_account();
 
             assert(new_class_hash.is_non_zero(), 'invalid class_hash');
-            assert(self.is_caller_world_owner(), Errors::OWNER_ONLY_UPGRADE);
+
+            if !self.is_caller_world_owner() {
+                panic_with_byte_array(@errors::not_owner_upgrade(get_caller_address(), WORLD));
+            }
 
             // upgrade to new_class_hash
             replace_class_syscall(new_class_hash).unwrap();
@@ -882,7 +928,9 @@ pub mod world {
             let caller = get_caller_address();
             let account = get_tx_info().unbox().account_contract_address;
 
-            assert(caller == account, Errors::CALLER_NOT_ACCOUNT);
+            if caller != account {
+                panic_with_byte_array(@errors::caller_not_account(caller));
+            }
         }
 
         /// Panic if the caller is NOT an owner of the resource.
@@ -891,26 +939,10 @@ pub mod world {
         ///   * `resource_selector` - the selector of the resource.
         #[inline(always)]
         fn assert_resource_owner(self: @ContractState, resource_selector: felt252) {
-            assert(
-                self.is_owner(resource_selector, get_caller_address())
-                    || self.is_caller_world_owner(),
-                Errors::NOT_OWNER
-            );
-        }
-
-        /// Panic if the caller is NOT allowed to write in the namespace.
-        ///
-        /// # Arguments
-        ///   * `namespace_hash` - the hash of the namespace.
-        #[inline(always)]
-        fn assert_namespace_write_access(self: @ContractState, namespace_hash: felt252) {
-            let caller = get_caller_address();
-            assert(
-                self.is_writer(namespace_hash, caller)
-                    || self.is_owner(namespace_hash, caller)
-                    || self.is_caller_world_owner(),
-                Errors::NO_NAMESPACE_WRITE_ACCESS
-            );
+            if !(self.is_owner(resource_selector, get_caller_address())
+                || self.is_caller_world_owner()) {
+                panic_with_byte_array(@errors::not_owner(get_caller_address(), resource_selector));
+            }
         }
 
         /// Panic if the caller is NOT allowed to write in the model.
@@ -923,7 +955,7 @@ pub mod world {
 
             // must have owner or writer role on the namespace or on the model
             match self.resources.read(model_selector) {
-                ResourceData::Model((
+                Resource::Model((
                     _, model_address
                 )) => {
                     let model = IModelDispatcher { contract_address: model_address };
@@ -939,9 +971,24 @@ pub mod world {
                         || self.is_caller_world_owner() {
                         return;
                     }
-                    core::panic_with_felt252(Errors::NO_MODEL_WRITE_ACCESS)
+
+                    panic_with_byte_array(@errors::no_model_write_access(model.tag(), caller));
                 },
-                _ => core::panic_with_felt252(Errors::INVALID_RESOURCE_SELECTOR)
+                _ => panic_with_byte_array(@errors::invalid_resource_selector(model_selector))
+            }
+        }
+
+        /// Panic if the caller is NOT allowed to write in the namespace.
+        ///
+        /// # Arguments
+        ///   * `namespace_hash` - the hash of the namespace.
+        #[inline(always)]
+        fn assert_namespace_write_access(self: @ContractState, namespace_hash: felt252) {
+            let caller = get_caller_address();
+            if !(self.is_writer(namespace_hash, caller)
+                || self.is_owner(namespace_hash, caller)
+                || self.is_caller_world_owner()) {
+                panic_with_byte_array(@errors::no_namespace_write_access(caller, namespace_hash));
             }
         }
 
@@ -949,7 +996,7 @@ pub mod world {
         #[inline(always)]
         fn is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
             match self.resources.read(namespace_hash) {
-                ResourceData::Namespace => true,
+                Resource::Namespace => true,
                 _ => false
             }
         }

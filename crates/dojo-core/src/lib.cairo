@@ -52,11 +52,12 @@ pub mod utils {
 pub mod world {
     pub(crate) mod update;
     pub(crate) mod config;
+    pub(crate) mod errors;
 
     mod world_contract;
     pub use world_contract::{
         world, IWorld, IWorldDispatcher, IWorldDispatcherTrait, IWorldProvider,
-        IWorldProviderDispatcher, IWorldProviderDispatcherTrait
+        IWorldProviderDispatcher, IWorldProviderDispatcherTrait, Resource
     };
     pub(crate) use world_contract::{
         IUpgradeableWorld, IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait

@@ -33,6 +33,7 @@ tracing.workspace = true
 dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 
 [dev-dependencies]
+cainome.workspace = true
 camino.workspace = true
 dojo-test-utils.workspace = true
 scarb.workspace = true

@@ -10,8 +10,8 @@ dependencies = [
 
 [[package]]
 name = "dojo_plugin"
-version = "0.7.3"
-source = "git+https://github.com/dojoengine/dojo?rev=71b1f1a4#71b1f1a467534cbeeb901356f41e612ed4187bd1"
+version = "1.0.0-alpha.4"
+source = "git+https://github.com/dojoengine/dojo?rev=f15def33#f15def330c0d099e79351d11c197f63e8cc1ff36"
 
 [[package]]
 name = "types_test"

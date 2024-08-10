@@ -120,8 +120,8 @@ mod records {
                     RecordLogged { record_id, type_u8: record_idx.into(), type_felt, random_u128 }
                 );
             };
-            return ();
         }
+
         // Implemment fn delete, input param: record_id
         fn delete(ref world: IWorldDispatcher, record_id: u32) {
             let world = self.world_dispatcher.read();

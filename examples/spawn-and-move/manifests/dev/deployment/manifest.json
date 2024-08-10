@@ -1,8 +1,8 @@
 {
   "world": {
     "kind": "WorldContract",
-    "class_hash": "0x27845f1b684041a2dcbba9960206ab0be559dc6acbc324bd1cba7918887e813",
-    "original_class_hash": "0x27845f1b684041a2dcbba9960206ab0be559dc6acbc324bd1cba7918887e813",
+    "class_hash": "0x73353335765851ca35cf9440782c48c50d15662afecbf352e38743c6a175e7b",
+    "original_class_hash": "0x73353335765851ca35cf9440782c48c50d15662afecbf352e38743c6a175e7b",
     "abi": [
       {
         "type": "impl",
@@ -145,6 +145,32 @@
       },
       {
         "type": "enum",
+        "name": "dojo::world::world_contract::Resource",
+        "variants": [
+          {
+            "name": "Model",
+            "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
+          },
+          {
+            "name": "Contract",
+            "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
+          },
+          {
+            "name": "Namespace",
+            "type": "()"
+          },
+          {
+            "name": "World",
+            "type": "()"
+          },
+          {
+            "name": "Unregistered",
+            "type": "()"
+          }
+        ]
+      },
+      {
+        "type": "enum",
         "name": "core::bool",
         "variants": [
           {
@@ -191,35 +217,15 @@
           },
           {
             "type": "function",
-            "name": "model",
+            "name": "register_namespace",
             "inputs": [
               {
-                "name": "selector",
-                "type": "core::felt252"
+                "name": "namespace",
+                "type": "core::byte_array::ByteArray"
               }
             ],
-            "outputs": [
-              {
-                "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
-              }
-            ],
-            "state_mutability": "view"
-          },
-          {
-            "type": "function",
-            "name": "contract",
-            "inputs": [
-              {
-                "name": "selector",
-                "type": "core::felt252"
-              }
-            ],
-            "outputs": [
-              {
-                "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
-              }
-            ],
-            "state_mutability": "view"
+            "outputs": [],
+            "state_mutability": "external"
           },
           {
             "type": "function",
@@ -235,11 +241,11 @@
           },
           {
             "type": "function",
-            "name": "register_namespace",
+            "name": "upgrade_model",
             "inputs": [
               {
-                "name": "namespace",
-                "type": "core::byte_array::ByteArray"
+                "name": "class_hash",
+                "type": "core::starknet::class_hash::ClassHash"
               }
             ],
             "outputs": [],
@@ -391,6 +397,22 @@
             "outputs": [
               {
                 "type": "core::starknet::class_hash::ClassHash"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "resource",
+            "inputs": [
+              {
+                "name": "selector",
+                "type": "core::felt252"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "dojo::world::world_contract::Resource"
               }
             ],
             "state_mutability": "view"
@@ -840,6 +862,33 @@
             "kind": "data"
           },
           {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
+        "name": "dojo::world::world_contract::world::ModelUpgraded",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "name",
+            "type": "core::byte_array::ByteArray",
+            "kind": "data"
+          },
+          {
+            "name": "namespace",
+            "type": "core::byte_array::ByteArray",
+            "kind": "data"
+          },
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
+          },
+          {
             "name": "prev_class_hash",
             "type": "core::starknet::class_hash::ClassHash",
             "kind": "data"
@@ -1099,6 +1148,11 @@
             "kind": "nested"
           },
           {
+            "name": "ModelUpgraded",
+            "type": "dojo::world::world_contract::world::ModelUpgraded",
+            "kind": "nested"
+          },
+          {
             "name": "StoreSetRecord",
             "type": "dojo::world::world_contract::world::StoreSetRecord",
             "kind": "nested"
@@ -1141,8 +1195,8 @@
         ]
       }
     ],
-    "address": "0x7ddf8574c8715a8e0ca352860099315a7a2f39597ff733f1df479760561a218",
-    "transaction_hash": "0x59bb050f12bdb14186e69c139e5da50a9f60b0d55acd349727b5ac847d2d706",
+    "address": "0x7d1b0c56b70f543f40cffb9e120316fc764fcc452e7c1636fee3330d564aa7f",
+    "transaction_hash": "0x3b0e941e0aa8d155983e7ccca8cba432c3ea67aa6d7e731f6e35dc993b6eac4",
     "block_number": 3,
     "seed": "dojo_examples",
     "metadata": {
@@ -1162,9 +1216,9 @@
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": "0x7f130e487fae5d3b9d947aa2f2002897361f957f3eb38a3c0ea4fa3b06f662c",
-      "class_hash": "0xc0a5037a6fdc0b374b270ca5e9f3bd76200d73d01f409749b7006b3cd6c03d",
-      "original_class_hash": "0xc0a5037a6fdc0b374b270ca5e9f3bd76200d73d01f409749b7006b3cd6c03d",
+      "address": "0x5e134a1f1be001f48c5db8c1f69118ed58dcf919414dce44dc0033d42c88002",
+      "class_hash": "0x61b852936c676b98c95d18b5719ca51c9e6a71a160e26b79cb1a9cd0ae4c161",
+      "original_class_hash": "0x61b852936c676b98c95d18b5719ca51c9e6a71a160e26b79cb1a9cd0ae4c161",
       "base_class_hash": "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2",
       "abi": [
         {
@@ -1296,77 +1350,6 @@
         },
         {
           "type": "impl",
-          "name": "ActionsComputedImpl",
-          "interface_name": "dojo_examples::actions::IActionsComputed"
-        },
-        {
-          "type": "struct",
-          "name": "dojo_examples::models::Vec2",
-          "members": [
-            {
-              "name": "x",
-              "type": "core::integer::u32"
-            },
-            {
-              "name": "y",
-              "type": "core::integer::u32"
-            }
-          ]
-        },
-        {
-          "type": "struct",
-          "name": "dojo_examples::models::Position",
-          "members": [
-            {
-              "name": "player",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
-            {
-              "name": "vec",
-              "type": "dojo_examples::models::Vec2"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo_examples::actions::IActionsComputed",
-          "items": [
-            {
-              "type": "function",
-              "name": "tile_terrain",
-              "inputs": [
-                {
-                  "name": "vec",
-                  "type": "dojo_examples::models::Vec2"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::felt252"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "quadrant",
-              "inputs": [
-                {
-                  "name": "pos",
-                  "type": "dojo_examples::models::Position"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::integer::u8"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "impl",
           "name": "ActionsImpl",
           "interface_name": "dojo_examples::actions::IActions"
         },
@@ -1393,6 +1376,34 @@
             {
               "name": "Down",
               "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Vec2",
+          "members": [
+            {
+              "name": "x",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "y",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Position",
+          "members": [
+            {
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "vec",
+              "type": "dojo_examples::models::Vec2"
             }
           ]
         },
@@ -1602,16 +1613,17 @@
       "reads": [],
       "writes": [
         "dojo_examples-Moves",
-        "dojo_examples-Position"
+        "dojo_examples-Position",
+        "dojo_examples-PlayerConfig",
+        "dojo_examples-ServerProfile"
       ],
-      "computed": [],
       "init_calldata": [],
       "tag": "dojo_examples-actions",
       "manifest_name": "dojo_examples-actions-40b6994c"
     },
     {
       "kind": "DojoContract",
-      "address": "0x50edd2f7b372b0551edacf628064e4eb8ac44150697ae9159ee2a130a532fac",
+      "address": "0x6df54d7384c6b22f2d93d6d20eaffa7b94acaf60cd0f24774972067e676ba9f",
       "class_hash": "0x45ad5a298db270a9c3ee439b7a7a008e3219b70937cfaa144589866442f3908",
       "original_class_hash": "0x45ad5a298db270a9c3ee439b7a7a008e3219b70937cfaa144589866442f3908",
       "base_class_hash": "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2",
@@ -1841,14 +1853,13 @@
       ],
       "reads": [],
       "writes": [],
-      "computed": [],
       "init_calldata": [],
       "tag": "dojo_examples-dungeon",
       "manifest_name": "dojo_examples-dungeon-6620e0e6"
     },
     {
       "kind": "DojoContract",
-      "address": "0x2730055c4af418e11c058e318ac7668179b2ee60c814041d139f8784ea687cb",
+      "address": "0x73eb27f7448504c209ebffa6246350737b2d397a49dde7c530e51fc1ce8c596",
       "class_hash": "0x2cc02e47b1f2e767ced0fa64afcc481e7e2ad9fad7a8e66921f8452cc44071c",
       "original_class_hash": "0x2cc02e47b1f2e767ced0fa64afcc481e7e2ad9fad7a8e66921f8452cc44071c",
       "base_class_hash": "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2",
@@ -2060,14 +2071,13 @@
       ],
       "reads": [],
       "writes": [],
-      "computed": [],
       "init_calldata": [],
       "tag": "dojo_examples-mock_token",
       "manifest_name": "dojo_examples-mock_token-31599eb2"
     },
     {
       "kind": "DojoContract",
-      "address": "0x263a9083ee28ba1b521b21b33b7588405b4dc484048ef1355c9e2e66a13e500",
+      "address": "0x4fa74e3a3dda5df9e61b6db8bf59bd06b6e4e54ff8c039181512531ed36b54",
       "class_hash": "0x647fc1b2d2e902e6304e127b36995d8f57fe45c38e38e15d8860db508dbf24a",
       "original_class_hash": "0x647fc1b2d2e902e6304e127b36995d8f57fe45c38e38e15d8860db508dbf24a",
       "base_class_hash": "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2",
@@ -2292,7 +2302,6 @@
       ],
       "reads": [],
       "writes": [],
-      "computed": [],
       "init_calldata": [
         "$contract_address:dojo_examples-actions",
         "$class_hash:dojo_examples-actions",

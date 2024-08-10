@@ -3,7 +3,7 @@ use std::str;
 
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
-use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
+use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
 use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
@@ -60,7 +60,7 @@ async fn migrate_with_auto_mine() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
@@ -75,7 +75,7 @@ async fn migrate_with_block_time() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
     let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         block_time: Some(1000),
@@ -95,13 +95,10 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
-    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
-        disable_fee: true,
-        ..Default::default()
-    })
-    .expect("Fail to start runner");
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Fail to start runner");
 
     let account = sequencer.account(0);
 
@@ -110,7 +107,11 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
             &ws,
             &migration,
             &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
+            TxnConfig {
+                fee_estimate_multiplier: Some(0.0000000000000001),
+                wait: true,
+                ..Default::default()
+            },
         )
         .await
         .is_err()
@@ -277,7 +278,7 @@ async fn migrate_with_metadata() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
     let sequencer = KatanaRunner::new().expect("Fail to start runner");
 
@@ -350,7 +351,7 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, diff) = setup::setup_migration(&config).unwrap();
+    let (migration, diff) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =

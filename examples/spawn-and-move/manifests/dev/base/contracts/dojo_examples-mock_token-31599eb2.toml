@@ -5,7 +5,6 @@ base_class_hash = "0x0"
 abi = "manifests/dev/base/abis/contracts/dojo_examples-mock_token-31599eb2.json"
 reads = []
 writes = []
-computed = []
 init_calldata = []
 tag = "dojo_examples-mock_token"
 manifest_name = "dojo_examples-mock_token-31599eb2"

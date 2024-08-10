@@ -1,20 +1,21 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use cainome::cairo_serde::ContractAddress;
+use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
-use dojo_test_utils::migration::prepare_migration;
-use dojo_world::contracts::world::{WorldContract, WorldContractReader};
-use dojo_world::metadata::{dojo_metadata_from_workspace, get_default_namespace_from_ws};
+use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
+use dojo_world::contracts::naming::compute_bytearray_hash;
+use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionWaiter;
-use katana_runner::KatanaRunner;
+use dojo_world::utils::{TransactionExt, TransactionWaiter};
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use scarb::ops;
-use sozo_ops::migration::{auto_authorize, execute_strategy, find_authorization_diff};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::get_selector_from_name;
+use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
@@ -39,61 +40,51 @@ async fn test_entities_queries() {
 
     let setup = CompilerTestSetup::from_examples("../../dojo-core", "../../../examples/");
     let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-    let ui = config.ui();
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let dojo_metadata =
-        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
+    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
 
-    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
+    let account = sequencer.account(0);
 
-    let (migration, diff) = prepare_migration(
-        config.manifest_path().parent().unwrap().into(),
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path,
         target_path,
-        dojo_metadata.skip_migration,
-        &default_namespace,
+        None,
+        "dojo_examples",
+        "dojo_examples",
     )
     .unwrap();
 
-    let sequencer = KatanaRunner::new().expect("Fail to start runner");
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
-    let account = sequencer.account(0);
 
-    let world_reader = WorldContractReader::new(migration.world_address, &provider);
-    let world = WorldContract::new(migration.world_address, sequencer.account(0))
-        .with_block(BlockId::Tag(BlockTag::Pending));
+    let world = WorldContract::new(strat.world_address, &account);
+    let world_reader = WorldContractReader::new(strat.world_address, &provider);
 
-    let migration_output =
-        execute_strategy(&ws, &migration, sequencer.account(0), TxnConfig::init_wait())
-            .await
-            .unwrap();
+    let actions = strat.contracts.first().unwrap();
+    let actions_address = get_contract_address(
+        actions.salt,
+        strat.base.as_ref().unwrap().diff.local_class_hash,
+        &[],
+        strat.world_address,
+    );
 
-    let world_address = migration_output.world_address;
-
-    println!("output {:?}", migration_output);
-
-    let (grant, revoke) =
-        find_authorization_diff(&ui, &world, &diff, Some(&migration_output), &default_namespace)
-            .await
-            .unwrap();
-
-    auto_authorize(&ws, &world, &TxnConfig::init_wait(), &default_namespace, &grant, &revoke)
+    // TODO: the init_wait should be sufficient here, but it's not.
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     // spawn
     let tx = account
         .execute_v1(vec![Call {
-            to: migration_output
-                .contracts
-                .first()
-                .expect("shouldn't be empty")
-                .as_ref()
-                .expect("should be deployed")
-                .contract_address,
+            to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
         }])
@@ -105,8 +96,11 @@ async fn test_entities_queries() {
 
     let db = Sql::new(
         pool.clone(),
-        world_address,
-        provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address).await.unwrap(),
+        strat.world_address,
+        provider
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), strat.world_address)
+            .await
+            .unwrap(),
     )
     .await
     .unwrap();
@@ -128,7 +122,7 @@ async fn test_entities_queries() {
     let _ = engine.sync_to_head(0, None).await.unwrap();
 
     let (_, receiver) = tokio::sync::mpsc::channel(1);
-    let grpc = DojoWorld::new(db.pool, receiver, world_address, provider.clone());
+    let grpc = DojoWorld::new(db.pool, receiver, strat.world_address, provider.clone());
 
     let entities = grpc
         .query_by_keys(

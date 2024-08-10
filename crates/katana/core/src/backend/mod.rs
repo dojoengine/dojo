@@ -47,7 +47,7 @@ pub struct Backend<EF: ExecutorFactory> {
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
-    #[allow(deprecated)]
+    #[allow(deprecated, unused)]
     pub(crate) async fn new(executor_factory: Arc<EF>, mut config: StarknetConfig) -> Self {
         let block_context_generator = config.block_context_generator();
 

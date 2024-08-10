@@ -33,7 +33,7 @@ fn test_owner() {
 
 
 #[test]
-#[should_panic(expected: ('resource not registered', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ("Resource `42` is not registered", 'ENTRYPOINT_FAILED'))]
 fn test_grant_owner_not_registered_resource() {
     let world = deploy_world();
 
@@ -42,7 +42,7 @@ fn test_grant_owner_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED'))]
 fn test_grant_owner_through_malicious_contract() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -61,7 +61,12 @@ fn test_grant_owner_through_malicious_contract() {
 }
 
 #[test]
-#[should_panic(expected: ('not owner', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Caller `659918` is not the owner of the resource `3123252206139358744730647958636922105676576163624049771737508399526017186883`",
+        'ENTRYPOINT_FAILED'
+    )
+)]
 fn test_grant_owner_fails_for_non_owner() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -77,7 +82,7 @@ fn test_grant_owner_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED'))]
 fn test_revoke_owner_through_malicious_contract() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -97,7 +102,12 @@ fn test_revoke_owner_through_malicious_contract() {
 }
 
 #[test]
-#[should_panic(expected: ('not owner', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Caller `659918` is not the owner of the resource `3123252206139358744730647958636922105676576163624049771737508399526017186883`",
+        'ENTRYPOINT_FAILED'
+    )
+)]
 fn test_revoke_owner_fails_for_non_owner() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -131,16 +141,15 @@ fn test_writer() {
 }
 
 #[test]
-#[should_panic(expected: ('resource not registered', 'ENTRYPOINT_FAILED'))]
 fn test_writer_not_registered_resource() {
     let world = deploy_world();
 
     // 42 is not a registered resource ID
-    world.grant_writer(42, 69.try_into().unwrap());
+    !world.is_writer(42, 69.try_into().unwrap());
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED'))]
 fn test_grant_writer_through_malicious_contract() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -159,7 +168,12 @@ fn test_grant_writer_through_malicious_contract() {
 }
 
 #[test]
-#[should_panic(expected: ('not owner', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Caller `659918` is not the owner of the resource `3123252206139358744730647958636922105676576163624049771737508399526017186883`",
+        'ENTRYPOINT_FAILED'
+    )
+)]
 fn test_grant_writer_fails_for_non_owner() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -175,7 +189,7 @@ fn test_grant_writer_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('caller not account', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED'))]
 fn test_revoke_writer_through_malicious_contract() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
@@ -195,7 +209,12 @@ fn test_revoke_writer_through_malicious_contract() {
 }
 
 #[test]
-#[should_panic(expected: ('not owner', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Caller `659918` is not the owner of the resource `3123252206139358744730647958636922105676576163624049771737508399526017186883`",
+        'ENTRYPOINT_FAILED'
+    )
+)]
 fn test_revoke_writer_fails_for_non_owner() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());

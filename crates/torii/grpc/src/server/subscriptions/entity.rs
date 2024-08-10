@@ -220,12 +220,14 @@ impl Service {
                 .map_err(ParseError::FromStr)?;
             let schemas = cache.schemas(&model_ids).await?;
 
-            let (entity_query, arrays_queries) = build_sql_query(
+            let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 "entities",
                 "entity_id",
                 Some("entities.id = ?"),
                 Some("entities.id = ?"),
+                None,
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(&entity.id).fetch_one(&pool).await?;
