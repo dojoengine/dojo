@@ -90,6 +90,15 @@ async fn test_load_from_remote() {
         strat.world_address,
     );
 
+    let world = WorldContract::new(strat.world_address, &account);
+
+    world.grant_writer(
+        &compute_bytearray_hash("dojo_examples"),
+        &ContractAddress(actions_address),
+    ).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
     // spawn
     let tx = &account
         .execute_v1(vec![Call {
@@ -221,6 +230,15 @@ async fn test_load_from_remote_del() {
         strat.world_address,
     );
 
+    let world = WorldContract::new(strat.world_address, &account);
+
+    world.grant_writer(
+        &compute_bytearray_hash("dojo_examples"),
+        &ContractAddress(actions_address),
+    ).send_with_cfg(&TxnConfig::init_wait()).await.unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
     // spawn
     account
         .execute_v1(vec![Call {
@@ -258,7 +276,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
@@ -329,7 +347,7 @@ async fn test_get_entity_keys() {
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
     // spawn
     account
@@ -342,7 +360,7 @@ async fn test_get_entity_keys() {
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
