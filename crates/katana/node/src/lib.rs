@@ -175,13 +175,13 @@ pub async fn start(
     // it to be registered.
     if let Some(addr) = server_config.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
-        let db = db.unwrap();
+        let reports = db.map(|db| vec![Box::new(db) as Box<dyn Report>]).unwrap_or_default();
 
         prometheus_exporter::serve(
             addr,
             prometheus_handle,
             metrics_process::Collector::default(),
-            vec![Box::new(db) as Box<dyn Report>],
+            reports,
         )
         .await?;
 
