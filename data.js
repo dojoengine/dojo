@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723408852125,
+  "lastUpdate": 1723412605599,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15073,6 +15073,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3927812,
             "range": "± 139224",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b5af28ed1a69eb3540b545fe377b987f138390f9",
+          "message": "refactor(katana): move pool into its own crate + skeleton code (#2281)",
+          "timestamp": "2024-08-12T05:24:26+08:00",
+          "tree_id": "94407b491cf3a5422fafb27368629c22c4491f34",
+          "url": "https://github.com/dojoengine/dojo/commit/b5af28ed1a69eb3540b545fe377b987f138390f9"
+        },
+        "date": 1723412604206,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17272964,
+            "range": "± 276891",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3750988,
+            "range": "± 62127",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3811505212,
+            "range": "± 848524867",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3890663,
+            "range": "± 7629",
             "unit": "ns/iter"
           }
         ]
