@@ -186,6 +186,7 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
+    use dojo::model::Model;
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
     use dojo::utils::test::{spawn_test_world, deploy_contract};
@@ -207,6 +208,10 @@ mod tests {
         let contract_address = world
             .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
         let actions_system = IActionsDispatcher { contract_address };
+
+        // set authorizations
+        world.grant_writer(Model::<Moves>::selector(), contract_address);
+        world.grant_writer(Model::<Position>::selector(), contract_address);
 
         // System calls
         actions_system.spawn();

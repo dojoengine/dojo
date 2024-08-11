@@ -193,7 +193,7 @@ abigen!(
         "name": "metadata",
         "inputs": [
           {
-            "name": "resource_id",
+            "name": "resource_selector",
             "type": "core::felt252"
           }
         ],
@@ -218,6 +218,18 @@ abigen!(
       },
       {
         "type": "function",
+        "name": "register_namespace",
+        "inputs": [
+          {
+            "name": "namespace",
+            "type": "core::byte_array::ByteArray"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
         "name": "register_model",
         "inputs": [
           {
@@ -230,11 +242,11 @@ abigen!(
       },
       {
         "type": "function",
-        "name": "register_namespace",
+        "name": "upgrade_model",
         "inputs": [
           {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray"
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash"
           }
         ],
         "outputs": [],
@@ -509,86 +521,6 @@ abigen!(
         ],
         "outputs": [],
         "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "can_write_resource",
-        "inputs": [
-          {
-            "name": "resource_id",
-            "type": "core::felt252"
-          },
-          {
-            "name": "contract",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::bool"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "can_write_model",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          },
-          {
-            "name": "contract",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::bool"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "can_write_contract",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          },
-          {
-            "name": "contract",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::bool"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "can_write_namespace",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          },
-          {
-            "name": "contract",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::bool"
-          }
-        ],
-        "state_mutability": "view"
       }
     ]
   },
@@ -931,6 +863,33 @@ abigen!(
         "kind": "data"
       },
       {
+        "name": "address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::world::world_contract::world::ModelUpgraded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "namespace",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "class_hash",
+        "type": "core::starknet::class_hash::ClassHash",
+        "kind": "data"
+      },
+      {
         "name": "prev_class_hash",
         "type": "core::starknet::class_hash::ClassHash",
         "kind": "data"
@@ -1187,6 +1146,11 @@ abigen!(
       {
         "name": "ModelRegistered",
         "type": "dojo::world::world_contract::world::ModelRegistered",
+        "kind": "nested"
+      },
+      {
+        "name": "ModelUpgraded",
+        "type": "dojo::world::world_contract::world::ModelUpgraded",
         "kind": "nested"
       },
       {

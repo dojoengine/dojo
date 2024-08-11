@@ -74,21 +74,9 @@ fn parse_registered_model_events() {
     ];
 
     let events = vec![
-        build_model_registered_event(
-            vec![felt!("0x5555"), felt!("0xbeef"), felt!("0xa1"), felt!("0")],
-            "ns",
-            "modelA",
-        ),
-        build_model_registered_event(
-            vec![felt!("0xbeef"), felt!("0"), felt!("0xa1"), felt!("0xa1")],
-            "ns",
-            "modelA",
-        ),
-        build_model_registered_event(
-            vec![felt!("0x6666"), felt!("0"), felt!("0xa3"), felt!("0")],
-            "ns",
-            "modelB",
-        ),
+        build_model_registered_event(vec![felt!("0x5555"), felt!("0xbeef")], "ns", "modelA"),
+        build_model_registered_event(vec![felt!("0x5555"), felt!("0xbeef")], "ns", "modelA"),
+        build_model_registered_event(vec![felt!("0x6666"), felt!("0xbaaf")], "ns", "modelB"),
     ];
 
     let actual_models = parse_models_events(events);

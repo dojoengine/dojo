@@ -63,9 +63,7 @@ where
         let packed_size: u32 = model.packed_size().await?;
 
         let class_hash = event.data[offset];
-        // NOTE: offset + 1 is the prev_class_hash, as denoted in
-        // the ModelRegistered event. so contract address is at offset + 2
-        let contract_address = event.data[offset + 2];
+        let contract_address = event.data[offset + 1];
 
         info!(
             target: LOG_TARGET,

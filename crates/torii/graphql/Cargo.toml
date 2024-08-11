@@ -15,6 +15,7 @@ async-graphql-warp = "6.0.7"
 async-recursion = "1.0.5"
 async-trait.workspace = true
 base64.workspace = true
+cainome.workspace = true
 chrono.workspace = true
 convert_case = "0.6.0"
 dojo-types = { path = "../../dojo-types" }

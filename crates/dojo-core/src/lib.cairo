@@ -52,6 +52,7 @@ pub mod utils {
 pub mod world {
     pub(crate) mod update;
     pub(crate) mod config;
+    pub(crate) mod errors;
 
     mod world_contract;
     pub use world_contract::{
@@ -76,6 +77,12 @@ mod tests {
     }
     mod base;
     mod benchmarks;
-    mod world;
+    mod helpers;
+    mod world {
+        mod acl;
+        mod entities;
+        mod resources;
+        mod world;
+    }
     mod utils;
 }

@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
+use cainome::cairo_serde::ContractAddress;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
-use dojo_world::contracts::naming::compute_selector_from_names;
-use dojo_world::contracts::world::WorldContractReader;
+use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_names};
+use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
@@ -89,6 +90,16 @@ async fn test_load_from_remote() {
         strat.world_address,
     );
 
+    let world = WorldContract::new(strat.world_address, &account);
+
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
     // spawn
     let tx = &account
         .execute_v1(vec![Call {
@@ -167,7 +178,7 @@ async fn test_load_from_remote() {
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 0);
 
-    assert_eq!(count_table("entities", &pool).await, 2);
+    assert_eq!(count_table("entities", &pool).await, 1);
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(
@@ -220,6 +231,16 @@ async fn test_load_from_remote_del() {
         strat.world_address,
     );
 
+    let world = WorldContract::new(strat.world_address, &account);
+
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
     // spawn
     account
         .execute_v1(vec![Call {
@@ -257,7 +278,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
@@ -320,6 +341,16 @@ async fn test_get_entity_keys() {
     );
 
     let account = sequencer.account(0);
+
+    let world = WorldContract::new(strat.world_address, &account);
+
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
     // spawn
     account
         .execute_v1(vec![Call {
@@ -331,7 +362,7 @@ async fn test_get_entity_keys() {
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 

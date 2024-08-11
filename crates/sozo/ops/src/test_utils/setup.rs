@@ -83,8 +83,10 @@ pub async fn setup(
 ) -> Result<WorldContract<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>> {
     let config = load_config();
     let ws = setup_ws(&config);
+    let ui = config.ui();
 
-    let (migration, _) = setup_migration(&config, "dojo_examples")?;
+    let (migration, diff) = setup_migration(&config, "dojo_examples")?;
+    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -96,9 +98,23 @@ pub async fn setup(
         TxnConfig { wait: true, ..Default::default() },
     )
     .await?;
-    // TODO: do we need to do authorization in setup?
+
     let world = WorldContract::new(output.world_address, account)
         .with_block(BlockId::Tag(BlockTag::Pending));
+
+    let (grant, revoke) =
+        migration::find_authorization_diff(&ui, &world, &diff, Some(&output), &default_namespace)
+            .await?;
+
+    migration::auto_authorize(
+        &ws,
+        &world,
+        &TxnConfig { wait: true, ..Default::default() },
+        &default_namespace,
+        &grant,
+        &revoke,
+    )
+    .await?;
 
     Ok(world)
 }

@@ -1,11 +1,14 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use cainome::cairo_serde::ContractAddress;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
-use dojo_world::contracts::WorldContractReader;
-use dojo_world::utils::TransactionWaiter;
+use dojo_world::contracts::naming::compute_bytearray_hash;
+use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::migration::TxnConfig;
+use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use scarb::ops;
@@ -59,7 +62,8 @@ async fn test_entities_queries() {
 
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-    let world = WorldContractReader::new(strat.world_address, &provider);
+    let world = WorldContract::new(strat.world_address, &account);
+    let world_reader = WorldContractReader::new(strat.world_address, &provider);
 
     let actions = strat.contracts.first().unwrap();
     let actions_address = get_contract_address(
@@ -68,6 +72,14 @@ async fn test_entities_queries() {
         &[],
         strat.world_address,
     );
+
+    // TODO: the init_wait should be sufficient here, but it's not.
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     // spawn
     let tx = account
@@ -95,7 +107,7 @@ async fn test_entities_queries() {
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
-        world,
+        world_reader,
         db.clone(),
         &provider,
         Processors {

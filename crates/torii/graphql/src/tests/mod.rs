@@ -2,14 +2,17 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
+use cainome::cairo_serde::ContractAddress;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::{copy_types_test_db, prepare_migration_with_world_and_seed};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::WorldContractReader;
-use dojo_world::utils::TransactionWaiter;
+use dojo_world::contracts::naming::compute_bytearray_hash;
+use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::migration::TxnConfig;
+use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use serde::Deserialize;
@@ -302,6 +305,14 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         &[],
         strat.world_address,
     );
+
+    let world = WorldContract::new(strat.world_address, &account);
+    world
+        .grant_writer(&compute_bytearray_hash("types_test"), &ContractAddress(records_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let InvokeTransactionResult { transaction_hash } = account
         .execute_v1(vec![Call {
