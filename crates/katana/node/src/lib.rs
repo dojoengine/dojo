@@ -23,7 +23,7 @@ use katana_core::service::messaging::MessagingService;
 use katana_core::service::{NodeService, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
-use katana_pool::ordering::Fcfs;
+use katana_pool::ordering::FiFo;
 use katana_pool::validation::NoopValidator;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::FinalityStatus;
@@ -156,19 +156,19 @@ pub async fn start(
 
     // --- build transaction pool and miner
 
-    let pool = TxPool::new(NoopValidator::new(), Fcfs::new());
+    let pool = TxPool::new(NoopValidator::new(), FiFo::new());
     let miner = TransactionMiner::new(pool.add_listener());
 
     // --- build block producer service
 
     let block_producer = if sequencer_config.block_time.is_some() || sequencer_config.no_mining {
         if let Some(interval) = sequencer_config.block_time {
-            BlockProducer::interval(pool.clone(), Arc::clone(&backend), interval)
+            BlockProducer::interval(Arc::clone(&backend), interval)
         } else {
-            BlockProducer::on_demand(pool.clone(), Arc::clone(&backend))
+            BlockProducer::on_demand(Arc::clone(&backend))
         }
     } else {
-        BlockProducer::instant(pool.clone(), Arc::clone(&backend))
+        BlockProducer::instant(Arc::clone(&backend))
     };
 
     // --- build metrics service

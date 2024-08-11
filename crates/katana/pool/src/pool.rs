@@ -1,5 +1,5 @@
-use std::collections::{BTreeMap, BinaryHeap, HashMap};
 use std::sync::Arc;
+use std::vec::IntoIter;
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::TxHash;
@@ -23,23 +23,10 @@ where
 
 #[derive(Debug)]
 struct Inner<T, V, O: PoolOrd> {
-    /// List of all valid txs mapped by their hash.
-    valid_ids_by_hash: RwLock<HashMap<TxHash, TxId>>,
-
     /// List of all valid txs in the pool
-    valid_txs: RwLock<BTreeMap<TxId, PendingTx<T, O>>>,
-
-    /// List of independent txs that can be included. A subset of the valid txs.
-    ///
-    /// The txs are sorted by the priority values.
-    pending_txs: RwLock<BinaryHeap<PendingTx<T, O>>>,
-
-    /// list of all invalid (aka rejected) txs in the pool
-    // TODO: add timeout eviction policy
-    rejected_txs: RwLock<BTreeMap<TxHash, Arc<T>>>,
+    transactions: RwLock<Vec<PendingTx<T, O>>>,
 
     /// listeners for incoming txs
-    // TODO: add listeners for different pools
     listeners: RwLock<Vec<Sender<TxHash>>>,
 
     /// the tx validator
@@ -61,11 +48,8 @@ where
             inner: Arc::new(Inner {
                 ordering,
                 validator,
+                transactions: Default::default(),
                 listeners: Default::default(),
-                valid_txs: Default::default(),
-                pending_txs: Default::default(),
-                rejected_txs: Default::default(),
-                valid_ids_by_hash: Default::default(),
             }),
         }
     }
@@ -118,23 +102,17 @@ where
                         // get the priority of the validated tx
                         let priority = self.inner.ordering.priority(&tx);
 
-                        let pool_tx = PendingTx::new(id.clone(), tx, priority);
-                        let hash = pool_tx.tx.hash();
+                        let tx = PendingTx::new(id.clone(), tx, priority);
+                        let hash = tx.tx.hash();
 
                         // insert the tx in the pool
-                        self.inner.valid_ids_by_hash.write().insert(hash, id.clone());
-                        self.inner.valid_txs.write().insert(id, pool_tx.clone());
-                        self.inner.pending_txs.write().push(pool_tx);
+                        self.inner.transactions.write().push(tx);
                         self.notify_listener(hash);
                         hash
                     }
 
-                    ValidationOutcome::Invalid { tx, .. } => {
-                        let hash = tx.hash();
-                        self.inner.rejected_txs.write().insert(hash, Arc::new(tx));
-                        // TODO: notify listeners
-                        hash
-                    }
+                    // for now, this variant is a no-op
+                    ValidationOutcome::Invalid { tx, .. } => tx.hash(),
                 };
 
                 info!(hash = format!("{hash:#x}"), "Transaction received.");
@@ -146,10 +124,10 @@ where
         }
     }
 
-    fn pending_transactions(&self) -> impl Iterator<Item = PendingTx<T, O>> {
+    fn take_transactions(&self) -> impl Iterator<Item = PendingTx<T, O>> {
+        // take all the transactions
         PendingTransactions {
-            all: self.inner.valid_txs.read().clone(),
-            pending: self.inner.pending_txs.read().clone(),
+            all: std::mem::take(&mut *self.inner.transactions.write()).into_iter(),
         }
     }
 
@@ -159,43 +137,12 @@ where
     }
 
     fn get(&self, hash: TxHash) -> Option<Arc<T>> {
-        // check in the valid list
-        if let Some(tx) = self
-            .inner
-            .valid_ids_by_hash
+        self.inner
+            .transactions
             .read()
-            .get(&hash)
-            .and_then(|id| self.inner.valid_txs.read().get(id).map(|tx| tx.tx.clone()))
-        {
-            return Some(tx);
-        }
-
-        // if not found, check in the rejected list
-        if let Some(tx) = self.inner.rejected_txs.read().get(&hash).map(Arc::clone) {
-            return Some(tx);
-        }
-
-        None
-    }
-
-    // to be used for removing transactions that have been included in a block, and no longer
-    // needs to be kept around in the pool.
-    //
-    // should remove from all the pools.
-    fn remove_transactions(&self, hashes: &[TxHash]) {
-        let ids = hashes
             .iter()
-            .filter_map(|hash| self.inner.valid_ids_by_hash.read().get(hash).cloned())
-            .collect::<Vec<TxId>>();
-
-        // get the locks on all the pools first
-        let mut all = self.inner.valid_txs.write();
-        let mut pending = self.inner.pending_txs.write();
-
-        for id in ids {
-            all.remove(&id);
-            pending.retain(|tx| tx.id != id);
-        }
+            .find(|tx| tx.tx.hash() == hash)
+            .map(|t| Arc::clone(&t.tx))
     }
 
     fn add_listener(&self) -> Receiver<TxHash> {
@@ -206,7 +153,7 @@ where
     }
 
     fn size(&self) -> usize {
-        self.inner.valid_txs.read().len() + self.inner.rejected_txs.read().len()
+        self.inner.transactions.read().len()
     }
 
     fn validator(&self) -> &Self::Validator {
@@ -228,28 +175,18 @@ where
 /// an iterator that yields transactions from the pool that can be included in a block, sorted by
 /// by its priority.
 struct PendingTransactions<T, O: PoolOrd> {
-    all: BTreeMap<TxId, PendingTx<T, O>>,
-    pending: BinaryHeap<PendingTx<T, O>>,
+    all: IntoIter<PendingTx<T, O>>,
 }
 
 impl<T, O> Iterator for PendingTransactions<T, O>
 where
-    T: PoolTransaction + Clone,
+    T: PoolTransaction,
     O: PoolOrd<Transaction = T>,
 {
     type Item = PendingTx<T, O>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(tx) = self.pending.pop() {
-            // check if there's a dependent tx that gets unlocked by this tx
-            if let Some(tx) = self.all.get(&tx.id.descendent()) {
-                // insert the unlocked tx to the pending pool
-                self.pending.push(tx.clone());
-            }
-            Some(tx)
-        } else {
-            None
-        }
+        self.all.next()
     }
 }
 
@@ -364,20 +301,23 @@ pub(crate) mod test_utils {
 #[cfg(test)]
 mod tests {
 
+    use katana_primitives::contract::{ContractAddress, Nonce};
+    use katana_primitives::FieldElement;
+
     use super::test_utils::*;
     use super::Pool;
-    use crate::ordering::{self, Fcfs};
+    use crate::ordering::{self, FiFo};
     use crate::pool::test_utils;
     use crate::tx::PoolTransaction;
     use crate::validation::{NoopValidator, ValidationOutcome, Validator};
     use crate::TransactionPool;
 
     /// Tx pool that uses a noop validator and a first-come-first-serve ordering.
-    type TestPool = Pool<PoolTx, NoopValidator<PoolTx>, Fcfs<PoolTx>>;
+    type TestPool = Pool<PoolTx, NoopValidator<PoolTx>, FiFo<PoolTx>>;
 
     impl TestPool {
         fn test() -> Self {
-            Pool::new(NoopValidator::new(), Fcfs::new())
+            Pool::new(NoopValidator::new(), FiFo::new())
         }
     }
 
@@ -398,21 +338,18 @@ mod tests {
 
         // initially pool should be empty
         assert!(pool.size() == 0);
-        assert!(pool.inner.valid_txs.read().is_empty());
-        assert!(pool.inner.pending_txs.read().is_empty());
-        assert!(pool.inner.rejected_txs.read().is_empty());
+        assert!(pool.inner.transactions.read().is_empty());
 
         // add all the txs to the pool
         txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
 
         // all the txs should be in the pool
         assert_eq!(pool.size(), txs.len());
-        assert_eq!(pool.inner.valid_txs.read().len(), txs.len());
-        assert_eq!(pool.inner.valid_txs.read().len(), pool.inner.pending_txs.read().len());
+        assert_eq!(pool.inner.transactions.read().len(), txs.len());
         assert!(txs.iter().all(|tx| pool.get(tx.hash()).is_some()));
 
         // noop validator should consider all txs as valid
-        let pendings = pool.pending_transactions().collect::<Vec<_>>();
+        let pendings = pool.take_transactions().collect::<Vec<_>>();
         assert_eq!(pendings.len(), txs.len());
 
         // bcs we're using fcfs, the order should be the same as the order of the txs submission
@@ -425,20 +362,12 @@ mod tests {
             assert_eq!(actual.tx.max_fee(), expected.max_fee());
         }
 
-        // the txs list in valid_txs must be a superset of the pending_txs
-        pool.inner.valid_txs.read().iter().for_each(|(k, _)| {
-            assert!(pool.inner.valid_txs.read().contains_key(k));
-        });
-
-        // remove all the transactions from the pool
-        let hashes = txs.iter().map(|tx| tx.hash()).collect::<Vec<_>>();
-        pool.remove_transactions(&hashes);
+        // take all transactions
+        let _ = pool.take_transactions();
 
         // all txs should've been removed
         assert!(pool.size() == 0);
-        assert!(pool.inner.valid_txs.read().is_empty());
-        assert!(pool.inner.pending_txs.read().is_empty());
-        assert!(pool.inner.rejected_txs.read().is_empty());
+        assert!(pool.inner.transactions.read().is_empty());
         assert!(txs.iter().all(|tx| pool.get(tx.hash()).is_none()));
     }
 
@@ -474,6 +403,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Rejected pool not implemented yet"]
     fn transactions_rejected() {
         let all = [
             PoolTx::new().with_tip(5),
@@ -486,7 +416,7 @@ mod tests {
         ];
 
         // create a pool with a validator that rejects txs with tip < 10
-        let pool = Pool::new(test_utils::TipValidator::new(10), Fcfs::new());
+        let pool = Pool::new(test_utils::TipValidator::new(10), FiFo::new());
 
         // Extract the expected valid and invalid transactions from the all list
         let (expected_valids, expected_invalids) = pool
@@ -517,7 +447,7 @@ mod tests {
         assert_eq!(pool.size(), all.len());
 
         // Pending transactions should only contain the valid transactions
-        let pendings = pool.pending_transactions().collect::<Vec<_>>();
+        let pendings = pool.take_transactions().collect::<Vec<_>>();
         assert_eq!(pendings.len(), expected_valids.len());
 
         // bcs its a fcfs pool, the order of the pending txs should be the as its order of insertion
@@ -526,14 +456,15 @@ mod tests {
             assert_eq!(actual.tx.hash(), expected.hash());
         }
 
-        // rejected_txs should contain all the invalid txs
-        assert_eq!(pool.inner.rejected_txs.read().len(), expected_invalids.len());
-        for tx in expected_invalids.iter() {
-            assert!(pool.inner.rejected_txs.read().contains_key(&tx.hash()));
-        }
+        // // rejected_txs should contain all the invalid txs
+        // assert_eq!(pool.inner.rejected.read().len(), expected_invalids.len());
+        // for tx in expected_invalids.iter() {
+        //     assert!(pool.inner.rejected.read().contains_key(&tx.hash()));
+        // }
     }
 
     #[test]
+    #[ignore = "Txs ordering not fully implemented yet"]
     fn txs_ordering() {
         // Create mock transactions with different tips and in random order
         let txs = [
@@ -553,7 +484,7 @@ mod tests {
         txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
 
         // Get pending transactions
-        let pending = pool.pending_transactions().collect::<Vec<_>>();
+        let pending = pool.take_transactions().collect::<Vec<_>>();
 
         // Assert that the transactions are ordered by tip (highest to lowest)
         assert_eq!(pending[0].tx.tip(), 7);
@@ -564,4 +495,36 @@ mod tests {
         assert_eq!(pending[5].tx.tip(), 2);
         assert_eq!(pending[6].tx.tip(), 1);
     }
+
+    #[test]
+    #[ignore = "Txs dependency management not fully implemented yet"]
+    fn dependent_txs_linear_insertion() {
+        let pool = TestPool::test();
+
+        // Create 100 transactions with the same sender but increasing nonce
+        let total = 100u128;
+        let sender = ContractAddress::from(FieldElement::from_hex("0x1337").unwrap());
+        let txs: Vec<PoolTx> = (0..total)
+            .map(|i| PoolTx::new().with_sender(sender).with_nonce(Nonce::from(i)))
+            .collect();
+
+        // Add all transactions to the pool
+        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+
+        // Get pending transactions
+        let pending = pool.take_transactions().collect::<Vec<_>>();
+
+        // Check that the number of pending transactions matches the number of added transactions
+        assert_eq!(pending.len(), total as usize);
+
+        // Check that the pending transactions are in the same order as they were added
+        for (i, pending_tx) in pending.iter().enumerate() {
+            assert_eq!(pending_tx.tx.nonce(), Nonce::from(i as u128));
+            assert_eq!(pending_tx.tx.sender(), sender);
+        }
+    }
+
+    #[test]
+    #[ignore = "Txs dependency management not fully implemented yet"]
+    fn dependent_txs_random_insertion() {}
 }

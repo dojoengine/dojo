@@ -107,9 +107,9 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                 }
             }
 
-            if let Poll::Ready(transactions) = pin.miner.poll(&pin.pool, cx) {
+            if let Poll::Ready(pool_txs) = pin.miner.poll(&pin.pool, cx) {
                 // miner returned a set of transaction that we feed to the producer
-                pin.block_producer.queue(transactions);
+                pin.block_producer.queue(pool_txs);
             } else {
                 // no progress made
                 break;
@@ -146,7 +146,7 @@ impl TransactionMiner {
 
         // take all the transactions from the pool
         let transactions =
-            pool.pending_transactions().map(|tx| tx.tx.as_ref().clone()).collect::<Vec<_>>();
+            pool.take_transactions().map(|tx| tx.tx.as_ref().clone()).collect::<Vec<_>>();
 
         if transactions.is_empty() {
             return Poll::Pending;

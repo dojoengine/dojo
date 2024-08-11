@@ -122,6 +122,8 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                 if let Some(pending_executor) = this.pending_executor() {
                     let remaining = MAX_PAGE_SIZE - transactions.len();
 
+                    println!("ohayo");
+
                     // If cursor is in the pending block
                     if cursor.block_number == latest_block_number + 1 {
                         let pending_transactions = pending_executor
@@ -145,6 +147,8 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             })
                             .collect::<Vec<_>>();
 
+                        println!("txs count: {}", pending_transactions.len());
+
                         // If there are no transactions after the index in the pending block
                         if pending_transactions.is_empty() {
                             // Wait for a new transaction to be executed
@@ -165,9 +169,11 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         next_cursor.transaction_index += pending_transactions.len() as u64;
                         transactions.extend(pending_transactions);
                     } else {
-                        let pending_transactions = pending_executor
-                            .read()
-                            .transactions()
+                        let pending_executor = pending_executor.read();
+                        let pending_transactions = pending_executor.transactions();
+                        println!("total: {}", pending_transactions.len());
+
+                        let pending_transactions = pending_transactions
                             .iter()
                             .take(remaining)
                             .filter_map(|(tx, res)| {
@@ -184,6 +190,9 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                                 })
                             })
                             .collect::<Vec<_>>();
+
+                        println!("taken: {}", pending_transactions.len());
+
                         next_cursor.block_number += 1;
                         next_cursor.transaction_index = pending_transactions.len() as u64;
                         transactions.extend(pending_transactions);

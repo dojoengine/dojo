@@ -21,18 +21,18 @@ pub trait PoolOrd {
 /// This ordering implementation can be generic over any transaction type as it doesn't require any
 /// context on the tx data itself.
 #[derive(Debug)]
-pub struct Fcfs<T> {
+pub struct FiFo<T> {
     nonce: AtomicU64,
     _tx: PhantomData<T>,
 }
 
-impl<T> Fcfs<T> {
+impl<T> FiFo<T> {
     pub fn new() -> Self {
         Self { nonce: AtomicU64::new(0), _tx: PhantomData }
     }
 }
 
-impl<T: PoolTransaction> PoolOrd for Fcfs<T> {
+impl<T: PoolTransaction> PoolOrd for FiFo<T> {
     type Transaction = T;
     type PriorityValue = TxSubmissionNonce;
 
@@ -41,7 +41,7 @@ impl<T: PoolTransaction> PoolOrd for Fcfs<T> {
     }
 }
 
-impl<T> Default for Fcfs<T> {
+impl<T> Default for FiFo<T> {
     fn default() -> Self {
         Self::new()
     }
