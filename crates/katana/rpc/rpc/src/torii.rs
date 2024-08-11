@@ -3,9 +3,9 @@ use std::sync::Arc;
 use futures::StreamExt;
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::backend::Backend;
-use katana_core::pool::TransactionPool;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
+use katana_pool::TxPool;
 use katana_primitives::block::{BlockHashOrNumber, FinalityStatus};
 use katana_provider::traits::block::BlockNumberProvider;
 use katana_provider::traits::transaction::TransactionProvider;
@@ -21,14 +21,14 @@ const MAX_PAGE_SIZE: usize = 100;
 #[allow(missing_debug_implementations)]
 pub struct ToriiApi<EF: ExecutorFactory> {
     backend: Arc<Backend<EF>>,
-    pool: Arc<TransactionPool>,
+    pool: TxPool,
     block_producer: Arc<BlockProducer<EF>>,
 }
 
 impl<EF: ExecutorFactory> Clone for ToriiApi<EF> {
     fn clone(&self) -> Self {
         Self {
-            pool: Arc::clone(&self.pool),
+            pool: self.pool.clone(),
             backend: Arc::clone(&self.backend),
             block_producer: Arc::clone(&self.block_producer),
         }
@@ -38,7 +38,7 @@ impl<EF: ExecutorFactory> Clone for ToriiApi<EF> {
 impl<EF: ExecutorFactory> ToriiApi<EF> {
     pub fn new(
         backend: Arc<Backend<EF>>,
-        pool: Arc<TransactionPool>,
+        pool: TxPool,
         block_producer: Arc<BlockProducer<EF>>,
     ) -> Self {
         Self { pool, backend, block_producer }
@@ -122,6 +122,8 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                 if let Some(pending_executor) = this.pending_executor() {
                     let remaining = MAX_PAGE_SIZE - transactions.len();
 
+                    println!("ohayo");
+
                     // If cursor is in the pending block
                     if cursor.block_number == latest_block_number + 1 {
                         let pending_transactions = pending_executor
@@ -145,6 +147,8 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             })
                             .collect::<Vec<_>>();
 
+                        println!("txs count: {}", pending_transactions.len());
+
                         // If there are no transactions after the index in the pending block
                         if pending_transactions.is_empty() {
                             // Wait for a new transaction to be executed
@@ -165,9 +169,11 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         next_cursor.transaction_index += pending_transactions.len() as u64;
                         transactions.extend(pending_transactions);
                     } else {
-                        let pending_transactions = pending_executor
-                            .read()
-                            .transactions()
+                        let pending_executor = pending_executor.read();
+                        let pending_transactions = pending_executor.transactions();
+                        println!("total: {}", pending_transactions.len());
+
+                        let pending_transactions = pending_transactions
                             .iter()
                             .take(remaining)
                             .filter_map(|(tx, res)| {
@@ -184,6 +190,9 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                                 })
                             })
                             .collect::<Vec<_>>();
+
+                        println!("taken: {}", pending_transactions.len());
+
                         next_cursor.block_number += 1;
                         next_cursor.transaction_index = pending_transactions.len() as u64;
                         transactions.extend(pending_transactions);

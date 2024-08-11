@@ -6725,7 +6725,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.7",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -7826,6 +7826,7 @@ dependencies = [
  "hex",
  "katana-db",
  "katana-executor",
+ "katana-pool",
  "katana-primitives",
  "katana-provider",
  "katana-tasks",
@@ -7903,6 +7904,7 @@ dependencies = [
  "katana-core",
  "katana-db",
  "katana-executor",
+ "katana-pool",
  "katana-primitives",
  "katana-provider",
  "katana-rpc",
@@ -7928,6 +7930,20 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "katana-pool"
+version = "1.0.0-alpha.4"
+dependencies = [
+ "futures",
+ "katana-executor",
+ "katana-primitives",
+ "parking_lot 0.12.3",
+ "rand",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -7997,6 +8013,7 @@ dependencies = [
  "katana-core",
  "katana-executor",
  "katana-node",
+ "katana-pool",
  "katana-primitives",
  "katana-provider",
  "katana-rpc-api",

@@ -121,6 +121,7 @@ async fn test_get_transactions() {
     // Test only returns first 100 txns from pending block
     for i in 0..101 {
         let deploy_call = build_deploy_contract_call(declare_res.class_hash, (i + 2_u32).into());
+        // settings the max fee manually will skip fee estimation
         let deploy_txn = account.execute_v1(vec![deploy_call]).nonce(nonce).max_fee(max_fee);
         let res = deploy_txn.send().await.unwrap();
         nonce += Felt::ONE;
