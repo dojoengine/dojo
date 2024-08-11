@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723253097174,
+  "lastUpdate": 1723397469270,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -14977,6 +14977,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3889452,
             "range": "± 32517",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64c5af89c579b4e23cb73c1096349778f20895e6",
+          "message": "ACL rework to avoid \"man in the middle\" vulnerability  (#2254)\n\n* rework ACL owner/writer roles\r\n\r\n* deactivate set! in mock_token::dojo_init\r\n\r\n* add auto-auth in tests\r\n\r\n* add overlays in Torii tests to set writer auth\r\n\r\n* fix tests\r\n\r\n* fix: ensure acl correctness in test\r\n\r\n* fix: fix fmt\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-11T13:10:55-04:00",
+          "tree_id": "f04cae9294abb489d86532eae7b7dde321437eac",
+          "url": "https://github.com/dojoengine/dojo/commit/64c5af89c579b4e23cb73c1096349778f20895e6"
+        },
+        "date": 1723397467669,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17693852,
+            "range": "± 239113",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 5442626,
+            "range": "± 495666",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 4069897143,
+            "range": "± 903674255",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5327184,
+            "range": "± 600768",
             "unit": "ns/iter"
           }
         ]
