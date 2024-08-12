@@ -48,6 +48,7 @@ if [[ -z "${SAYA_WORLD_ADDRESS}" ]]; then
         --fee-estimate-multiplier 20 \
         --name $SAYA_WORLD_NAME
 
+    echo "Set SAYA_WORLD_ADDRESS to the address of the deployed contract."
 
     exit 0
 
@@ -104,7 +105,7 @@ if [[ -z "${SAYA_FORK_BLOCK_NUMBER}" ]]; then
 fi
 
 if [[ -z "${SAYA_PILTOVER_ADDRESS}" ]]; then
-    sncast -a dev -u $SAYA_SEPOLIA_ENDPOINT deploy \
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT deploy \
         --class-hash $SAYA_PILTOVER_CLASS_HASH \
         -c $SAYA_SEPOLIA_ACCOUNT_ADDRESS $SAYA_PILTOVER_STARTING_STATE_ROOT $(expr $SAYA_FORK_BLOCK_NUMBER + 1)  0
 
@@ -113,9 +114,9 @@ if [[ -z "${SAYA_PILTOVER_ADDRESS}" ]]; then
 fi
 
 if [[ -z "${SAYA_PILTOVER_PREPARED}" ]]; then
-    sncast -a dev -u $SAYA_SEPOLIA_ENDPOINT --wait invoke \
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT --wait invoke \
         --contract-address $SAYA_PILTOVER_ADDRESS --function set_program_info -c $SAYA_PROGRAM_HASH $SAYA_CONFIG_HASH
-    sncast -a dev -u $SAYA_SEPOLIA_ENDPOINT --wait invoke \
+    sncast -a $SAYA_SNCAST_ACCOUNT_NAME -u $SAYA_SEPOLIA_ENDPOINT --wait invoke \
         --contract-address $SAYA_PILTOVER_ADDRESS --function set_facts_registry -c $SAYA_FACT_REGISTRY
 fi
 
