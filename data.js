@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723440786543,
+  "lastUpdate": 1723504793888,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15169,6 +15169,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4722784,
             "range": "± 420671",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d31771ae7041cd70d2117fa4273d120a96484093",
+          "message": "fix(sozo): add support for new ACLs workflow (#2288)\n\n* feat: add declarers\r\n\r\n* wip: refine contract deployments and auto auth still needed after init\r\n\r\n* fix: rework order to have auth before dojo init\r\n\r\n* fix: fmt and clippy\r\n\r\n* fix: rebuild test artifacts\r\n\r\n* fix: add back init on mock token\r\n\r\n* fix: fix tests\r\n\r\n* fix: ensure tests are not run twice, benches may be reactives on demand\r\n\r\n* fix: ensure public network deployement work without declarers\r\n\r\n* fix: fix display of declarers",
+          "timestamp": "2024-08-12T19:00:07-04:00",
+          "tree_id": "ece53b96ba218ebcaa4a89c15f260e261ff741d6",
+          "url": "https://github.com/dojoengine/dojo/commit/d31771ae7041cd70d2117fa4273d120a96484093"
+        },
+        "date": 1723504792915,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17463294,
+            "range": "± 224533",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3794113,
+            "range": "± 110028",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3778574190,
+            "range": "± 854044937",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3953420,
+            "range": "± 141856",
             "unit": "ns/iter"
           }
         ]
