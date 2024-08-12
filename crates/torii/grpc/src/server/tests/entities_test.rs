@@ -47,7 +47,9 @@ async fn test_entities_queries() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_path = ws.target_dir().path_existent().unwrap().join(config.profile().to_string());
 
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
 
@@ -73,7 +75,6 @@ async fn test_entities_queries() {
         strat.world_address,
     );
 
-    // TODO: the init_wait should be sufficient here, but it's not.
     world
         .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
         .send_with_cfg(&TxnConfig::init_wait())

@@ -2,14 +2,14 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
-use cainome::cairo_serde::ContractAddress;
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::{copy_types_test_db, prepare_migration_with_world_and_seed};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::naming::compute_bytearray_hash;
+use dojo_world::contracts::abi::world::Resource;
+use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
@@ -21,7 +21,6 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{Felt, InvokeTransactionResult};
-use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
@@ -284,7 +283,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_types_test_db().as_str());
+    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_types_test_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let account = sequencer.account(0);
@@ -298,26 +299,28 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     )
     .unwrap();
 
-    let records = strat.contracts.first().unwrap();
-    let records_address = get_contract_address(
-        records.salt,
-        strat.base.as_ref().unwrap().diff.local_class_hash,
-        &[],
-        strat.world_address,
-    );
-
     let world = WorldContract::new(strat.world_address, &account);
+
+    let records_address = if let Resource::Contract((_, records_address)) =
+        world.resource(&compute_selector_from_tag("types_test-records")).call().await.unwrap()
+    {
+        records_address
+    } else {
+        panic!("Failed to get records address")
+    };
+
     world
-        .grant_writer(&compute_bytearray_hash("types_test"), &ContractAddress(records_address))
+        .grant_writer(&compute_bytearray_hash("types_test"), &records_address)
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
+
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let InvokeTransactionResult { transaction_hash } = account
         .execute_v1(vec![Call {
             calldata: vec![Felt::from_str("0xa").unwrap()],
-            to: records_address,
+            to: records_address.into(),
             selector: selector!("create"),
         }])
         .send()
@@ -330,7 +333,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let InvokeTransactionResult { transaction_hash } = account
         .execute_v1(vec![Call {
             calldata: vec![Felt::from_str("0x14").unwrap()],
-            to: records_address,
+            to: records_address.into(),
             selector: selector!("delete"),
         }])
         .send()

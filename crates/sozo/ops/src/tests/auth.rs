@@ -50,13 +50,15 @@ fn get_resource_owners(owner: Felt) -> [ResourceOwner; 2] {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_writer_ok() {
-    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
 
-    assert!(!execute_spawn(&world).await);
-
+    // Overlays already have the writer set up. But running again to ensure we don't
+    // actually revert something with this call.
     auth::grant_writer(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
@@ -74,7 +76,9 @@ async fn auth_grant_writer_ok() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_writer_ok() {
-    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -110,8 +114,11 @@ async fn auth_grant_owner_ok() {
     let move_model_selector = compute_selector_from_tag(MOVE_MODEL_TAG);
     let position_model_selector = compute_selector_from_tag(POSITION_MODEL_TAG);
 
-    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
+    println!("sequencer logs: {:?}", sequencer.log_file_path());
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
 
@@ -144,7 +151,9 @@ async fn auth_revoke_owner_ok() {
     let move_model_selector = compute_selector_from_tag(MOVE_MODEL_TAG);
     let position_model_selector = compute_selector_from_tag(POSITION_MODEL_TAG);
 
-    let config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();

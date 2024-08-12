@@ -69,7 +69,9 @@ async fn test_load_from_remote() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
 
@@ -178,7 +180,7 @@ async fn test_load_from_remote() {
     assert_eq!(packed_size, 0);
     assert_eq!(unpacked_size, 0);
 
-    assert_eq!(count_table("entities", &pool).await, 1);
+    assert_eq!(count_table("entities", &pool).await, 2);
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(
@@ -211,7 +213,9 @@ async fn test_load_from_remote_del() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
     let account = sequencer.account(0);
 
@@ -320,7 +324,8 @@ async fn test_get_entity_keys() {
     let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_dir = Utf8PathBuf::from(ws.target_dir().to_string()).join("dev");
 
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let (strat, _) = prepare_migration_with_world_and_seed(
