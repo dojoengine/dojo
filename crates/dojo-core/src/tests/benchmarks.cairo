@@ -57,7 +57,7 @@ fn bench_reference_offset() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_storage_single() {
-    let keys = array!['database_test', '42'].span();
+    let keys = ['database_test', '42'].span();
 
     let gas = GasCounterTrait::start();
     storage::set(0, keys, 420);
@@ -73,9 +73,9 @@ fn bench_storage_single() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_storage_many() {
-    let keys = array![0x1337].span();
-    let values = array![1, 2].span();
-    let layout = array![251, 251].span();
+    let keys = [0x1337].span();
+    let values = [1, 2].span();
+    let layout = [251, 251].span();
 
     let gas = GasCounterTrait::start();
     storage::set_many(0, keys, values, 0, layout).unwrap();
@@ -94,7 +94,7 @@ fn bench_storage_many() {
 #[available_gas(1000000000)]
 fn bench_native_storage() {
     let gas = GasCounterTrait::start();
-    let keys = array![0x1337].span();
+    let keys = [0x1337].span();
     let base = storage_base_address_from_felt252(poseidon_hash_span(keys));
     let address = storage_address_from_base(base);
     gas.end("native prep");
@@ -114,7 +114,7 @@ fn bench_native_storage() {
 #[available_gas(1000000000)]
 fn bench_native_storage_offset() {
     let gas = GasCounterTrait::start();
-    let keys = array![0x1337].span();
+    let keys = [0x1337].span();
     let base = storage_base_address_from_felt252(poseidon_hash_span(keys));
     let address = storage_address_from_base_and_offset(base, 42);
     gas.end("native prep of");

@@ -93,7 +93,7 @@ pub fn deploy_and_get_metadata(
     salt: felt252, class_hash: starknet::ClassHash
 ) -> SyscallResult<(starknet::ContractAddress, ByteArray, felt252, ByteArray, felt252)> {
     let (contract_address, _) = starknet::syscalls::deploy_syscall(
-        class_hash, salt, array![].span(), false,
+        class_hash, salt, [].span(), false,
     )?;
     let model = IModelDispatcher { contract_address };
     let name = model.name();

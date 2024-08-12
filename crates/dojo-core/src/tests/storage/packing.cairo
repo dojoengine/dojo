@@ -340,8 +340,8 @@ fn test_pack_unpack_felt252_single() {
 #[test]
 fn test_pack_with_offset() {
     let mut packed = array![];
-    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
-    let mut layout = array![16, 128, 128, 8].span();
+    let mut unpacked = [1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = [16, 128, 128, 8].span();
 
     pack(ref packed, ref unpacked, 5, ref layout);
 
@@ -354,27 +354,27 @@ fn test_pack_with_offset() {
 #[test]
 #[available_gas(9000000)]
 fn test_calculate_packed_size() {
-    let mut layout = array![128, 32].span();
+    let mut layout = [128, 32].span();
     let got = calculate_packed_size(ref layout);
     assert(got == 1, 'invalid length for [128, 32]');
 
-    let mut layout = array![128, 128].span();
+    let mut layout = [128, 128].span();
     let got = calculate_packed_size(ref layout);
     assert(got == 2, 'invalid length for [128, 128]');
 
-    let mut layout = array![251, 251].span();
+    let mut layout = [251, 251].span();
     let got = calculate_packed_size(ref layout);
     assert(got == 2, 'invalid length for [251, 251]');
 
-    let mut layout = array![251].span();
+    let mut layout = [251].span();
     let got = calculate_packed_size(ref layout);
     assert(got == 1, 'invalid length for [251]');
 
-    let mut layout = array![32, 64, 128, 27].span();
+    let mut layout = [32, 64, 128, 27].span();
     let got = calculate_packed_size(ref layout);
     assert(got == 1, 'invalid length');
 
-    let mut layout = array![32, 64, 128, 28].span();
+    let mut layout = [32, 64, 128, 28].span();
     let got = calculate_packed_size(ref layout);
     assert(got == 2, 'invalid length');
 }
@@ -397,8 +397,8 @@ fn test_pack_max_bits_value() {
 #[should_panic(expected: ('mismatched input lens',))]
 fn test_pack_with_offset_exceeds_length() {
     let mut packed = array![];
-    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
-    let mut layout = array![16, 128, 128, 8].span();
+    let mut unpacked = [1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = [16, 128, 128, 8].span();
 
     pack(ref packed, ref unpacked, 6, ref layout);
 }
@@ -407,8 +407,8 @@ fn test_pack_with_offset_exceeds_length() {
 #[should_panic(expected: ('mismatched input lens',))]
 fn test_pack_with_offset_layout_too_long() {
     let mut packed = array![];
-    let mut unpacked = array![1, 2, 3, 4, 5, 6, 7, 8, 9].span();
-    let mut layout = array![16, 128, 128, 8, 251].span();
+    let mut unpacked = [1, 2, 3, 4, 5, 6, 7, 8, 9].span();
+    let mut layout = [16, 128, 128, 8, 251].span();
 
     pack(ref packed, ref unpacked, 5, ref layout);
 }

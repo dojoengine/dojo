@@ -124,7 +124,7 @@ pub mod bar {
                 .read()
                 .delete_entity(
                     Model::<Foo>::selector(),
-                    ModelIndex::Keys(array![get_caller_address().into()].span()),
+                    ModelIndex::Keys([get_caller_address().into()].span()),
                     Model::<Foo>::layout()
                 );
         }

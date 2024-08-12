@@ -314,7 +314,7 @@ pub mod world {
             let mut values = self
                 .read_model_entity(
                     Model::<ResourceMetadata>::selector(),
-                    entity_id_from_keys(array![resource_selector].span()),
+                    entity_id_from_keys([resource_selector].span()),
                     Model::<ResourceMetadata>::layout()
                 );
 
@@ -607,7 +607,7 @@ pub mod world {
             let caller = get_caller_address();
 
             let (contract_address, _) = deploy_syscall(
-                self.contract_base.read(), salt, array![].span(), false
+                self.contract_base.read(), salt, [].span(), false
             )
                 .unwrap_syscall();
             let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address };
@@ -982,8 +982,10 @@ pub mod world {
                     let model = IModelDispatcher { contract_address: model_address };
                     let namespace_selector = model.namespace_hash();
 
-                    // - use several single if because it seems more efficient than a big one with several conditions. 
-                    // - sort conditions by order of probability so once a condition is met, the function returns.
+                    // - use several single if because it seems more efficient than a big one with
+                    // several conditions.
+                    // - sort conditions by order of probability so once a condition is met, the
+                    // function returns.
                     if self.is_writer(namespace_selector, caller) {
                         return;
                     }
