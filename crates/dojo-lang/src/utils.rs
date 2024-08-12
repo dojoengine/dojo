@@ -3,7 +3,7 @@ use std::fs;
 use anyhow::Result;
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use dojo_world::metadata::NamespaceConfig;
+use dojo_world::config::NamespaceConfig;
 use regex::Regex;
 use toml::Table;
 

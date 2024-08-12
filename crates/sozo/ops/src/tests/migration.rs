@@ -12,8 +12,9 @@ use dojo_world::manifest::{
 };
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, get_default_namespace_from_ws, ArtifactMetadata, DojoMetadata,
-    Uri, WorldMetadata, IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
+    WorldMetadata, IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
 };
+use dojo_world::uri::Uri;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationMetadata};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;

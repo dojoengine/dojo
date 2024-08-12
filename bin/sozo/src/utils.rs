@@ -2,9 +2,10 @@ use std::str::FromStr;
 
 use anyhow::{Error, Result};
 use camino::Utf8PathBuf;
+use dojo_world::config::Environment;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
-use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::{Config, TomlManifest};
 use semver::Version;
 use starknet::providers::jsonrpc::HttpTransport;

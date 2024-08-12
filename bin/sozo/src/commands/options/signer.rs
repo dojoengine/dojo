@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use clap::Args;
-use dojo_world::metadata::Environment;
+use dojo_world::config::Environment;
 use starknet::core::types::Felt;
 use starknet::signers::{LocalWallet, SigningKey};
 use tracing::trace;

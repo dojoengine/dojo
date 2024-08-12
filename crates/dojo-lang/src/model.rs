@@ -11,9 +11,9 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
+use dojo_world::config::NamespaceConfig;
 use dojo_world::contracts::naming;
 use dojo_world::manifest::Member;
-use dojo_world::metadata::{is_name_valid, NamespaceConfig};
 use starknet::core::utils::get_selector_from_name;
 
 use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
@@ -222,7 +222,7 @@ pub fn handle_model_struct(
     };
 
     for (id, value) in [("name", &model_name), ("namespace", &model_namespace)] {
-        if !is_name_valid(value) {
+        if !NamespaceConfig::is_name_valid(value) {
             return (
                 RewriteNode::empty(),
                 vec![PluginDiagnostic {

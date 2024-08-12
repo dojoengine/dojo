@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
-use dojo_world::metadata::Environment;
+use dojo_world::config::Environment;
 use scarb::core::Config;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};

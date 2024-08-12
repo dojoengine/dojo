@@ -1,0 +1,6 @@
+[world]
+name = ""
+seed = ""
+
+[namespace]
+default = "bestiary"

@@ -657,7 +657,7 @@ mod tests {
             &config.manifest_path().to_path_buf(),
             "dojo_examples",
             "dev",
-            dojo_metadata.skip_migration,
+            dojo_metadata.migration.skip_migration,
         )
         .unwrap();
 

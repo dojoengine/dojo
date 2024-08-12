@@ -1612,10 +1612,7 @@
       ],
       "reads": [],
       "writes": [
-        "dojo_examples-Moves",
-        "dojo_examples-Position",
-        "dojo_examples-PlayerConfig",
-        "dojo_examples-ServerProfile"
+        "ns:dojo_examples"
       ],
       "init_calldata": [],
       "tag": "dojo_examples-actions",
@@ -2070,7 +2067,9 @@
         }
       ],
       "reads": [],
-      "writes": [],
+      "writes": [
+        "ns:dojo_examples"
+      ],
       "init_calldata": [],
       "tag": "dojo_examples-mock_token",
       "manifest_name": "dojo_examples-mock_token-31599eb2"
