@@ -657,7 +657,7 @@ mod tests {
             &config.manifest_path().to_path_buf(),
             "dojo_examples",
             "dev",
-            dojo_metadata.migration.map(|m| m.skip_contracts)
+            dojo_metadata.migration.map(|m| m.skip_contracts),
         )
         .unwrap();
 

@@ -61,6 +61,9 @@ mod tests {
   cover_uri = "file://example_cover.png"
   website = "https://dojoengine.org"
   socials.x = "https://x.com/dojostarknet"
+
+  [namespace]
+  default = "example"
           "#,
         )
         .unwrap();

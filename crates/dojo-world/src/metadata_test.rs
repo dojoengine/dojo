@@ -10,13 +10,13 @@ use url::Url;
 use crate::contracts::naming::{get_filename_from_tag, TAG_SEPARATOR};
 use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 use crate::metadata::{
-    dojo_metadata_from_workspace, ArtifactMetadata, Uri,
-    WorldMetadata, ABIS_DIR, BASE_DIR, MANIFESTS_DIR,
+    dojo_metadata_from_workspace, ArtifactMetadata, Uri, WorldMetadata, ABIS_DIR, BASE_DIR,
+    MANIFESTS_DIR,
 };
 
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
-    let meta = WorldMetadata {        
+    let meta = WorldMetadata {
         name: "Test World".to_string(),
         seed: String::from("dojo_examples"),
         description: Some("A world used for testing".to_string()),

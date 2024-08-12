@@ -1,10 +1,10 @@
 #![allow(dead_code)]
-use std::str;
+use std::str::{self, FromStr};
 
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
-use dojo_world::contracts::naming::compute_selector_from_tag;
+use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
     BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
@@ -14,10 +14,10 @@ use dojo_world::metadata::{
     dojo_metadata_from_workspace, get_default_namespace_from_ws, ArtifactMetadata, DojoMetadata,
     WorldMetadata, IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
 };
-use dojo_world::uri::Uri;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationMetadata};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
+use dojo_world::uri::Uri;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
@@ -26,6 +26,7 @@ use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
+use crate::auth::ResourceType;
 use crate::migration::{
     auto_authorize, execute_strategy, find_authorization_diff, upload_metadata,
 };
@@ -396,11 +397,19 @@ async fn migrate_with_auto_authorize() {
 
         let contract = manifest.contracts.iter().find(|a| a.inner.tag == c.diff.tag).unwrap();
 
-        for model in &contract.inner.writes {
-            let model_selector = compute_selector_from_tag(model);
+        for resource in &contract.inner.writes {
+            let resource_type = ResourceType::from_str(resource).unwrap();
+
+            let selector = match resource_type {
+                ResourceType::Model(tag) => compute_selector_from_tag(&tag),
+                ResourceType::Contract(tag) => compute_selector_from_tag(&tag),
+                ResourceType::Namespace(ns) => compute_bytearray_hash(&ns),
+                ResourceType::Selector(s) => s,
+            };
+
             let contract_address = ContractAddress(contract_address);
             let is_writer =
-                world_reader.is_writer(&model_selector, &contract_address).call().await.unwrap();
+                world_reader.is_writer(&selector, &contract_address).call().await.unwrap();
             assert!(is_writer);
         }
     }

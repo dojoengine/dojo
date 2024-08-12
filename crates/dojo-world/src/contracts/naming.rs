@@ -81,12 +81,13 @@ pub fn get_tag_from_filename(filename: &str) -> Result<String> {
 }
 
 pub fn compute_bytearray_hash(value: &str) -> Felt {
-    let ba = ByteArray::from_string(value).unwrap();
+    let ba = ByteArray::from_string(value).unwrap_or_else(|_| panic!("Invalid ByteArray: {value}"));
     poseidon_hash_many(&ByteArray::cairo_serialize(&ba))
 }
 
 pub fn compute_selector_from_tag(tag: &str) -> Felt {
-    let (namespace, name) = split_tag(tag).unwrap();
+    let (namespace, name) =
+        split_tag(tag).unwrap_or_else(|_| panic!("Invalid tag to split: {tag}"));
     compute_selector_from_names(&namespace, &name)
 }
 

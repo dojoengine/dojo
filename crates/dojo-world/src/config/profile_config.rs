@@ -53,11 +53,13 @@ impl ProfileConfig {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+
     use smol_str::SmolStr;
     use tempfile::TempDir;
     use url::Url;
-    use crate::uri::Uri;
+
     use super::*;
+    use crate::uri::Uri;
 
     #[test]
     fn test_profile_config_empty() {
@@ -163,7 +165,7 @@ mod tests {
     fn test_profile_config_new_dev() {
         let tmp_dir =
             Utf8PathBuf::from(TempDir::new().unwrap().into_path().to_string_lossy().to_string());
-        let config_path = tmp_dir.join("dev.toml");
+        let config_path = tmp_dir.join("dojo_dev.toml");
         println!("config_path: {:?}", config_path);
 
         let config_content = r#"
