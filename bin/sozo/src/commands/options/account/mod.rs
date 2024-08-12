@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn account_address_from_env_metadata() {
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             account_address: Some("0x0".to_owned()),
             ..Default::default()
         };
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn account_address_from_both() {
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             account_address: Some("0x0".to_owned()),
             ..Default::default()
         };

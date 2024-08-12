@@ -30,8 +30,8 @@ impl ProfileConfig {
     /// * `manifest_dir` - The path to the directory containing the `Scarb.toml` file.
     /// * `profile` - The profile to load the configuration for.
     pub fn new(manifest_dir: &Utf8PathBuf, profile: Profile) -> Result<Self> {
-        let dev_config_path = manifest_dir.join("dev.toml");
-        let config_path = manifest_dir.join(format!("{}.toml", profile.as_str()));
+        let dev_config_path = manifest_dir.join("dojo_dev.toml");
+        let config_path = manifest_dir.join(format!("dojo_{}.toml", profile.as_str()));
 
         if !dev_config_path.exists() {
             return Err(anyhow::anyhow!(
@@ -52,9 +52,11 @@ impl ProfileConfig {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use smol_str::SmolStr;
     use tempfile::TempDir;
-
+    use url::Url;
+    use crate::uri::Uri;
     use super::*;
 
     #[test]
@@ -122,22 +124,24 @@ mod tests {
         let config = toml::from_str::<ProfileConfig>(content).unwrap();
 
         let migration = config.migration.unwrap();
-        assert_eq!(migration.skip_contracts, Some(vec!["module::my-contract".to_string()]));
-        assert_eq!(migration.rpc_url, Some("https://example.com/rpc".to_string()));
-        assert_eq!(migration.account_address, Some("test".to_string()));
-        assert_eq!(migration.private_key, Some("test".to_string()));
-        assert_eq!(migration.keystore_path, Some("test".to_string()));
-        assert_eq!(migration.keystore_password, Some("test".to_string()));
-        assert_eq!(migration.world_address, Some("test".to_string()));
+        assert_eq!(migration.skip_contracts, vec!["module::my-contract".to_string()]);
+
+        let env = config.env.unwrap();
+        assert_eq!(env.rpc_url, Some("https://example.com/rpc".to_string()));
+        assert_eq!(env.account_address, Some("test".to_string()));
+        assert_eq!(env.private_key, Some("test".to_string()));
+        assert_eq!(env.keystore_path, Some("test".to_string()));
+        assert_eq!(env.keystore_password, Some("test".to_string()));
+        assert_eq!(env.world_address, Some("test".to_string()));
 
         assert_eq!(config.world.description, Some("test".to_string()));
         assert_eq!(
             config.world.cover_uri,
-            Some(Uri::from_str("file://example.com/cover.png").unwrap())
+            Some(Uri::from_string("file://example.com/cover.png").unwrap())
         );
         assert_eq!(
             config.world.icon_uri,
-            Some(Uri::from_str("ipfs://example.com/icon.png").unwrap())
+            Some(Uri::from_string("ipfs://example.com/icon.png").unwrap())
         );
         assert_eq!(config.world.website, Some(Url::try_from("https://example.com").unwrap()));
         assert_eq!(
@@ -183,7 +187,9 @@ mod tests {
     fn test_profile_config_new_custom_profile() {
         let tmp_dir =
             Utf8PathBuf::from(TempDir::new().unwrap().into_path().to_string_lossy().to_string());
-        let config_path = tmp_dir.join("slot.toml");
+
+        let dev_config_path = tmp_dir.join("dojo_dev.toml");
+        let config_path = tmp_dir.join("dojo_slot.toml");
         println!("config_path: {:?}", config_path);
 
         let config_content = r#"
@@ -195,6 +201,7 @@ mod tests {
         default = "test_namespace"
         "#;
         fs::write(&config_path, config_content).unwrap();
+        fs::write(&dev_config_path, config_content).unwrap();
 
         let profile = Profile::new(SmolStr::from("slot")).unwrap();
 

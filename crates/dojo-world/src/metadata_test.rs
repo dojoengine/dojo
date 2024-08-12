@@ -10,71 +10,14 @@ use url::Url;
 use crate::contracts::naming::{get_filename_from_tag, TAG_SEPARATOR};
 use crate::manifest::{CONTRACTS_DIR, MODELS_DIR, WORLD_CONTRACT_TAG};
 use crate::metadata::{
-    dojo_metadata_from_workspace, ArtifactMetadata, NamespaceConfig, ProjectMetadata, Uri,
+    dojo_metadata_from_workspace, ArtifactMetadata, Uri,
     WorldMetadata, ABIS_DIR, BASE_DIR, MANIFESTS_DIR,
 };
 
-#[test]
-fn check_metadata_deserialization() {
-    let metadata: ProjectMetadata = toml::from_str(
-        r#"
-[env]
-rpc_url = "http://localhost:5050/"
-account_address = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
-private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-keystore_path = "test/"
-keystore_password = "dojo"
-world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a"
-
-[world]
-name = "example"
-description = "example world"
-cover_uri = "file://example_cover.png"
-icon_uri = "file://example_icon.png"
-website = "https://dojoengine.org"
-socials.x = "https://x.com/dojostarknet"
-seed = "dojo_examples"
-namespace = { default = "dojo_examples" }
-        "#,
-    )
-    .unwrap();
-
-    assert!(metadata.env.is_some());
-    let env = metadata.env.unwrap();
-
-    assert_eq!(env.rpc_url(), Some("http://localhost:5050/"));
-    assert_eq!(
-        env.account_address(),
-        Some("0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973")
-    );
-    assert_eq!(
-        env.private_key(),
-        Some("0x1800000000300000180000000000030000000000003006001800006600")
-    );
-    assert_eq!(env.keystore_path(), Some("test/"));
-    assert_eq!(env.keystore_password(), Some("dojo"));
-    assert_eq!(
-        env.world_address(),
-        Some("0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a")
-    );
-
-    let world = metadata.world;
-
-    assert_eq!(world.name(), Some("example"));
-    assert_eq!(world.description(), Some("example world"));
-    assert_eq!(world.cover_uri, Some(Uri::File("example_cover.png".into())));
-    assert_eq!(world.icon_uri, Some(Uri::File("example_icon.png".into())));
-    assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
-    assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
-    assert_eq!(world.seed, String::from("dojo_examples"));
-    assert_eq!(world.namespace, NamespaceConfig::new("dojo_examples"));
-}
-
 #[tokio::test]
 async fn world_metadata_hash_and_upload() {
-    let meta = WorldMetadata {
-        namespace: NamespaceConfig::new("dojo_examples"),
-        name: Some("Test World".to_string()),
+    let meta = WorldMetadata {        
+        name: "Test World".to_string(),
         seed: String::from("dojo_examples"),
         description: Some("A world used for testing".to_string()),
         cover_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
@@ -88,34 +31,6 @@ async fn world_metadata_hash_and_upload() {
     };
 
     let _ = meta.upload().await.unwrap();
-}
-
-#[tokio::test]
-async fn parse_world_metadata_without_socials() {
-    let metadata: ProjectMetadata = toml::from_str(
-        r#"
-[env]
-rpc_url = "http://localhost:5050/"
-account_address = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
-private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-keystore_path = "test/"
-keystore_password = "dojo"
-world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a"
-
-[world]
-name = "example"
-description = "example world"
-seed = "dojo_examples"
-namespace = { default = "dojo_examples" }
-cover_uri = "file://example_cover.png"
-icon_uri = "file://example_icon.png"
-website = "https://dojoengine.org"
-# socials.x = "https://x.com/dojostarknet"
-        "#,
-    )
-    .unwrap();
-
-    assert!(metadata.world.socials.is_none());
 }
 
 #[tokio::test]
@@ -161,8 +76,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(env.keystore_password.is_none());
 
     // world
-    assert!(dojo_metadata.world.name.is_some());
-    assert!(dojo_metadata.world.name.unwrap().eq("example"));
+    assert_eq!(dojo_metadata.world.name, "example");
 
     assert!(dojo_metadata.world.description.is_some());
     assert!(dojo_metadata.world.description.unwrap().eq("example world"));

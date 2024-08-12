@@ -234,7 +234,7 @@ mod tests {
             &config.manifest_path().to_path_buf(),
             "dojo_example",
             "dev",
-            dojo_metadata.migration.skip_migration,
+            dojo_metadata.migration.map(|m| m.skip_contracts),
         )
         .unwrap();
 

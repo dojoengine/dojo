@@ -317,8 +317,8 @@ fn fetch_remote_manifest() {
     )
     .unwrap();
 
-    if let Some(skip_manifests) = dojo_metadata.skip_migration {
-        local_manifest.remove_tags(skip_manifests);
+    if let Some(m) = dojo_metadata.migration {
+        local_manifest.remove_tags(m.skip_contracts);
     }
 
     let overlay_dir = manifest_path.join(OVERLAYS_DIR).join(&profile_name);

@@ -146,7 +146,7 @@ mod tests {
     #[tokio::test]
     async fn private_key_from_env_metadata() {
         let private_key = "0x1";
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             private_key: Some(private_key.to_owned()),
             ..Default::default()
         };
@@ -191,7 +191,7 @@ mod tests {
         let keystore_password = "dojoftw";
 
         let private_key = "0x1";
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             keystore_path: Some(keystore_path.to_owned()),
             ..Default::default()
         };
@@ -213,7 +213,7 @@ mod tests {
         let keystore_password = "dojoftw";
         let private_key = "0x1";
 
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             keystore_password: Some(keystore_password.to_owned()),
             ..Default::default()
         };

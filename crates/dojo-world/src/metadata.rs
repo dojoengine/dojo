@@ -364,10 +364,3 @@ impl DojoMetadata {
         self.env.as_ref()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use smol_str::SmolStr;
-
-    use super::*;
-}
