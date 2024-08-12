@@ -982,7 +982,7 @@ pub mod world {
 
                     // - use a "if or" instead of "if not/and" so once a condition is met,
                     // the function returns.
-                    // - sort conditions by order of probability
+                    // - sort conditions by order of probability.
                     if self.is_writer(namespace_selector, caller)
                         || self.is_writer(model_selector, caller)
                         || self.is_owner(namespace_selector, caller)

@@ -1,15 +1,19 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
+use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::WorldContract;
 use dojo_world::manifest::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
+use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use scarb::core::Workspace;
-use starknet::accounts::{ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::Felt;
+use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
+use starknet::core::types::{Felt, InvokeTransactionResult};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
+use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
@@ -262,6 +266,37 @@ where
                 ui.print_sub(format!("Failed to auto authorize with error: {e}"));
             }
         };
+
+        ui.print(format!("Initializing contracts..."));
+
+        // Run dojo inits now everything is actually deployed and permissioned.
+        let mut init_calls = vec![];
+        for c in strategy.contracts {
+            let contract_selector = compute_selector_from_tag(&c.diff.tag);
+            let init_calldata: Vec<Felt> = c.diff.init_calldata
+                .iter()
+                .map(|s| Felt::from_str(s))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let mut calldata = vec![contract_selector, Felt::from(init_calldata.len())];
+            calldata.extend(init_calldata);
+
+            init_calls.push(Call {
+                calldata,
+                selector: selector!("init_contract"),
+                to: strategy.world_address,
+            });
+        }
+
+        let InvokeTransactionResult { transaction_hash } =
+            account.execute_v1(init_calls).send_with_cfg(&TxnConfig::init_wait()).await.map_err(|e| {
+                ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to deploy contracts: {e}")
+        })?;
+
+        TransactionWaiter::new(transaction_hash, account.provider()).await?;
+
+        ui.print(format!("All contracts are initialized at: {transaction_hash:#x}\n"));
 
         if let Some(migration_output) = &migration_output {
             if !ws.config().offline() {

@@ -21,7 +21,7 @@ use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
+    Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
 };
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use futures::future;
@@ -627,6 +627,7 @@ where
     // The init must be called after the authorization are given.
 
     let mut calls = vec![];
+    let mut deploy_outputs = vec![];
 
     for contract in contracts {
         let tag = &contract.diff.tag;
@@ -642,10 +643,22 @@ where
             )
             .await
         {
+            let contract_address = call.to;
+            let base_class_hash = contract.diff.base_class_hash;
+
             calls.push(call);
-            // Print upgrade.
+
+            ui.print_hidden_sub(format!("{} at address {:#066x}", tag, contract_address));
+
+            deploy_outputs.push(Some(ContractMigrationOutput {
+                tag: tag.clone(),
+                contract_address,
+                base_class_hash,
+            }));
+            // TODO: Print upgrade.
         } else {
             // contract already deployed.
+            deploy_outputs.push(None);
         }
     }
 
@@ -659,7 +672,7 @@ where
 
     ui.print(format!("All contracts are deployed at: {transaction_hash:#x}\n"));
 
-    Ok(vec![])
+    Ok(deploy_outputs)
 }
 
 async fn deploy_contract<A>(
