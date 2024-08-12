@@ -263,10 +263,6 @@ abigen!(
           {
             "name": "class_hash",
             "type": "core::starknet::class_hash::ClassHash"
-          },
-          {
-            "name": "init_calldata",
-            "type": "core::array::Span::<core::felt252>"
           }
         ],
         "outputs": [
@@ -294,6 +290,22 @@ abigen!(
             "type": "core::starknet::class_hash::ClassHash"
           }
         ],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "init_contract",
+        "inputs": [
+          {
+            "name": "selector",
+            "type": "core::felt252"
+          },
+          {
+            "name": "init_calldata",
+            "type": "core::array::Span::<core::felt252>"
+          }
+        ],
+        "outputs": [],
         "state_mutability": "external"
       },
       {
@@ -798,6 +810,23 @@ abigen!(
   },
   {
     "type": "event",
+    "name": "dojo::world::world_contract::world::ContractInitialized",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "selector",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "init_calldata",
+        "type": "core::array::Span::<core::felt252>",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
     "name": "dojo::world::world_contract::world::WorldUpgraded",
     "kind": "struct",
     "members": [
@@ -1126,6 +1155,11 @@ abigen!(
       {
         "name": "ContractUpgraded",
         "type": "dojo::world::world_contract::world::ContractUpgraded",
+        "kind": "nested"
+      },
+      {
+        "name": "ContractInitialized",
+        "type": "dojo::world::world_contract::world::ContractInitialized",
         "kind": "nested"
       },
       {

@@ -21,7 +21,7 @@ use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
+    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
 };
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use futures::future;
@@ -246,8 +246,15 @@ where
         }
     };
 
-    match register_dojo_contracts(&strategy.contracts, world_address, migrator, &ui, &txn_config)
-        .await
+    match register_dojo_contracts(
+        &strategy.contracts,
+        world_address,
+        migrator,
+        &ui,
+        &txn_config,
+        declarers,
+    )
+    .await
     {
         Ok(output) => {
             migration_output.contracts = output;
@@ -548,6 +555,7 @@ async fn register_dojo_contracts<A>(
     migrator: A,
     ui: &Ui,
     txn_config: &TxnConfig,
+    declarers: &[SingleOwnerAccount<AnyProvider, LocalWallet>],
 ) -> Result<Vec<Option<ContractMigrationOutput>>>
 where
     A: ConnectedAccount + Send + Sync,
@@ -559,82 +567,99 @@ where
 
     ui.print_header(format!("# Contracts ({})", contracts.len()));
 
-    let mut deploy_output = vec![];
+    // Declare all and keep (tg, class_hash, tx_hash).
+    // Then multicall the deploy matching the class hash.
+    let mut declarers_tasks = HashMap::new();
+    for (i, c) in contracts.iter().enumerate() {
+        let declarer_index = i % declarers.len();
+        declarers_tasks
+            .entry(declarer_index)
+            .or_insert(vec![])
+            .push((c.diff.tag.clone(), c.declare(&declarers[declarer_index], txn_config)));
+    }
 
-    // 1. declare.
-    // 2. deploy multicall.
-    // 3. add authorizations multicall.
-    // 4. init multicall.
+    let mut futures = Vec::new();
+
+    for (declarer_index, d_tasks) in declarers_tasks {
+        let future = async move {
+            let mut results = Vec::new();
+            for (tag, task) in d_tasks {
+                let result = task.await;
+                results.push((declarer_index, tag, result));
+            }
+            results
+        };
+
+        futures.push(future);
+    }
+
+    let all_results = futures::future::join_all(futures).await;
+
+    let mut declare_outputs = vec![];
+
+    for results in all_results {
+        for (index, tag, result) in results {
+            ui.print(italic_message(&tag).to_string());
+            match result {
+                Ok(output) => {
+                    ui.print_sub(format!("Selector: {:#066x}", compute_selector_from_tag(&tag)));
+                    ui.print_hidden_sub(format!("Class hash: {:#066x}", output.class_hash));
+                    ui.print_hidden_sub(format!(
+                        "Declare transaction: {:#066x}",
+                        output.transaction_hash
+                    ));
+                    declare_outputs.push(output);
+                }
+                Err(MigrationError::ClassAlreadyDeclared) => {
+                    ui.print_sub("Already declared");
+                }
+                Err(MigrationError::ArtifactError(e)) => {
+                    return Err(handle_artifact_error(ui, contracts[index].artifact_path(), e));
+                }
+                Err(e) => {
+                    ui.verbose(format!("{e:?}"));
+                    bail!("Failed to declare model: {e}")
+                }
+            }
+        }
+    }
+
+    // The init must be called after the authorization are given.
+
+    let mut calls = vec![];
 
     for contract in contracts {
         let tag = &contract.diff.tag;
         ui.print(italic_message(tag).to_string());
 
-        match contract
-            .deploy_dojo_contract(
+        if let Ok((call, _was_upgraded)) = contract
+            .deploy_dojo_contract_call(
                 world_address,
                 contract.diff.local_class_hash,
                 contract.diff.base_class_hash,
                 &migrator,
-                txn_config,
-                &contract.diff.init_calldata,
                 tag,
             )
             .await
         {
-            Ok(output) => {
-                if let Some(ref declare) = output.declare {
-                    ui.print_hidden_sub(format!(
-                        "Declare transaction: {:#x}",
-                        declare.transaction_hash
-                    ));
-                }
-
-                // NOTE: this assignment may not look useful since we are dropping
-                // `MigrationStrategy` without actually using this value from it.
-                // but some tests depend on this behaviour
-                // contract.contract_address = output.contract_address;
-
-                if output.was_upgraded {
-                    ui.print_hidden_sub(format!(
-                        "Invoke transaction to upgrade: {:#x}",
-                        output.transaction_hash
-                    ));
-                    ui.print_sub(format!(
-                        "Contract address [upgraded]: {:#x}",
-                        output.contract_address
-                    ));
-                } else {
-                    ui.print_hidden_sub(format!(
-                        "Deploy transaction: {:#x}",
-                        output.transaction_hash
-                    ));
-                    ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
-                }
-                deploy_output.push(Some(ContractMigrationOutput {
-                    tag: tag.clone(),
-                    contract_address: output.contract_address,
-                    base_class_hash: output.base_class_hash,
-                }));
-            }
-            Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
-                ui.print_sub(format!("Already deployed: {:#x}", contract_address));
-                deploy_output.push(None);
-            }
-            Err(MigrationError::ArtifactError(e)) => {
-                return Err(handle_artifact_error(ui, contract.artifact_path(), e));
-            }
-            Err(e) => {
-                ui.verbose(format!("{e:?}"));
-                return Err(anyhow!(
-                    "Failed to migrate {tag}: {e}. Please also verify init calldata is valid, if \
-                     any."
-                ));
-            }
+            calls.push(call);
+            // Print upgrade.
+        } else {
+            // contract already deployed.
         }
     }
 
-    Ok(deploy_output)
+    let InvokeTransactionResult { transaction_hash } =
+        migrator.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
+            ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to deploy contracts: {e}")
+        })?;
+
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+    ui.print(format!("All contracts are deployed at: {transaction_hash:#x}\n"));
+
+    Ok(vec![])
 }
 
 async fn deploy_contract<A>(

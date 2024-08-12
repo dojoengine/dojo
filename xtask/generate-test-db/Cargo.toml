@@ -13,3 +13,4 @@ scarb.workspace = true
 sozo-ops = { workspace = true, features = [ "test-utils" ] }
 tokio.workspace = true
 starknet.workspace = true
+reqwest = { workspace = true, features = [ "json" ] }

@@ -38,7 +38,7 @@ pub async fn get_declarers_from_sequencer(sequencer: &KatanaRunner) -> Vec<Singl
 }
 
 async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
-    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), ..Default::default() };
+    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), n_accounts: 10, ..Default::default() };
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // migrate the example project
@@ -59,7 +59,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
 }
 
 async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
-    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), ..Default::default() };
+    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), n_accounts: 10, ..Default::default() };
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // migrate the example project
