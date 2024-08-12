@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723504793888,
+  "lastUpdate": 1723504818569,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15217,6 +15217,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3953420,
             "range": "± 141856",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cb8cf83dd5404ef3a622790aa13e16ebff834e90",
+          "message": "fix: update migration error message about world_address in Scarb.toml (#2286)\n\nupdate error message",
+          "timestamp": "2024-08-12T19:01:01-04:00",
+          "tree_id": "43756903e9928d3d15cdc820abcf37b51b58abfe",
+          "url": "https://github.com/dojoengine/dojo/commit/cb8cf83dd5404ef3a622790aa13e16ebff834e90"
+        },
+        "date": 1723504817285,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17471729,
+            "range": "± 244291",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3812799,
+            "range": "± 293630",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3834908254,
+            "range": "± 820829445",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3914223,
+            "range": "± 33594",
             "unit": "ns/iter"
           }
         ]
