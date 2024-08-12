@@ -267,13 +267,15 @@ where
             }
         };
 
-        ui.print(format!("Initializing contracts..."));
+        ui.print("Initializing contracts...");
 
         // Run dojo inits now everything is actually deployed and permissioned.
         let mut init_calls = vec![];
         for c in strategy.contracts {
             let contract_selector = compute_selector_from_tag(&c.diff.tag);
-            let init_calldata: Vec<Felt> = c.diff.init_calldata
+            let init_calldata: Vec<Felt> = c
+                .diff
+                .init_calldata
                 .iter()
                 .map(|s| Felt::from_str(s))
                 .collect::<Result<Vec<_>, _>>()?;
@@ -289,10 +291,12 @@ where
         }
 
         let InvokeTransactionResult { transaction_hash } =
-            account.execute_v1(init_calls).send_with_cfg(&TxnConfig::init_wait()).await.map_err(|e| {
-                ui.verbose(format!("{e:?}"));
-            anyhow!("Failed to deploy contracts: {e}")
-        })?;
+            account.execute_v1(init_calls).send_with_cfg(&TxnConfig::init_wait()).await.map_err(
+                |e| {
+                    ui.verbose(format!("{e:?}"));
+                    anyhow!("Failed to deploy contracts: {e}")
+                },
+            )?;
 
         TransactionWaiter::new(transaction_hash, account.provider()).await?;
 

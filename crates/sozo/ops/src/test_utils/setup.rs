@@ -19,7 +19,9 @@ use starknet::signers::{LocalWallet, SigningKey};
 use crate::migration;
 
 /// Get the declarers from the sequencer.
-pub async fn get_declarers_from_sequencer(sequencer: &KatanaRunner) -> Vec<SingleOwnerAccount<AnyProvider, LocalWallet>> {
+pub async fn get_declarers_from_sequencer(
+    sequencer: &KatanaRunner,
+) -> Vec<SingleOwnerAccount<AnyProvider, LocalWallet>> {
     let chain_id = sequencer.provider().chain_id().await.unwrap();
 
     let mut accounts = vec![];

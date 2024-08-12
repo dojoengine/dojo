@@ -16,7 +16,9 @@ use starknet::signers::{LocalWallet, SigningKey};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 /// Get the declarers from the sequencer.
-pub async fn get_declarers_from_sequencer(sequencer: &KatanaRunner) -> Vec<SingleOwnerAccount<AnyProvider, LocalWallet>> {
+pub async fn get_declarers_from_sequencer(
+    sequencer: &KatanaRunner,
+) -> Vec<SingleOwnerAccount<AnyProvider, LocalWallet>> {
     let chain_id = sequencer.provider().chain_id().await.unwrap();
 
     let mut accounts = vec![];
@@ -38,7 +40,11 @@ pub async fn get_declarers_from_sequencer(sequencer: &KatanaRunner) -> Vec<Singl
 }
 
 async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
-    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), n_accounts: 10, ..Default::default() };
+    let cfg = KatanaRunnerConfig {
+        db_dir: Some(db_path.to_path_buf()),
+        n_accounts: 10,
+        ..Default::default()
+    };
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // migrate the example project
@@ -53,13 +59,18 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
 
     // migrate the example project
     let (strat, _) = test_utils::setup::setup_migration(&cfg, "dojo_examples")?;
-    let output = migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait(), &declarers).await?;
+    let output =
+        migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait(), &declarers).await?;
 
     Ok(output)
 }
 
 async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
-    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), n_accounts: 10, ..Default::default() };
+    let cfg = KatanaRunnerConfig {
+        db_dir: Some(db_path.to_path_buf()),
+        n_accounts: 10,
+        ..Default::default()
+    };
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // migrate the example project
@@ -74,7 +85,8 @@ async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
 
     // migrate the example project
     let (strat, _) = test_utils::setup::setup_migration(&cfg, "types_test")?;
-    let output = migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait(), &declarers).await?;
+    let output =
+        migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait(), &declarers).await?;
 
     Ok(output)
 }

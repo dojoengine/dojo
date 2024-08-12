@@ -200,7 +200,9 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
 
     let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
+        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers)
+            .await
+            .unwrap();
 
     // first time DojoContract named `others` will fail due to calldata error
     assert!(!migration_output.full);
@@ -233,7 +235,9 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     .unwrap();
 
     let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
+        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers)
+            .await
+            .unwrap();
     assert!(migration_output.full);
 }
 
@@ -300,7 +304,9 @@ async fn migrate_with_metadata() {
 
     let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
 
-    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers)
+        .await
+        .unwrap();
 
     let res = upload_metadata(&ws, &account, output.clone(), TxnConfig::init_wait()).await;
     assert!(res.is_ok());
