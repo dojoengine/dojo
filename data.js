@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723412605599,
+  "lastUpdate": 1723440786543,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15121,6 +15121,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3890663,
             "range": "± 7629",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0bf090ca37de874a51ea45ce4b06857d5eea9c60",
+          "message": "feat: adding profile config (#2285)\n\n* feat: adding profile config\r\n\r\n* fix: fix tests and fmt\r\n\r\n* fix: ensure resource type are correctly parsed for testing\r\n\r\n* fix: fix cairo fmt\r\n\r\n* fix: fix fmt",
+          "timestamp": "2024-08-12T01:13:02-04:00",
+          "tree_id": "529c66c7832002b424aeece60ab38fd9c3be993d",
+          "url": "https://github.com/dojoengine/dojo/commit/0bf090ca37de874a51ea45ce4b06857d5eea9c60"
+        },
+        "date": 1723440784918,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17856511,
+            "range": "± 150746",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4314210,
+            "range": "± 253435",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3912221126,
+            "range": "± 814299432",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4722784,
+            "range": "± 420671",
             "unit": "ns/iter"
           }
         ]
