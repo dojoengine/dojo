@@ -958,8 +958,10 @@ pub mod world {
         ///   * `resource_selector` - the selector of the resource.
         #[inline(always)]
         fn assert_resource_owner(self: @ContractState, resource_selector: felt252) {
-            if !(self.is_owner(resource_selector, get_caller_address())
-                || self.is_caller_world_owner()) {
+            if self.is_owner(resource_selector, get_caller_address()) {
+                return;
+            }
+            if !self.is_caller_world_owner() {
                 panic_with_byte_array(@errors::not_owner(get_caller_address(), resource_selector));
             }
         }
@@ -980,14 +982,21 @@ pub mod world {
                     let model = IModelDispatcher { contract_address: model_address };
                     let namespace_selector = model.namespace_hash();
 
-                    // - use a "if or" instead of "if not/and" so once a condition is met,
-                    // the function returns.
-                    // - sort conditions by order of probability.
-                    if self.is_writer(namespace_selector, caller)
-                        || self.is_writer(model_selector, caller)
-                        || self.is_owner(namespace_selector, caller)
-                        || self.is_owner(model_selector, caller)
-                        || self.is_caller_world_owner() {
+                    // - use several single if because it seems more efficient than a big one with several conditions. 
+                    // - sort conditions by order of probability so once a condition is met, the function returns.
+                    if self.is_writer(namespace_selector, caller) {
+                        return;
+                    }
+                    if self.is_writer(model_selector, caller) {
+                        return;
+                    }
+                    if self.is_owner(namespace_selector, caller) {
+                        return;
+                    }
+                    if self.is_owner(model_selector, caller) {
+                        return;
+                    }
+                    if self.is_caller_world_owner() {
                         return;
                     }
 
@@ -1004,9 +1013,14 @@ pub mod world {
         #[inline(always)]
         fn assert_namespace_write_access(self: @ContractState, namespace_hash: felt252) {
             let caller = get_caller_address();
-            if !(self.is_writer(namespace_hash, caller)
-                || self.is_owner(namespace_hash, caller)
-                || self.is_caller_world_owner()) {
+
+            if self.is_writer(namespace_hash, caller) {
+                return;
+            }
+            if self.is_owner(namespace_hash, caller) {
+                return;
+            }
+            if !self.is_caller_world_owner() {
                 panic_with_byte_array(@errors::no_namespace_write_access(caller, namespace_hash));
             }
         }
