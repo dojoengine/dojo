@@ -3,7 +3,9 @@ pub mod mock_token {
     use dojo_examples::models::{MockToken};
     use starknet::{ContractAddress, get_caller_address};
 
-    fn dojo_init(world: @IWorldDispatcher) {// TODO: Dojo init are called before the authorization are given.
+    fn dojo_init(
+        world: @IWorldDispatcher
+    ) { // TODO: Dojo init are called before the authorization are given.
     // And the resource must be registered to actually give the authorization.
     // So we ends up in dojo_init function not able to set any models...
     //
