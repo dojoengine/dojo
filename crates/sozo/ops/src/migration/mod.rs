@@ -101,7 +101,7 @@ where
             bail!(format!(
                 "Calculated world address ({:#x}) doesn't match provided world address. If you \
                  are deploying with custom seed make sure `world_address` is correctly configured \
-                 (or not set) `Scarb.toml`",
+                 (or not set) in your `dojo_{profile_name}.toml`",
                 generated_world_address
             ))
         }
