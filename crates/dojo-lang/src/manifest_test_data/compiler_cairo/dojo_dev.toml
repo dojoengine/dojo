@@ -1,0 +1,10 @@
+[world]
+description = "Cairo compiler features"
+name = "compiler_cairo_features"
+seed = "compiler_cairo_features"
+
+[namespace]
+default = "ccf"
+
+[env]
+rpc_url = "http://localhost:5050/"

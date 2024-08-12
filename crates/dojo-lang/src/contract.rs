@@ -15,8 +15,8 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
+use dojo_world::config::NamespaceConfig;
 use dojo_world::contracts::naming;
-use dojo_world::metadata::{is_name_valid, NamespaceConfig};
 
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
@@ -67,7 +67,7 @@ impl DojoContract {
         };
 
         for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {
-            if !is_name_valid(value) {
+            if !NamespaceConfig::is_name_valid(value) {
                 return PluginResult {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
