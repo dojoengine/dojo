@@ -8,8 +8,34 @@ use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use sozo_ops::migration::{self, MigrationOutput};
 use sozo_ops::test_utils;
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
+use starknet::signers::{LocalWallet, SigningKey};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+/// Get the declarers from the sequencer.
+pub async fn get_declarers_from_sequencer(sequencer: &KatanaRunner) -> Vec<SingleOwnerAccount<AnyProvider, LocalWallet>> {
+    let chain_id = sequencer.provider().chain_id().await.unwrap();
+
+    let mut accounts = vec![];
+    for a in sequencer.accounts_data() {
+        let provider =
+            AnyProvider::JsonRpcHttp(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+        let signer = LocalWallet::from(SigningKey::from_secret_scalar(
+            a.private_key.as_ref().unwrap().secret_scalar(),
+        ));
+
+        let account =
+            SingleOwnerAccount::new(provider, signer, a.address, chain_id, ExecutionEncoding::New);
+
+        accounts.push(account);
+    }
+
+    accounts
+}
 
 async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
     let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), ..Default::default() };
@@ -23,9 +49,11 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
     let cfg = setup.build_test_config("spawn-and-move", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 
+    let declarers = get_declarers_from_sequencer(&runner).await;
+
     // migrate the example project
     let (strat, _) = test_utils::setup::setup_migration(&cfg, "dojo_examples")?;
-    let output = migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait()).await?;
+    let output = migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait(), &declarers).await?;
 
     Ok(output)
 }
@@ -42,9 +70,11 @@ async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
     let cfg = setup.build_test_config("types-test", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 
+    let declarers = get_declarers_from_sequencer(&runner).await;
+
     // migrate the example project
     let (strat, _) = test_utils::setup::setup_migration(&cfg, "types_test")?;
-    let output = migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait()).await?;
+    let output = migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait(), &declarers).await?;
 
     Ok(output)
 }

@@ -26,10 +26,9 @@ pub trait IWorld<T> {
     fn register_model(ref self: T, class_hash: ClassHash);
     fn upgrade_model(ref self: T, class_hash: ClassHash);
 
-    fn deploy_contract(
-        ref self: T, salt: felt252, class_hash: ClassHash, init_calldata: Span<felt252>
-    ) -> ContractAddress;
+    fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, selector: felt252, class_hash: ClassHash) -> ClassHash;
+    fn init_contract(ref self: T, selector: felt252, init_calldata: Span<felt252>);
 
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
@@ -132,6 +131,7 @@ pub mod world {
         WorldSpawned: WorldSpawned,
         ContractDeployed: ContractDeployed,
         ContractUpgraded: ContractUpgraded,
+        ContractInitialized: ContractInitialized,
         WorldUpgraded: WorldUpgraded,
         MetadataUpdate: MetadataUpdate,
         NamespaceRegistered: NamespaceRegistered,
@@ -176,6 +176,12 @@ pub mod world {
     pub struct ContractUpgraded {
         pub class_hash: ClassHash,
         pub address: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
+    pub struct ContractInitialized {
+        pub selector: felt252,
+        pub init_calldata: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event, Debug, PartialEq)]
@@ -594,10 +600,7 @@ pub mod world {
         ///
         /// * `ContractAddress` - The address of the newly deployed contract.
         fn deploy_contract(
-            ref self: ContractState,
-            salt: felt252,
-            class_hash: ClassHash,
-            init_calldata: Span<felt252>,
+            ref self: ContractState, salt: felt252, class_hash: ClassHash,
         ) -> ContractAddress {
             self.assert_caller_is_account();
 
@@ -623,19 +626,7 @@ pub mod world {
             self.assert_namespace_write_access(namespace_hash);
 
             let selector = dispatcher.selector();
-
-            if self.initialized_contract.read(selector) {
-                panic!("Contract has already been initialized");
-            } else {
-                starknet::syscalls::call_contract_syscall(
-                    contract_address, DOJO_INIT_SELECTOR, init_calldata
-                )
-                    .unwrap_syscall();
-                self.initialized_contract.write(selector, true);
-            }
-
             self.owners.write((selector, caller), true);
-
             self.resources.write(selector, Resource::Contract((class_hash, contract_address)));
 
             EventEmitter::emit(
@@ -670,6 +661,34 @@ pub mod world {
                 class_hash
             } else {
                 panic_with_byte_array(@errors::invalid_resource_selector(selector))
+            }
+        }
+
+        /// Initializes a contract associated with the world.
+        ///
+        /// # Arguments
+        ///
+        /// * `selector` - The selector of the contract to initialize.
+        /// * `init_calldata` - Calldata used to initialize the contract.
+        fn init_contract(ref self: ContractState, selector: felt252, init_calldata: Span<felt252>) {
+            if let Resource::Contract((_, contract_address)) = self.resources.read(selector) {
+                if self.initialized_contract.read(selector) {
+                    let dispatcher = IContractDispatcher { contract_address };
+                    let tag = dispatcher.tag();
+                    panic!("Contract {} has already been initialized", tag);
+                } else {
+                    starknet::syscalls::call_contract_syscall(
+                        contract_address, DOJO_INIT_SELECTOR, init_calldata
+                    )
+                        .unwrap_syscall();
+                    self.initialized_contract.write(selector, true);
+
+                    EventEmitter::emit(ref self, ContractInitialized { selector, init_calldata });
+                }
+            } else {
+                panic_with_byte_array(
+                    @errors::resource_conflict(format!("{selector}"), "contract")
+                );
             }
         }
 

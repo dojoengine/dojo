@@ -7,10 +7,14 @@ use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
-use starknet::accounts::ConnectedAccount;
+use starknet::accounts::{ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
+use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::poseidon_hash_single;
+use url::Url;
 
 mod auto_auth;
 mod migrate;
@@ -43,6 +47,60 @@ pub struct ContractMigrationOutput {
     pub tag: String,
     pub contract_address: Felt,
     pub base_class_hash: Felt,
+}
+
+/// Get predeployed accounts from the Katana RPC server.
+async fn get_declarers_accounts<A: ConnectedAccount>(
+    migrator: A,
+    rpc_url: &str,
+) -> Result<Vec<SingleOwnerAccount<AnyProvider, LocalWallet>>> {
+    let client = reqwest::Client::new();
+    let response = client
+        .post(rpc_url)
+        .json(&serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "katana_predeployedAccounts",
+            "params": [],
+            "id": 1
+        }))
+        .send()
+        .await;
+
+    if response.is_err() {
+        return Ok(vec![]);
+    }
+
+    let result: serde_json::Value = response.unwrap().json().await?;
+
+    let mut declarers = vec![];
+
+    if let Some(vals) = result.get("result").and_then(|v| v.as_array()) {
+        let chain_id = migrator.provider().chain_id().await?;
+
+        for a in vals {
+            let address = a["address"].as_str().unwrap();
+            let private_key = a["privateKey"].as_str().unwrap();
+            let provider = AnyProvider::JsonRpcHttp(JsonRpcClient::new(HttpTransport::new(
+                Url::parse(rpc_url).unwrap(),
+            )));
+
+            let signer = LocalWallet::from(SigningKey::from_secret_scalar(
+                Felt::from_hex(private_key).unwrap(),
+            ));
+
+            let account = SingleOwnerAccount::new(
+                provider,
+                signer,
+                Felt::from_hex(address).unwrap(),
+                chain_id,
+                ExecutionEncoding::New,
+            );
+
+            declarers.push(account);
+        }
+    }
+
+    Ok(declarers)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -144,8 +202,12 @@ where
 
         Ok(None)
     } else {
+        let declarers = get_declarers_accounts(&account, &rpc_url).await?;
+
+        ui.print_sub(format!("Declarers: {}", declarers.len()));
+
         let migration_output = if total_diffs != 0 {
-            match apply_diff(ws, &account, txn_config, &strategy).await {
+            match apply_diff(ws, &account, txn_config, &strategy, &declarers).await {
                 Ok(migration_output) => Some(migration_output),
                 Err(e) => {
                     update_manifests_and_abis(

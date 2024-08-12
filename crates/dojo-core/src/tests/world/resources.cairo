@@ -363,7 +363,7 @@ fn test_deploy_contract_for_namespace_owner() {
 
     drop_all_events(world.contract_address);
 
-    let contract_address = world.deploy_contract('salt1', class_hash, array![].span());
+    let contract_address = world.deploy_contract('salt1', class_hash);
     let dispatcher = IContractDispatcher { contract_address };
 
     let event = starknet::testing::pop_log::<ContractDeployed>(world.contract_address);
@@ -390,10 +390,7 @@ fn test_deploy_contract_for_namespace_writer() {
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
 
-    world
-        .deploy_contract(
-            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
-        );
+    world.deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(),);
 }
 
 
@@ -411,20 +408,14 @@ fn test_deploy_contract_no_namespace_write_access() {
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
 
-    world
-        .deploy_contract(
-            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
-        );
+    world.deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(),);
 }
 
 #[test]
 #[should_panic(expected: ("Namespace `buzz_namespace` is not registered", 'ENTRYPOINT_FAILED',))]
 fn test_deploy_contract_with_unregistered_namespace() {
     let world = deploy_world();
-    world
-        .deploy_contract(
-            'salt1', buzz_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
-        );
+    world.deploy_contract('salt1', buzz_contract::TEST_CLASS_HASH.try_into().unwrap(),);
 }
 
 #[test]
@@ -441,10 +432,7 @@ fn test_deploy_contract_through_malicious_contract() {
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(malicious_contract);
 
-    world
-        .deploy_contract(
-            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
-        );
+    world.deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(),);
 }
 
 #[test]
@@ -459,7 +447,7 @@ fn test_upgrade_contract_from_resource_owner() {
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
 
-    let contract_address = world.deploy_contract('salt1', class_hash, array![].span());
+    let contract_address = world.deploy_contract('salt1', class_hash);
 
     let dispatcher = IContractDispatcher { contract_address };
 
@@ -495,7 +483,7 @@ fn test_upgrade_contract_from_resource_writer() {
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
 
-    let contract_address = world.deploy_contract('salt1', class_hash, array![].span());
+    let contract_address = world.deploy_contract('salt1', class_hash);
 
     let dispatcher = IContractDispatcher { contract_address };
 
@@ -518,7 +506,7 @@ fn test_upgrade_contract_from_random_account() {
     let world = deploy_world();
     let class_hash = test_contract::TEST_CLASS_HASH.try_into().unwrap();
 
-    let contract_address = world.deploy_contract('salt1', class_hash, array![].span());
+    let contract_address = world.deploy_contract('salt1', class_hash);
 
     let alice = starknet::contract_address_const::<0xa11ce>();
     let dispatcher = IContractDispatcher { contract_address };
@@ -543,7 +531,7 @@ fn test_upgrade_contract_through_malicious_contract() {
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(bob);
 
-    let contract_address = world.deploy_contract('salt1', class_hash, array![].span());
+    let contract_address = world.deploy_contract('salt1', class_hash);
 
     let dispatcher = IContractDispatcher { contract_address };
 

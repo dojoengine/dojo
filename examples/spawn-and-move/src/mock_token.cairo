@@ -6,7 +6,8 @@ pub mod mock_token {
     fn dojo_init(
         world: @IWorldDispatcher
     ) { // TODO: Dojo init are called before the authorization are given.
-    // And the resource must be registered to actually give the authorization.
+        let _ = world;
+        // And the resource must be registered to actually give the authorization.
     // So we ends up in dojo_init function not able to set any models...
     //
     // We will change the order for the migration:

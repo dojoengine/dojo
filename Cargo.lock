@@ -12939,6 +12939,7 @@ dependencies = [
  "katana-runner",
  "num-bigint",
  "num-traits 0.2.19",
+ "reqwest 0.12.5",
  "rpassword",
  "scarb",
  "scarb-ui",
@@ -16246,6 +16247,7 @@ dependencies = [
  "katana-runner",
  "scarb",
  "sozo-ops",
+ "starknet 0.11.0",
  "tokio",
 ]
 

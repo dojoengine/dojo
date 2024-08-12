@@ -28,14 +28,15 @@ use futures::future;
 use itertools::Itertools;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
-use starknet::accounts::{Account, ConnectedAccount};
+use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
     BlockId, BlockTag, Felt, FunctionCall, InvokeTransactionResult, StarknetError,
 };
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
 };
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{AnyProvider, Provider, ProviderError};
+use starknet::signers::LocalWallet;
 use tokio::fs;
 
 use super::ui::{bold_message, italic_message, MigrationUi};
@@ -76,6 +77,7 @@ pub async fn apply_diff<A>(
     account: A,
     txn_config: TxnConfig,
     strategy: &MigrationStrategy,
+    declarers: &[SingleOwnerAccount<AnyProvider, LocalWallet>],
 ) -> Result<MigrationOutput>
 where
     A: ConnectedAccount + Sync + Send,
@@ -87,7 +89,7 @@ where
     ui.print_step(4, "🛠", "Migrating...");
     ui.print(" ");
 
-    let migration_output = execute_strategy(ws, strategy, account, txn_config)
+    let migration_output = execute_strategy(ws, strategy, account, txn_config, declarers)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
@@ -120,6 +122,7 @@ pub async fn execute_strategy<A>(
     strategy: &MigrationStrategy,
     migrator: A,
     txn_config: TxnConfig,
+    declarers: &[SingleOwnerAccount<AnyProvider, LocalWallet>],
 ) -> Result<MigrationOutput>
 where
     A: ConnectedAccount + Sync + Send,
@@ -224,7 +227,16 @@ where
 
     // Once Torii supports indexing arrays, we should declare and register the
     // ResourceMetadata model.
-    match register_dojo_models(&strategy.models, world_address, &migrator, &ui, &txn_config).await {
+    match register_dojo_models(
+        &strategy.models,
+        world_address,
+        &migrator,
+        &ui,
+        &txn_config,
+        declarers,
+    )
+    .await
+    {
         Ok(output) => {
             migration_output.models = output.registered_models;
         }
@@ -435,6 +447,7 @@ async fn register_dojo_models<A>(
     migrator: &A,
     ui: &Ui,
     txn_config: &TxnConfig,
+    declarers: &[SingleOwnerAccount<AnyProvider, LocalWallet>],
 ) -> Result<RegisterOutput>
 where
     A: ConnectedAccount + Send + Sync,
@@ -453,32 +466,57 @@ where
     let mut declare_output = vec![];
     let mut registered_models = vec![];
 
-    for c in models.iter() {
-        ui.print(italic_message(&c.diff.tag).to_string());
+    let mut declarers_tasks = HashMap::new();
+    for (i, m) in models.iter().enumerate() {
+        let declarer_index = i % declarers.len();
+        declarers_tasks
+            .entry(declarer_index)
+            .or_insert(vec![])
+            .push((m.diff.tag.clone(), m.declare(&declarers[declarer_index], txn_config)));
+    }
 
-        let res = c.declare(&migrator, txn_config).await;
-        match res {
-            Ok(output) => {
-                ui.print_hidden_sub(format!("Declare transaction: {:#x}", output.transaction_hash));
+    let mut futures = Vec::new();
 
-                declare_output.push(output);
+    for (declarer_index, d_tasks) in declarers_tasks {
+        let future = async move {
+            let mut results = Vec::new();
+            for (tag, task) in d_tasks {
+                let result = task.await;
+                results.push((declarer_index, tag, result));
             }
+            results
+        };
 
-            // Continue if model is already declared
-            Err(MigrationError::ClassAlreadyDeclared) => {
-                ui.print_sub(format!("Already declared: {:#x}", c.diff.local_class_hash));
-                continue;
-            }
-            Err(MigrationError::ArtifactError(e)) => {
-                return Err(handle_artifact_error(ui, c.artifact_path(), e));
-            }
-            Err(e) => {
-                ui.verbose(format!("{e:?}"));
-                bail!("Failed to declare model {}: {e}", c.diff.tag)
+        futures.push(future);
+    }
+
+    let all_results = futures::future::join_all(futures).await;
+
+    for results in all_results {
+        for (index, tag, result) in results {
+            ui.print(italic_message(&tag).to_string());
+            match result {
+                Ok(output) => {
+                    ui.print_sub(format!("Selector: {:#066x}", compute_selector_from_tag(&tag)));
+                    ui.print_hidden_sub(format!("Class hash: {:#066x}", output.class_hash));
+                    ui.print_hidden_sub(format!(
+                        "Declare transaction: {:#066x}",
+                        output.transaction_hash
+                    ));
+                    declare_output.push(output);
+                }
+                Err(MigrationError::ClassAlreadyDeclared) => {
+                    ui.print_sub("Already declared");
+                }
+                Err(MigrationError::ArtifactError(e)) => {
+                    return Err(handle_artifact_error(ui, models[index].artifact_path(), e));
+                }
+                Err(e) => {
+                    ui.verbose(format!("{e:?}"));
+                    bail!("Failed to declare model: {e}")
+                }
             }
         }
-
-        ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));
     }
 
     let world = WorldContract::new(world_address, &migrator);
@@ -522,6 +560,11 @@ where
     ui.print_header(format!("# Contracts ({})", contracts.len()));
 
     let mut deploy_output = vec![];
+
+    // 1. declare.
+    // 2. deploy multicall.
+    // 3. add authorizations multicall.
+    // 4. init multicall.
 
     for contract in contracts {
         let tag = &contract.diff.tag;

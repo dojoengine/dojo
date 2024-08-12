@@ -69,7 +69,9 @@ async fn migrate_with_auto_mine() {
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -88,7 +90,9 @@ async fn migrate_with_block_time() {
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    execute_strategy(&ws, &migration, &account, TxnConfig::default(), &declarers).await.unwrap();
 }
 
 #[should_panic]
@@ -104,6 +108,8 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let account = sequencer.account(0);
 
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
     assert!(
         execute_strategy(
             &ws,
@@ -114,6 +120,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
                 wait: true,
                 ..Default::default()
             },
+            &declarers,
         )
         .await
         .is_err()
@@ -190,8 +197,10 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     )
     .unwrap();
 
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
     let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
 
     // first time DojoContract named `others` will fail due to calldata error
     assert!(!migration_output.full);
@@ -224,7 +233,7 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     .unwrap();
 
     let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
     assert!(migration_output.full);
 }
 
@@ -257,7 +266,9 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
         &base.to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
@@ -287,7 +298,9 @@ async fn migrate_with_metadata() {
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
 
     let res = upload_metadata(&ws, &account, output.clone(), TxnConfig::init_wait()).await;
     assert!(res.is_ok());
@@ -373,7 +386,9 @@ async fn migrate_with_auto_authorize() {
 
     let txn_config = TxnConfig::init_wait();
 
-    let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    let output = execute_strategy(&ws, &migration, &account, txn_config, &declarers).await.unwrap();
 
     let world_address = migration.world_address;
     let world = WorldContract::new(world_address, account);
