@@ -225,45 +225,76 @@ where
 
     register_namespaces(&namespaces, world_address, &migrator, &ui, &txn_config).await?;
 
-    // Once Torii supports indexing arrays, we should declare and register the
-    // ResourceMetadata model.
-    match register_dojo_models(
-        &strategy.models,
-        world_address,
-        &migrator,
-        &ui,
-        &txn_config,
-        declarers,
-    )
-    .await
-    {
-        Ok(output) => {
-            migration_output.models = output.registered_models;
-        }
-        Err(e) => {
-            ui.anyhow(&e);
-            return Ok(migration_output);
-        }
-    };
+    // TODO: rework this part when more time.
+    if declarers.is_empty() {
+        match register_dojo_models(&strategy.models, world_address, &migrator, &ui, &txn_config)
+            .await
+        {
+            Ok(output) => {
+                migration_output.models = output.registered_models;
+            }
+            Err(e) => {
+                ui.anyhow(&e);
+                return Ok(migration_output);
+            }
+        };
 
-    match register_dojo_contracts(
-        &strategy.contracts,
-        world_address,
-        migrator,
-        &ui,
-        &txn_config,
-        declarers,
-    )
-    .await
-    {
-        Ok(output) => {
-            migration_output.contracts = output;
-        }
-        Err(e) => {
-            ui.anyhow(&e);
-            return Ok(migration_output);
-        }
-    };
+        match register_dojo_contracts(
+            &strategy.contracts,
+            world_address,
+            migrator,
+            &ui,
+            &txn_config,
+        )
+        .await
+        {
+            Ok(output) => {
+                migration_output.contracts = output;
+            }
+            Err(e) => {
+                ui.anyhow(&e);
+                return Ok(migration_output);
+            }
+        };
+    } else {
+        match register_dojo_models_with_declarers(
+            &strategy.models,
+            world_address,
+            &migrator,
+            &ui,
+            &txn_config,
+            declarers,
+        )
+        .await
+        {
+            Ok(output) => {
+                migration_output.models = output.registered_models;
+            }
+            Err(e) => {
+                ui.anyhow(&e);
+                return Ok(migration_output);
+            }
+        };
+
+        match register_dojo_contracts_declarers(
+            &strategy.contracts,
+            world_address,
+            migrator,
+            &ui,
+            &txn_config,
+            declarers,
+        )
+        .await
+        {
+            Ok(output) => {
+                migration_output.contracts = output;
+            }
+            Err(e) => {
+                ui.anyhow(&e);
+                return Ok(migration_output);
+            }
+        };
+    }
 
     migration_output.full = true;
 
@@ -454,6 +485,83 @@ async fn register_dojo_models<A>(
     migrator: &A,
     ui: &Ui,
     txn_config: &TxnConfig,
+) -> Result<RegisterOutput>
+where
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+{
+    if models.is_empty() {
+        return Ok(RegisterOutput {
+            transaction_hash: Felt::ZERO,
+            declare_output: vec![],
+            registered_models: vec![],
+        });
+    }
+
+    ui.print_header(format!("# Models ({})", models.len()));
+
+    let mut declare_output = vec![];
+
+    for (i, m) in models.iter().enumerate() {
+        let tag = &m.diff.tag;
+
+        ui.print(italic_message(tag).to_string());
+
+        match m.declare(&migrator, txn_config).await {
+            Ok(output) => {
+                ui.print_sub(format!("Selector: {:#066x}", compute_selector_from_tag(tag)));
+                ui.print_hidden_sub(format!("Class hash: {:#066x}", output.class_hash));
+                ui.print_hidden_sub(format!(
+                    "Declare transaction: {:#066x}",
+                    output.transaction_hash
+                ));
+                declare_output.push(output);
+            }
+            Err(MigrationError::ClassAlreadyDeclared) => {
+                ui.print_sub("Already declared");
+            }
+            Err(MigrationError::ArtifactError(e)) => {
+                return Err(handle_artifact_error(ui, models[i].artifact_path(), e));
+            }
+            Err(e) => {
+                ui.verbose(format!("{e:?}"));
+                bail!("Failed to declare model: {e}")
+            }
+        }
+    }
+
+    let world = WorldContract::new(world_address, &migrator);
+
+    let mut registered_models = vec![];
+
+    let calls = models
+        .iter()
+        .map(|c| {
+            registered_models.push(c.diff.tag.clone());
+            world.register_model_getcall(&c.diff.local_class_hash.into())
+        })
+        .collect::<Vec<_>>();
+
+    let InvokeTransactionResult { transaction_hash } =
+        world.account.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
+            ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to register models to World: {e}")
+        })?;
+
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+    ui.print(format!("All models are registered at: {transaction_hash:#x}\n"));
+
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_models })
+}
+
+// For now duplicated because the migrator account is different from the declarers account type.
+async fn register_dojo_models_with_declarers<A>(
+    models: &[ClassMigration],
+    world_address: Felt,
+    migrator: &A,
+    ui: &Ui,
+    txn_config: &TxnConfig,
     declarers: &[SingleOwnerAccount<AnyProvider, LocalWallet>],
 ) -> Result<RegisterOutput>
 where
@@ -550,6 +658,105 @@ where
 }
 
 async fn register_dojo_contracts<A>(
+    contracts: &Vec<ContractMigration>,
+    world_address: Felt,
+    migrator: A,
+    ui: &Ui,
+    txn_config: &TxnConfig,
+) -> Result<Vec<Option<ContractMigrationOutput>>>
+where
+    A: ConnectedAccount + Send + Sync,
+    <A as ConnectedAccount>::Provider: Send,
+{
+    if contracts.is_empty() {
+        return Ok(vec![]);
+    }
+
+    ui.print_header(format!("# Contracts ({})", contracts.len()));
+
+    let mut declare_outputs = vec![];
+
+    for (i, c) in contracts.iter().enumerate() {
+        let tag = &c.diff.tag;
+        ui.print(italic_message(&tag).to_string());
+
+        match c.declare(&migrator, txn_config).await {
+            Ok(output) => {
+                ui.print_sub(format!("Selector: {:#066x}", compute_selector_from_tag(tag)));
+                ui.print_hidden_sub(format!("Class hash: {:#066x}", output.class_hash));
+                ui.print_hidden_sub(format!(
+                    "Declare transaction: {:#066x}",
+                    output.transaction_hash
+                ));
+                declare_outputs.push(output);
+            }
+            Err(MigrationError::ClassAlreadyDeclared) => {
+                ui.print_sub("Already declared");
+            }
+            Err(MigrationError::ArtifactError(e)) => {
+                return Err(handle_artifact_error(ui, contracts[i].artifact_path(), e));
+            }
+            Err(e) => {
+                ui.verbose(format!("{e:?}"));
+                bail!("Failed to declare model: {e}")
+            }
+        }
+    }
+
+    let mut calls = vec![];
+    let mut deploy_outputs = vec![];
+
+    for contract in contracts {
+        let tag = &contract.diff.tag;
+        ui.print(italic_message(tag).to_string());
+
+        if let Ok((call, was_upgraded)) = contract
+            .deploy_dojo_contract_call(
+                world_address,
+                contract.diff.local_class_hash,
+                contract.diff.base_class_hash,
+                &migrator,
+                tag,
+            )
+            .await
+        {
+            let contract_address = call.to;
+            let base_class_hash = contract.diff.base_class_hash;
+
+            calls.push(call);
+
+            if was_upgraded {
+                ui.print_hidden_sub(format!("{} upgraded at {:#066x}", tag, contract_address));
+            } else {
+                ui.print_hidden_sub(format!("{} deployed at {:#066x}", tag, contract_address));
+            }
+
+            deploy_outputs.push(Some(ContractMigrationOutput {
+                tag: tag.clone(),
+                contract_address,
+                base_class_hash,
+                was_upgraded,
+            }));
+        } else {
+            // contract already deployed.
+            deploy_outputs.push(None);
+        }
+    }
+
+    let InvokeTransactionResult { transaction_hash } =
+        migrator.execute_v1(calls).send_with_cfg(txn_config).await.map_err(|e| {
+            ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to deploy contracts: {e}")
+        })?;
+
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+    ui.print(format!("All contracts are deployed at: {transaction_hash:#x}\n"));
+
+    Ok(deploy_outputs)
+}
+
+async fn register_dojo_contracts_declarers<A>(
     contracts: &Vec<ContractMigration>,
     world_address: Felt,
     migrator: A,
