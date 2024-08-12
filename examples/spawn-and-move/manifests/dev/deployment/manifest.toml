@@ -50,8 +50,8 @@ manifest_name = "dojo_examples-dungeon-6620e0e6"
 [[contracts]]
 kind = "DojoContract"
 address = "0x1995a9e4c86360ce6daa020ea7d6f750b825c032b2e75394e0496276baf0f33"
-class_hash = "0x2cc02e47b1f2e767ced0fa64afcc481e7e2ad9fad7a8e66921f8452cc44071c"
-original_class_hash = "0x2cc02e47b1f2e767ced0fa64afcc481e7e2ad9fad7a8e66921f8452cc44071c"
+class_hash = "0x3daab1621bba5f43f0d84f8f68ee7a5dfa4d83f98f746e2e9dcd3a848233e35"
+original_class_hash = "0x3daab1621bba5f43f0d84f8f68ee7a5dfa4d83f98f746e2e9dcd3a848233e35"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-mock_token-31599eb2.json"
 reads = []
