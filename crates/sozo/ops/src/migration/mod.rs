@@ -22,7 +22,7 @@ use url::Url;
 
 mod auto_auth;
 mod migrate;
-mod ui;
+pub mod ui;
 mod utils;
 
 pub use self::auto_auth::auto_authorize;
@@ -51,6 +51,7 @@ pub struct ContractMigrationOutput {
     pub tag: String,
     pub contract_address: Felt,
     pub base_class_hash: Felt,
+    pub was_upgraded: bool,
 }
 
 /// Get predeployed accounts from the Katana RPC server.
@@ -267,40 +268,59 @@ where
             }
         };
 
-        ui.print("Initializing contracts...");
+        if let Some(migration_output) = &migration_output {
+            ui.print(" ");
+            ui.print_step(7, "🏗️", "Initializing contracts...");
 
-        // Run dojo inits now everything is actually deployed and permissioned.
-        let mut init_calls = vec![];
-        for c in strategy.contracts {
-            let contract_selector = compute_selector_from_tag(&c.diff.tag);
-            let init_calldata: Vec<Felt> = c
-                .diff
-                .init_calldata
-                .iter()
-                .map(|s| Felt::from_str(s))
-                .collect::<Result<Vec<_>, _>>()?;
+            // Run dojo inits now that everything is actually deployed and permissioned.
+            let mut init_calls = vec![];
+            for c in strategy.contracts {
+                let was_upgraded = migration_output
+                    .contracts
+                    .iter()
+                    .flatten()
+                    .find(|output| output.tag == c.diff.tag)
+                    .map(|output| output.was_upgraded)
+                    .unwrap_or(false);
 
-            let mut calldata = vec![contract_selector, Felt::from(init_calldata.len())];
-            calldata.extend(init_calldata);
+                if was_upgraded {
+                    continue;
+                }
 
-            init_calls.push(Call {
-                calldata,
-                selector: selector!("init_contract"),
-                to: strategy.world_address,
-            });
+                let contract_selector = compute_selector_from_tag(&c.diff.tag);
+                let init_calldata: Vec<Felt> = c
+                    .diff
+                    .init_calldata
+                    .iter()
+                    .map(|s| Felt::from_str(s))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                let mut calldata = vec![contract_selector, Felt::from(init_calldata.len())];
+                calldata.extend(init_calldata);
+
+                init_calls.push(Call {
+                    calldata,
+                    selector: selector!("init_contract"),
+                    to: strategy.world_address,
+                });
+            }
+
+            if !init_calls.is_empty() {
+                let InvokeTransactionResult { transaction_hash } = account
+                    .execute_v1(init_calls)
+                    .send_with_cfg(&TxnConfig::init_wait())
+                    .await
+                    .map_err(|e| {
+                        ui.verbose(format!("{e:?}"));
+                        anyhow!("Failed to deploy contracts: {e}")
+                    })?;
+
+                TransactionWaiter::new(transaction_hash, account.provider()).await?;
+                ui.print_sub(format!("All contracts are initialized at: {transaction_hash:#x}\n"));
+            } else {
+                ui.print_sub("No contracts to initialize");
+            }
         }
-
-        let InvokeTransactionResult { transaction_hash } =
-            account.execute_v1(init_calls).send_with_cfg(&TxnConfig::init_wait()).await.map_err(
-                |e| {
-                    ui.verbose(format!("{e:?}"));
-                    anyhow!("Failed to deploy contracts: {e}")
-                },
-            )?;
-
-        TransactionWaiter::new(transaction_hash, account.provider()).await?;
-
-        ui.print(format!("All contracts are initialized at: {transaction_hash:#x}\n"));
 
         if let Some(migration_output) = &migration_output {
             if !ws.config().offline() {

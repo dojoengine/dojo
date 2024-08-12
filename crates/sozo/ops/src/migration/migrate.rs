@@ -330,7 +330,7 @@ where
     let ui = ws.config().ui();
 
     ui.print(" ");
-    ui.print_step(7, "🌐", "Uploading metadata...");
+    ui.print_step(8, "🌐", "Uploading metadata...");
     ui.print(" ");
 
     let dojo_metadata = dojo_metadata_from_workspace(ws)?;
@@ -624,8 +624,6 @@ where
         }
     }
 
-    // The init must be called after the authorization are given.
-
     let mut calls = vec![];
     let mut deploy_outputs = vec![];
 
@@ -633,7 +631,7 @@ where
         let tag = &contract.diff.tag;
         ui.print(italic_message(tag).to_string());
 
-        if let Ok((call, _was_upgraded)) = contract
+        if let Ok((call, was_upgraded)) = contract
             .deploy_dojo_contract_call(
                 world_address,
                 contract.diff.local_class_hash,
@@ -648,14 +646,18 @@ where
 
             calls.push(call);
 
-            ui.print_hidden_sub(format!("{} at address {:#066x}", tag, contract_address));
+            if was_upgraded {
+                ui.print_hidden_sub(format!("{} upgraded at {:#066x}", tag, contract_address));
+            } else {
+                ui.print_hidden_sub(format!("{} deployed at {:#066x}", tag, contract_address));
+            }
 
             deploy_outputs.push(Some(ContractMigrationOutput {
                 tag: tag.clone(),
                 contract_address,
                 base_class_hash,
+                was_upgraded,
             }));
-            // TODO: Print upgrade.
         } else {
             // contract already deployed.
             deploy_outputs.push(None);
