@@ -84,7 +84,7 @@ pub mod actions {
             let player = get_caller_address();
 
             let items = array![
-                PlayerItem { item_id: 1, quantity: 100, score: 10 },
+                PlayerItem { item_id: 1, quantity: 100, score: 150 },
                 PlayerItem { item_id: 2, quantity: 50, score: -32 }
             ];
 
@@ -206,7 +206,7 @@ mod tests {
 
         // deploy systems contract
         let contract_address = world
-            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
+            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap());
         let actions_system = IActionsDispatcher { contract_address };
 
         // set authorizations

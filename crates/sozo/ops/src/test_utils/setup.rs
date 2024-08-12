@@ -10,13 +10,37 @@ use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
 use scarb::core::{Config, Workspace};
 use scarb::ops;
-use starknet::accounts::SingleOwnerAccount;
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
-use starknet::signers::LocalWallet;
+use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
+use starknet::signers::{LocalWallet, SigningKey};
 
 use crate::migration;
+
+/// Get the declarers from the sequencer.
+pub async fn get_declarers_from_sequencer(
+    sequencer: &KatanaRunner,
+) -> Vec<SingleOwnerAccount<AnyProvider, LocalWallet>> {
+    let chain_id = sequencer.provider().chain_id().await.unwrap();
+
+    let mut accounts = vec![];
+    for a in sequencer.accounts_data() {
+        let provider =
+            AnyProvider::JsonRpcHttp(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+        let signer = LocalWallet::from(SigningKey::from_secret_scalar(
+            a.private_key.as_ref().unwrap().secret_scalar(),
+        ));
+
+        let account =
+            SingleOwnerAccount::new(provider, signer, a.address, chain_id, ExecutionEncoding::New);
+
+        accounts.push(account);
+    }
+
+    accounts
+}
 
 /// Load the spawn-and-moves project configuration from a copy of the project
 /// into a temporary directory to avoid any race during multithreading testing.
@@ -91,11 +115,29 @@ pub async fn setup(
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
+    let chain_id = sequencer.provider().chain_id().await.unwrap();
+
+    let mut accounts = vec![];
+    for a in sequencer.accounts_data() {
+        let provider =
+            AnyProvider::JsonRpcHttp(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+        let signer = LocalWallet::from(SigningKey::from_secret_scalar(
+            a.private_key.as_ref().unwrap().secret_scalar(),
+        ));
+
+        let account =
+            SingleOwnerAccount::new(provider, signer, a.address, chain_id, ExecutionEncoding::New);
+
+        accounts.push(account);
+    }
+
     let output = migration::execute_strategy(
         &ws,
         &migration,
         &account,
         TxnConfig { wait: true, ..Default::default() },
+        &accounts,
     )
     .await?;
 

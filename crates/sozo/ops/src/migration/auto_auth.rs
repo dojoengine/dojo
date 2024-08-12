@@ -20,7 +20,6 @@ where
 {
     let ui = ws.config().ui();
 
-    ui.print(" ");
     grant_writer(&ui, world, grant, *txn_config, default_namespace).await?;
     revoke_writer(&ui, world, revoke, *txn_config, default_namespace).await?;
 

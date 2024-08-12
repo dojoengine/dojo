@@ -6,47 +6,68 @@ use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_world::migration::TxnConfig;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
-use sozo_ops::migration::{self, MigrationOutput};
-use sozo_ops::test_utils;
+use sozo_ops::migration::MigrationOutput;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 async fn migrate_spawn_and_move(db_path: &Path) -> Result<MigrationOutput> {
-    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), ..Default::default() };
+    let cfg = KatanaRunnerConfig {
+        db_dir: Some(db_path.to_path_buf()),
+        n_accounts: 10,
+        ..Default::default()
+    };
     let runner = KatanaRunner::new_with_config(cfg)?;
-
-    // migrate the example project
-    let acc = runner.account(0);
 
     // setup scarb workspace
     let setup = CompilerTestSetup::from_examples("crates/dojo-core", "examples/");
     let cfg = setup.build_test_config("spawn-and-move", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 
-    // migrate the example project
-    let (strat, _) = test_utils::setup::setup_migration(&cfg, "dojo_examples")?;
-    let output = migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait()).await?;
+    println!("account {:?}", runner.account(0));
 
-    Ok(output)
+    let output = sozo_ops::migration::migrate(
+        &ws,
+        None,
+        runner.url().to_string(),
+        runner.account(0),
+        "dojo_examples",
+        false,
+        TxnConfig::init_wait(),
+        None,
+    )
+    .await?;
+
+    // We know it's always successful as the migration is applied with dry-run set to false.
+    Ok(output.unwrap())
 }
 
 async fn migrate_types_test(db_path: &Path) -> Result<MigrationOutput> {
-    let cfg = KatanaRunnerConfig { db_dir: Some(db_path.to_path_buf()), ..Default::default() };
+    let cfg = KatanaRunnerConfig {
+        db_dir: Some(db_path.to_path_buf()),
+        n_accounts: 10,
+        ..Default::default()
+    };
     let runner = KatanaRunner::new_with_config(cfg)?;
-
-    // migrate the example project
-    let acc = runner.account(0);
 
     // setup scarb workspace
     let setup = CompilerTestSetup::from_paths("crates/dojo-core", &["crates/torii/types-test"]);
     let cfg = setup.build_test_config("types-test", Profile::DEV);
     let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
 
-    // migrate the example project
-    let (strat, _) = test_utils::setup::setup_migration(&cfg, "types_test")?;
-    let output = migration::execute_strategy(&ws, &strat, &acc, TxnConfig::init_wait()).await?;
+    let output = sozo_ops::migration::migrate(
+        &ws,
+        None,
+        runner.url().to_string(),
+        runner.account(0),
+        "types_test",
+        false,
+        TxnConfig::init_wait(),
+        None,
+    )
+    .await?;
 
-    Ok(output)
+    // We know it's always successful as the migration is applied with dry-run set to false.
+    Ok(output.unwrap())
 }
 
 #[tokio::main]

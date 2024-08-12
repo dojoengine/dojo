@@ -17,7 +17,9 @@ use crate::{execute, model};
 // migration for now. Should be replaced by individual tests once Katana spinning up is enhanced.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model_ops() {
-    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
+
     let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
     let world = setup::setup_with_world(&sequencer).await.unwrap();
@@ -57,7 +59,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x7b1928f3bfe269f123ed7673830f5d2c3bd6a1909e0ea3e6443c3a113c7547c")
+        Felt::from_hex("0x6de8479396508d97b9f74731e93e0444d9f93954f504d728ba0edcb9550c423")
             .unwrap()
     );
 

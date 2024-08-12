@@ -8,11 +8,12 @@ use dojo_world::contracts::naming::{
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
+use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 
+use crate::migration::ui::MigrationUi;
 use crate::utils;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -133,6 +134,8 @@ where
             .await
             .with_context(|| "Failed to send transaction")?;
 
+        TransactionWaiter::new(res.transaction_hash, &world.provider()).await?;
+
         utils::handle_transaction_result(
             ui,
             &world.account.provider(),
@@ -170,6 +173,8 @@ where
         .send_with_cfg(&txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;
+
+    TransactionWaiter::new(res.transaction_hash, &world.provider()).await?;
 
     utils::handle_transaction_result(
         ui,
@@ -210,6 +215,8 @@ where
             .send_with_cfg(&txn_config)
             .await
             .with_context(|| "Failed to send transaction")?;
+
+        TransactionWaiter::new(res.transaction_hash, &world.provider()).await?;
 
         utils::handle_transaction_result(
             ui,
@@ -292,7 +299,7 @@ where
             // be sure that the model exists
             match world_reader.model_reader_with_tag(&tag).await {
                 Err(ModelError::ModelNotFound) => {
-                    ui.print(format!("Unknown model '{}' => IGNORED", tag));
+                    ui.print_sub(format!("Unknown model '{}' => IGNORED", tag));
                 }
                 Err(err) => {
                     return Err(err.into());

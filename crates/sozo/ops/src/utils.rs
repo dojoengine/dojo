@@ -9,6 +9,8 @@ use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
 
+use crate::migration::ui::MigrationUi;
+
 /// Retrieves a contract address from it's name
 /// using the world's data, or parses a hex string into
 /// a [`Felt`].
@@ -86,21 +88,21 @@ pub async fn handle_transaction_result<P>(
 where
     P: Provider + Send,
 {
-    ui.print(format!("Transaction hash: {:#x}", transaction_result.transaction_hash));
+    ui.print_sub(format!("Transaction hash: {:#066x}", transaction_result.transaction_hash));
 
     if wait_for_tx {
         let receipt =
             TransactionWaiter::new(transaction_result.transaction_hash, &provider).await?;
 
         if show_receipt {
-            ui.print(format!("Receipt:\n{}", serde_json::to_string_pretty(&receipt)?));
+            ui.print_sub(format!("Receipt:\n{}", serde_json::to_string_pretty(&receipt)?));
         } else {
             match execution_status_from_receipt(&receipt.receipt) {
                 ExecutionResult::Succeeded => {
-                    ui.print("Status: OK".to_string());
+                    ui.print_sub("Status: OK");
                 }
                 ExecutionResult::Reverted { reason } => {
-                    ui.print("Status: REVERTED".to_string());
+                    ui.print_sub("Status: REVERTED");
                     ui.print(format!("Reason:\n{}", reason));
                 }
             };

@@ -1693,30 +1693,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "benches"
-version = "1.0.0-alpha.4"
-dependencies = [
- "anyhow",
- "clap",
- "clap_builder",
- "dojo-lang",
- "dojo-world",
- "futures",
- "hex",
- "katana-runner",
- "lazy_static",
- "proptest",
- "reqwest 0.12.5",
- "scarb",
- "serde",
- "serde_json",
- "sozo",
- "sozo-ops",
- "starknet 0.11.0",
- "tokio",
-]
-
-[[package]]
 name = "bigdecimal"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12939,6 +12915,7 @@ dependencies = [
  "katana-runner",
  "num-bigint",
  "num-traits 0.2.19",
+ "reqwest 0.12.5",
  "rpassword",
  "scarb",
  "scarb-ui",
@@ -16244,8 +16221,10 @@ dependencies = [
  "dojo-test-utils",
  "dojo-world",
  "katana-runner",
+ "reqwest 0.12.5",
  "scarb",
  "sozo-ops",
+ "starknet 0.11.0",
  "tokio",
 ]
 

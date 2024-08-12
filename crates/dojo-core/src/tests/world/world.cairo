@@ -92,10 +92,7 @@ fn test_delete() {
 fn test_contract_getter() {
     let world = deploy_world();
 
-    let _ = world
-        .deploy_contract(
-            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
-        );
+    let _ = world.deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(),);
 
     if let Resource::Contract((class_hash, _)) = world
         .resource(selector_from_tag!("dojo-test_contract")) {
@@ -345,9 +342,7 @@ trait IDojoInit<ContractState> {
 fn test_can_call_init() {
     let world = deploy_world();
     let address = world
-        .deploy_contract(
-            'salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap(), array![].span()
-        );
+        .deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
 
     let dojo_init = IDojoInitDispatcher { contract_address: address };
     dojo_init.dojo_init();

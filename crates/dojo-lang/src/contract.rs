@@ -137,6 +137,8 @@ impl DojoContract {
                         fn $init_name$(self: @ContractState) {
                             assert(starknet::get_caller_address() == \
                      self.world().contract_address, 'Only world can init');
+                            assert(self.world().is_owner(self.selector(), \
+                     starknet::get_tx_info().account_contract_address), 'Only owner can init');
                         }
                     }
                 ",
