@@ -209,7 +209,8 @@ where
     } else {
         let declarers = get_declarers_accounts(&account, &rpc_url).await?;
 
-        ui.print_sub(format!("Declarers: {}", declarers.len()));
+        let declarers_len = if declarers.is_empty() { 1 } else { declarers.len() };
+        ui.print_sub(format!("Declarers: {}", declarers_len));
 
         let migration_output = if total_diffs != 0 {
             match apply_diff(ws, &account, txn_config, &strategy, &declarers).await {
