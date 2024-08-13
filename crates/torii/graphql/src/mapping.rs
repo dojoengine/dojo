@@ -4,7 +4,9 @@ use async_graphql::Name;
 use dojo_types::primitive::Primitive;
 use lazy_static::lazy_static;
 
-use crate::constants::{CONTENT_TYPE_NAME, SOCIAL_TYPE_NAME};
+use crate::constants::{
+    CONTENT_TYPE_NAME, ERC20_BALANCE_TYPE_NAME, ERC721_BALANCE_TYPE_NAME, SOCIAL_TYPE_NAME,
+};
 use crate::types::{GraphqlType, TypeData, TypeMapping};
 
 lazy_static! {
@@ -143,11 +145,18 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
         ),
     ]);
+    pub static ref ERC_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("erc20"), TypeData::Simple(TypeRef::named_list(ERC20_BALANCE_TYPE_NAME))),
+        (Name::new("erc721"), TypeData::Simple(TypeRef::named_list(ERC721_BALANCE_TYPE_NAME))),
+    ]);
+
     pub static ref ERC20_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("balance"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("tokenAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
     ]);
+
     pub static ref ERC721_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("balance"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),

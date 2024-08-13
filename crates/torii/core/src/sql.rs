@@ -9,7 +9,6 @@ use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
-use num_traits::{FromPrimitive, ToPrimitive};
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction, U256};
@@ -19,7 +18,6 @@ use super::World;
 use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
-use crate::sql;
 use crate::types::{
     Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
     Model as ModelRegistered,
@@ -1197,7 +1195,7 @@ impl Sql {
         // Insert transfer event to erc20_transfers table
         {
             let insert_query =
-                "INSERT INTO erc20_transfers (token_address, from, to, amount) VALUES (?, ?, ?, ?)";
+                "INSERT INTO erc20_transfers (token_address, from_address, to_address, amount) VALUES (?, ?, ?, ?)";
 
             self.query_queue.enqueue(
                 insert_query,
@@ -1219,7 +1217,7 @@ impl Sql {
             // statements.
             // Fetch balances for both `from` and `to` addresses, update them and write back to db
             let query = sqlx::query_as::<_, (String, String)>(
-                "SELECT address, balance FROM erc20_balances WHERE token_address = ? AND address \
+                "SELECT address, balance FROM erc20_balances WHERE token_address = ? AND account_address \
                  IN (?, ?)",
             )
             .bind(format!("{:#x}", token_address))
@@ -1252,9 +1250,9 @@ impl Sql {
             let new_to_balance = if to != Felt::ZERO { to_balance.add(amount) } else { to_balance };
 
             let update_query = "
-            INSERT INTO erc20_balances (address, token_address, balance)
+            INSERT INTO erc20_balances (account_address, token_address, balance)
             VALUES (?, ?, ?)
-            ON CONFLICT (address, token_address) 
+            ON CONFLICT (account_address, token_address) 
             DO UPDATE SET balance = excluded.balance";
 
             self.query_queue.enqueue(
@@ -1289,7 +1287,8 @@ impl Sql {
     ) -> Result<()> {
         // Insert transfer event to erc721_transfers table
         {
-            let insert_query = "INSERT INTO erc721_transfers (token_address, from, to, token_id) \
+            let insert_query =
+                "INSERT INTO erc721_transfers (token_address, from_address, to_address, token_id) \
                                 VALUES (?, ?, ?, ?)";
 
             self.query_queue.enqueue(
@@ -1307,7 +1306,7 @@ impl Sql {
         {
             if from != Felt::ZERO {
                 self.query_queue.enqueue(
-                "DELETE FROM erc721_balances WHERE address = ? AND token_address = ? AND token_id = ?",
+                "DELETE FROM erc721_balances WHERE account_address = ? AND token_address = ? AND token_id = ?",
                 vec![
                     Argument::FieldElement(from),
                     Argument::FieldElement(token_address),
@@ -1318,7 +1317,7 @@ impl Sql {
 
             if to != Felt::ZERO {
                 self.query_queue.enqueue(
-                "INSERT INTO erc721_balances (address, token_address, token_id) VALUES (?, ?, ?)",
+                "INSERT INTO erc721_balances (account_address, token_address, token_id) VALUES (?, ?, ?)",
                 vec![
                     Argument::FieldElement(to),
                     Argument::FieldElement(token_address),

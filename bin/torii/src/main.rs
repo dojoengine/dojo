@@ -126,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
 
     // TODO: see where to get this addresses from, cli? config?
     let addresses = [(
-        Felt::from_str("0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
+        Felt::from_str("0x07b5cd6382e91444c3e8d62bf9ae17d9b0876f3a6d9c077c8ee2f7e6de458862")
             .unwrap(),
         0,
     )];

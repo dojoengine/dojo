@@ -16,9 +16,9 @@ use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
 use proto::world::{
-    Erc20BalanceRequest, Erc20BalanceResponse, Erc721BalanceRequest, Erc721BalanceResponse,
-    MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
+    Erc20BalanceResponse, Erc721BalanceResponse, MetadataRequest, MetadataResponse,
+    RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest,
+    RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
     UpdateEntitiesSubscriptionRequest,
 };
 use sqlx::prelude::FromRow;

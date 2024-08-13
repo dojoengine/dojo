@@ -10,7 +10,9 @@ use super::object::model_data::ModelDataObject;
 use super::types::ScalarType;
 use super::utils;
 use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
-// use crate::object::erc20_balance::Erc20Balance;
+use crate::object::erc::erc20_balance::Erc20BalanceObject;
+use crate::object::erc::erc721_balance::Erc721BalanceObject;
+use crate::object::erc_balance::ErcBalanceObject;
 use crate::object::event_message::EventMessageObject;
 use crate::object::metadata::content::ContentObject;
 use crate::object::metadata::social::SocialObject;
@@ -29,6 +31,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let (objects, unions) = build_objects(pool).await?;
 
     let mut schema_builder = Schema::build(QUERY_TYPE_NAME, None, Some(SUBSCRIPTION_TYPE_NAME));
+    //? why we need to provide QUERY_TYPE_NAME object here when its already passed to Schema?
     let mut query_root = Object::new(QUERY_TYPE_NAME);
     let mut subscription_root = Subscription::new(SUBSCRIPTION_TYPE_NAME);
 
@@ -113,10 +116,12 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Resolvable(Box::new(MetadataObject)),
         ObjectVariant::Resolvable(Box::new(ModelObject)),
         ObjectVariant::Resolvable(Box::new(TransactionObject)),
-        // ObjectVariant::Resolvable(Box::new(Erc20Balance)),
+        ObjectVariant::Resolvable(Box::new(ErcBalanceObject)),
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),
         ObjectVariant::Basic(Box::new(PageInfoObject)),
+        ObjectVariant::Basic(Box::new(Erc20BalanceObject)),
+        ObjectVariant::Basic(Box::new(Erc721BalanceObject)),
     ];
 
     // model union object

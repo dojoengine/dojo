@@ -1,6 +1,7 @@
 pub mod connection;
 pub mod entity;
-// pub mod erc20_balance;
+pub mod erc;
+pub mod erc_balance;
 pub mod event;
 pub mod event_message;
 pub mod inputs;
