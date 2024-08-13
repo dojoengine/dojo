@@ -6,14 +6,7 @@ name = "dojo"
 version = "1.0.0-alpha.4"
 
 [dependencies]
-# Rev points to support for Cairo 2.7.0-rc.3 without any tag yet. Should be
-# updated once a release is cut with `2.7.0-rc.3` support in it.
-dojo_plugin = { git = "https://github.com/dojoengine/dojo", rev = "71b1f1a4" }
+dojo_plugin = { git = "https://github.com/dojoengine/dojo", rev = "f15def33" }
 starknet = "=2.7.0"
 
 [lib]
-
-# Dojo core is tested with sozo, hence we need a namespace for the test
-# command to work.
-[tool.dojo.world]
-namespace = { default = "dojo" }

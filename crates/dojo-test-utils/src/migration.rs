@@ -7,12 +7,27 @@ use starknet::core::types::Felt;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::macros::felt;
 
+pub const SPAWN_AND_MOVE_TEST_DB_DIR: &str = "/tmp/spawn-and-move-db";
+pub const TYPES_TEST_DB_DIR: &str = "/tmp/types-test-db";
+
+/// Copies the spawn and move test database to a temporary directory and returns the path to the
+/// temporary directory. Must be used if the test is going to modify the database.
+pub fn copy_spawn_and_move_db() -> Utf8PathBuf {
+    crate::compiler::copy_tmp_dir(&Utf8PathBuf::from(SPAWN_AND_MOVE_TEST_DB_DIR))
+}
+
+/// Copies the types test database to a temporary directory and returns the path to the temporary
+/// directory. Must be used if the test is going to modify the database.
+pub fn copy_types_test_db() -> Utf8PathBuf {
+    crate::compiler::copy_tmp_dir(&Utf8PathBuf::from(TYPES_TEST_DB_DIR))
+}
+
 pub fn prepare_migration(
     manifest_dir: Utf8PathBuf,
     target_dir: Utf8PathBuf,
     skip_migration: Option<Vec<String>>,
     default_namespace: &str,
-) -> Result<MigrationStrategy> {
+) -> Result<(MigrationStrategy, WorldDiff)> {
     // In testing, profile name is always dev.
     let profile_name = "dev";
 
@@ -34,9 +49,9 @@ pub fn prepare_migration(
 
     let world = WorldDiff::compute(manifest, None, default_namespace)?;
 
-    let strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world).unwrap();
+    let strat = prepare_for_migration(None, felt!("0x12345"), &target_dir, world.clone()).unwrap();
 
-    Ok(strat)
+    Ok((strat, world))
 }
 
 pub fn prepare_migration_with_world_and_seed(
@@ -60,7 +75,7 @@ pub fn prepare_migration_with_world_and_seed(
         manifest.merge(overlay_manifest);
     }
 
-    let world = WorldDiff::compute(manifest, None, default_namespace)?;
+    let world = WorldDiff::compute(manifest.clone(), None, default_namespace)?;
 
     let seed = cairo_short_string_to_felt(seed).unwrap();
     let strat = prepare_for_migration(world_address, seed, &target_dir, world.clone())?;

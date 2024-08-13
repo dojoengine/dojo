@@ -146,6 +146,32 @@ abigen!(
   },
   {
     "type": "enum",
+    "name": "dojo::world::world_contract::Resource",
+    "variants": [
+      {
+        "name": "Model",
+        "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
+      },
+      {
+        "name": "Contract",
+        "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
+      },
+      {
+        "name": "Namespace",
+        "type": "()"
+      },
+      {
+        "name": "World",
+        "type": "()"
+      },
+      {
+        "name": "Unregistered",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "enum",
     "name": "core::bool",
     "variants": [
       {
@@ -167,7 +193,7 @@ abigen!(
         "name": "metadata",
         "inputs": [
           {
-            "name": "resource_id",
+            "name": "resource_selector",
             "type": "core::felt252"
           }
         ],
@@ -192,35 +218,15 @@ abigen!(
       },
       {
         "type": "function",
-        "name": "model",
+        "name": "register_namespace",
         "inputs": [
           {
-            "name": "selector",
-            "type": "core::felt252"
+            "name": "namespace",
+            "type": "core::byte_array::ByteArray"
           }
         ],
-        "outputs": [
-          {
-            "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "contract",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
-          }
-        ],
-        "state_mutability": "view"
+        "outputs": [],
+        "state_mutability": "external"
       },
       {
         "type": "function",
@@ -236,11 +242,11 @@ abigen!(
       },
       {
         "type": "function",
-        "name": "register_namespace",
+        "name": "upgrade_model",
         "inputs": [
           {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray"
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash"
           }
         ],
         "outputs": [],
@@ -257,10 +263,6 @@ abigen!(
           {
             "name": "class_hash",
             "type": "core::starknet::class_hash::ClassHash"
-          },
-          {
-            "name": "init_calldata",
-            "type": "core::array::Span::<core::felt252>"
           }
         ],
         "outputs": [
@@ -288,6 +290,22 @@ abigen!(
             "type": "core::starknet::class_hash::ClassHash"
           }
         ],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "init_contract",
+        "inputs": [
+          {
+            "name": "selector",
+            "type": "core::felt252"
+          },
+          {
+            "name": "init_calldata",
+            "type": "core::array::Span::<core::felt252>"
+          }
+        ],
+        "outputs": [],
         "state_mutability": "external"
       },
       {
@@ -398,6 +416,22 @@ abigen!(
       },
       {
         "type": "function",
+        "name": "resource",
+        "inputs": [
+          {
+            "name": "selector",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "dojo::world::world_contract::Resource"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
         "name": "is_owner",
         "inputs": [
           {
@@ -499,86 +533,6 @@ abigen!(
         ],
         "outputs": [],
         "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "can_write_resource",
-        "inputs": [
-          {
-            "name": "resource_id",
-            "type": "core::felt252"
-          },
-          {
-            "name": "contract",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::bool"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "can_write_model",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          },
-          {
-            "name": "contract",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::bool"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "can_write_contract",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          },
-          {
-            "name": "contract",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::bool"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "can_write_namespace",
-        "inputs": [
-          {
-            "name": "selector",
-            "type": "core::felt252"
-          },
-          {
-            "name": "contract",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::bool"
-          }
-        ],
-        "state_mutability": "view"
       }
     ]
   },
@@ -856,6 +810,23 @@ abigen!(
   },
   {
     "type": "event",
+    "name": "dojo::world::world_contract::world::ContractInitialized",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "selector",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "init_calldata",
+        "type": "core::array::Span::<core::felt252>",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
     "name": "dojo::world::world_contract::world::WorldUpgraded",
     "kind": "struct",
     "members": [
@@ -903,6 +874,33 @@ abigen!(
   {
     "type": "event",
     "name": "dojo::world::world_contract::world::ModelRegistered",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "namespace",
+        "type": "core::byte_array::ByteArray",
+        "kind": "data"
+      },
+      {
+        "name": "class_hash",
+        "type": "core::starknet::class_hash::ClassHash",
+        "kind": "data"
+      },
+      {
+        "name": "address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "dojo::world::world_contract::world::ModelUpgraded",
     "kind": "struct",
     "members": [
       {
@@ -1160,6 +1158,11 @@ abigen!(
         "kind": "nested"
       },
       {
+        "name": "ContractInitialized",
+        "type": "dojo::world::world_contract::world::ContractInitialized",
+        "kind": "nested"
+      },
+      {
         "name": "WorldUpgraded",
         "type": "dojo::world::world_contract::world::WorldUpgraded",
         "kind": "nested"
@@ -1177,6 +1180,11 @@ abigen!(
       {
         "name": "ModelRegistered",
         "type": "dojo::world::world_contract::world::ModelRegistered",
+        "kind": "nested"
+      },
+      {
+        "name": "ModelUpgraded",
+        "type": "dojo::world::world_contract::world::ModelUpgraded",
         "kind": "nested"
       },
       {

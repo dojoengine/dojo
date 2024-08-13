@@ -6,6 +6,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::BlockEnv;
+use katana_primitives::transaction::TxHash;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
@@ -47,7 +48,7 @@ pub struct Backend<EF: ExecutorFactory> {
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
-    #[allow(deprecated)]
+    #[allow(deprecated, unused)]
     pub(crate) async fn new(executor_factory: Arc<EF>, mut config: StarknetConfig) -> Self {
         let block_context_generator = config.block_context_generator();
 
@@ -155,6 +156,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
             },
         };
 
+        let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
         let header = Header::new(partial_header, FieldElement::ZERO);
         let block = Block { header, body: txs }.seal();
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
@@ -174,7 +176,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
             "Block mined.",
         );
 
-        Ok(MinedBlockOutcome { block_number, stats: execution_output.stats })
+        Ok(MinedBlockOutcome { block_number, txs: tx_hashes, stats: execution_output.stats })
     }
 
     pub fn update_block_env(&self, block_env: &mut BlockEnv) {

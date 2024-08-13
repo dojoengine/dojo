@@ -8,7 +8,7 @@ members = [
 	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
-	"crates/benches",
+#	"crates/benches",
 	"crates/common",
 	"crates/dojo-bindgen",
 	"crates/dojo-core",
@@ -22,6 +22,7 @@ members = [
 	"crates/katana/executor",
 	"crates/katana/node",
 	"crates/katana/node-bindings",
+	"crates/katana/pool",
 	"crates/katana/primitives",
 	"crates/katana/rpc/rpc",
 	"crates/katana/rpc/rpc-api",
@@ -42,6 +43,7 @@ members = [
 	"crates/torii/server",
 	"crates/torii/types-test",
 	"examples/spawn-and-move",
+	"xtask/generate-test-db",
 ]
 
 [workspace.package]
@@ -49,7 +51,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.0-alpha.4"
+version = "1.0.0-alpha.5"
 
 [profile.performance]
 codegen-units = 1
@@ -83,6 +85,7 @@ katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor", default-features = false }
 katana-node = { path = "crates/katana/node", default-features = false }
+katana-pool = { path = "crates/katana/pool" }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }

@@ -14,16 +14,9 @@ pub trait IActions {
     fn enter_dungeon(ref world: IWorldDispatcher, dungeon_address: starknet::ContractAddress);
 }
 
-#[dojo::interface]
-pub trait IActionsComputed {
-    fn tile_terrain(vec: Vec2) -> felt252;
-    fn quadrant(pos: Position) -> u8;
-}
-
 #[dojo::contract]
 pub mod actions {
     use super::IActions;
-    use super::IActionsComputed;
 
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{
@@ -48,32 +41,6 @@ pub mod actions {
         #[key]
         pub player: ContractAddress,
         pub direction: Direction,
-    }
-
-    #[abi(embed_v0)]
-    impl ActionsComputedImpl of IActionsComputed<ContractState> {
-        #[computed]
-        fn tile_terrain(vec: Vec2) -> felt252 {
-            'land'
-        }
-
-        #[computed(Position)]
-        fn quadrant(pos: Position) -> u8 {
-            // 10 is zero
-            if pos.vec.x < 10 {
-                if pos.vec.y < 10 {
-                    3 // Quadrant - -
-                } else {
-                    4 // Quadrant - +
-                }
-            } else {
-                if pos.vec.y < 10 {
-                    2 // Quadrant + -
-                } else {
-                    1 // Quadrant + +
-                }
-            }
-        }
     }
 
     // impl: implement functions specified in trait
@@ -117,7 +84,7 @@ pub mod actions {
             let player = get_caller_address();
 
             let items = array![
-                PlayerItem { item_id: 1, quantity: 100, score: 10 },
+                PlayerItem { item_id: 1, quantity: 100, score: 150 },
                 PlayerItem { item_id: 2, quantity: 50, score: -32 }
             ];
 
@@ -219,6 +186,7 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
+    use dojo::model::Model;
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
     use dojo::utils::test::{spawn_test_world, deploy_contract};
@@ -238,8 +206,12 @@ mod tests {
 
         // deploy systems contract
         let contract_address = world
-            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap(), array![].span());
+            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap());
         let actions_system = IActionsDispatcher { contract_address };
+
+        // set authorizations
+        world.grant_writer(Model::<Moves>::selector(), contract_address);
+        world.grant_writer(Model::<Position>::selector(), contract_address);
 
         // System calls
         actions_system.spawn();

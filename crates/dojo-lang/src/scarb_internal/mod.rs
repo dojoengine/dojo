@@ -1,5 +1,3 @@
-use std::fs;
-
 // I have copied source code from https://github.com/software-mansion/scarb/blob/main/scarb/src/compiler/db.rs
 // since build_scarb_root_database is not public.
 //
@@ -16,17 +14,17 @@ use cairo_lang_project::AllCratesConfig;
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use camino::{Utf8Path, Utf8PathBuf};
-use dojo_world::metadata::{NamespaceConfig, DEFAULT_NAMESPACE_CFG_KEY, NAMESPACE_CFG_PREFIX};
+use camino::Utf8PathBuf;
+use dojo_world::config::{NamespaceConfig, DEFAULT_NAMESPACE_CFG_KEY, NAMESPACE_CFG_PREFIX};
+use dojo_world::metadata::dojo_metadata_from_package;
 use regex::Regex;
 use scarb::compiler::{
     CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes, CompilationUnitComponent,
 };
-use scarb::core::{Config, Package, PackageId, TargetKind};
+use scarb::core::{Config, PackageId, Workspace};
 use scarb::ops::CompileOpts;
 use scarb_ui::Ui;
 use smol_str::SmolStr;
-use toml::Table;
 use tracing::trace;
 
 use crate::plugin::dojo_plugin_suite;
@@ -125,11 +123,12 @@ pub fn compile_workspace(
             ui.print(format!("compiling {}", unit_name_no_path));
             ui.verbose(format!("target kind: {}", unit.main_component().target_kind()));
 
-            let root_package_data = PackageData::from_scarb_package(&unit.components[0].package)?;
+            let dojo_metadata = dojo_metadata_from_package(&unit.components[0].package, &ws)?;
 
-            if let Some(nm_config) = &root_package_data.namespace_config {
-                ui.verbose(nm_config.display_mappings());
-            }
+            // let root_package_data =
+            // PackageData::from_scarb_package(&unit.components[0].package)?;
+
+            ui.verbose(dojo_metadata.namespace.display_mappings());
 
             // For each component in the compilation unit (namely, the dependencies being
             // compiled) we inject into the `CfgSet` the component name and
@@ -137,7 +136,7 @@ pub fn compile_workspace(
             // of the manifest is done once at compile time, and not everytime
             // the plugin is called.
             for c in unit.components.iter_mut() {
-                c.cfg_set = Some(cfg_set_from_component(c, &root_package_data, &ui)?);
+                c.cfg_set = Some(cfg_set_from_component(c, &dojo_metadata.namespace, &ui, &ws)?);
             }
 
             let mut db = build_scarb_root_database(&unit).unwrap();
@@ -200,97 +199,18 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
     Ok(project_config)
 }
 
-#[derive(Debug)]
-pub struct PackageData {
-    pub namespace_config: Option<NamespaceConfig>,
-}
-
-impl PackageData {
-    pub fn from_scarb_package(package: &Package) -> Result<Self> {
-        let manifest_path = package.manifest_path();
-        let is_lib = package.is_lib();
-        let is_dojo_target = package.target(&TargetKind::new(SmolStr::from("dojo"))).is_some();
-
-        if is_lib && is_dojo_target {
-            return Err(anyhow::anyhow!(
-                "A library package [lib] cannot have dojo target [[target.dojo]] ({}).",
-                manifest_path
-            ));
-        }
-
-        let mut is_dojo_dependent = false;
-
-        // Read the manifest path to inspect package dependencies.
-        let manifest_content = match fs::read_to_string(manifest_path) {
-            Ok(x) => x,
-            Err(e) => return Err(anyhow::anyhow!("Failed to read Scarb.toml file: {e}.")),
-        };
-
-        let config = match manifest_content.parse::<Table>() {
-            Ok(x) => x,
-            Err(e) => return Err(anyhow::anyhow!("Failed to parse Scarb.toml file: {e}.")),
-        };
-
-        if let Some(dependencies) = config.get("dependencies").and_then(|t| t.as_table()) {
-            for (dep_name, _) in dependencies.iter() {
-                if dep_name == "dojo" {
-                    is_dojo_dependent = true;
-                    break;
-                }
-            }
-        }
-
-        let namespace_config = namespace_config_from_toml(manifest_path, &config)?;
-
-        if is_dojo_dependent && namespace_config.is_none() {
-            return Err(anyhow::anyhow!(
-                "A package with dojo as a dependency must at least define a default namespace \
-                 inside [tool.dojo.world.namespace] ({}).",
-                manifest_path
-            ));
-        }
-
-        Ok(Self { namespace_config })
-    }
-}
-
-fn namespace_config_from_toml(
-    config_path: &Utf8Path,
-    config: &Table,
-) -> Result<Option<NamespaceConfig>> {
-    if let Some(tool) = config.get("tool").and_then(|t| t.as_table()) {
-        if let Some(dojo) = tool.get("dojo").and_then(|d| d.as_table()) {
-            if let Some(world) = dojo.get("world").and_then(|w| w.as_table()) {
-                if let Some(namespace_config) = world.get("namespace").and_then(|n| n.as_table()) {
-                    match toml::from_str::<NamespaceConfig>(&namespace_config.to_string()) {
-                        Ok(config) => return Ok(Some(config.validate()?)),
-                        Err(e) => {
-                            return Err(anyhow::anyhow!(
-                                "Failed to parse namespace configuration of {}: {}",
-                                config_path.to_string(),
-                                e
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(None)
-}
-
 pub fn cfg_set_from_component(
     c: &CompilationUnitComponent,
-    root_package_data: &PackageData,
+    root_package_namespace: &NamespaceConfig,
     ui: &Ui,
+    ws: &Workspace<'_>,
 ) -> Result<CfgSet> {
     let cname = c.cairo_package_name().clone();
-    let package_data = PackageData::from_scarb_package(&c.package)?;
+    let package_dojo_metadata = dojo_metadata_from_package(&c.package, ws)?;
 
     ui.verbose(format!("component: {} ({})", cname, c.package.manifest_path()));
 
-    tracing::debug!(target: LOG_TARGET, ?c, ?package_data);
+    tracing::debug!(target: LOG_TARGET, ?c, ?package_dojo_metadata);
 
     let component_cfg = Cfg { key: "component_name".into(), value: Some(cname) };
 
@@ -306,26 +226,22 @@ pub fn cfg_set_from_component(
     // Add it's name for debugging on the plugin side.
     cfg_set.insert(component_cfg);
 
-    if let Some(namespace_config) = package_data.namespace_config {
-        cfg_set.insert(Cfg {
-            key: DEFAULT_NAMESPACE_CFG_KEY.into(),
-            value: Some(namespace_config.default.into()),
-        });
+    cfg_set.insert(Cfg {
+        key: DEFAULT_NAMESPACE_CFG_KEY.into(),
+        value: Some(package_dojo_metadata.namespace.default.into()),
+    });
 
-        // We ignore mappings for dependencies as the [[target.dojo]] package is
-        // defining them.
-    }
+    // We ignore mappings for dependencies as the [[target.dojo]] package is
+    // defining them.
 
     // Inject the mapping from the root package with [[target.dojo]] to
     // all dependencies to ensure correct namespace mappings.
-    if let Some(config) = &root_package_data.namespace_config {
-        if let Some(mappings) = &config.mappings {
-            for (k, v) in mappings.iter() {
-                cfg_set.insert(Cfg {
-                    key: format!("{}{}", NAMESPACE_CFG_PREFIX, k).into(),
-                    value: Some(v.into()),
-                });
-            }
+    if let Some(mappings) = &root_package_namespace.mappings {
+        for (k, v) in mappings.iter() {
+            cfg_set.insert(Cfg {
+                key: format!("{}{}", NAMESPACE_CFG_PREFIX, k).into(),
+                value: Some(v.into()),
+            });
         }
     }
 

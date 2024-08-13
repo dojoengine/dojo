@@ -15,8 +15,8 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
+use dojo_world::config::NamespaceConfig;
 use dojo_world::contracts::naming;
-use dojo_world::metadata::{is_name_valid, NamespaceConfig};
 
 use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
@@ -67,7 +67,7 @@ impl DojoContract {
         };
 
         for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {
-            if !is_name_valid(value) {
+            if !NamespaceConfig::is_name_valid(value) {
                 return PluginResult {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
@@ -137,6 +137,8 @@ impl DojoContract {
                         fn $init_name$(self: @ContractState) {
                             assert(starknet::get_caller_address() == \
                      self.world().contract_address, 'Only world can init');
+                            assert(self.world().is_owner(self.selector(), \
+                     starknet::get_tx_info().account_contract_address), 'Only owner can init');
                         }
                     }
                 ",
@@ -161,7 +163,7 @@ impl DojoContract {
                 node: Box::new(RewriteNode::interpolate_patched(
                     "
                 #[starknet::contract]
-                mod $name$ {
+                pub mod $name$ {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;

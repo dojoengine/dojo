@@ -1,10 +1,10 @@
 [world]
 kind = "WorldContract"
-class_hash = "0x14287624e97e0312d4e680e19071efce983810e909b32afc54cd9c8031f4c1c"
-original_class_hash = "0x14287624e97e0312d4e680e19071efce983810e909b32afc54cd9c8031f4c1c"
+class_hash = "0x76ced5a15cb43c7be7176cff4779cd57c56638a46ddf2c9da709d22298c5e5a"
+original_class_hash = "0x76ced5a15cb43c7be7176cff4779cd57c56638a46ddf2c9da709d22298c5e5a"
 abi = "manifests/dev/deployment/abis/dojo-world.json"
-address = "0x2f6f0512832a8820173edb8e1adac28b7edc78bb3b6f038614adf4377b694c5"
-transaction_hash = "0x22c5e928ee07543e0eef5aae78ded9902d7d8647f76d46d743be2f2661ebab7"
+address = "0x42e172247714a480a40121c97c13acb1338e6cc8948b5ae23f5d7d53cd26338"
+transaction_hash = "0x27be65ab7dbbeee4fc4c4385a7ce882ba6ad38766f0b53904a7a989d94abf22"
 block_number = 3
 seed = "dojo_examples"
 manifest_name = "dojo-world"
@@ -23,59 +23,52 @@ manifest_name = "dojo-base"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x66221f204a50d51e28d03bc1578bc1845371cd0f0932666b507cd9721c183ec"
-class_hash = "0xc0a5037a6fdc0b374b270ca5e9f3bd76200d73d01f409749b7006b3cd6c03d"
-original_class_hash = "0xc0a5037a6fdc0b374b270ca5e9f3bd76200d73d01f409749b7006b3cd6c03d"
+address = "0x46e6c059917c1024b714d472d4c93e53e45a151066557847fe5d0183a9186a3"
+class_hash = "0x68757b5f32ef8e46c398aff8d9be0754ef702121610cacb9e132df1d6da8096"
+original_class_hash = "0x68757b5f32ef8e46c398aff8d9be0754ef702121610cacb9e132df1d6da8096"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-actions-40b6994c.json"
 reads = []
-writes = [
-    "dojo_examples-Moves",
-    "dojo_examples-Position",
-]
-computed = []
+writes = ["ns:dojo_examples"]
 init_calldata = []
 tag = "dojo_examples-actions"
 manifest_name = "dojo_examples-actions-40b6994c"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x71e9522f412f3458a3508d0449f8f3a4e1662da382c86393b3abb193d2968b5"
-class_hash = "0x45ad5a298db270a9c3ee439b7a7a008e3219b70937cfaa144589866442f3908"
-original_class_hash = "0x45ad5a298db270a9c3ee439b7a7a008e3219b70937cfaa144589866442f3908"
+address = "0x22c892496a9e63cb3327d2e35bf04a500c48e7cbf7aa812ed983b0c80356919"
+class_hash = "0x5d2892f0389e921a051daaad07efb49af7a13213ba309a901fc386acef15c3c"
+original_class_hash = "0x5d2892f0389e921a051daaad07efb49af7a13213ba309a901fc386acef15c3c"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-dungeon-6620e0e6.json"
 reads = []
 writes = []
-computed = []
 init_calldata = []
 tag = "dojo_examples-dungeon"
 manifest_name = "dojo_examples-dungeon-6620e0e6"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x33a28bd8c06940892f49b8d9211ddc5165ec9316087c1fa563e56152f95d429"
+address = "0x1995a9e4c86360ce6daa020ea7d6f750b825c032b2e75394e0496276baf0f33"
 class_hash = "0x3daab1621bba5f43f0d84f8f68ee7a5dfa4d83f98f746e2e9dcd3a848233e35"
 original_class_hash = "0x3daab1621bba5f43f0d84f8f68ee7a5dfa4d83f98f746e2e9dcd3a848233e35"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-mock_token-31599eb2.json"
 reads = []
-writes = []
-computed = []
+writes = ["ns:dojo_examples"]
 init_calldata = []
 tag = "dojo_examples-mock_token"
 manifest_name = "dojo_examples-mock_token-31599eb2"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x4de3cf22c1348202eaf06464aa308d1cbe8e6fea755ce4f0598a00d0e860886"
+address = "0x7656310254714a9c86a39bd08565e996397b470e576b69a8297143d92aa882e"
 class_hash = "0x647fc1b2d2e902e6304e127b36995d8f57fe45c38e38e15d8860db508dbf24a"
 original_class_hash = "0x647fc1b2d2e902e6304e127b36995d8f57fe45c38e38e15d8860db508dbf24a"
 base_class_hash = "0x2427dd10a58850ac9a5ca6ce04b7771b05330fd18f2e481831ad903b969e6b2"
 abi = "manifests/dev/deployment/abis/contracts/dojo_examples-others-61de2c18.json"
 reads = []
 writes = []
-computed = []
 init_calldata = [
     "$contract_address:dojo_examples-actions",
     "$class_hash:dojo_examples-actions",

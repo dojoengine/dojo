@@ -128,77 +128,6 @@
   },
   {
     "type": "impl",
-    "name": "ActionsComputedImpl",
-    "interface_name": "dojo_examples::actions::IActionsComputed"
-  },
-  {
-    "type": "struct",
-    "name": "dojo_examples::models::Vec2",
-    "members": [
-      {
-        "name": "x",
-        "type": "core::integer::u32"
-      },
-      {
-        "name": "y",
-        "type": "core::integer::u32"
-      }
-    ]
-  },
-  {
-    "type": "struct",
-    "name": "dojo_examples::models::Position",
-    "members": [
-      {
-        "name": "player",
-        "type": "core::starknet::contract_address::ContractAddress"
-      },
-      {
-        "name": "vec",
-        "type": "dojo_examples::models::Vec2"
-      }
-    ]
-  },
-  {
-    "type": "interface",
-    "name": "dojo_examples::actions::IActionsComputed",
-    "items": [
-      {
-        "type": "function",
-        "name": "tile_terrain",
-        "inputs": [
-          {
-            "name": "vec",
-            "type": "dojo_examples::models::Vec2"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::felt252"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "quadrant",
-        "inputs": [
-          {
-            "name": "pos",
-            "type": "dojo_examples::models::Position"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::integer::u8"
-          }
-        ],
-        "state_mutability": "view"
-      }
-    ]
-  },
-  {
-    "type": "impl",
     "name": "ActionsImpl",
     "interface_name": "dojo_examples::actions::IActions"
   },
@@ -225,6 +154,34 @@
       {
         "name": "Down",
         "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "dojo_examples::models::Vec2",
+    "members": [
+      {
+        "name": "x",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "y",
+        "type": "core::integer::u32"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "dojo_examples::models::Position",
+    "members": [
+      {
+        "name": "player",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "name": "vec",
+        "type": "dojo_examples::models::Vec2"
       }
     ]
   },

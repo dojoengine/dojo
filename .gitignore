@@ -18,3 +18,5 @@ crates/benches/bench_results.txt
 .vscode
 bindings
 justfile
+spawn-and-move-db
+types-test-db

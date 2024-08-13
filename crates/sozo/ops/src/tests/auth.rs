@@ -1,11 +1,13 @@
 use std::str::FromStr;
 
+use dojo_test_utils::migration::copy_spawn_and_move_db;
+use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::TxnConfig;
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::Felt;
 
 use crate::auth::{self, ResourceOwner, ResourceType, ResourceWriter};
 use crate::execute;
@@ -13,94 +15,90 @@ use crate::test_utils::setup;
 
 const ACTION_CONTRACT_NAME: &str = "dojo_examples-actions";
 const DEFAULT_NAMESPACE: &str = "dojo_examples";
+const MOVE_MODEL_TAG: &str = "dojo_examples-Moves";
+const POSITION_MODEL_TAG: &str = "dojo_examples-Position";
+
+fn get_resource_writers() -> [ResourceWriter; 3] {
+    [
+        ResourceWriter {
+            resource: ResourceType::from_str(&format!("model:{MOVE_MODEL_TAG}")).unwrap(),
+            tag_or_address: ACTION_CONTRACT_NAME.to_string(),
+        },
+        ResourceWriter {
+            resource: ResourceType::from_str(&format!("model:{POSITION_MODEL_TAG}")).unwrap(),
+            tag_or_address: ACTION_CONTRACT_NAME.to_string(),
+        },
+        ResourceWriter {
+            resource: ResourceType::from_str(&format!("ns:{DEFAULT_NAMESPACE}")).unwrap(),
+            tag_or_address: ACTION_CONTRACT_NAME.to_string(),
+        },
+    ]
+}
+
+fn get_resource_owners(owner: Felt) -> [ResourceOwner; 2] {
+    [
+        ResourceOwner {
+            resource: ResourceType::from_str(&format!("model:{MOVE_MODEL_TAG}")).unwrap(),
+            owner,
+        },
+        ResourceOwner {
+            resource: ResourceType::from_str(&format!("model:{POSITION_MODEL_TAG}")).unwrap(),
+            owner,
+        },
+    ]
+}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_writer_ok() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    // Shouldn't have any permission at this point.
-    let account2 = sequencer.account(1);
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
-    // Setup new world contract handler with account 2.
-    let world_2 = WorldContract::new(world.address, account2);
-
-    assert!(!execute_spawn(&world_2).await);
-
-    // Account2 does not have the permission to write, but granting
-    // writer to the actions contract allows the execution of it's systems by
-    // any account.
-    let moves_mc = ResourceWriter {
-        resource: ResourceType::from_str("model:Moves").unwrap(),
-        tag_or_address: ACTION_CONTRACT_NAME.to_string(),
-    };
-
-    let position_mc = ResourceWriter {
-        resource: ResourceType::from_str("model:Position").unwrap(),
-        tag_or_address: ACTION_CONTRACT_NAME.to_string(),
-    };
-
+    // Overlays already have the writer set up. But running again to ensure we don't
+    // actually revert something with this call.
     auth::grant_writer(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        &[moves_mc, position_mc],
+        &get_resource_writers(),
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
 
-    assert!(execute_spawn(&world_2).await);
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+    assert!(execute_spawn(&world).await);
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_writer_ok() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    // Shouldn't have any permission at this point.
-    let account2 = sequencer.account(1);
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
-    // Setup new world contract handler with account 2.
-    let world_2 =
-        WorldContract::new(world.address, account2).with_block(BlockId::Tag(BlockTag::Pending));
-
-    assert!(!execute_spawn(&world_2).await);
-
-    // Account2 does not have the permission to write, but granting
-    // writer to the actions contract allows the execution of it's systems by
-    // any account.
-    let moves_mc = ResourceWriter {
-        resource: ResourceType::from_str("model:Moves").unwrap(),
-        tag_or_address: ACTION_CONTRACT_NAME.to_string(),
-    };
-
-    let position_mc = ResourceWriter {
-        resource: ResourceType::from_str("model:Position").unwrap(),
-        tag_or_address: ACTION_CONTRACT_NAME.to_string(),
-    };
-
-    // Here we are granting the permission to write
     auth::grant_writer(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        &[moves_mc.clone(), position_mc.clone()],
+        &get_resource_writers(),
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
 
-    // This should be executable now
-    assert!(execute_spawn(&world_2).await);
+    assert!(execute_spawn(&world).await);
 
-    // Here we are revoking the access again.
     auth::revoke_writer(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        &[moves_mc, position_mc],
+        &get_resource_writers(),
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
@@ -108,100 +106,81 @@ async fn auth_revoke_writer_ok() {
     .unwrap();
 
     // Here it shouldn't be executable.
-    assert!(!execute_spawn(&world_2).await);
+    assert!(!execute_spawn(&world).await);
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_grant_owner_ok() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let move_model_selector = compute_selector_from_tag(MOVE_MODEL_TAG);
+    let position_model_selector = compute_selector_from_tag(POSITION_MODEL_TAG);
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
 
-    // Shouldn't have any permission at this point.
-    let account_2 = sequencer.account(1);
-    let account_2_addr = account_2.address();
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
+    println!("sequencer logs: {:?}", sequencer.log_file_path());
 
-    // Setup new world contract handler with account 2.
-    let world_2 = WorldContract::new(world.address, account_2);
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
-    assert!(!execute_spawn(&world_2).await);
+    let default_account = sequencer.account(0).address();
+    let other_account = sequencer.account(1).address();
 
-    // Account2 does not have the permission to write, let's give this account
-    // ownership of both models.
-    let moves = ResourceOwner {
-        resource: ResourceType::from_str("model:Moves").unwrap(),
-        owner: account_2_addr,
-    };
-
-    let position = ResourceOwner {
-        resource: ResourceType::from_str("model:Position").unwrap(),
-        owner: account_2_addr,
-    };
+    assert!(world.is_owner(&move_model_selector, &default_account.into()).call().await.unwrap());
+    assert!(
+        world.is_owner(&position_model_selector, &default_account.into()).call().await.unwrap()
+    );
+    assert!(!world.is_owner(&move_model_selector, &other_account.into()).call().await.unwrap());
+    assert!(!world.is_owner(&position_model_selector, &other_account.into()).call().await.unwrap());
 
     auth::grant_owner(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        &[moves, position],
+        &get_resource_owners(other_account),
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
 
-    assert!(execute_spawn(&world_2).await);
+    assert!(world.is_owner(&move_model_selector, &other_account.into()).call().await.unwrap());
+    assert!(world.is_owner(&position_model_selector, &other_account.into()).call().await.unwrap());
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn auth_revoke_owner_ok() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let move_model_selector = compute_selector_from_tag(MOVE_MODEL_TAG);
+    let position_model_selector = compute_selector_from_tag(POSITION_MODEL_TAG);
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
 
-    // Shouldn't have any permission at this point.
-    let account_2 = sequencer.account(1);
-    let account_2_addr = account_2.address();
+    let sequencer = KatanaRunner::new_with_config(config).expect("Failed to start runner.");
 
-    // Setup new world contract handler with account 2.
-    let world_2 = WorldContract::new(world.address, account_2);
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
 
-    assert!(!execute_spawn(&world_2).await);
+    let default_account = sequencer.account(0).address();
 
-    // Account2 does not have the permission to write, let's give this account
-    // ownership of both models.
-    let moves = ResourceOwner {
-        resource: ResourceType::from_str("model:Moves").unwrap(),
-        owner: account_2_addr,
-    };
-
-    let position = ResourceOwner {
-        resource: ResourceType::from_str("model:Position").unwrap(),
-        owner: account_2_addr,
-    };
-
-    auth::grant_owner(
-        &Ui::new(Verbosity::Normal, OutputFormat::Text),
-        &world,
-        &[moves.clone(), position.clone()],
-        TxnConfig { wait: true, ..Default::default() },
-        DEFAULT_NAMESPACE,
-    )
-    .await
-    .unwrap();
-
-    assert!(execute_spawn(&world_2).await);
+    assert!(world.is_owner(&move_model_selector, &default_account.into()).call().await.unwrap());
+    assert!(
+        world.is_owner(&position_model_selector, &default_account.into()).call().await.unwrap()
+    );
 
     auth::revoke_owner(
         &Ui::new(Verbosity::Normal, OutputFormat::Text),
         &world,
-        &[moves, position],
+        &get_resource_owners(default_account),
         TxnConfig { wait: true, ..Default::default() },
         DEFAULT_NAMESPACE,
     )
     .await
     .unwrap();
 
-    assert!(!execute_spawn(&world_2).await);
+    assert!(!world.is_owner(&move_model_selector, &default_account.into()).call().await.unwrap());
+    assert!(
+        !world.is_owner(&position_model_selector, &default_account.into()).call().await.unwrap()
+    );
 }
+
 /// Executes the `spawn` system on `actions` contract.
 ///
 /// # Returns
@@ -223,7 +202,7 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
     )
     .await;
 
-    println!("ERR {:?}", r);
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     r.is_ok()
 }

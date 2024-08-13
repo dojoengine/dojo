@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use dojo_world::metadata::{project_to_world_metadata, ProjectMetadata};
+    use dojo_world::config::ProfileConfig;
+    use dojo_world::metadata::WorldMetadata;
     use sqlx::SqlitePool;
     use starknet::core::types::Felt;
     use torii_core::sql::Sql;
@@ -51,22 +52,24 @@ mod tests {
         let schema = build_schema(&pool).await.unwrap();
 
         let cover_img = "QWxsIHlvdXIgYmFzZSBiZWxvbmcgdG8gdXM=";
-        let project_metadata: ProjectMetadata = toml::from_str(
+        let profile_config: ProfileConfig = toml::from_str(
             r#"
   [world]
   name = "example"
   description = "example world"
   seed = "example"
-  namespace = { default = "example" }
   cover_uri = "file://example_cover.png"
   website = "https://dojoengine.org"
   socials.x = "https://x.com/dojostarknet"
+
+  [namespace]
+  default = "example"
           "#,
         )
         .unwrap();
         // TODO: we may want to store here the namespace and the seed. Check the
         // implementation to actually add those to the metadata table.
-        let world_metadata = project_to_world_metadata(project_metadata.world);
+        let world_metadata: WorldMetadata = profile_config.world.into();
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
             .await

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
-use dojo_world::metadata::Environment;
+use dojo_world::config::Environment;
 use scarb::core::Config;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn account_address_from_env_metadata() {
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             account_address: Some("0x0".to_owned()),
             ..Default::default()
         };
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn account_address_from_both() {
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             account_address: Some("0x0".to_owned()),
             ..Default::default()
         };

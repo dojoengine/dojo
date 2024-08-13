@@ -25,6 +25,9 @@ pub mod abigen {
     pub mod model {
         pub use crate::contracts::abi::model::*;
     }
+    pub mod world {
+        pub use crate::contracts::abi::world::*;
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -96,7 +99,10 @@ where
         let model_selector = naming::compute_selector_from_names(namespace, name);
 
         let (class_hash, contract_address) =
-            world.model(&model_selector).block_id(world.block_id).call().await?;
+            match world.resource(&model_selector).block_id(world.block_id).call().await? {
+                abigen::world::Resource::Model((hash, address)) => (hash, address),
+                _ => return Err(ModelError::ModelNotFound),
+            };
 
         // World Cairo contract won't raise an error in case of unknown/unregistered
         // model so raise an error here in case of zero address.

@@ -11,9 +11,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use katana_core::backend::Backend;
-use katana_core::pool::TransactionPool;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
+use katana_pool::TxPool;
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
 };
@@ -53,7 +53,7 @@ impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
 }
 
 struct Inner<EF: ExecutorFactory> {
-    pool: Arc<TransactionPool>,
+    pool: TxPool,
     backend: Arc<Backend<EF>>,
     block_producer: Arc<BlockProducer<EF>>,
     blocking_task_pool: BlockingTaskPool,
@@ -62,7 +62,7 @@ struct Inner<EF: ExecutorFactory> {
 impl<EF: ExecutorFactory> StarknetApi<EF> {
     pub fn new(
         backend: Arc<Backend<EF>>,
-        pool: Arc<TransactionPool>,
+        pool: TxPool,
         block_producer: Arc<BlockProducer<EF>>,
     ) -> Self {
         let blocking_task_pool =

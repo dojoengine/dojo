@@ -41,8 +41,11 @@ jobs:
           path: /tmp/bins
       - run: |
           chmod +x /tmp/bins/katana
-          KATANA_RUNNER_BIN=/tmp/bins/katana cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 20
-          cargo llvm-cov nextest --no-report -p katana
+          chmod +x /tmp/bins/sozo
+          bash scripts/build_cairo_projects.sh /tmp/bins/sozo
+          tar -xzf spawn-and-move-db.tar.gz -C /tmp/
+          tar -xzf types-test-db.tar.gz -C /tmp/
+          KATANA_RUNNER_BIN=/tmp/bins/katana cargo llvm-cov nextest --no-report --all-features --workspace --build-jobs 20
           cargo llvm-cov report --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v4
         with:
@@ -73,7 +76,9 @@ jobs:
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.github_token }}
-      - uses: ilammy/setup-nasm@v1
+      # required for `aws-lc-rs` crate to compile on Windows; https://aws.github.io/aws-lc-rs/requirements/windows.html
+      - name: Install NASM
+        uses: ilammy/setup-nasm@v1
         with:
           version: "2.15.05"
       - run: cargo build --target x86_64-pc-windows-msvc --bins

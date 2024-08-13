@@ -45,6 +45,8 @@ pub struct KatanaRunnerConfig {
     pub log_path: Option<PathBuf>,
     /// The messaging config file
     pub messaging: Option<String>,
+    /// The path to the database dir.
+    pub db_dir: Option<PathBuf>,
 }
 
 impl Default for KatanaRunnerConfig {
@@ -58,7 +60,15 @@ impl Default for KatanaRunnerConfig {
             run_name: None,
             log_path: None,
             messaging: None,
+            db_dir: None,
         }
+    }
+}
+
+impl KatanaRunnerConfig {
+    pub fn with_db_dir(mut self, db_dir: &str) -> Self {
+        self.db_dir = Some(PathBuf::from(db_dir));
+        self
     }
 }
 
@@ -97,6 +107,10 @@ impl KatanaRunner {
 
         if let Some(messaging_file) = config.messaging {
             builder = builder.messaging(messaging_file);
+        }
+
+        if let Some(path) = config.db_dir {
+            builder = builder.db_dir(path);
         }
 
         let mut katana = builder.spawn();

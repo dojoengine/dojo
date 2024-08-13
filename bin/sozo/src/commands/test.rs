@@ -11,7 +11,8 @@ use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::plugin::dojo_plugin_suite;
-use dojo_lang::scarb_internal::{crates_config_for_compilation_unit, PackageData};
+use dojo_lang::scarb_internal::{cfg_set_from_component, crates_config_for_compilation_unit};
+use dojo_world::metadata::dojo_metadata_from_package;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::{Config, Package, TargetKind};
@@ -120,7 +121,7 @@ impl TestArgs {
 
             config.ui().print(format!("testing {}", unit.name()));
 
-            let root_package_data = PackageData::from_scarb_package(&unit.components[0].package)?;
+            let root_dojo_metadata = dojo_metadata_from_package(&unit.components[0].package, &ws)?;
 
             // For each component in the compilation unit (namely, the dependencies being
             // compiled) we inject into the `CfgSet` the component name and
@@ -128,10 +129,11 @@ impl TestArgs {
             // of the manifest is done once at compile time, and not everytime
             // the plugin is called.
             for c in unit.components.iter_mut() {
-                c.cfg_set = Some(dojo_lang::scarb_internal::cfg_set_from_component(
+                c.cfg_set = Some(cfg_set_from_component(
                     c,
-                    &root_package_data,
+                    &root_dojo_metadata.namespace,
                     &config.ui(),
+                    &ws,
                 )?);
 
                 // As we override all the components CfgSet to ensure the namespace mapping

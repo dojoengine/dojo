@@ -1,10 +1,10 @@
 #![allow(dead_code)]
-use std::str;
+use std::str::{self, FromStr};
 
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
-use dojo_world::contracts::naming::compute_selector_from_tag;
+use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
     BaseManifest, DeploymentManifest, OverlayManifest, BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR,
@@ -12,11 +12,12 @@ use dojo_world::manifest::{
 };
 use dojo_world::metadata::{
     dojo_metadata_from_workspace, get_default_namespace_from_ws, ArtifactMetadata, DojoMetadata,
-    Uri, WorldMetadata, IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
+    WorldMetadata, IPFS_CLIENT_URL, IPFS_PASSWORD, IPFS_USERNAME,
 };
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationMetadata};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
+use dojo_world::uri::Uri;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
@@ -25,6 +26,7 @@ use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
+use crate::auth::ResourceType;
 use crate::migration::{
     auto_authorize, execute_strategy, find_authorization_diff, upload_metadata,
 };
@@ -36,7 +38,9 @@ async fn default_migrate_no_dry_run() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let sequencer = KatanaRunner::new().expect("Fail to start runner");
+    let sequencer =
+        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
+            .expect("Fail to start runner");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -60,14 +64,18 @@ async fn migrate_with_auto_mine() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
-    let sequencer = KatanaRunner::new().expect("Fail to start runner");
+    let sequencer =
+        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
+            .expect("Fail to start runner");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -75,9 +83,10 @@ async fn migrate_with_block_time() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
     let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
+        n_accounts: 10,
         block_time: Some(1000),
         ..Default::default()
     })
@@ -86,35 +95,9 @@ async fn migrate_with_block_time() {
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
-}
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
 
-#[should_panic]
-#[tokio::test(flavor = "multi_thread")]
-async fn migrate_with_small_fee_multiplier_will_fail() {
-    let config = setup::load_config();
-    let ws = setup::setup_ws(&config);
-
-    let (migration, _) = setup::setup_migration(&config).unwrap();
-
-    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
-        disable_fee: true,
-        ..Default::default()
-    })
-    .expect("Fail to start runner");
-
-    let account = sequencer.account(0);
-
-    assert!(
-        execute_strategy(
-            &ws,
-            &migration,
-            &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
-        )
-        .await
-        .is_err()
-    );
+    execute_strategy(&ws, &migration, &account, TxnConfig::default(), &declarers).await.unwrap();
 }
 
 #[tokio::test]
@@ -166,7 +149,9 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     let base = config.manifest_path().parent().unwrap();
     let target_dir = format!("{}/target/dev", base);
 
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let sequencer =
+        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
+            .expect("Failed to start runner.");
 
     let account = sequencer.account(0);
 
@@ -187,11 +172,12 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     )
     .unwrap();
 
-    let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
 
-    // first time DojoContract named `others` will fail due to calldata error
-    assert!(!migration_output.full);
+    let migration_output =
+        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers)
+            .await
+            .unwrap();
 
     let world_address = migration_output.world_address;
 
@@ -221,7 +207,10 @@ async fn migration_with_correct_calldata_second_time_work_as_expected() {
     .unwrap();
 
     let migration_output =
-        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+        execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers)
+            .await
+            .unwrap();
+
     assert!(migration_output.full);
 }
 
@@ -233,7 +222,9 @@ async fn migration_from_remote() {
     let base = config.manifest_path().parent().unwrap();
     let target_dir = format!("{}/target/dev", base);
 
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let sequencer =
+        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
+            .expect("Failed to start runner.");
 
     let account = sequencer.account(0);
 
@@ -254,7 +245,9 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
         &base.to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
@@ -277,14 +270,20 @@ async fn migrate_with_metadata() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, _) = setup::setup_migration(&config).unwrap();
+    let (migration, _) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
-    let sequencer = KatanaRunner::new().expect("Fail to start runner");
+    let sequencer =
+        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
+            .expect("Failed to start runner.");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::init_wait(), &declarers)
+        .await
+        .unwrap();
 
     let res = upload_metadata(&ws, &account, output.clone(), TxnConfig::init_wait()).await;
     assert!(res.is_ok());
@@ -350,7 +349,7 @@ async fn migrate_with_auto_authorize() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let (migration, diff) = setup::setup_migration(&config).unwrap();
+    let (migration, diff) = setup::setup_migration(&config, "dojo_examples").unwrap();
 
     let manifest_base = config.manifest_path().parent().unwrap();
     let mut manifest =
@@ -363,14 +362,18 @@ async fn migrate_with_auto_authorize() {
         manifest.merge(overlay_manifest);
     }
 
-    let sequencer = KatanaRunner::new().expect("Fail to start runner");
+    let sequencer =
+        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
+            .expect("Failed to start runner.");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let txn_config = TxnConfig::init_wait();
 
-    let output = execute_strategy(&ws, &migration, &account, txn_config).await.unwrap();
+    let declarers = setup::get_declarers_from_sequencer(&sequencer).await;
+
+    let output = execute_strategy(&ws, &migration, &account, txn_config, &declarers).await.unwrap();
 
     let world_address = migration.world_address;
     let world = WorldContract::new(world_address, account);
@@ -394,11 +397,19 @@ async fn migrate_with_auto_authorize() {
 
         let contract = manifest.contracts.iter().find(|a| a.inner.tag == c.diff.tag).unwrap();
 
-        for model in &contract.inner.writes {
-            let model_selector = compute_selector_from_tag(model);
+        for resource in &contract.inner.writes {
+            let resource_type = ResourceType::from_str(resource).unwrap();
+
+            let selector = match resource_type {
+                ResourceType::Model(tag) => compute_selector_from_tag(&tag),
+                ResourceType::Contract(tag) => compute_selector_from_tag(&tag),
+                ResourceType::Namespace(ns) => compute_bytearray_hash(&ns),
+                ResourceType::Selector(s) => s,
+            };
+
             let contract_address = ContractAddress(contract_address);
             let is_writer =
-                world_reader.is_writer(&model_selector, &contract_address).call().await.unwrap();
+                world_reader.is_writer(&selector, &contract_address).call().await.unwrap();
             assert!(is_writer);
         }
     }

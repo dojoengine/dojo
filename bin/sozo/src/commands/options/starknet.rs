@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Args;
-use dojo_world::metadata::Environment;
+use dojo_world::config::Environment;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tracing::trace;
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn url_exist_in_env_but_not_in_args() {
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             rpc_url: Some(METADATA_RPC.into()),
             ..Default::default()
         };
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn url_doesnt_exist_in_env_but_exist_in_args() {
-        let env_metadata = dojo_world::metadata::Environment::default();
+        let env_metadata = dojo_world::config::Environment::default();
         let cmd = Command::parse_from(["sozo", "--rpc-url", ENV_RPC]);
 
         assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), ENV_RPC);
@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn url_exists_in_both() {
-        let env_metadata = dojo_world::metadata::Environment {
+        let env_metadata = dojo_world::config::Environment {
             rpc_url: Some(METADATA_RPC.into()),
             ..Default::default()
         };
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn url_exists_in_neither() {
-        let env_metadata = dojo_world::metadata::Environment::default();
+        let env_metadata = dojo_world::config::Environment::default();
         let cmd = Command::parse_from([""]);
         assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), DEFAULT_RPC);
     }

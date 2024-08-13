@@ -15,7 +15,6 @@ use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::BlockContextGenerator;
-use katana_core::pool::TransactionPool;
 #[allow(deprecated)]
 use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
@@ -24,6 +23,9 @@ use katana_core::service::messaging::MessagingService;
 use katana_core::service::{NodeService, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_pool::ordering::FiFo;
+use katana_pool::validation::NoopValidator;
+use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_provider::providers::fork::ForkedProvider;
@@ -154,7 +156,7 @@ pub async fn start(
 
     // --- build transaction pool and miner
 
-    let pool = Arc::new(TransactionPool::new());
+    let pool = TxPool::new(NoopValidator::new(), FiFo::new());
     let miner = TransactionMiner::new(pool.add_listener());
 
     // --- build block producer service
@@ -175,13 +177,13 @@ pub async fn start(
     // it to be registered.
     if let Some(addr) = server_config.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
-        let db = db.unwrap();
+        let reports = db.map(|db| vec![Box::new(db) as Box<dyn Report>]).unwrap_or_default();
 
         prometheus_exporter::serve(
             addr,
             prometheus_handle,
             metrics_process::Collector::default(),
-            vec![Box::new(db) as Box<dyn Report>],
+            reports,
         )
         .await?;
 
@@ -192,7 +194,7 @@ pub async fn start(
 
     #[cfg(feature = "messaging")]
     let messaging = if let Some(config) = sequencer_config.messaging.clone() {
-        MessagingService::new(config, Arc::clone(&pool), Arc::clone(&backend)).await.ok()
+        MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await.ok()
     } else {
         None
     };
@@ -201,7 +203,7 @@ pub async fn start(
 
     // TODO: avoid dangling task, or at least store the handle to the NodeService
     tokio::spawn(NodeService::new(
-        Arc::clone(&pool),
+        pool.clone(),
         miner,
         block_producer.clone(),
         #[cfg(feature = "messaging")]
@@ -218,7 +220,7 @@ pub async fn start(
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (Arc<TransactionPool>, Arc<Backend<EF>>, Arc<BlockProducer<EF>>),
+    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>),
     config: ServerConfig,
 ) -> Result<NodeHandle> {
     let (pool, backend, block_producer) = node_components;

@@ -7,6 +7,3 @@ description = "Some scary foes to fight."
 dojo.workspace = true
 
 [lib]
-
-[tool.dojo.world]
-namespace = { default = "bestiary" }
