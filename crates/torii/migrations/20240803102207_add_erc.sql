@@ -12,11 +12,17 @@ CREATE TABLE erc721_balances (
     PRIMARY KEY (account_address, token_address, token_id)
 );
 
+-- -- query: get all balances for a given account
+-- -- query(in future): get all balanves for a given token contract
+
 -- -- one row represents a token contract on chain
--- CREATE TABLE erc_contracts (
---     token_address TEXT NOT NULL PRIMARY KEY,
---     -- "ERC20" or "ERC721" or "ERC1155"
---     token_type TEXT NOT NULL,
+-- CREATE TABLE contracts (
+--     contract_address TEXT NOT NULL PRIMARY KEY,
+--     -- "ERC20" or "ERC721" or "ERC1155" or "WORLD"
+--     contract_type TEXT NOT NULL,
+-- );
+
+-- CREATE TABLE token_id (
 --     --! for ERC1155: both name and symbol are offchain (so would be null)
 --     name TEXT,
 --     symbol TEXT,
@@ -24,7 +30,8 @@ CREATE TABLE erc721_balances (
 --     decimals TEXT,
 --     --! total_supply would in erc1155 would need to be a map of token_id to balance
 --     total_supply TEXT
--- );
+
+-- )
 
 -- CREATE TABLE erc_balances (
 --     -- for ERC20, this would be (account_address:token_address:0x0)
@@ -40,19 +47,19 @@ CREATE TABLE erc721_balances (
 -- );
 
 CREATE TABLE erc20_transfers (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     token_address TEXT NOT NULL,
     from_address TEXT NOT NULL,
     to_address TEXT NOT NULL,
-    amount TEXT NOT NULL,
-    PRIMARY KEY (from_address, to_address)
+    amount TEXT NOT NULL
 );
 
 CREATE TABLE erc721_transfers (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     token_address TEXT NOT NULL,
     from_address TEXT NOT NULL,
     to_address TEXT NOT NULL,
-    token_id TEXT NOT NULL,
-    PRIMARY KEY (from_address, to_address)
+    token_id TEXT NOT NULL
 );
 
 -- these are metadata of the contracts which we would need to fetch from RPC separately

@@ -1234,13 +1234,13 @@ impl Sql {
                 .iter()
                 .find(|(address, _)| address == &format!("{:#x}", from))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("{:#x}", crypto_bigint::U256::ZERO));
+                .unwrap_or_else(|| format!("{:#63x}", crypto_bigint::U256::ZERO));
 
             let to_balance = balances
                 .iter()
                 .find(|(address, _)| address == &format!("{:#x}", to))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("{:#x}", crypto_bigint::U256::ZERO));
+                .unwrap_or_else(|| format!("{:#64x}", crypto_bigint::U256::ZERO));
 
             let from_balance = sql_string_to_u256(&from_balance);
             let to_balance = sql_string_to_u256(&to_balance);
@@ -1342,7 +1342,7 @@ fn felts_sql_string(felts: &[Felt]) -> String {
 }
 
 fn u256_to_sql_string(u256: &U256) -> String {
-    format!("{:#x}", u256)
+    format!("{:#064x}", u256)
 }
 
 fn sql_string_to_u256(sql_string: &str) -> U256 {
