@@ -84,7 +84,14 @@ async fn get_declarers_accounts<A: ConnectedAccount>(
 
         for a in vals {
             let address = a["address"].as_str().unwrap();
-            let private_key = a["privateKey"].as_str().unwrap();
+
+            // On slot, some accounts are hidden, we skip them.
+            let private_key = if let Some(pk) = a["privateKey"].as_str() {
+                pk
+            } else {
+                continue;
+            };
+
             let provider = AnyProvider::JsonRpcHttp(JsonRpcClient::new(HttpTransport::new(
                 Url::parse(rpc_url).unwrap(),
             )));
