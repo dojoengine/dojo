@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723514023928,
+  "lastUpdate": 1723516585424,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15553,6 +15553,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3859068,
             "range": "± 46996",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "6878242e120d3135d3bc1bb94135d7135693069b",
+          "message": "fix: ensure slot hidden accounts are skipped",
+          "timestamp": "2024-08-12T22:11:07-04:00",
+          "tree_id": "51fff007b511f6dbb61992e106f4db115a98e66c",
+          "url": "https://github.com/dojoengine/dojo/commit/6878242e120d3135d3bc1bb94135d7135693069b"
+        },
+        "date": 1723516584662,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17652422,
+            "range": "± 584122",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3802003,
+            "range": "± 99298",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3630477635,
+            "range": "± 801354550",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3953938,
+            "range": "± 67872",
             "unit": "ns/iter"
           }
         ]
