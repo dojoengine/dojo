@@ -236,8 +236,9 @@ impl<P: Provider + Sync> Engine<P> {
             keys: None,
         };
 
-        let _ = get_all_events(&self.provider, events_filter, self.config.events_chunk_size);
-        // fetch_all_events_tasks.push(world_events_pages);
+        let world_events_pages =
+            get_all_events(&self.provider, events_filter, self.config.events_chunk_size);
+        fetch_all_events_tasks.push(world_events_pages);
 
         for token in &self.tokens {
             let events_filter = EventFilter {
@@ -483,7 +484,6 @@ impl<P: Provider + Sync> Engine<P> {
                 || get_selector_from_name(&processor.event_key())? == event.keys[0])
                 && processor.validate(event)
             {
-                dbg!(processor.event_key());
                 if let Err(e) = processor
                     .process(
                         &self.world,
