@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723510298459,
+  "lastUpdate": 1723511456980,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15409,6 +15409,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3946220,
             "range": "± 68974",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "ecdae0fe40ac8e5973f8db5b79116821149279a2",
+          "message": "ci(release): add missing nasm uses",
+          "timestamp": "2024-08-12T20:50:56-04:00",
+          "tree_id": "9b45ca85d42e53e3ecdab502bcfb8a5377a1d906",
+          "url": "https://github.com/dojoengine/dojo/commit/ecdae0fe40ac8e5973f8db5b79116821149279a2"
+        },
+        "date": 1723511456199,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17840650,
+            "range": "± 248348",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3806700,
+            "range": "± 67983",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3974148330,
+            "range": "± 739999008",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3907250,
+            "range": "± 56751",
             "unit": "ns/iter"
           }
         ]
