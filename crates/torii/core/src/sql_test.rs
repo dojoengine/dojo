@@ -94,13 +94,13 @@ async fn test_load_from_remote() {
 
     let world = WorldContract::new(strat.world_address, &account);
 
-    world
+    let res = world
         .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
 
     // spawn
     let tx = &account
@@ -237,16 +237,16 @@ async fn test_load_from_remote_del() {
 
     let world = WorldContract::new(strat.world_address, &account);
 
-    world
+    let res = world
         .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
 
     // spawn
-    account
+    let res = account
         .execute_v1(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
@@ -256,10 +256,10 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
 
     // Set player config.
-    account
+    let res = account
         .execute_v1(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("set_player_config").unwrap(),
@@ -270,9 +270,9 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
 
-    account
+    let res = account
         .execute_v1(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("reset_player_config").unwrap(),
@@ -282,7 +282,7 @@ async fn test_load_from_remote_del() {
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
@@ -349,15 +349,16 @@ async fn test_get_entity_keys() {
 
     let world = WorldContract::new(strat.world_address, &account);
 
-    world
+    let res = world
         .grant_writer(&compute_bytearray_hash("dojo_examples"), &ContractAddress(actions_address))
         .send_with_cfg(&TxnConfig::init_wait())
         .await
         .unwrap();
-    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
 
     // spawn
-    account
+    let res = account
         .execute_v1(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
@@ -367,7 +368,7 @@ async fn test_get_entity_keys() {
         .await
         .unwrap();
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    TransactionWaiter::new(res.transaction_hash, &account.provider()).await.unwrap();
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
