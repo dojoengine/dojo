@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723511456980,
+  "lastUpdate": 1723511777620,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15457,6 +15457,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3907250,
             "range": "± 56751",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "distinct": true,
+          "id": "0a0008755044f7b2db1c0e62e6410e53d5f585fe",
+          "message": "doc(ci): specify reason to install nasm",
+          "timestamp": "2024-08-12T20:57:05-04:00",
+          "tree_id": "e2381bf4ef427ada246c261ee459821bdfa47c14",
+          "url": "https://github.com/dojoengine/dojo/commit/0a0008755044f7b2db1c0e62e6410e53d5f585fe"
+        },
+        "date": 1723511776313,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17886140,
+            "range": "± 228347",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3766456,
+            "range": "± 199922",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3740948186,
+            "range": "± 785208140",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3926077,
+            "range": "± 108040",
             "unit": "ns/iter"
           }
         ]
