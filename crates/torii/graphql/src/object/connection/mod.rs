@@ -136,7 +136,7 @@ pub fn connection_output(
             let primary_order = row.try_get::<String, &str>(id_column)?;
             let secondary_order = row.try_get_unchecked::<String, &str>(&order_field)?;
             let cursor = cursor::encode(&primary_order, &secondary_order);
-            let value_mapping = value_mapping_from_row(row, types, is_external)?;
+            let value_mapping = value_mapping_from_row(row, id_column, types, is_external)?;
 
             let mut edge = ValueMapping::new();
             edge.insert(Name::new("node"), Value::Object(value_mapping));

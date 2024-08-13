@@ -3,6 +3,8 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
+use sqlx::{Pool, Sqlite};
+use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::EventMessage;
 
@@ -10,7 +12,8 @@ use super::entity::model_data_recursive_query;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, EVENT_MESSAGE_NAMES, EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN
+    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, EVENT_MESSAGE_NAMES,
+    EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
@@ -61,31 +64,35 @@ impl ResolvableObject for EventMessageObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![SubscriptionField::new(
-            "eventMessageUpdated",
-            TypeRef::named_nn(self.type_name()),
-            |ctx| {
-                SubscriptionFieldFuture::new(async move {
-                    let id = match ctx.args.get("id") {
-                        Some(id) => Some(id.string()?.to_string()),
-                        None => None,
-                    };
-                    // if id is None, then subscribe to all entities
-                    // if id is Some, then subscribe to only the entity with that id
-                    Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(
-                        move |entity: EventMessage| {
-                            if id.is_none() || id == Some(entity.id.clone()) {
-                                Some(Ok(Value::Object(EventMessageObject::value_mapping(entity))))
-                            } else {
-                                // id != entity.id , then don't send anything, still listening
-                                None
-                            }
-                        },
-                    ))
-                })
-            },
-        )
-        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
+        Some(vec![
+            SubscriptionField::new(
+                "eventMessageUpdated",
+                TypeRef::named_nn(self.type_name()),
+                |ctx| {
+                    SubscriptionFieldFuture::new(async move {
+                        let id = match ctx.args.get("id") {
+                            Some(id) => Some(id.string()?.to_string()),
+                            None => None,
+                        };
+                        // if id is None, then subscribe to all entities
+                        // if id is Some, then subscribe to only the entity with that id
+                        Ok(SimpleBroker::<EventMessage>::subscribe().filter_map(
+                            move |entity: EventMessage| {
+                                if id.is_none() || id == Some(entity.id.clone()) {
+                                    Some(Ok(Value::Object(EventMessageObject::value_mapping(
+                                        entity,
+                                    ))))
+                                } else {
+                                    // id != entity.id , then don't send anything, still listening
+                                    None
+                                }
+                            },
+                        ))
+                    })
+                },
+            )
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
     }
 }
 

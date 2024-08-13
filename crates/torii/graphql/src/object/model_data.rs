@@ -213,7 +213,12 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                                     &entity_id,
                                 )
                                 .await?;
-                                let result = value_mapping_from_row(&data, ENTITY_ID_COLUMN, &nested_mapping, true)?;
+                                let result = value_mapping_from_row(
+                                    &data,
+                                    ENTITY_ID_COLUMN,
+                                    &nested_mapping,
+                                    true,
+                                )?;
 
                                 Ok(Some(Value::Object(result)))
                             }

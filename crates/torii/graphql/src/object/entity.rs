@@ -13,7 +13,8 @@ use torii_core::types::Entity;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    DATETIME_FORMAT, ENTITY_ID_COLUMN, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN
+    DATETIME_FORMAT, ENTITY_ID_COLUMN, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME,
+    EVENT_ID_COLUMN, ID_COLUMN,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
@@ -199,7 +200,8 @@ pub async fn model_data_recursive_query(
     let mut nested_value_mappings = Vec::new();
 
     for (idx, row) in rows.iter().enumerate() {
-        let mut nested_value_mapping = value_mapping_from_row(row, entity_id_column, type_mapping, true)?;
+        let mut nested_value_mapping =
+            value_mapping_from_row(row, entity_id_column, type_mapping, true)?;
 
         for (field_name, type_data) in type_mapping {
             if let TypeData::Nested((_, nested_mapping)) = type_data {
