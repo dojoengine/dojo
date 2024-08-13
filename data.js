@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723508334647,
+  "lastUpdate": 1723510298459,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15361,6 +15361,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3922515,
             "range": "± 93216",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "1d036c40f8c5402ed4da3f44aae7074809525c5b",
+          "message": "ci(release): update aws-lc-rs to not use ASM on windows",
+          "timestamp": "2024-08-12T20:32:39-04:00",
+          "tree_id": "df69d4873282e17ae0bac7c99a14e81e09b1ed1d",
+          "url": "https://github.com/dojoengine/dojo/commit/1d036c40f8c5402ed4da3f44aae7074809525c5b"
+        },
+        "date": 1723510297195,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17820307,
+            "range": "± 246420",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3799748,
+            "range": "± 105021",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3629748338,
+            "range": "± 863487390",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3946220,
+            "range": "± 68974",
             "unit": "ns/iter"
           }
         ]
