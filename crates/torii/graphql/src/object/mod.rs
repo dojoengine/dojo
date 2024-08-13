@@ -21,7 +21,6 @@ use self::connection::{
 };
 use self::inputs::keys_input::parse_keys_argument;
 use self::inputs::order_input::parse_order_argument;
-use crate::constants::ENTITY_ID_COLUMN;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
@@ -136,7 +135,7 @@ pub fn resolve_one(
             let id: String =
                 extract::<String>(ctx.args.as_index_map(), &id_column.to_case(Case::Camel))?;
             let data = fetch_single_row(&mut conn, &table_name, &id_column, &id).await?;
-            let model = value_mapping_from_row(&data, ENTITY_ID_COLUMN, &type_mapping, false)?;
+            let model = value_mapping_from_row(&data, &type_mapping, false)?;
             Ok(Some(Value::Object(model)))
         })
     })
