@@ -10,7 +10,9 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, SqliteConnection};
 use torii_core::sql::FELT_DELIMITER;
 
-use crate::constants::{BOOLEAN_TRUE, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
+use crate::constants::{
+    BOOLEAN_TRUE, ENTITY_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
+};
 use crate::object::model_data::ModelMember;
 use crate::types::{TypeData, TypeMapping, ValueMapping};
 
@@ -195,6 +197,8 @@ pub fn value_mapping_from_row(
     // entity_id is not part of a model's type_mapping but needed to relate to parent entity
     if let Ok(entity_id) = row.try_get::<String, &str>(ENTITY_ID_COLUMN) {
         value_mapping.insert(Name::new(INTERNAL_ENTITY_ID_KEY), Value::from(entity_id));
+    } else if let Ok(event_message_id) = row.try_get::<String, &str>(EVENT_MESSAGE_ID_COLUMN) {
+        value_mapping.insert(Name::new(INTERNAL_ENTITY_ID_KEY), Value::from(event_message_id));
     }
 
     Ok(value_mapping)
