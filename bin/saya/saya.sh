@@ -14,7 +14,8 @@ SAYA_SNCAST_ACCOUNT_NAME="dev"
 
 SAYA_PROVER_URL=http://prover.visoft.dev:3618
 SAYA_WORLD_NAME=saya-persistent-run
-SAYA_MANIFEST_PATH=../shard-dungeon/Scarb.toml
+# SAYA_MANIFEST_PATH=../shard-dungeon/Scarb.toml
+SAYA_MANIFEST_PATH=examples/spawn-and-move/Scarb.toml
 SAYA_FACT_REGISTRY=0x216a9754a38e86a09261ee424012b97d498a0f4ca81653bd4be269d583c7ec9
 SAYA_PILTOVER_CLASS_HASH=0x06b71b95e47818934fbbda5ea18fe6838d01012217e5d9825e4d08f42d5349d6
 SAYA_PILTOVER_STARTING_STATE_ROOT=0
@@ -35,18 +36,17 @@ if [[ -z "${SAYA_WORLD_ADDRESS}" ]]; then
   echo "World address not set: DEPLOYING WORLD"
 
     # Build world contract
-    sozo \
+    cargo run --bin sozo -- \
         build \
         --manifest-path $SAYA_MANIFEST_PATH
 
-    sozo \
+    cargo run --bin sozo -- \
         migrate apply \
         --manifest-path $SAYA_MANIFEST_PATH \
         --rpc-url $SAYA_SEPOLIA_ENDPOINT \
         --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
         --account-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
-        --fee-estimate-multiplier 20 \
-        --name $SAYA_WORLD_NAME
+        --fee-estimate-multiplier 20
 
     echo "Set SAYA_WORLD_ADDRESS to the address of the deployed contract."
 
@@ -59,7 +59,7 @@ fi
 if [[ -z "${SAYA_WORLD_PREPARED}" ]]; then
     echo "World not prepared: PREPARING WORLD"
 
-    sozo \
+    cargo run --bin sozo -- \
         execute $SAYA_WORLD_ADDRESS set_differ_program_hash \
         -c 2265722951651489608338464389196546125983429710081933755514038580032192121109 \
         --manifest-path $SAYA_MANIFEST_PATH \
@@ -70,7 +70,7 @@ if [[ -z "${SAYA_WORLD_PREPARED}" ]]; then
         --world $SAYA_WORLD_ADDRESS \
         --wait
 
-    sozo \
+    cargo run --bin sozo -- \
         execute $SAYA_WORLD_ADDRESS set_merger_program_hash \
         -c 2265722951651489608338464389196546125983429710081933755514038580032192121109 \
         --manifest-path $SAYA_MANIFEST_PATH \
@@ -81,7 +81,7 @@ if [[ -z "${SAYA_WORLD_PREPARED}" ]]; then
         --world $SAYA_WORLD_ADDRESS \
         --wait
 
-    sozo \
+    cargo run --bin sozo -- \
         execute $SAYA_WORLD_ADDRESS set_facts_registry \
         -c $SAYA_FACT_REGISTRY \
         --manifest-path $SAYA_MANIFEST_PATH \
@@ -122,8 +122,7 @@ fi
 
 
 if [[ -z "${SAYA_SKIP_MAKING_TRANSACTIONS}" ]]; then
-    sozo execute shard_dungeon::systems::metagame::metagame register_player \
-        -c str:mateo \
+    cargo run -r --bin sozo -- execute dojo_examples-actions spawn \
         --manifest-path $SAYA_MANIFEST_PATH \
         --rpc-url http://localhost:5050 \
         --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
@@ -131,33 +130,18 @@ if [[ -z "${SAYA_SKIP_MAKING_TRANSACTIONS}" ]]; then
         --world $SAYA_WORLD_ADDRESS \
         --wait
 
-    sozo execute shard_dungeon::systems::hazard_hall::hazard_hall enter_dungeon \
-        --manifest-path $SAYA_MANIFEST_PATH \
-        --rpc-url http://localhost:5050 \
-        --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
-        --account-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
-        --world $SAYA_WORLD_ADDRESS \
-        --wait
-
-    sozo execute shard_dungeon::systems::hazard_hall::hazard_hall fate_strike \
-        --manifest-path $SAYA_MANIFEST_PATH \
-        --rpc-url http://localhost:5050 \
-        --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
-        --account-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
-        --world $SAYA_WORLD_ADDRESS \
-        --wait
-
-    sozo execute shard_dungeon::systems::hazard_hall::hazard_hall fate_strike \
-        --manifest-path $SAYA_MANIFEST_PATH \
-        --rpc-url http://localhost:5050 \
-        --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
-        --account-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
-        --world $SAYA_WORLD_ADDRESS \
-        --wait
+    # cargo run -r --bin sozo -- execute dojo_examples-actions move \
+    #     -c 0x1 \
+    #     --manifest-path $SAYA_MANIFEST_PATH \
+    #     --rpc-url http://localhost:5050 \
+    #     --private-key $SAYA_SEPOLIA_PRIVATE_KEY \
+    #     --account-address $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
+    #     --world $SAYA_WORLD_ADDRESS \
+    #     --wait
 fi
 
 
-cargo run -r --bin sozo -- model get Inventory $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
+cargo run -r --bin sozo -- model get Moves $SAYA_SEPOLIA_ACCOUNT_ADDRESS \
     --manifest-path $SAYA_MANIFEST_PATH \
     --rpc-url $SAYA_SEPOLIA_ENDPOINT \
     --world $SAYA_WORLD_ADDRESS
