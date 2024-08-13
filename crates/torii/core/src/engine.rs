@@ -483,6 +483,7 @@ impl<P: Provider + Sync> Engine<P> {
                 || get_selector_from_name(&processor.event_key())? == event.keys[0])
                 && processor.validate(event)
             {
+                dbg!(processor.event_key());
                 if let Err(e) = processor
                     .process(
                         &self.world,

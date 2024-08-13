@@ -40,21 +40,19 @@ CREATE TABLE erc721_balances (
 -- );
 
 CREATE TABLE erc20_transfers (
-    account_address TEXT NOT NULL,
     token_address TEXT NOT NULL,
     from_address TEXT NOT NULL,
     to_address TEXT NOT NULL,
     amount TEXT NOT NULL,
-    PRIMARY KEY (account_address, token_address)
+    PRIMARY KEY (from_address, to_address)
 );
 
 CREATE TABLE erc721_transfers (
-    account_address TEXT NOT NULL,
     token_address TEXT NOT NULL,
     from_address TEXT NOT NULL,
     to_address TEXT NOT NULL,
     token_id TEXT NOT NULL,
-    PRIMARY KEY (account_address, token_address, token_id)
+    PRIMARY KEY (from_address, to_address)
 );
 
 -- these are metadata of the contracts which we would need to fetch from RPC separately

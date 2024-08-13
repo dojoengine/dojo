@@ -1217,7 +1217,7 @@ impl Sql {
             // statements.
             // Fetch balances for both `from` and `to` addresses, update them and write back to db
             let query = sqlx::query_as::<_, (String, String)>(
-                "SELECT address, balance FROM erc20_balances WHERE token_address = ? AND account_address \
+                "SELECT account_address, balance FROM erc20_balances WHERE token_address = ? AND account_address \
                  IN (?, ?)",
             )
             .bind(format!("{:#x}", token_address))
@@ -1234,13 +1234,13 @@ impl Sql {
                 .iter()
                 .find(|(address, _)| address == &format!("{:#x}", from))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("0x0"));
+                .unwrap_or_else(|| format!("{:#x}", crypto_bigint::U256::ZERO));
 
             let to_balance = balances
                 .iter()
                 .find(|(address, _)| address == &format!("{:#x}", to))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("0x0"));
+                .unwrap_or_else(|| format!("{:#x}", crypto_bigint::U256::ZERO));
 
             let from_balance = sql_string_to_u256(&from_balance);
             let to_balance = sql_string_to_u256(&to_balance);
@@ -1255,23 +1255,27 @@ impl Sql {
             ON CONFLICT (account_address, token_address) 
             DO UPDATE SET balance = excluded.balance";
 
-            self.query_queue.enqueue(
-                update_query,
-                vec![
-                    Argument::FieldElement(from),
-                    Argument::FieldElement(token_address),
-                    Argument::String(u256_to_sql_string(&new_from_balance)),
-                ],
-            );
+            if from != Felt::ZERO {
+                self.query_queue.enqueue(
+                    update_query,
+                    vec![
+                        Argument::FieldElement(from),
+                        Argument::FieldElement(token_address),
+                        Argument::String(u256_to_sql_string(&new_from_balance)),
+                    ],
+                );
+            }
 
-            self.query_queue.enqueue(
-                update_query,
-                vec![
-                    Argument::FieldElement(to),
-                    Argument::FieldElement(token_address),
-                    Argument::String(u256_to_sql_string(&new_to_balance)),
-                ],
-            );
+            if to != Felt::ZERO {
+                self.query_queue.enqueue(
+                    update_query,
+                    vec![
+                        Argument::FieldElement(to),
+                        Argument::FieldElement(token_address),
+                        Argument::String(u256_to_sql_string(&new_to_balance)),
+                    ],
+                );
+            }
         }
         self.query_queue.execute_all().await?;
 
