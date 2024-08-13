@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723511777620,
+  "lastUpdate": 1723514023928,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15505,6 +15505,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3926077,
             "range": "± 108040",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ccbccbf964fd3ccb93cc72c75e7234e604a10fba",
+          "message": "feat(torii-graphql): event messages update & subscription (#2227)\n\n* feat(torii-graphql): event messages update & subscription\r\n\r\n* refactor: correct type mapping\r\n\r\n* feat: event message field to modeldata\r\n\r\n* refactor: use constant for type names\r\n\r\n* fmt\r\n\r\n* refactor: share logic between event messages and entities\r\n\r\n* fmt\r\n\r\n* chore: remove executedAt for event message\r\n\r\n* refactor; more miantaible value mapping\r\n\r\n* chore: add back executed at\r\n\r\n* fmt\r\n\r\n* fix: use transaction waiter to ensure replicable tests even with slow machines\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-12T21:34:50-04:00",
+          "tree_id": "c8adcf787a81afc2aacba73f7c3e09d2a0609835",
+          "url": "https://github.com/dojoengine/dojo/commit/ccbccbf964fd3ccb93cc72c75e7234e604a10fba"
+        },
+        "date": 1723514022856,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17939802,
+            "range": "± 135062",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3809806,
+            "range": "± 140743",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3657124680,
+            "range": "± 740335173",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3859068,
+            "range": "± 46996",
             "unit": "ns/iter"
           }
         ]
