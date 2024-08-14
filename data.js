@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723658956773,
+  "lastUpdate": 1723665872811,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15697,6 +15697,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3886726,
             "range": "± 33326",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a9b0bc54fb6942f563efb859c92a568698eaf738",
+          "message": "fix(dojo-lang): add all crates to test database for Cairo test runner (#2296)\n\n* fix: ensure all the crates are inserted into the database but not all tested\r\n\r\n* chore: remote unused dep\r\n\r\n* chore: remove unused deps",
+          "timestamp": "2024-08-14T15:44:48-04:00",
+          "tree_id": "cf5e1683246d0a4eea3ed07c85b149d02475c8d3",
+          "url": "https://github.com/dojoengine/dojo/commit/a9b0bc54fb6942f563efb859c92a568698eaf738"
+        },
+        "date": 1723665871232,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17161364,
+            "range": "± 155912",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4001773,
+            "range": "± 212726",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3838377089,
+            "range": "± 881240857",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4046388,
+            "range": "± 135221",
             "unit": "ns/iter"
           }
         ]
