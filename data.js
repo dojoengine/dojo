@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723665872811,
+  "lastUpdate": 1723675641007,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15745,6 +15745,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4046388,
             "range": "± 135221",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "00770bd4b83975b54b96783ea8b062c4c5cb3580",
+          "message": "feat: improve world contract performance (#2287)\n\n* add benchmarks\r\n\r\n* split multi-conditions if into several single-condition if\r\n\r\n* replace array![...].span() by [...].span()\r\n\r\n* fix: add better error message for unregister models + merge\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-14T18:28:18-04:00",
+          "tree_id": "1cd5895d26f36785732f3c97c1e279b6f7012dc0",
+          "url": "https://github.com/dojoengine/dojo/commit/00770bd4b83975b54b96783ea8b062c4c5cb3580"
+        },
+        "date": 1723675639734,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17299727,
+            "range": "± 218098",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3798727,
+            "range": "± 140990",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3412252627,
+            "range": "± 838228205",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3931893,
+            "range": "± 34105",
             "unit": "ns/iter"
           }
         ]
