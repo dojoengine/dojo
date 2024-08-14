@@ -4,6 +4,7 @@ use std::num::ParseIntError;
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
+#[cfg(not(target_arch = "wasm32"))]
 use tonic::transport::Endpoint;
 
 use crate::proto::world::{
@@ -17,6 +18,7 @@ use crate::types::{EntityKeysClause, Event, EventQuery, KeysClause, ModelKeysCla
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[cfg(not(target_arch = "wasm32"))]
     #[error("Endpoint error: {0}")]
     Endpoint(String),
     #[error(transparent)]
