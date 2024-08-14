@@ -192,6 +192,7 @@ mod tests {
     use dojo::utils::test::{spawn_test_world, deploy_contract};
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
+    use armory::flatbow;
     use dojo_examples::models::{Position, position, Moves, moves, Direction, Vec2};
 
     #[test]
@@ -200,9 +201,13 @@ mod tests {
         let caller = starknet::contract_address_const::<0x0>();
 
         // models
-        let mut models = array![position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH,];
+        let mut models = array![
+            position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH, flatbow::TEST_CLASS_HASH
+        ];
         // deploy world with models
-        let world = spawn_test_world("dojo_examples", models);
+        let world = spawn_test_world(
+            ["dojo_examples", "dojo_examples_weapons"].span(), models.span()
+        );
 
         // deploy systems contract
         let contract_address = world

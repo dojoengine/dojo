@@ -15,7 +15,7 @@ bestiary = { path = "../game-lib/bestiary" }
 dojo = { path = "../../crates/dojo-core" }
 
 [[target.dojo]]
-build-external-contracts = [ "armory::Flatbow", "bestiary::RiverSkale" ]
+build-external-contracts = [ "armory::Flatbow", "bestiary::RiverSkale", "origami_token::components::introspection::src5::SRC5Model" ]
 
 [features]
 default = [ "dungeon" ]
