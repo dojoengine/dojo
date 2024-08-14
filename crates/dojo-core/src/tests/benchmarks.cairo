@@ -44,7 +44,12 @@ struct ComplexModel {
 }
 
 fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world("dojo", array![case::TEST_CLASS_HASH, case_not_packed::TEST_CLASS_HASH, complex_model::TEST_CLASS_HASH])
+    spawn_test_world(
+        ["dojo"].span(),
+        [
+            case::TEST_CLASS_HASH, case_not_packed::TEST_CLASS_HASH, complex_model::TEST_CLASS_HASH
+        ].span()
+    )
 }
 
 #[test]
@@ -405,21 +410,11 @@ fn test_benchmark_set_entity() {
     let bob = starknet::contract_address_const::<0xb0b>();
 
     let simple_entity_packed = Case {
-        owner: bob,
-        sword: Sword {
-            swordsmith: bob,
-            damage: 42,
-        },
-        material: 'iron'
+        owner: bob, sword: Sword { swordsmith: bob, damage: 42, }, material: 'iron'
     };
 
     let simple_entity_not_packed = CaseNotPacked {
-        owner: bob,
-        sword: Sword {
-            swordsmith: bob,
-            damage: 42,
-        },
-        material: 'iron'
+        owner: bob, sword: Sword { swordsmith: bob, damage: 42, }, material: 'iron'
     };
 
     let complex_entity = ComplexModel {
@@ -428,8 +423,12 @@ fn test_benchmark_set_entity() {
         first_name: "John",
         last_name: "Doe",
         weapons: array![
-            Weapon::DualWield((Sword {swordsmith: bob, damage: 42}, Sword {swordsmith: bob, damage: 800})),
-            Weapon::Fists((Sword {swordsmith: bob, damage: 300}, Sword {swordsmith: bob, damage: 1200}))
+            Weapon::DualWield(
+                (Sword { swordsmith: bob, damage: 42 }, Sword { swordsmith: bob, damage: 800 })
+            ),
+            Weapon::Fists(
+                (Sword { swordsmith: bob, damage: 300 }, Sword { swordsmith: bob, damage: 1200 })
+            )
         ],
         abilities: (
             Abilities {
@@ -447,7 +446,8 @@ fn test_benchmark_set_entity() {
                 intelligence: 2,
                 wisdom: 1,
                 charisma: 43,
-            }),
+            }
+        ),
         stats: Stats {
             kills: 99,
             deaths: 1,
@@ -462,30 +462,33 @@ fn test_benchmark_set_entity() {
     };
 
     let gas = GasCounterTrait::start();
-    world.set_entity(
-        model_selector: Model::<Case>::selector(),
-        index: ModelIndex::Keys(simple_entity_packed.keys()),
-        values: simple_entity_packed.values(),
-        layout: Model::<Case>::layout()
-    );
+    world
+        .set_entity(
+            model_selector: Model::<Case>::selector(),
+            index: ModelIndex::Keys(simple_entity_packed.keys()),
+            values: simple_entity_packed.values(),
+            layout: Model::<Case>::layout()
+        );
     gas.end("World::SetEntity::SimplePacked");
 
     let gas = GasCounterTrait::start();
-    world.set_entity(
-        model_selector: Model::<CaseNotPacked>::selector(),
-        index: ModelIndex::Keys(simple_entity_not_packed.keys()),
-        values: simple_entity_not_packed.values(),
-        layout: Model::<CaseNotPacked>::layout()
-    );
+    world
+        .set_entity(
+            model_selector: Model::<CaseNotPacked>::selector(),
+            index: ModelIndex::Keys(simple_entity_not_packed.keys()),
+            values: simple_entity_not_packed.values(),
+            layout: Model::<CaseNotPacked>::layout()
+        );
     gas.end("World::SetEntity::SimpleNotPacked");
 
     let gas = GasCounterTrait::start();
-    world.set_entity(
-        model_selector: Model::<ComplexModel>::selector(),
-        index: ModelIndex::Keys(complex_entity.keys()),
-        values: complex_entity.values(),
-        layout: Model::<ComplexModel>::layout()
-    );
+    world
+        .set_entity(
+            model_selector: Model::<ComplexModel>::selector(),
+            index: ModelIndex::Keys(complex_entity.keys()),
+            values: complex_entity.values(),
+            layout: Model::<ComplexModel>::layout()
+        );
     gas.end("World::SetEntity::ComplexModel");
 
     let gas = GasCounterTrait::start();

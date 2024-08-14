@@ -133,77 +133,68 @@ where
     let mut world_tx_hash: Option<Felt> = None;
     let mut world_block_number: Option<u64> = None;
 
-    match &strategy.base {
-        Some(base) => {
-            ui.print_header("# Base Contract");
+    if let Some(base) = &strategy.base {
+        ui.print_header("# Base Contract");
 
-            match base.declare(&migrator, &txn_config).await {
-                Ok(res) => {
-                    ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
-                }
-                Err(MigrationError::ClassAlreadyDeclared) => {
-                    ui.print_sub(format!("Already declared: {:#x}", base.diff.local_class_hash));
-                }
-                Err(MigrationError::ArtifactError(e)) => {
-                    return Err(handle_artifact_error(&ui, base.artifact_path(), e));
-                }
-                Err(e) => {
-                    ui.verbose(format!("{e:?}"));
-                    return Err(e.into());
-                }
-            };
-        }
-        None => {}
-    };
-
-    match &strategy.world {
-        Some(world) => {
-            ui.print_header("# World");
-
-            // If a migration is pending for the world, we upgrade only if the remote world
-            // already exists.
-            if world.diff.remote_class_hash.is_some() {
-                let _deploy_result = upgrade_contract(
-                    world,
-                    "world",
-                    world.diff.original_class_hash,
-                    strategy.base.as_ref().unwrap().diff.original_class_hash,
-                    &migrator,
-                    &ui,
-                    &txn_config,
-                )
-                .await
-                .map_err(|e| {
-                    ui.verbose(format!("{e:?}"));
-                    anyhow!("Failed to upgrade world: {e}")
-                })?;
-
-                ui.print_sub(format!(
-                    "Upgraded Contract at address: {:#x}",
-                    world.contract_address
-                ));
-            } else {
-                let calldata = vec![strategy.base.as_ref().unwrap().diff.local_class_hash];
-                let deploy_result =
-                    deploy_contract(world, "world", calldata.clone(), &migrator, &ui, &txn_config)
-                        .await
-                        .map_err(|e| {
-                            ui.verbose(format!("{e:?}"));
-                            anyhow!("Failed to deploy world: {e}")
-                        })?;
-
-                (world_tx_hash, world_block_number) =
-                    if let ContractDeploymentOutput::Output(deploy_result) = deploy_result {
-                        (Some(deploy_result.transaction_hash), deploy_result.block_number)
-                    } else {
-                        (None, None)
-                    };
-
-                ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
+        match base.declare(&migrator, &txn_config).await {
+            Ok(res) => {
+                ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
             }
+            Err(MigrationError::ClassAlreadyDeclared) => {
+                ui.print_sub(format!("Already declared: {:#x}", base.diff.local_class_hash));
+            }
+            Err(MigrationError::ArtifactError(e)) => {
+                return Err(handle_artifact_error(&ui, base.artifact_path(), e));
+            }
+            Err(e) => {
+                ui.verbose(format!("{e:?}"));
+                return Err(e.into());
+            }
+        };
+    }
+
+    if let Some(world) = &strategy.world {
+        ui.print_header("# World");
+
+        // If a migration is pending for the world, we upgrade only if the remote world
+        // already exists.
+        if world.diff.remote_class_hash.is_some() {
+            let _deploy_result = upgrade_contract(
+                world,
+                "world",
+                world.diff.original_class_hash,
+                strategy.base.as_ref().unwrap().diff.original_class_hash,
+                &migrator,
+                &ui,
+                &txn_config,
+            )
+            .await
+            .map_err(|e| {
+                ui.verbose(format!("{e:?}"));
+                anyhow!("Failed to upgrade world: {e}")
+            })?;
+
+            ui.print_sub(format!("Upgraded Contract at address: {:#x}", world.contract_address));
+        } else {
+            let calldata = vec![strategy.base.as_ref().unwrap().diff.local_class_hash];
+            let deploy_result =
+                deploy_contract(world, "world", calldata.clone(), &migrator, &ui, &txn_config)
+                    .await
+                    .map_err(|e| {
+                        ui.verbose(format!("{e:?}"));
+                        anyhow!("Failed to deploy world: {e}")
+                    })?;
+
+            (world_tx_hash, world_block_number) =
+                if let ContractDeploymentOutput::Output(deploy_result) = deploy_result {
+                    (Some(deploy_result.transaction_hash), deploy_result.block_number)
+                } else {
+                    (None, None)
+                };
+
+            ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
         }
-        None => {}
-    };
+    }
 
     let world_address = strategy.world_address;
     let mut migration_output = MigrationOutput {

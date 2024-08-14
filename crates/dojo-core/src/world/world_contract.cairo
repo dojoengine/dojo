@@ -1004,7 +1004,12 @@ pub mod world {
 
                     panic_with_byte_array(@errors::no_model_write_access(model.tag(), caller));
                 },
-                _ => panic_with_byte_array(@errors::invalid_resource_selector(model_selector))
+                Resource::Unregistered => {
+                    panic_with_byte_array(@errors::resource_not_registered(model_selector));
+                },
+                _ => panic_with_byte_array(
+                    @errors::resource_conflict(format!("{}", model_selector), "model")
+                )
             }
         }
 
