@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723658858716,
+  "lastUpdate": 1723658956773,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15649,6 +15649,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3943655,
             "range": "± 52427",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ebed9bd2d278c31e677722e8802bf47e487c6bdf",
+          "message": "fix: ensure migrators are on block pending + display contract address (#2293)\n\n* fix: ensure contract address is showed without -vvv flag\r\n\r\n* fix: ensure migrators are on block pending",
+          "timestamp": "2024-08-14T13:50:03-04:00",
+          "tree_id": "e2ec59f670cf1e5bed3d722f5159f85531f7639c",
+          "url": "https://github.com/dojoengine/dojo/commit/ebed9bd2d278c31e677722e8802bf47e487c6bdf"
+        },
+        "date": 1723658955917,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17534315,
+            "range": "± 137296",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3872216,
+            "range": "± 209327",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3834821706,
+            "range": "± 800073113",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3886726,
+            "range": "± 33326",
             "unit": "ns/iter"
           }
         ]
