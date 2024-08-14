@@ -1,4 +1,5 @@
 use core::fmt;
+use std::{path::PathBuf, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use dojo_types::schema::Ty;
@@ -80,4 +81,44 @@ pub struct Event {
     pub transaction_hash: String,
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Default, Deserialize, Debug, Clone)]
+pub struct ToriiConfig {
+    /// ERC contract addresses to index
+    pub erc_contracts: Vec<ErcContract>,
+}
+
+impl ToriiConfig {
+    pub fn load_from_path(path: &PathBuf) -> Result<Self, anyhow::Error> {
+        let config = std::fs::read_to_string(path)?;
+        let config: Self = toml::from_str(&config)?;
+        Ok(config)
+    }
+}
+
+#[derive(Default, Deserialize, Debug, Clone)]
+pub struct ErcContract {
+    pub contract_address: Felt,
+    pub start_block: u64,
+    pub r#type: ErcType,
+}
+
+#[derive(Default, Deserialize, Debug, Clone)]
+pub enum ErcType {
+    #[default]
+    ERC20,
+    ERC721,
+}
+
+impl FromStr for ErcType {
+    type Err = anyhow::Error;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        match input.to_lowercase().as_str() {
+            "erc20" | "Er20" | "ERC20" => Ok(ErcType::ERC20),
+            "erc721" | "Er721" | "ERC721" => Ok(ErcType::ERC721),
+            _ => Err(anyhow::anyhow!("Invalid ERC type: {}", input)),
+        }
+    }
 }

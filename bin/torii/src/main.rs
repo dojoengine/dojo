@@ -11,6 +11,7 @@
 //!   for more info.
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -40,7 +41,7 @@ use torii_core::processors::store_update_member::StoreUpdateMemberProcessor;
 use torii_core::processors::store_update_record::StoreUpdateRecordProcessor;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
-use torii_core::types::Model;
+use torii_core::types::{ErcContract, ErcType, Model, ToriiConfig};
 use torii_server::proxy::Proxy;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -118,23 +119,36 @@ struct Args {
     /// Enable indexing pending blocks
     #[arg(long)]
     index_pending: bool,
+
+    /// ERC contract addresses to index
+    #[arg(long, value_parser = parse_erc_contracts)]
+    #[arg(conflicts_with = "config")]
+    erc_contracts: Option<std::vec::Vec<ErcContract>>,
+
+    /// Configuration file
+    #[arg(long)]
+    config: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    // TODO: see where to get this addresses from, cli? config?
-    let addresses = [(
-        Felt::from_str("0x068cd056469117f9f57b216b9f5d09aabfbcaf0bad442c842eb2b141f6ec43df")
-            .unwrap(),
-        0,
-    )];
     let mut start_block = args.start_block;
 
-    for address in &addresses {
-        if address.1 < start_block {
-            start_block = address.1;
+    let mut config = if let Some(path) = args.config {
+        ToriiConfig::load_from_path(&path)?
+    } else {
+        ToriiConfig::default()
+    };
+
+    if let Some(erc_contracts) = args.erc_contracts {
+        config.erc_contracts = erc_contracts;
+    }
+
+    for address in &config.erc_contracts {
+        if address.start_block < start_block {
+            start_block = address.start_block;
         }
     }
 
@@ -215,7 +229,11 @@ async fn main() -> anyhow::Result<()> {
         },
         shutdown_tx.clone(),
         Some(block_tx),
-        addresses.iter().map(|(address, _)| *address).collect(),
+        config
+            .erc_contracts
+            .iter()
+            .map(|contract| (contract.contract_address, contract.clone()))
+            .collect(),
     );
 
     let shutdown_rx = shutdown_tx.subscribe();
@@ -309,4 +327,30 @@ async fn spawn_rebuilding_graphql_server(
             break;
         }
     }
+}
+
+// Parses clap cli argument which is expected to be in the format:
+// - erc_type:address:start_block
+// - address:start_block (erc_type defaults to ERC20)
+fn parse_erc_contracts(s: &str) -> anyhow::Result<Vec<ErcContract>> {
+    let parts: Vec<&str> = s.split(',').collect();
+    let mut contracts = Vec::new();
+    for part in parts {
+        match part.split(':').collect::<Vec<&str>>().as_slice() {
+            [r#type, address, start_block] => {
+                let contract_address = Felt::from_str(address).unwrap();
+                let start_block = start_block.parse::<u64>()?;
+                let r#type = r#type.parse::<ErcType>()?;
+                contracts.push(ErcContract { contract_address, start_block, r#type });
+            }
+            [address, start_block] => {
+                let contract_address = Felt::from_str(address)?;
+                let start_block = start_block.parse::<u64>()?;
+                let r#type = ErcType::default();
+                contracts.push(ErcContract { contract_address, start_block, r#type });
+            }
+            _ => return Err(anyhow::anyhow!("Invalid ERC contract format")),
+        }
+    }
+    Ok(contracts)
 }

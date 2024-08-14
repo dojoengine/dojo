@@ -37,6 +37,7 @@ thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
+toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

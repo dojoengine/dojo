@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::time::Duration;
 
@@ -19,6 +19,7 @@ use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
+use crate::types::ErcContract;
 #[allow(missing_debug_implementations)]
 pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
@@ -62,8 +63,8 @@ pub struct Engine<P: Provider + Sync> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
-    // ERC20 tokens to index
-    tokens: HashSet<Felt>,
+    // ERC tokens to index
+    tokens: HashMap<Felt, ErcContract>,
 }
 
 struct UnprocessedEvent {
@@ -80,7 +81,7 @@ impl<P: Provider + Sync> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
-        tokens: HashSet<Felt>,
+        tokens: HashMap<Felt, ErcContract>,
     ) -> Self {
         Self {
             world,
@@ -244,7 +245,7 @@ impl<P: Provider + Sync> Engine<P> {
             let events_filter = EventFilter {
                 from_block: Some(BlockId::Number(from)),
                 to_block: Some(BlockId::Number(to)),
-                address: Some(*token),
+                address: Some(*token.0),
                 keys: None,
             };
 
@@ -393,7 +394,7 @@ impl<P: Provider + Sync> Engine<P> {
             let mut world_event = false;
             for (event_idx, event) in events.iter().enumerate() {
                 if event.from_address != self.world.address
-                    && !self.tokens.contains(&event.from_address)
+                    && !self.tokens.contains_key(&event.from_address)
                 {
                     continue;
                 }
