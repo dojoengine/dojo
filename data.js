@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723516585424,
+  "lastUpdate": 1723658858716,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15601,6 +15601,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3953938,
             "range": "± 67872",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "corentin.cailleaud@caillef.com",
+            "name": "Corentin CAILLEAUD",
+            "username": "caillef"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5b3ae8a34ae2a72fca64707c494194bf6e132e01",
+          "message": "feat(torii): enable any build (not just wasm) to connect to Slot (#2147)\n\n* feature: add tls-roots and handle non root endpoint\r\n\r\n* fix: format typo\r\n\r\n* fix: condition to import Endpoint\r\n\r\n* fix: use previous Cargo.lock\r\n\r\n---------\r\n\r\nCo-authored-by: Corentin Cailleaud <corentin.cailleaud@epitech.eu>",
+          "timestamp": "2024-08-14T13:48:25-04:00",
+          "tree_id": "03b9decb56bf55b60c1d0ec6150370f1a0e20017",
+          "url": "https://github.com/dojoengine/dojo/commit/5b3ae8a34ae2a72fca64707c494194bf6e132e01"
+        },
+        "date": 1723658857716,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17007255,
+            "range": "± 260529",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3765703,
+            "range": "± 47346",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3876364404,
+            "range": "± 807674077",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3943655,
+            "range": "± 52427",
             "unit": "ns/iter"
           }
         ]
