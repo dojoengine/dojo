@@ -854,9 +854,9 @@ where
             calls.push(call);
 
             if was_upgraded {
-                ui.print_hidden_sub(format!("{} upgraded at {:#066x}", tag, contract_address));
+                ui.print_sub(format!("{} upgraded at {:#066x}", tag, contract_address));
             } else {
-                ui.print_hidden_sub(format!("{} deployed at {:#066x}", tag, contract_address));
+                ui.print_sub(format!("{} deployed at {:#066x}", tag, contract_address));
             }
 
             deploy_outputs.push(Some(ContractMigrationOutput {

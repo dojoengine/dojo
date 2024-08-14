@@ -172,7 +172,7 @@ pub mod bar {
 }
 
 pub fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world("dojo", array![])
+    spawn_test_world(["dojo"].span(), [].span())
 }
 
 pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {

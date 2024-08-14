@@ -40,7 +40,7 @@ pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -
     deploy_contract(class_hash, [world.contract_address.into()].span())
 }
 
-pub fn spawn_test_world(namespace: ByteArray, models: Array<felt252>) -> IWorldDispatcher {
+pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> IWorldDispatcher {
     let salt = core::testing::get_available_gas();
 
     // deploy world
@@ -55,7 +55,10 @@ pub fn spawn_test_world(namespace: ByteArray, models: Array<felt252>) -> IWorldD
     let world = IWorldDispatcher { contract_address: world_address };
 
     // register namespace
-    world.register_namespace(namespace);
+    let mut namespaces = namespaces;
+    while let Option::Some(namespace) = namespaces.pop_front() {
+        world.register_namespace(namespace.clone());
+    };
 
     // register models
     let mut index = 0;

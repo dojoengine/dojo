@@ -11,7 +11,7 @@ use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use scarb::core::Workspace;
 use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{Felt, InvokeTransactionResult};
+use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -100,13 +100,15 @@ async fn get_declarers_accounts<A: ConnectedAccount>(
                 Felt::from_hex(private_key).unwrap(),
             ));
 
-            let account = SingleOwnerAccount::new(
+            let mut account = SingleOwnerAccount::new(
                 provider,
                 signer,
                 Felt::from_hex(address).unwrap(),
                 chain_id,
                 ExecutionEncoding::New,
             );
+
+            account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
             declarers.push(account);
         }
