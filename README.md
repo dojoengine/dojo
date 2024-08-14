@@ -31,4 +31,4 @@ If you encounter issues or have questions, you can [submit an issue on GitHub](h
 
 Dojo core smart contracts have been audited:
 
-- Feb-24: [Nethermind Security](https://github.com/NethermindEth/PublicAuditReports/blob/main/NM0159-FINAL_DOJO.pdf)
+- Feb-07: [Nethermind Security](https://github.com/NethermindEth/PublicAuditReports/blob/main/NM0159-FINAL_DOJO.pdf)
