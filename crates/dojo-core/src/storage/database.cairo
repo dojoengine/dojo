@@ -39,7 +39,7 @@ fn fill_with_zeroes(ref values: Array<felt252>, size: u32) {
 /// # Returns
 ///   A [`Span<felt252>`] representing an internal storage key.
 fn get_storage_key(table: felt252, key: felt252) -> Span<felt252> {
-    array![DOJO_STORAGE, table, key].span()
+    [DOJO_STORAGE, table, key].span()
 }
 
 /// Read a record from a table, with its ID and layout.

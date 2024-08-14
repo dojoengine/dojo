@@ -18,8 +18,8 @@ fn test_database_basic() {
     values.append('database_test');
     values.append('42');
 
-    set('table', 'key', values.span(), 0, array![251, 251].span());
-    let res = get('table', 'key', array![251, 251].span());
+    set('table', 'key', values.span(), 0, [251, 251].span());
+    let res = get('table', 'key', [251, 251].span());
 
     assert(res.at(0) == values.at(0), 'Value at 0 not equal!');
     assert(res.at(1) == values.at(1), 'Value at 0 not equal!');
@@ -37,10 +37,10 @@ fn test_database_different_tables() {
     other.append(0x3);
     other.append(0x4);
 
-    set('first', 'key', values.span(), 0, array![251, 251].span());
-    set('second', 'key', other.span(), 0, array![251, 251].span());
-    let res = get('first', 'key', array![251, 251].span());
-    let other_res = get('second', 'key', array![251, 251].span());
+    set('first', 'key', values.span(), 0, [251, 251].span());
+    set('second', 'key', other.span(), 0, [251, 251].span());
+    let res = get('first', 'key', [251, 251].span());
+    let other_res = get('second', 'key', [251, 251].span());
 
     assert(res.len() == values.len(), 'Lengths not equal');
     assert(res.at(0) == values.at(0), 'Values different at `first`!');
@@ -59,10 +59,10 @@ fn test_database_different_keys() {
     other.append(0x3);
     other.append(0x4);
 
-    set('table', 'key', values.span(), 0, array![251, 251].span());
-    set('table', 'other', other.span(), 0, array![251, 251].span());
-    let res = get('table', 'key', array![251, 251].span());
-    let other_res = get('table', 'other', array![251, 251].span());
+    set('table', 'key', values.span(), 0, [251, 251].span());
+    set('table', 'other', other.span(), 0, [251, 251].span());
+    let res = get('table', 'key', [251, 251].span());
+    let other_res = get('table', 'other', [251, 251].span());
 
     assert(res.len() == values.len(), 'Lengths not equal');
     assert(res.at(0) == values.at(0), 'Values different at `key`!');

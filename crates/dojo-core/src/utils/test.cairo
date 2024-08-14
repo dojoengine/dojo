@@ -37,7 +37,7 @@ pub fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> Contract
 /// # Returns
 /// * address of contract deployed
 pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> ContractAddress {
-    deploy_contract(class_hash, array![world.contract_address.into()].span())
+    deploy_contract(class_hash, [world.contract_address.into()].span())
 }
 
 pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> IWorldDispatcher {
@@ -47,7 +47,7 @@ pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> I
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
         salt.into(),
-        array![base::TEST_CLASS_HASH].span(),
+        [base::TEST_CLASS_HASH].span(),
         false
     )
         .unwrap();

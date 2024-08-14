@@ -61,7 +61,7 @@ pub fn write_array_layout(
     let array_len: u32 = array_len.try_into().unwrap();
 
     // then, write the array size
-    database::set(model, key, values, offset, array![251].span());
+    database::set(model, key, values, offset, [251].span());
     offset += 1;
 
     // and then, write array items
@@ -172,7 +172,7 @@ pub fn write_enum_layout(
     assert(variant.into() < 256_u256, 'invalid variant value');
 
     // and write it
-    database::set(model, key, values, offset, array![251].span());
+    database::set(model, key, values, offset, [251].span());
     offset += 1;
 
     // find the corresponding layout and then write the full variant
@@ -201,7 +201,7 @@ pub fn delete_fixed_layout(model: felt252, key: felt252, layout: Span<u8>) {
 ///   * `key` - the model record key.
 pub fn delete_array_layout(model: felt252, key: felt252) {
     // just set the array length to 0
-    database::delete(model, key, array![251].span());
+    database::delete(model, key, [251].span());
 }
 
 ///
@@ -215,7 +215,7 @@ pub fn delete_byte_array_layout(model: felt252, key: felt252) {
     //
 
     // So, just set the 3 first values to 0 (len(data), pending_world and pending_word_len)
-    database::delete(model, key, array![251, 251, 251].span());
+    database::delete(model, key, [251, 251, 251].span());
 }
 
 /// Delete a model record from the world storage.
@@ -281,14 +281,14 @@ pub fn delete_tuple_layout(model: felt252, key: felt252, layout: Span<Layout>) {
 
 pub fn delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<FieldLayout>) {
     // read the variant value
-    let res = database::get(model, key, array![251].span());
+    let res = database::get(model, key, [251].span());
     assert(res.len() == 1, 'internal database error');
 
     let variant = *res.at(0);
     assert(variant.into() < 256_u256, 'invalid variant value');
 
     // reset the variant value
-    database::delete(model, key, array![251].span());
+    database::delete(model, key, [251].span());
 
     // find the corresponding layout and the delete the full variant
     let variant_data_key = combine_key(key, variant);
@@ -342,7 +342,7 @@ pub fn read_array_layout(
     model: felt252, key: felt252, ref read_data: Array<felt252>, layout: Span<Layout>
 ) {
     // read number of array items
-    let res = database::get(model, key, array![251].span());
+    let res = database::get(model, key, [251].span());
     assert(res.len() == 1, 'internal database error');
 
     let array_len = *res.at(0);
@@ -377,7 +377,7 @@ pub fn read_byte_array_layout(model: felt252, key: felt252, ref read_data: Array
     //
     // So, read the length of data and compute the full size to read
 
-    let res = database::get(model, key, array![251].span());
+    let res = database::get(model, key, [251].span());
     assert(res.len() == 1, 'internal database error');
 
     let data_len = *res.at(0);
@@ -445,7 +445,7 @@ pub fn read_enum_layout(
     model: felt252, key: felt252, ref read_data: Array<felt252>, variant_layouts: Span<FieldLayout>
 ) {
     // read the variant value first
-    let res = database::get(model, key, array![8].span());
+    let res = database::get(model, key, [8].span());
     assert(res.len() == 1, 'internal database error');
 
     let variant = *res.at(0);

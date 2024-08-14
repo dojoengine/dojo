@@ -14,7 +14,7 @@ fn test_storage() {
     values.append(0x1);
     values.append(0x2);
 
-    let layout = array![251, 251].span();
+    let layout = [251, 251].span();
 
     storage::set(0, keys.span(), *values.at(0));
     assert(storage::get(0, keys.span()) == *values.at(0), 'value not set');
@@ -30,13 +30,13 @@ fn test_storage() {
 fn test_storage_empty() {
     let mut keys = ArrayTrait::new();
     assert(storage::get(0, keys.span()) == 0x0, 'Value should be 0');
-    let many = storage::get_many(0, keys.span(), array![251, 251, 251].span()).unwrap();
+    let many = storage::get_many(0, keys.span(), [251, 251, 251].span()).unwrap();
     assert(many.len() == 0x3, 'Array should be len 3');
     assert((*many[0]) == 0x0, 'Array[0] should be 0');
     assert((*many[1]) == 0x0, 'Array[1] should be 0');
     assert((*many[2]) == 0x0, 'Array[2] should be 0');
 
-    let many = storage::get_many(0, keys.span(), array![8, 8, 32].span()).unwrap();
+    let many = storage::get_many(0, keys.span(), [8, 8, 32].span()).unwrap();
     assert(many.len() == 0x3, 'Array should be len 3');
     assert((*many[0]) == 0x0, 'Array[0] should be 0');
     assert((*many[1]) == 0x0, 'Array[1] should be 0');
@@ -55,8 +55,8 @@ fn test_storage_set_many() {
     values.append(0x3);
     values.append(0x4);
 
-    storage::set_many(0, keys.span(), values.span(), 0, array![251, 251, 251, 251].span()).unwrap();
-    let many = storage::get_many(0, keys.span(), array![251, 251, 251, 251].span()).unwrap();
+    storage::set_many(0, keys.span(), values.span(), 0, [251, 251, 251, 251].span()).unwrap();
+    let many = storage::get_many(0, keys.span(), [251, 251, 251, 251].span()).unwrap();
     assert(many.at(0) == values.at(0), 'Value at 0 not equal!');
     assert(many.at(1) == values.at(1), 'Value at 1 not equal!');
     assert(many.at(2) == values.at(2), 'Value at 2 not equal!');

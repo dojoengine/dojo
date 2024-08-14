@@ -175,7 +175,7 @@ pub fn get_packed_array(
     address_domain: u32, keys: Span<felt252>, array_size: u32
 ) -> SyscallResult<Span<felt252>> {
     if array_size == 0 {
-        return SyscallResult::<Span<felt252>>::Ok(array![].span());
+        return SyscallResult::<Span<felt252>>::Ok([].span());
     }
 
     let base = storage_base_address_from_felt252(poseidon_hash_span(keys));
@@ -221,6 +221,6 @@ pub fn get_packed_array(
 }
 
 fn chunk_segment_pointer(address: StorageAddress, chunk: felt252) -> StorageBaseAddress {
-    let p = poseidon_hash_span(array![address.into(), chunk, 'DojoStorageChunk'].span());
+    let p = poseidon_hash_span([address.into(), chunk, 'DojoStorageChunk'].span());
     storage_base_address_from_felt252(p)
 }

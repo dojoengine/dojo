@@ -52,7 +52,7 @@ pub mod upgradeable {
             assert(new_class_hash.is_non_zero(), Errors::INVALID_CLASS);
 
             match starknet::syscalls::library_call_syscall(
-                new_class_hash, selector!("world"), array![].span(),
+                new_class_hash, selector!("world"), [].span(),
             ) {
                 Result::Ok(_) => {
                     replace_class_syscall(new_class_hash).unwrap();
