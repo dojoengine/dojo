@@ -3,7 +3,7 @@ mod test {
     use std::error::Error;
 
     use crate::client::RelayClient;
-    use crate::server::parse_value_to_ty;
+    use crate::typed_data::parse_value_to_ty;
     use crate::typed_data::PrimitiveType;
 
     #[cfg(target_arch = "wasm32")]
