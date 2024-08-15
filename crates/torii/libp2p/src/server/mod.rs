@@ -24,7 +24,7 @@ use rand::thread_rng;
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use starknet_crypto::{poseidon_hash_many, verify};
+use starknet_crypto::poseidon_hash_many;
 use torii_core::sql::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
@@ -304,39 +304,24 @@ impl<P: Provider + Sync> Relay<P> {
                                     continue;
                                 };
 
-                            let public_key = match self
+                            let mut calldata = vec![message_hash];
+                            calldata.extend(data.signature);
+                            if !match self
                                 .provider
                                 .call(
                                     FunctionCall {
                                         contract_address: entity_identity,
                                         entry_point_selector: get_selector_from_name(
-                                            "getPublicKey",
+                                            "is_valid_signature",
                                         )
                                         .unwrap(),
-                                        calldata: vec![],
+                                        calldata,
                                     },
                                     BlockId::Tag(BlockTag::Pending),
                                 )
                                 .await
                             {
-                                Ok(res) => res[0],
-                                Err(e) => {
-                                    warn!(
-                                        target: LOG_TARGET,
-                                        error = %e,
-                                        "Fetching public key."
-                                    );
-                                    continue;
-                                }
-                            };
-
-                            if !match verify(
-                                &public_key,
-                                &message_hash,
-                                &data.signature_r,
-                                &data.signature_s,
-                            ) {
-                                Ok(valid) => valid,
+                                Ok(res) => res[0] != Felt::ZERO,
                                 Err(e) => {
                                     warn!(
                                         target: LOG_TARGET,

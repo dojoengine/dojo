@@ -433,8 +433,7 @@ mod test {
             .command_sender
             .publish(Message {
                 message: typed_data,
-                signature_r: signature.r,
-                signature_s: signature.s,
+                signature: vec![signature.r, signature.s],
             })
             .await?;
 
