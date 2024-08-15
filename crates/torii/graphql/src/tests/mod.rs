@@ -344,7 +344,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let world = WorldContractReader::new(strat.world_address, account.provider());
 
-    let db = Sql::new(pool.clone(), strat.world_address, Felt::ZERO).await.unwrap();
+    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(

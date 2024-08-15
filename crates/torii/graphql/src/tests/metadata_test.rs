@@ -48,7 +48,7 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_metadata(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO, Felt::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         let cover_img = "QWxsIHlvdXIgYmFzZSBiZWxvbmcgdG8gdXM=";
@@ -100,7 +100,7 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     async fn test_empty_content(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), Felt::ZERO, Felt::ZERO).await.unwrap();
+        let mut db = Sql::new(pool.clone(), Felt::ZERO).await.unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);
