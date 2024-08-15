@@ -309,24 +309,52 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn delete_entity(&mut self, entity_id: Felt, entity: Ty) -> Result<()> {
+    pub async fn delete_entity(
+        &mut self,
+        entity_id: Felt,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
         let path = vec![entity.name()];
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
 
-        // delete entity
-        let mut entity_deleted =
-            sqlx::query_as::<_, EntityUpdated>("DELETE FROM entities WHERE id = ? RETURNING *")
-                .bind(entity_id)
+        let models = sqlx::query_scalar::<_, String>(
+            "SELECT group_concat(entity_model.model_id) as model_ids
+            FROM entities
+            JOIN entity_model ON entities.id = entity_model.entity_id WHERE entities.id = ?",
+        )
+        .bind(&entity_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
+            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
+             = ? RETURNING *",
+        )
+        .bind(utc_dt_string_from_timestamp(block_timestamp))
+        .bind(event_id)
+        .bind(&entity_id)
+        .fetch_one(&self.pool)
+        .await?;
+        update_entity.updated_model = Some(entity.clone());
+
+        let models = models.split(',').collect::<Vec<&str>>();
+
+        if models.len() == 0 {
+            // delete entity
+            sqlx::query("DELETE FROM entities WHERE id = ?")
+                .bind(&entity_id)
                 .fetch_one(&self.pool)
                 .await?;
 
-        entity_deleted.updated_model = Some(entity.clone());
-        entity_deleted.deleted = true;
+            update_entity.deleted = true;
+        }
 
-        SimpleBroker::publish(entity_deleted);
+        SimpleBroker::publish(update_entity);
         Ok(())
     }
 

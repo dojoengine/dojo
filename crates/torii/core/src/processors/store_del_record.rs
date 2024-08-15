@@ -42,9 +42,9 @@ where
         _world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
-        _block_timestamp: u64,
+        block_timestamp: u64,
         _transaction_receipt: &TransactionReceiptWithBlockInfo,
-        _event_id: &str,
+        event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
         let selector = event.data[MODEL_INDEX];
@@ -60,7 +60,7 @@ where
         let entity_id = event.data[ENTITY_ID_INDEX];
         let entity = model.schema().await?;
 
-        db.delete_entity(entity_id, entity).await?;
+        db.delete_entity(entity_id, entity, event_id, block_timestamp).await?;
 
         Ok(())
     }
