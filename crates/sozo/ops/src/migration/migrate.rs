@@ -701,7 +701,7 @@ where
         let tag = &contract.diff.tag;
         ui.print(italic_message(tag).to_string());
 
-        if let Ok((call, was_upgraded)) = contract
+        if let Ok((call, contract_address, was_upgraded)) = contract
             .deploy_dojo_contract_call(
                 world_address,
                 contract.diff.local_class_hash,
@@ -711,7 +711,6 @@ where
             )
             .await
         {
-            let contract_address = call.to;
             let base_class_hash = contract.diff.base_class_hash;
 
             calls.push(call);
@@ -829,7 +828,7 @@ where
         let tag = &contract.diff.tag;
         ui.print(italic_message(tag).to_string());
 
-        if let Ok((call, was_upgraded)) = contract
+        if let Ok((call, contract_address, was_upgraded)) = contract
             .deploy_dojo_contract_call(
                 world_address,
                 contract.diff.local_class_hash,
@@ -839,7 +838,6 @@ where
             )
             .await
         {
-            let contract_address = call.to;
             let base_class_hash = contract.diff.base_class_hash;
 
             calls.push(call);
