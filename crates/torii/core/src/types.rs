@@ -42,6 +42,7 @@ pub struct Entity {
     // this should never be None
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
+    #[sqlx(skip)]
     pub deleted: bool,
 }
 
