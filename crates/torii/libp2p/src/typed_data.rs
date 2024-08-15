@@ -33,7 +33,7 @@ pub enum Field {
     SimpleType(SimpleField),
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum PrimitiveType {
     // All of object types. Including preset types
