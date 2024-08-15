@@ -3,8 +3,7 @@ mod test {
     use std::error::Error;
 
     use crate::client::RelayClient;
-    use crate::typed_data::parse_value_to_ty;
-    use crate::typed_data::PrimitiveType;
+    use crate::typed_data::{parse_value_to_ty, PrimitiveType};
 
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
