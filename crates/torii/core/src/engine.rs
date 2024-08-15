@@ -94,6 +94,7 @@ impl<P: Provider + Sync> Engine<P> {
 
         let mut shutdown_rx = self.shutdown_tx.subscribe();
 
+        let mut erroring_out = false;
         loop {
             tokio::select! {
                 _ = shutdown_rx.recv() => {
@@ -102,11 +103,17 @@ impl<P: Provider + Sync> Engine<P> {
                 _ = async {
                     match self.sync_to_head(head, pending_block_tx).await {
                         Ok((latest_block_number, latest_pending_tx)) => {
+                            if erroring_out {
+                                erroring_out = false;
+                                backoff_delay = Duration::from_secs(1);
+                                info!(target: LOG_TARGET, latest_block_number = latest_block_number, "Syncing reestablished.");
+                            }
+
                             pending_block_tx = latest_pending_tx;
                             head = latest_block_number;
-                            backoff_delay = Duration::from_secs(1);
                         }
                         Err(e) => {
+                            erroring_out = true;
                             error!(target: LOG_TARGET, error = %e, "Syncing to head.");
                             sleep(backoff_delay).await;
                             if backoff_delay < max_backoff_delay {
