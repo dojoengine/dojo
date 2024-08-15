@@ -19,8 +19,6 @@ use tracing::{error, info, trace, warn};
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
 
-type HasWorldEvent = bool;
-
 #[allow(missing_debug_implementations)]
 pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
@@ -309,16 +307,6 @@ impl<P: Provider + Sync> Engine<P> {
             }
         }
 
-        // Process blocks
-        // for (block_number, block_timestamp) in blocks.iter() {
-        //     if let Some(ref block_tx) = self.block_tx {
-        //         block_tx.send(*block_number).await?;
-        //     }
-
-        //     self.process_block(*block_number, *block_timestamp).await?;
-        //
-        // }
-
         // Process all transactions
         let mut last_block = 0;
         for (block_number, transaction_hash) in transactions {
@@ -364,13 +352,15 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
+    // Process a transaction and its receipt.
+    // Returns whether the transaction has a world event.
     async fn process_transaction_and_receipt(
         &mut self,
         transaction_hash: Felt,
         transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
-    ) -> Result<HasWorldEvent> {
+    ) -> Result<bool> {
         let receipt = self.provider.get_transaction_receipt(transaction_hash).await?;
         let events = match &receipt.receipt {
             TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
