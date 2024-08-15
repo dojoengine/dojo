@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
 use cainome::cairo_serde::ByteArray;
+use crypto_bigint::Encoding;
+use dojo_types::primitive::Primitive;
+use dojo_types::schema::Ty;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
@@ -43,6 +46,191 @@ pub enum PrimitiveType {
     // For JSON numbers. Formed into a Felt
     Number(Number),
 }
+
+pub fn map_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
+    match ty {
+        Ty::Struct(struct_) => {
+            let mut object = IndexMap::new();
+            for member in &struct_.children {
+                object.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
+            }
+            Ok(PrimitiveType::Object(object))
+        }
+        Ty::Enum(enum_) => {
+            let mut object = IndexMap::new();
+            let option = enum_.option.map_or(Err(Error::InvalidMessageError("Enum option not found".to_string())), Ok)?;
+            let option = enum_.options.get(option as usize).map_or(Err(Error::InvalidMessageError("Enum option not found".to_string())), Ok)?;
+            object.insert(option.name.clone(), map_ty_to_primitive(&option.ty)?);
+            Ok(PrimitiveType::Object(object))
+        }
+        Ty::Array(array) => {
+            let values: Result<Vec<PrimitiveType>, Error> = array.iter().map(map_ty_to_primitive).collect();
+            Ok(PrimitiveType::Array(values?))
+        }
+        Ty::Tuple(tuple) => {
+            let values: Result<Vec<PrimitiveType>, Error> = tuple.iter().map(map_ty_to_primitive).collect();
+            Ok(PrimitiveType::Array(values?))
+        }
+        Ty::Primitive(primitive) => match primitive {
+            Primitive::Bool(b) => Ok(PrimitiveType::Bool(b.unwrap_or(false))),
+            Primitive::I8(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
+            Primitive::I16(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
+            Primitive::I32(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
+            Primitive::I64(n) => Ok(PrimitiveType::String((n.unwrap_or(0)).to_string())),
+            Primitive::I128(n) => Ok(PrimitiveType::String((n.unwrap_or(0)).to_string())),
+            Primitive::U8(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
+            Primitive::U16(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
+            Primitive::U32(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
+            Primitive::U64(n) => Ok(PrimitiveType::String((n.unwrap_or(0)).to_string())),
+            Primitive::U128(n) => Ok(PrimitiveType::String((n.unwrap_or(0)).to_string())),
+            Primitive::USize(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
+            Primitive::Felt252(f) => Ok(PrimitiveType::String((f.unwrap_or(Felt::ZERO)).to_string())),
+            Primitive::ClassHash(c) => Ok(PrimitiveType::String((c.unwrap_or(Felt::ZERO)).to_string())),
+            Primitive::ContractAddress(c) => Ok(PrimitiveType::String((c.unwrap_or(Felt::ZERO)).to_string())),
+            Primitive::U256(u256) => {
+                let mut object = IndexMap::new();
+                let bytes = u256.map_or([0u8; 32], |u256| u256.to_be_bytes());
+                let high = u128::from_be_bytes(bytes[..16].try_into().unwrap());
+                let low = u128::from_be_bytes(bytes[16..].try_into().unwrap());
+                object.insert("high".to_string(), PrimitiveType::String(high.to_string()));
+                object.insert("low".to_string(), PrimitiveType::String(low.to_string()));
+                Ok(PrimitiveType::Object(object))
+            }
+        },
+        Ty::ByteArray(s) => Ok(PrimitiveType::String(s.clone())),
+    }
+}
+
+fn map_ty_type(types: &mut IndexMap<String, Vec<Field>>, name: &str, ty: Ty) -> Field {
+    match ty {
+        Ty::Primitive(primitive) => match primitive {
+            // map all signed integers to i128
+            Primitive::I8(_)
+            | Primitive::I16(_)
+            | Primitive::I32(_)
+            | Primitive::I64(_)
+            | Primitive::I128(_) => {
+                Field::SimpleType(SimpleField {
+                        name: name.to_string(),
+                        r#type: "i128".to_string(),
+                    })
+            }
+            Primitive::U8(_)
+            | Primitive::U16(_)
+            | Primitive::U32(_)
+            | Primitive::U64(_)
+            | Primitive::USize(_)
+            | Primitive::U128(_) => {
+                Field::SimpleType(SimpleField {
+                        name: name.to_string(),
+                        r#type: "u128".to_string(),
+                    })
+            }
+            Primitive::U256(_) => {
+                Field::SimpleType(SimpleField {
+                        name: name.to_string(),
+                        r#type: "u256".to_string(),
+                    })
+            }
+            Primitive::Bool(_) => {
+                Field::SimpleType(SimpleField {
+                        name: name.to_string(),
+                        r#type: "bool".to_string(),
+                    })
+            }
+            Primitive::Felt252(_) => {
+                Field::SimpleType(SimpleField {
+                        name: name.to_string(),
+                        r#type: "felt".to_string(),
+                    })
+            }
+            Primitive::ClassHash(_) => {
+                Field::SimpleType(SimpleField {
+                        name: name.to_string(),
+                        r#type: "ClassHash".to_string(),
+                    })
+            }
+            Primitive::ContractAddress(_) => {
+                Field::SimpleType(SimpleField {
+                        name: name.to_string(),
+                        r#type: "ContractAddress".to_string(),
+                    })
+            }
+        }
+        Ty::Array(array) => {
+            // if array is empty, we fallback to felt
+            let array_type = if let Some(inner) = array.get(0) {
+                map_ty_type(types, "inner", inner.clone())
+            } else {
+                return Field::SimpleType(SimpleField {
+                    name: name.to_string(),
+                    r#type: "felt".to_string(),
+                });
+            };
+
+            Field::SimpleType(SimpleField {
+                name: name.to_string(),
+                r#type: format!("{}*", match array_type {
+                    Field::SimpleType(simple_field) => simple_field.r#type,
+                    Field::ParentType(parent_field) => parent_field.r#type,
+                }),
+            })
+        }
+        Ty::Struct(struct_ty) => {
+            let mut fields = Vec::new();
+            for member in struct_ty.children.iter() {
+                let field = map_ty_type(types, &member.name, member.ty.clone());
+                fields.push(field);
+            }
+
+            types.insert(struct_ty.name.clone(), fields);
+
+            Field::SimpleType(SimpleField {
+                name: name.to_string(),
+                r#type: struct_ty.name,
+            })
+        }
+        Ty::Enum(enum_ty) => {
+            let mut fields = Vec::new();
+            for option in enum_ty.options.iter() {
+                let field = map_ty_type(types, &option.name, option.ty.clone());
+                fields.push(field);
+            }
+
+            types.insert(enum_ty.name.clone(), fields);
+
+            Field::ParentType(ParentField {
+                name: name.to_string(),
+                r#type: "enum".to_string(),
+                contains: enum_ty.name,
+            })
+        }
+        Ty::Tuple(tuple_ty) => {
+            Field::SimpleType(SimpleField {
+                name: name.to_string(),
+                r#type: format!(
+                    "({})",
+                    tuple_ty
+                        .iter()
+                        .map(|ty| match map_ty_type(types, "inner", ty.clone()) {
+                            Field::SimpleType(simple_field) => simple_field.r#type,
+                            Field::ParentType(parent_field) => parent_field.r#type,
+                        })
+                        .collect::<Vec<String>>()
+                        .join(",")
+                ),
+            })
+        }
+        Ty::ByteArray(_) => {
+            Field::SimpleType(SimpleField {
+                name: name.to_string(),
+                r#type: "string".to_string(),
+            })
+        }
+    }
+}
+
+
 
 fn get_preset_types() -> IndexMap<String, Vec<Field>> {
     let mut types = IndexMap::new();
@@ -428,6 +616,32 @@ impl TypedData {
         message: IndexMap<String, PrimitiveType>,
     ) -> Self {
         Self { types, primary_type: primary_type.to_string(), domain, message }
+    }
+
+    pub fn from_model(
+        model: Ty,
+        domain: Domain,
+    ) -> Result<Self, Error> {
+        let model = model.as_struct().expect("Model must be a struct");
+        let mut types = IndexMap::new();
+        let mut values = IndexMap::new();
+        values.insert("model".to_string(), PrimitiveType::String(model.name.clone()));
+        
+        let mut model_values = IndexMap::new();
+
+
+        let mut fields = Vec::new();
+        for member in model.children.iter() {
+            let field = map_ty_type(&mut types, &member.name, member.ty.clone());
+            fields.push(field);
+
+            model_values.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
+        }
+
+        types.insert(model.name.clone(), fields);
+        values.insert(model.name.clone(), PrimitiveType::Object(model_values));
+
+        Ok(Self::new(types, model.name.as_str(), domain, values))
     }
 
     pub fn encode(&self, account: Felt) -> Result<Felt, Error> {
