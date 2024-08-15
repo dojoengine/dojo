@@ -6,7 +6,7 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::naming::compute_selector_from_names;
+use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Row, Sqlite};
@@ -322,14 +322,11 @@ impl Sql {
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
 
-        let models = sqlx::query_scalar::<_, String>(
-            "SELECT group_concat(entity_model.model_id) as model_ids
-            FROM entities
-            JOIN entity_model ON entities.id = entity_model.entity_id WHERE entities.id = ?",
-        )
-        .bind(&entity_id)
-        .fetch_one(&self.pool)
-        .await?;
+        sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
+            .bind(&entity_id)
+            .bind(format!("{:#x}", compute_selector_from_tag(&entity.name())))
+            .fetch_one(&self.pool)
+            .await?;
 
         let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
             "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
@@ -342,9 +339,14 @@ impl Sql {
         .await?;
         update_entity.updated_model = Some(entity.clone());
 
-        let models = models.split(',').collect::<Vec<&str>>();
+        let models_count = sqlx::query_scalar::<_, u32>(
+            "SELECT count(*) FROM entity_model WHERE entity_id = ?",
+        )
+        .bind(&entity_id)
+        .fetch_one(&self.pool)
+        .await?;
 
-        if models.is_empty() {
+        if models_count == 0 {
             // delete entity
             sqlx::query("DELETE FROM entities WHERE id = ?")
                 .bind(&entity_id)
@@ -747,7 +749,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
