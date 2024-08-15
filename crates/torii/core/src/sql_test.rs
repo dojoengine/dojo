@@ -12,7 +12,7 @@ use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call, ConnectedAccount};
-use starknet::core::types::{BlockId, BlockTag, Felt};
+use starknet::core::types::Felt;
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
@@ -117,17 +117,7 @@ async fn test_load_from_remote() {
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
-    let mut db = Sql::new(
-        pool.clone(),
-        world_reader.address,
-        account
-            .provider()
-            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_reader.address)
-            .await
-            .unwrap(),
-    )
-    .await
-    .unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
 
@@ -286,17 +276,7 @@ async fn test_load_from_remote_del() {
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
-    let mut db = Sql::new(
-        pool.clone(),
-        world_reader.address,
-        account
-            .provider()
-            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_reader.address)
-            .await
-            .unwrap(),
-    )
-    .await
-    .unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
 
@@ -372,17 +352,7 @@ async fn test_get_entity_keys() {
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
-    let mut db = Sql::new(
-        pool.clone(),
-        world_reader.address,
-        account
-            .provider()
-            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_reader.address)
-            .await
-            .unwrap(),
-    )
-    .await
-    .unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
 
