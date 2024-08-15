@@ -6,8 +6,6 @@ import "schema.proto";
 message WorldMetadata {
     // The hex-encoded address of the world.
     string world_address = 1;
-    // The hex-encoded class hash of the world.
-    string world_class_hash = 2;
     // A list of metadata for all registered components in the world. 
     repeated ModelMetadata models = 5;
 }
