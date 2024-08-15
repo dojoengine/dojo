@@ -325,7 +325,7 @@ impl Sql {
         sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
             .bind(&entity_id)
             .bind(format!("{:#x}", compute_selector_from_tag(&entity.name())))
-            .fetch_one(&self.pool)
+            .execute(&self.pool)
             .await?;
 
         let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
@@ -339,18 +339,17 @@ impl Sql {
         .await?;
         update_entity.updated_model = Some(entity.clone());
 
-        let models_count = sqlx::query_scalar::<_, u32>(
-            "SELECT count(*) FROM entity_model WHERE entity_id = ?",
-        )
-        .bind(&entity_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let models_count =
+            sqlx::query_scalar::<_, u32>("SELECT count(*) FROM entity_model WHERE entity_id = ?")
+                .bind(&entity_id)
+                .fetch_one(&self.pool)
+                .await?;
 
         if models_count == 0 {
             // delete entity
             sqlx::query("DELETE FROM entities WHERE id = ?")
                 .bind(&entity_id)
-                .fetch_one(&self.pool)
+                .execute(&self.pool)
                 .await?;
 
             update_entity.deleted = true;
@@ -749,11 +748,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return;

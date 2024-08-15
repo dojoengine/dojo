@@ -219,7 +219,7 @@ async fn test_load_from_remote_del() {
     .unwrap();
     let actions = strat.contracts.first().unwrap();
     let actions_address = get_contract_address(
-        actions.salt, 
+        actions.salt,
         strat.base.as_ref().unwrap().diff.local_class_hash,
         &[],
         strat.world_address,
