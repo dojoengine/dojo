@@ -344,7 +344,7 @@ impl Sql {
 
         let models = models.split(',').collect::<Vec<&str>>();
 
-        if models.len() == 0 {
+        if models.is_empty() {
             // delete entity
             sqlx::query("DELETE FROM entities WHERE id = ?")
                 .bind(&entity_id)
