@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723728166045,
+  "lastUpdate": 1723728390416,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15841,6 +15841,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4115579,
             "range": "± 202729",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c5c277ec42c1f43287afccf20c7fc621c8431e4e",
+          "message": "refactor(torii): include model in entity deletion for filter & update member broadcast (#2299)\n\n* refactor(torii): include model in entity deletion for filter & broadcast model member update\r\n\r\n* chore: skip deleted",
+          "timestamp": "2024-08-15T09:07:07-04:00",
+          "tree_id": "296593ea7a46d40909f5778d9ec2ee1e0c3ad001",
+          "url": "https://github.com/dojoengine/dojo/commit/c5c277ec42c1f43287afccf20c7fc621c8431e4e"
+        },
+        "date": 1723728388983,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17111257,
+            "range": "± 326648",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3767815,
+            "range": "± 78332",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3742691829,
+            "range": "± 724923068",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4056271,
+            "range": "± 390573",
             "unit": "ns/iter"
           }
         ]
