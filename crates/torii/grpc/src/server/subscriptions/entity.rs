@@ -188,7 +188,7 @@ impl Service {
                 continue;
             }
 
-            if entity.updated_model.is_none() {
+            if entity.deleted {
                 let resp = proto::world::SubscribeEntityResponse {
                     entity: Some(proto::types::Entity {
                         hashed_keys: hashed.to_bytes_be().to_vec(),
