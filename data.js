@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723728390416,
+  "lastUpdate": 1723728775910,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15889,6 +15889,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4056271,
             "range": "± 390573",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "19207e26fdb6c101d1431a7b690641e091b367fa",
+          "message": "feat(torii-core): log when engine syncing has been reestablished (#2301)\n\nfeat: log when syncing has been reestablished",
+          "timestamp": "2024-08-15T09:13:44-04:00",
+          "tree_id": "d80486fbfa841fe94832375f43e5237855f94415",
+          "url": "https://github.com/dojoengine/dojo/commit/19207e26fdb6c101d1431a7b690641e091b367fa"
+        },
+        "date": 1723728775054,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17401682,
+            "range": "± 140899",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3754710,
+            "range": "± 70257",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3747475244,
+            "range": "± 776456848",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3904115,
+            "range": "± 43601",
             "unit": "ns/iter"
           }
         ]
