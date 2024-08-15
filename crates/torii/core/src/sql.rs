@@ -238,8 +238,8 @@ impl Sql {
         let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               updated_at=CURRENT_TIMESTAMP, event_id=EXCLUDED.event_id RETURNING \
-                               *";
+                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+                               event_id=EXCLUDED.event_id RETURNING *";
         let mut event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
@@ -292,6 +292,20 @@ impl Sql {
         );
         self.query_queue.execute_all().await?;
 
+        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
+            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
+             = ? RETURNING *",
+        )
+        .bind(utc_dt_string_from_timestamp(block_timestamp))
+        .bind(event_id)
+        .bind(entity_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        update_entity.updated_model = Some(wrapped_ty);
+
+        SimpleBroker::publish(update_entity);
+
         Ok(())
     }
 
@@ -303,11 +317,14 @@ impl Sql {
         self.query_queue.execute_all().await?;
 
         // delete entity
-        let entity_deleted =
+        let mut entity_deleted =
             sqlx::query_as::<_, EntityUpdated>("DELETE FROM entities WHERE id = ? RETURNING *")
                 .bind(entity_id)
                 .fetch_one(&self.pool)
                 .await?;
+
+        entity_deleted.updated_model = Some(entity.clone());
+        entity_deleted.deleted = true;
 
         SimpleBroker::publish(entity_deleted);
         Ok(())
