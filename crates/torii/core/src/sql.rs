@@ -322,15 +322,16 @@ impl Sql {
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
 
-        let deleted_entity_model = sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
-            .bind(&entity_id)
-            .bind(format!("{:#x}", compute_selector_from_tag(&entity.name())))
-            .execute(&self.pool)
-            .await?;
+        let deleted_entity_model =
+            sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
+                .bind(&entity_id)
+                .bind(format!("{:#x}", compute_selector_from_tag(&entity.name())))
+                .execute(&self.pool)
+                .await?;
         if deleted_entity_model.rows_affected() == 0 {
             // fail silently. we have no entity-model relation to delete.
-            // this can happen if a entity model that doesnt exist 
-            // got deleted 
+            // this can happen if a entity model that doesnt exist
+            // got deleted
             return Ok(());
         }
 
