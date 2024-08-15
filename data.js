@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723675641007,
+  "lastUpdate": 1723728166045,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -15793,6 +15793,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3931893,
             "range": "± 34105",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f0b43a6b091f5392816911f664532aa0e5f4bc58",
+          "message": "refactor(torii): get rid of world class hash (#2298)",
+          "timestamp": "2024-08-15T09:03:24-04:00",
+          "tree_id": "d6a7db2b92951dcabe3e7b7d6d1f0ef537a38445",
+          "url": "https://github.com/dojoengine/dojo/commit/f0b43a6b091f5392816911f664532aa0e5f4bc58"
+        },
+        "date": 1723728165021,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17067643,
+            "range": "± 286283",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3750800,
+            "range": "± 63038",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3691156770,
+            "range": "± 839484486",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4115579,
+            "range": "± 202729",
             "unit": "ns/iter"
           }
         ]
