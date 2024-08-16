@@ -657,11 +657,11 @@ pub fn map_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
             let mut object = IndexMap::new();
             let option = enum_
                 .option
-                .map_or(Err(Error::InvalidMessageError("Enum option not found".to_string())), Ok)?;
+                .ok_or(Error::InvalidMessageError("Enum option not found".to_string()))?;
             let option = enum_
                 .options
                 .get(option as usize)
-                .map_or(Err(Error::InvalidMessageError("Enum option not found".to_string())), Ok)?;
+                .ok_or(Error::InvalidMessageError("Enum option not found".to_string()))?;
             object.insert(option.name.clone(), map_ty_to_primitive(&option.ty)?);
             Ok(PrimitiveType::Object(object))
         }
@@ -755,7 +755,7 @@ fn map_ty_type(types: &mut IndexMap<String, Vec<Field>>, name: &str, ty: Ty) -> 
         },
         Ty::Array(array) => {
             // if array is empty, we fallback to felt
-            let array_type = if let Some(inner) = array.get(0) {
+            let array_type = if let Some(inner) = array.first() {
                 map_ty_type(types, "inner", inner.clone())
             } else {
                 return Field::SimpleType(SimpleField {
