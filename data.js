@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723817091028,
+  "lastUpdate": 1723823657362,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -16177,6 +16177,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4009800,
             "range": "± 183598",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c1ebf1b86e809294dbacfc40cc651c84bc8dcf95",
+          "message": "feat(dojo-lang): add systems to contract's manifest and fix `DojoAuxData` gathering (#2309)\n\n* fix: ensure contract address for deployed contract is correct\r\n\r\n* fix: fix compiler aux data to correctly fill dojo contract data\r\n\r\n* fix: remove prints",
+          "timestamp": "2024-08-16T11:34:55-04:00",
+          "tree_id": "b38176655048ddf94432637e473ff054cb7d9b99",
+          "url": "https://github.com/dojoengine/dojo/commit/c1ebf1b86e809294dbacfc40cc651c84bc8dcf95"
+        },
+        "date": 1723823656329,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17653571,
+            "range": "± 214162",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3773665,
+            "range": "± 95428",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3922290799,
+            "range": "± 849954348",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3946190,
+            "range": "± 131724",
             "unit": "ns/iter"
           }
         ]
