@@ -47,6 +47,8 @@ pub struct KatanaRunnerConfig {
     pub messaging: Option<String>,
     /// The path to the database dir.
     pub db_dir: Option<PathBuf>,
+    /// Whether to run the katana runner with the `dev` rpc endpoints.
+    pub dev: bool,
 }
 
 impl Default for KatanaRunnerConfig {
@@ -61,6 +63,7 @@ impl Default for KatanaRunnerConfig {
             log_path: None,
             messaging: None,
             db_dir: None,
+            dev: false,
         }
     }
 }
@@ -99,6 +102,7 @@ impl KatanaRunner {
             .accounts(n_accounts)
             .json_log(true)
             .max_connections(10000)
+            .dev(config.dev)
             .fee(!config.disable_fee);
 
         if let Some(block_time_ms) = config.block_time {

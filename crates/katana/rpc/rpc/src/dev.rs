@@ -6,6 +6,7 @@ use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, Pen
 use katana_executor::ExecutorFactory;
 use katana_primitives::FieldElement;
 use katana_rpc_api::dev::DevApiServer;
+use katana_rpc_types::account::Account;
 use katana_rpc_types::error::dev::DevApiError;
 
 #[allow(missing_debug_implementations)]
@@ -89,5 +90,10 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
         //     .await
         //     .map_err(|_| Error::from(KatanaApiError::FailedToUpdateStorage))
         Ok(())
+    }
+
+    #[allow(deprecated)]
+    async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
+        Ok(self.backend.config.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
     }
 }
