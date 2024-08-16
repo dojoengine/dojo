@@ -7,4 +7,5 @@ reads = []
 writes = []
 init_calldata = []
 tag = "dojo_examples-others"
+systems = []
 manifest_name = "dojo_examples-others-61de2c18"

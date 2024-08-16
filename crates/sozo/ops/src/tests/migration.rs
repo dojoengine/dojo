@@ -38,9 +38,12 @@ async fn default_migrate_no_dry_run() {
     let config = setup::load_config();
     let ws = setup::setup_ws(&config);
 
-    let sequencer =
-        KatanaRunner::new_with_config(KatanaRunnerConfig { n_accounts: 10, ..Default::default() })
-            .expect("Fail to start runner");
+    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
+        n_accounts: 10,
+        dev: true,
+        ..Default::default()
+    })
+    .expect("Fail to start runner");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));

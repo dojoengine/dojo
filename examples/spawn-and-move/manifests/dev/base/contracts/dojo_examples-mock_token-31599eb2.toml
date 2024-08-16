@@ -7,4 +7,5 @@ reads = []
 writes = []
 init_calldata = []
 tag = "dojo_examples-mock_token"
+systems = []
 manifest_name = "dojo_examples-mock_token-31599eb2"
