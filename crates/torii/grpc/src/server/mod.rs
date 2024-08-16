@@ -131,8 +131,8 @@ impl DojoWorld {
 
 impl DojoWorld {
     pub async fn metadata(&self) -> Result<proto::types::WorldMetadata, Error> {
-        let (world_address, world_class_hash): (String, String) = sqlx::query_as(&format!(
-            "SELECT world_address, world_class_hash FROM worlds WHERE id = '{:#x}'",
+        let world_address = sqlx::query_scalar(&format!(
+            "SELECT world_address FROM worlds WHERE id = '{:#x}'",
             self.world_address
         ))
         .fetch_one(&self.pool)
@@ -175,7 +175,7 @@ impl DojoWorld {
             });
         }
 
-        Ok(proto::types::WorldMetadata { world_address, world_class_hash, models: models_metadata })
+        Ok(proto::types::WorldMetadata { world_address, models: models_metadata })
     }
 
     async fn entities_all(
