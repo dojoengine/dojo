@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1723814408543,
+  "lastUpdate": 1723814590804,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -16081,6 +16081,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3936513,
             "range": "± 29109",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "59fa4c89231447fa83734078716198da093a1a95",
+          "message": "refactor(torii): entity deletion logic for models (#2306)\n\n* refactor(torii): entity deletion logic for models\r\n\r\n* chore: clippy\r\n\r\n* refactor(torii): delete entity model relation\r\n\r\n* fix(torii): entity modelr relation deletion\r\n\r\n* refactor(torii): dont update entity / broadcast if deleted model does not exist for entity\r\n\r\n* fmt",
+          "timestamp": "2024-08-16T09:03:46-04:00",
+          "tree_id": "bb164b4a6d84f715c913bb0bccbd1cd7f8a56232",
+          "url": "https://github.com/dojoengine/dojo/commit/59fa4c89231447fa83734078716198da093a1a95"
+        },
+        "date": 1723814589867,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17051007,
+            "range": "± 206070",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3765785,
+            "range": "± 146434",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3898294944,
+            "range": "± 773879239",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3906026,
+            "range": "± 119945",
             "unit": "ns/iter"
           }
         ]
