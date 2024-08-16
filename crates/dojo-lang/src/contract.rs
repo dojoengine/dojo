@@ -521,7 +521,6 @@ impl DojoContract {
         let return_type =
             fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
 
-        println!("return_type: {:?} for func {:?}", return_type, fn_name);
         // Consider the function as a system if no return type is specified.
         if return_type.is_empty() {
             self.systems.push(fn_name.to_string());

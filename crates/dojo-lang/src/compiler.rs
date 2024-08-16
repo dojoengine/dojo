@@ -133,7 +133,6 @@ impl Compiler for DojoCompiler {
             // the `full_path()` method of StructId uses the original struct name case.
             // (see in `get_dojo_model_artifacts`)
             let qualified_path = decl.module_id().full_path(db.upcast_mut());
-            println!("Decl qualified path: {:?}", qualified_path);
 
             let class_hash = compute_class_hash_of_contract_class(&class).with_context(|| {
                 format!("problem computing class hash for contract `{}`", qualified_path.clone())
@@ -475,15 +474,9 @@ fn get_dojo_contract_artifacts(
         let contract_qualified_path =
             format!("{}{}{}", module_id.full_path(db), CAIRO_PATH_SEPARATOR, contract_name);
 
-        println!("qualified_path: {:?}", contract_qualified_path);
-        println!("tag: {:?}", tag);
-        println!("compiled_classes: {:?}", compiled_classes.keys());
-        println!("systems: {:?}", systems);
-
         if let Some((class_hash, class)) =
             compiled_classes.get(&contract_qualified_path.to_string())
         {
-            println!("contract's systems <<<<<< : {:?}", systems);
             let manifest = Manifest::new(
                 DojoContract {
                     tag: tag.to_string(),

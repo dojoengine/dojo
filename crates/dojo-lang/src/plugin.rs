@@ -98,7 +98,6 @@ impl BuiltinDojoPlugin {
         metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
-            println!("module_ast: {:?}", module_ast.as_syntax_node().get_text(db));
             return DojoContract::from_module(db, &module_ast, namespace_config, metadata);
         }
 
