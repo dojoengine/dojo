@@ -7,4 +7,5 @@ reads = []
 writes = []
 init_calldata = []
 tag = "dojo_examples-dungeon"
+systems = ["enter"]
 manifest_name = "dojo_examples-dungeon-6620e0e6"

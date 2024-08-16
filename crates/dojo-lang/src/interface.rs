@@ -23,7 +23,7 @@ impl DojoInterface {
         metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
         let name = trait_ast.name(db).text(db);
-        let mut system = DojoInterface { diagnostics: vec![] };
+        let mut interface = DojoInterface { diagnostics: vec![] };
         let mut builder = PatchBuilder::new(db, &trait_ast);
 
         if let ast::MaybeTraitBody::Some(body) = trait_ast.body(db) {
@@ -31,10 +31,10 @@ impl DojoInterface {
                 .iter_items_in_cfg(db, metadata.cfg_set)
                 .flat_map(|el| {
                     if let ast::TraitItem::Function(ref fn_ast) = el {
-                        return system.rewrite_function(db, fn_ast.clone());
+                        return interface.rewrite_function(db, fn_ast.clone());
                     }
 
-                    system.diagnostics.push(PluginDiagnostic {
+                    interface.diagnostics.push(PluginDiagnostic {
                         stable_ptr: el.stable_ptr().untyped(),
                         message: "Anything other than functions is not supported in a \
                                   dojo::interface"
@@ -87,7 +87,7 @@ impl DojoInterface {
                 aux_data: None,
                 code_mappings,
             }),
-            diagnostics: system.diagnostics,
+            diagnostics: interface.diagnostics,
             remove_original_item: true,
         }
     }
