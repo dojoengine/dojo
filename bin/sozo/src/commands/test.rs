@@ -233,7 +233,10 @@ mod tests {
 
     use super::*;
 
+    // Ignored as scarb takes too much time to compile in debug mode.
+    // It's anyway run in the CI in the `test` job.
     #[test]
+    #[ignore]
     fn test_spawn_and_move_test() {
         let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
 

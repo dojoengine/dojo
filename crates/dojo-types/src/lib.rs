@@ -16,7 +16,6 @@ pub mod system;
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct WorldMetadata {
     pub world_address: Felt,
-    pub world_class_hash: Felt,
     pub models: HashMap<Felt, ModelMetadata>,
 }
 
