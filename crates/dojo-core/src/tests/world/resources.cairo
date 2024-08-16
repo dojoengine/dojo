@@ -396,10 +396,7 @@ fn test_deploy_contract_for_namespace_writer() {
 
 #[test]
 #[should_panic(
-    expected: (
-        "Caller `2827` has no write access on namespace `1374390215641666319136539165206515249533397964515542652183446950829433832442`",
-        'ENTRYPOINT_FAILED',
-    )
+    expected: ("Caller `2827` has no write access on namespace `dojo`", 'ENTRYPOINT_FAILED',)
 )]
 fn test_deploy_contract_no_namespace_write_access() {
     let world = deploy_world();

@@ -23,6 +23,24 @@ pub struct Buzz {
     pub b: u128,
 }
 
+#[dojo::interface]
+pub trait IFooSetter {
+    fn set_foo(ref world: IWorldDispatcher, a: felt252, b: u128);
+}
+
+#[dojo::contract]
+pub mod foo_setter {
+    use super::IFooSetter;
+    use super::Foo;
+
+    #[abi(embed_v0)]
+    impl IFooSetterImpl of super::IFooSetter<ContractState> {
+        fn set_foo(ref world: IWorldDispatcher, a: felt252, b: u128) {
+            set!(world, (Foo { caller: starknet::get_caller_address(), a, b }));
+        }
+    }
+}
+
 #[dojo::contract]
 pub mod test_contract {}
 

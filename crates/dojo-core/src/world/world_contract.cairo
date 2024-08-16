@@ -488,14 +488,14 @@ pub mod world {
             }
 
             if !self.is_namespace_registered(namespace_hash) {
-                panic_with_byte_array(@errors::namespace_not_registered(namespace));
+                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
             }
 
-            self.assert_namespace_write_access(namespace_hash);
+            self.assert_namespace_write_access(@namespace, namespace_hash);
 
             let model = self.resources.read(selector);
             if !model.is_unregistered() {
-                panic_with_byte_array(@errors::model_already_registered(namespace, name));
+                panic_with_byte_array(@errors::model_already_registered(@namespace, @name));
             }
 
             self.resources.write(selector, Resource::Model((class_hash, address)));
@@ -518,10 +518,10 @@ pub mod world {
             self.models_salt.write(salt + 1);
 
             if !self.is_namespace_registered(namespace_hash) {
-                panic_with_byte_array(@errors::namespace_not_registered(namespace));
+                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
             }
 
-            self.assert_namespace_write_access(namespace_hash);
+            self.assert_namespace_write_access(@namespace, namespace_hash);
 
             if selector.is_zero() {
                 panic_with_byte_array(@errors::invalid_resource_selector(selector));
@@ -543,10 +543,10 @@ pub mod world {
                     prev_address = model_address;
                 },
                 Resource::Unregistered => {
-                    panic_with_byte_array(@errors::model_not_registered(namespace, name))
+                    panic_with_byte_array(@errors::model_not_registered(@namespace, @name))
                 },
                 _ => panic_with_byte_array(
-                    @errors::resource_conflict(format!("{}-{}", namespace, name), "model")
+                    @errors::resource_conflict(@format!("{}-{}", namespace, name), @"model")
                 )
             };
 
@@ -575,7 +575,7 @@ pub mod world {
             match self.resources.read(hash) {
                 Resource::Namespace => {
                     if !self.is_owner(hash, caller) {
-                        panic_with_byte_array(@errors::namespace_already_registered(namespace));
+                        panic_with_byte_array(@errors::namespace_already_registered(@namespace));
                     }
                 },
                 Resource::Unregistered => {
@@ -584,7 +584,9 @@ pub mod world {
 
                     EventEmitter::emit(ref self, NamespaceRegistered { namespace, hash });
                 },
-                _ => { panic_with_byte_array(@errors::resource_conflict(namespace, "namespace")); }
+                _ => {
+                    panic_with_byte_array(@errors::resource_conflict(@namespace, @"namespace"));
+                }
             };
         }
 
@@ -613,17 +615,16 @@ pub mod world {
             let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address };
             upgradeable_dispatcher.upgrade(class_hash);
 
-            // namespace checking
             let dispatcher = IContractDispatcher { contract_address };
             let namespace = dispatcher.namespace();
             let name = dispatcher.contract_name();
             let namespace_hash = dispatcher.namespace_hash();
 
             if !self.is_namespace_registered(namespace_hash) {
-                panic_with_byte_array(@errors::namespace_not_registered(namespace));
+                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
             }
 
-            self.assert_namespace_write_access(namespace_hash);
+            self.assert_namespace_write_access(@namespace, namespace_hash);
 
             let selector = dispatcher.selector();
             self.owners.write((selector, caller), true);
@@ -687,7 +688,7 @@ pub mod world {
                 }
             } else {
                 panic_with_byte_array(
-                    @errors::resource_conflict(format!("{selector}"), "contract")
+                    @errors::resource_conflict(@format!("{selector}"), @"contract")
                 );
             }
         }
@@ -935,13 +936,16 @@ pub mod world {
     #[generate_trait]
     impl Self of SelfTrait {
         #[inline(always)]
+        /// Indicates if the caller is the owner of the world.
         fn is_caller_world_owner(self: @ContractState) -> bool {
             self.is_owner(WORLD, get_caller_address())
         }
 
-        /// To be sure that a world function has been directly called from an account (with sozo for
-        /// example), to avoid any malicious contract between the account and the world to be able
-        /// to call some functions with account privileges.
+        /// Asserts that the caller is an account.
+        ///
+        /// This check is done to be sure that a sensible world function has been directly called
+        /// from an account (with sozo for example), to avoid any malicious contract between the
+        /// account and the world to be able to call some functions with account privileges.
         #[inline(always)]
         fn assert_caller_is_account(self: @ContractState) {
             let caller = get_caller_address();
@@ -952,21 +956,26 @@ pub mod world {
             }
         }
 
-        /// Panic if the caller is NOT an owner of the resource.
+        /// Panics if the caller is NOT an owner of the resource.
         ///
         /// # Arguments
         ///   * `resource_selector` - the selector of the resource.
         #[inline(always)]
         fn assert_resource_owner(self: @ContractState, resource_selector: felt252) {
-            if self.is_owner(resource_selector, get_caller_address()) {
+            let caller = get_caller_address();
+
+            if self.is_owner(resource_selector, caller) {
                 return;
             }
-            if !self.is_caller_world_owner() {
-                panic_with_byte_array(@errors::not_owner(get_caller_address(), resource_selector));
+
+            if self.is_caller_world_owner() {
+                return;
             }
+
+            panic_with_byte_array(@errors::not_owner(caller, resource_selector));
         }
 
-        /// Panic if the caller is NOT allowed to write in the model.
+        /// Panics if the caller has NOT the writer role on the model.
         ///
         /// # Arguments
         ///   * `model_selector` - the selector of the model.
@@ -974,7 +983,7 @@ pub mod world {
         fn assert_model_write_access(self: @ContractState, model_selector: felt252) {
             let caller = get_caller_address();
 
-            // must have owner or writer role on the namespace or on the model
+            // Must have owner or writer role on the namespace or on the model.
             match self.resources.read(model_selector) {
                 Resource::Model((
                     _, model_address
@@ -1002,23 +1011,45 @@ pub mod world {
                         return;
                     }
 
-                    panic_with_byte_array(@errors::no_model_write_access(model.tag(), caller));
+                    let model_tag = model.tag();
+                    let d = IContractDispatcher { contract_address: caller };
+
+                    // If the caller is not a dojo contract, the `d.selector()` will fail. In the
+                    // future use the SRC5 to first query the contract to see if it implements the
+                    // `IContract` interface.
+                    // For now, we just assume that the caller is a dojo contract as it's 100% of
+                    // the dojo use cases at the moment.
+                    if let Resource::Contract((_, contract_address)) = self
+                        .resources
+                        .read(d.selector()) {
+                        let d = IContractDispatcher { contract_address };
+                        panic_with_byte_array(
+                            @errors::no_write_access_with_tags(
+                                @d.tag(), @"model (or it's namespace)", @model_tag
+                            )
+                        );
+                    } else {
+                        panic_with_byte_array(@errors::no_model_write_access(@model_tag, caller));
+                    }
                 },
                 Resource::Unregistered => {
                     panic_with_byte_array(@errors::resource_not_registered(model_selector));
                 },
                 _ => panic_with_byte_array(
-                    @errors::resource_conflict(format!("{}", model_selector), "model")
+                    @errors::resource_conflict(@format!("{}", model_selector), @"model")
                 )
             }
         }
 
-        /// Panic if the caller is NOT allowed to write in the namespace.
+        /// Panics if the caller has NOT the writer role on the namespace.
         ///
         /// # Arguments
+        ///   * `namespace` - the namespace name.
         ///   * `namespace_hash` - the hash of the namespace.
         #[inline(always)]
-        fn assert_namespace_write_access(self: @ContractState, namespace_hash: felt252) {
+        fn assert_namespace_write_access(
+            self: @ContractState, namespace: @ByteArray, namespace_hash: felt252
+        ) {
             let caller = get_caller_address();
 
             if self.is_writer(namespace_hash, caller) {
@@ -1027,12 +1058,35 @@ pub mod world {
             if self.is_owner(namespace_hash, caller) {
                 return;
             }
-            if !self.is_caller_world_owner() {
-                panic_with_byte_array(@errors::no_namespace_write_access(caller, namespace_hash));
+            if self.is_caller_world_owner() {
+                return;
+            }
+
+            if caller == get_tx_info().account_contract_address {
+                panic_with_byte_array(@errors::no_namespace_write_access(caller, namespace));
+            }
+
+            // If the caller is not a dojo contract, the `d.selector()` will fail. In the future use
+            // the SRC5 to first query the contract to see if it implements the `IContract`
+            // interface.
+            // For now, we just assume that the caller is a dojo contract as it's 100% of the dojo
+            // use cases at the moment.
+            let d = IContractDispatcher { contract_address: caller };
+
+            if let Resource::Contract((_, contract_address)) = self.resources.read(d.selector()) {
+                let d = IContractDispatcher { contract_address };
+                panic_with_byte_array(
+                    @errors::no_write_access_with_tags(@d.tag(), @"namespace", namespace)
+                );
+            } else {
+                panic_with_byte_array(@errors::no_namespace_write_access(caller, namespace));
             }
         }
 
         /// Indicates if the provided namespace is already registered
+        ///
+        /// # Arguments
+        ///   * `namespace_hash` - the hash of the namespace.
         #[inline(always)]
         fn is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
             match self.resources.read(namespace_hash) {
