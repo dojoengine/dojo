@@ -3,7 +3,9 @@ mod test {
     use std::error::Error;
 
     use crate::client::RelayClient;
-    use crate::typed_data::{map_ty_to_primitive, parse_value_to_ty, PrimitiveType};
+    use crate::typed_data::{
+        map_ty_to_primitive, parse_value_to_ty, Domain, PrimitiveType, TypedData,
+    };
 
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -324,7 +326,7 @@ mod test {
 
     #[test]
     fn test_map_ty_to_complex() {
-                let ty = Ty::Struct(Struct {
+        let ty = Ty::Struct(Struct {
             name: "PlayerConfig".to_string(),
             children: vec![
                 Member {
@@ -410,7 +412,10 @@ mod test {
                             "Some".to_string(),
                             PrimitiveType::Object(
                                 vec![
-                                    ("item_id".to_string(), PrimitiveType::Number(Number::from(1u64))),
+                                    (
+                                        "item_id".to_string(),
+                                        PrimitiveType::Number(Number::from(1u64)),
+                                    ),
                                     (
                                         "quantity".to_string(),
                                         PrimitiveType::Number(Number::from(1u64)),
@@ -430,7 +435,90 @@ mod test {
         );
 
         assert_eq!(value, map_ty_to_primitive(&ty).unwrap());
-    }    
+    }
+
+    #[test]
+    fn test_model_to_typed_data() {
+        let ty = Ty::Struct(Struct {
+            name: "PlayerConfig".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    ty: Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))),
+                    key: true,
+                },
+                Member {
+                    name: "name".to_string(),
+                    ty: Ty::ByteArray("mimi".to_string()),
+                    key: false,
+                },
+                Member {
+                    name: "items".to_string(),
+                    // array of PlayerItem struct
+                    ty: Ty::Array(vec![Ty::Struct(Struct {
+                        name: "PlayerItem".to_string(),
+                        children: vec![
+                            Member {
+                                name: "item_id".to_string(),
+                                ty: Ty::Primitive(Primitive::U32(Some(1))),
+                                key: false,
+                            },
+                            Member {
+                                name: "quantity".to_string(),
+                                ty: Ty::Primitive(Primitive::U32(Some(1))),
+                                key: false,
+                            },
+                        ],
+                    })]),
+                    key: false,
+                },
+                // a favorite_item field with enum type Option<PlayerItem>
+                Member {
+                    name: "favorite_item".to_string(),
+                    ty: Ty::Enum(Enum {
+                        name: "Option".to_string(),
+                        option: Some(1),
+                        options: vec![
+                            EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption {
+                                name: "Some".to_string(),
+                                ty: Ty::Struct(Struct {
+                                    name: "PlayerItem".to_string(),
+                                    children: vec![
+                                        Member {
+                                            name: "item_id".to_string(),
+                                            ty: Ty::Primitive(Primitive::U32(Some(69))),
+                                            key: false,
+                                        },
+                                        Member {
+                                            name: "quantity".to_string(),
+                                            ty: Ty::Primitive(Primitive::U32(Some(42))),
+                                            key: false,
+                                        },
+                                    ],
+                                }),
+                            },
+                        ],
+                    }),
+                    key: false,
+                },
+            ],
+        });
+
+        let typed_data =
+            TypedData::from_model(ty, Domain::new("Test", "1", "Test", Some("1"))).unwrap();
+
+        let path = "mocks/model_PlayerConfig.json";
+        let file = std::fs::File::open(path).unwrap();
+        let reader = std::io::BufReader::new(file);
+
+        let file_typed_data: TypedData = serde_json::from_reader(reader).unwrap();
+
+        assert_eq!(
+            typed_data.encode(Felt::ZERO).unwrap(),
+            file_typed_data.encode(Felt::ZERO).unwrap()
+        );
+    }
 
     // This tests subscribing to a topic and receiving a message
     #[cfg(not(target_arch = "wasm32"))]

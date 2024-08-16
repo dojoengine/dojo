@@ -267,33 +267,38 @@ impl PrimitiveType {
                     })?;
                     let variant_type = get_value_type(variant_name, types)?;
 
-                    let arr: &Vec<PrimitiveType> = match value {
-                        PrimitiveType::Array(arr) => arr,
-                        _ => {
-                            return Err(Error::InvalidMessageError(
-                                "Enum value must be an array".to_string(),
-                            ));
-                        }
-                    };
-
                     // variant index
                     hashes.push(Felt::from(variant_type.index as u32));
 
-                    // variant parameters
-                    for (idx, param) in arr.iter().enumerate() {
-                        let field_type = &variant_type
-                            .r#type
-                            .trim_start_matches('(')
-                            .trim_end_matches(')')
-                            .split(',')
-                            .nth(idx)
-                            .ok_or_else(|| {
-                                Error::InvalidMessageError("Invalid enum variant type".to_string())
-                            })?;
+                    match value {
+                        PrimitiveType::Array(arr) =>
+                        // variant parameters
+                        {
+                            for (idx, param) in arr.iter().enumerate() {
+                                let field_type = &variant_type
+                                    .r#type
+                                    .trim_start_matches('(')
+                                    .trim_end_matches(')')
+                                    .split(',')
+                                    .nth(idx)
+                                    .ok_or_else(|| {
+                                        Error::InvalidMessageError(
+                                            "Invalid enum variant type".to_string(),
+                                        )
+                                    })?;
 
-                        let field_hash = param.encode(field_type, types, preset_types, ctx)?;
-                        hashes.push(field_hash);
-                    }
+                                let field_hash =
+                                    param.encode(field_type, types, preset_types, ctx)?;
+                                hashes.push(field_hash);
+                            }
+                        }
+                        _ => hashes.push(value.encode(
+                            variant_type.r#type.as_str(),
+                            types,
+                            preset_types,
+                            ctx,
+                        )?),
+                    };
 
                     return Ok(poseidon_hash_many(hashes.as_slice()));
                 }
@@ -325,13 +330,38 @@ impl PrimitiveType {
 
                 Ok(poseidon_hash_many(hashes.as_slice()))
             }
-            PrimitiveType::Array(array) => Ok(poseidon_hash_many(
-                array
-                    .iter()
-                    .map(|x| x.encode(r#type.trim_end_matches('*'), types, preset_types, ctx))
-                    .collect::<Result<Vec<_>, _>>()?
-                    .as_slice(),
-            )),
+            PrimitiveType::Array(array) => match r#type {
+                // tuple
+                _ if r#type.starts_with('(') && r#type.ends_with(')') => {
+                    let inner_types = r#type[1..r#type.len() - 1]
+                        .split(',')
+                        .map(|t| t.trim())
+                        .collect::<Vec<&str>>();
+
+                    if inner_types.len() != array.len() {
+                        return Err(Error::InvalidMessageError(
+                            "Tuple length mismatch".to_string(),
+                        ));
+                    }
+
+                    let mut hashes = Vec::new();
+                    for (idx, value) in array.iter().enumerate() {
+                        let field_hash =
+                            value.encode(inner_types[idx], types, preset_types, ctx)?;
+                        hashes.push(field_hash);
+                    }
+
+                    Ok(poseidon_hash_many(hashes.as_slice()))
+                }
+                // array
+                _ => Ok(poseidon_hash_many(
+                    array
+                        .iter()
+                        .map(|x| x.encode(r#type.trim_end_matches('*'), types, preset_types, ctx))
+                        .collect::<Result<Vec<_>, _>>()?
+                        .as_slice(),
+                )),
+            },
             PrimitiveType::Bool(boolean) => {
                 let v = if *boolean { Felt::from(1_u32) } else { Felt::from(0_u32) };
                 Ok(v)
@@ -813,21 +843,39 @@ impl TypedData {
     pub fn from_model(model: Ty, domain: Domain) -> Result<Self, Error> {
         let model = model.as_struct().expect("Model must be a struct");
         let mut types = IndexMap::new();
-        let mut values = IndexMap::new();
-        values.insert("model".to_string(), PrimitiveType::String(model.name.clone()));
+        types.insert(
+            "StarknetDomain".to_string(),
+            vec![
+                Field::SimpleType(SimpleField {
+                    name: "name".to_string(),
+                    r#type: "shortstring".to_string(),
+                }),
+                Field::SimpleType(SimpleField {
+                    name: "version".to_string(),
+                    r#type: "shortstring".to_string(),
+                }),
+                Field::SimpleType(SimpleField {
+                    name: "chainId".to_string(),
+                    r#type: "shortstring".to_string(),
+                }),
+                Field::SimpleType(SimpleField {
+                    name: "revision".to_string(),
+                    r#type: "shortstring".to_string(),
+                }),
+            ],
+        );
 
-        let mut model_values = IndexMap::new();
+        let mut values = IndexMap::new();
 
         let mut fields = Vec::new();
         for member in model.children.iter() {
             let field = map_ty_type(&mut types, &member.name, member.ty.clone());
             fields.push(field);
 
-            model_values.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
+            values.insert(member.name.clone(), map_ty_to_primitive(&member.ty)?);
         }
 
         types.insert(model.name.clone(), fields);
-        values.insert(model.name.clone(), PrimitiveType::Object(model_values));
 
         Ok(Self::new(types, model.name.as_str(), domain, values))
     }
