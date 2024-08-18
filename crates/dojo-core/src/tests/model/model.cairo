@@ -24,7 +24,7 @@ fn test_id() {
 #[test]
 fn test_values() {
     let mvalues = FooEntity { __id: 1, v1: 3, v2: 4 };
-    let expected_values = array![3, 4].span();
+    let expected_values = [3, 4].span();
 
     let values = ModelEntity::<FooEntity>::values(@mvalues);
     assert!(expected_values == values);
@@ -32,7 +32,7 @@ fn test_values() {
 
 #[test]
 fn test_from_values() {
-    let mut values = array![3, 4].span();
+    let mut values = [3, 4].span();
 
     let model_entity = ModelEntity::<FooEntity>::from_values(1, ref values);
     assert!(model_entity.__id == 1 && model_entity.v1 == 3 && model_entity.v2 == 4);
@@ -41,7 +41,7 @@ fn test_from_values() {
 #[test]
 #[should_panic(expected: "ModelEntity `FooEntity`: deserialization failed.")]
 fn test_from_values_bad_data() {
-    let mut values = array![3].span();
+    let mut values = [3].span();
     let _ = ModelEntity::<FooEntity>::from_values(1, ref values);
 }
 
@@ -98,7 +98,7 @@ fn test_get_and_set_member_from_entity() {
     assert!(*v1_raw_value.at(0) == 3);
 
     let entity = FooEntityStore::get(world, foo.entity_id());
-    entity.set_member(world, selector!("v1"), array![42].span());
+    entity.set_member(world, selector!("v1"), [42].span());
 
     let entity = FooEntityStore::get(world, foo.entity_id());
     assert!(entity.v1 == 42);
@@ -164,7 +164,7 @@ fn test_get_and_set_member_from_model() {
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
-    let keys = array![foo.k1.into(), foo.k2.into()].span();
+    let keys = [foo.k1.into(), foo.k2.into()].span();
     foo.set(world);
 
     let v1_raw_value = Model::<Foo>::get_member(world, keys, selector!("v1"));
@@ -172,7 +172,7 @@ fn test_get_and_set_member_from_model() {
     assert!(v1_raw_value.len() == 1);
     assert!(*v1_raw_value.at(0) == 3);
 
-    foo.set_member(world, selector!("v1"), array![42].span());
+    foo.set_member(world, selector!("v1"), [42].span());
     let foo = FooStore::get(world, foo.k1, foo.k2);
     assert!(foo.v1 == 42);
 }

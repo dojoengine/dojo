@@ -29,7 +29,7 @@ fn test_set_metadata_world() {
 
 #[test]
 fn test_set_metadata_resource_owner() {
-    let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
 
     let bob = starknet::contract_address_const::<0xb0b>();
 
@@ -63,7 +63,7 @@ fn test_set_metadata_resource_owner() {
     )
 )]
 fn test_set_metadata_not_possible_for_resource_writer() {
-    let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
 
     let bob = starknet::contract_address_const::<0xb0b>();
 
@@ -102,7 +102,7 @@ fn test_set_metadata_not_possible_for_random_account() {
 #[test]
 #[should_panic(expected: ("Caller `57005` is not an account", 'ENTRYPOINT_FAILED',))]
 fn test_set_metadata_through_malicious_contract() {
-    let world = spawn_test_world("dojo", array![foo::TEST_CLASS_HASH],);
+    let world = spawn_test_world(["dojo"].span(), [foo::TEST_CLASS_HASH].span(),);
 
     let bob = starknet::contract_address_const::<0xb0b>();
     let malicious_contract = starknet::contract_address_const::<0xdead>();
@@ -396,10 +396,7 @@ fn test_deploy_contract_for_namespace_writer() {
 
 #[test]
 #[should_panic(
-    expected: (
-        "Caller `2827` has no write access on namespace `1374390215641666319136539165206515249533397964515542652183446950829433832442`",
-        'ENTRYPOINT_FAILED',
-    )
+    expected: ("Caller `2827` has no write access on namespace `dojo`", 'ENTRYPOINT_FAILED',)
 )]
 fn test_deploy_contract_no_namespace_write_access() {
     let world = deploy_world();

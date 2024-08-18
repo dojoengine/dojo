@@ -53,10 +53,11 @@ pub struct Model {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct SystemAuxData {
+pub struct ContractAuxData {
     pub name: SmolStr,
     pub namespace: String,
     pub dependencies: Vec<Dependency>,
+    pub systems: Vec<String>,
 }
 
 /// Dojo related auxiliary data of the Dojo plugin.
@@ -64,8 +65,8 @@ pub struct SystemAuxData {
 pub struct DojoAuxData {
     /// A list of models that were processed by the plugin.
     pub models: Vec<Model>,
-    /// A list of systems that were processed by the plugin and their model dependencies.
-    pub systems: Vec<SystemAuxData>,
+    /// A list of contracts that were processed by the plugin and their model dependencies.
+    pub contracts: Vec<ContractAuxData>,
     /// A list of events that were processed by the plugin.
     pub events: Vec<StarkNetEventAuxData>,
 }

@@ -49,7 +49,7 @@ use contract_upgrade::{IQuantumLeapDispatcher, IQuantumLeapDispatcherTrait};
 
 // Utils
 fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world("dojo", array![])
+    spawn_test_world(["dojo"].span(), [].span())
 }
 
 // A test contract needs to be used instead of previously used base contract since.

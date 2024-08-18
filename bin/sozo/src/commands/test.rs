@@ -13,7 +13,7 @@ use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Pr
 use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::{cfg_set_from_component, crates_config_for_compilation_unit};
 use dojo_world::metadata::dojo_metadata_from_package;
-use scarb::compiler::helpers::collect_main_crate_ids;
+use scarb::compiler::helpers::{collect_all_crate_ids, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::{self, CompileOpts};
@@ -152,8 +152,8 @@ impl TestArgs {
                 bail!("failed to compile");
             }
 
-            let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
-            let test_crate_ids = main_crate_ids.clone();
+            let mut main_crate_ids = collect_all_crate_ids(&unit, &db);
+            let test_crate_ids = collect_main_crate_ids(&unit, &db);
 
             if unit.main_package_id.name.to_string() != "dojo" {
                 let core_crate_ids = collect_core_crate_ids(&db);
@@ -176,7 +176,8 @@ impl TestArgs {
             let compiler =
                 TestCompiler { db: db.snapshot(), main_crate_ids, test_crate_ids, starknet: true };
 
-            let runner = CompiledTestRunner { compiled: compiler.build()?, config };
+            let compiled = compiler.build()?;
+            let runner = CompiledTestRunner { compiled, config };
 
             // Database is required here for the profiler to work.
             runner.run(Some(&db))?;
@@ -232,7 +233,10 @@ mod tests {
 
     use super::*;
 
+    // Ignored as scarb takes too much time to compile in debug mode.
+    // It's anyway run in the CI in the `test` job.
     #[test]
+    #[ignore]
     fn test_spawn_and_move_test() {
         let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
 

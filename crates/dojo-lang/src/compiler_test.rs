@@ -6,7 +6,10 @@ use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
 use crate::compiler::ContractSelector;
 use crate::scarb_internal;
 
+// Ignored as scarb takes too much time to compile in debug mode.
+// It's anyway run in the CI in the `test` job.
 #[test]
+#[ignore]
 fn test_compiler_cairo_features() {
     let config =
         build_test_config("./src/manifest_test_data/compiler_cairo/Scarb.toml", Profile::DEV)

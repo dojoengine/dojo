@@ -175,7 +175,7 @@ pub trait Deployable: Declarable + Sync {
         base_class_hash: Felt,
         account: A,
         tag: &str,
-    ) -> Result<(Call, bool), MigrationError<<A as Account>::SignError>>
+    ) -> Result<(Call, Felt, bool), MigrationError<<A as Account>::SignError>>
     where
         A: ConnectedAccount + Send + Sync,
         <A as ConnectedAccount>::Provider: Send,
@@ -214,7 +214,7 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(MigrationError::Provider(e)),
         };
 
-        Ok((call, was_upgraded))
+        Ok((call, contract_address, was_upgraded))
     }
 
     #[allow(clippy::too_many_arguments)]

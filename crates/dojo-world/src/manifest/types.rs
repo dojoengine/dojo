@@ -106,6 +106,7 @@ pub struct DojoContract {
     #[serde(default)]
     pub init_calldata: Vec<String>,
     pub tag: String,
+    pub systems: Vec<String>,
 }
 
 /// Represents a declaration of a model.

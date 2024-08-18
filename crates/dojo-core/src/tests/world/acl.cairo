@@ -4,7 +4,9 @@ use dojo::model::Model;
 use dojo::utils::{bytearray_hash, entity_id_from_keys};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 
-use dojo::tests::helpers::{deploy_world, Foo, foo};
+use dojo::tests::helpers::{
+    deploy_world, Foo, foo, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait
+};
 
 #[test]
 fn test_owner() {
@@ -229,4 +231,30 @@ fn test_revoke_writer_fails_for_non_owner() {
     starknet::testing::set_contract_address(alice);
 
     world.revoke_writer(foo_selector, bob);
+}
+
+#[test]
+#[should_panic(
+    expected: (
+        "Caller `dojo-foo_setter` has no write access on model (or it's namespace) `dojo-Foo`",
+        'ENTRYPOINT_FAILED',
+        'ENTRYPOINT_FAILED'
+    )
+)]
+fn test_not_writer_with_known_contract() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let account = starknet::contract_address_const::<0xb0b>();
+    world.grant_owner(bytearray_hash(@"dojo"), account);
+
+    // the account owns the 'test_contract' namespace so it should be able to deploy
+    // and register the model.
+    starknet::testing::set_account_contract_address(account);
+    starknet::testing::set_contract_address(account);
+
+    let contract_address = world
+        .deploy_contract('salt1', foo_setter::TEST_CLASS_HASH.try_into().unwrap());
+    let d = IFooSetterDispatcher { contract_address };
+    d.set_foo(1, 2);
 }

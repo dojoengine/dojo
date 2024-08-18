@@ -20,6 +20,7 @@ use tracing::{error, info, trace, warn};
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
 use crate::types::ErcContract;
+
 #[allow(missing_debug_implementations)]
 pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
@@ -108,6 +109,7 @@ impl<P: Provider + Sync> Engine<P> {
 
         let mut shutdown_rx = self.shutdown_tx.subscribe();
 
+        let mut erroring_out = false;
         loop {
             tokio::select! {
                 _ = shutdown_rx.recv() => {
@@ -116,11 +118,17 @@ impl<P: Provider + Sync> Engine<P> {
                 _ = async {
                     match self.sync_to_head(head, pending_block_tx).await {
                         Ok((latest_block_number, latest_pending_tx)) => {
+                            if erroring_out {
+                                erroring_out = false;
+                                backoff_delay = Duration::from_secs(1);
+                                info!(target: LOG_TARGET, latest_block_number = latest_block_number, "Syncing reestablished.");
+                            }
+
                             pending_block_tx = latest_pending_tx;
                             head = latest_block_number;
-                            backoff_delay = Duration::from_secs(1);
                         }
                         Err(e) => {
+                            erroring_out = true;
                             error!(target: LOG_TARGET, error = %e, "Syncing to head.");
                             sleep(backoff_delay).await;
                             if backoff_delay < max_backoff_delay {
@@ -203,12 +211,14 @@ impl<P: Provider + Sync> Engine<P> {
                         }
                     }
                 }
+                Ok(true) => {
+                    pending_block_tx = Some(*transaction.transaction_hash());
+                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending world transaction.");
+                }
                 Ok(_) => {
                     info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending transaction.")
                 }
             }
-
-            pending_block_tx = Some(*transaction.transaction_hash());
         }
 
         // Set the head to the last processed pending transaction
@@ -332,17 +342,8 @@ impl<P: Provider + Sync> Engine<P> {
             }
         }
 
-        // Process blocks
-        for (block_number, block_timestamp) in blocks.iter() {
-            if let Some(ref block_tx) = self.block_tx {
-                block_tx.send(*block_number).await?;
-            }
-
-            self.process_block(*block_number, *block_timestamp).await?;
-            info!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
-        }
-
         // Process all transactions
+        let mut last_block = 0;
         for (block_number, transaction_hash) in transactions {
             // Process transaction
             let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
@@ -354,6 +355,16 @@ impl<P: Provider + Sync> Engine<P> {
                 blocks[&block_number],
             )
             .await?;
+
+            // Process block
+            if block_number > last_block {
+                if let Some(ref block_tx) = self.block_tx {
+                    block_tx.send(block_number).await?;
+                }
+
+                self.process_block(block_number, blocks[&block_number]).await?;
+                last_block = block_number;
+            }
         }
 
         // We return None for the pending_block_tx because our sync_range
@@ -376,13 +387,15 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
+    // Process a transaction and its receipt.
+    // Returns whether the transaction has a world event.
     async fn process_transaction_and_receipt(
         &mut self,
         transaction_hash: Felt,
         transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         let receipt = self.provider.get_transaction_receipt(transaction_hash).await?;
         let events = match &receipt.receipt {
             TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
@@ -390,8 +403,8 @@ impl<P: Provider + Sync> Engine<P> {
             _ => None,
         };
 
+        let mut world_event = false;
         if let Some(events) = events {
-            let mut world_event = false;
             for (event_idx, event) in events.iter().enumerate() {
                 if event.from_address != self.world.address
                     && !self.tokens.contains_key(&event.from_address)
@@ -427,7 +440,7 @@ impl<P: Provider + Sync> Engine<P> {
             }
         }
 
-        Ok(())
+        Ok(world_event)
     }
 
     async fn process_block(&mut self, block_number: u64, block_timestamp: u64) -> Result<()> {
@@ -436,6 +449,8 @@ impl<P: Provider + Sync> Engine<P> {
                 .process(&mut self.db, self.provider.as_ref(), block_number, block_timestamp)
                 .await?
         }
+
+        info!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
         Ok(())
     }
 

@@ -217,8 +217,10 @@ mod tests {
     use super::{create_stats_table, BuildArgs, *};
     use crate::commands::build::CONTRACT_NAME_LABEL;
 
-    // Uncomment once bindings support arrays.
+    // Ignored as scarb takes too much time to compile in debug mode.
+    // It's anyway run in the CI in the `test` job.
     #[test]
+    #[ignore]
     fn build_example_with_typescript_and_unity_bindings() {
         let setup = CompilerTestSetup::from_examples("../../crates/dojo-core", "../../examples/");
 

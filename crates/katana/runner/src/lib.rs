@@ -47,6 +47,8 @@ pub struct KatanaRunnerConfig {
     pub messaging: Option<String>,
     /// The path to the database dir.
     pub db_dir: Option<PathBuf>,
+    /// Whether to run the katana runner with the `dev` rpc endpoints.
+    pub dev: bool,
 }
 
 impl Default for KatanaRunnerConfig {
@@ -61,6 +63,7 @@ impl Default for KatanaRunnerConfig {
             log_path: None,
             messaging: None,
             db_dir: None,
+            dev: false,
         }
     }
 }
@@ -112,6 +115,8 @@ impl KatanaRunner {
         if let Some(path) = config.db_dir {
             builder = builder.db_dir(path);
         }
+
+        builder = builder.dev(config.dev);
 
         let mut katana = builder.spawn();
 

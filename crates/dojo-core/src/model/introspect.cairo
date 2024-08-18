@@ -45,7 +45,7 @@ pub impl Introspect_felt252 of Introspect<felt252> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
+        Layout::Fixed([251].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('felt252')
@@ -57,7 +57,7 @@ pub impl Introspect_bool of Introspect<bool> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![1].span())
+        Layout::Fixed([1].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('bool')
@@ -69,7 +69,7 @@ pub impl Introspect_u8 of Introspect<u8> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![8].span())
+        Layout::Fixed([8].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('u8')
@@ -81,7 +81,7 @@ pub impl Introspect_u16 of Introspect<u16> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![16].span())
+        Layout::Fixed([16].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('u16')
@@ -93,7 +93,7 @@ pub impl Introspect_u32 of Introspect<u32> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![32].span())
+        Layout::Fixed([32].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('u32')
@@ -105,7 +105,7 @@ pub impl Introspect_u64 of Introspect<u64> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![64].span())
+        Layout::Fixed([64].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('u64')
@@ -117,7 +117,7 @@ pub impl Introspect_u128 of Introspect<u128> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![128].span())
+        Layout::Fixed([128].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('u128')
@@ -129,7 +129,7 @@ pub impl Introspect_u256 of Introspect<u256> {
         Option::Some(2)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![128, 128].span())
+        Layout::Fixed([128, 128].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('u256')
@@ -141,7 +141,7 @@ pub impl Introspect_i8 of Introspect<i8> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
+        Layout::Fixed([251].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('i8')
@@ -153,7 +153,7 @@ pub impl Introspect_i16 of Introspect<i16> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
+        Layout::Fixed([251].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('i16')
@@ -165,7 +165,7 @@ pub impl Introspect_i32 of Introspect<i32> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
+        Layout::Fixed([251].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('i32')
@@ -177,7 +177,7 @@ pub impl Introspect_i64 of Introspect<i64> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
+        Layout::Fixed([251].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('i64')
@@ -189,7 +189,7 @@ pub impl Introspect_i128 of Introspect<i128> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
+        Layout::Fixed([251].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('i128')
@@ -201,7 +201,7 @@ pub impl Introspect_address of Introspect<starknet::ContractAddress> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
+        Layout::Fixed([251].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('starknet::ContractAddress')
@@ -213,7 +213,7 @@ pub impl Introspect_classhash of Introspect<starknet::ClassHash> {
         Option::Some(1)
     }
     fn layout() -> Layout {
-        Layout::Fixed(array![251].span())
+        Layout::Fixed([251].span())
     }
     fn ty() -> Ty {
         Ty::Primitive('starknet::ClassHash')
@@ -239,26 +239,21 @@ pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
 
     fn layout() -> Layout {
         Layout::Enum(
-            array![
+            [
                 dojo::model::FieldLayout { // Some
                  selector: 0, layout: Introspect::<T>::layout() },
                 dojo::model::FieldLayout { // None
-                    selector: 1, layout: Layout::Fixed(array![].span())
-                },
-            ]
-                .span()
+                 selector: 1, layout: Layout::Fixed([].span()) },
+            ].span()
         )
     }
 
     fn ty() -> Ty {
         Ty::Enum(
             Enum {
-                name: 'Option<T>',
-                attrs: array![].span(),
-                children: array![
-                    ('Some(T)', Introspect::<T>::ty()), ('None', Ty::Tuple(array![].span()))
-                ]
-                    .span()
+                name: 'Option<T>', attrs: [].span(), children: [
+                    ('Some(T)', Introspect::<T>::ty()), ('None', Ty::Tuple([].span()))
+                ].span()
             }
         )
     }
@@ -269,11 +264,11 @@ pub impl Introspect_array<T, +Introspect<T>> of Introspect<Array<T>> {
         Option::None
     }
     fn layout() -> Layout {
-        Layout::Array(array![Introspect::<T>::layout()].span())
+        Layout::Array([Introspect::<T>::layout()].span())
     }
 
     fn ty() -> Ty {
-        Ty::Array(array![Introspect::<T>::ty()].span())
+        Ty::Array([Introspect::<T>::ty()].span())
     }
 }
 
@@ -282,10 +277,10 @@ pub impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
         Option::None
     }
     fn layout() -> Layout {
-        Layout::Array(array![Introspect::<T>::layout()].span())
+        Layout::Array([Introspect::<T>::layout()].span())
     }
 
     fn ty() -> Ty {
-        Ty::Array(array![Introspect::<T>::ty()].span())
+        Ty::Array([Introspect::<T>::ty()].span())
     }
 }

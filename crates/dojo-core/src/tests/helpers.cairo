@@ -23,6 +23,24 @@ pub struct Buzz {
     pub b: u128,
 }
 
+#[dojo::interface]
+pub trait IFooSetter {
+    fn set_foo(ref world: IWorldDispatcher, a: felt252, b: u128);
+}
+
+#[dojo::contract]
+pub mod foo_setter {
+    use super::IFooSetter;
+    use super::Foo;
+
+    #[abi(embed_v0)]
+    impl IFooSetterImpl of super::IFooSetter<ContractState> {
+        fn set_foo(ref world: IWorldDispatcher, a: felt252, b: u128) {
+            set!(world, (Foo { caller: starknet::get_caller_address(), a, b }));
+        }
+    }
+}
+
 #[dojo::contract]
 pub mod test_contract {}
 
@@ -124,7 +142,7 @@ pub mod bar {
                 .read()
                 .delete_entity(
                     Model::<Foo>::selector(),
-                    ModelIndex::Keys(array![get_caller_address().into()].span()),
+                    ModelIndex::Keys([get_caller_address().into()].span()),
                     Model::<Foo>::layout()
                 );
         }
@@ -172,7 +190,7 @@ pub mod bar {
 }
 
 pub fn deploy_world() -> IWorldDispatcher {
-    spawn_test_world("dojo", array![])
+    spawn_test_world(["dojo"].span(), [].span())
 }
 
 pub fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {

@@ -21,9 +21,9 @@ use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
-use starknet::core::types::{BlockId, BlockTag, Felt};
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::JsonRpcClient;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -199,9 +199,7 @@ async fn main() -> anyhow::Result<()> {
         .iter()
         .map(|contract| (contract.contract_address, contract.clone()))
         .collect();
-    let class_hash =
-        provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), args.world_address).await?;
-    let db = Sql::new(pool.clone(), args.world_address, class_hash, &erc_contracts).await?;
+    let db = Sql::new(pool.clone(), args.world_address, &erc_contracts).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
