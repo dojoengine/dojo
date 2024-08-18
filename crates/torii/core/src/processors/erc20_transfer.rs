@@ -35,7 +35,7 @@ where
 
     async fn process(
         &self,
-        _world: &WorldContractReader<P>,
+        world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
         _block_timestamp: u64,
@@ -50,7 +50,7 @@ where
         let value = U256Cainome::cairo_deserialize(&event.data, 0)?;
         let value = U256::from_words(value.low, value.high);
 
-        db.handle_erc20_transfer(token_address, from, to, value).await?;
+        db.handle_erc20_transfer(token_address, from, to, value, world.provider()).await?;
         info!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer");
 
         Ok(())

@@ -194,9 +194,14 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
 
+    let erc_contracts = config
+        .erc_contracts
+        .iter()
+        .map(|contract| (contract.contract_address, contract.clone()))
+        .collect();
     let class_hash =
         provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), args.world_address).await?;
-    let db = Sql::new(pool.clone(), args.world_address, class_hash).await?;
+    let db = Sql::new(pool.clone(), args.world_address, class_hash, &erc_contracts).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
@@ -229,11 +234,7 @@ async fn main() -> anyhow::Result<()> {
         },
         shutdown_tx.clone(),
         Some(block_tx),
-        config
-            .erc_contracts
-            .iter()
-            .map(|contract| (contract.contract_address, contract.clone()))
-            .collect(),
+        erc_contracts,
     );
 
     let shutdown_rx = shutdown_tx.subscribe();

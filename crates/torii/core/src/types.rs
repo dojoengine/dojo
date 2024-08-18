@@ -122,3 +122,13 @@ impl FromStr for ErcType {
         }
     }
 }
+
+impl ToString for ErcType {
+    fn to_string(&self) -> String {
+        match self {
+            ErcType::ERC20 => "ERC20",
+            ErcType::ERC721 => "ERC721",
+        }
+        .to_string()
+    }
+}

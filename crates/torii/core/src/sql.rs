@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
@@ -11,7 +13,12 @@ use dojo_world::contracts::naming::compute_selector_from_names;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Row, Sqlite};
-use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction, U256};
+use starknet::core::types::BlockTag;
+use starknet::core::types::{
+    BlockId, Event, Felt, FunctionCall, InvokeTransaction, Transaction, U256,
+};
+use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -19,8 +26,8 @@ use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
-    Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated,
-    Model as ModelRegistered,
+    Entity as EntityUpdated, ErcContract, Event as EventEmitted,
+    EventMessage as EventMessageUpdated, Model as ModelRegistered,
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
@@ -45,6 +52,7 @@ impl Sql {
         pool: Pool<Sqlite>,
         world_address: Felt,
         world_class_hash: Felt,
+        erc_contracts: &HashMap<Felt, ErcContract>,
     ) -> Result<Self> {
         let mut query_queue = QueryQueue::new(pool.clone());
 
@@ -60,6 +68,17 @@ impl Sql {
                 Argument::FieldElement(world_class_hash),
             ],
         );
+
+        for erc_contract in erc_contracts.values() {
+            query_queue.enqueue(
+                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, ?)",
+                vec![
+                    Argument::FieldElement(erc_contract.contract_address),
+                    Argument::FieldElement(erc_contract.contract_address),
+                    Argument::String(erc_contract.r#type.to_string()),
+                ],
+            );
+        }
 
         query_queue.execute_all().await?;
 
@@ -1185,13 +1204,89 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn handle_erc20_transfer(
+    pub async fn handle_erc20_transfer<P: Provider + Sync>(
         &mut self,
-        token_address: Felt,
+        contract_address: Felt,
         from: Felt,
         to: Felt,
         amount: U256,
+        provider: &P,
     ) -> Result<()> {
+        let token_exists: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
+                .bind(format!("{:#x}", contract_address))
+                .fetch_one(&self.pool)
+                .await?;
+
+        if !token_exists {
+            // Fetch token information from the chain
+            let name = provider
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: get_selector_from_name("name").unwrap(),
+                        calldata: vec![],
+                    },
+                    BlockId::Tag(BlockTag::Pending),
+                )
+                .await?;
+
+            // len = 1 => return value felt (i.e. legacy erc20 token)
+            // len > 1 => return value ByteArray (i.e. new erc20 token)
+            let name = if name.len() == 1 {
+                parse_cairo_short_string(&name[0]).unwrap()
+            } else {
+                ByteArray::cairo_deserialize(&name, 0)
+                    .expect("Return value not ByteArray")
+                    .to_string()
+                    .expect("Return value not String")
+            };
+
+            let symbol = provider
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: get_selector_from_name("symbol").unwrap(),
+                        calldata: vec![],
+                    },
+                    BlockId::Tag(BlockTag::Pending),
+                )
+                .await?;
+            let symbol = if symbol.len() == 1 {
+                parse_cairo_short_string(&symbol[0]).unwrap()
+            } else {
+                ByteArray::cairo_deserialize(&symbol, 0)
+                    .expect("Return value not ByteArray")
+                    .to_string()
+                    .expect("Return value not String")
+            };
+
+            let decimals = provider
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: get_selector_from_name("decimals").unwrap(),
+                        calldata: vec![],
+                    },
+                    BlockId::Tag(BlockTag::Pending),
+                )
+                .await?;
+            let decimals = u8::cairo_deserialize(&decimals, 0).expect("Return value not u8");
+
+            // Insert the token into the tokens table
+            self.query_queue.enqueue(
+                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, ?, ?)",
+                vec![
+                    Argument::String(format!("{:#x}", contract_address)),
+                    Argument::FieldElement(contract_address),
+                    Argument::String(name),
+                    Argument::String(symbol),
+                    Argument::Int(decimals.into()),
+                ],
+            );
+        }
+
+        // Now proceed with the transfer handling
         // Insert transfer event to erc20_transfers table
         {
             let insert_query =
@@ -1200,7 +1295,7 @@ impl Sql {
             self.query_queue.enqueue(
                 insert_query,
                 vec![
-                    Argument::FieldElement(token_address),
+                    Argument::FieldElement(contract_address),
                     Argument::FieldElement(from),
                     Argument::FieldElement(to),
                     Argument::String(u256_to_sql_string(&amount)),
@@ -1217,10 +1312,10 @@ impl Sql {
             // statements.
             // Fetch balances for both `from` and `to` addresses, update them and write back to db
             let query = sqlx::query_as::<_, (String, String)>(
-                "SELECT account_address, balance FROM erc20_balances WHERE token_address = ? AND account_address \
+                "SELECT account_address, balance FROM balances WHERE contract_address = ? AND account_address \
                  IN (?, ?)",
             )
-            .bind(format!("{:#x}", token_address))
+            .bind(format!("{:#x}", contract_address))
             .bind(format!("{:#x}", from))
             .bind(format!("{:#x}", to));
 
@@ -1250,18 +1345,20 @@ impl Sql {
             let new_to_balance = if to != Felt::ZERO { to_balance.add(amount) } else { to_balance };
 
             let update_query = "
-            INSERT INTO erc20_balances (account_address, token_address, balance)
-            VALUES (?, ?, ?)
-            ON CONFLICT (account_address, token_address) 
+            INSERT INTO balances (id, balance, account_address, contract_address, token_id)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT (id) 
             DO UPDATE SET balance = excluded.balance";
 
             if from != Felt::ZERO {
                 self.query_queue.enqueue(
                     update_query,
                     vec![
-                        Argument::FieldElement(from),
-                        Argument::FieldElement(token_address),
+                        Argument::String(format!("{:#x}:{:#x}", from, contract_address)),
                         Argument::String(u256_to_sql_string(&new_from_balance)),
+                        Argument::FieldElement(from),
+                        Argument::FieldElement(contract_address),
+                        Argument::String(format!("{:#x}", contract_address)),
                     ],
                 );
             }
@@ -1270,9 +1367,11 @@ impl Sql {
                 self.query_queue.enqueue(
                     update_query,
                     vec![
-                        Argument::FieldElement(to),
-                        Argument::FieldElement(token_address),
+                        Argument::String(format!("{:#x}:{:#x}", to, contract_address)),
                         Argument::String(u256_to_sql_string(&new_to_balance)),
+                        Argument::FieldElement(to),
+                        Argument::FieldElement(contract_address),
+                        Argument::String(format!("{:#x}", contract_address)),
                     ],
                 );
             }
@@ -1282,13 +1381,79 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn handle_erc721_transfer(
+    pub async fn handle_erc721_transfer<P: Provider + Sync>(
         &mut self,
-        token_address: Felt,
+        contract_address: Felt,
         from: Felt,
         to: Felt,
         token_id: U256,
+        provider: &P,
     ) -> Result<()> {
+        let balance_token_id = format!("{:#x}:{}", contract_address, u256_to_sql_string(&token_id));
+        let token_exists: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
+                .bind(balance_token_id.clone())
+                .fetch_one(&self.pool)
+                .await?;
+
+        if !token_exists {
+            // Fetch token information from the chain
+            let name = provider
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: get_selector_from_name("name").unwrap(),
+                        calldata: vec![],
+                    },
+                    BlockId::Tag(BlockTag::Pending),
+                )
+                .await?;
+
+            // len = 1 => return value felt (i.e. legacy erc721 token)
+            // len > 1 => return value ByteArray (i.e. new erc721 token)
+            let name = if name.len() == 1 {
+                parse_cairo_short_string(&name[0]).unwrap()
+            } else {
+                ByteArray::cairo_deserialize(&name, 0)
+                    .expect("Return value not ByteArray")
+                    .to_string()
+                    .expect("Return value not String")
+            };
+
+            let symbol = provider
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: get_selector_from_name("symbol").unwrap(),
+                        calldata: vec![],
+                    },
+                    BlockId::Tag(BlockTag::Pending),
+                )
+                .await?;
+            let symbol = if symbol.len() == 1 {
+                parse_cairo_short_string(&symbol[0]).unwrap()
+            } else {
+                ByteArray::cairo_deserialize(&symbol, 0)
+                    .expect("Return value not ByteArray")
+                    .to_string()
+                    .expect("Return value not String")
+            };
+
+            let decimals = 0;
+
+            // Insert the token into the tokens table
+            self.query_queue.enqueue(
+                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, ?, ?)",
+                vec![
+                    Argument::String(balance_token_id.clone()),
+                    Argument::FieldElement(contract_address),
+                    Argument::String(name),
+                    Argument::String(symbol),
+                    Argument::Int(decimals.into()),
+                ],
+            );
+        }
+
         // Insert transfer event to erc721_transfers table
         {
             let insert_query =
@@ -1298,7 +1463,7 @@ impl Sql {
             self.query_queue.enqueue(
                 insert_query,
                 vec![
-                    Argument::FieldElement(token_address),
+                    Argument::FieldElement(contract_address),
                     Argument::FieldElement(from),
                     Argument::FieldElement(to),
                     Argument::String(u256_to_sql_string(&token_id)),
@@ -1308,25 +1473,43 @@ impl Sql {
 
         // Update balances in erc721_balances table
         {
+            let update_query = "
+            INSERT INTO balances (id, balance, account_address, contract_address, token_id)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT (account_address, contract_address, token_id) 
+            DO UPDATE SET balance = excluded.balance";
+            let balance_token_id =
+                format!("{:#x}:{}", contract_address, u256_to_sql_string(&token_id));
+
             if from != Felt::ZERO {
                 self.query_queue.enqueue(
-                "DELETE FROM erc721_balances WHERE account_address = ? AND token_address = ? AND token_id = ?",
-                vec![
-                    Argument::FieldElement(from),
-                    Argument::FieldElement(token_address),
-                    Argument::String(u256_to_sql_string(&token_id)),
-                ],
+                    update_query,
+                    vec![
+                        Argument::String(format!(
+                            "{:#x}:{:#x}:{:#x}",
+                            from, contract_address, token_id
+                        )),
+                        Argument::FieldElement(from),
+                        Argument::FieldElement(contract_address),
+                        Argument::String(u256_to_sql_string(&U256::from(1u8))),
+                        Argument::String(balance_token_id.clone()),
+                    ],
                 );
             }
 
             if to != Felt::ZERO {
                 self.query_queue.enqueue(
-                "INSERT INTO erc721_balances (account_address, token_address, token_id) VALUES (?, ?, ?)",
-                vec![
-                    Argument::FieldElement(to),
-                    Argument::FieldElement(token_address),
-                    Argument::String(u256_to_sql_string(&token_id)),
-                ],
+                    update_query,
+                    vec![
+                        Argument::String(format!(
+                            "{:#x}:{:#x}:{:#x}",
+                            to, contract_address, token_id
+                        )),
+                        Argument::FieldElement(to),
+                        Argument::FieldElement(contract_address),
+                        Argument::String(u256_to_sql_string(&U256::from(0u8))),
+                        Argument::String(balance_token_id.clone()),
+                    ],
                 );
             }
         }
