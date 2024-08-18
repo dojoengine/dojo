@@ -4,9 +4,7 @@ use async_graphql::Name;
 use dojo_types::primitive::Primitive;
 use lazy_static::lazy_static;
 
-use crate::constants::{
-    CONTENT_TYPE_NAME, ERC20_BALANCE_TYPE_NAME, ERC721_BALANCE_TYPE_NAME, SOCIAL_TYPE_NAME,
-};
+use crate::constants::{CONTENT_TYPE_NAME, ERC_TOKEN_TYPE_NAME, SOCIAL_TYPE_NAME};
 use crate::types::{GraphqlType, TypeData, TypeMapping};
 
 lazy_static! {
@@ -146,20 +144,15 @@ lazy_static! {
         ),
     ]);
     pub static ref ERC_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
-        (Name::new("accountAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("erc20"), TypeData::Simple(TypeRef::named_list(ERC20_BALANCE_TYPE_NAME))),
-        (Name::new("erc721"), TypeData::Simple(TypeRef::named_list(ERC721_BALANCE_TYPE_NAME))),
-    ]);
-
-    pub static ref ERC20_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
-        (Name::new("accountAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("tokenAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("balance"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("type"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("token_metadata"), TypeData::Simple(TypeRef::named(ERC_TOKEN_TYPE_NAME))),
     ]);
 
-    pub static ref ERC721_BALANCE_TYPE_MAPPING: TypeMapping = IndexMap::from([
-        (Name::new("accountAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("tokenAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("tokenId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+    pub static ref ERC_TOKEN_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("symbol"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("decimals"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("contract_address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
     ]);
 }

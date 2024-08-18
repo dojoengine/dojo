@@ -1,2 +1,2 @@
-pub mod erc20_balance;
-pub mod erc721_balance;
+pub mod erc_balance;
+pub mod erc_token;
