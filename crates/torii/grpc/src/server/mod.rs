@@ -17,9 +17,8 @@ use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
 use proto::world::{
-    Erc20BalanceResponse, Erc721BalanceResponse, MetadataRequest, MetadataResponse,
-    RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventsRequest,
-    RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
+    MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
+    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
     UpdateEntitiesSubscriptionRequest,
 };
 use sqlx::prelude::FromRow;
@@ -967,38 +966,6 @@ impl DojoWorld {
     ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
         self.event_manager.add_subscriber(clause.into()).await
     }
-
-    async fn erc20_balance(
-        &self,
-        token_address: String,
-        account_address: String,
-    ) -> Result<String, Error> {
-        // how to handle case where the queried data is not found?
-        let balance: (String,) = sqlx::query_as(&format!(
-            "SELECT balance FROM erc20_balances WHERE token_address = '{}' AND account_address = '{}'",
-            token_address, account_address
-        ))
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(balance.0)
-    }
-
-    async fn erc721_balance(
-        &self,
-        token_address: String,
-        account_address: String,
-        token_id: String,
-    ) -> Result<String, Error> {
-        let balance: (String,) = sqlx::query_as(&format!(
-            "SELECT balance FROM erc721_balances WHERE token_address = '{}' AND account_address = '{}' AND token_id = '{}'",
-            token_address, account_address, token_id
-        ))
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(balance.0)
-    }
 }
 
 fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
@@ -1206,39 +1173,6 @@ impl proto::world::world_server::World for DojoWorld {
         let rx = self.subscribe_events(keys).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEventsStream))
-    }
-
-    async fn erc20_balance(
-        &self,
-        request: Request<proto::world::Erc20BalanceRequest>,
-    ) -> Result<Response<Erc20BalanceResponse>, Status> {
-        let request = request.into_inner();
-        let token_address = request.token_address;
-        let account_address = request.account_address;
-
-        let balance = self
-            .erc20_balance(token_address, account_address)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(Erc20BalanceResponse { balance }))
-    }
-
-    async fn erc721_balance(
-        &self,
-        request: Request<proto::world::Erc721BalanceRequest>,
-    ) -> Result<Response<Erc721BalanceResponse>, Status> {
-        let request = request.into_inner();
-        let token_address = request.token_address;
-        let account_address = request.account_address;
-        let token_id = request.token_id;
-
-        let balance = self
-            .erc721_balance(token_address, account_address, token_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(Erc721BalanceResponse { balance }))
     }
 }
 

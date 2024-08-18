@@ -36,13 +36,8 @@ service World {
 
     // Subscribe to events
     rpc SubscribeEvents (SubscribeEventsRequest) returns (stream SubscribeEventsResponse);
-
-    // Retrieve ERC20 balance
-    rpc Erc20Balance (Erc20BalanceRequest) returns (Erc20BalanceResponse);
-
-    // Retrieve ERC721 balance
-    rpc Erc721Balance (Erc721BalanceRequest) returns (Erc721BalanceResponse);
 }
+
 
 // A request to retrieve metadata for a specific world ID.
 message MetadataRequest {
@@ -103,23 +98,4 @@ message SubscribeEventsRequest {
 
 message SubscribeEventsResponse {
     types.Event event = 1;
-}
-
-message Erc20BalanceRequest {
-    string account_address = 1;
-    string token_address = 2;
-}
-
-message Erc20BalanceResponse {
-    string balance = 1;
-}
-
-message Erc721BalanceRequest {
-    string account_address = 1;
-    string token_address = 2;
-    string token_id = 3;
-}
-
-message Erc721BalanceResponse {
-    string balance = 1;
 }
