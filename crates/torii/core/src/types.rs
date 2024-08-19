@@ -1,5 +1,6 @@
 use core::fmt;
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
+use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
 use dojo_types::schema::Ty;

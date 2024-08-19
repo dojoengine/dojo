@@ -1,5 +1,3 @@
-use crate::types::ValueMapping;
-use crate::utils::extract;
 use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use convert_case::{Case, Casing};
@@ -10,7 +8,8 @@ use tracing::warn;
 use crate::constants::{ERC_BALANCE_NAME, ERC_BALANCE_TYPE_NAME};
 use crate::mapping::ERC_BALANCE_TYPE_MAPPING;
 use crate::object::{BasicObject, ResolvableObject};
-use crate::types::TypeMapping;
+use crate::types::{TypeMapping, ValueMapping};
+use crate::utils::extract;
 
 #[derive(Debug)]
 pub struct ErcBalanceObject;
@@ -59,7 +58,8 @@ async fn fetch_erc_balances(
     conn: &mut SqliteConnection,
     address: &str,
 ) -> sqlx::Result<Vec<Value>> {
-    let query = "SELECT t.contract_address, t.name, t.symbol, t.decimals, b.balance, b.token_id, c.contract_type 
+    let query = "SELECT t.contract_address, t.name, t.symbol, t.decimals, b.balance, b.token_id, \
+                 c.contract_type 
          FROM balances b
          JOIN tokens t ON b.token_id = t.id
          JOIN contracts c ON t.contract_address = c.contract_address

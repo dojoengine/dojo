@@ -1,5 +1,3 @@
-use crate::types::ValueMapping;
-use crate::utils::extract;
 use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
 use async_graphql::{Name, Value};
 use convert_case::{Case, Casing};
@@ -10,7 +8,8 @@ use tracing::warn;
 use crate::constants::{ERC_TRANSFER_NAME, ERC_TRANSFER_TYPE_NAME};
 use crate::mapping::ERC_TRANSFER_TYPE_MAPPING;
 use crate::object::{BasicObject, ResolvableObject};
-use crate::types::TypeMapping;
+use crate::types::{TypeMapping, ValueMapping};
+use crate::utils::extract;
 
 #[derive(Debug)]
 pub struct ErcTransferObject;

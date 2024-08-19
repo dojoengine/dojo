@@ -13,9 +13,8 @@ use dojo_world::contracts::naming::{compute_selector_from_names, compute_selecto
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Row, Sqlite};
-use starknet::core::types::BlockTag;
 use starknet::core::types::{
-    BlockId, Event, Felt, FunctionCall, InvokeTransaction, Transaction, U256,
+    BlockId, BlockTag, Event, Felt, FunctionCall, InvokeTransaction, Transaction, U256,
 };
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
@@ -66,7 +65,8 @@ impl Sql {
 
         for erc_contract in erc_contracts.values() {
             query_queue.enqueue(
-                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, ?)",
+                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, \
+                 ?, ?)",
                 vec![
                     Argument::FieldElement(erc_contract.contract_address),
                     Argument::FieldElement(erc_contract.contract_address),
@@ -778,11 +778,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return;
@@ -1327,7 +1323,8 @@ impl Sql {
 
             // Insert the token into the tokens table
             self.query_queue.enqueue(
-                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, \
+                 ?, ?, ?)",
                 vec![
                     Argument::String(format!("{:#x}", contract_address)),
                     Argument::FieldElement(contract_address),
@@ -1341,9 +1338,9 @@ impl Sql {
         // Now proceed with the transfer handling
         // Insert transfer event to erc20_transfers table
         {
-            let insert_query =
-                "INSERT INTO erc_transfers (contract_address, from_address, to_address, amount, token_id, \
-                 executed_at) VALUES (?, ?, ?, ?, ?, ?)";
+            let insert_query = "INSERT INTO erc_transfers (contract_address, from_address, \
+                                to_address, amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, \
+                                ?)";
 
             self.query_queue.enqueue(
                 insert_query,
@@ -1367,8 +1364,8 @@ impl Sql {
             // statements.
             // Fetch balances for both `from` and `to` addresses, update them and write back to db
             let query = sqlx::query_as::<_, (String, String)>(
-                "SELECT account_address, balance FROM balances WHERE contract_address = ? AND account_address \
-                 IN (?, ?)",
+                "SELECT account_address, balance FROM balances WHERE contract_address = ? AND \
+                 account_address IN (?, ?)",
             )
             .bind(format!("{:#x}", contract_address))
             .bind(format!("{:#x}", from))
@@ -1499,7 +1496,8 @@ impl Sql {
 
             // Insert the token into the tokens table
             self.query_queue.enqueue(
-                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, \
+                 ?, ?, ?)",
                 vec![
                     Argument::String(token_id.clone()),
                     Argument::FieldElement(contract_address),
@@ -1512,9 +1510,8 @@ impl Sql {
 
         // Insert transfer event to erc721_transfers table
         {
-            let insert_query =
-                "INSERT INTO erc721_transfers (contract_address, from_address, to_address, token_id, \
-                 executed_at) VALUES (?, ?, ?, ?, ?)";
+            let insert_query = "INSERT INTO erc721_transfers (contract_address, from_address, \
+                                to_address, token_id, executed_at) VALUES (?, ?, ?, ?, ?)";
 
             self.query_queue.enqueue(
                 insert_query,

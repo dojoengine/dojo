@@ -12,7 +12,6 @@ use url::Url;
 use warp::{Filter, Rejection, Reply};
 
 use super::schema::build_schema;
-
 use crate::constants::MODEL_TABLE;
 use crate::query::data::count_rows;
 
