@@ -34,6 +34,7 @@ pub const SUBSCRIPTION_TYPE_NAME: &str = "World__Subscription";
 pub const MODEL_ORDER_TYPE_NAME: &str = "World__ModelOrder";
 pub const MODEL_ORDER_FIELD_TYPE_NAME: &str = "World__ModelOrderField";
 pub const ERC_BALANCE_TYPE_NAME: &str = "ERC__Balance";
+pub const ERC_TRANSFER_TYPE_NAME: &str = "ERC__Transfer";
 pub const ERC_TOKEN_TYPE_NAME: &str = "ERC__Token";
 
 // objects' single and plural names
@@ -49,6 +50,7 @@ pub const PAGE_INFO_NAMES: (&str, &str) = ("pageInfo", "");
 
 pub const ERC_BALANCE_NAME: (&str, &str) = ("ercBalance", "");
 pub const ERC_TOKEN_NAME: (&str, &str) = ("ercToken", "");
+pub const ERC_TRANSFER_NAME: (&str, &str) = ("ercTransfer", "");
 
 // misc
 pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";

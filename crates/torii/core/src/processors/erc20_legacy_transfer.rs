@@ -38,7 +38,7 @@ where
         world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
-        _block_timestamp: u64,
+        block_timestamp: u64,
         _transaction_receipt: &TransactionReceiptWithBlockInfo,
         _event_id: &str,
         event: &Event,
@@ -50,7 +50,8 @@ where
         let value = U256Cainome::cairo_deserialize(&event.data, 2)?;
         let value = U256::from_words(value.low, value.high);
 
-        db.handle_erc20_transfer(token_address, from, to, value, world.provider()).await?;
+        db.handle_erc20_transfer(token_address, from, to, value, world.provider(), block_timestamp)
+            .await?;
         info!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "Legacy ERC20 Transfer");
 
         Ok(())

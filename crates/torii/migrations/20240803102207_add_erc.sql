@@ -30,18 +30,14 @@ CREATE TABLE tokens (
     -- FOREIGN KEY (contract_address) REFERENCES contracts(id)
 );
 
-CREATE TABLE erc20_transfers (
+CREATE TABLE erc_transfers (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    token_address TEXT NOT NULL,
+    contract_address TEXT NOT NULL,
     from_address TEXT NOT NULL,
     to_address TEXT NOT NULL,
-    amount TEXT NOT NULL
-);
-
-CREATE TABLE erc721_transfers (
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    token_address TEXT NOT NULL,
-    from_address TEXT NOT NULL,
-    to_address TEXT NOT NULL,
-    token_id TEXT NOT NULL
+    amount TEXT NOT NULL,
+    -- contract_address:token_id
+    token_id TEXT NOT NULL,
+    executed_at DATETIME NOT NULL,
+    FOREIGN KEY (token_id) REFERENCES tokens(id)
 );

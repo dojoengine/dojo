@@ -1259,10 +1259,14 @@ impl Sql {
         to: Felt,
         amount: U256,
         provider: &P,
+        block_timestamp: u64,
     ) -> Result<()> {
+        // unique token identifier in DB
+        let token_id = format!("{:#x}", contract_address);
+
         let token_exists: bool =
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
-                .bind(format!("{:#x}", contract_address))
+                .bind(token_id.clone())
                 .fetch_one(&self.pool)
                 .await?;
 
@@ -1338,7 +1342,8 @@ impl Sql {
         // Insert transfer event to erc20_transfers table
         {
             let insert_query =
-                "INSERT INTO erc20_transfers (token_address, from_address, to_address, amount) VALUES (?, ?, ?, ?)";
+                "INSERT INTO erc_transfers (contract_address, from_address, to_address, amount, token_id, \
+                 executed_at) VALUES (?, ?, ?, ?, ?, ?)";
 
             self.query_queue.enqueue(
                 insert_query,
@@ -1347,6 +1352,8 @@ impl Sql {
                     Argument::FieldElement(from),
                     Argument::FieldElement(to),
                     Argument::String(u256_to_sql_string(&amount)),
+                    Argument::String(token_id.clone()),
+                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 ],
             );
         }
@@ -1406,7 +1413,7 @@ impl Sql {
                         Argument::String(u256_to_sql_string(&new_from_balance)),
                         Argument::FieldElement(from),
                         Argument::FieldElement(contract_address),
-                        Argument::String(format!("{:#x}", contract_address)),
+                        Argument::String(token_id.clone()),
                     ],
                 );
             }
@@ -1419,7 +1426,7 @@ impl Sql {
                         Argument::String(u256_to_sql_string(&new_to_balance)),
                         Argument::FieldElement(to),
                         Argument::FieldElement(contract_address),
-                        Argument::String(format!("{:#x}", contract_address)),
+                        Argument::String(token_id.clone()),
                     ],
                 );
             }
@@ -1436,11 +1443,12 @@ impl Sql {
         to: Felt,
         token_id: U256,
         provider: &P,
+        block_timestamp: u64,
     ) -> Result<()> {
-        let balance_token_id = format!("{:#x}:{}", contract_address, u256_to_sql_string(&token_id));
+        let token_id = format!("{:#x}:{}", contract_address, u256_to_sql_string(&token_id));
         let token_exists: bool =
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tokens WHERE id = ?)")
-                .bind(balance_token_id.clone())
+                .bind(token_id.clone())
                 .fetch_one(&self.pool)
                 .await?;
 
@@ -1493,7 +1501,7 @@ impl Sql {
             self.query_queue.enqueue(
                 "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, ?, ?, ?, ?)",
                 vec![
-                    Argument::String(balance_token_id.clone()),
+                    Argument::String(token_id.clone()),
                     Argument::FieldElement(contract_address),
                     Argument::String(name),
                     Argument::String(symbol),
@@ -1505,8 +1513,8 @@ impl Sql {
         // Insert transfer event to erc721_transfers table
         {
             let insert_query =
-                "INSERT INTO erc721_transfers (token_address, from_address, to_address, token_id) \
-                                VALUES (?, ?, ?, ?)";
+                "INSERT INTO erc721_transfers (contract_address, from_address, to_address, token_id, \
+                 executed_at) VALUES (?, ?, ?, ?, ?)";
 
             self.query_queue.enqueue(
                 insert_query,
@@ -1514,7 +1522,8 @@ impl Sql {
                     Argument::FieldElement(contract_address),
                     Argument::FieldElement(from),
                     Argument::FieldElement(to),
-                    Argument::String(u256_to_sql_string(&token_id)),
+                    Argument::String(token_id.clone()),
+                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 ],
             );
         }
@@ -1526,21 +1535,16 @@ impl Sql {
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT (account_address, contract_address, token_id) 
             DO UPDATE SET balance = excluded.balance";
-            let balance_token_id =
-                format!("{:#x}:{}", contract_address, u256_to_sql_string(&token_id));
 
             if from != Felt::ZERO {
                 self.query_queue.enqueue(
                     update_query,
                     vec![
-                        Argument::String(format!(
-                            "{:#x}:{:#x}:{:#x}",
-                            from, contract_address, token_id
-                        )),
+                        Argument::String(format!("{:#x}:{}", from, &token_id)),
                         Argument::FieldElement(from),
                         Argument::FieldElement(contract_address),
-                        Argument::String(u256_to_sql_string(&U256::from(1u8))),
-                        Argument::String(balance_token_id.clone()),
+                        Argument::String(u256_to_sql_string(&U256::from(0u8))),
+                        Argument::String(token_id.clone()),
                     ],
                 );
             }
@@ -1549,14 +1553,11 @@ impl Sql {
                 self.query_queue.enqueue(
                     update_query,
                     vec![
-                        Argument::String(format!(
-                            "{:#x}:{:#x}:{:#x}",
-                            to, contract_address, token_id
-                        )),
+                        Argument::String(format!("{:#x}:{}", to, &token_id)),
                         Argument::FieldElement(to),
                         Argument::FieldElement(contract_address),
-                        Argument::String(u256_to_sql_string(&U256::from(0u8))),
-                        Argument::String(balance_token_id.clone()),
+                        Argument::String(u256_to_sql_string(&U256::from(1u8))),
+                        Argument::String(token_id.clone()),
                     ],
                 );
             }
