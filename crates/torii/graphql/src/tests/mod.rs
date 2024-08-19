@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::Result;
@@ -344,7 +345,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let world = WorldContractReader::new(strat.world_address, account.provider());
 
-    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
+    let db = Sql::new(pool.clone(), strat.world_address, &HashMap::default()).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -362,6 +363,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         EngineConfig::default(),
         shutdown_tx,
         None,
+        HashMap::default(),
     );
 
     let _ = engine.sync_to_head(0, None).await?;

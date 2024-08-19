@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -94,7 +95,7 @@ async fn test_entities_queries() {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let db = Sql::new(pool.clone(), strat.world_address).await.unwrap();
+    let db = Sql::new(pool.clone(), strat.world_address, &HashMap::default()).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -108,6 +109,7 @@ async fn test_entities_queries() {
         EngineConfig::default(),
         shutdown_tx,
         None,
+        HashMap::default(),
     );
 
     let _ = engine.sync_to_head(0, None).await.unwrap();

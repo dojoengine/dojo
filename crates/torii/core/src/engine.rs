@@ -1,3 +1,4 @@
+use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::time::Duration;
@@ -74,6 +75,7 @@ struct UnprocessedEvent {
 }
 
 impl<P: Provider + Sync> Engine<P> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         world: WorldContractReader<P>,
         db: Sql,
@@ -308,9 +310,9 @@ impl<P: Provider + Sync> Engine<P> {
                 };
 
                 // Fetch block timestamp if not already fetched and inserts into the map
-                if !blocks.contains_key(&block_number) {
+                if let Entry::Vacant(e) = blocks.entry(block_number) {
                     let block_timestamp = self.get_block_timestamp(block_number).await?;
-                    blocks.insert(block_number, block_timestamp);
+                    e.insert(block_timestamp);
                 }
 
                 // Then we skip all transactions until we reach the last pending processed

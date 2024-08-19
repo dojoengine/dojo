@@ -27,7 +27,7 @@ where
         // ref: https://github.com/OpenZeppelin/cairo-contracts/blob/eabfa029b7b681d9e83bf171f723081b07891016/packages/token/src/erc721/erc721.cairo#L44-L53
         // key: [hash(Transfer), from, to, token_id.low, token_id.high]
         // data: []
-        if event.keys.len() == 5 && event.data.len() == 0 {
+        if event.keys.len() == 5 && event.data.is_empty() {
             return true;
         }
 

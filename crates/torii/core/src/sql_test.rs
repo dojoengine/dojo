@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use cainome::cairo_serde::ContractAddress;
@@ -48,6 +49,7 @@ where
         EngineConfig::default(),
         shutdown_tx,
         None,
+        HashMap::default(),
     );
 
     let _ = engine.sync_to_head(0, None).await?;
@@ -117,7 +119,7 @@ async fn test_load_from_remote() {
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::default()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
 
@@ -276,7 +278,7 @@ async fn test_load_from_remote_del() {
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::default()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
 
@@ -352,7 +354,7 @@ async fn test_get_entity_keys() {
 
     let world_reader = WorldContractReader::new(strat.world_address, account.provider());
 
-    let mut db = Sql::new(pool.clone(), world_reader.address).await.unwrap();
+    let mut db = Sql::new(pool.clone(), world_reader.address, &HashMap::default()).await.unwrap();
 
     let _ = bootstrap_engine(world_reader, db.clone(), account.provider()).await;
 

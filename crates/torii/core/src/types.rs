@@ -127,12 +127,11 @@ impl FromStr for ErcType {
     }
 }
 
-impl ToString for ErcType {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for ErcType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ErcType::ERC20 => "ERC20",
-            ErcType::ERC721 => "ERC721",
+            ErcType::ERC20 => write!(f, "ERC20"),
+            ErcType::ERC721 => write!(f, "ERC721"),
         }
-        .to_string()
     }
 }
