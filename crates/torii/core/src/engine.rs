@@ -110,8 +110,8 @@ impl<P: Provider + Sync> Engine<P> {
                                 info!(target: LOG_TARGET, latest_block_number = latest_block_number, "Syncing reestablished.");
                             }
 
-                            pending_block_tx = latest_pending_tx;
                             head = latest_block_number;
+                            pending_block_tx = latest_pending_tx;
                         }
                         Err(e) => {
                             erroring_out = true;

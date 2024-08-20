@@ -263,7 +263,15 @@ async fn main() -> anyhow::Result<()> {
     }
 
     tokio::select! {
-        _ = engine.start() => {},
+        res = engine.start() => {
+            match res {
+                Ok(_) => {}
+                Err(e) => {
+                    error!(target: LOG_TARGET, error = %e, "Engine start failed");
+                    std::process::exit(1);
+                }
+            }
+        },
         _ = proxy_server.start(shutdown_tx.subscribe()) => {},
         _ = graphql_server => {},
         _ = grpc_server => {},

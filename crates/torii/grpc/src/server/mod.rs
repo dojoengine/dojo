@@ -132,7 +132,7 @@ impl DojoWorld {
 impl DojoWorld {
     pub async fn metadata(&self) -> Result<proto::types::WorldMetadata, Error> {
         let world_address = sqlx::query_scalar(&format!(
-            "SELECT world_address FROM worlds WHERE id = '{:#x}'",
+            "SELECT contract_address FROM contracts WHERE id = '{:#x}'",
             self.world_address
         ))
         .fetch_one(&self.pool)
