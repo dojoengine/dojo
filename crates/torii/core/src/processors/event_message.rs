@@ -54,7 +54,7 @@ where
 
         info!(
             target: LOG_TARGET,
-            model = %model.name(),
+            model = %model.name,
             "Store event message."
         );
 
@@ -63,7 +63,7 @@ where
         let mut keys_and_unpacked =
             [event.keys[1..event.keys.len() - 1].to_vec(), event.data.clone()].concat();
 
-        let mut entity = model.schema().await?;
+        let mut entity = model.schema.clone();
         entity.deserialize(&mut keys_and_unpacked)?;
 
         db.set_event_message(entity, event_id, block_timestamp).await?;

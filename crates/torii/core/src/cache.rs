@@ -8,10 +8,17 @@ use tokio::sync::RwLock;
 use crate::error::{Error, QueryError};
 use crate::model::{parse_sql_model_members, SqlModelMember};
 
+#[derive(Debug, Clone)]
+pub struct Model {
+    pub namespace: String,
+    pub name: String,
+    pub schema: Ty
+}
+
 #[derive(Debug)]
 pub struct ModelCache {
     pool: SqlitePool,
-    cache: RwLock<HashMap<Felt, Ty>>,
+    cache: RwLock<HashMap<Felt, Model>>,
 }
 
 impl ModelCache {
@@ -19,16 +26,16 @@ impl ModelCache {
         Self { pool, cache: RwLock::new(HashMap::new()) }
     }
 
-    pub async fn schemas(&self, selectors: &[Felt]) -> Result<Vec<Ty>, Error> {
+    pub async fn models(&self, selectors: &[Felt]) -> Result<Vec<Model>, Error> {
         let mut schemas = Vec::with_capacity(selectors.len());
         for selector in selectors {
-            schemas.push(self.schema(selector).await?);
+            schemas.push(self.model(selector).await?);
         }
 
         Ok(schemas)
     }
 
-    pub async fn schema(&self, selector: &Felt) -> Result<Ty, Error> {
+    pub async fn model(&self, selector: &Felt) -> Result<Model, Error> {
         {
             let cache = self.cache.read().await;
             if let Some(model) = cache.get(selector).cloned() {
@@ -36,10 +43,10 @@ impl ModelCache {
             }
         }
 
-        self.update_schema(selector).await
+        self.update_model(selector).await
     }
 
-    async fn update_schema(&self, selector: &Felt) -> Result<Ty, Error> {
+    async fn update_model(&self, selector: &Felt) -> Result<Model, Error> {
         let formatted_selector = format!("{:#x}", selector);
 
         let (namespace, name): (String, String) =
@@ -61,9 +68,11 @@ impl ModelCache {
 
         let schema = parse_sql_model_members(&namespace, &name, &model_members);
         let mut cache = self.cache.write().await;
-        cache.insert(*selector, schema.clone());
+        
+        let model = Model { namespace, name, schema: schema.clone() };
+        cache.insert(*selector, model.clone());
 
-        Ok(schema)
+        Ok(model)
     }
 
     pub async fn clear(&self) {
