@@ -98,6 +98,8 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
+    // switch to using BlockTag::Pending instead of sync_range and sync_pending logic
+    // run tasks for world and erc tokens concurrently
     pub async fn start(&mut self) -> Result<()> {
         let (mut head, mut pending_block_tx) = self.db.head().await?;
         if head == 0 {

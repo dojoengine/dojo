@@ -28,11 +28,11 @@ use crate::types::{
     EventMessage as EventMessageUpdated, Model as ModelRegistered,
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
-use crate::World;
 
 type IsEventMessage = bool;
 type IsStoreUpdateMember = bool;
 
+pub const WORLD_CONTRACT_TYPE: &str = "WORLD";
 pub const FELT_DELIMITER: &str = "/";
 
 #[cfg(test)]
@@ -55,18 +55,17 @@ impl Sql {
         let mut query_queue = QueryQueue::new(pool.clone());
 
         query_queue.enqueue(
-            "INSERT OR IGNORE INTO indexers (id, head) VALUES (?, ?)",
-            vec![Argument::FieldElement(world_address), Argument::Int(0)],
-        );
-        query_queue.enqueue(
-            "INSERT OR IGNORE INTO worlds (id, world_address) VALUES (?, ?)",
-            vec![Argument::FieldElement(world_address), Argument::FieldElement(world_address)],
+            "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, ?)",
+            vec![
+                Argument::FieldElement(world_address),
+                Argument::FieldElement(world_address),
+                Argument::String(WORLD_CONTRACT_TYPE.to_string()),
+            ],
         );
 
         for erc_contract in erc_contracts.values() {
             query_queue.enqueue(
-                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, \
-                 ?, ?)",
+                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, ?)",
                 vec![
                     Argument::FieldElement(erc_contract.contract_address),
                     Argument::FieldElement(erc_contract.contract_address),
@@ -82,12 +81,13 @@ impl Sql {
 
     pub async fn head(&self) -> Result<(u64, Option<Felt>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer_query = sqlx::query_as::<_, (i64, Option<String>)>(
-            "SELECT head, pending_block_tx FROM indexers WHERE id = ?",
+        let indexer_query = sqlx::query_as::<_, (i64, Option<String>, String)>(
+            "SELECT head, pending_block_tx, contract_type FROM contracts WHERE id = ?",
         )
         .bind(format!("{:#x}", self.world_address));
 
-        let indexer: (i64, Option<String>) = indexer_query.fetch_one(&mut *conn).await?;
+        let indexer: (i64, Option<String>, String) = indexer_query.fetch_one(&mut *conn).await?;
+        assert!(indexer.2 == WORLD_CONTRACT_TYPE);
         Ok((
             indexer.0.try_into().expect("doesn't fit in u64"),
             indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
@@ -104,19 +104,9 @@ impl Sql {
         };
 
         self.query_queue.enqueue(
-            "UPDATE indexers SET head = ?, pending_block_tx = ? WHERE id = ?",
+            "UPDATE contracts SET head = ?, pending_block_tx = ? WHERE id = ?",
             vec![head, pending_block_tx, id],
         );
-    }
-
-    pub async fn world(&self) -> Result<World> {
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let meta: World = sqlx::query_as("SELECT * FROM worlds WHERE id = ?")
-            .bind(format!("{:#x}", self.world_address))
-            .fetch_one(&mut *conn)
-            .await?;
-
-        Ok(meta)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -778,7 +768,11 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
+                        if let Ty::Tuple(t) = &o.ty {
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     },
                 ) {
                     return;
