@@ -10,3 +10,5 @@ futures.workspace = true
 rayon.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tokio-util = { version = "0.7.11", features = [ "rt" ] }
+tracing.workspace = true
