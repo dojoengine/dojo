@@ -102,7 +102,7 @@ impl<P: Provider + Sync> Engine<P> {
                     break Ok(());
                 }
                 _ = async {
-                    match self.sync_to_head(head, pending_block_tx).await {
+                    match self.sync_range(head, pending_block_tx).await {
                         Ok((latest_block_number, latest_pending_tx)) => {
                             if erroring_out {
                                 erroring_out = false;
@@ -128,105 +128,23 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    pub async fn sync_to_head(
-        &mut self,
-        from: u64,
-        mut pending_block_tx: Option<Felt>,
-    ) -> Result<(u64, Option<Felt>)> {
-        let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
-
-        if from < latest_block_number {
-            // if `from` == 0, then the block may or may not be processed yet.
-            let from = if from == 0 { from } else { from + 1 };
-            pending_block_tx = self.sync_range(from, latest_block_number, pending_block_tx).await?;
-        } else if self.config.index_pending {
-            pending_block_tx = self.sync_pending(latest_block_number + 1, pending_block_tx).await?;
-        }
-
-        Ok((latest_block_number, pending_block_tx))
-    }
-
-    pub async fn sync_pending(
-        &mut self,
-        block_number: u64,
-        mut pending_block_tx: Option<Felt>,
-    ) -> Result<Option<Felt>> {
-        let block = if let MaybePendingBlockWithTxs::PendingBlock(pending) =
-            self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Pending)).await?
-        {
-            pending
-        } else {
-            return Ok(None);
-        };
-
-        // Skip transactions that have been processed already
-        // Our cursor is the last processed transaction
-        let mut pending_block_tx_cursor = pending_block_tx;
-        for transaction in block.transactions {
-            if let Some(tx) = pending_block_tx_cursor {
-                if transaction.transaction_hash() != &tx {
-                    continue;
-                }
-
-                pending_block_tx_cursor = None;
-                continue;
-            }
-
-            match self
-                .process_transaction_and_receipt(
-                    *transaction.transaction_hash(),
-                    &transaction,
-                    block_number,
-                    block.timestamp,
-                )
-                .await
-            {
-                Err(e) => {
-                    match e.to_string().as_str() {
-                        "TransactionHashNotFound" => {
-                            // We failed to fetch the transaction, which is because
-                            // the transaction might not have been processed fast enough by the
-                            // provider. So we can fail silently and try
-                            // again in the next iteration.
-                            warn!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Retrieving pending transaction receipt.");
-                            return Ok(pending_block_tx);
-                        }
-                        _ => {
-                            error!(target: LOG_TARGET, error = %e, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processing pending transaction.");
-                            return Err(e);
-                        }
-                    }
-                }
-                Ok(true) => {
-                    pending_block_tx = Some(*transaction.transaction_hash());
-                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending world transaction.");
-                }
-                Ok(_) => {
-                    info!(target: LOG_TARGET, transaction_hash = %format!("{:#x}", transaction.transaction_hash()), "Processed pending transaction.")
-                }
-            }
-        }
-
-        // Set the head to the last processed pending transaction
-        // Head block number should still be latest block number
-        self.db.set_head(block_number - 1, pending_block_tx);
-
-        self.db.execute().await?;
-        Ok(pending_block_tx)
-    }
-
     pub async fn sync_range(
         &mut self,
         from: u64,
-        to: u64,
         pending_block_tx: Option<Felt>,
     ) -> Result<Option<Felt>> {
         // Process all blocks from current to latest.
+        let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
+
         let get_events = |token: Option<String>| {
             self.provider.get_events(
                 EventFilter {
                     from_block: Some(BlockId::Number(from)),
-                    to_block: Some(BlockId::Number(to)),
+                    to_block: Some(if self.config.index_pending {
+                        BlockId::Tag(BlockTag::Pending)
+                    } else {
+                        BlockId::Number(latest_block_number)
+                    }),
                     address: Some(self.world.address),
                     keys: None,
                 },
@@ -268,11 +186,11 @@ impl<P: Provider + Sync> Engine<P> {
                                 } else {
                                     // If the block is pending, we assume the block number is the
                                     // latest + 1
-                                    to + 1
+                                    latest_block_number + 1
                                 }
                             }
 
-                            _ => to + 1,
+                            _ => latest_block_number + 1,
                         }
                     }
                 };
