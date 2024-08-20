@@ -17,6 +17,11 @@ pub mod model {
         deploy_and_get_metadata
     };
 
+    #[cfg(target: "test")]
+    pub use model::{
+        ModelTest, ModelEntityTest
+    };
+
     pub mod metadata;
     pub use metadata::{ResourceMetadata, ResourceMetadataTrait, resource_metadata};
     pub(crate) use metadata::{initial_address, initial_class_hash};
@@ -57,10 +62,15 @@ pub mod world {
     mod world_contract;
     pub use world_contract::{
         world, IWorld, IWorldDispatcher, IWorldDispatcherTrait, IWorldProvider,
-        IWorldProviderDispatcher, IWorldProviderDispatcherTrait, Resource
+        IWorldProviderDispatcher, IWorldProviderDispatcherTrait, Resource,
     };
     pub(crate) use world_contract::{
         IUpgradeableWorld, IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait
+    };
+
+    #[cfg(target: "test")]
+    pub use world_contract::{
+        IWorldTest, IWorldTestDispatcher, IWorldTestDispatcherTrait
     };
 }
 

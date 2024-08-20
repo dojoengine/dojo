@@ -186,14 +186,15 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
-    use dojo::model::Model;
+    use dojo::model::{Model, ModelTest, ModelIndex, ModelEntityTest};
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+    use dojo::world::{IWorldTestDispatcher, IWorldTestDispatcherTrait};
 
     use dojo::utils::test::{spawn_test_world, deploy_contract};
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
     use armory::flatbow;
-    use dojo_examples::models::{Position, position, Moves, moves, Direction, Vec2};
+    use dojo_examples::models::{Position, position, PositionStore, PositionEntityStore, Moves, moves, Direction, Vec2};
 
     #[test]
     #[available_gas(30000000)]
@@ -221,6 +222,22 @@ mod tests {
         // System calls
         actions_system.spawn();
         let initial_moves = get!(world, caller, Moves);
+        let mut initial_position = get!(world, caller, Position);
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<'FOO_1234'>());
+        initial_position.vec.x = 188;
+        let world_test = IWorldTestDispatcher { contract_address: world.contract_address };
+        initial_position.set_test(world_test);
+        initial_position.delete_test(world_test);
+
+        let id = PositionStore::entity_id_from_keys(caller);
+        let mut position = PositionEntityStore::get(world, id);
+
+        position.vec.x = 122;
+        position.update_test(world_test);
+
+        //world_test.set_entity_test(initial_position.instance_selector(), ModelIndex::Keys([caller_felt].span()), initial_position.values(), initial_position.instance_layout());
+
         let initial_position = get!(world, caller, Position);
 
         println!("initial_position: {:?}", initial_position);
