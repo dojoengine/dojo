@@ -100,7 +100,7 @@ impl ModelCache {
         let model = Model {
             namespace,
             name,
-            selector: selector.clone(),
+            selector: *selector,
             class_hash,
             contract_address,
             packed_size,
