@@ -64,8 +64,7 @@ impl<'a> TaskBuilder<'a> {
         self
     }
 
-    /// Notifies the task manager to perform a graceful shutdown when the task is finished due to
-    /// completion or cancellation.
+    /// Notifies the task manager to perform a graceful shutdown when the task is finished.
     pub fn graceful_shutdown(mut self) -> Self {
         self.graceful_shutdown = true;
         self
