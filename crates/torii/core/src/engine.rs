@@ -6,7 +6,7 @@ use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
     BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, ReceiptBlock, Transaction, TransactionReceipt,
+    ReceiptBlock, Transaction, TransactionReceipt,
     TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
@@ -102,7 +102,7 @@ impl<P: Provider + Sync> Engine<P> {
                     break Ok(());
                 }
                 _ = async {
-                    match self.sync_range(head, pending_block_tx).await {
+                    match self.sync(head, pending_block_tx).await {
                         Ok((latest_block_number, latest_pending_tx)) => {
                             if erroring_out {
                                 erroring_out = false;
@@ -128,12 +128,13 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    pub async fn sync_range(
+    pub async fn sync(
         &mut self,
         from: u64,
         pending_block_tx: Option<Felt>,
-    ) -> Result<Option<Felt>> {
-        // Process all blocks from current to latest.
+    ) -> Result<(u64, Option<Felt>)> {
+        // Process all blocks from current to head.
+        // If the index pending flag is set, we will process pending events as well.
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         let get_events = |token: Option<String>| {
@@ -238,13 +239,14 @@ impl<P: Provider + Sync> Engine<P> {
             // Process transaction
             let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
 
-            self.process_transaction_and_receipt(
-                transaction_hash,
-                &transaction,
-                block_number,
-                blocks[&block_number],
-            )
-            .await?;
+            let has_world_event = self
+                .process_transaction_and_receipt(
+                    transaction_hash,
+                    &transaction,
+                    block_number,
+                    blocks[&block_number],
+                )
+                .await?;
 
             // Process block
             if block_number > last_block {
@@ -255,6 +257,11 @@ impl<P: Provider + Sync> Engine<P> {
                 self.process_block(block_number, blocks[&block_number]).await?;
                 last_block = block_number;
             }
+
+            // If the transaction has a world event, we update the cursor
+            if has_world_event {
+                pending_block_tx_cursor = Some(transaction_hash);
+            }
         }
 
         // We return None for the pending_block_tx because our sync_range
@@ -263,11 +270,11 @@ impl<P: Provider + Sync> Engine<P> {
         // so once the sync range is done, we assume all of the tx of the block
         // have been processed.
 
-        self.db.set_head(to, None);
+        self.db.set_head(latest_block_number, pending_block_tx_cursor);
 
         self.db.execute().await?;
 
-        Ok(None)
+        Ok((latest_block_number, pending_block_tx_cursor))
     }
 
     async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {

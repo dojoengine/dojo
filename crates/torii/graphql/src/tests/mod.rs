@@ -364,7 +364,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         None,
     );
 
-    let _ = engine.sync_to_head(0, None).await?;
+    let _ = engine.sync(0, None).await?;
 
     Ok(pool)
 }

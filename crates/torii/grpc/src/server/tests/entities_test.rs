@@ -110,7 +110,7 @@ async fn test_entities_queries() {
         None,
     );
 
-    let _ = engine.sync_to_head(0, None).await.unwrap();
+    let _ = engine.sync(0, None).await.unwrap();
 
     let (_, receiver) = tokio::sync::mpsc::channel(1);
     let grpc = DojoWorld::new(db.pool, receiver, strat.world_address, provider.clone());
