@@ -3,7 +3,8 @@ CREATE TABLE contracts (
     id TEXT NOT NULL PRIMARY KEY,
     contract_address TEXT NOT NULL,
     contract_type TEXT NOT NULL,
-    head TEXT
+    head BIGINT NOT NULL DEFAULT 0,
+    pending_block_tx TEXT NULL DEFAULT NULL
 );
 
 CREATE TABLE balances (
@@ -26,8 +27,8 @@ CREATE TABLE tokens (
     contract_address TEXT NOT NULL,
     name TEXT NOT NULL,
     symbol TEXT NOT NULL,
-    decimals INTEGER NOT NULL
-    -- FOREIGN KEY (contract_address) REFERENCES contracts(id)
+    decimals INTEGER NOT NULL,
+    FOREIGN KEY (contract_address) REFERENCES contracts(id)
 );
 
 CREATE TABLE erc_transfers (
