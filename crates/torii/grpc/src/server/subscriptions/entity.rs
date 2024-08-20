@@ -218,7 +218,7 @@ impl Service {
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas = cache.schemas(&model_ids).await?;
+            let schemas = cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,

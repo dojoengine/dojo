@@ -161,8 +161,9 @@ impl DojoWorld {
         for model in models {
             let schema = self
                 .model_cache
-                .schema(&Felt::from_str(&model.id).map_err(ParseError::FromStr)?)
-                .await?;
+                .model(&Felt::from_str(&model.id).map_err(ParseError::FromStr)?)
+                .await?
+                .schema;
             models_metadata.push(proto::types::ModelMetadata {
                 namespace: model.namespace,
                 name: model.name,
@@ -292,7 +293,8 @@ impl DojoWorld {
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas = self.model_cache.schemas(&model_ids).await?;
+            let schemas =
+                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
@@ -433,7 +435,8 @@ impl DojoWorld {
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas = self.model_cache.schemas(&model_ids).await?;
+            let schemas =
+                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
@@ -525,7 +528,8 @@ impl DojoWorld {
             .map(Felt::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;
-        let schemas = self.model_cache.schemas(&model_ids).await?;
+        let schemas =
+            self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
@@ -702,7 +706,8 @@ impl DojoWorld {
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas = self.model_cache.schemas(&model_ids).await?;
+            let schemas =
+                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
             let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
@@ -735,33 +740,17 @@ impl DojoWorld {
         // selector
         let model = compute_selector_from_names(namespace, name);
 
-        let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
-            String,
-            String,
-            String,
-            u32,
-            u32,
-            String,
-        ) = sqlx::query_as(
-            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
-             layout FROM models WHERE id = ?",
-        )
-        .bind(format!("{:#x}", model))
-        .fetch_one(&self.pool)
-        .await?;
-
-        let schema = self.model_cache.schema(&model).await?;
-        let layout = layout.as_bytes().to_vec();
+        let model = self.model_cache.model(&model).await?;
 
         Ok(proto::types::ModelMetadata {
             namespace: namespace.to_string(),
-            name,
-            layout,
-            class_hash,
-            contract_address,
-            packed_size,
-            unpacked_size,
-            schema: serde_json::to_vec(&schema).unwrap(),
+            name: name.to_string(),
+            class_hash: format!("{:#x}", model.class_hash),
+            contract_address: format!("{:#x}", model.contract_address),
+            packed_size: model.packed_size,
+            unpacked_size: model.unpacked_size,
+            layout: serde_json::to_vec(&model.layout).unwrap(),
+            schema: serde_json::to_vec(&model.schema).unwrap(),
         })
     }
 

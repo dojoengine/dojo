@@ -1,6 +1,5 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
 use starknet::providers::Provider;
