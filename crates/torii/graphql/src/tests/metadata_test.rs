@@ -74,6 +74,7 @@ mod tests {
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
             .await
             .unwrap();
+        db.execute().await.unwrap();
 
         let result = run_graphql_query(&schema, QUERY).await;
         let value = result.get("metadatas").ok_or("metadatas not found").unwrap().clone();

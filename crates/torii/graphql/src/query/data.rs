@@ -1,6 +1,7 @@
 use async_graphql::connection::PageInfo;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Result, Row, SqliteConnection};
+use torii_core::sql::WORLD_CONTRACT_TYPE;
 
 use super::filter::{Filter, FilterValue};
 use super::order::{CursorDirection, Direction, Order};
@@ -25,8 +26,8 @@ pub async fn count_rows(
 }
 
 pub async fn fetch_world_address(conn: &mut SqliteConnection) -> Result<String> {
-    let query = "SELECT world_address FROM worlds".to_string();
-    let res: (String,) = sqlx::query_as(&query).fetch_one(conn).await?;
+    let query = "SELECT contract_address FROM contracts where contract_type = ?".to_string();
+    let res: (String,) = sqlx::query_as(&query).bind(WORLD_CONTRACT_TYPE).fetch_one(conn).await?;
     Ok(res.0)
 }
 
