@@ -12,7 +12,7 @@ pub type TaskHandle<T> = JoinHandle<TaskResult<T>>;
 /// Usage for this task manager is mainly to spawn tasks that can be cancelled, and captures
 /// panicked tasks (which in the context of the task manager - a critical task) for graceful
 /// shutdown.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TaskManager {
     /// A handle to the Tokio runtime.
     handle: Handle,
