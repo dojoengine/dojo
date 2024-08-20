@@ -5,9 +5,8 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes,
-    ReceiptBlock, Transaction, TransactionReceipt,
-    TransactionReceiptWithBlockInfo,
+    BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes, ReceiptBlock,
+    Transaction, TransactionReceipt, TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
