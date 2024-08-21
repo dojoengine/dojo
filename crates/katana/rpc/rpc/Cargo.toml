@@ -32,6 +32,7 @@ cainome.workspace = true
 dojo-test-utils.workspace = true
 dojo-utils.workspace = true
 dojo-world.workspace = true
+indexmap.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-cairo.workspace = true
 katana-node = { workspace = true, features = [ "messaging" ] }

@@ -10,6 +10,7 @@ version.workspace = true
 futures.workspace = true
 katana-executor.workspace = true
 katana-primitives.workspace = true
+katana-provider.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
 tracing.workspace = true

@@ -156,7 +156,8 @@ pub async fn start(
 
     // --- build transaction pool and miner
 
-    let pool = TxPool::new(NoopValidator::new(), FiFo::new());
+    let validator = NoopValidator::new();
+    let pool = TxPool::new(validator, FiFo::new());
     let miner = TransactionMiner::new(pool.add_listener());
 
     // --- build block producer service

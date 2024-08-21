@@ -1,3 +1,5 @@
+mod stateful;
+
 use katana_executor::ExecutionError;
 use katana_primitives::transaction::TxHash;
 
@@ -9,7 +11,7 @@ pub struct Error {
     /// The hash of the transaction that failed validation.
     pub hash: TxHash,
     /// The error that caused the transaction to fail validation.
-    pub error: Box<ExecutionError>,
+    pub error: Box<dyn std::error::Error>,
 }
 
 pub type ValidationResult<T> = Result<ValidationOutcome<T>, Error>;

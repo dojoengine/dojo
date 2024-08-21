@@ -1,5 +1,6 @@
 #![allow(deprecated)]
 
+use std::collections::HashSet;
 use std::fs::{self};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -8,17 +9,18 @@ use std::time::Duration;
 use anyhow::Result;
 use cainome::rs::abigen_legacy;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
+use indexmap::IndexSet;
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_rpc_types::receipt::ReceiptBlock;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionReceipt, Felt, TransactionFinalityStatus,
+    BlockId, BlockTag, DeclareTransactionReceipt, ExecutionResult, Felt, TransactionFinalityStatus,
     TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
-use starknet::macros::felt;
+use starknet::macros::{felt, selector};
 use starknet::providers::Provider;
 
 mod common;
@@ -220,6 +222,51 @@ async fn estimate_fee() -> Result<()> {
     let nonce = felt!("0x1337");
     let result = contract.transfer(&recipient, &amount).nonce(nonce).estimate_fee().await;
     assert!(result.is_ok(), "estimate should succeed with nonce >= current nonce");
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn rapid_transactions_submissions() -> Result<()> {
+    let sequencer = TestSequencer::start(
+        SequencerConfig { block_time: Some(2000), ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
+
+    let account = sequencer.account();
+    let provider = account.provider();
+
+    const ITERATION: usize = 10;
+    let mut txs = IndexSet::with_capacity(ITERATION);
+
+    for _ in 0..ITERATION {
+        let call = Call {
+            to: DEFAULT_FEE_TOKEN_ADDRESS.into(),
+            selector: selector!("transfer"),
+            calldata: vec![
+                felt!("0x100"), // recipient address
+                Felt::ONE,      // amount (low)
+                Felt::ZERO,     // amount (high)
+            ],
+        };
+
+        let result = account.execute_v1(vec![call]).send().await?;
+        txs.insert(result.transaction_hash);
+    }
+
+    // optimisitcally wait for 10 seconds for all the txs to be mined
+    tokio::time::sleep(Duration::from_secs(5)).await;
+
+    // we should've submitted ITERATION transactions
+    assert_eq!(txs.len(), ITERATION);
+
+    // check the status of each txs
+    for hash in txs {
+        let receipt = provider.get_transaction_receipt(hash).await?;
+        assert_eq!(receipt.receipt.execution_result(), &ExecutionResult::Succeeded);
+        assert_eq!(receipt.receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
+    }
 
     Ok(())
 }
