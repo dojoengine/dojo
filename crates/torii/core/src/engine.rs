@@ -36,7 +36,7 @@ pub(crate) const LOG_TARGET: &str = "tori_core::engine";
 
 #[derive(Debug)]
 pub struct EngineConfig {
-    pub block_time: Duration,
+    pub polling_interval: Duration,
     pub start_block: u64,
     pub events_chunk_size: u64,
     pub index_pending: bool,
@@ -45,10 +45,10 @@ pub struct EngineConfig {
 impl Default for EngineConfig {
     fn default() -> Self {
         Self {
-            block_time: Duration::from_secs(1),
+            polling_interval: Duration::from_millis(500),
             start_block: 0,
-            events_chunk_size: 1000,
-            index_pending: false,
+            events_chunk_size: 1024,
+            index_pending: true,
         }
     }
 }
@@ -122,7 +122,7 @@ impl<P: Provider + Sync> Engine<P> {
                             }
                         }
                     };
-                    sleep(self.config.block_time).await;
+                    sleep(self.config.polling_interval).await;
                 } => {}
             }
         }
