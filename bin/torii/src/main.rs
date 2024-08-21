@@ -108,7 +108,7 @@ struct Args {
     explorer: bool,
 
     /// Chunk size of the events page when indexing using events
-    #[arg(long, default_value = "1000")]
+    #[arg(long, default_value = "1024")]
     events_chunk_size: u64,
 
     /// Enable indexing pending blocks
@@ -116,7 +116,7 @@ struct Args {
     index_pending: bool,
 
     /// Polling interval in ms
-    #[arg(long, default_value = "1000")]
+    #[arg(long, default_value = "500")]
     polling_interval: u64,
 }
 

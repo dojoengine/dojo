@@ -45,7 +45,7 @@ impl Default for EngineConfig {
         Self {
             polling_interval: Duration::from_millis(500),
             start_block: 0,
-            events_chunk_size: 1000,
+            events_chunk_size: 1024,
             index_pending: true,
         }
     }
