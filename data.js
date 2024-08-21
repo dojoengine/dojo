@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724276813515,
+  "lastUpdate": 1724276831340,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -16609,6 +16609,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3912141,
             "range": "± 165333",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4aa7454e3969d45e5ef10c401162329bd070b99b",
+          "message": "feat(torii): make poll time configurable (#2327)\n\n* default index pending & and make polling_interval configurable\r\n\r\n* fix with recommandation\r\n\r\n* back to 1s interval\r\n\r\n* feat: default values for engine\r\n\r\n---------\r\n\r\nCo-authored-by: notV4l <imV4l@proton.me>",
+          "timestamp": "2024-08-21T15:27:46-06:00",
+          "tree_id": "7a0e9ce29c16e64cbc5d5617b2a66af19f42f116",
+          "url": "https://github.com/dojoengine/dojo/commit/4aa7454e3969d45e5ef10c401162329bd070b99b"
+        },
+        "date": 1724276829795,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17638619,
+            "range": "± 253486",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3784690,
+            "range": "± 59529",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3712310350,
+            "range": "± 717383618",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 5025662,
+            "range": "± 296329",
             "unit": "ns/iter"
           }
         ]
