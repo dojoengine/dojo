@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724262087462,
+  "lastUpdate": 1724271180245,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -16465,6 +16465,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4000525,
             "range": "± 168159",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09556382fd4f98b289836ee8cfbe75c782d4a69d",
+          "message": "feat(dojo-core): add world test capabilities (#2323)\n\n* feat: add interfaces for testing set into the world\r\n\r\n* fix: update tests\r\n\r\n* fix: internalize the world test for better devX during testing\r\n\r\n* feat: add qualified path to DojoModel manifest",
+          "timestamp": "2024-08-21T13:53:23-06:00",
+          "tree_id": "bab55557074b7f1c1d88325390df635f96fc533c",
+          "url": "https://github.com/dojoengine/dojo/commit/09556382fd4f98b289836ee8cfbe75c782d4a69d"
+        },
+        "date": 1724271179369,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17976774,
+            "range": "± 406486",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 6149349,
+            "range": "± 611830",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3883241334,
+            "range": "± 802872589",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4288509,
+            "range": "± 571920",
             "unit": "ns/iter"
           }
         ]
