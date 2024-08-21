@@ -96,6 +96,7 @@ class_hash = "0x720bb4a3a1324dea862ac8b3ac3e30ac55490ce6ec9f7f68341db081b290c08"
 original_class_hash = "0x720bb4a3a1324dea862ac8b3ac3e30ac55490ce6ec9f7f68341db081b290c08"
 abi = "manifests/dev/deployment/abis/models/dojo_examples-ContractInitialized-376b7bd6.json"
 tag = "dojo_examples-ContractInitialized"
+qualified_path = "dojo_examples::others::others::contract_initialized"
 manifest_name = "dojo_examples-ContractInitialized-376b7bd6"
 
 [[models.members]]
@@ -119,6 +120,7 @@ class_hash = "0x3ca17c0ebb595e1d1cc01813923864316a49b91f4a725ef1371329abbc1947b"
 original_class_hash = "0x3ca17c0ebb595e1d1cc01813923864316a49b91f4a725ef1371329abbc1947b"
 abi = "manifests/dev/deployment/abis/models/dojo_examples-Message-1bb1d226.json"
 tag = "dojo_examples-Message"
+qualified_path = "dojo_examples::models::message"
 manifest_name = "dojo_examples-Message-1bb1d226"
 
 [[models.members]]
@@ -147,6 +149,7 @@ class_hash = "0x244a875f2049e4ca875b631270f1203a5be374fc040a8c4bd40405eeeea07bd"
 original_class_hash = "0x244a875f2049e4ca875b631270f1203a5be374fc040a8c4bd40405eeeea07bd"
 abi = "manifests/dev/deployment/abis/models/dojo_examples-MockToken-38903c7c.json"
 tag = "dojo_examples-MockToken"
+qualified_path = "dojo_examples::models::mock_token"
 manifest_name = "dojo_examples-MockToken-38903c7c"
 
 [[models.members]]
@@ -165,6 +168,7 @@ class_hash = "0x71f21bb9f7454ede4f4fe1482012218ef57448ca9687018dab409c4ddb790a2"
 original_class_hash = "0x71f21bb9f7454ede4f4fe1482012218ef57448ca9687018dab409c4ddb790a2"
 abi = "manifests/dev/deployment/abis/models/dojo_examples-Moved-318ae40d.json"
 tag = "dojo_examples-Moved"
+qualified_path = "dojo_examples::actions::actions::moved"
 manifest_name = "dojo_examples-Moved-318ae40d"
 
 [[models.members]]
@@ -183,6 +187,7 @@ class_hash = "0x4dd1c573b5cdc56561be8b28a4840048a3a008d1a4a6eed397ec4135effaf44"
 original_class_hash = "0x4dd1c573b5cdc56561be8b28a4840048a3a008d1a4a6eed397ec4135effaf44"
 abi = "manifests/dev/deployment/abis/models/dojo_examples-Moves-2e2accba.json"
 tag = "dojo_examples-Moves"
+qualified_path = "dojo_examples::models::moves"
 manifest_name = "dojo_examples-Moves-2e2accba"
 
 [[models.members]]
@@ -206,6 +211,7 @@ class_hash = "0x515f106010313c2fcd87719836e75873aa75a711a4bdcd2ea0b6e38854deebf"
 original_class_hash = "0x515f106010313c2fcd87719836e75873aa75a711a4bdcd2ea0b6e38854deebf"
 abi = "manifests/dev/deployment/abis/models/dojo_examples-PlayerConfig-3adad785.json"
 tag = "dojo_examples-PlayerConfig"
+qualified_path = "dojo_examples::models::player_config"
 manifest_name = "dojo_examples-PlayerConfig-3adad785"
 
 [[models.members]]
@@ -234,6 +240,7 @@ class_hash = "0x5af60d63e6a1d25fc117fde1fa7e1d628adc46a52c3d007541ed6dd369e8ea"
 original_class_hash = "0x5af60d63e6a1d25fc117fde1fa7e1d628adc46a52c3d007541ed6dd369e8ea"
 abi = "manifests/dev/deployment/abis/models/dojo_examples-Position-1e145e26.json"
 tag = "dojo_examples-Position"
+qualified_path = "dojo_examples::models::position"
 manifest_name = "dojo_examples-Position-1e145e26"
 
 [[models.members]]
@@ -252,6 +259,7 @@ class_hash = "0x2fa72f20995710bef20ac3c36e2f43ec210517a787927ea3407e2b29c21bb0b"
 original_class_hash = "0x2fa72f20995710bef20ac3c36e2f43ec210517a787927ea3407e2b29c21bb0b"
 abi = "manifests/dev/deployment/abis/models/dojo_examples-ServerProfile-4caad1e6.json"
 tag = "dojo_examples-ServerProfile"
+qualified_path = "dojo_examples::models::server_profile"
 manifest_name = "dojo_examples-ServerProfile-4caad1e6"
 
 [[models.members]]
@@ -275,6 +283,7 @@ class_hash = "0x4f3cbb247febb63bf5ab34d87504fd85e7a3b4ab6ff16fa2bf23597bf3309c7"
 original_class_hash = "0x4f3cbb247febb63bf5ab34d87504fd85e7a3b4ab6ff16fa2bf23597bf3309c7"
 abi = "manifests/dev/deployment/abis/models/dojo_examples_foes-RiverSkale-39535c12.json"
 tag = "dojo_examples_foes-RiverSkale"
+qualified_path = "bestiary::river_skale"
 manifest_name = "dojo_examples_foes-RiverSkale-39535c12"
 
 [[models.members]]
@@ -303,6 +312,7 @@ class_hash = "0x783cecd986c0f03f8ac70318f67d57ea8072db7d4d135d54585f4de33c879ad"
 original_class_hash = "0x783cecd986c0f03f8ac70318f67d57ea8072db7d4d135d54585f4de33c879ad"
 abi = "manifests/dev/deployment/abis/models/dojo_examples_weapons-Flatbow-22f5bd16.json"
 tag = "dojo_examples_weapons-Flatbow"
+qualified_path = "armory::flatbow"
 manifest_name = "dojo_examples_weapons-Flatbow-22f5bd16"
 
 [[models.members]]

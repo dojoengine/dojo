@@ -2793,6 +2793,7 @@
         }
       ],
       "tag": "dojo_examples-ContractInitialized",
+      "qualified_path": "dojo_examples::others::others::contract_initialized",
       "manifest_name": "dojo_examples-ContractInitialized-376b7bd6"
     },
     {
@@ -3237,6 +3238,7 @@
         }
       ],
       "tag": "dojo_examples-Message",
+      "qualified_path": "dojo_examples::models::message",
       "manifest_name": "dojo_examples-Message-1bb1d226"
     },
     {
@@ -3663,6 +3665,7 @@
         }
       ],
       "tag": "dojo_examples-MockToken",
+      "qualified_path": "dojo_examples::models::mock_token",
       "manifest_name": "dojo_examples-MockToken-38903c7c"
     },
     {
@@ -4115,6 +4118,7 @@
         }
       ],
       "tag": "dojo_examples-Moved",
+      "qualified_path": "dojo_examples::actions::actions::moved",
       "manifest_name": "dojo_examples-Moved-318ae40d"
     },
     {
@@ -4576,6 +4580,7 @@
         }
       ],
       "tag": "dojo_examples-Moves",
+      "qualified_path": "dojo_examples::models::moves",
       "manifest_name": "dojo_examples-Moves-2e2accba"
     },
     {
@@ -5038,6 +5043,7 @@
         }
       ],
       "tag": "dojo_examples-PlayerConfig",
+      "qualified_path": "dojo_examples::models::player_config",
       "manifest_name": "dojo_examples-PlayerConfig-3adad785"
     },
     {
@@ -5478,6 +5484,7 @@
         }
       ],
       "tag": "dojo_examples-Position",
+      "qualified_path": "dojo_examples::models::position",
       "manifest_name": "dojo_examples-Position-1e145e26"
     },
     {
@@ -5913,6 +5920,7 @@
         }
       ],
       "tag": "dojo_examples-ServerProfile",
+      "qualified_path": "dojo_examples::models::server_profile",
       "manifest_name": "dojo_examples-ServerProfile-4caad1e6"
     },
     {
@@ -6357,6 +6365,7 @@
         }
       ],
       "tag": "dojo_examples_foes-RiverSkale",
+      "qualified_path": "bestiary::river_skale",
       "manifest_name": "dojo_examples_foes-RiverSkale-39535c12"
     },
     {
@@ -6792,6 +6801,7 @@
         }
       ],
       "tag": "dojo_examples_weapons-Flatbow",
+      "qualified_path": "armory::flatbow",
       "manifest_name": "dojo_examples_weapons-Flatbow-22f5bd16"
     }
   ]

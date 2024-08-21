@@ -441,6 +441,7 @@ fn get_dojo_model_artifacts(
                                 abi: None,
                                 members: model.members.clone(),
                                 original_class_hash: class_hash,
+                                qualified_path,
                             },
                             naming::get_filename_from_tag(&tag),
                         ),
