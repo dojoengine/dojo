@@ -61,12 +61,11 @@ impl StarknetMessaging {
         })
     }
 
-    /// Fetches events for the given blocks range.
     pub async fn fetch_events(
         &self,
         from_block: BlockId,
         to_block: BlockId,
-    ) -> Result<HashMap<u64, Vec<EmittedEvent>>> {
+    ) -> Result<Vec<(u64, Vec<EmittedEvent>)>> {
         trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
         let mut block_to_events: HashMap<u64, Vec<EmittedEvent>> = HashMap::new();
@@ -104,7 +103,11 @@ impl StarknetMessaging {
             }
         }
 
-        Ok(block_to_events)
+        // Converti Hashmap into Vec
+        let mut sorted_block_events: Vec<(u64, Vec<EmittedEvent>)> = block_to_events.into_iter().collect();
+        sorted_block_events.sort_by_key(|&(block_number, _)| block_number);
+
+        Ok(sorted_block_events)
     }
 
     /// Sends an invoke TX on starknet.
@@ -200,7 +203,7 @@ impl Messenger for StarknetMessaging {
             .await
             .map_err(|_| Error::SendError)
             .unwrap()
-            .iter()
+            .into_iter()
             .for_each(|(block_number, block_events)| {
                 debug!(
                     target: LOG_TARGET,
