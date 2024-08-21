@@ -164,6 +164,125 @@ impl<P: Provider + Sync> Engine<P> {
         Ok((latest_block_number, pending_block_tx))
     }
 
+    pub async fn sync_events(
+        &mut self,
+        from: u64,
+        last_processed_tx: Option<Felt>,
+    ) -> Result<(u64, Option<Felt>)> {
+        let events_filter = EventFilter {
+            from_block: Some(BlockId::Number(from)),
+            to_block: Some(BlockId::Tag(BlockTag::Pending)),
+            address: Some(self.world.address),
+            keys: None,
+        };
+
+        // TODO: instead of fetching all of them at once,  process them batch wise
+        let events_pages =
+            get_all_events(&self.provider, events_filter, self.config.events_chunk_size).await?;
+        // Transactions & blocks to process
+        let mut blocks = BTreeMap::new();
+        let mut transactions = vec![];
+
+        let mut pending_block_tx_cursor = last_processed_tx;
+        let to = 0;
+        for events_page in &events_pages {
+            for event in &events_page.events {
+                let block_number = match event.block_number {
+                    Some(block_number) => block_number,
+                    // this means event is part of pending block
+                    None => {
+                        let TransactionReceiptWithBlockInfo { receipt, block } =
+                            self.provider.get_transaction_receipt(event.transaction_hash).await?;
+
+                        match receipt {
+                            TransactionReceipt::Invoke(_) | TransactionReceipt::L1Handler(_) => {
+                                if let ReceiptBlock::Block { block_number, .. } = block {
+                                    block_number
+                                } else {
+                                    // If the block is pending, we assume the block number is the
+                                    // latest + 1
+                                    todo!()
+                                }
+                            }
+
+                            _ => to + 1,
+                        }
+                    }
+                };
+
+                // Fetch block timestamp if not already fetched and inserts into the map
+                if let Entry::Vacant(e) = blocks.entry(block_number) {
+                    let block_timestamp = self.get_block_timestamp(block_number).await?;
+                    e.insert(block_timestamp);
+                }
+
+                // Then we skip all transactions until we reach the last pending processed
+                // transaction (if any)
+                if let Some(tx) = pending_block_tx_cursor {
+                    if event.transaction_hash != tx {
+                        continue;
+                    }
+
+                    pending_block_tx_cursor = None;
+                }
+
+                // Skip the latest pending block transaction events
+                // * as we might have multiple events for the same transaction
+                if let Some(tx) = last_processed_tx {
+                    if event.transaction_hash == tx {
+                        continue;
+                    }
+                }
+
+                if let Some((_, last_tx_hash)) = transactions.last() {
+                    // Dedup transactions
+                    // As me might have multiple events for the same transaction
+                    if *last_tx_hash == event.transaction_hash {
+                        continue;
+                    }
+                }
+                transactions.push((block_number, event.transaction_hash));
+            }
+        }
+
+        // Process all transactions
+        let mut last_block = 0;
+        for (block_number, transaction_hash) in transactions {
+            // Process transaction
+            let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
+
+            self.process_transaction_and_receipt(
+                transaction_hash,
+                &transaction,
+                block_number,
+                blocks[&block_number],
+            )
+            .await?;
+
+            // Process block
+            if block_number > last_block {
+                if let Some(ref block_tx) = self.block_tx {
+                    block_tx.send(block_number).await?;
+                }
+
+                self.process_block(block_number, blocks[&block_number]).await?;
+                last_block = block_number;
+            }
+        }
+
+        // We return None for the pending_block_tx because our sync_range
+        // retrieves only specific events from the world. so some transactions
+        // might get ignored and wont update the cursor.
+        // so once the sync range is done, we assume all of the tx of the block
+        // have been processed.
+
+        self.db.set_head(to, None);
+
+        self.db.execute().await?;
+
+        Ok(None)
+    }
+
     pub async fn sync_pending(
         &mut self,
         block_number: u64,
