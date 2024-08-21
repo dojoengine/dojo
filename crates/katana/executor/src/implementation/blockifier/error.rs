@@ -63,10 +63,14 @@ impl From<TransactionPreValidationError> for ExecutionError {
     fn from(error: TransactionPreValidationError) -> Self {
         match error {
             TransactionPreValidationError::InvalidNonce {
+                address,
                 account_nonce,
                 incoming_tx_nonce,
-                ..
-            } => Self::InvalidNonce { actual: incoming_tx_nonce.0, expected: account_nonce.0 },
+            } => Self::InvalidNonce {
+                address: to_address(address),
+                tx_nonce: incoming_tx_nonce.0,
+                current_nonce: account_nonce.0,
+            },
             TransactionPreValidationError::TransactionFeeError(e) => Self::from(e),
             TransactionPreValidationError::StateError(e) => Self::from(e),
         }

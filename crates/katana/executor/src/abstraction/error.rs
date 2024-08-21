@@ -9,52 +9,64 @@ pub enum ExecutorError {}
 /// Errors that can occur during the transaction execution.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum ExecutionError {
-    #[error("contract constructor execution error: {reason}")]
+    #[error("Contract constructor execution error: {reason}")]
     ConstructorExecutionFailed { reason: String },
 
-    #[error("class with hash {0:#x} is already declared")]
+    #[error("Class with hash {0:#x} is already declared")]
     ClassAlreadyDeclared(ClassHash),
 
-    #[error("entry point {0:#x} not found in contract")]
+    #[error("Entry point {0:#x} not found in contract")]
     EntryPointNotFound(FieldElement),
 
-    #[error("invalid input: {input_descriptor}; {info}")]
+    #[error("Invalid input: {input_descriptor}; {info}")]
     InvalidInput { input_descriptor: String, info: String },
 
-    #[error("execution failed due to recursion depth exceeded")]
+    #[error("Execution failed due to recursion depth exceeded")]
     RecursionDepthExceeded,
 
-    #[error("contract with address {0} is not deployed")]
+    #[error("Contract with address {0} is not deployed")]
     ContractNotDeployed(ContractAddress),
 
-    #[error("invalid transaction nonce: expected {expected} got {actual}")]
-    InvalidNonce { actual: Nonce, expected: Nonce },
+    // The error message is the exact copy of the one defined by blockifier but without using
+    // Debug formatting for the struct fields.
+    #[error(
+        "Invalid transaction nonce of contract at address {address}. Account nonce: \
+         {current_nonce:#x}; got: {tx_nonce:#x}."
+    )]
+    InvalidNonce {
+        /// The address of the account contract.
+        address: ContractAddress,
+        /// The current nonce of the account.
+        current_nonce: Nonce,
+        /// The nonce of the incoming transaction.
+        tx_nonce: Nonce,
+    },
 
     #[error(
-        "insufficient balance: max fee {max_fee} exceeds account balance u256({balance_low}, \
+        "Insufficient balance: max fee {max_fee} exceeds account balance u256({balance_low}, \
          {balance_high})"
     )]
     InsufficientBalance { max_fee: u128, balance_low: FieldElement, balance_high: FieldElement },
 
-    #[error("actual fee {max_fee} exceeded transaction max fee {actual_fee}")]
+    #[error("Actual fee ({actual_fee}) exceeded max fee ({max_fee})")]
     ActualFeeExceedsMaxFee { max_fee: u128, actual_fee: u128 },
 
-    #[error("transaction max fee ({max_fee:#x}) is too low; min max fee is {min:#x}")]
+    #[error("Transaction max fee ({max_fee:#x}) is too low; min max fee is {min:#x}")]
     MaxFeeTooLow { min: u128, max_fee: u128 },
 
-    #[error("class with hash {0:#x} is not declared")]
+    #[error("Class with hash {0:#x} is not declared")]
     UndeclaredClass(ClassHash),
 
-    #[error("fee transfer error: {0}")]
+    #[error("Fee transfer error: {0}")]
     FeeTransferError(String),
 
-    #[error("entry point execution error: {reason}")]
+    #[error("Entry point execution error: {reason}")]
     ExecutionFailed { reason: String },
 
-    #[error("transaction validation error: {reason}")]
+    #[error("Transaction validation error: {reason}")]
     TransactionValidationFailed { reason: String },
 
-    #[error("transaction reverted: {revert_error}")]
+    #[error("Transaction reverted: {revert_error}")]
     TransactionReverted { revert_error: String },
 
     #[error("{0}")]
