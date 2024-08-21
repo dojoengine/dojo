@@ -5,8 +5,8 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes, ReceiptBlock,
-    Transaction, TransactionReceipt, TransactionReceiptWithBlockInfo,
+    BlockId, BlockTag, Event, EventFilter, Felt, MaybePendingBlockWithTxHashes, Transaction,
+    TransactionReceipt, TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -174,16 +174,18 @@ impl<P: Provider + Sync> Engine<P> {
                     Some(block_number) => block_number,
                     // If the block number is not present, we assume we're dealing
                     // with a pending block event. Thus the block number is the latest + 1
-                    None =>  latest_block_number + 1,
+                    None => latest_block_number + 1,
                 };
 
                 // Keep track of last block number and fetch block timestamp
                 if block_number > last_block {
-                    let block_timestamp = self.get_block_timestamp(if block_number > latest_block_number {
-                        BlockId::Tag(BlockTag::Pending)
-                    } else {
-                        BlockId::Number(block_number)
-                    }).await?;
+                    let block_timestamp = self
+                        .get_block_timestamp(if block_number > latest_block_number {
+                            BlockId::Tag(BlockTag::Pending)
+                        } else {
+                            BlockId::Number(block_number)
+                        })
+                        .await?;
                     blocks.insert(block_number, block_timestamp);
 
                     last_block = block_number;
@@ -224,14 +226,13 @@ impl<P: Provider + Sync> Engine<P> {
             // Process transaction
             let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
 
-            let has_world_event = self
-                .process_transaction_and_receipt(
-                    transaction_hash,
-                    &transaction,
-                    block_number,
-                    blocks[&block_number],
-                )
-                .await?;
+            self.process_transaction_and_receipt(
+                transaction_hash,
+                &transaction,
+                block_number,
+                blocks[&block_number],
+            )
+            .await?;
 
             // Process block
             if block_number > last_block {
@@ -243,10 +244,7 @@ impl<P: Provider + Sync> Engine<P> {
                 last_block = block_number;
             }
 
-            // If the transaction has a world event, we update the cursor
-            if has_world_event {
-                pending_block_tx_cursor = Some(transaction_hash);
-            }
+            pending_block_tx_cursor = Some(transaction_hash);
         }
 
         // We return None for the pending_block_tx because our sync_range
@@ -277,7 +275,7 @@ impl<P: Provider + Sync> Engine<P> {
         transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
-    ) -> Result<bool> {
+    ) -> Result<()> {
         let receipt = self.provider.get_transaction_receipt(transaction_hash).await?;
         let events = match &receipt.receipt {
             TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
@@ -285,8 +283,8 @@ impl<P: Provider + Sync> Engine<P> {
             _ => None,
         };
 
-        let mut world_event = false;
         if let Some(events) = events {
+            let mut world_event = false;
             for (event_idx, event) in events.iter().enumerate() {
                 if event.from_address != self.world.address {
                     continue;
@@ -320,7 +318,7 @@ impl<P: Provider + Sync> Engine<P> {
             }
         }
 
-        Ok(world_event)
+        Ok(())
     }
 
     async fn process_block(&mut self, block_number: u64, block_timestamp: u64) -> Result<()> {
