@@ -102,3 +102,15 @@ pub fn deploy_and_get_metadata(
     let namespace_hash = model.namespace_hash();
     Result::Ok((contract_address, name, selector, namespace, namespace_hash))
 }
+
+#[cfg(target: "test")]
+pub trait ModelTest<T> {
+    fn set_test(self: @T, world: IWorldDispatcher);
+    fn delete_test(self: @T, world: IWorldDispatcher);
+}
+
+#[cfg(target: "test")]
+pub trait ModelEntityTest<T> {
+    fn update_test(self: @T, world: IWorldDispatcher);
+    fn delete_test(self: @T, world: IWorldDispatcher);
+}

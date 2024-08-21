@@ -122,6 +122,7 @@ pub struct DojoModel {
     pub original_class_hash: Felt,
     pub abi: Option<AbiFormat>,
     pub tag: String,
+    pub qualified_path: String,
 }
 
 #[serde_as]

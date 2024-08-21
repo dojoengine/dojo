@@ -61,6 +61,20 @@ pub trait IWorld<T> {
 }
 
 #[starknet::interface]
+#[cfg(target: "test")]
+pub trait IWorldTest<T> {
+    fn set_entity_test(
+        ref self: T,
+        model_selector: felt252,
+        index: ModelIndex,
+        values: Span<felt252>,
+        layout: Layout
+    );
+
+    fn delete_entity_test(ref self: T, model_selector: felt252, index: ModelIndex, layout: Layout);
+}
+
+#[starknet::interface]
 pub trait IUpgradeableWorld<T> {
     fn upgrade(ref self: T, new_class_hash: ClassHash);
 }
@@ -301,6 +315,26 @@ pub mod world {
         self.config.initializer(creator);
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
+    }
+
+    #[cfg(target: "test")]
+    #[abi(embed_v0)]
+    impl WorldTestImpl of super::IWorldTest<ContractState> {
+        fn set_entity_test(
+            ref self: ContractState,
+            model_selector: felt252,
+            index: ModelIndex,
+            values: Span<felt252>,
+            layout: Layout
+        ) {
+            self.set_entity_internal(model_selector, index, values, layout);
+        }
+
+        fn delete_entity_test(
+            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+        ) {
+            self.delete_entity_internal(model_selector, index, layout);
+        }
     }
 
     #[abi(embed_v0)]
@@ -762,36 +796,7 @@ pub mod world {
             layout: Layout
         ) {
             self.assert_model_write_access(model_selector);
-
-            match index {
-                ModelIndex::Keys(keys) => {
-                    let entity_id = entity_id_from_keys(keys);
-                    self.write_model_entity(model_selector, entity_id, values, layout);
-                    EventEmitter::emit(
-                        ref self, StoreSetRecord { table: model_selector, keys, values }
-                    );
-                },
-                ModelIndex::Id(entity_id) => {
-                    self.write_model_entity(model_selector, entity_id, values, layout);
-                    EventEmitter::emit(
-                        ref self, StoreUpdateRecord { table: model_selector, entity_id, values }
-                    );
-                },
-                ModelIndex::MemberId((
-                    entity_id, member_selector
-                )) => {
-                    self
-                        .write_model_member(
-                            model_selector, entity_id, member_selector, values, layout
-                        );
-                    EventEmitter::emit(
-                        ref self,
-                        StoreUpdateMember {
-                            table: model_selector, entity_id, member_selector, values
-                        }
-                    );
-                }
-            }
+            self.set_entity_internal(model_selector, index, values, layout);
         }
 
         /// Deletes a record/entity of a model..
@@ -806,23 +811,7 @@ pub mod world {
             ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
         ) {
             self.assert_model_write_access(model_selector);
-
-            match index {
-                ModelIndex::Keys(keys) => {
-                    let entity_id = entity_id_from_keys(keys);
-                    self.delete_model_entity(model_selector, entity_id, layout);
-                    EventEmitter::emit(
-                        ref self, StoreDelRecord { table: model_selector, entity_id }
-                    );
-                },
-                ModelIndex::Id(entity_id) => {
-                    self.delete_model_entity(model_selector, entity_id, layout);
-                    EventEmitter::emit(
-                        ref self, StoreDelRecord { table: model_selector, entity_id }
-                    );
-                },
-                ModelIndex::MemberId(_) => { panic_with_felt252(errors::DELETE_ENTITY_MEMBER); }
-            }
+            self.delete_entity_internal(model_selector, index, layout);
         }
 
         /// Gets the base contract class hash.
@@ -934,7 +923,7 @@ pub mod world {
     }
 
     #[generate_trait]
-    impl Self of SelfTrait {
+    impl SelfImpl of SelfTrait {
         #[inline(always)]
         /// Indicates if the caller is the owner of the world.
         fn is_caller_world_owner(self: @ContractState) -> bool {
@@ -1092,6 +1081,80 @@ pub mod world {
             match self.resources.read(namespace_hash) {
                 Resource::Namespace => true,
                 _ => false
+            }
+        }
+
+        /// Sets the model value for a model record/entity/member.
+        ///
+        /// # Arguments
+        ///
+        /// * `model_selector` - The selector of the model to be set.
+        /// * `index` - The index of the record/entity/member to write.
+        /// * `values` - The value to be set, serialized using the model layout format.
+        /// * `layout` - The memory layout of the model.
+        fn set_entity_internal(
+            ref self: ContractState,
+            model_selector: felt252,
+            index: ModelIndex,
+            values: Span<felt252>,
+            layout: Layout
+        ) {
+            match index {
+                ModelIndex::Keys(keys) => {
+                    let entity_id = entity_id_from_keys(keys);
+                    self.write_model_entity(model_selector, entity_id, values, layout);
+                    EventEmitter::emit(
+                        ref self, StoreSetRecord { table: model_selector, keys, values }
+                    );
+                },
+                ModelIndex::Id(entity_id) => {
+                    self.write_model_entity(model_selector, entity_id, values, layout);
+                    EventEmitter::emit(
+                        ref self, StoreUpdateRecord { table: model_selector, entity_id, values }
+                    );
+                },
+                ModelIndex::MemberId((
+                    entity_id, member_selector
+                )) => {
+                    self
+                        .write_model_member(
+                            model_selector, entity_id, member_selector, values, layout
+                        );
+                    EventEmitter::emit(
+                        ref self,
+                        StoreUpdateMember {
+                            table: model_selector, entity_id, member_selector, values
+                        }
+                    );
+                }
+            }
+        }
+
+        /// Deletes an entity for the given model, setting all the values to 0 in the given layout.
+        ///
+        /// # Arguments
+        ///
+        /// * `model_selector` - The selector of the model to be deleted.
+        /// * `index` - The index of the record/entity to delete.
+        /// * `layout` - The memory layout of the model.
+        fn delete_entity_internal(
+            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+        ) {
+            match index {
+                ModelIndex::Keys(keys) => {
+                    let entity_id = entity_id_from_keys(keys);
+                    self.delete_model_entity(model_selector, entity_id, layout);
+                    EventEmitter::emit(
+                        ref self, StoreDelRecord { table: model_selector, entity_id }
+                    );
+                },
+                ModelIndex::Id(entity_id) => {
+                    self.delete_model_entity(model_selector, entity_id, layout);
+                    EventEmitter::emit(
+                        ref self, StoreDelRecord { table: model_selector, entity_id }
+                    );
+                },
+                ModelIndex::MemberId(_) => { panic_with_felt252(errors::DELETE_ENTITY_MEMBER); }
             }
         }
 
