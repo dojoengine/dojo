@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724271180245,
+  "lastUpdate": 1724273614241,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -16513,6 +16513,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4288509,
             "range": "± 571920",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "54a891ee45d0f593c7d0cea28c5b72f56008412e",
+          "message": "opt(torii): indexing model schema retrieval (#2319)\n\n* opt(torii): indexing model schema retrieval\r\n\r\n* :fix and optimize grpc\r\n\r\n* chore: clippy",
+          "timestamp": "2024-08-21T16:32:00-04:00",
+          "tree_id": "6a455410d242b9ce65b37f744346fbf103932b32",
+          "url": "https://github.com/dojoengine/dojo/commit/54a891ee45d0f593c7d0cea28c5b72f56008412e"
+        },
+        "date": 1724273613361,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 18670113,
+            "range": "± 411902",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 4108464,
+            "range": "± 136720",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 4069377936,
+            "range": "± 929648281",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4312035,
+            "range": "± 206702",
             "unit": "ns/iter"
           }
         ]
