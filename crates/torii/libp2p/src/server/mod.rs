@@ -32,8 +32,6 @@ use crate::errors::Error;
 
 mod events;
 
-use dojo_world::contracts::model::ModelReader;
-
 use crate::server::events::ServerEvent;
 use crate::typed_data::{parse_value_to_ty, PrimitiveType};
 use crate::types::Message;
@@ -455,11 +453,7 @@ async fn validate_message(
         .model(selector)
         .await
         .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model, e)))?
-        .schema()
-        .await
-        .map_err(|e| {
-            Error::InvalidMessageError(format!("Failed to get schema for model {}: {}", model, e))
-        })?;
+        .schema;
 
     if let Some(object) = message.get(model) {
         parse_value_to_ty(object, &mut ty)?;

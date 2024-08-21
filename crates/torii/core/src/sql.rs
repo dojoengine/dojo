@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use chrono::Utc;
@@ -13,7 +14,7 @@ use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 
-use crate::model::ModelSQLReader;
+use crate::cache::{Model, ModelCache};
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
@@ -37,6 +38,7 @@ pub struct Sql {
     world_address: Felt,
     pub pool: Pool<Sqlite>,
     query_queue: QueryQueue,
+    model_cache: Arc<ModelCache>,
 }
 
 impl Sql {
@@ -54,7 +56,12 @@ impl Sql {
 
         query_queue.execute_all().await?;
 
-        Ok(Self { pool, world_address, query_queue })
+        Ok(Self {
+            pool: pool.clone(),
+            world_address,
+            query_queue,
+            model_cache: Arc::new(ModelCache::new(pool)),
+        })
     }
 
     pub async fn head(&self) -> Result<(u64, Option<Felt>)> {
@@ -411,13 +418,8 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn model(&self, selector: Felt) -> Result<ModelSQLReader> {
-        match ModelSQLReader::new(selector, self.pool.clone()).await {
-            Ok(reader) => Ok(reader),
-            Err(e) => {
-                Err(anyhow::anyhow!("Failed to get model from db for selector {selector:#x}: {e}"))
-            }
-        }
+    pub async fn model(&self, selector: Felt) -> Result<Model> {
+        self.model_cache.model(&selector).await.map_err(|e| e.into())
     }
 
     /// Retrieves the keys definition for a given model.

@@ -1,17 +1,36 @@
 use std::collections::HashMap;
 
 use dojo_types::schema::Ty;
+use dojo_world::contracts::abi::model::Layout;
 use sqlx::SqlitePool;
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;
 
-use crate::error::{Error, QueryError};
+use crate::error::{Error, ParseError, QueryError};
 use crate::model::{parse_sql_model_members, SqlModelMember};
+
+#[derive(Debug, Clone)]
+pub struct Model {
+    /// Namespace of the model
+    pub namespace: String,
+    /// The name of the model
+    pub name: String,
+    /// The selector of the model
+    pub selector: Felt,
+    /// The class hash of the model
+    pub class_hash: Felt,
+    /// The contract address of the model
+    pub contract_address: Felt,
+    pub packed_size: u32,
+    pub unpacked_size: u32,
+    pub layout: Layout,
+    pub schema: Ty,
+}
 
 #[derive(Debug)]
 pub struct ModelCache {
     pool: SqlitePool,
-    cache: RwLock<HashMap<Felt, Ty>>,
+    cache: RwLock<HashMap<Felt, Model>>,
 }
 
 impl ModelCache {
@@ -19,16 +38,16 @@ impl ModelCache {
         Self { pool, cache: RwLock::new(HashMap::new()) }
     }
 
-    pub async fn schemas(&self, selectors: &[Felt]) -> Result<Vec<Ty>, Error> {
+    pub async fn models(&self, selectors: &[Felt]) -> Result<Vec<Model>, Error> {
         let mut schemas = Vec::with_capacity(selectors.len());
         for selector in selectors {
-            schemas.push(self.schema(selector).await?);
+            schemas.push(self.model(selector).await?);
         }
 
         Ok(schemas)
     }
 
-    pub async fn schema(&self, selector: &Felt) -> Result<Ty, Error> {
+    pub async fn model(&self, selector: &Felt) -> Result<Model, Error> {
         {
             let cache = self.cache.read().await;
             if let Some(model) = cache.get(selector).cloned() {
@@ -36,17 +55,33 @@ impl ModelCache {
             }
         }
 
-        self.update_schema(selector).await
+        self.update_model(selector).await
     }
 
-    async fn update_schema(&self, selector: &Felt) -> Result<Ty, Error> {
+    async fn update_model(&self, selector: &Felt) -> Result<Model, Error> {
         let formatted_selector = format!("{:#x}", selector);
 
-        let (namespace, name): (String, String) =
-            sqlx::query_as("SELECT namespace, name FROM models WHERE id = ?")
-                .bind(formatted_selector.clone())
-                .fetch_one(&self.pool)
-                .await?;
+        let (namespace, name, class_hash, contract_address, packed_size, unpacked_size, layout): (
+            String,
+            String,
+            String,
+            String,
+            u32,
+            u32,
+            String,
+        ) = sqlx::query_as(
+            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
+             layout FROM models WHERE id = ?",
+        )
+        .bind(format!("{:#x}", selector))
+        .fetch_one(&self.pool)
+        .await?;
+
+        let class_hash = Felt::from_hex(&class_hash).map_err(ParseError::FromStr)?;
+        let contract_address = Felt::from_hex(&contract_address).map_err(ParseError::FromStr)?;
+
+        let layout = serde_json::from_str(&layout).map_err(ParseError::FromJsonStr)?;
+
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
             "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
              model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
@@ -61,9 +96,21 @@ impl ModelCache {
 
         let schema = parse_sql_model_members(&namespace, &name, &model_members);
         let mut cache = self.cache.write().await;
-        cache.insert(*selector, schema.clone());
 
-        Ok(schema)
+        let model = Model {
+            namespace,
+            name,
+            selector: *selector,
+            class_hash,
+            contract_address,
+            packed_size,
+            unpacked_size,
+            layout,
+            schema,
+        };
+        cache.insert(*selector, model.clone());
+
+        Ok(model)
     }
 
     pub async fn clear(&self) {
