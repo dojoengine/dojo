@@ -172,32 +172,18 @@ impl<P: Provider + Sync> Engine<P> {
             for event in &events_page.events {
                 let block_number = match event.block_number {
                     Some(block_number) => block_number,
-                    // If the block number is not present, try to fetch it from the transaction
-                    // receipt Should not/rarely happen. Thus the additional
-                    // fetch is acceptable.
-                    None => {
-                        let TransactionReceiptWithBlockInfo { receipt, block } =
-                            self.provider.get_transaction_receipt(event.transaction_hash).await?;
-
-                        match receipt {
-                            TransactionReceipt::Invoke(_) | TransactionReceipt::L1Handler(_) => {
-                                if let ReceiptBlock::Block { block_number, .. } = block {
-                                    block_number
-                                } else {
-                                    // If the block is pending, we assume the block number is the
-                                    // latest + 1
-                                    latest_block_number + 1
-                                }
-                            }
-
-                            _ => latest_block_number + 1,
-                        }
-                    }
+                    // If the block number is not present, we assume we're dealing
+                    // with a pending block event. Thus the block number is the latest + 1
+                    None =>  latest_block_number + 1,
                 };
 
                 // Keep track of last block number and fetch block timestamp
                 if block_number > last_block {
-                    let block_timestamp = self.get_block_timestamp(block_number).await?;
+                    let block_timestamp = self.get_block_timestamp(if block_number > latest_block_number {
+                        BlockId::Tag(BlockTag::Pending)
+                    } else {
+                        BlockId::Number(block_number)
+                    }).await?;
                     blocks.insert(block_number, block_timestamp);
 
                     last_block = block_number;
@@ -276,8 +262,8 @@ impl<P: Provider + Sync> Engine<P> {
         Ok((latest_block_number, pending_block_tx_cursor))
     }
 
-    async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {
-        match self.provider.get_block_with_tx_hashes(BlockId::Number(block_number)).await? {
+    async fn get_block_timestamp(&self, block_id: BlockId) -> Result<u64> {
+        match self.provider.get_block_with_tx_hashes(block_id).await? {
             MaybePendingBlockWithTxHashes::Block(block) => Ok(block.timestamp),
             MaybePendingBlockWithTxHashes::PendingBlock(block) => Ok(block.timestamp),
         }
