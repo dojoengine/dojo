@@ -468,9 +468,12 @@ pub impl $type_name$ModelEntityImpl of dojo::model::ModelEntity<$type_name$Entit
 
 #[cfg(target: \"test\")]
 pub impl $type_name$ModelEntityTestImpl of dojo::model::ModelEntityTest<$type_name$Entity> {
-    fn update_test(self: @$type_name$Entity, world: dojo::world::IWorldTestDispatcher) {
+    fn update_test(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+        let world_test = dojo::world::IWorldTestDispatcher { contract_address: \
+             world.contract_address };
+
         dojo::world::IWorldTestDispatcherTrait::set_entity_test(
-            world,
+            world_test,
             dojo::model::Model::<$type_name$>::selector(),
             dojo::model::ModelIndex::Id(self.id()),
             self.values(),
@@ -478,9 +481,12 @@ pub impl $type_name$ModelEntityTestImpl of dojo::model::ModelEntityTest<$type_na
         );
     }
 
-    fn delete_test(self: @$type_name$Entity, world: dojo::world::IWorldTestDispatcher) {
+    fn delete_test(self: @$type_name$Entity, world: dojo::world::IWorldDispatcher) {
+        let world_test = dojo::world::IWorldTestDispatcher { contract_address: \
+             world.contract_address };
+
         dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
-            world,
+            world_test,
             dojo::model::Model::<$type_name$>::selector(),
             dojo::model::ModelIndex::Id(self.id()),
             dojo::model::Model::<$type_name$>::layout()
@@ -644,10 +650,13 @@ pub impl $type_name$ModelImpl of dojo::model::Model<$type_name$> {
 pub impl $type_name$ModelTestImpl of dojo::model::ModelTest<$type_name$> {
    fn set_test(
         self: @$type_name$,
-        world: dojo::world::IWorldTestDispatcher
+        world: dojo::world::IWorldDispatcher
     ) {
+        let world_test = dojo::world::IWorldTestDispatcher { contract_address: \
+             world.contract_address };
+
         dojo::world::IWorldTestDispatcherTrait::set_entity_test(
-            world,
+            world_test,
             dojo::model::Model::<$type_name$>::selector(),
             dojo::model::ModelIndex::Keys(dojo::model::Model::<$type_name$>::keys(self)),
             dojo::model::Model::<$type_name$>::values(self),
@@ -657,10 +666,13 @@ pub impl $type_name$ModelTestImpl of dojo::model::ModelTest<$type_name$> {
 
     fn delete_test(
         self: @$type_name$,
-        world: dojo::world::IWorldTestDispatcher
+        world: dojo::world::IWorldDispatcher
     ) {
+        let world_test = dojo::world::IWorldTestDispatcher { contract_address: \
+             world.contract_address };
+
         dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
-            world,
+            world_test,
             dojo::model::Model::<$type_name$>::selector(),
             dojo::model::ModelIndex::Keys(dojo::model::Model::<$type_name$>::keys(self)),
             dojo::model::Model::<$type_name$>::layout()

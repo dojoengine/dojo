@@ -104,16 +104,13 @@ pub fn deploy_and_get_metadata(
 }
 
 #[cfg(target: "test")]
-use dojo::world::IWorldTestDispatcher;
-
-#[cfg(target: "test")]
 pub trait ModelTest<T> {
-    fn set_test(self: @T, world: IWorldTestDispatcher);
-    fn delete_test(self: @T, world: IWorldTestDispatcher);
+    fn set_test(self: @T, world: IWorldDispatcher);
+    fn delete_test(self: @T, world: IWorldDispatcher);
 }
 
 #[cfg(target: "test")]
 pub trait ModelEntityTest<T> {
-    fn update_test(self: @T, world: IWorldTestDispatcher);
-    fn delete_test(self: @T, world: IWorldTestDispatcher);
+    fn update_test(self: @T, world: IWorldDispatcher);
+    fn delete_test(self: @T, world: IWorldDispatcher);
 }
