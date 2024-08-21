@@ -1,6 +1,5 @@
 #![allow(deprecated)]
 
-use std::collections::HashSet;
 use std::fs::{self};
 use std::path::PathBuf;
 use std::sync::Arc;
