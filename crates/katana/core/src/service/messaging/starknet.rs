@@ -103,7 +103,7 @@ impl StarknetMessaging {
             }
         }
 
-        // Converti Hashmap into Vec
+        // Convert Hashmap into Vec
         let mut sorted_block_events: Vec<(u64, Vec<EmittedEvent>)> = block_to_events.into_iter().collect();
         sorted_block_events.sort_by_key(|&(block_number, _)| block_number);
 
