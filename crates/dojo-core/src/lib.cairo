@@ -18,9 +18,7 @@ pub mod model {
     };
 
     #[cfg(target: "test")]
-    pub use model::{
-        ModelTest, ModelEntityTest
-    };
+    pub use model::{ModelTest, ModelEntityTest};
 
     pub mod metadata;
     pub use metadata::{ResourceMetadata, ResourceMetadataTrait, resource_metadata};
@@ -69,9 +67,7 @@ pub mod world {
     };
 
     #[cfg(target: "test")]
-    pub use world_contract::{
-        IWorldTest, IWorldTestDispatcher, IWorldTestDispatcherTrait
-    };
+    pub use world_contract::{IWorldTest, IWorldTestDispatcher, IWorldTestDispatcherTrait};
 }
 
 #[cfg(test)]

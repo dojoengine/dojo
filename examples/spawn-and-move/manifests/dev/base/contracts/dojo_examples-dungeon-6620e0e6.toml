@@ -1,0 +1,11 @@
+kind = "DojoContract"
+class_hash = "0x5d2892f0389e921a051daaad07efb49af7a13213ba309a901fc386acef15c3c"
+original_class_hash = "0x5d2892f0389e921a051daaad07efb49af7a13213ba309a901fc386acef15c3c"
+base_class_hash = "0x0"
+abi = "manifests/dev/base/abis/contracts/dojo_examples-dungeon-6620e0e6.json"
+reads = []
+writes = []
+init_calldata = []
+tag = "dojo_examples-dungeon"
+systems = ["enter"]
+manifest_name = "dojo_examples-dungeon-6620e0e6"

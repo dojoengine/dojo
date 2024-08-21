@@ -63,7 +63,13 @@ pub trait IWorld<T> {
 #[starknet::interface]
 #[cfg(target: "test")]
 pub trait IWorldTest<T> {
-    fn set_entity_test(ref self: T, model_selector: felt252, index: ModelIndex, values: Span<felt252>, layout: Layout);
+    fn set_entity_test(
+        ref self: T,
+        model_selector: felt252,
+        index: ModelIndex,
+        values: Span<felt252>,
+        layout: Layout
+    );
 
     fn delete_entity_test(ref self: T, model_selector: felt252, index: ModelIndex, layout: Layout);
 }
@@ -314,11 +320,19 @@ pub mod world {
     #[cfg(target: "test")]
     #[abi(embed_v0)]
     impl WorldTestImpl of super::IWorldTest<ContractState> {
-        fn set_entity_test(ref self: ContractState, model_selector: felt252, index: ModelIndex, values: Span<felt252>, layout: Layout) {
+        fn set_entity_test(
+            ref self: ContractState,
+            model_selector: felt252,
+            index: ModelIndex,
+            values: Span<felt252>,
+            layout: Layout
+        ) {
             self.set_entity_internal(model_selector, index, values, layout);
         }
 
-        fn delete_entity_test(ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout) {
+        fn delete_entity_test(
+            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+        ) {
             self.delete_entity_internal(model_selector, index, layout);
         }
     }

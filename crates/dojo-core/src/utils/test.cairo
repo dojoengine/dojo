@@ -48,7 +48,7 @@ pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -
 /// * `models` - Models to register.
 ///
 /// # Returns
-/// 
+///
 /// * World dispatcher
 pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> IWorldDispatcher {
     let salt = core::testing::get_available_gas();
