@@ -36,6 +36,7 @@ dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 cainome.workspace = true
 camino.workspace = true
 dojo-test-utils.workspace = true
+dojo-utils.workspace = true
 scarb.workspace = true
 sozo-ops.workspace = true
 katana-runner.workspace = true

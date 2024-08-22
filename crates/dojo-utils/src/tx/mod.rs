@@ -1,27 +1,44 @@
-mod waiter;
-
-pub use waiter::*;
-
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::time::Duration;
+pub mod waiter;
 
 use anyhow::Result;
-use futures::FutureExt;
 use starknet::accounts::{
     AccountDeploymentV1, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
     DeclarationV2, ExecutionV1,
 };
 use starknet::core::types::{
-    DeclareTransactionResult, DeployAccountTransactionResult, ExecutionResult, Felt,
-    InvokeTransactionResult, ReceiptBlock, StarknetError, TransactionFinalityStatus,
-    TransactionReceipt, TransactionReceiptWithBlockInfo, TransactionStatus,
+    DeclareTransactionResult, DeployAccountTransactionResult, Felt, InvokeTransactionResult,
 };
-use starknet::providers::{Provider, ProviderError};
-use tokio::time::{Instant, Interval};
 
-use dojo_world::migration::TxnConfig;
+/// The transaction configuration to use when sending a transaction.
+#[derive(Debug, Copy, Clone, Default)]
+pub struct TxnConfig {
+    /// The multiplier for how much the actual transaction max fee should be relative to the
+    /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
+    pub fee_estimate_multiplier: Option<f64>,
+    pub wait: bool,
+    pub receipt: bool,
+    pub max_fee_raw: Option<Felt>,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum TxnAction {
+    Send {
+        wait: bool,
+        receipt: bool,
+        max_fee_raw: Option<Felt>,
+        /// The multiplier for how much the actual transaction max fee should be relative to the
+        /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
+        fee_estimate_multiplier: Option<f64>,
+    },
+    Estimate,
+    Simulate,
+}
+
+impl TxnConfig {
+    pub fn init_wait() -> Self {
+        Self { wait: true, ..Default::default() }
+    }
+}
 
 /// Helper trait to abstract away setting `TxnConfig` configurations before sending a transaction
 /// Implemented by types from `starknet-accounts` like `Execution`, `Declaration`, etc...

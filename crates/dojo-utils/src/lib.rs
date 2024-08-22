@@ -3,4 +3,5 @@
 pub mod parse;
 mod tx;
 
-pub use tx::*;
+pub use tx::waiter::*;
+pub use tx::{TransactionExt, TxnAction, TxnConfig};

@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
 use anyhow::{Context, Result};
+use dojo_utils::{TransactionExt, TxnConfig};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::DeploymentManifest;
-use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::Felt;

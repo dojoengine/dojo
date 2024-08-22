@@ -7,7 +7,6 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-dojo-world = { workspace = true, features = [ "migration" ] }
 futures.workspace = true
 reqwest.workspace = true
 starknet.workspace = true

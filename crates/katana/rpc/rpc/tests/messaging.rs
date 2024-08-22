@@ -7,7 +7,7 @@ use alloy::providers::{ProviderBuilder, WalletProvider};
 use alloy::sol;
 use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
-use dojo_world::utils::TransactionWaiter;
+use dojo_utils::TransactionWaiter;
 use katana_primitives::utils::transaction::{
     compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
 };

@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
+use dojo_utils::{TransactionExt, TransactionWaiter, TransactionWaitingError, TxnConfig};
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
@@ -18,7 +19,6 @@ use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
 use crate::contracts::naming::compute_selector_from_tag;
-use dojo_utils::utils::{TransactionExt, TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
 pub mod contract;
@@ -90,37 +90,6 @@ pub enum MigrationType {
 pub trait StateDiff {
     /// Returns `true` if the local and remote states are equivalent.
     fn is_same(&self) -> bool;
-}
-
-/// The transaction configuration to use when sending a transaction.
-#[derive(Debug, Copy, Clone, Default)]
-pub struct TxnConfig {
-    /// The multiplier for how much the actual transaction max fee should be relative to the
-    /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
-    pub fee_estimate_multiplier: Option<f64>,
-    pub wait: bool,
-    pub receipt: bool,
-    pub max_fee_raw: Option<Felt>,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum TxnAction {
-    Send {
-        wait: bool,
-        receipt: bool,
-        max_fee_raw: Option<Felt>,
-        /// The multiplier for how much the actual transaction max fee should be relative to the
-        /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
-        fee_estimate_multiplier: Option<f64>,
-    },
-    Estimate,
-    Simulate,
-}
-
-impl TxnConfig {
-    pub fn init_wait() -> Self {
-        Self { wait: true, ..Default::default() }
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]

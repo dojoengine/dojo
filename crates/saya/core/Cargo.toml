@@ -16,7 +16,7 @@ anyhow.workspace = true
 async-trait.workspace = true
 bigdecimal.workspace = true
 cairo-proof-parser.workspace = true
-dojo-world = { workspace = true, features = [ "contracts", "manifest", "metadata", "migration" ] }
+dojo-utils.workspace = true
 futures.workspace = true
 itertools.workspace = true
 serde.workspace = true
