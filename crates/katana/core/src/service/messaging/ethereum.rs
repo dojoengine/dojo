@@ -145,7 +145,7 @@ impl Messenger for EthereumMessaging {
             .for_each(|l| {
                 debug!(
                     target: LOG_TARGET,
-                    logs: ?l,
+                    logs = ?l,
                     "Converting logs into L1HandlerTx.",
                 );
 

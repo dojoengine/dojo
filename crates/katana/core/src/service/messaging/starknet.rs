@@ -202,7 +202,7 @@ impl Messenger for StarknetMessaging {
             .for_each(|e| {
                 debug!(
                     target: LOG_TARGET,
-                    event: ?e,
+                    event = ?e,
                     "Converting events of block into L1HandlerTx."
                 );
 
