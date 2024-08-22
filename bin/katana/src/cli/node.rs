@@ -16,8 +16,8 @@ use std::path::PathBuf;
 use alloy_primitives::U256;
 use anyhow::{Context, Result};
 use clap::{Args, Parser};
-use common::parse::parse_socket_address;
 use console::Style;
+use dojo_utils::parse::parse_socket_address;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_SEQUENCER_ADDRESS,

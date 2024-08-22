@@ -9,7 +9,7 @@ members = [
 	"bin/sozo",
 	"bin/torii",
 #	"crates/benches",
-	"crates/common",
+	"crates/dojo-utils",
 	"crates/dojo-bindgen",
 	"crates/dojo-core",
 	"crates/dojo-lang",
@@ -61,7 +61,7 @@ lto = "fat"
 
 [workspace.dependencies]
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.2", features = [ "abigen-rs" ] }
-common = { path = "crates/common" }
+dojo-utils = { path = "crates/dojo-utils" }
 
 # metrics
 dojo-metrics = { path = "crates/metrics" }

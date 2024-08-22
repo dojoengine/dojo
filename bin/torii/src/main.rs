@@ -16,8 +16,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{ArgAction, Parser};
-use common::parse::{parse_socket_address, parse_url};
 use dojo_metrics::{metrics_process, prometheus_exporter};
+use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
