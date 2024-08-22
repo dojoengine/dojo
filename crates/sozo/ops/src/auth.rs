@@ -142,6 +142,7 @@ where
             res,
             txn_config.wait,
             txn_config.receipt,
+            txn_config.walnut,
         )
         .await?;
     }
@@ -182,6 +183,7 @@ where
         res,
         txn_config.wait,
         txn_config.receipt,
+        txn_config.walnut,
     )
     .await?;
 
@@ -224,6 +226,7 @@ where
             res,
             txn_config.wait,
             txn_config.receipt,
+            txn_config.walnut,
         )
         .await?;
     }
@@ -262,6 +265,7 @@ where
         res,
         txn_config.wait,
         txn_config.receipt,
+        txn_config.walnut,
     )
     .await?;
 

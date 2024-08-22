@@ -12961,6 +12961,7 @@ dependencies = [
  "toml 0.8.15",
  "tracing",
  "url",
+ "urlencoding",
 ]
 
 [[package]]
