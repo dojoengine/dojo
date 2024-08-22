@@ -134,7 +134,7 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let mut start_block = args.start_block;
+    let start_block = args.start_block;
 
     let mut config = if let Some(path) = args.config {
         ToriiConfig::load_from_path(&path)?
@@ -146,11 +146,11 @@ async fn main() -> anyhow::Result<()> {
         config.erc_contracts = erc_contracts;
     }
 
-    for address in &config.erc_contracts {
-        if address.start_block < start_block {
-            start_block = address.start_block;
-        }
-    }
+    // for address in &config.erc_contracts {
+    //     if address.start_block < start_block {
+    //         start_block = address.start_block;
+    //     }
+    // }
 
     let filter_layer = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -199,6 +199,7 @@ async fn main() -> anyhow::Result<()> {
         .iter()
         .map(|contract| (contract.contract_address, contract.clone()))
         .collect();
+
     let db = Sql::new(pool.clone(), args.world_address, &erc_contracts).await?;
     let processors = Processors {
         event: vec![

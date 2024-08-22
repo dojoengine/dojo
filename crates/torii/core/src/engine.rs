@@ -1,13 +1,14 @@
 use std::collections::btree_map::Entry;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::time::Duration;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockTag, Event, EventFilter, EventsPage, Felt, MaybePendingBlockWithTxHashes,
-    Transaction, TransactionReceipt, TransactionReceiptWithBlockInfo,
+    BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventsPage, Felt,
+    MaybePendingBlockWithTxHashes, Transaction, TransactionReceipt,
+    TransactionReceiptWithBlockInfo,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -99,13 +100,6 @@ impl<P: Provider + Sync> Engine<P> {
     // run tasks for world and erc tokens concurrently
     // add erc indexing
     pub async fn start(&mut self) -> Result<()> {
-        let (mut head, mut pending_block_tx) = self.db.head().await?;
-        if head == 0 {
-            head = self.config.start_block;
-        } else if self.config.start_block != 0 {
-            warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
-        }
-
         let mut backoff_delay = Duration::from_secs(1);
         let max_backoff_delay = Duration::from_secs(60);
 
@@ -119,17 +113,14 @@ impl<P: Provider + Sync> Engine<P> {
                 }
                 // TODO!: make this method cancel safe
                 // see: https://docs.rs/tokio/latest/tokio/macro.select.html#cancellation-safety
-                res = self.sync(head, pending_block_tx) => {
+                res = self.sync() => {
                     match res {
-                        Ok((latest_block_number, latest_pending_tx)) => {
+                        Ok(()) => {
                             if erroring_out {
                                 erroring_out = false;
                                 backoff_delay = Duration::from_secs(1);
-                                info!(target: LOG_TARGET, latest_block_number = latest_block_number, "Syncing reestablished.");
+                                info!(target: LOG_TARGET, "Syncing reestablished.");
                             }
-
-                            pending_block_tx = latest_pending_tx;
-                            head = latest_block_number;
                         }
                         Err(e) => {
                             erroring_out = true;
@@ -146,137 +137,79 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    pub async fn sync(
-        &mut self,
-        from: u64,
-        last_processed_tx: Option<Felt>,
-    ) -> Result<(u64, Option<Felt>)> {
-        let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
-
-        let from_block = BlockId::Number(from);
-        let to_block = if self.config.index_pending {
-            BlockId::Tag(BlockTag::Pending)
-        } else {
-            BlockId::Number(latest_block_number)
-        };
-
-        let events_filter = EventFilter {
-            from_block: Some(from_block),
-            to_block: Some(to_block),
-            address: Some(self.world.address),
-            keys: None,
-        };
-
+    // ASSUMPTION: events are ordered by (block number, transaction index)
+    pub async fn sync(&mut self) -> Result<()> {
         // TODO: instead of fetching all of them at once, process them batch wise
-        let events_pages =
-            get_all_events(&self.provider, events_filter, self.config.events_chunk_size).await?;
+        let mut events = Vec::new();
+        let mut latest_for_contract = HashMap::new();
+
+        let (world_events, block_number, transaction_hash) =
+            self.get_contract_events(self.world.address, self.config.start_block).await?;
+        latest_for_contract.insert(self.world.address, (block_number, transaction_hash));
+
+        events.extend(world_events);
+
+        for (erc_address, erc_contract) in &self.tokens {
+            let (erc_events, block_number, transaction_hash) =
+                self.get_contract_events(*erc_address, erc_contract.start_block).await?;
+            latest_for_contract.insert(*erc_address, (block_number, transaction_hash));
+            events.extend(erc_events);
+        }
 
         // Transactions & blocks to process
         let mut blocks = BTreeMap::new();
-        let mut transactions = vec![];
+        let mut transactions = HashSet::new();
 
-        let mut pending_block_tx_cursor = last_processed_tx;
-        for events_page in &events_pages {
-            for event in &events_page.events {
-                let block_number = match event.block_number {
-                    Some(block_number) => block_number,
-                    // this means event is part of pending block
-                    None => {
-                        // TODO?: should we refetch the receipt incase the pending block got mined?
-                        // let TransactionReceiptWithBlockInfo { receipt, block } =
-                        //     self.provider.get_transaction_receipt(event.transaction_hash).await?;
+        for event in &events {
+            let block_number = match event.block_number {
+                Some(block_number) => block_number,
+                // this means event is part of pending block
+                None => latest_for_contract.get(&event.from_address).unwrap().0,
+            };
 
-                        // match receipt {
-                        //     TransactionReceipt::Invoke(_) | TransactionReceipt::L1Handler(_) => {
-                        //         if let ReceiptBlock::Block { block_number, .. } = block {
-                        //             block_number
-                        //         } else {
-                        //             // If the block is pending, we assume the block number is the
-                        //             // latest + 1
-                        //             latest_block_number + 1
-                        //         }
-                        //     }
-
-                        //     _ => latest_block_number + 1,
-                        // }
-                        latest_block_number + 1
-                    }
+            if let Entry::Vacant(e) = blocks.entry(block_number) {
+                let block_id = if let Some(block_number) = event.block_number {
+                    BlockId::Number(block_number)
+                } else {
+                    BlockId::Tag(BlockTag::Pending)
                 };
 
-                if let Entry::Vacant(e) = blocks.entry(block_number) {
-                    let block_id = if let Some(block_number) = event.block_number {
-                        BlockId::Number(block_number)
-                    } else {
-                        BlockId::Tag(BlockTag::Pending)
-                    };
-
-                    let block_timestamp = self.get_block_timestamp(block_id).await?;
-                    e.insert(block_timestamp);
-                }
-
-                // Then we skip all transactions until we reach the last pending processed
-                // transaction (if any)
-                if let Some(tx) = pending_block_tx_cursor {
-                    if event.transaction_hash != tx {
-                        continue;
-                    }
-
-                    pending_block_tx_cursor = None;
-                }
-
-                // Skip the latest pending block transaction events
-                // * as we might have multiple events for the same transaction
-                if let Some(tx) = last_processed_tx {
-                    if event.transaction_hash == tx {
-                        continue;
-                    }
-                }
-
-                if let Some((_, last_tx_hash)) = transactions.last() {
-                    // Dedup transactions
-                    // As me might have multiple events for the same transaction
-                    if *last_tx_hash == event.transaction_hash {
-                        continue;
-                    }
-                }
-                transactions.push((block_number, event.transaction_hash));
+                let block_timestamp = self.get_block_timestamp(block_id).await?;
+                e.insert(block_timestamp);
             }
+
+            transactions.insert((block_number, event.transaction_hash));
         }
 
         // Process all transactions
-        let mut last_block = 0;
         for (block_number, transaction_hash) in transactions {
             // Process transaction
             let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
 
-            let has_world_event = self
-                .process_transaction_and_receipt(
-                    transaction_hash,
-                    &transaction,
-                    block_number,
-                    blocks[&block_number],
-                )
-                .await?;
-
-            if has_world_event {
-                pending_block_tx_cursor = Some(transaction_hash);
-            }
-
-            // Process block
-            if block_number > last_block {
-                if let Some(ref block_tx) = self.block_tx {
-                    block_tx.send(block_number).await?;
-                }
-
-                self.process_block(block_number, blocks[&block_number]).await?;
-                last_block = block_number;
-            }
+            self.process_transaction_and_receipt(
+                transaction_hash,
+                &transaction,
+                block_number,
+                blocks[&block_number],
+            )
+            .await?;
         }
 
-        self.db.set_head(latest_block_number, pending_block_tx_cursor);
+        // Process block
+        for (block_number, timestamp) in blocks.iter() {
+            if let Some(ref block_tx) = self.block_tx {
+                block_tx.send(*block_number).await?;
+            }
+
+            self.process_block(*block_number, *timestamp).await?;
+        }
+
+        for (contract_address, (block_number, transaction_hash)) in &latest_for_contract {
+            self.db.set_head(*block_number, *transaction_hash, *contract_address);
+        }
         self.db.execute().await?;
 
-        Ok((latest_block_number, pending_block_tx_cursor))
+        Ok(())
     }
 
     async fn get_block_timestamp(&self, block_id: BlockId) -> Result<u64> {
@@ -287,14 +220,14 @@ impl<P: Provider + Sync> Engine<P> {
     }
 
     // Process a transaction and its receipt.
-    // Returns whether the transaction has a world event.
+    // We only call this for transactions which contains the event we are interested in.
     async fn process_transaction_and_receipt(
         &mut self,
         transaction_hash: Felt,
         transaction: &Transaction,
         block_number: u64,
         block_timestamp: u64,
-    ) -> Result<bool> {
+    ) -> Result<()> {
         let receipt = self.provider.get_transaction_receipt(transaction_hash).await?;
         let events = match &receipt.receipt {
             TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
@@ -302,16 +235,8 @@ impl<P: Provider + Sync> Engine<P> {
             _ => None,
         };
 
-        let mut world_event = false;
         if let Some(events) = events {
             for (event_idx, event) in events.iter().enumerate() {
-                if event.from_address != self.world.address
-                    && !self.tokens.contains_key(&event.from_address)
-                {
-                    continue;
-                }
-
-                world_event = true;
                 let event_id =
                     format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
 
@@ -326,20 +251,18 @@ impl<P: Provider + Sync> Engine<P> {
                 .await?;
             }
 
-            if world_event {
-                Self::process_transaction(
-                    self,
-                    block_number,
-                    block_timestamp,
-                    &receipt,
-                    transaction_hash,
-                    transaction,
-                )
-                .await?;
-            }
+            Self::process_transaction(
+                self,
+                block_number,
+                block_timestamp,
+                &receipt,
+                transaction_hash,
+                transaction,
+            )
+            .await?;
         }
 
-        Ok(world_event)
+        Ok(())
     }
 
     async fn process_block(&mut self, block_number: u64, block_timestamp: u64) -> Result<()> {
@@ -428,6 +351,74 @@ impl<P: Provider + Sync> Engine<P> {
             }
         }
         Ok(())
+    }
+
+    async fn get_contract_events(
+        &self,
+        contract_address: Felt,
+        start_block: u64,
+    ) -> Result<(Vec<EmittedEvent>, u64, Option<Felt>)> {
+        let (mut from, last_processed_tx, _) = self.db.head(contract_address).await?;
+        if from == 0 {
+            from = start_block;
+        } else if self.config.start_block != 0 {
+            warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
+        }
+
+        let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
+
+        let from_block = BlockId::Number(from);
+        let to_block = if self.config.index_pending {
+            BlockId::Tag(BlockTag::Pending)
+        } else {
+            BlockId::Number(latest_block_number)
+        };
+
+        let events_filter = EventFilter {
+            from_block: Some(from_block),
+            to_block: Some(to_block),
+            address: Some(contract_address),
+            keys: None,
+        };
+
+        let event_pages =
+            get_all_events(&self.provider, events_filter, self.config.events_chunk_size).await?;
+        let mut events = Vec::new();
+        let mut last_processed_tx_cursor = last_processed_tx;
+
+        for event_page in event_pages {
+            for event in event_page.events {
+                // Then we skip all transactions until we reach the last pending processed
+                // transaction (if any)
+                if let Some(tx) = last_processed_tx_cursor {
+                    if event.transaction_hash != tx {
+                        continue;
+                    }
+                    last_processed_tx_cursor = None;
+                }
+
+                // Skip the latest pending block transaction events
+                // * as we might have multiple events for the same transaction
+                if let Some(tx) = last_processed_tx {
+                    if event.transaction_hash == tx {
+                        continue;
+                    }
+                }
+
+                events.push(event);
+            }
+        }
+
+        let (last_block, last_tx) = if let Some(last_event) = events.last() {
+            (
+                last_event.block_number.unwrap_or_else(|| latest_block_number + 1),
+                Some(last_event.transaction_hash),
+            )
+        } else {
+            (latest_block_number + 1, None)
+        };
+
+        Ok((events, last_block, last_tx))
     }
 }
 

@@ -41,7 +41,6 @@ mod test;
 
 #[derive(Debug, Clone)]
 pub struct Sql {
-    world_address: Felt,
     pub pool: Pool<Sqlite>,
     query_queue: QueryQueue,
 }
@@ -76,27 +75,27 @@ impl Sql {
 
         query_queue.execute_all().await?;
 
-        Ok(Self { pool, world_address, query_queue })
+        Ok(Self { pool, query_queue })
     }
 
-    pub async fn head(&self) -> Result<(u64, Option<Felt>)> {
+    pub async fn head(&self, address: Felt) -> Result<(u64, Option<Felt>, String)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let indexer_query = sqlx::query_as::<_, (i64, Option<String>, String)>(
             "SELECT head, pending_block_tx, contract_type FROM contracts WHERE id = ?",
         )
-        .bind(format!("{:#x}", self.world_address));
+        .bind(format!("{:#x}", address));
 
         let indexer: (i64, Option<String>, String) = indexer_query.fetch_one(&mut *conn).await?;
-        assert!(indexer.2 == WORLD_CONTRACT_TYPE);
         Ok((
             indexer.0.try_into().expect("doesn't fit in u64"),
             indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
+            indexer.2,
         ))
     }
 
-    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<Felt>) {
+    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<Felt>, contract: Felt) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
-        let id = Argument::FieldElement(self.world_address);
+        let id = Argument::FieldElement(contract);
         let pending_block_tx = if let Some(f) = pending_block_tx {
             Argument::String(format!("{:#x}", f))
         } else {
