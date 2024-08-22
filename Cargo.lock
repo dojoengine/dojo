@@ -3467,15 +3467,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "common"
-version = "1.0.0-alpha.7"
-dependencies = [
- "anyhow",
- "reqwest 0.12.5",
- "thiserror",
-]
-
-[[package]]
 name = "common-multipart-rfc7578"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4531,6 +4522,15 @@ dependencies = [
  "starknet 0.11.0",
  "strum 0.25.0",
  "strum_macros 0.25.3",
+ "thiserror",
+]
+
+[[package]]
+name = "dojo-utils"
+version = "1.0.0-alpha.7"
+dependencies = [
+ "anyhow",
+ "reqwest 0.12.5",
  "thiserror",
 ]
 
@@ -7732,8 +7732,8 @@ dependencies = [
  "clap",
  "clap_complete",
  "comfy-table",
- "common 1.0.0-alpha.7",
  "console",
+ "dojo-utils",
  "katana-core",
  "katana-db",
  "katana-node",
@@ -10698,7 +10698,7 @@ version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/http-prover?rev=7d00b05#7d00b05fec6bdf533d4110656c635a086d5872b7"
 dependencies = [
  "bytes",
- "common 0.1.0",
+ "common",
  "ed25519-dalek",
  "http 1.1.0",
  "hyper-util",
@@ -14493,10 +14493,10 @@ dependencies = [
  "camino",
  "chrono",
  "clap",
- "common 1.0.0-alpha.7",
  "ctrlc",
  "dojo-metrics",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "either",
  "futures",
