@@ -89,7 +89,7 @@ impl StarknetMessaging {
                 // We ignore events without the block number
                 if event.block_number.is_some() {
                     // Blocks are processed in order as retrieved by `get_events`.
-                    // This way we keep the order and ensure the messages are executed in order
+                    // This way we keep the order and ensure the messages are executed in order.
                     events.push(event);
                 }
             });
