@@ -198,11 +198,10 @@ async fn estimate_fee() -> Result<()> {
 
     // send a valid transaction first to increment the nonce (so that we can test nonce < current
     // nonce later)
-    let result = contract.transfer(&recipient, &amount).send().await;
+    let result = contract.transfer(&recipient, &amount).send().await?;
 
     // wait until the tx is included in a block
-    // TODO: replace with a tx waiter
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    dojo_utils::TransactionWaiter::new(result.transaction_hash, &provider).await?;
 
     // estimate fee with current nonce (the expected nonce)
     let nonce = provider.get_nonce(BlockId::Tag(BlockTag::Pending), account.address()).await?;
