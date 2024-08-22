@@ -1,6 +1,5 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, TransactionReceiptWithBlockInfo};
 use starknet::providers::Provider;
@@ -53,12 +52,12 @@ where
 
         info!(
             target: LOG_TARGET,
-            name = %model.name(),
+            name = %model.name,
             "Store delete record."
         );
 
         let entity_id = event.data[ENTITY_ID_INDEX];
-        let entity = model.schema().await?;
+        let entity = model.schema;
 
         db.delete_entity(entity_id, entity, event_id, block_timestamp).await?;
 

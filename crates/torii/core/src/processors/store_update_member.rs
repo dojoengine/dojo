@@ -1,6 +1,5 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
@@ -57,7 +56,7 @@ where
         let member_selector = event.data[MEMBER_INDEX];
 
         let model = db.model(selector).await?;
-        let schema = model.schema().await?;
+        let schema = model.schema;
 
         let mut member = schema
             .as_struct()
@@ -73,7 +72,7 @@ where
 
         info!(
             target: LOG_TARGET,
-            name = %model.name(),
+            name = %model.name,
             entity_id = format!("{:#x}", entity_id),
             member = %member.name,
             "Store update member.",
@@ -86,7 +85,7 @@ where
         // Skip the length to only get the values as they will be deserialized.
         let mut values = event.data[values_start + 1..=values_end].to_vec();
 
-        let tag = naming::get_tag(model.namespace(), model.name());
+        let tag = naming::get_tag(&model.namespace, &model.name);
 
         if !db.does_entity_exist(tag.clone(), entity_id).await? {
             warn!(

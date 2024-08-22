@@ -1,6 +1,5 @@
 use anyhow::{Context, Error, Ok, Result};
 use async_trait::async_trait;
-use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::naming;
 use dojo_world::contracts::world::WorldContractReader;
 use num_traits::ToPrimitive;
@@ -56,7 +55,7 @@ where
 
         info!(
             target: LOG_TARGET,
-            name = %model.name(),
+            name = %model.name,
             entity_id = format!("{:#x}", entity_id),
             "Store update record.",
         );
@@ -68,14 +67,14 @@ where
         // Skip the length to only get the values as they will be deserialized.
         let values = event.data[values_start + 1..=values_end].to_vec();
 
-        let tag = naming::get_tag(model.namespace(), model.name());
+        let tag = naming::get_tag(&model.namespace, &model.name);
 
         // Keys are read from the db, since we don't have access to them when only
         // the entity id is passed.
         let keys = db.get_entity_keys(entity_id, &tag).await?;
         let mut keys_and_unpacked = [keys, values].concat();
 
-        let mut entity = model.schema().await?;
+        let mut entity = model.schema;
         entity.deserialize(&mut keys_and_unpacked)?;
 
         db.set_entity(entity, event_id, block_timestamp).await?;
