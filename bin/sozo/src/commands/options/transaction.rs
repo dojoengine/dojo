@@ -37,6 +37,13 @@ pub struct TransactionOptions {
     )]
     #[arg(global = true)]
     pub receipt: bool,
+
+    #[arg(long)]
+    #[arg(
+        help = "If --wait is set, the link to debug the transaction with Walnut is displayed on stdout. Otherwise, it is a no-op."
+    )]
+    #[arg(global = true)]
+    pub walnut: bool,
 }
 
 impl TransactionOptions {
@@ -56,6 +63,7 @@ impl TransactionOptions {
                 receipt: self.receipt,
                 max_fee_raw: self.max_fee_raw,
                 fee_estimate_multiplier: self.fee_estimate_multiplier,
+                walnut: self.walnut,
             }),
         }
     }
@@ -74,6 +82,7 @@ impl From<TransactionOptions> for TxnConfig {
             wait: value.wait,
             receipt: value.receipt,
             max_fee_raw: value.max_fee_raw,
+            walnut: value.walnut,
         }
     }
 }

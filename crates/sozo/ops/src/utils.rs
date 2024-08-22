@@ -8,6 +8,7 @@ use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
+use urlencoding::encode;
 
 use crate::migration::ui::MigrationUi;
 
@@ -78,12 +79,14 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
 /// * `transaction_result` - Result of the transaction to handle.
 /// * `wait_for_tx` - Wait for the transaction to be mined.
 /// * `show_receipt` - If the receipt of the transaction should be displayed on stdout.
+/// * `debug_with_walnut` - If the link to debug the transaction with Walnut should be displayed on stdout.
 pub async fn handle_transaction_result<P>(
     ui: &Ui,
     provider: P,
     transaction_result: InvokeTransactionResult,
     wait_for_tx: bool,
     show_receipt: bool,
+    debug_with_walnut: bool,
 ) -> Result<()>
 where
     P: Provider + Send,
@@ -106,6 +109,18 @@ where
                     ui.print(format!("Reason:\n{}", reason));
                 }
             };
+
+            // TODO: Find a way to pass the rpc url here
+            let rpc_url = "https://api.cartridge.gg/x/somedeployment/katana";
+            let encoded_rpc_url = encode(rpc_url);
+
+            if debug_with_walnut {
+                ui.print_sub(format!(
+            "Debug transaction with Walnut: https://app.walnut.dev/transactions?rpcUrl={}&txHash={}",
+            encoded_rpc_url,
+            transaction_result.transaction_hash
+        ));
+            }
         }
     }
 
