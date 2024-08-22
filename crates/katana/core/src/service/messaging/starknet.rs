@@ -65,10 +65,10 @@ impl StarknetMessaging {
         &self,
         from_block: BlockId,
         to_block: BlockId,
-    ) -> Result<Vec<(u64, Vec<EmittedEvent>)>> {
+    ) -> Result<Vec<EmittedEvent>> {
         trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
-        let mut block_to_events: HashMap<u64, Vec<EmittedEvent>> = HashMap::new();
+        let mut events: Vec<EmittedEvent> = Vec::new();
 
         let filter = EventFilter {
             from_block: Some(from_block),
@@ -88,11 +88,8 @@ impl StarknetMessaging {
 
             event_page.events.into_iter().for_each(|event| {
                 // We ignore events without the block number
-                if let Some(block_number) = event.block_number {
-                    block_to_events
-                        .entry(block_number)
-                        .and_modify(|v| v.push(event.clone()))
-                        .or_insert(vec![event]);
+                if event.block_number.is_some() {
+                    events.push(event);
                 }
             });
 
@@ -102,13 +99,11 @@ impl StarknetMessaging {
                 break;
             }
         }
-
-        // Convert Hashmap into Vec
-        let mut sorted_block_events: Vec<(u64, Vec<EmittedEvent>)> =
-            block_to_events.into_iter().collect();
-        sorted_block_events.sort_by_key(|&(block_number, _)| block_number);
-
-        Ok(sorted_block_events)
+    
+        // Ordering the events to process them in the correct order
+        events.sort_by_key(|e| e.block_number);
+    
+        Ok(events)
     }
 
     /// Sends an invoke TX on starknet.
@@ -204,20 +199,17 @@ impl Messenger for StarknetMessaging {
             .await
             .map_err(|_| Error::SendError)
             .unwrap()
-            .into_iter()
-            .for_each(|(block_number, block_events)| {
+            .iter()
+            .for_each(|e| {
                 debug!(
                     target: LOG_TARGET,
-                    block_number = %block_number,
-                    events_count = %block_events.len(),
+                    event: %e,
                     "Converting events of block into L1HandlerTx."
                 );
 
-                block_events.iter().for_each(|e| {
-                    if let Ok(tx) = l1_handler_tx_from_event(e, chain_id) {
-                        l1_handler_txs.push(tx)
-                    }
-                })
+                if let Ok(tx) = l1_handler_tx_from_event(e, chain_id) {
+                    l1_handler_txs.push(tx)
+                }
             });
 
         Ok((to_block, l1_handler_txs))
