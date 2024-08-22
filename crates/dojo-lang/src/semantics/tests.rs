@@ -18,6 +18,8 @@ test_file_test!(
         set: "set",
 
         selector_from_tag: "selector_from_tag",
+
+        get_models_test_class_hashes: "get_models_test_class_hashes",
     },
     test_semantics
 );

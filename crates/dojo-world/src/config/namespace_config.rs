@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 pub const NAMESPACE_CFG_PREFIX: &str = "nm|";
 pub const DEFAULT_NAMESPACE_CFG_KEY: &str = "namespace_default";
+pub const DOJO_MANIFESTS_DIR_CFG_KEY: &str = "dojo_manifests_dir";
 
 /// Namespace configuration.
 #[derive(Debug, Clone, Default, Deserialize)]

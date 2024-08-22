@@ -240,13 +240,10 @@ mod tests {
     fn test_move() {
         let caller = starknet::contract_address_const::<0x0>();
 
-        // models
-        let mut models = array![
-            position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH, flatbow::TEST_CLASS_HASH
-        ];
         // deploy world with models
         let world = spawn_test_world(
-            ["dojo_examples", "dojo_examples_weapons"].span(), models.span()
+            ["dojo_examples", "dojo_examples_weapons"].span(),
+            get_models_test_class_hashes!(["dojo_examples", "dojo_examples_weapons"])
         );
 
         // deploy systems contract
