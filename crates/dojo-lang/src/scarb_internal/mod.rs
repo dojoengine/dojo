@@ -32,6 +32,7 @@ use tracing::trace;
 use crate::plugin::dojo_plugin_suite;
 
 pub(crate) const LOG_TARGET: &str = "dojo_lang::scarb_internal";
+pub mod debug;
 
 /// Compilation information of all the units found in the workspace.
 #[derive(Debug, Default)]

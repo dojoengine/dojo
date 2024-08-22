@@ -1,7 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io::Write;
-use std::iter::zip;
 use std::ops::DerefMut;
 
 use anyhow::{anyhow, Context, Result};
@@ -28,7 +27,7 @@ use dojo_world::manifest::{
     BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
     WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
-use itertools::Itertools;
+use itertools::{izip, Itertools};
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
 use scarb::core::{PackageName, TargetKind, Workspace};
@@ -41,6 +40,7 @@ use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
 use crate::plugin::{DojoAuxData, Model};
+use crate::scarb_internal::debug::SierraToCairoDebugInfo;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
 
@@ -88,6 +88,7 @@ impl Compiler for DojoCompiler {
         TargetKind::new("dojo")
     }
 
+    // TODO: refacto the main loop here, could be much more simpler and efficient.
     fn compile(
         &self,
         unit: CairoCompilationUnit,
@@ -129,10 +130,27 @@ impl Compiler for DojoCompiler {
             compile_prepared_db(db, &contracts, compiler_config)?
         };
 
-        let mut compiled_classes: HashMap<String, (Felt, ContractClass)> = HashMap::new();
+        // TODO: get the debug flag from the `dojo_<profile>.toml` file.
+        let with_debug_info = true;
+        let debug_info_classes: Vec<Option<SierraToCairoDebugInfo>> = if with_debug_info {
+            let debug_classes =
+                crate::scarb_internal::debug::compile_prepared_db_to_debug_info(db, &contracts)?;
+
+            debug_classes
+                .into_iter()
+                .map(|d| Some(crate::scarb_internal::debug::get_sierra_to_cairo_debug_info(&d, db)))
+                .collect()
+        } else {
+            vec![None; contracts.len()]
+        };
+
+        let mut compiled_classes: HashMap<
+            String,
+            (Felt, ContractClass, Option<SierraToCairoDebugInfo>),
+        > = HashMap::new();
         let list_selector = ListSelector::default();
 
-        for (decl, class) in zip(contracts, classes) {
+        for (decl, class, debug_info) in izip!(contracts, classes, debug_info_classes) {
             let contract_name = decl.submodule_id.name(db.upcast_mut());
 
             // note that the qualified path is in snake case while
@@ -164,7 +182,7 @@ impl Compiler for DojoCompiler {
                 format!("problem computing class hash for contract `{}`", qualified_path.clone())
             })?;
 
-            compiled_classes.insert(qualified_path, (class_hash, class));
+            compiled_classes.insert(qualified_path, (class_hash, class, debug_info));
         }
 
         update_files(
@@ -256,7 +274,7 @@ fn update_files(
     ws: &Workspace<'_>,
     target_dir: &Filesystem,
     crate_ids: &[CrateId],
-    compiled_artifacts: HashMap<String, (Felt, ContractClass)>,
+    compiled_artifacts: HashMap<String, (Felt, ContractClass, Option<SierraToCairoDebugInfo>)>,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
     let profile_name =
@@ -270,9 +288,9 @@ fn update_files(
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
-        artifacts: &'a HashMap<String, (Felt, ContractClass)>,
+        artifacts: &'a HashMap<String, (Felt, ContractClass, Option<SierraToCairoDebugInfo>)>,
         qualified_artifact_path: &str,
-    ) -> anyhow::Result<&'a (Felt, ContractClass)> {
+    ) -> anyhow::Result<&'a (Felt, ContractClass, Option<SierraToCairoDebugInfo>)> {
         artifacts.get(qualified_artifact_path).context(format!(
             "Contract `{qualified_artifact_path}` not found. Did you include `dojo` as a \
              dependency?",
@@ -285,7 +303,8 @@ fn update_files(
     for (qualified_path, tag) in
         [(WORLD_QUALIFIED_PATH, WORLD_CONTRACT_TAG), (BASE_QUALIFIED_PATH, BASE_CONTRACT_TAG)]
     {
-        let (hash, class) = get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
+        let (hash, class, debug_info) =
+            get_compiled_artifact_from_map(&compiled_artifacts, qualified_path)?;
         let filename = naming::get_filename_from_tag(tag);
         write_manifest_and_abi(
             &base_manifests_dir,
@@ -304,6 +323,10 @@ fn update_files(
             &class.abi,
         )?;
         save_json_artifact_file(ws, target_dir, class, &filename, tag)?;
+
+        if let Some(debug_info) = debug_info {
+            save_json_artifact_debug_file(ws, target_dir, debug_info, &filename, tag)?;
+        }
     }
 
     let mut models = BTreeMap::new();
@@ -380,7 +403,7 @@ fn update_files(
         std::fs::create_dir_all(&base_contracts_abis_dir)?;
     }
 
-    for (_, (manifest, class, module_id)) in contracts.iter_mut() {
+    for (_, (manifest, class, module_id, debug_info)) in contracts.iter_mut() {
         write_manifest_and_abi(
             &base_contracts_dir,
             &base_contracts_abis_dir,
@@ -399,6 +422,16 @@ fn update_files(
             &manifest.inner.tag,
         )?;
         save_json_artifact_file(ws, &contracts_dir, class, &filename, &manifest.inner.tag)?;
+
+        if let Some(debug_info) = debug_info {
+            save_json_artifact_debug_file(
+                ws,
+                &contracts_dir,
+                debug_info,
+                &filename,
+                &manifest.inner.tag,
+            )?;
+        }
     }
 
     let models_dir = target_dir.child(MODELS_DIR);
@@ -417,7 +450,7 @@ fn update_files(
         std::fs::create_dir_all(&base_models_abis_dir)?;
     }
 
-    for (_, (manifest, class, module_id)) in models.iter_mut() {
+    for (_, (manifest, class, module_id, debug_info)) in models.iter_mut() {
         write_manifest_and_abi(
             &base_models_dir,
             &base_models_abis_dir,
@@ -429,6 +462,16 @@ fn update_files(
         let filename = naming::get_filename_from_tag(&manifest.inner.tag);
         save_expanded_source_file(ws, *module_id, db, &models_dir, &filename, &manifest.inner.tag)?;
         save_json_artifact_file(ws, &models_dir, class, &filename, &manifest.inner.tag)?;
+
+        if let Some(debug_info) = debug_info {
+            save_json_artifact_debug_file(
+                ws,
+                &models_dir,
+                debug_info,
+                &filename,
+                &manifest.inner.tag,
+            )?;
+        }
     }
 
     Ok(())
@@ -441,8 +484,10 @@ fn get_dojo_model_artifacts(
     db: &RootDatabase,
     aux_data: &Vec<Model>,
     module_id: ModuleId,
-    compiled_classes: &HashMap<String, (Felt, ContractClass)>,
-) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, ContractClass, ModuleId)>> {
+    compiled_classes: &HashMap<String, (Felt, ContractClass, Option<SierraToCairoDebugInfo>)>,
+) -> anyhow::Result<
+    HashMap<String, (Manifest<DojoModel>, ContractClass, ModuleId, Option<SierraToCairoDebugInfo>)>,
+> {
     let mut models = HashMap::with_capacity(aux_data.len());
 
     for model in aux_data {
@@ -456,7 +501,7 @@ fn get_dojo_model_artifacts(
             let compiled_class = compiled_classes.get(&qualified_path).cloned();
             let tag = naming::get_tag(&model.namespace, &model.name);
 
-            if let Some((class_hash, class)) = compiled_class {
+            if let Some((class_hash, class, debug_info)) = compiled_class {
                 models.insert(
                     qualified_path.clone(),
                     (
@@ -473,6 +518,7 @@ fn get_dojo_model_artifacts(
                         ),
                         class,
                         module_id,
+                        debug_info.clone(),
                     ),
                 );
             } else {
@@ -489,9 +535,14 @@ fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
     tag: &str,
-    compiled_classes: &HashMap<String, (Felt, ContractClass)>,
+    compiled_classes: &HashMap<String, (Felt, ContractClass, Option<SierraToCairoDebugInfo>)>,
     systems: &[String],
-) -> anyhow::Result<HashMap<String, (Manifest<DojoContract>, ContractClass, ModuleId)>> {
+) -> anyhow::Result<
+    HashMap<
+        String,
+        (Manifest<DojoContract>, ContractClass, ModuleId, Option<SierraToCairoDebugInfo>),
+    >,
+> {
     let mut result = HashMap::new();
 
     if !matches!(naming::get_name_from_tag(tag).as_str(), "world" | "resource_metadata" | "base") {
@@ -501,7 +552,7 @@ fn get_dojo_contract_artifacts(
         let contract_qualified_path =
             format!("{}{}{}", module_id.full_path(db), CAIRO_PATH_SEPARATOR, contract_name);
 
-        if let Some((class_hash, class)) =
+        if let Some((class_hash, class, debug_info)) =
             compiled_classes.get(&contract_qualified_path.to_string())
         {
             let manifest = Manifest::new(
@@ -517,8 +568,10 @@ fn get_dojo_contract_artifacts(
                 naming::get_filename_from_tag(tag),
             );
 
-            result
-                .insert(contract_qualified_path.to_string(), (manifest, class.clone(), *module_id));
+            result.insert(
+                contract_qualified_path.to_string(),
+                (manifest, class.clone(), *module_id, debug_info.clone()),
+            );
         }
     }
 
@@ -629,5 +682,24 @@ fn save_json_artifact_file(
         contract_dir.open_rw(format!("{contract_basename}.json"), "class file", ws.config())?;
     serde_json::to_writer_pretty(file.deref_mut(), &contract_class)
         .with_context(|| format!("failed to serialize contract artifact: {contract_tag}"))?;
+    Ok(())
+}
+
+fn save_json_artifact_debug_file(
+    ws: &Workspace<'_>,
+    contract_dir: &Filesystem,
+    debug_info: &SierraToCairoDebugInfo,
+    contract_basename: &str,
+    contract_tag: &str,
+) -> anyhow::Result<()> {
+    let mut file = contract_dir.open_rw(
+        format!("{contract_basename}.debug.json"),
+        "class file",
+        ws.config(),
+    )?;
+
+    serde_json::to_writer_pretty(file.deref_mut(), debug_info)
+        .with_context(|| format!("failed to serialize contract debug artifact: {contract_tag}"))?;
+
     Ok(())
 }
