@@ -4530,8 +4530,14 @@ name = "dojo-utils"
 version = "1.0.0-alpha.7"
 dependencies = [
  "anyhow",
+ "assert_matches",
+ "dojo-test-utils",
+ "dojo-world",
+ "futures",
  "reqwest 0.12.5",
+ "starknet 0.11.0",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -4552,7 +4558,6 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
- "futures",
  "http 0.2.12",
  "ipfs-api-backend-hyper",
  "katana-runner",

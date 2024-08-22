@@ -18,7 +18,7 @@ use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
 use crate::contracts::naming::compute_selector_from_tag;
-use crate::utils::{TransactionExt, TransactionWaiter, TransactionWaitingError};
+use dojo_utils::utils::{TransactionExt, TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
 pub mod contract;
