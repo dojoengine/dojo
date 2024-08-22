@@ -74,14 +74,15 @@ pub fn transact<S: StateReader>(
     ) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
         let validate = !simulation_flags.skip_validate;
         let charge_fee = !simulation_flags.skip_fee_transfer;
+        let nonce_check = !simulation_flags.skip_nonce_check;
 
         let fee_type = get_fee_type_from_tx(&tx);
         let info = match tx {
             Transaction::AccountTransaction(tx) => {
-                tx.execute(state, block_context, charge_fee, validate)
+                tx.execute(state, block_context, charge_fee, validate, nonce_check)
             }
             Transaction::L1HandlerTransaction(tx) => {
-                tx.execute(state, block_context, charge_fee, validate)
+                tx.execute(state, block_context, charge_fee, validate, nonce_check)
             }
         }?;
 
