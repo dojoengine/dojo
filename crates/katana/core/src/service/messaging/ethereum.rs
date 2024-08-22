@@ -76,10 +76,10 @@ impl EthereumMessaging {
         &self,
         from_block: u64,
         to_block: u64,
-    ) -> MessengerResult<HashMap<u64, Vec<Log>>> {
+    ) -> MessengerResult<Vec<Log>> {
         trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
-        let mut block_to_logs: HashMap<u64, Vec<Log>> = HashMap::new();
+        let mut logs: Vec<Log> = Vec::new();
 
         let filters = Filter {
             block_option: FilterBlockOption::Range {
@@ -107,15 +107,11 @@ impl EthereumMessaging {
             .await?
             .into_iter()
             .filter(|log| log.block_number.is_some())
-            .map(|log| (log.block_number.unwrap(), log))
-            .for_each(|(block_num, log)| {
-                block_to_logs
-                    .entry(block_num)
-                    .and_modify(|v| v.push(log.clone()))
-                    .or_insert(vec![log]);
+            .for_each(|log| {
+                logs.push(log);
             });
 
-        Ok(block_to_logs)
+        Ok(logs)
     }
 }
 
@@ -143,20 +139,19 @@ impl Messenger for EthereumMessaging {
         let mut l1_handler_txs = vec![];
 
         trace!(target: LOG_TARGET, from_block, to_block, "Fetching logs from {from_block} to {to_block}.");
-        self.fetch_logs(from_block, to_block).await?.into_iter().for_each(
-            |(block_number, block_logs)| {
+        self.fetch_logs(from_block, to_block)
+            .await?
+            .iter()
+            .for_each(|l| {
                 debug!(
                     target: LOG_TARGET,
-                    block_number = %block_number,
-                    logs_found = %block_logs.len(),
+                    logs: ?l,
                     "Converting logs into L1HandlerTx.",
                 );
 
-                block_logs.into_iter().for_each(|log| {
-                    if let Ok(tx) = l1_handler_tx_from_log(log, chain_id) {
-                        l1_handler_txs.push(tx)
-                    }
-                })
+                if let Ok(tx) = l1_handler_tx_from_log(l, chain_id) {
+                    l1_handler_txs.push(tx)
+                }
             },
         );
 

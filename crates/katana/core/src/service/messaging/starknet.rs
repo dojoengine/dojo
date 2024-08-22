@@ -89,6 +89,8 @@ impl StarknetMessaging {
             event_page.events.into_iter().for_each(|event| {
                 // We ignore events without the block number
                 if event.block_number.is_some() {
+                    // Blocks are processed in order as retrieved by `get_events`.
+                    // This way we keep the order and ensure the messages are executed in order
                     events.push(event);
                 }
             });
@@ -99,9 +101,6 @@ impl StarknetMessaging {
                 break;
             }
         }
-    
-        // Ordering the events to process them in the correct order
-        events.sort_by_key(|e| e.block_number);
     
         Ok(events)
     }
@@ -203,7 +202,7 @@ impl Messenger for StarknetMessaging {
             .for_each(|e| {
                 debug!(
                     target: LOG_TARGET,
-                    event: %e,
+                    event: ?e,
                     "Converting events of block into L1HandlerTx."
                 );
 
