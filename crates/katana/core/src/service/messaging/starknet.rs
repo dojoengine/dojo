@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -68,7 +67,7 @@ impl StarknetMessaging {
     ) -> Result<Vec<EmittedEvent>> {
         trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
-        let mut events: Vec<EmittedEvent> = Vec::new();
+        let mut events = vec![];
 
         let filter = EventFilter {
             from_block: Some(from_block),
@@ -101,7 +100,7 @@ impl StarknetMessaging {
                 break;
             }
         }
-    
+
         Ok(events)
     }
 
@@ -203,7 +202,7 @@ impl Messenger for StarknetMessaging {
                 debug!(
                     target: LOG_TARGET,
                     event = ?e,
-                    "Converting events of block into L1HandlerTx."
+                    "Converting event into L1HandlerTx."
                 );
 
                 if let Ok(tx) = l1_handler_tx_from_event(e, chain_id) {

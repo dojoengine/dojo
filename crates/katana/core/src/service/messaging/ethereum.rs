@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -72,14 +71,10 @@ impl EthereumMessaging {
     ///
     /// * `from_block` - The first block of which logs must be fetched.
     /// * `to_block` - The last block of which logs must be fetched.
-    pub async fn fetch_logs(
-        &self,
-        from_block: u64,
-        to_block: u64,
-    ) -> MessengerResult<Vec<Log>> {
+    pub async fn fetch_logs(&self, from_block: u64, to_block: u64) -> MessengerResult<Vec<Log>> {
         trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
-        let mut logs: Vec<Log> = Vec::new();
+        let mut logs = vec![];
 
         let filters = Filter {
             block_option: FilterBlockOption::Range {
@@ -139,21 +134,17 @@ impl Messenger for EthereumMessaging {
         let mut l1_handler_txs = vec![];
 
         trace!(target: LOG_TARGET, from_block, to_block, "Fetching logs from {from_block} to {to_block}.");
-        self.fetch_logs(from_block, to_block)
-            .await?
-            .iter()
-            .for_each(|l| {
-                debug!(
-                    target: LOG_TARGET,
-                    logs = ?l,
-                    "Converting logs into L1HandlerTx.",
-                );
+        self.fetch_logs(from_block, to_block).await?.iter().for_each(|l| {
+            debug!(
+                target: LOG_TARGET,
+                log = ?l,
+                "Converting log into L1HandlerTx.",
+            );
 
-                if let Ok(tx) = l1_handler_tx_from_log(l, chain_id) {
-                    l1_handler_txs.push(tx)
-                }
-            },
-        );
+            if let Ok(tx) = l1_handler_tx_from_log(l.clone(), chain_id) {
+                l1_handler_txs.push(tx)
+            }
+        });
 
         Ok((to_block, l1_handler_txs))
     }
