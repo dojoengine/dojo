@@ -10,6 +10,7 @@ use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::Felt;
 use starknet::providers::Provider;
+use url::Url;
 
 use crate::utils::handle_transaction_result;
 
@@ -20,6 +21,7 @@ pub async fn model_register<A, P>(
     world_reader: WorldContractReader<P>,
     world_address: Felt,
     config: &Config,
+    rpc_url: &Option<Url>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -74,6 +76,7 @@ where
     handle_transaction_result(
         &config.ui(),
         &world.account.provider(),
+        rpc_url,
         res,
         txn_config.wait,
         txn_config.receipt,

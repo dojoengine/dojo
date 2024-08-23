@@ -60,7 +60,7 @@ impl RegisterArgs {
 
         config.tokio_handle().block_on(async {
             let world =
-                utils::world_from_env_metadata(world, account, starknet, &env_metadata, config)
+                utils::world_from_env_metadata(world, account, &starknet, &env_metadata, config)
                     .await?;
             let provider = world.account.provider();
             let mut world_reader = WorldContractReader::new(world_address, &provider);
@@ -73,6 +73,7 @@ impl RegisterArgs {
                 world_reader,
                 world_address,
                 config,
+                &starknet.url(env_metadata.as_ref()).ok(),
             )
             .await
         })

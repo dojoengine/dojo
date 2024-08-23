@@ -149,7 +149,7 @@ pub async fn grant(
 ) -> Result<()> {
     trace!(?kind, ?world, ?starknet, ?account, ?transaction, "Executing Grant command.");
     let world =
-        utils::world_from_env_metadata(world, account, starknet, &env_metadata, config).await?;
+        utils::world_from_env_metadata(world, account, &starknet, &env_metadata, config).await?;
 
     match kind {
         AuthKind::Writer { models_contracts } => {
@@ -157,16 +157,30 @@ pub async fn grant(
                 contracts=?models_contracts,
                 "Granting Writer permissions."
             );
-            auth::grant_writer(ui, &world, &models_contracts, transaction.into(), default_namespace)
-                .await
+            auth::grant_writer(
+                ui,
+                &world,
+                &models_contracts,
+                transaction.into(),
+                default_namespace,
+                &starknet.url(env_metadata.as_ref()).ok(),
+            )
+            .await
         }
         AuthKind::Owner { owners_resources } => {
             trace!(
                 resources=?owners_resources,
                 "Granting Owner permissions."
             );
-            auth::grant_owner(ui, &world, &owners_resources, transaction.into(), default_namespace)
-                .await
+            auth::grant_owner(
+                ui,
+                &world,
+                &owners_resources,
+                transaction.into(),
+                default_namespace,
+                &starknet.url(env_metadata.as_ref()).ok(),
+            )
+            .await
         }
     }
 }
@@ -185,7 +199,7 @@ pub async fn revoke(
 ) -> Result<()> {
     trace!(?kind, ?world, ?starknet, ?account, ?transaction, "Executing Revoke command.");
     let world =
-        utils::world_from_env_metadata(world, account, starknet, &env_metadata, config).await?;
+        utils::world_from_env_metadata(world, account, &starknet, &env_metadata, config).await?;
 
     match kind {
         AuthKind::Writer { models_contracts } => {
@@ -199,6 +213,7 @@ pub async fn revoke(
                 &models_contracts,
                 transaction.into(),
                 default_namespace,
+                &starknet.url(env_metadata.as_ref()).ok(),
             )
             .await
         }
@@ -207,8 +222,15 @@ pub async fn revoke(
                 resources=?owners_resources,
                 "Revoking Owner permissions."
             );
-            auth::revoke_owner(ui, &world, &owners_resources, transaction.into(), default_namespace)
-                .await
+            auth::revoke_owner(
+                ui,
+                &world,
+                &owners_resources,
+                transaction.into(),
+                default_namespace,
+                &starknet.url(env_metadata.as_ref()).ok(),
+            )
+            .await
         }
     }
 }

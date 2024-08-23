@@ -52,7 +52,7 @@ pub fn load_metadata_from_config(config: &Config) -> Result<Option<Environment>,
 pub async fn world_from_env_metadata(
     world: WorldOptions,
     account: AccountOptions,
-    starknet: StarknetOptions,
+    starknet: &StarknetOptions,
     env_metadata: &Option<Environment>,
     config: &Config,
 ) -> Result<WorldContract<SozoAccount<JsonRpcClient<HttpTransport>>>, Error> {
