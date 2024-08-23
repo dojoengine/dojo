@@ -42,6 +42,7 @@ lazy_static! {
     pub static ref MODEL_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("namespace"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
             Name::new("classHash"),
             TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
