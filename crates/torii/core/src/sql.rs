@@ -54,7 +54,8 @@ impl Sql {
         let mut query_queue = QueryQueue::new(pool.clone());
 
         query_queue.enqueue(
-            "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, ?)",
+            "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, \
+             ?)",
             vec![
                 Argument::FieldElement(world_address),
                 Argument::FieldElement(world_address),
@@ -64,7 +65,8 @@ impl Sql {
 
         for erc_contract in erc_contracts.values() {
             query_queue.enqueue(
-                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, ?, ?)",
+                "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, \
+                 ?, ?)",
                 vec![
                     Argument::FieldElement(erc_contract.contract_address),
                     Argument::FieldElement(erc_contract.contract_address),
@@ -78,34 +80,47 @@ impl Sql {
         Ok(Self { pool, query_queue })
     }
 
-    pub async fn head(&self, address: Felt) -> Result<(u64, Option<Felt>, String)> {
+    pub async fn head(&self, address: Felt) -> Result<(Option<u64>, Option<Felt>, String)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer_query = sqlx::query_as::<_, (i64, Option<String>, String)>(
-            "SELECT head, pending_block_tx, contract_type FROM contracts WHERE id = ?",
+        let indexer_query = sqlx::query_as::<_, (Option<i64>, Option<String>, String)>(
+            "SELECT head, latest_block_tx, contract_type FROM contracts WHERE id = ?",
         )
         .bind(format!("{:#x}", address));
 
-        let indexer: (i64, Option<String>, String) = indexer_query.fetch_one(&mut *conn).await?;
+        let indexer: (Option<i64>, Option<String>, String) =
+            indexer_query.fetch_one(&mut *conn).await?;
         Ok((
-            indexer.0.try_into().expect("doesn't fit in u64"),
+            indexer.0.map(|h| h.try_into().expect("doesn't fit in u64")),
             indexer.1.map(|f| Felt::from_str(&f)).transpose()?,
             indexer.2,
         ))
     }
 
-    pub fn set_head(&mut self, head: u64, pending_block_tx: Option<Felt>, contract: Felt) {
+    pub fn set_head_and_latest_block_tx(
+        &mut self,
+        head: u64,
+        latest_block_tx: Option<Felt>,
+        contract: Felt,
+    ) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(contract);
-        let pending_block_tx = if let Some(f) = pending_block_tx {
+        let latest_block_tx = if let Some(f) = latest_block_tx {
             Argument::String(format!("{:#x}", f))
         } else {
             Argument::Null
         };
 
         self.query_queue.enqueue(
-            "UPDATE contracts SET head = ?, pending_block_tx = ? WHERE id = ?",
-            vec![head, pending_block_tx, id],
+            "UPDATE contracts SET head = ?, latest_block_tx = ? WHERE id = ?",
+            vec![head, latest_block_tx, id],
         );
+    }
+
+    pub fn set_head(&mut self, head: u64, contract: Felt) {
+        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
+        let id = Argument::FieldElement(contract);
+
+        self.query_queue.enqueue("UPDATE contracts SET head = ? WHERE id = ?", vec![head, id]);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -767,11 +782,7 @@ impl Sql {
             Ty::Enum(e) => {
                 if e.options.iter().all(
                     |o| {
-                        if let Ty::Tuple(t) = &o.ty {
-                            t.is_empty()
-                        } else {
-                            false
-                        }
+                        if let Ty::Tuple(t) = &o.ty { t.is_empty() } else { false }
                     },
                 ) {
                     return;

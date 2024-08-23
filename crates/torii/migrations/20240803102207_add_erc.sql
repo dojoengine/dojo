@@ -3,8 +3,8 @@ CREATE TABLE contracts (
     id TEXT NOT NULL PRIMARY KEY,
     contract_address TEXT NOT NULL,
     contract_type TEXT NOT NULL,
-    head BIGINT NOT NULL DEFAULT 0,
-    pending_block_tx TEXT NULL DEFAULT NULL
+    head INTEGER,
+    latest_block_tx TEXT NULL DEFAULT NULL
 );
 
 CREATE TABLE balances (

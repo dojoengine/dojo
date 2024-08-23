@@ -97,8 +97,6 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    // run tasks for world and erc tokens concurrently
-    // add erc indexing
     pub async fn start(&mut self) -> Result<()> {
         let mut backoff_delay = Duration::from_secs(1);
         let max_backoff_delay = Duration::from_secs(60);
@@ -106,6 +104,8 @@ impl<P: Provider + Sync> Engine<P> {
         let mut shutdown_rx = self.shutdown_tx.subscribe();
 
         let mut erroring_out = false;
+        self.initialize_cursors().await?;
+
         loop {
             tokio::select! {
                 _ = shutdown_rx.recv() => {
@@ -144,14 +144,14 @@ impl<P: Provider + Sync> Engine<P> {
         let mut latest_for_contract = HashMap::new();
 
         let (world_events, block_number, transaction_hash) =
-            self.get_contract_events(self.world.address, self.config.start_block).await?;
+            self.get_contract_events(self.world.address).await?;
         latest_for_contract.insert(self.world.address, (block_number, transaction_hash));
 
         events.extend(world_events);
 
-        for (erc_address, erc_contract) in &self.tokens {
+        for erc_address in self.tokens.keys() {
             let (erc_events, block_number, transaction_hash) =
-                self.get_contract_events(*erc_address, erc_contract.start_block).await?;
+                self.get_contract_events(*erc_address).await?;
             latest_for_contract.insert(*erc_address, (block_number, transaction_hash));
             events.extend(erc_events);
         }
@@ -205,7 +205,11 @@ impl<P: Provider + Sync> Engine<P> {
         }
 
         for (contract_address, (block_number, transaction_hash)) in &latest_for_contract {
-            self.db.set_head(*block_number, *transaction_hash, *contract_address);
+            self.db.set_head_and_latest_block_tx(
+                *block_number,
+                *transaction_hash,
+                *contract_address,
+            );
         }
         self.db.execute().await?;
 
@@ -356,14 +360,9 @@ impl<P: Provider + Sync> Engine<P> {
     async fn get_contract_events(
         &self,
         contract_address: Felt,
-        start_block: u64,
     ) -> Result<(Vec<EmittedEvent>, u64, Option<Felt>)> {
-        let (mut from, last_processed_tx, _) = self.db.head(contract_address).await?;
-        if from == 0 {
-            from = start_block;
-        } else if self.config.start_block != 0 {
-            warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
-        }
+        let (from, last_processed_tx, _) = self.db.head(contract_address).await?;
+        let from = from.unwrap_or(0);
 
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
@@ -419,6 +418,27 @@ impl<P: Provider + Sync> Engine<P> {
         };
 
         Ok((events, last_block, last_tx))
+    }
+
+    async fn initialize_cursors(&mut self) -> Result<()> {
+        let (from, _, _) = self.db.head(self.world.address).await?;
+
+        if from.is_none() {
+            self.db.set_head(self.config.start_block, self.world.address);
+        } else if self.config.start_block != 0 {
+            warn!(target: LOG_TARGET, "Start block for worldignored, stored head exists and will be used instead.");
+        }
+
+        for contract in self.tokens.values() {
+            let (from, _, _) = self.db.head(contract.contract_address).await?;
+            if from.is_none() {
+                self.db.set_head(contract.start_block, contract.contract_address);
+            } else if contract.start_block != 0 {
+                warn!(target: LOG_TARGET, "Start block for contract {:#x} ignored, stored head exists and will be used instead.", contract.contract_address);
+            }
+        }
+
+        Ok(())
     }
 }
 
