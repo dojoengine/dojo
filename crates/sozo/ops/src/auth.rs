@@ -11,6 +11,7 @@ use dojo_world::contracts::WorldContractReader;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
+use url::Url;
 
 use crate::migration::ui::MigrationUi;
 use crate::utils;
@@ -110,6 +111,7 @@ pub async fn grant_writer<'a, A>(
     new_writers: &[ResourceWriter],
     txn_config: TxnConfig,
     default_namespace: &str,
+    rpc_url: &Option<Url>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send,
@@ -138,6 +140,7 @@ where
         utils::handle_transaction_result(
             ui,
             &world.account.provider(),
+            rpc_url,
             res,
             txn_config.wait,
             txn_config.receipt,
@@ -155,6 +158,7 @@ pub async fn grant_owner<A>(
     new_owners: &[ResourceOwner],
     txn_config: TxnConfig,
     default_namespace: &str,
+    rpc_url: &Option<Url>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -179,6 +183,7 @@ where
     utils::handle_transaction_result(
         ui,
         &world.account.provider(),
+        rpc_url,
         res,
         txn_config.wait,
         txn_config.receipt,
@@ -195,6 +200,7 @@ pub async fn revoke_writer<A>(
     new_writers: &[ResourceWriter],
     txn_config: TxnConfig,
     default_namespace: &str,
+    rpc_url: &Option<Url>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -222,6 +228,7 @@ where
         utils::handle_transaction_result(
             ui,
             &world.account.provider(),
+            rpc_url,
             res,
             txn_config.wait,
             txn_config.receipt,
@@ -239,6 +246,7 @@ pub async fn revoke_owner<A>(
     new_owners: &[ResourceOwner],
     txn_config: TxnConfig,
     default_namespace: &str,
+    rpc_url: &Option<Url>,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -261,6 +269,7 @@ where
     utils::handle_transaction_result(
         ui,
         &world.account.provider(),
+        rpc_url,
         res,
         txn_config.wait,
         txn_config.receipt,

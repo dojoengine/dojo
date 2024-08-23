@@ -269,7 +269,17 @@ where
         )
         .await?;
 
-        match auto_authorize(ws, &world, &txn_config, &default_namespace, &grant, &revoke).await {
+        match auto_authorize(
+            ws,
+            &world,
+            &txn_config,
+            &default_namespace,
+            &grant,
+            &revoke,
+            &Url::parse(&rpc_url).ok(),
+        )
+        .await
+        {
             Ok(()) => {
                 ui.print_sub("Auto authorize completed successfully");
             }

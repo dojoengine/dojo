@@ -8,6 +8,7 @@ use scarb_ui::Ui;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag, ExecutionResult, Felt, InvokeTransactionResult};
 use starknet::providers::Provider;
+use url::Url;
 use urlencoding::encode;
 
 use crate::migration::ui::MigrationUi;
@@ -76,6 +77,7 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
 /// # Arguments
 ///
 /// * `provider` - Starknet provider to fetch transaction status.
+/// * `rpc_url` - The RPC URL to use for Walnut debugging.
 /// * `transaction_result` - Result of the transaction to handle.
 /// * `wait_for_tx` - Wait for the transaction to be mined.
 /// * `show_receipt` - If the receipt of the transaction should be displayed on stdout.
@@ -83,6 +85,7 @@ pub async fn get_contract_address_from_reader<P: Provider + Sync + Send>(
 pub async fn handle_transaction_result<P>(
     ui: &Ui,
     provider: P,
+    rpc_url: &Option<Url>,
     transaction_result: InvokeTransactionResult,
     wait_for_tx: bool,
     show_receipt: bool,
@@ -110,16 +113,23 @@ where
                 }
             };
 
-            // TODO: Find a way to pass the rpc url here
-            let rpc_url = "https://api.cartridge.gg/x/somedeployment/katana";
-            let encoded_rpc_url = encode(rpc_url);
-
             if debug_with_walnut {
-                ui.print_sub(format!(
-            "Debug transaction with Walnut: https://app.walnut.dev/transactions?rpcUrl={}&txHash={}",
-            encoded_rpc_url,
-            transaction_result.transaction_hash
-        ));
+                if let Some(rpc_url) = rpc_url {
+                    if rpc_url.host_str() != Some("localhost")
+                        && rpc_url.host_str() != Some("127.0.0.1")
+                    {
+                        let encoded_rpc_url = encode(rpc_url.as_str());
+                        ui.print_sub(format!(
+                            "Debug transaction with Walnut: https://app.walnut.dev/transactions?rpcUrl={}&txHash={:#066x}",
+                            encoded_rpc_url,
+                            transaction_result.transaction_hash
+                        ));
+                    } else {
+                        ui.print_sub("Debugging transactions with Walnut is only supported on hosted networks");
+                    }
+                } else {
+                    ui.print_sub("Unable to debug transaction with Walnut: no RPC URL provided");
+                }
             }
         }
     }

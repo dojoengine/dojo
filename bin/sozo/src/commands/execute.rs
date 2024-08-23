@@ -65,7 +65,7 @@ impl ExecuteArgs {
             let world = utils::world_from_env_metadata(
                 self.world,
                 self.account,
-                self.starknet,
+                &self.starknet,
                 &env_metadata,
                 config,
             )
@@ -93,6 +93,7 @@ impl ExecuteArgs {
                 calldata,
                 &world,
                 &tx_config,
+                &self.starknet.url(env_metadata.as_ref()).ok(),
             )
             .await
         })

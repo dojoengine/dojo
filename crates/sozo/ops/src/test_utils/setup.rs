@@ -155,6 +155,7 @@ pub async fn setup(
         &default_namespace,
         &grant,
         &revoke,
+        &None,
     )
     .await?;
 
