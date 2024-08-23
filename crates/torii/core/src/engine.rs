@@ -56,6 +56,12 @@ impl Default for EngineConfig {
     }
 }
 
+pub struct FetchResult {
+    blocks: BTreeMap<u64, u64>,
+    transactions: LinkedHashSet<(u64, Felt)>,
+    latest_for_contract: HashMap<Felt, (u64, Option<Felt>)>,
+}
+
 #[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Sync> {
     world: WorldContractReader<P>,
@@ -112,11 +118,11 @@ impl<P: Provider + Sync> Engine<P> {
                 _ = shutdown_rx.recv() => {
                     break Ok(());
                 }
-                // TODO!: make this method cancel safe
-                // see: https://docs.rs/tokio/latest/tokio/macro.select.html#cancellation-safety
-                res = self.sync() => {
+                res = self.fetch_events() => {
                     match res {
-                        Ok(()) => {
+                        Ok(fetch_result) => {
+                            self.process_fetch_result(fetch_result).await?;
+
                             if erroring_out {
                                 erroring_out = false;
                                 backoff_delay = Duration::from_secs(1);
@@ -139,8 +145,7 @@ impl<P: Provider + Sync> Engine<P> {
     }
 
     // ASSUMPTION: events are ordered by (block number, transaction index)
-    pub async fn sync(&mut self) -> Result<()> {
-        // TODO: instead of fetching all of them at once, process them batch wise
+    pub async fn fetch_events(&mut self) -> Result<FetchResult> {
         let mut events = Vec::new();
         let mut latest_for_contract = HashMap::new();
 
@@ -159,6 +164,7 @@ impl<P: Provider + Sync> Engine<P> {
 
         // Transactions & blocks to process
         let mut blocks = BTreeMap::new();
+        // We use a LinkedHashSet to preserve the order of transactions and avoid duplicates
         let mut transactions = LinkedHashSet::new();
 
         for event in &events {
@@ -184,8 +190,12 @@ impl<P: Provider + Sync> Engine<P> {
             }
         }
 
+        Ok(FetchResult { blocks, transactions, latest_for_contract })
+    }
+
+    async fn process_fetch_result(&mut self, fetch_result: FetchResult) -> Result<()> {
         // Process all transactions
-        for (block_number, transaction_hash) in transactions {
+        for (block_number, transaction_hash) in fetch_result.transactions {
             // Process transaction
             let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
 
@@ -193,13 +203,13 @@ impl<P: Provider + Sync> Engine<P> {
                 transaction_hash,
                 &transaction,
                 block_number,
-                blocks[&block_number],
+                fetch_result.blocks[&block_number],
             )
             .await?;
         }
 
         // Process block
-        for (block_number, timestamp) in blocks.iter() {
+        for (block_number, timestamp) in fetch_result.blocks.iter() {
             if let Some(ref block_tx) = self.block_tx {
                 block_tx.send(*block_number).await?;
             }
@@ -207,7 +217,9 @@ impl<P: Provider + Sync> Engine<P> {
             self.process_block(*block_number, *timestamp).await?;
         }
 
-        for (contract_address, (block_number, transaction_hash)) in &latest_for_contract {
+        for (contract_address, (block_number, transaction_hash)) in
+            &fetch_result.latest_for_contract
+        {
             self.db.set_head_and_latest_block_tx(
                 *block_number,
                 *transaction_hash,
@@ -215,7 +227,6 @@ impl<P: Provider + Sync> Engine<P> {
             );
         }
         self.db.execute().await?;
-
         Ok(())
     }
 

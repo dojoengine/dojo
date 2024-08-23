@@ -1336,7 +1336,7 @@ impl Sql {
                 .iter()
                 .find(|(address, _)| address == &format!("{:#x}", from))
                 .map(|(_, balance)| balance.clone())
-                .unwrap_or_else(|| format!("{:#63x}", crypto_bigint::U256::ZERO));
+                .unwrap_or_else(|| format!("{:#64x}", crypto_bigint::U256::ZERO));
 
             let to_balance = balances
                 .iter()
