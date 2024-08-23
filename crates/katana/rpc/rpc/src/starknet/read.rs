@@ -467,6 +467,12 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             let should_validate = !(skip_validate || this.inner.backend.config.disable_validate);
             let flags = katana_executor::SimulationFlag {
                 skip_validate: !should_validate,
+                // We don't care about the nonce when estimating the fee as the nonce value
+                // doesn't affect transaction execution.
+                //
+                // This doesn't completely disregard the nonce as nonce < account nonce will
+                // return an error. It only 'relaxes' the check for nonce >= account nonce.
+                skip_nonce_check: true,
                 ..Default::default()
             };
 
