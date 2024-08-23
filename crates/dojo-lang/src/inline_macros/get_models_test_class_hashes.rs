@@ -5,11 +5,10 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 
 use super::unsupported_arg_diagnostic;
-use super::utils::load_manifest_models_and_namespaces;
+use super::utils::{extract_namespaces, load_manifest_models_and_namespaces};
 
 #[derive(Debug, Default)]
 pub struct GetModelsTestClassHashes;
@@ -102,38 +101,4 @@ impl InlineMacroExprPlugin for GetModelsTestClassHashes {
             diagnostics: vec![],
         }
     }
-}
-
-/// Extracts the namespaces from a fixed size array of strings.
-fn extract_namespaces(
-    db: &dyn SyntaxGroup,
-    expression: &ast::Expr,
-) -> Result<Vec<String>, PluginDiagnostic> {
-    let mut namespaces = vec![];
-
-    match expression {
-        ast::Expr::FixedSizeArray(array) => {
-            for element in array.exprs(db).elements(db) {
-                if let ast::Expr::String(string_literal) = element {
-                    namespaces.push(string_literal.as_syntax_node().get_text(db).replace('\"', ""));
-                } else {
-                    return Err(PluginDiagnostic {
-                        stable_ptr: element.stable_ptr().untyped(),
-                        message: "Expected a string literal".to_string(),
-                        severity: Severity::Error,
-                    });
-                }
-            }
-        }
-        _ => {
-            return Err(PluginDiagnostic {
-                stable_ptr: expression.stable_ptr().untyped(),
-                message: "The list of namespaces should be a fixed size array of strings."
-                    .to_string(),
-                severity: Severity::Error,
-            });
-        }
-    }
-
-    Ok(namespaces)
 }

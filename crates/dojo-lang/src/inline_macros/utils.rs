@@ -1,9 +1,12 @@
 use std::collections::HashSet;
 
+use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_filesystem::cfg::CfgSet;
-use cairo_lang_syntax::node::ast::{ExprPath, ExprStructCtorCall};
+use cairo_lang_syntax::node::ast::{self, ExprPath, ExprStructCtorCall};
+use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::kind::SyntaxKind;
-use cairo_lang_syntax::node::SyntaxNode;
+use cairo_lang_syntax::node::{SyntaxNode, TypedStablePtr, TypedSyntaxNode};
 use camino::Utf8PathBuf;
 use dojo_world::config::namespace_config::DOJO_MANIFESTS_DIR_CFG_KEY;
 use dojo_world::contracts::naming;
@@ -70,4 +73,38 @@ pub fn get_dojo_manifests_dir(cfg_set: CfgSet) -> anyhow::Result<Utf8PathBuf> {
     }
 
     Err(anyhow::anyhow!("dojo_manifests_dir not found"))
+}
+
+/// Extracts the namespaces from a fixed size array of strings.
+pub fn extract_namespaces(
+    db: &dyn SyntaxGroup,
+    expression: &ast::Expr,
+) -> Result<Vec<String>, PluginDiagnostic> {
+    let mut namespaces = vec![];
+
+    match expression {
+        ast::Expr::FixedSizeArray(array) => {
+            for element in array.exprs(db).elements(db) {
+                if let ast::Expr::String(string_literal) = element {
+                    namespaces.push(string_literal.as_syntax_node().get_text(db).replace('\"', ""));
+                } else {
+                    return Err(PluginDiagnostic {
+                        stable_ptr: element.stable_ptr().untyped(),
+                        message: "Expected a string literal".to_string(),
+                        severity: Severity::Error,
+                    });
+                }
+            }
+        }
+        _ => {
+            return Err(PluginDiagnostic {
+                stable_ptr: expression.stable_ptr().untyped(),
+                message: "The list of namespaces should be a fixed size array of strings."
+                    .to_string(),
+                severity: Severity::Error,
+            });
+        }
+    }
+
+    Ok(namespaces)
 }

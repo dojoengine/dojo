@@ -33,7 +33,7 @@ use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::get_models_test_class_hashes::GetModelsTestClassHashes;
 use crate::inline_macros::selector_from_tag::SelectorFromTagMacro;
 use crate::inline_macros::set::SetMacro;
-use crate::inline_macros::spawn_test_world_full::SpawnTestWorldFull;
+use crate::inline_macros::spawn_test_world::SpawnTestWorld;
 use crate::interface::DojoInterface;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
@@ -159,7 +159,7 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<EmitMacro>()
         .add_inline_macro_plugin::<SelectorFromTagMacro>()
         .add_inline_macro_plugin::<GetModelsTestClassHashes>()
-        .add_inline_macro_plugin::<SpawnTestWorldFull>();
+        .add_inline_macro_plugin::<SpawnTestWorld>();
 
     suite
 }

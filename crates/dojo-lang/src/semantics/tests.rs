@@ -21,7 +21,7 @@ test_file_test!(
 
         get_models_test_class_hashes: "get_models_test_class_hashes",
 
-        spawn_test_world_full: "spawn_test_world_full",
+        spawn_test_world: "spawn_test_world",
     },
     test_semantics
 );

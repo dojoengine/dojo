@@ -7,16 +7,17 @@ use cairo_lang_defs::plugin_utils::unsupported_bracket_diagnostic;
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 
-use super::utils::load_manifest_models_and_namespaces;
+use super::unsupported_arg_diagnostic;
+use super::utils::{extract_namespaces, load_manifest_models_and_namespaces};
 
 #[derive(Debug, Default)]
-pub struct SpawnTestWorldFull;
+pub struct SpawnTestWorld;
 
-impl NamedPlugin for SpawnTestWorldFull {
-    const NAME: &'static str = "spawn_test_world_full";
+impl NamedPlugin for SpawnTestWorld {
+    const NAME: &'static str = "spawn_test_world";
 }
 
-impl InlineMacroExprPlugin for SpawnTestWorldFull {
+impl InlineMacroExprPlugin for SpawnTestWorld {
     fn generate_code(
         &self,
         db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
@@ -29,35 +30,50 @@ impl InlineMacroExprPlugin for SpawnTestWorldFull {
 
         let args = arg_list.arguments(db).elements(db);
 
-        if !args.is_empty() {
+        if args.len() > 1 {
             return InlinePluginResult {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: syntax.stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"spawn_test_world_full!()\" with no \
-                              arguments."
+                    message: "Invalid arguments. Expected \"spawn_test_world!()\" or \
+                              \"spawn_test_world!([\"ns1\"])"
                         .to_string(),
                     severity: Severity::Error,
                 }],
             };
         }
 
-        let (namespaces, models) = match load_manifest_models_and_namespaces(metadata.cfg_set, &[])
-        {
-            Ok((namespaces, models)) => (namespaces, models),
-            Err(_e) => {
-                return InlinePluginResult {
-                    code: None,
-                    diagnostics: vec![PluginDiagnostic {
-                        stable_ptr: syntax.stable_ptr().untyped(),
-                        message: "Failed to load models and namespaces, ensure you have run `sozo \
-                                  build` first."
-                            .to_string(),
-                        severity: Severity::Error,
-                    }],
-                };
+        let whitelisted_namespaces = if args.len() == 1 {
+            let ast::ArgClause::Unnamed(expected_array) = args[0].arg_clause(db) else {
+                return unsupported_arg_diagnostic(db, syntax);
+            };
+
+            match extract_namespaces(db, &expected_array.value(db)) {
+                Ok(namespaces) => namespaces,
+                Err(e) => {
+                    return InlinePluginResult { code: None, diagnostics: vec![e] };
+                }
             }
+        } else {
+            vec![]
         };
+
+        let (namespaces, models) =
+            match load_manifest_models_and_namespaces(metadata.cfg_set, &whitelisted_namespaces) {
+                Ok((namespaces, models)) => (namespaces, models),
+                Err(_e) => {
+                    return InlinePluginResult {
+                        code: None,
+                        diagnostics: vec![PluginDiagnostic {
+                            stable_ptr: syntax.stable_ptr().untyped(),
+                            message: "Failed to load models and namespaces, ensure you have run \
+                                      `sozo build` first."
+                                .to_string(),
+                            severity: Severity::Error,
+                        }],
+                    };
+                }
+            };
 
         let mut builder = PatchBuilder::new(db, syntax);
 
@@ -75,7 +91,7 @@ impl InlineMacroExprPlugin for SpawnTestWorldFull {
 
         InlinePluginResult {
             code: Some(PluginGeneratedFile {
-                name: "spawn_test_world_full_macro".into(),
+                name: "spawn_test_world_macro".into(),
                 content: code,
                 code_mappings,
                 aux_data: None,
