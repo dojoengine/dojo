@@ -1203,55 +1203,6 @@ impl Sql {
         Ok(())
     }
 
-    // Registers a new ERC20 contract in erc20_contracts table
-    pub fn register_erc20(
-        &mut self,
-        address: Felt,
-        decimals: u8,
-        name: String,
-        symbol: String,
-        total_supply: U256,
-    ) -> Result<()> {
-        let insert_query = "INSERT INTO erc20_contracts (token_address, name, symbol, decimals \
-                            total_supply) VALUES (?, ?, ?, ?, ?)";
-
-        self.query_queue.enqueue(
-            insert_query,
-            vec![
-                Argument::FieldElement(address),
-                Argument::String(name),
-                Argument::String(symbol),
-                Argument::Int(decimals.into()),
-                Argument::String(u256_to_sql_string(&total_supply)),
-            ],
-        );
-
-        Ok(())
-    }
-
-    pub fn register_erc721(
-        &mut self,
-        token_address: Felt,
-        name: String,
-        symbol: String,
-        total_supply: U256,
-    ) -> Result<()> {
-        let insert_query = "INSERT INTO erc721_contracts (token_address, name, symbol, \
-                            total_supply) VALUES (?, ?, ?, ?)";
-
-        self.query_queue.enqueue(
-            insert_query,
-            vec![
-                Argument::FieldElement(token_address),
-                Argument::String(name),
-                Argument::String(symbol),
-                Argument::String(u256_to_sql_string(&total_supply)),
-            ],
-        );
-
-        Ok(())
-    }
-
     pub async fn handle_erc20_transfer<P: Provider + Sync>(
         &mut self,
         contract_address: Felt,
