@@ -308,7 +308,7 @@ mod tests {
     use starknet::core::types::TransactionFinalityStatus::{self, AcceptedOnL1, AcceptedOnL2};
     use starknet::core::types::{
         ComputationResources, DataAvailabilityResources, DataResources, ExecutionResources,
-        ExecutionResult, FeePayment, Felt, InvokeTransactionReceipt, PriceUnit, ReceiptBlock,
+        ExecutionResult, FeePayment, InvokeTransactionReceipt, PriceUnit, ReceiptBlock,
         TransactionReceipt, TransactionReceiptWithBlockInfo,
     };
     use starknet::macros::felt;
