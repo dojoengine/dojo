@@ -206,17 +206,20 @@ async fn estimate_fee() -> Result<()> {
     // estimate fee with current nonce (the expected nonce)
     let nonce = provider.get_nonce(BlockId::Tag(BlockTag::Pending), account.address()).await?;
     let result = contract.transfer(&recipient, &amount).nonce(nonce).estimate_fee().await;
-    assert!(result.is_ok(), "should succeed with current nonce");
+    assert!(result.is_ok(), "estimate should succeed with nonce == current nonce");
 
     // estimate fee with arbitrary nonce < current nonce
+    //
+    // here we're essentially estimating a transaction with a nonce that has already been
+    // used, so it should fail.
     let nonce = nonce - 1;
     let result = contract.transfer(&recipient, &amount).nonce(nonce).estimate_fee().await;
-    assert!(result.is_err(), "should fail with nonce < current nonce");
+    assert!(result.is_err(), "estimate should fail with nonce < current nonce");
 
     // estimate fee with arbitrary nonce >= current nonce
     let nonce = felt!("0x1337");
     let result = contract.transfer(&recipient, &amount).nonce(nonce).estimate_fee().await;
-    assert!(result.is_ok(), "should succeed with nonce >= current nonce");
+    assert!(result.is_ok(), "estimate should succeed with nonce >= current nonce");
 
     Ok(())
 }
