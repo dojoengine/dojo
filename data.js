@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724438260313,
+  "lastUpdate": 1724439931350,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -16945,6 +16945,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4340498,
             "range": "± 531055",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a3ddf39dee725c5ca5f7b889e728a40d7efffc4c",
+          "message": "feat: add macros for testing (#2337)\n\n* feat: add get_models_test_class_hashes macro\r\n\r\n* feat: add new spawn_test_world_full macro\r\n\r\n* fix: enhance macro for spawn world",
+          "timestamp": "2024-08-23T12:46:21-06:00",
+          "tree_id": "62cc8c8e800335b539aa7dc4fdb41c2385e3b316",
+          "url": "https://github.com/dojoengine/dojo/commit/a3ddf39dee725c5ca5f7b889e728a40d7efffc4c"
+        },
+        "date": 1724439929856,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17556214,
+            "range": "± 426871",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3792970,
+            "range": "± 134319",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3663381056,
+            "range": "± 816577303",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3921242,
+            "range": "± 56990",
             "unit": "ns/iter"
           }
         ]
