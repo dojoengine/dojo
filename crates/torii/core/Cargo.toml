@@ -19,6 +19,7 @@ dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world", features = [ "contracts", "manifest" ] }
 futures-channel = "0.3.0"
 futures-util.workspace = true
+hashlink.workspace = true
 hex.workspace = true
 lazy_static.workspace = true
 log.workspace = true

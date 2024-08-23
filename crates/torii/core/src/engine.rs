@@ -1,10 +1,11 @@
 use std::collections::btree_map::Entry;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::time::Duration;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
+use hashlink::LinkedHashSet;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventsPage, Felt,
     MaybePendingBlockWithTxHashes, Transaction, TransactionReceipt,
@@ -158,7 +159,7 @@ impl<P: Provider + Sync> Engine<P> {
 
         // Transactions & blocks to process
         let mut blocks = BTreeMap::new();
-        let mut transactions = HashSet::new();
+        let mut transactions = LinkedHashSet::new();
 
         for event in &events {
             let block_number = match event.block_number {
@@ -178,7 +179,9 @@ impl<P: Provider + Sync> Engine<P> {
                 e.insert(block_timestamp);
             }
 
-            transactions.insert((block_number, event.transaction_hash));
+            if !transactions.contains(&(block_number, event.transaction_hash)) {
+                transactions.insert((block_number, event.transaction_hash));
+            }
         }
 
         // Process all transactions
