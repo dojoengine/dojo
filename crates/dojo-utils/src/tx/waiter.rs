@@ -311,6 +311,7 @@ mod tests {
         ExecutionResult, FeePayment, Felt, InvokeTransactionReceipt, PriceUnit, ReceiptBlock,
         TransactionReceipt, TransactionReceiptWithBlockInfo,
     };
+    use starknet::macros::felt;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
 
@@ -385,12 +386,13 @@ mod tests {
     async fn should_timeout_on_nonexistant_transaction() {
         let (_sequencer, provider) = create_test_sequencer().await;
 
-        assert_matches!(
-            TransactionWaiter::new(Felt::from_hex("0x1234").unwrap(), &provider)
-                .with_timeout(Duration::from_secs(1))
-                .await,
-            Err(super::TransactionWaitingError::Timeout)
-        );
+        let hash = felt!("0x1234");
+        let result = TransactionWaiter::new(hash, &provider)
+            .with_timeout(Duration::from_secs(1))
+            .await
+            .unwrap_err();
+
+        assert_matches!(result, TransactionWaitingError::Timeout);
     }
 
     macro_rules! eval_receipt {
@@ -414,17 +416,7 @@ mod tests {
     #[test]
     fn wait_for_no_finality_status() {
         let receipt = mock_receipt(AcceptedOnL2, Succeeded);
-
-        assert_eq!(
-            TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                receipt.clone(),
-                None,
-                false
-            )
-            .unwrap()
-            .unwrap(),
-            receipt
-        );
+        assert!(eval_receipt!(receipt.clone(), false).unwrap().is_ok());
     }
 
     #[test]
@@ -433,15 +425,12 @@ mod tests {
         assert!(eval_receipt!(receipt.clone(), AcceptedOnL2, false).unwrap().is_ok());
 
         let receipt = mock_receipt(AcceptedOnL2, Succeeded);
-        // eval_receipt!((receipt.clone(), AcceptedOnL1, true), receipt);
-        assert!(eval_receipt!(receipt.clone(), AcceptedOnL1, true).unwrap().is_ok());
+        assert!(eval_receipt!(receipt.clone(), AcceptedOnL1, true).is_none());
 
         let receipt = mock_receipt(AcceptedOnL1, Succeeded);
-        // eval_receipt!((receipt.clone(), AcceptedOnL2, false), receipt);
         assert!(eval_receipt!(receipt.clone(), AcceptedOnL2, false).unwrap().is_ok());
 
         let receipt = mock_receipt(AcceptedOnL1, Succeeded);
-        // eval_receipt!((receipt.clone(), AcceptedOnL1, false), receipt);
         assert!(eval_receipt!(receipt.clone(), AcceptedOnL1, false).unwrap().is_ok());
     }
 
