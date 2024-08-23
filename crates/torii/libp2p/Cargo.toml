@@ -22,11 +22,11 @@ dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 indexmap.workspace = true
 regex.workspace = true
 serde_json.workspace = true
-starknet-crypto.workspace = true
 starknet.workspace = true
+starknet-crypto.workspace = true
 thiserror.workspace = true
-tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 
 [dev-dependencies]
 dojo-test-utils.workspace = true
