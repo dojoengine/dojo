@@ -28,6 +28,7 @@ colored_json = "3.2.0"
 console.workspace = true
 dojo-lang.workspace = true
 dojo-types.workspace = true
+dojo-utils.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 futures.workspace = true
 itertools.workspace = true

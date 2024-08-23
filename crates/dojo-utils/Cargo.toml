@@ -7,5 +7,12 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+futures.workspace = true
 reqwest.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
+tokio = { version = "1", features = [ "time" ], default-features = false }
+
+[dev-dependencies]
+assert_matches.workspace = true
+dojo-test-utils.workspace = true

@@ -1,6 +1,6 @@
 use anyhow::Result;
+use dojo_utils::TxnConfig;
 use dojo_world::contracts::WorldContract;
-use dojo_world::migration::TxnConfig;
 use scarb::core::Workspace;
 use starknet::accounts::ConnectedAccount;
 

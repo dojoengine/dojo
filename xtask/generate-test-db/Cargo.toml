@@ -7,7 +7,7 @@ version.workspace = true
 
 [dependencies]
 dojo-test-utils.workspace = true
-dojo-world = { workspace = true, features = [ "migration" ] }
+dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
 sozo-ops = { workspace = true, features = [ "test-utils" ] }

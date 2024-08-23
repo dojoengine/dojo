@@ -32,6 +32,7 @@ derive_more.workspace = true
 dojo-bindgen.workspace = true
 dojo-lang.workspace = true
 dojo-types.workspace = true
+dojo-utils.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 futures.workspace = true
 hex = "0.4.3"
@@ -69,5 +70,5 @@ katana-runner.workspace = true
 snapbox = "0.4.6"
 
 [features]
-controller = [ "dep:account_sdk", "dep:slot", "dep:reqwest" ]
+controller = [ "dep:account_sdk", "dep:reqwest", "dep:slot" ]
 default = [ "controller" ]

@@ -1,11 +1,11 @@
 use anyhow::Result;
 use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
+use dojo_utils::TxnConfig;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::strategy::MigrationStrategy;
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::TxnConfig;
 use katana_runner::KatanaRunner;
 use scarb::compiler::Profile;
 use scarb::core::{Config, Workspace};

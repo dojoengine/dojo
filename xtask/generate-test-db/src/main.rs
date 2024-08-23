@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use dojo_test_utils::compiler::CompilerTestSetup;
-use dojo_world::migration::TxnConfig;
+use dojo_utils::TxnConfig;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use sozo_ops::migration::MigrationOutput;

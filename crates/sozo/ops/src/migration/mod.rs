@@ -2,13 +2,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
+use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::WorldContract;
 use dojo_world::manifest::{BASE_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
-use dojo_world::utils::{TransactionExt, TransactionWaiter};
+use dojo_world::migration::{DeployOutput, UpgradeOutput};
 use scarb::core::Workspace;
 use starknet::accounts::{Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt, InvokeTransactionResult};

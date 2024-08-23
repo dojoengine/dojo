@@ -4530,8 +4530,13 @@ name = "dojo-utils"
 version = "1.0.0-alpha.7"
 dependencies = [
  "anyhow",
+ "assert_matches",
+ "dojo-test-utils",
+ "futures",
  "reqwest 0.12.5",
+ "starknet 0.11.0",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -4552,7 +4557,7 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
- "futures",
+ "dojo-utils",
  "http 0.2.12",
  "ipfs-api-backend-hyper",
  "katana-runner",
@@ -7982,6 +7987,7 @@ dependencies = [
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.3.2)",
  "dojo-metrics",
  "dojo-test-utils",
+ "dojo-utils",
  "dojo-world",
  "futures",
  "jsonrpsee 0.16.3",
@@ -11942,7 +11948,7 @@ dependencies = [
  "cairo-proof-parser",
  "celestia-rpc",
  "celestia-types",
- "dojo-world",
+ "dojo-utils",
  "futures",
  "itertools 0.12.1",
  "katana-primitives",
@@ -12877,6 +12883,7 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "futures",
  "hex",
@@ -12937,6 +12944,7 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "futures",
  "ipfs-api-backend-hyper",
@@ -14570,6 +14578,7 @@ dependencies = [
  "crypto-bigint",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "futures-channel",
  "futures-util",
@@ -14612,6 +14621,7 @@ dependencies = [
  "convert_case 0.6.0",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "katana-runner",
  "lazy_static",
@@ -14648,6 +14658,7 @@ dependencies = [
  "crypto-bigint",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "futures",
  "futures-util",
@@ -16276,7 +16287,7 @@ name = "xtask-generate-test-db"
 version = "1.0.0-alpha.7"
 dependencies = [
  "dojo-test-utils",
- "dojo-world",
+ "dojo-utils",
  "katana-runner",
  "reqwest 0.12.5",
  "scarb",

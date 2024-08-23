@@ -5,6 +5,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail, Context, Result};
 use cainome::cairo_serde::ByteArray;
 use camino::Utf8PathBuf;
+use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use dojo_world::contracts::abi::world;
 use dojo_world::contracts::naming::{
     self, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
@@ -20,10 +21,7 @@ use dojo_world::migration::class::ClassMigration;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::{
-    Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
-};
-use dojo_world::utils::{TransactionExt, TransactionWaiter};
+use dojo_world::migration::{Declarable, Deployable, MigrationError, RegisterOutput, Upgradable};
 use futures::future;
 use itertools::Itertools;
 use scarb::core::Workspace;

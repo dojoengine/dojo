@@ -1,10 +1,9 @@
 use dojo_test_utils::migration::copy_spawn_and_move_db;
+use dojo_utils::{TransactionExt, TxnConfig};
 use dojo_world::contracts::abi::model::{FieldLayout, Layout};
 use dojo_world::contracts::abi::world::Resource;
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::Account;

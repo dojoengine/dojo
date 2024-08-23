@@ -41,7 +41,8 @@ warp.workspace = true
 [dev-dependencies]
 camino.workspace = true
 dojo-test-utils = { path = "../../dojo-test-utils", features = [ "build-examples" ] }
-dojo-world = { path = "../../dojo-world" }
+dojo-world.workspace = true
+dojo-utils.workspace = true
 katana-runner.workspace = true
 scarb.workspace = true
 serial_test = "2.0.0"
