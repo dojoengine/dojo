@@ -15,7 +15,9 @@ use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use camino::Utf8PathBuf;
-use dojo_world::config::{NamespaceConfig, DEFAULT_NAMESPACE_CFG_KEY, NAMESPACE_CFG_PREFIX};
+use dojo_world::config::{
+    NamespaceConfig, DEFAULT_NAMESPACE_CFG_KEY, DOJO_MANIFESTS_DIR_CFG_KEY, NAMESPACE_CFG_PREFIX,
+};
 use dojo_world::metadata::dojo_metadata_from_package;
 use regex::Regex;
 use scarb::compiler::{
@@ -110,6 +112,7 @@ pub fn compile_workspace(
         .collect::<Vec<_>>();
 
     let mut compile_error_units = vec![];
+
     for unit in compilation_units {
         trace!(target: LOG_TARGET, unit_name = %unit.name(), target_kind = %unit.main_component().target_kind(), "Compiling unit.");
 
@@ -208,6 +211,14 @@ pub fn cfg_set_from_component(
     let cname = c.cairo_package_name().clone();
     let package_dojo_metadata = dojo_metadata_from_package(&c.package, ws)?;
 
+    let dojo_manifests_dir = ws
+        .config()
+        .manifest_path()
+        .parent()
+        .expect("Scarb.toml manifest should always have parent")
+        .join("manifests")
+        .join(ws.current_profile().expect("profile should be set").to_string());
+
     ui.verbose(format!("component: {} ({})", cname, c.package.manifest_path()));
 
     tracing::debug!(target: LOG_TARGET, ?c, ?package_dojo_metadata);
@@ -225,6 +236,11 @@ pub fn cfg_set_from_component(
 
     // Add it's name for debugging on the plugin side.
     cfg_set.insert(component_cfg);
+
+    cfg_set.insert(Cfg {
+        key: DOJO_MANIFESTS_DIR_CFG_KEY.into(),
+        value: Some(dojo_manifests_dir.to_string().into()),
+    });
 
     cfg_set.insert(Cfg {
         key: DEFAULT_NAMESPACE_CFG_KEY.into(),

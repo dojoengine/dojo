@@ -189,7 +189,7 @@ mod tests {
     use dojo::model::{Model, ModelTest, ModelIndex, ModelEntityTest};
     use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
-    use dojo::utils::test::{spawn_test_world, deploy_contract};
+    use dojo::utils::test::deploy_contract;
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
     use armory::flatbow;
@@ -201,13 +201,7 @@ mod tests {
     fn test_world_test_set() {
         let caller = starknet::contract_address_const::<0x0>();
 
-        let mut models = array![
-            position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH, flatbow::TEST_CLASS_HASH
-        ];
-
-        let world = spawn_test_world(
-            ["dojo_examples", "dojo_examples_weapons"].span(), models.span()
-        );
+        let world = spawn_test_world!();
 
         // Without having the permission, we can set data into the dojo database for the given
         // models.
@@ -240,14 +234,8 @@ mod tests {
     fn test_move() {
         let caller = starknet::contract_address_const::<0x0>();
 
-        // models
-        let mut models = array![
-            position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH, flatbow::TEST_CLASS_HASH
-        ];
-        // deploy world with models
-        let world = spawn_test_world(
-            ["dojo_examples", "dojo_examples_weapons"].span(), models.span()
-        );
+        // deploy world with only the models for the given namespaces.
+        let world = spawn_test_world!(["dojo_examples", "dojo_examples_weapons"]);
 
         // deploy systems contract
         let contract_address = world
