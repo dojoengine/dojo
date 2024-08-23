@@ -1,3 +1,5 @@
+include = [ "**/Cargo.toml" ]
+
 [formatting]
 align_comments = false
 align_entries = false

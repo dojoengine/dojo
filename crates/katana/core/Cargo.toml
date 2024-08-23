@@ -48,15 +48,15 @@ tempfile.workspace = true
 
 [features]
 messaging = [
-	"alloy-contract",
-	"alloy-network",
-	"alloy-provider",
-	"alloy-rpc-types-eth",
-	"alloy-sol-types",
-	"alloy-transport",
-	"async-trait",
-	"reqwest",
-	"serde",
-	"serde_json",
+  "alloy-contract",
+  "alloy-network",
+  "alloy-provider",
+  "alloy-rpc-types-eth",
+  "alloy-sol-types",
+  "alloy-transport",
+  "async-trait",
+  "reqwest",
+  "serde",
+  "serde_json",
 ]
 starknet-messaging = [  ]
