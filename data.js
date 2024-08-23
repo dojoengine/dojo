@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724386090514,
+  "lastUpdate": 1724406414443,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -16801,6 +16801,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3912112,
             "range": "± 46436",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1cf67f86a942f366f938927ffc0b8f082b75eb82",
+          "message": "fix(torii-graphql): expose namespace in models query (#2331)",
+          "timestamp": "2024-08-23T14:57:40+05:30",
+          "tree_id": "27f03d790463d188029c2b83b4aaf20aac144476",
+          "url": "https://github.com/dojoengine/dojo/commit/1cf67f86a942f366f938927ffc0b8f082b75eb82"
+        },
+        "date": 1724406413356,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17514987,
+            "range": "± 294642",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3756627,
+            "range": "± 149967",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3711025875,
+            "range": "± 778554837",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 4371495,
+            "range": "± 265047",
             "unit": "ns/iter"
           }
         ]
