@@ -201,13 +201,7 @@ mod tests {
     fn test_world_test_set() {
         let caller = starknet::contract_address_const::<0x0>();
 
-        let mut models = array![
-            position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH, flatbow::TEST_CLASS_HASH
-        ];
-
-        let world = spawn_test_world(
-            ["dojo_examples", "dojo_examples_weapons"].span(), models.span()
-        );
+        let world = spawn_test_world_full!();
 
         // Without having the permission, we can set data into the dojo database for the given
         // models.

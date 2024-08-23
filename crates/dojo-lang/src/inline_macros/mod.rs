@@ -10,6 +10,7 @@ pub mod get;
 pub mod get_models_test_class_hashes;
 pub mod selector_from_tag;
 pub mod set;
+pub mod spawn_test_world_full;
 pub mod utils;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;
