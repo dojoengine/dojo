@@ -37,10 +37,10 @@ rayon.workspace = true
 
 [features]
 blockifier = [
-  "dep:blockifier",
-  "dep:katana-cairo",
-  "dep:parking_lot",
-  "dep:starknet",
+	"dep:blockifier",
+	"dep:katana-cairo",
+	"dep:parking_lot",
+	"dep:starknet",
 ]
 default = [ "blockifier" ]
 
