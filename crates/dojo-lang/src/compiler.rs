@@ -7,7 +7,9 @@ use std::ops::DerefMut;
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::ids::{ModuleId, ModuleItemId, NamedLanguageElementId, TopLevelLanguageElementId};
+use cairo_lang_defs::ids::{
+    ModuleId, ModuleItemId, NamedLanguageElementId, TopLevelLanguageElementId,
+};
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_formatter::format_string;
@@ -16,11 +18,10 @@ use cairo_lang_starknet::compile::compile_prepared_db;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
 use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_starknet_classes::abi;
-use cairo_lang_starknet_classes::allowed_libfuncs::{ ListSelector, AllowedLibfuncsError };
+use cairo_lang_starknet_classes::allowed_libfuncs::{AllowedLibfuncsError, ListSelector};
 use cairo_lang_starknet_classes::contract_class::ContractClass;
 use cairo_lang_utils::UpcastMut;
 use camino::Utf8PathBuf;
-use indoc::formatdoc;
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 use dojo_world::manifest::{
@@ -29,6 +30,7 @@ use dojo_world::manifest::{
     MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
 use dojo_world::metadata::get_namespace_config_from_ws;
+use indoc::formatdoc;
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
@@ -144,22 +146,22 @@ impl Compiler for DojoCompiler {
             let qualified_path = decl.module_id().full_path(db.upcast_mut());
 
             match class.validate_version_compatible(list_selector.clone()) {
-                Ok(()) => {},
+                Ok(()) => {}
                 Err(AllowedLibfuncsError::UnsupportedLibfunc {
                     invalid_libfunc,
-                    allowed_libfuncs_list_name,
+                    allowed_libfuncs_list_name: _,
                 }) => {
                     let diagnostic = formatdoc! {r#"
-                        Contract `{contract_name}` ({qualified_path}) include `{invalid_libfunc}` function that is not allowed in the libfuncs list `{allowed_libfuncs_list_name}`.
-                        Please locate and remove this function from contract `{contract_name}` to ensure compatibility.
+                        Contract `{contract_name}` ({qualified_path}) includes `{invalid_libfunc}` function that is not allowed in the default libfuncs for public Starknet networks (mainnet, sepolia).
+                        It will work on Katana, but don't forget to remove it before deploying on a public Starknet network.
                     "#};
 
                     ws.config().ui().warn(diagnostic);
-                },
+                }
                 Err(e) => {
                     return Err(e).with_context(|| {
                         format!("Failed to check allowed libfuncs for contract: {}", contract_name)
-                    })
+                    });
                 }
             }
 
