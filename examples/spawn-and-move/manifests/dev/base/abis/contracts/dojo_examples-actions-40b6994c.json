@@ -322,7 +322,12 @@
       {
         "type": "function",
         "name": "dojo_init",
-        "inputs": [],
+        "inputs": [
+          {
+            "name": "init_caller",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
         "outputs": [],
         "state_mutability": "view"
       }

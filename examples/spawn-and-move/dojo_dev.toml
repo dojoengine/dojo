@@ -14,4 +14,4 @@ rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-world_address = "0x75f37b9d81cd262f3ba32ef89596e4e6eae99b345cf11fc1a85521c6be87c06"
+world_address = "0x67d4339b46a8ce2b8d4d00a130022c7e67f3d6f2518b8202da82d66d9a9728f"
