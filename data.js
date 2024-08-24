@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724439931350,
+  "lastUpdate": 1724487532775,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -16993,6 +16993,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3921242,
             "range": "± 56990",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joma116@hotmail.com",
+            "name": "blockchainer_cr",
+            "username": "jsanchez556"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "599e36877fb3bded7585cb3d5b0f417391d5735e",
+          "message": "feat(dojo-lang): add warnings for migrations with prints (#2316)\n\n* add warnings for migrations with prints\r\n\r\n* fix: formatting and diagnostic text\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-24T02:00:34-06:00",
+          "tree_id": "7d5fcf036d8fb89c71a4c2ae3ef6a8bf457d033a",
+          "url": "https://github.com/dojoengine/dojo/commit/599e36877fb3bded7585cb3d5b0f417391d5735e"
+        },
+        "date": 1724487531891,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17498618,
+            "range": "± 298242",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3750381,
+            "range": "± 130035",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3398933450,
+            "range": "± 924385083",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3872986,
+            "range": "± 32627",
             "unit": "ns/iter"
           }
         ]
