@@ -75,7 +75,6 @@ pub struct BlockProducer<EF: ExecutorFactory> {
     /// The inner mode of mining.
     pub producer: RwLock<BlockProducerMode<EF>>,
     /// validator used in the tx pool
-    //
     // the validator needs to always be built against the state of the block producer, so
     // im putting here for now until we find a better way to handle this.
     validator: TxValidator,

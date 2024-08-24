@@ -13,7 +13,8 @@ use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
 use ordering::{FiFo, PoolOrd};
 use pool::Pool;
 use tx::{PendingTx, PoolTransaction};
-use validation::{stateful::TxValidator, Validator};
+use validation::stateful::TxValidator;
+use validation::{InvalidTransactionError, Validator};
 
 /// Katana default transacstion pool type.
 pub type TxPool = Pool<ExecutableTxWithHash, TxValidator, FiFo<ExecutableTxWithHash>>;
@@ -23,7 +24,7 @@ pub type PoolResult<T> = Result<T, PoolError>;
 #[derive(Debug, thiserror::Error)]
 pub enum PoolError {
     #[error("Invalid transaction: {0}")]
-    InvalidTransaction(ExecutionError),
+    InvalidTransaction(#[from] InvalidTransactionError),
     #[error("Internal error: {0}")]
     Internal(Box<dyn std::error::Error>),
 }

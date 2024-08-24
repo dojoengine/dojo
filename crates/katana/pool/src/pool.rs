@@ -115,7 +115,7 @@ where
 
                     ValidationOutcome::Invalid { tx, error } => {
                         warn!(hash = format!("{:#x}", tx.hash()), "Invalid transaction.");
-                        Err(PoolError::InvalidTransaction(error))
+                        Err(error.into())
                     }
                 }
             }
@@ -203,7 +203,9 @@ pub(crate) mod test_utils {
 
     use super::*;
     use crate::tx::PoolTransaction;
-    use crate::validation::{ValidationOutcome, ValidationResult, Validator};
+    use crate::validation::{
+        InvalidTransactionError, ValidationOutcome, ValidationResult, Validator,
+    };
 
     fn random_bytes<const SIZE: usize>() -> [u8; SIZE] {
         let mut bytes = [0u8; SIZE];
@@ -292,7 +294,7 @@ pub(crate) mod test_utils {
             if tx.tip() < self.threshold {
                 return ValidationResult::Ok(ValidationOutcome::Invalid {
                     tx,
-                    error: ExecutionError::Other("tip too low".to_string()),
+                    error: InvalidTransactionError::InsufficientFunds {},
                 });
             }
 

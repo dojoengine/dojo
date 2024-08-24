@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use katana_executor::implementation::blockifier::blockifier::blockifier::stateful_validator::StatefulValidatorError;
+use katana_executor::implementation::blockifier::blockifier::blockifier::stateful_validator::{
+    StatefulValidator as BlockifierValidator, StatefulValidatorError,
+};
 use katana_executor::implementation::blockifier::blockifier::state::cached_state::CachedState;
 use katana_executor::implementation::blockifier::blockifier::transaction::transaction_execution::Transaction;
 use katana_executor::implementation::blockifier::utils::{block_context_from_envs, to_executor_tx};
-use katana_executor::{
-    implementation::blockifier::blockifier::blockifier::stateful_validator::StatefulValidator as BlockifierValidator,
-    StateProviderDb,
-};
+use katana_executor::StateProviderDb;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::traits::state::StateProvider;

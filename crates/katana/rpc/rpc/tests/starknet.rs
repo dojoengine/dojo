@@ -11,8 +11,11 @@ use cainome::rs::abigen_legacy;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use indexmap::IndexSet;
 use katana_core::sequencer::SequencerConfig;
-use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
+use katana_primitives::genesis::constant::{
+    DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+};
 use katana_rpc_types::receipt::ReceiptBlock;
+use num_traits::FromPrimitive;
 use starknet::accounts::{
     Account, AccountError, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount,
 };
@@ -275,36 +278,63 @@ async fn rapid_transactions_submissions() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_send_tx_with_invalid_signature() -> Result<()> {
+async fn send_tx_invalid_txs() -> Result<()> {
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
-    let provider = sequencer.provider();
-    let chain_id = provider.chain_id().await?;
-    let address = sequencer.account().address();
-    let signer = LocalWallet::from_signing_key(SigningKey::from_random());
+    // setup test contract to interact with.
+    abigen_legacy!(Contract, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+    let contract = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), sequencer.account());
 
-    let acc = SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::New);
+    // function call params
+    let recipient = Felt::ONE;
+    let amount = Uint256 { low: Felt::ONE, high: Felt::ZERO };
 
-    // Create a call, but we don't care whether the call is correct or not
-    let call = Call {
-        to: DEFAULT_FEE_TOKEN_ADDRESS.into(),
-        selector: selector!("transfer"),
-        calldata: vec![
-            felt!("0x100"), // recipient address
-            Felt::ONE,      // amount (low)
-            Felt::ZERO,     // amount (high)
-        ],
-    };
+    ///////////////////////////////////////////////////////////////////
 
-    // Create a transaction with an invalid signature
-    let result = acc.execute_v1(vec![call]).max_fee(felt!("0x1111111111")).send().await;
-    assert_matches!(
-        result,
-        Err(AccountError::Provider(ProviderError::StarknetError(
-            StarknetError::ValidationFailure(_)
-        )))
+    //  transaction with low max fee (underpriced).
+    let res = contract.transfer(&recipient, &amount).max_fee(Felt::TWO).send().await;
+    assert!(dbg!(res).is_err());
+
+    ///////////////////////////////////////////////////////////////////
+
+    //  transaction with insufficient balance.
+    let fee = Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE + 1);
+    let res = contract.transfer(&recipient, &amount).max_fee(fee).send().await;
+    assert!(dbg!(res).is_err());
+
+    ///////////////////////////////////////////////////////////////////
+
+    //  transaction with insufficient balance.
+    let fee = Felt::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE + 1);
+    let res = contract.transfer(&recipient, &amount).max_fee(fee).send().await;
+    assert!(dbg!(res).is_err());
+
+    ///////////////////////////////////////////////////////////////////
+
+    //  transaction with invalid signatures.
+
+    // starknet-rs doesn't provide a way to manually set the signatures so instead we create an
+    // account with random signer that is not associated with the actual account.
+    let chain_id = sequencer.provider().chain_id().await?;
+
+    let account = SingleOwnerAccount::new(
+        sequencer.provider(),
+        LocalWallet::from(SigningKey::from_random()),
+        sequencer.account().address(),
+        chain_id,
+        ExecutionEncoding::New,
     );
+
+    let res = Contract::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), account)
+        .transfer(&recipient, &amount)
+        .max_fee(felt!("0x1111111111"))
+        .send()
+        .await;
+
+    assert!(dbg!(res).is_err());
+
+    ///////////////////////////////////////////////////////////////////
 
     Ok(())
 }
