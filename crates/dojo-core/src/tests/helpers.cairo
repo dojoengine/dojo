@@ -46,7 +46,8 @@ pub mod test_contract {}
 
 #[dojo::contract]
 pub mod test_contract_with_dojo_init_args {
-    fn dojo_init(world: @IWorldDispatcher, arg1: felt252) {
+    fn dojo_init(world: @IWorldDispatcher, _arg1: felt252) {
+        let _u = world.uuid();
     }
 }
 

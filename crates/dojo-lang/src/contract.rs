@@ -139,8 +139,8 @@ impl DojoContract {
                         fn $init_name$(self: @ContractState) {
                             if starknet::get_caller_address() != self.world().contract_address {
                                 core::panics::panic_with_byte_array(
-                                    @format!(\"Only the world ({:?}) can init contract `{}`, but \
-                     caller is `{:?}`\", self.world().contract_address,
+                                    @format!(\"Only the world can init contract `{}`, but caller \
+                     is `{:?}`\",
                                     self.tag(),
                                     starknet::get_caller_address(),
                                 ));
@@ -329,9 +329,8 @@ impl DojoContract {
 
         let assert_world_caller_node = RewriteNode::Text(
             "if starknet::get_caller_address() != self.world().contract_address { \
-             core::panics::panic_with_byte_array(@format!(\"Only the world ({:?}) can init \
-             contract `{}`, but caller is `{:?}`\", self.world().contract_address, self.tag(), \
-             starknet::get_caller_address())); }"
+             core::panics::panic_with_byte_array(@format!(\"Only the world can init contract \
+             `{}`, but caller is `{:?}`\", self.tag(), starknet::get_caller_address())); }"
                 .to_string(),
         );
 
