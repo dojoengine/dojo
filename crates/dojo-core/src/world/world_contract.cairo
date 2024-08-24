@@ -361,8 +361,7 @@ pub mod world {
         ///
         /// `metadata` - The metadata content for the resource.
         fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
-            self.assert_caller_is_account();
-            self.assert_resource_owner(metadata.resource_id);
+            self.assert_caller_is_resource_owner(metadata.resource_id);
 
             self
                 .write_model_entity(
@@ -402,13 +401,11 @@ pub mod world {
         /// * `resource` - The resource.
         /// * `address` - The contract address.
         fn grant_owner(ref self: ContractState, resource: felt252, address: ContractAddress) {
-            self.assert_caller_is_account();
-
             if self.resources.read(resource).is_unregistered() {
                 panic_with_byte_array(@errors::resource_not_registered(resource));
             }
 
-            self.assert_resource_owner(resource);
+            self.assert_caller_is_resource_owner(resource);
 
             self.owners.write((resource, address), true);
 
@@ -425,13 +422,11 @@ pub mod world {
         /// * `resource` - The resource.
         /// * `address` - The contract address.
         fn revoke_owner(ref self: ContractState, resource: felt252, address: ContractAddress) {
-            self.assert_caller_is_account();
-
             if self.resources.read(resource).is_unregistered() {
                 panic_with_byte_array(@errors::resource_not_registered(resource));
             }
 
-            self.assert_resource_owner(resource);
+            self.assert_caller_is_resource_owner(resource);
 
             self.owners.write((resource, address), false);
 
@@ -462,13 +457,11 @@ pub mod world {
         /// * `resource` - The hash of the resource name.
         /// * `contract` - The name of the contract.
         fn grant_writer(ref self: ContractState, resource: felt252, contract: ContractAddress) {
-            self.assert_caller_is_account();
-
             if self.resources.read(resource).is_unregistered() {
                 panic_with_byte_array(@errors::resource_not_registered(resource));
             }
 
-            self.assert_resource_owner(resource);
+            self.assert_caller_is_resource_owner(resource);
 
             self.writers.write((resource, contract), true);
 
@@ -485,13 +478,11 @@ pub mod world {
         /// * `model` - The name of the model.
         /// * `contract` - The name of the contract.
         fn revoke_writer(ref self: ContractState, resource: felt252, contract: ContractAddress) {
-            self.assert_caller_is_account();
-
             if self.resources.read(resource).is_unregistered() {
                 panic_with_byte_array(@errors::resource_not_registered(resource));
             }
 
-            self.assert_resource_owner(resource);
+            self.assert_caller_is_resource_owner(resource);
 
             self.writers.write((resource, contract), false);
 
@@ -505,8 +496,6 @@ pub mod world {
         ///
         /// * `class_hash` - The class hash of the model to be registered.
         fn register_model(ref self: ContractState, class_hash: ClassHash) {
-            self.assert_caller_is_account();
-
             let caller = get_caller_address();
 
             let salt = self.models_salt.read();
@@ -525,7 +514,7 @@ pub mod world {
                 panic_with_byte_array(@errors::namespace_not_registered(@namespace));
             }
 
-            self.assert_namespace_write_access(@namespace, namespace_hash);
+            self.assert_caller_namespace_write_access(@namespace, namespace_hash);
 
             let model = self.resources.read(selector);
             if !model.is_unregistered() {
@@ -539,8 +528,6 @@ pub mod world {
         }
 
         fn upgrade_model(ref self: ContractState, class_hash: ClassHash) {
-            self.assert_caller_is_account();
-
             let caller = get_caller_address();
 
             let salt = self.models_salt.read();
@@ -555,7 +542,7 @@ pub mod world {
                 panic_with_byte_array(@errors::namespace_not_registered(@namespace));
             }
 
-            self.assert_namespace_write_access(@namespace, namespace_hash);
+            self.assert_caller_namespace_write_access(@namespace, namespace_hash);
 
             if selector.is_zero() {
                 panic_with_byte_array(@errors::invalid_resource_selector(selector));
@@ -600,18 +587,14 @@ pub mod world {
         ///
         /// * `namespace` - The name of the namespace to be registered.
         fn register_namespace(ref self: ContractState, namespace: ByteArray) {
-            self.assert_caller_is_account();
-
             let caller = get_caller_address();
 
             let hash = bytearray_hash(@namespace);
 
             match self.resources.read(hash) {
-                Resource::Namespace => {
-                    if !self.is_owner(hash, caller) {
-                        panic_with_byte_array(@errors::namespace_already_registered(@namespace));
-                    }
-                },
+                Resource::Namespace => panic_with_byte_array(
+                    @errors::namespace_already_registered(@namespace)
+                ),
                 Resource::Unregistered => {
                     self.resources.write(hash, Resource::Namespace);
                     self.owners.write((hash, caller), true);
@@ -638,8 +621,6 @@ pub mod world {
         fn deploy_contract(
             ref self: ContractState, salt: felt252, class_hash: ClassHash,
         ) -> ContractAddress {
-            self.assert_caller_is_account();
-
             let caller = get_caller_address();
 
             let (contract_address, _) = deploy_syscall(
@@ -658,7 +639,7 @@ pub mod world {
                 panic_with_byte_array(@errors::namespace_not_registered(@namespace));
             }
 
-            self.assert_namespace_write_access(@namespace, namespace_hash);
+            self.assert_caller_namespace_write_access(@namespace, namespace_hash);
 
             let selector = dispatcher.selector();
             self.owners.write((selector, caller), true);
@@ -685,8 +666,7 @@ pub mod world {
         fn upgrade_contract(
             ref self: ContractState, selector: felt252, class_hash: ClassHash
         ) -> ClassHash {
-            self.assert_caller_is_account();
-            self.assert_resource_owner(selector);
+            self.assert_caller_is_resource_owner(selector);
 
             if let Resource::Contract((_, contract_address)) = self.resources.read(selector) {
                 IUpgradeableDispatcher { contract_address }.upgrade(class_hash);
@@ -707,15 +687,28 @@ pub mod world {
         /// * `init_calldata` - Calldata used to initialize the contract.
         fn init_contract(ref self: ContractState, selector: felt252, init_calldata: Span<felt252>) {
             if let Resource::Contract((_, contract_address)) = self.resources.read(selector) {
+                let caller = get_caller_address();
+
+                let dispatcher = IContractDispatcher { contract_address };
+                let tag = dispatcher.tag();
+
                 if self.initialized_contract.read(selector) {
-                    let dispatcher = IContractDispatcher { contract_address };
-                    let tag = dispatcher.tag();
-                    panic!("Contract {} has already been initialized", tag);
+                    panic_with_byte_array(@errors::contract_already_initialized(@tag));
                 } else {
+                    if !self.is_owner(selector, get_caller_address()) {
+                        panic_with_byte_array(@errors::not_owner_init(@tag, caller));
+                    }
+
+                    // For the init, to ensure only the world can call the init function,
+                    // the verification is done in the init function of the contract:
+                    // `crates/dojo-lang/src/contract.rs#L138`
+                    // `crates/dojo-lang/src/contract.rs#L328`
+
                     starknet::syscalls::call_contract_syscall(
                         contract_address, DOJO_INIT_SELECTOR, init_calldata
                     )
                         .unwrap_syscall();
+
                     self.initialized_contract.write(selector, true);
 
                     EventEmitter::emit(ref self, ContractInitialized { selector, init_calldata });
@@ -795,7 +788,7 @@ pub mod world {
             values: Span<felt252>,
             layout: Layout
         ) {
-            self.assert_model_write_access(model_selector);
+            self.assert_caller_model_write_access(model_selector);
             self.set_entity_internal(model_selector, index, values, layout);
         }
 
@@ -810,7 +803,7 @@ pub mod world {
         fn delete_entity(
             ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
         ) {
-            self.assert_model_write_access(model_selector);
+            self.assert_caller_model_write_access(model_selector);
             self.delete_entity_internal(model_selector, index, layout);
         }
 
@@ -844,8 +837,6 @@ pub mod world {
         ///
         /// * `new_class_hash` - The new world class hash.
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
-            self.assert_caller_is_account();
-
             assert(new_class_hash.is_non_zero(), 'invalid class_hash');
 
             if !self.is_caller_world_owner() {
@@ -868,6 +859,12 @@ pub mod world {
             program_output: ProgramOutput,
             program_hash: felt252
         ) {
+            if !self.is_caller_world_owner() {
+                panic_with_byte_array(
+                    @errors::no_world_owner(get_caller_address(), @"upgrade state")
+                );
+            }
+
             let mut da_hasher = PedersenTrait::new(0);
             let mut i = 0;
             loop {
@@ -930,27 +927,12 @@ pub mod world {
             self.is_owner(WORLD, get_caller_address())
         }
 
-        /// Asserts that the caller is an account.
-        ///
-        /// This check is done to be sure that a sensible world function has been directly called
-        /// from an account (with sozo for example), to avoid any malicious contract between the
-        /// account and the world to be able to call some functions with account privileges.
-        #[inline(always)]
-        fn assert_caller_is_account(self: @ContractState) {
-            let caller = get_caller_address();
-            let account = get_tx_info().unbox().account_contract_address;
-
-            if caller != account {
-                panic_with_byte_array(@errors::caller_not_account(caller));
-            }
-        }
-
         /// Panics if the caller is NOT an owner of the resource.
         ///
         /// # Arguments
         ///   * `resource_selector` - the selector of the resource.
         #[inline(always)]
-        fn assert_resource_owner(self: @ContractState, resource_selector: felt252) {
+        fn assert_caller_is_resource_owner(self: @ContractState, resource_selector: felt252) {
             let caller = get_caller_address();
 
             if self.is_owner(resource_selector, caller) {
@@ -969,7 +951,7 @@ pub mod world {
         /// # Arguments
         ///   * `model_selector` - the selector of the model.
         #[inline(always)]
-        fn assert_model_write_access(self: @ContractState, model_selector: felt252) {
+        fn assert_caller_model_write_access(self: @ContractState, model_selector: felt252) {
             let caller = get_caller_address();
 
             // Must have owner or writer role on the namespace or on the model.
@@ -1036,7 +1018,7 @@ pub mod world {
         ///   * `namespace` - the namespace name.
         ///   * `namespace_hash` - the hash of the namespace.
         #[inline(always)]
-        fn assert_namespace_write_access(
+        fn assert_caller_namespace_write_access(
             self: @ContractState, namespace: @ByteArray, namespace_hash: felt252
         ) {
             let caller = get_caller_address();
@@ -1051,6 +1033,8 @@ pub mod world {
                 return;
             }
 
+            // We know it's an account and return the explicit error message as no tag will match
+            // the account.
             if caller == get_tx_info().account_contract_address {
                 panic_with_byte_array(@errors::no_namespace_write_access(caller, namespace));
             }
@@ -1068,6 +1052,9 @@ pub mod world {
                     @errors::no_write_access_with_tags(@d.tag(), @"namespace", namespace)
                 );
             } else {
+                // This is in theory unreachable code as the contract call syscall made by the
+                // dispatcher will panic. Which may lead to a bad user experience in testing as the
+                // error will be something like "CONTRACT_NOT_DEPLOYED".
                 panic_with_byte_array(@errors::no_namespace_write_access(caller, namespace));
             }
         }
