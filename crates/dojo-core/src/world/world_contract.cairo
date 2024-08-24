@@ -695,14 +695,14 @@ pub mod world {
                 if self.initialized_contract.read(selector) {
                     panic_with_byte_array(@errors::contract_already_initialized(@tag));
                 } else {
-                    if !self.is_owner(selector, get_caller_address()) {
+                    if !self.is_owner(selector, caller) {
                         panic_with_byte_array(@errors::not_owner_init(@tag, caller));
                     }
 
                     // For the init, to ensure only the world can call the init function,
                     // the verification is done in the init function of the contract:
-                    // `crates/dojo-lang/src/contract.rs#L138`
-                    // `crates/dojo-lang/src/contract.rs#L328`
+                    // `crates/dojo-lang/src/contract.rs#L140`
+                    // `crates/dojo-lang/src/contract.rs#L331`
 
                     starknet::syscalls::call_contract_syscall(
                         contract_address, DOJO_INIT_SELECTOR, init_calldata

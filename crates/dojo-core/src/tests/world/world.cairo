@@ -11,7 +11,7 @@ use dojo::world::{
 };
 use dojo::tests::helpers::{
     IbarDispatcher, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, foo, bar,
-    Character, character, test_contract
+    Character, character, test_contract, test_contract_with_dojo_init_args
 };
 use dojo::utils::test::{spawn_test_world, deploy_with_world_address, GasCounterTrait};
 
@@ -335,7 +335,7 @@ use test_contract::IDojoInitDispatcherTrait;
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(expected: ('Only world can init', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ("Only the world (3556084947322374848580334090546308925879059620647788931552577281229853223334) can init contract `dojo-test_contract`, but caller is `0`", 'ENTRYPOINT_FAILED'))]
 fn test_can_call_init_only_world() {
     let world = deploy_world();
     let address = world
@@ -366,12 +366,36 @@ fn test_can_call_init_only_owner() {
 
 #[test]
 #[available_gas(6000000)]
-fn test_can_call_init() {
+fn test_can_call_init_default() {
     let world = deploy_world();
     let _address = world
         .deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
 
     world.init_contract(selector_from_tag!("dojo-test_contract"), [].span());
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_can_call_init_args() {
+    let world = deploy_world();
+    let _address = world
+        .deploy_contract('salt1', test_contract_with_dojo_init_args::TEST_CLASS_HASH.try_into().unwrap());
+
+    world.init_contract(selector_from_tag!("dojo-test_contract_with_dojo_init_args"), [1].span());
+}
+
+use test_contract_with_dojo_init_args::IDojoInitArgsDispatcherTrait;
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(expected: ("Only the world (3556084947322374848580334090546308925879059620647788931552577281229853223334) can init contract `dojo-test_contract_with_dojo_init_args`, but caller is `0`", 'ENTRYPOINT_FAILED'))]
+fn test_can_call_init_only_world_args() {
+    let world = deploy_world();
+    let address = world
+        .deploy_contract('salt1', test_contract_with_dojo_init_args::TEST_CLASS_HASH.try_into().unwrap());
+
+    let d = test_contract_with_dojo_init_args::IDojoInitArgsDispatcher { contract_address: address };
+    d.dojo_init(123);
 }
 
 use dojo::world::update::IUpgradeableStateDispatcherTrait;
