@@ -25,8 +25,11 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(tx));
             let tx_hash = tx.hash;
 
-            this.inner.pool.add_transaction(tx);
-            Ok(tx_hash.into())
+            // pool result return a hash of the tx
+            match this.inner.pool.add_transaction(tx) {
+                Ok(_) => Ok(tx_hash.into()),
+                Err(e) => Err(StarknetApiError::UnexpectedError { reason: e.to_string() }),
+            }
         })
         .await
     }

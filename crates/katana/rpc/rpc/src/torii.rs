@@ -55,7 +55,7 @@ impl<EF: ExecutorFactory> ToriiApi<EF> {
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
     fn pending_executor(&self) -> Option<PendingExecutor> {
-        match &*self.block_producer.inner.read() {
+        match &*self.block_producer.producer.read() {
             BlockProducerMode::Instant(_) => None,
             BlockProducerMode::Interval(producer) => Some(producer.executor()),
         }
@@ -152,7 +152,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         // If there are no transactions after the index in the pending block
                         if pending_transactions.is_empty() {
                             // Wait for a new transaction to be executed
-                            let inner = this.block_producer.inner.read();
+                            let inner = this.block_producer.producer.read();
                             let block_producer = match &*inner {
                                 BlockProducerMode::Interval(block_producer) => block_producer,
                                 _ => panic!(
@@ -204,7 +204,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
 
                     if transactions.is_empty() {
                         // Wait for a new transaction to be executed
-                        let inner = this.block_producer.inner.read();
+                        let inner = this.block_producer.producer.read();
                         let block_producer = match &*inner {
                             BlockProducerMode::Instant(block_producer) => block_producer,
                             _ => {

@@ -86,7 +86,7 @@ impl<'a> StarknetVMProcessor<'a> {
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
-        let state = state::CachedState::new(StateProviderDb(state));
+        let state = state::CachedState::new(StateProviderDb::new(state));
         Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
     }
 

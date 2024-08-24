@@ -8,8 +8,8 @@ use tracing::{error, info, warn};
 
 use crate::ordering::PoolOrd;
 use crate::tx::{PendingTx, PoolTransaction, TxId};
-use crate::validation::{ValidationOutcome, Validator};
-use crate::TransactionPool;
+use crate::validation::{ValidationOutcome, ValidationResult, Validator};
+use crate::{PoolError, PoolResult, TransactionPool};
 
 #[derive(Debug)]
 pub struct Pool<T, V, O>
@@ -92,34 +92,37 @@ where
     type Validator = V;
     type Ordering = O;
 
-    fn add_transaction(&self, tx: T) {
+    fn add_transaction(&self, tx: T) -> PoolResult<TxHash> {
+        let hash = tx.hash();
         let id = TxId::new(tx.sender(), tx.nonce());
+
+        info!(hash = format!("{hash:#x}"), "Transaction received.");
 
         match self.inner.validator.validate(tx) {
             Ok(outcome) => {
-                let hash = match outcome {
+                match outcome {
                     ValidationOutcome::Valid(tx) => {
                         // get the priority of the validated tx
                         let priority = self.inner.ordering.priority(&tx);
-
-                        let tx = PendingTx::new(id.clone(), tx, priority);
-                        let hash = tx.tx.hash();
+                        let tx = PendingTx::new(id, tx, priority);
 
                         // insert the tx in the pool
                         self.inner.transactions.write().push(tx);
                         self.notify_listener(hash);
-                        hash
+
+                        Ok(hash)
                     }
 
-                    // for now, this variant is a no-op
-                    ValidationOutcome::Invalid { tx, .. } => tx.hash(),
-                };
-
-                info!(hash = format!("{hash:#x}"), "Transaction received.");
+                    ValidationOutcome::Invalid { tx, error } => {
+                        warn!(hash = format!("{:#x}", tx.hash()), "Invalid transaction.");
+                        Err(PoolError::InvalidTransaction(error))
+                    }
+                }
             }
 
-            Err(error @ crate::validation::Error { hash, .. }) => {
-                error!(hash = format!("{hash:#x}"), %error, "Failed to validate transaction.");
+            Err(e @ crate::validation::Error { hash, .. }) => {
+                error!(hash = format!("{hash:#x}"), %e, "Failed to validate transaction.");
+                Err(PoolError::Internal(e.error))
             }
         }
     }
@@ -341,7 +344,9 @@ mod tests {
         assert!(pool.inner.transactions.read().is_empty());
 
         // add all the txs to the pool
-        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // all the txs should be in the pool
         assert_eq!(pool.size(), txs.len());
@@ -389,7 +394,9 @@ mod tests {
         let mut listener = pool.add_listener();
 
         // start adding txs to the pool
-        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // the channel should contain all the added txs
         let mut counter = 0;
@@ -440,7 +447,9 @@ mod tests {
         assert_eq!(expected_invalids.len(), 4);
 
         // Add all transactions to the pool
-        all.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        all.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // Check that all transactions should be in the pool regardless of validity
         assert!(all.iter().all(|tx| pool.get(tx.hash()).is_some()));
@@ -481,7 +490,9 @@ mod tests {
         let pool = Pool::new(NoopValidator::new(), ordering::Tip::new());
 
         // Add transactions to the pool
-        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // Get pending transactions
         let pending = pool.take_transactions().collect::<Vec<_>>();
@@ -509,7 +520,9 @@ mod tests {
             .collect();
 
         // Add all transactions to the pool
-        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // Get pending transactions
         let pending = pool.take_transactions().collect::<Vec<_>>();

@@ -1,4 +1,4 @@
-mod stateful;
+pub mod stateful;
 
 use katana_executor::ExecutionError;
 use katana_primitives::transaction::TxHash;

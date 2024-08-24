@@ -24,6 +24,7 @@ use katana_core::service::{NodeService, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_pool::ordering::FiFo;
+use katana_pool::validation::stateful::StatefulValidatorAdapter;
 use katana_pool::validation::NoopValidator;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::FinalityStatus;
@@ -154,12 +155,6 @@ pub async fn start(
         config: starknet_config,
     });
 
-    // --- build transaction pool and miner
-
-    let validator = NoopValidator::new();
-    let pool = TxPool::new(validator, FiFo::new());
-    let miner = TransactionMiner::new(pool.add_listener());
-
     // --- build block producer service
 
     let block_producer = if sequencer_config.block_time.is_some() || sequencer_config.no_mining {
@@ -171,6 +166,12 @@ pub async fn start(
     } else {
         BlockProducer::instant(Arc::clone(&backend))
     };
+
+    // --- build transaction pool and miner
+
+    let validator = block_producer.validator().clone();
+    let pool = TxPool::new(validator, FiFo::new());
+    let miner = TransactionMiner::new(pool.add_listener());
 
     // --- build metrics service
 
