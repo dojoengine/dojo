@@ -12,7 +12,7 @@ use indexmap::IndexSet;
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_rpc_types::receipt::ReceiptBlock;
-use starknet::accounts::{Account, Call, ConnectedAccount};
+use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionReceipt, ExecutionResult, Felt, TransactionFinalityStatus,
@@ -21,6 +21,7 @@ use starknet::core::types::{
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::macros::{felt, selector};
 use starknet::providers::Provider;
+use starknet::signers::{LocalWallet, SigningKey};
 
 mod common;
 
@@ -266,6 +267,37 @@ async fn rapid_transactions_submissions() -> Result<()> {
         assert_eq!(receipt.receipt.execution_result(), &ExecutionResult::Succeeded);
         assert_eq!(receipt.receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_send_tx_with_invalid_signature() -> Result<()> {
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
+    let provider = sequencer.provider();
+    let chain_id = provider.chain_id().await?;
+    let address = sequencer.account().address();
+    let signer = LocalWallet::from_signing_key(SigningKey::from_random());
+
+    let account =
+        SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::New);
+
+    // Create a call, but we don't care whether the call is correct or not
+    let call = Call {
+        to: DEFAULT_FEE_TOKEN_ADDRESS.into(),
+        selector: selector!("transfer"),
+        calldata: vec![
+            felt!("0x100"), // recipient address
+            Felt::ONE,      // amount (low)
+            Felt::ZERO,     // amount (high)
+        ],
+    };
+
+    // Create a transaction with an invalid signature
+    let result = account.execute_v1(vec![call]).max_fee(felt!("0x1111111111")).send().await;
+    dbg!(result);
 
     Ok(())
 }
