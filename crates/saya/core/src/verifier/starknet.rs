@@ -1,8 +1,7 @@
 use std::time::Duration;
 
 use anyhow::Context;
-use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
+use dojo_utils::{TransactionExt, TxnConfig};
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{Felt, TransactionExecutionStatus, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;

@@ -4,6 +4,7 @@ use std::str::{self, FromStr};
 use cainome::cairo_serde::ContractAddress;
 use camino::Utf8Path;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
+use dojo_utils::TxnConfig;
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::{
@@ -16,7 +17,6 @@ use dojo_world::metadata::{
 };
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationMetadata};
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::TxnConfig;
 use dojo_world::uri::Uri;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};

@@ -1859,7 +1859,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.8.0-dev.2"
-source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7#5e6e47ea47eeca12316d4a0e3394f38aa4870c71"
+source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7#031eef1b54766bc9799e97c43f63e36b63af30ee"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3467,15 +3467,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "common"
-version = "1.0.0-alpha.7"
-dependencies = [
- "anyhow",
- "reqwest 0.12.5",
- "thiserror",
-]
-
-[[package]]
 name = "common-multipart-rfc7578"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4535,6 +4526,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-utils"
+version = "1.0.0-alpha.7"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "dojo-test-utils",
+ "futures",
+ "reqwest 0.12.5",
+ "starknet 0.11.0",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "dojo-world"
 version = "1.0.0-alpha.7"
 dependencies = [
@@ -4552,7 +4557,7 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
- "futures",
+ "dojo-utils",
  "http 0.2.12",
  "ipfs-api-backend-hyper",
  "katana-runner",
@@ -7732,8 +7737,8 @@ dependencies = [
  "clap",
  "clap_complete",
  "comfy-table",
- "common 1.0.0-alpha.7",
  "console",
+ "dojo-utils",
  "katana-core",
  "katana-db",
  "katana-node",
@@ -7982,6 +7987,7 @@ dependencies = [
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?tag=v0.3.2)",
  "dojo-metrics",
  "dojo-test-utils",
+ "dojo-utils",
  "dojo-world",
  "futures",
  "jsonrpsee 0.16.3",
@@ -10698,7 +10704,7 @@ version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/http-prover?rev=7d00b05#7d00b05fec6bdf533d4110656c635a086d5872b7"
 dependencies = [
  "bytes",
- "common 0.1.0",
+ "common",
  "ed25519-dalek",
  "http 1.1.0",
  "hyper-util",
@@ -11942,7 +11948,7 @@ dependencies = [
  "cairo-proof-parser",
  "celestia-rpc",
  "celestia-types",
- "dojo-world",
+ "dojo-utils",
  "futures",
  "itertools 0.12.1",
  "katana-primitives",
@@ -12877,6 +12883,7 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "futures",
  "hex",
@@ -12937,6 +12944,7 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "futures",
  "ipfs-api-backend-hyper",
@@ -14493,10 +14501,10 @@ dependencies = [
  "camino",
  "chrono",
  "clap",
- "common 1.0.0-alpha.7",
  "ctrlc",
  "dojo-metrics",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "either",
  "futures",
@@ -14570,6 +14578,7 @@ dependencies = [
  "crypto-bigint",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "futures-channel",
  "futures-util",
@@ -14612,6 +14621,7 @@ dependencies = [
  "convert_case 0.6.0",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "katana-runner",
  "lazy_static",
@@ -14648,6 +14658,7 @@ dependencies = [
  "crypto-bigint",
  "dojo-test-utils",
  "dojo-types",
+ "dojo-utils",
  "dojo-world",
  "futures",
  "futures-util",
@@ -16276,7 +16287,7 @@ name = "xtask-generate-test-db"
 version = "1.0.0-alpha.7"
 dependencies = [
  "dojo-test-utils",
- "dojo-world",
+ "dojo-utils",
  "katana-runner",
  "reqwest 0.12.5",
  "scarb",

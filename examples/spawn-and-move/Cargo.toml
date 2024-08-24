@@ -7,8 +7,8 @@ version.workspace = true
 
 [package.metadata.release]
 pre-release-replacements = [
-    { file = "Scarb.lock", search = "^name = \"dojo\"\nversion = \".*\"$", replace = "name = \"dojo\"\nversion = \"{{version}}\"", min = 1 },
-    { file = "Scarb.toml", search = "^version = \".*\"$", replace = "version = \"{{version}}\"", min = 1 },
+	{ file = "Scarb.lock", search = "^name = \"dojo\"\nversion = \".*\"$", replace = "name = \"dojo\"\nversion = \"{{version}}\"", min = 1 },
+	{ file = "Scarb.toml", search = "^version = \".*\"$", replace = "version = \"{{version}}\"", min = 1 },
 ]
 
 [lib]

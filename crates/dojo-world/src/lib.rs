@@ -10,5 +10,3 @@ pub mod metadata;
 pub mod migration;
 #[cfg(feature = "metadata")]
 pub mod uri;
-#[cfg(feature = "migration")]
-pub mod utils; // TODO: move to somewhere else

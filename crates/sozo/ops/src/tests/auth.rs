@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
 use dojo_test_utils::migration::copy_spawn_and_move_db;
+use dojo_utils::TxnConfig;
 use dojo_world::contracts::naming::compute_selector_from_tag;
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::migration::TxnConfig;
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::{Account, ConnectedAccount};
