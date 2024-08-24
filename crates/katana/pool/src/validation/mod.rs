@@ -10,8 +10,32 @@ use crate::tx::PoolTransaction;
 pub struct Error {
     /// The hash of the transaction that failed validation.
     pub hash: TxHash,
-    /// The error that caused the transaction to fail validation.
+    /// The actual error object.
     pub error: Box<dyn std::error::Error>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum InvalidTransactionError {
+    #[error("account has insufficient funds to cover the tx fee")]
+    InsufficientFunds {},
+
+    #[error("the specified tx max fee is insufficient")]
+    InsufficientMaxFee {},
+
+    #[error("invalid signature")]
+    InvalidSignature { error: ExecutionError },
+
+    #[error("sender is not an account")]
+    NonAccount,
+
+    #[error("nonce mismatch")]
+    InvalidNonce,
+
+    #[error("max l1 gas amount too low")]
+    MaxL1GasAmountTooLow,
+
+    #[error("placeholder")]
+    MaxL1GasPriceTooLow,
 }
 
 pub type ValidationResult<T> = Result<ValidationOutcome<T>, Error>;
@@ -39,7 +63,7 @@ pub enum ValidationOutcome<T> {
     /// tx that is or may eventually be valid after some nonce changes.
     Valid(T),
     /// tx that will never be valid, eg. due to invalid signature, nonce lower than current, etc.
-    Invalid { tx: T, error: ExecutionError },
+    Invalid { tx: T, error: InvalidTransactionError },
 }
 
 /// A no-op validator that does nothing and assume all incoming transactions are valid.

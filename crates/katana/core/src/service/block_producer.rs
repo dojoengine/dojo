@@ -9,7 +9,7 @@ use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
 use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFactory};
-use katana_pool::validation::stateful::{StatefulValidatorAdapter, TxValidator};
+use katana_pool::validation::stateful::TxValidator;
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;

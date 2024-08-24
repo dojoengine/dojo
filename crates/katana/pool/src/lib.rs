@@ -13,7 +13,7 @@ use katana_primitives::transaction::{ExecutableTxWithHash, TxHash};
 use ordering::{FiFo, PoolOrd};
 use pool::Pool;
 use tx::{PendingTx, PoolTransaction};
-use validation::{stateful::TxValidator, NoopValidator, ValidationResult, Validator};
+use validation::{stateful::TxValidator, Validator};
 
 /// Katana default transacstion pool type.
 pub type TxPool = Pool<ExecutableTxWithHash, TxValidator, FiFo<ExecutableTxWithHash>>;

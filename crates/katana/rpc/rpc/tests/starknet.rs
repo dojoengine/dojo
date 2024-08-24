@@ -6,21 +6,24 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use assert_matches::assert_matches;
 use cainome::rs::abigen_legacy;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use indexmap::IndexSet;
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_rpc_types::receipt::ReceiptBlock;
-use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
+use starknet::accounts::{
+    Account, AccountError, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount,
+};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionReceipt, ExecutionResult, Felt, TransactionFinalityStatus,
-    TransactionReceipt,
+    BlockId, BlockTag, DeclareTransactionReceipt, ExecutionResult, Felt, StarknetError,
+    TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::macros::{felt, selector};
-use starknet::providers::Provider;
+use starknet::providers::{Provider, ProviderError};
 use starknet::signers::{LocalWallet, SigningKey};
 
 mod common;
@@ -281,8 +284,7 @@ async fn test_send_tx_with_invalid_signature() -> Result<()> {
     let address = sequencer.account().address();
     let signer = LocalWallet::from_signing_key(SigningKey::from_random());
 
-    let account =
-        SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::New);
+    let acc = SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::New);
 
     // Create a call, but we don't care whether the call is correct or not
     let call = Call {
@@ -296,8 +298,13 @@ async fn test_send_tx_with_invalid_signature() -> Result<()> {
     };
 
     // Create a transaction with an invalid signature
-    let result = account.execute_v1(vec![call]).max_fee(felt!("0x1111111111")).send().await;
-    dbg!(result);
+    let result = acc.execute_v1(vec![call]).max_fee(felt!("0x1111111111")).send().await;
+    assert_matches!(
+        result,
+        Err(AccountError::Provider(ProviderError::StarknetError(
+            StarknetError::ValidationFailure(_)
+        )))
+    );
 
     Ok(())
 }

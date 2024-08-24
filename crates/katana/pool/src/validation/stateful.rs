@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
-use katana_executor::implementation::blockifier::blockifier::context::BlockContext;
+use katana_executor::implementation::blockifier::blockifier::blockifier::stateful_validator::StatefulValidatorError;
 use katana_executor::implementation::blockifier::blockifier::state::cached_state::CachedState;
 use katana_executor::implementation::blockifier::blockifier::transaction::transaction_execution::Transaction;
-use katana_executor::implementation::blockifier::utils::{
-    self, block_context_from_envs, to_executor_tx,
-};
+use katana_executor::implementation::blockifier::utils::{block_context_from_envs, to_executor_tx};
 use katana_executor::{
     implementation::blockifier::blockifier::blockifier::stateful_validator::StatefulValidator as BlockifierValidator,
     StateProviderDb,
@@ -63,6 +61,7 @@ impl StatefulValidatorAdapter {
             Transaction::AccountTransaction(blockifier_tx) => {
                 match self.inner.perform_validations(blockifier_tx, None) {
                     Ok(()) => Ok(ValidationOutcome::Valid(tx)),
+                    // TODO: implement from<statefulvalidatorerror> for invalidtransactionerror
                     Err(e) => Err(Error { hash: tx.hash, error: Box::new(e) }),
                 }
             }
