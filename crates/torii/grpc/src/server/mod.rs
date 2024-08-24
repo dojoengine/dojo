@@ -12,6 +12,7 @@ use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use futures::Stream;
@@ -45,6 +46,7 @@ use crate::proto::world::{
     SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventsResponse,
 };
 use crate::proto::{self};
+use crate::types::schema::SchemaError;
 use crate::types::ComparisonOperator;
 
 pub(crate) static ENTITIES_TABLE: &str = "entities";
@@ -54,6 +56,21 @@ pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "entity_id";
 pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
 pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "event_message_id";
+
+impl From<SchemaError> for Error {
+    fn from(err: SchemaError) -> Self {
+        match err {
+            SchemaError::MissingExpectedData(data) => QueryError::MissingParam(data).into(),
+            SchemaError::UnsupportedType(data) => QueryError::UnsupportedValue(data).into(),
+            SchemaError::InvalidByteLength(got, expected) => {
+                PrimitiveError::InvalidByteLength(got, expected).into()
+            }
+            SchemaError::ParseIntError(err) => ParseError::ParseIntError(err).into(),
+            SchemaError::FromSlice(err) => ParseError::FromSlice(err).into(),
+            SchemaError::FromStr(err) => ParseError::FromStr(err).into(),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct DojoWorld {
@@ -114,8 +131,8 @@ impl DojoWorld {
 
 impl DojoWorld {
     pub async fn metadata(&self) -> Result<proto::types::WorldMetadata, Error> {
-        let (world_address, world_class_hash): (String, String) = sqlx::query_as(&format!(
-            "SELECT world_address, world_class_hash FROM worlds WHERE id = '{:#x}'",
+        let world_address = sqlx::query_scalar(&format!(
+            "SELECT world_address FROM worlds WHERE id = '{:#x}'",
             self.world_address
         ))
         .fetch_one(&self.pool)
@@ -144,8 +161,9 @@ impl DojoWorld {
         for model in models {
             let schema = self
                 .model_cache
-                .schema(&Felt::from_str(&model.id).map_err(ParseError::FromStr)?)
-                .await?;
+                .model(&Felt::from_str(&model.id).map_err(ParseError::FromStr)?)
+                .await?
+                .schema;
             models_metadata.push(proto::types::ModelMetadata {
                 namespace: model.namespace,
                 name: model.name,
@@ -158,7 +176,7 @@ impl DojoWorld {
             });
         }
 
-        Ok(proto::types::WorldMetadata { world_address, world_class_hash, models: models_metadata })
+        Ok(proto::types::WorldMetadata { world_address, models: models_metadata })
     }
 
     async fn entities_all(
@@ -275,14 +293,17 @@ impl DojoWorld {
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas = self.model_cache.schemas(&model_ids).await?;
+            let schemas =
+                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
-            let (entity_query, arrays_queries) = build_sql_query(
+            let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
                 Some(&format!("{table}.id = ?")),
                 Some(&format!("{table}.id = ?")),
+                None,
+                None,
             )?;
 
             let row =
@@ -414,14 +435,17 @@ impl DojoWorld {
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas = self.model_cache.schemas(&model_ids).await?;
+            let schemas =
+                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
-            let (entity_query, arrays_queries) = build_sql_query(
+            let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
                 Some(&format!("{table}.id = ?")),
                 Some(&format!("{table}.id = ?")),
+                None,
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
@@ -476,13 +500,10 @@ impl DojoWorld {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
-        let value_type = member_clause
-            .value
-            .ok_or(QueryError::MissingParam("value".into()))?
-            .value_type
-            .ok_or(QueryError::MissingParam("value_type".into()))?;
+        let primitive: Primitive =
+            member_clause.value.ok_or(QueryError::MissingParam("value".into()))?.try_into()?;
 
-        let comparison_value = value_to_string(&value_type)?;
+        let comparison_value = primitive.to_sql_value()?;
 
         let (namespace, model) = member_clause
             .model
@@ -507,20 +528,25 @@ impl DojoWorld {
             .map(Felt::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::FromStr)?;
-        let schemas = self.model_cache.schemas(&model_ids).await?;
+        let schemas =
+            self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
-        let (entity_query, arrays_queries) = build_sql_query(
+        let (entity_query, arrays_queries, count_query) = build_sql_query(
             &schemas,
             table,
             entity_relation_column,
-            Some(&format!(
-                "{table_name}.{column_name} {comparison_operator} ? ORDER BY {table}.event_id \
-                 DESC LIMIT ? OFFSET ?"
-            )),
+            Some(&format!("[{table_name}].{column_name} {comparison_operator} ?")),
             None,
+            limit,
+            offset,
         )?;
+
+        let total_count = sqlx::query_scalar(&count_query)
+            .bind(comparison_value.clone())
+            .fetch_one(&self.pool)
+            .await?;
 
         let db_entities = sqlx::query(&entity_query)
             .bind(comparison_value.clone())
@@ -539,8 +565,6 @@ impl DojoWorld {
             .iter()
             .map(|row| map_row_to_entity(row, &arrays_rows, schemas.clone()))
             .collect::<Result<Vec<_>, Error>>()?;
-        // Since there is not limit and offset, total_count is same as number of entities
-        let total_count = entities_collection.len() as u32;
         Ok((entities_collection, total_count))
     }
 
@@ -582,8 +606,8 @@ impl DojoWorld {
                     let comparison_operator =
                         ComparisonOperator::from_repr(member.operator as usize)
                             .expect("invalid comparison operator");
-                    let value = member.value.unwrap().value_type.unwrap();
-                    let comparison_value = value_to_string(&value)?;
+                    let value: Primitive = member.value.unwrap().try_into()?;
+                    let comparison_value = value.to_sql_value()?;
 
                     let column_name = format!("external_{}", member.member);
 
@@ -682,14 +706,17 @@ impl DojoWorld {
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas = self.model_cache.schemas(&model_ids).await?;
+            let schemas =
+                self.model_cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
-            let (entity_query, arrays_queries) = build_sql_query(
+            let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 table,
                 entity_relation_column,
                 Some(&format!("[{table}].id = ?")),
                 Some(&format!("[{table}].id = ?")),
+                None,
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(entity_id).fetch_one(&self.pool).await?;
@@ -713,33 +740,17 @@ impl DojoWorld {
         // selector
         let model = compute_selector_from_names(namespace, name);
 
-        let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
-            String,
-            String,
-            String,
-            u32,
-            u32,
-            String,
-        ) = sqlx::query_as(
-            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
-             layout FROM models WHERE id = ?",
-        )
-        .bind(format!("{:#x}", model))
-        .fetch_one(&self.pool)
-        .await?;
-
-        let schema = self.model_cache.schema(&model).await?;
-        let layout = layout.as_bytes().to_vec();
+        let model = self.model_cache.model(&model).await?;
 
         Ok(proto::types::ModelMetadata {
             namespace: namespace.to_string(),
-            name,
-            layout,
-            class_hash,
-            contract_address,
-            packed_size,
-            unpacked_size,
-            schema: serde_json::to_vec(&schema).unwrap(),
+            name: name.to_string(),
+            class_hash: format!("{:#x}", model.class_hash),
+            contract_address: format!("{:#x}", model.contract_address),
+            packed_size: model.packed_size,
+            unpacked_size: model.unpacked_size,
+            layout: serde_json::to_vec(&model.layout).unwrap(),
+            schema: serde_json::to_vec(&model.schema).unwrap(),
         })
     }
 
@@ -1000,18 +1011,6 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
     keys_pattern += "/$";
 
     Ok(keys_pattern)
-}
-
-fn value_to_string(value: &proto::types::value::ValueType) -> Result<String, Error> {
-    match value {
-        proto::types::value::ValueType::StringValue(string) => Ok(string.clone()),
-        proto::types::value::ValueType::IntValue(int) => Ok(int.to_string()),
-        proto::types::value::ValueType::UintValue(uint) => Ok(uint.to_string()),
-        proto::types::value::ValueType::BoolValue(bool) => {
-            Ok(if *bool { "1".to_string() } else { "0".to_string() })
-        }
-        _ => Err(QueryError::UnsupportedQuery.into()),
-    }
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;

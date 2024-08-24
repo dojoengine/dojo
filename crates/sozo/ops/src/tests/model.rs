@@ -1,7 +1,10 @@
+use dojo_test_utils::migration::copy_spawn_and_move_db;
+use dojo_utils::{TransactionExt, TxnConfig};
 use dojo_world::contracts::abi::model::{FieldLayout, Layout};
+use dojo_world::contracts::abi::world::Resource;
+use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_tag};
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::migration::TxnConfig;
-use katana_runner::KatanaRunner;
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_ui::{OutputFormat, Ui, Verbosity};
 use starknet::accounts::Account;
 use starknet::core::types::Felt;
@@ -13,9 +16,27 @@ use crate::{execute, model};
 // migration for now. Should be replaced by individual tests once Katana spinning up is enhanced.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model_ops() {
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
+    let seq_config = KatanaRunnerConfig { n_accounts: 10, ..Default::default() }
+        .with_db_dir(copy_spawn_and_move_db().as_str());
 
-    let world = setup::setup(&sequencer).await.unwrap();
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
+
+    let world = setup::setup_with_world(&sequencer).await.unwrap();
+
+    let action_address = if let Resource::Contract((_, address)) =
+        world.resource(&compute_selector_from_tag("dojo_examples-actions")).call().await.unwrap()
+    {
+        address
+    } else {
+        panic!("No action contract found in world");
+    };
+
+    world
+        .grant_writer(&compute_bytearray_hash("dojo_examples"), &action_address)
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     assert_eq!(
         model::model_class_hash(
@@ -25,7 +46,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x61fa996f7cf8412bb5aca7d4bd4fd9eca806a92e5007e87d23f638b6774ed40")
+        Felt::from_hex("0x4dd1c573b5cdc56561be8b28a4840048a3a008d1a4a6eed397ec4135effaf44")
             .unwrap()
     );
 
@@ -37,7 +58,7 @@ async fn test_model_ops() {
         )
         .await
         .unwrap(),
-        Felt::from_hex("0x4eddd8563a17c7d256b35e3cb0decdfcdfe122dd72593ebc572cfc535941ac2")
+        Felt::from_hex("0x604735fb6510c558ba3ae21972fcbdb1b4234bedcbc990910bd7efd194e7db3")
             .unwrap()
     );
 

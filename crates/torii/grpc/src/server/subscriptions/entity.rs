@@ -124,68 +124,71 @@ impl Service {
 
             // If we have a clause of keys, then check that the key pattern of the entity
             // matches the key pattern of the subscriber.
-            if !sub.clauses.iter().any(|clause| match clause {
-                EntityKeysClause::HashedKeys(hashed_keys) => {
-                    hashed_keys.is_empty() || hashed_keys.contains(&hashed)
-                }
-                EntityKeysClause::Keys(clause) => {
-                    // if we have a model clause, then we need to check that the entity
-                    // has an updated model and that the model name matches the clause
-                    if let Some(updated_model) = &entity.updated_model {
-                        let name = updated_model.name();
-                        let (namespace, name) = name.split_once('-').unwrap();
+            if !sub.clauses.is_empty()
+                && !sub.clauses.iter().any(|clause| match clause {
+                    EntityKeysClause::HashedKeys(hashed_keys) => {
+                        hashed_keys.is_empty() || hashed_keys.contains(&hashed)
+                    }
+                    EntityKeysClause::Keys(clause) => {
+                        // if we have a model clause, then we need to check that the entity
+                        // has an updated model and that the model name matches the clause
+                        if let Some(updated_model) = &entity.updated_model {
+                            let name = updated_model.name();
+                            let (namespace, name) = name.split_once('-').unwrap();
 
-                        if !clause.models.is_empty()
-                            && !clause.models.iter().any(|clause_model| {
-                                let (clause_namespace, clause_model) =
-                                    clause_model.split_once('-').unwrap();
-                                // if both namespace and model are empty, we should match all.
-                                // if namespace is specified and model is empty or * we should match
-                                // all models in the namespace
-                                // if namespace and model are specified, we should match the
-                                // specific model
-                                (clause_namespace.is_empty()
-                                    || clause_namespace == namespace
-                                    || clause_namespace == "*")
-                                    && (clause_model.is_empty()
-                                        || clause_model == name
-                                        || clause_model == "*")
-                            })
+                            if !clause.models.is_empty()
+                                && !clause.models.iter().any(|clause_model| {
+                                    let (clause_namespace, clause_model) =
+                                        clause_model.split_once('-').unwrap();
+                                    // if both namespace and model are empty, we should match all.
+                                    // if namespace is specified and model is empty or * we should
+                                    // match all models in the
+                                    // namespace if namespace
+                                    // and model are specified, we should match the
+                                    // specific model
+                                    (clause_namespace.is_empty()
+                                        || clause_namespace == namespace
+                                        || clause_namespace == "*")
+                                        && (clause_model.is_empty()
+                                            || clause_model == name
+                                            || clause_model == "*")
+                                })
+                            {
+                                return false;
+                            }
+                        }
+
+                        // if the key pattern doesnt match our subscribers key pattern, skip
+                        // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
+                        if clause.pattern_matching == PatternMatching::FixedLen
+                            && keys.len() != clause.keys.len()
                         {
                             return false;
                         }
+
+                        return keys.iter().enumerate().all(|(idx, key)| {
+                            // this is going to be None if our key pattern overflows the subscriber
+                            // key pattern in this case we should skip
+                            let sub_key = clause.keys.get(idx);
+
+                            match sub_key {
+                                // the key in the subscriber must match the key of the entity
+                                // athis index
+                                Some(Some(sub_key)) => key == sub_key,
+                                // otherwise, if we have no key we should automatically match.
+                                // or.. we overflowed the subscriber key pattern
+                                // but we're in VariableLen pattern matching
+                                // so we should match all next keys
+                                _ => true,
+                            }
+                        });
                     }
-
-                    // if the key pattern doesnt match our subscribers key pattern, skip
-                    // ["", "0x0"] would match with keys ["0x...", "0x0", ...]
-                    if clause.pattern_matching == PatternMatching::FixedLen
-                        && keys.len() != clause.keys.len()
-                    {
-                        return false;
-                    }
-
-                    return keys.iter().enumerate().all(|(idx, key)| {
-                        // this is going to be None if our key pattern overflows the subscriber
-                        // key pattern in this case we should skip
-                        let sub_key = clause.keys.get(idx);
-
-                        match sub_key {
-                            // the key in the subscriber must match the key of the entity
-                            // athis index
-                            Some(Some(sub_key)) => key == sub_key,
-                            // otherwise, if we have no key we should automatically match.
-                            // or.. we overflowed the subscriber key pattern
-                            // but we're in VariableLen pattern matching
-                            // so we should match all next keys
-                            _ => true,
-                        }
-                    });
-                }
-            }) {
+                })
+            {
                 continue;
             }
 
-            if entity.updated_model.is_none() {
+            if entity.deleted {
                 let resp = proto::world::SubscribeEntityResponse {
                     entity: Some(proto::types::Entity {
                         hashed_keys: hashed.to_bytes_be().to_vec(),
@@ -215,14 +218,16 @@ impl Service {
                 .map(Felt::from_str)
                 .collect::<Result<_, _>>()
                 .map_err(ParseError::FromStr)?;
-            let schemas = cache.schemas(&model_ids).await?;
+            let schemas = cache.models(&model_ids).await?.into_iter().map(|m| m.schema).collect();
 
-            let (entity_query, arrays_queries) = build_sql_query(
+            let (entity_query, arrays_queries, _) = build_sql_query(
                 &schemas,
                 "entities",
                 "entity_id",
                 Some("entities.id = ?"),
                 Some("entities.id = ?"),
+                None,
+                None,
             )?;
 
             let row = sqlx::query(&entity_query).bind(&entity.id).fetch_one(&pool).await?;

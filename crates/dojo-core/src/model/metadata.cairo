@@ -114,7 +114,7 @@ pub impl ResourceMetadataModel of Model<ResourceMetadata> {
 
     #[inline(always)]
     fn selector() -> felt252 {
-        poseidon_hash_span(array![Self::namespace_hash(), Self::name_hash()].span())
+        poseidon_hash_span([Self::namespace_hash(), Self::name_hash()].span())
     }
 
     #[inline(always)]
@@ -174,8 +174,7 @@ pub impl ResourceMetadataIntrospect<> of Introspect<ResourceMetadata<>> {
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Struct(
-            array![FieldLayout { selector: selector!("metadata_uri"), layout: Layout::ByteArray }]
-                .span()
+            [FieldLayout { selector: selector!("metadata_uri"), layout: Layout::ByteArray }].span()
         )
     }
 
@@ -183,17 +182,12 @@ pub impl ResourceMetadataIntrospect<> of Introspect<ResourceMetadata<>> {
     fn ty() -> Ty {
         Ty::Struct(
             Struct {
-                name: 'ResourceMetadata',
-                attrs: array![].span(),
-                children: array![
+                name: 'ResourceMetadata', attrs: [].span(), children: [
                     Member {
-                        name: 'resource_id',
-                        ty: Ty::Primitive('felt252'),
-                        attrs: array!['key'].span()
+                        name: 'resource_id', ty: Ty::Primitive('felt252'), attrs: ['key'].span()
                     },
-                    Member { name: 'metadata_uri', ty: Ty::ByteArray, attrs: array![].span() }
-                ]
-                    .span()
+                    Member { name: 'metadata_uri', ty: Ty::ByteArray, attrs: [].span() }
+                ].span()
             }
         )
     }

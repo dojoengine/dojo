@@ -1,8 +1,9 @@
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
+use dojo_utils::TxnConfig;
+use dojo_world::config::Environment;
 use dojo_world::manifest::MANIFESTS_DIR;
-use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
-use dojo_world::migration::TxnConfig;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration;
@@ -100,7 +101,7 @@ impl MigrateArgs {
                         &name,
                         true,
                         TxnConfig::default(),
-                        dojo_metadata.skip_migration,
+                        dojo_metadata.migration.map(|m| m.skip_contracts.clone()),
                     )
                     .await
                 })
@@ -119,7 +120,7 @@ impl MigrateArgs {
                         &name,
                         false,
                         txn_config,
-                        dojo_metadata.skip_migration,
+                        dojo_metadata.migration.map(|m| m.skip_contracts.clone()),
                     )
                     .await
                 })

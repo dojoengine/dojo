@@ -1,6 +1,6 @@
 use anyhow::Result;
+use dojo_utils::TxnConfig;
 use dojo_world::contracts::WorldContract;
-use dojo_world::migration::TxnConfig;
 use scarb::core::Workspace;
 use starknet::accounts::ConnectedAccount;
 
@@ -20,7 +20,6 @@ where
 {
     let ui = ws.config().ui();
 
-    ui.print(" ");
     grant_writer(&ui, world, grant, *txn_config, default_namespace).await?;
     revoke_writer(&ui, world, revoke, *txn_config, default_namespace).await?;
 

@@ -1,8 +1,11 @@
+use std::str::FromStr;
+
 use account_sdk::account::session::hash::{AllowedMethod, Session};
 use account_sdk::account::session::SessionAccount;
 use account_sdk::signers::HashSigner;
 use anyhow::{bail, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use dojo_utils::TransactionWaiter;
 use dojo_world::contracts::naming::get_name_from_tag;
 use dojo_world::manifest::{BaseManifest, Class, DojoContract, Manifest};
 use dojo_world::migration::strategy::generate_salt;
@@ -266,13 +269,16 @@ fn get_dojo_world_address(
 /// `cartridge_deployController` is not a method that Katana itself exposes. It's from a middleware
 /// layer that is deployed on top of the Katana deployment on Slot. This method will deploy the
 /// contract of a user based on the Slot deployment.
-async fn deploy_account_if_not_exist(
+async fn deploy_account_if_not_exist<P>(
     rpc_url: Url,
-    provider: &impl Provider,
+    provider: &P,
     chain_id: Felt,
     address: Felt,
     username: &str,
-) -> Result<()> {
+) -> Result<()>
+where
+    P: Provider + Send,
+{
     use reqwest::Client;
     use serde_json::json;
 
@@ -302,13 +308,41 @@ async fn deploy_account_if_not_exist(
                 "method": "cartridge_deployController",
             });
 
-            let _ = Client::new()
+            // The response object is in the form:
+            //
+            // {
+            //   "id": 1,
+            //   "jsonrpc": "2.0",
+            //   "result": {
+            //     "already_deployed": false,
+            //     "transaction_hash": "0x12345"
+            //   }
+            // }
+            let res = Client::new()
                 .post(rpc_url)
                 .json(&body)
                 .send()
                 .await?
                 .error_for_status()
-                .with_context(|| "Failed to deploy controller")?;
+                .context("Failed to deploy controller")?;
+
+            // TODO: handle this more elegantly
+            let response = res.json::<serde_json::Value>().await?;
+            let hex = response["result"]["transaction_hash"]
+                .as_str()
+                .context("Failed to get Controller deployment transaction hash from response")?;
+
+            // wait for deployment tx to finish
+            let tx_hash = Felt::from_str(hex)?;
+            let _ = TransactionWaiter::new(tx_hash, provider).await?;
+
+            trace!(
+                %username,
+                chain = format!("{chain_id:#}"),
+                address = format!("{address:#x}"),
+                tx = format!("{tx_hash:#x}"),
+                "Controller deployed successfully.",
+            );
 
             Ok(())
         }

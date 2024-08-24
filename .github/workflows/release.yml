@@ -9,7 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.79.0
+  RUST_VERSION: 1.80.0
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
@@ -76,6 +76,12 @@ jobs:
       - uses: Swatinem/rust-cache@v1
         with:
           cache-on-failure: true
+
+      # required for `aws-lc-rs` crate to compile on Windows; https://aws.github.io/aws-lc-rs/requirements/windows.html
+      - name: Install NASM
+        uses: ilammy/setup-nasm@v1
+        with:
+          version: "2.15.05"
 
       - uses: arduino/setup-protoc@v2
         with:

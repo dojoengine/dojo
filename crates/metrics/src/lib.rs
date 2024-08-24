@@ -13,3 +13,11 @@ pub use reth_metrics_derive::Metrics;
 #[cfg(all(feature = "jemalloc", unix))]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+/// A helper trait for reporting metrics.
+///
+/// This is meant for types that require a specific trigger to register their metrics.
+pub trait Report: Send + Sync {
+    /// Report the metrics.
+    fn report(&self);
+}

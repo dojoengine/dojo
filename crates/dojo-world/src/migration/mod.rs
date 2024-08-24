@@ -1,12 +1,12 @@
 use std::fs::File;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
+use dojo_utils::{TransactionExt, TransactionWaiter, TransactionWaitingError, TxnConfig};
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
@@ -19,7 +19,6 @@ use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
 use crate::contracts::naming::compute_selector_from_tag;
-use crate::utils::{TransactionExt, TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
 pub mod contract;
@@ -93,37 +92,6 @@ pub trait StateDiff {
     fn is_same(&self) -> bool;
 }
 
-/// The transaction configuration to use when sending a transaction.
-#[derive(Debug, Copy, Clone, Default)]
-pub struct TxnConfig {
-    /// The multiplier for how much the actual transaction max fee should be relative to the
-    /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
-    pub fee_estimate_multiplier: Option<f64>,
-    pub wait: bool,
-    pub receipt: bool,
-    pub max_fee_raw: Option<Felt>,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum TxnAction {
-    Send {
-        wait: bool,
-        receipt: bool,
-        max_fee_raw: Option<Felt>,
-        /// The multiplier for how much the actual transaction max fee should be relative to the
-        /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
-        fee_estimate_multiplier: Option<f64>,
-    },
-    Estimate,
-    Simulate,
-}
-
-impl TxnConfig {
-    pub fn init_wait() -> Self {
-        Self { wait: true, ..Default::default() }
-    }
-}
-
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Declarable {
@@ -169,26 +137,18 @@ pub trait Declarable {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
     #[allow(clippy::too_many_arguments)]
-    async fn deploy_dojo_contract<A>(
+    async fn deploy_dojo_contract_call<A>(
         &self,
         world_address: Felt,
         class_hash: Felt,
         base_class_hash: Felt,
         account: A,
-        txn_config: &TxnConfig,
-        calldata: &[String],
         tag: &str,
-    ) -> Result<DeployOutput, MigrationError<<A as Account>::SignError>>
+    ) -> Result<(Call, Felt, bool), MigrationError<<A as Account>::SignError>>
     where
         A: ConnectedAccount + Send + Sync,
         <A as ConnectedAccount>::Provider: Send,
     {
-        let declare = match self.declare(&account, txn_config).await {
-            Ok(res) => Some(res),
-            Err(MigrationError::ClassAlreadyDeclared) => None,
-            Err(e) => return Err(e),
-        };
-
         let contract_address =
             get_contract_address(self.salt(), base_class_hash, &[], world_address);
 
@@ -212,14 +172,58 @@ pub trait Deployable: Declarable + Sync {
             }
 
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                let init_calldata: Vec<Felt> = calldata
-                    .iter()
-                    .map(|s| Felt::from_str(s))
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(|_| MigrationError::BadInitCalldata)?;
+                let calldata = vec![self.salt(), class_hash];
+                Call { calldata, selector: selector!("deploy_contract"), to: world_address }
+            }
 
-                let mut calldata = vec![self.salt(), class_hash, Felt::from(calldata.len())];
-                calldata.extend(init_calldata);
+            Ok(_) => {
+                return Err(MigrationError::ContractAlreadyDeployed(contract_address));
+            }
+
+            Err(e) => return Err(MigrationError::Provider(e)),
+        };
+
+        Ok((call, contract_address, was_upgraded))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn deploy_dojo_contract<A>(
+        &self,
+        world_address: Felt,
+        class_hash: Felt,
+        base_class_hash: Felt,
+        account: A,
+        txn_config: &TxnConfig,
+        tag: &str,
+    ) -> Result<DeployOutput, MigrationError<<A as Account>::SignError>>
+    where
+        A: ConnectedAccount + Send + Sync,
+        <A as ConnectedAccount>::Provider: Send,
+    {
+        let contract_address =
+            get_contract_address(self.salt(), base_class_hash, &[], world_address);
+
+        let mut was_upgraded = false;
+
+        let call = match account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
+            .await
+        {
+            Ok(current_class_hash) if current_class_hash != class_hash => {
+                was_upgraded = true;
+
+                let contract_selector = compute_selector_from_tag(tag);
+
+                Call {
+                    calldata: vec![contract_selector, class_hash],
+                    selector: selector!("upgrade_contract"),
+                    to: world_address,
+                }
+            }
+
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                let calldata = vec![self.salt(), class_hash];
                 Call { calldata, selector: selector!("deploy_contract"), to: world_address }
             }
 
@@ -243,7 +247,7 @@ pub trait Deployable: Declarable + Sync {
             transaction_hash,
             block_number,
             contract_address,
-            declare,
+            declare: None,
             base_class_hash,
             was_upgraded,
             tag: None,

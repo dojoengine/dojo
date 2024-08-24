@@ -12,11 +12,45 @@ use starknet::storage_access::{
 };
 use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
 
-use dojo::model::{Model, Layout};
+use dojo::model::{Model, Layout, ModelIndex};
 use dojo::model::introspect::Introspect;
 use dojo::storage::{database, storage};
-use dojo::utils::test::GasCounterTrait;
-use dojo::tests::world::Foo;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+
+use dojo::tests::helpers::{Foo, Sword, Case, case, Character, Abilities, Stats, Weapon};
+use dojo::utils::test::{spawn_test_world, GasCounterTrait};
+
+#[derive(Drop, Serde)]
+#[dojo::model]
+struct CaseNotPacked {
+    #[key]
+    pub owner: ContractAddress,
+    pub sword: Sword,
+    pub material: felt252,
+}
+
+#[derive(Drop, Serde)]
+#[dojo::model]
+struct ComplexModel {
+    #[key]
+    pub game_id: u128,
+    #[key]
+    pub player: ContractAddress,
+    pub first_name: ByteArray,
+    pub last_name: ByteArray,
+    pub weapons: Array<Weapon>,
+    pub abilities: (Abilities, Abilities),
+    pub stats: Stats,
+}
+
+fn deploy_world() -> IWorldDispatcher {
+    spawn_test_world(
+        ["dojo"].span(),
+        [
+            case::TEST_CLASS_HASH, case_not_packed::TEST_CLASS_HASH, complex_model::TEST_CLASS_HASH
+        ].span()
+    )
+}
 
 #[test]
 #[available_gas(1000000000)]
@@ -28,7 +62,7 @@ fn bench_reference_offset() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_storage_single() {
-    let keys = array!['database_test', '42'].span();
+    let keys = ['database_test', '42'].span();
 
     let gas = GasCounterTrait::start();
     storage::set(0, keys, 420);
@@ -44,9 +78,9 @@ fn bench_storage_single() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_storage_many() {
-    let keys = array![0x1337].span();
-    let values = array![1, 2].span();
-    let layout = array![251, 251].span();
+    let keys = [0x1337].span();
+    let values = [1, 2].span();
+    let layout = [251, 251].span();
 
     let gas = GasCounterTrait::start();
     storage::set_many(0, keys, values, 0, layout).unwrap();
@@ -65,7 +99,7 @@ fn bench_storage_many() {
 #[available_gas(1000000000)]
 fn bench_native_storage() {
     let gas = GasCounterTrait::start();
-    let keys = array![0x1337].span();
+    let keys = [0x1337].span();
     let base = storage_base_address_from_felt252(poseidon_hash_span(keys));
     let address = storage_address_from_base(base);
     gas.end("native prep");
@@ -85,7 +119,7 @@ fn bench_native_storage() {
 #[available_gas(1000000000)]
 fn bench_native_storage_offset() {
     let gas = GasCounterTrait::start();
-    let keys = array![0x1337].span();
+    let keys = [0x1337].span();
     let base = storage_base_address_from_felt252(poseidon_hash_span(keys));
     let address = storage_address_from_base_and_offset(base, 42);
     gas.end("native prep of");
@@ -240,21 +274,6 @@ fn test_struct_with_many_fields_fixed() {
     gas.end("pos db get");
 }
 
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-pub struct Sword {
-    pub swordsmith: ContractAddress,
-    pub damage: u32,
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-#[dojo::model]
-pub struct Case {
-    #[key]
-    pub owner: ContractAddress,
-    pub sword: Sword,
-    pub material: felt252,
-}
-
 // TODO: this test should be adapted to benchmark the new layout system
 #[test]
 #[ignore]
@@ -301,47 +320,6 @@ fn bench_nested_struct_packed() {
     let gas = GasCounterTrait::start();
     database::get('cases', '42', layout);
     gas.end("case db get");
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-#[dojo::model]
-pub struct Character {
-    #[key]
-    pub caller: ContractAddress,
-    pub heigth: felt252,
-    pub abilities: Abilities,
-    pub stats: Stats,
-    pub weapon: Weapon,
-    pub gold: u32,
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-pub struct Abilities {
-    pub strength: u8,
-    pub dexterity: u8,
-    pub constitution: u8,
-    pub intelligence: u8,
-    pub wisdom: u8,
-    pub charisma: u8,
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-pub struct Stats {
-    pub kills: u128,
-    pub deaths: u16,
-    pub rests: u32,
-    pub hits: u64,
-    pub blocks: u32,
-    pub walked: felt252,
-    pub runned: felt252,
-    pub finished: bool,
-    pub romances: u16,
-}
-
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
-pub enum Weapon {
-    DualWield: (Sword, Sword),
-    Fists: (Sword, Sword), // Introspect requires same arms
 }
 
 // TODO: this test should be adapted to benchmark the new layout system
@@ -425,3 +403,116 @@ fn bench_complex_struct_packed() {
     database::get('chars', '42', layout);
     gas.end("chars db get");
 }
+
+#[test]
+fn test_benchmark_set_entity() {
+    let world = deploy_world();
+    let bob = starknet::contract_address_const::<0xb0b>();
+
+    let simple_entity_packed = Case {
+        owner: bob, sword: Sword { swordsmith: bob, damage: 42, }, material: 'iron'
+    };
+
+    let simple_entity_not_packed = CaseNotPacked {
+        owner: bob, sword: Sword { swordsmith: bob, damage: 42, }, material: 'iron'
+    };
+
+    let complex_entity = ComplexModel {
+        game_id: 0x123456789ABCDEF123456789ABCDEF,
+        player: bob,
+        first_name: "John",
+        last_name: "Doe",
+        weapons: array![
+            Weapon::DualWield(
+                (Sword { swordsmith: bob, damage: 42 }, Sword { swordsmith: bob, damage: 800 })
+            ),
+            Weapon::Fists(
+                (Sword { swordsmith: bob, damage: 300 }, Sword { swordsmith: bob, damage: 1200 })
+            )
+        ],
+        abilities: (
+            Abilities {
+                strength: 12,
+                dexterity: 32,
+                constitution: 8,
+                intelligence: 14,
+                wisdom: 1,
+                charisma: 25,
+            },
+            Abilities {
+                strength: 28,
+                dexterity: 13,
+                constitution: 18,
+                intelligence: 2,
+                wisdom: 1,
+                charisma: 43,
+            }
+        ),
+        stats: Stats {
+            kills: 99,
+            deaths: 1,
+            rests: 23,
+            hits: 8192,
+            blocks: 4301,
+            walked: 12,
+            runned: 32,
+            finished: true,
+            romances: 65
+        },
+    };
+
+    let gas = GasCounterTrait::start();
+    world
+        .set_entity(
+            model_selector: Model::<Case>::selector(),
+            index: ModelIndex::Keys(simple_entity_packed.keys()),
+            values: simple_entity_packed.values(),
+            layout: Model::<Case>::layout()
+        );
+    gas.end("World::SetEntity::SimplePacked");
+
+    let gas = GasCounterTrait::start();
+    world
+        .set_entity(
+            model_selector: Model::<CaseNotPacked>::selector(),
+            index: ModelIndex::Keys(simple_entity_not_packed.keys()),
+            values: simple_entity_not_packed.values(),
+            layout: Model::<CaseNotPacked>::layout()
+        );
+    gas.end("World::SetEntity::SimpleNotPacked");
+
+    let gas = GasCounterTrait::start();
+    world
+        .set_entity(
+            model_selector: Model::<ComplexModel>::selector(),
+            index: ModelIndex::Keys(complex_entity.keys()),
+            values: complex_entity.values(),
+            layout: Model::<ComplexModel>::layout()
+        );
+    gas.end("World::SetEntity::ComplexModel");
+
+    let gas = GasCounterTrait::start();
+    simple_entity_packed.set(world);
+    gas.end("Model::Set::SimplePacked");
+
+    let gas = GasCounterTrait::start();
+    simple_entity_not_packed.set(world);
+    gas.end("Model::Set::SimpleNotPacked");
+
+    let gas = GasCounterTrait::start();
+    complex_entity.set(world);
+    gas.end("Model::Set::ComplexModel");
+
+    let gas = GasCounterTrait::start();
+    set!(world, (simple_entity_packed,));
+    gas.end("Macro::Set::SimplePacked");
+
+    let gas = GasCounterTrait::start();
+    set!(world, (simple_entity_not_packed,));
+    gas.end("Macro::Set::SimpleNotPacked");
+
+    let gas = GasCounterTrait::start();
+    set!(world, (complex_entity,));
+    gas.end("Macro::Set::ComplexModel");
+}
+

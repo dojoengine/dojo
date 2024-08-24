@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use dojo_metrics::{metrics_process, prometheus_exporter, Report};
 use hyper::{Method, Uri};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
@@ -14,7 +15,6 @@ use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::BlockContextGenerator;
-use katana_core::pool::TransactionPool;
 #[allow(deprecated)]
 use katana_core::sequencer::SequencerConfig;
 use katana_core::service::block_producer::BlockProducer;
@@ -23,6 +23,9 @@ use katana_core::service::messaging::MessagingService;
 use katana_core::service::{NodeService, TransactionMiner};
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_pool::ordering::FiFo;
+use katana_pool::validation::NoopValidator;
+use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_provider::providers::fork::ForkedProvider;
@@ -46,7 +49,7 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::trace;
+use tracing::{info, trace};
 
 /// Build the core Katana components from the given configurations and start running the node.
 // TODO: placeholder until we implement a dedicated class that encapsulate building the node
@@ -86,7 +89,7 @@ pub async fn start(
 
     // --- build backend
 
-    let blockchain = if let Some(forked_url) = &starknet_config.fork_rpc_url {
+    let (blockchain, db) = if let Some(forked_url) = &starknet_config.fork_rpc_url {
         let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
         let forked_chain_id = provider.chain_id().await.unwrap();
 
@@ -132,11 +135,13 @@ pub async fn start(
         )?;
 
         starknet_config.env.chain_id = forked_chain_id.into();
-        blockchain
+
+        (blockchain, None)
     } else if let Some(db_path) = &starknet_config.db_dir {
-        Blockchain::new_with_db(db_path, &starknet_config.genesis)?
+        let db = katana_db::init_db(db_path)?;
+        (Blockchain::new_with_db(db.clone(), &starknet_config.genesis)?, Some(db))
     } else {
-        Blockchain::new_with_genesis(InMemoryProvider::new(), &starknet_config.genesis)?
+        (Blockchain::new_with_genesis(InMemoryProvider::new(), &starknet_config.genesis)?, None)
     };
 
     let chain_id = starknet_config.env.chain_id;
@@ -151,7 +156,7 @@ pub async fn start(
 
     // --- build transaction pool and miner
 
-    let pool = Arc::new(TransactionPool::new());
+    let pool = TxPool::new(NoopValidator::new(), FiFo::new());
     let miner = TransactionMiner::new(pool.add_listener());
 
     // --- build block producer service
@@ -166,11 +171,30 @@ pub async fn start(
         BlockProducer::instant(Arc::clone(&backend))
     };
 
+    // --- build metrics service
+
+    // Metrics recorder must be initialized before calling any of the metrics macros, in order for
+    // it to be registered.
+    if let Some(addr) = server_config.metrics {
+        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+        let reports = db.map(|db| vec![Box::new(db) as Box<dyn Report>]).unwrap_or_default();
+
+        prometheus_exporter::serve(
+            addr,
+            prometheus_handle,
+            metrics_process::Collector::default(),
+            reports,
+        )
+        .await?;
+
+        info!(%addr, "Metrics endpoint started.");
+    }
+
     // --- build messaging service
 
     #[cfg(feature = "messaging")]
     let messaging = if let Some(config) = sequencer_config.messaging.clone() {
-        MessagingService::new(config, Arc::clone(&pool), Arc::clone(&backend)).await.ok()
+        MessagingService::new(config, pool.clone(), Arc::clone(&backend)).await.ok()
     } else {
         None
     };
@@ -179,7 +203,7 @@ pub async fn start(
 
     // TODO: avoid dangling task, or at least store the handle to the NodeService
     tokio::spawn(NodeService::new(
-        Arc::clone(&pool),
+        pool.clone(),
         miner,
         block_producer.clone(),
         #[cfg(feature = "messaging")]
@@ -196,7 +220,7 @@ pub async fn start(
 
 // Moved from `katana_rpc` crate
 pub async fn spawn<EF: ExecutorFactory>(
-    node_components: (Arc<TransactionPool>, Arc<Backend<EF>>, Arc<BlockProducer<EF>>),
+    node_components: (TxPool, Arc<Backend<EF>>, Arc<BlockProducer<EF>>),
     config: ServerConfig,
 ) -> Result<NodeHandle> {
     let (pool, backend, block_producer) = node_components;

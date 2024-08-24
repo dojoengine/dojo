@@ -26,6 +26,7 @@ main() {
 
       -r|--repo)        shift; DOJOUP_REPO=$1;;
       -b|--branch)      shift; DOJOUP_BRANCH=$1;;
+      -t|--tag)         shift; DOJOUP_USER_TAG=$1;;
       -v|--version)     shift; DOJOUP_VERSION=$1;;
       -p|--path)        shift; DOJOUP_LOCAL_REPO=$1;;
       -P|--pr)          shift; DOJOUP_PR=$1;;
@@ -41,17 +42,20 @@ main() {
     esac; shift
   done
 
-  if [ -n "$DOJOUP_BRANCH" ] || [ -n "$DOJOUP_PR" ] || [ -n "$DOJOUP_COMMIT" ] || [ -n "$DOJOUP_LOCAL_REPO" ] || [ -n "$DOJOUP_REPO" ]; then
+  if [ -n "$DOJOUP_BRANCH" ] || [ -n "$DOJOUP_USER_TAG" ] || [ -n "$DOJOUP_PR" ] || [ -n "$DOJOUP_COMMIT" ] || [ -n "$DOJOUP_LOCAL_REPO" ] || [ -n "$DOJOUP_REPO" ]; then
     if ! command -v rustc &> /dev/null; then
       err "Rust is required for building from source. Please install Rust from https://www.rust-lang.org/tools/install."
     fi
   fi
 
-  if [ -n "$DOJOUP_PR" ]; then
-    if [ -z "$DOJOUP_BRANCH" ]; then
+  REMOTE_OPTION=$(check_exclusive_options DOJOUP_BRANCH DOJOUP_USER_TAG DOJOUP_PR)
+
+  if [ -n "$REMOTE_OPTION" ]; then
+    if [ "$REMOTE_OPTION" = "DOJOUP_PR" ]; then
+      say "Using $REMOTE_OPTION: $DOJOUP_PR"
       DOJOUP_BRANCH="refs/pull/$DOJOUP_PR/head"
     else
-      err "can't use --pr and --branch at the same time"
+      say "Using $REMOTE_OPTION: ${!REMOTE_OPTION}"
     fi
   fi
 
@@ -89,7 +93,13 @@ main() {
   # Install by downloading binaries
   if [[ "$DOJOUP_REPO" == "dojoengine/dojo" && -z "$DOJOUP_BRANCH" && -z "$DOJOUP_COMMIT" ]]; then
     DOJOUP_VERSION=${DOJOUP_VERSION-stable}
-    DOJOUP_TAG=$DOJOUP_VERSION
+
+    if [ -n "$DOJOUP_USER_TAG" ]; then
+        DOJOUP_TAG=$DOJOUP_USER_TAG
+        DOJOUP_VERSION=$DOJOUP_USER_TAG
+    else
+        DOJOUP_TAG=$DOJOUP_VERSION
+    fi
     
     # Normalize versions (handle channels, versions without v prefix
     if [[ "$DOJOUP_VERSION" == "stable" ]]; then
@@ -156,7 +166,7 @@ main() {
     echo $BIN_ARCHIVE_URL
 
     # Display message only if version is not mentioned by user.
-    if [ ! -n "$DOJOUP_USER_VERSION" ]; then
+    if [ ! -n "$DOJOUP_USER_VERSION" ] && [ ! -n "$DOJOUP_USER_TAG" ]; then
       say "downloading latest dojo"
     fi
 
@@ -319,6 +329,26 @@ download() {
     else
       wget --show-progress -qO- "$1"
     fi
+  fi
+}
+
+# Function to check mutual exclusivity of options.
+check_exclusive_options() {
+  local options=("$@")
+  local count=0
+  local set_option=""
+
+  for option in "${options[@]}"; do
+    if [ -n "${!option}" ]; then
+      ((count++))
+      set_option="$option"
+    fi
+  done
+
+  if [ "$count" -gt 1 ]; then
+    err "only one of ${options[*]} can be specified"
+  elif [ "$count" -eq 1 ]; then
+    echo "$set_option"
   fi
 }
 

@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io::Write;
 use std::iter::zip;
@@ -16,7 +16,6 @@ use cairo_lang_formatter::format_string;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_starknet::compile::compile_prepared_db;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
-use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_starknet_classes::abi;
 use cairo_lang_starknet_classes::allowed_libfuncs::{AllowedLibfuncsError, ListSelector};
 use cairo_lang_starknet_classes::contract_class::ContractClass;
@@ -25,12 +24,10 @@ use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 use dojo_world::manifest::{
-    AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
-    ABIS_DIR, BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR,
-    MODELS_DIR, WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
+    AbiFormat, Class, DojoContract, DojoModel, Manifest, ManifestMethods, ABIS_DIR,
+    BASE_CONTRACT_TAG, BASE_DIR, BASE_QUALIFIED_PATH, CONTRACTS_DIR, MANIFESTS_DIR, MODELS_DIR,
+    WORLD_CONTRACT_TAG, WORLD_QUALIFIED_PATH,
 };
-use dojo_world::metadata::get_namespace_config_from_ws;
-use indoc::formatdoc;
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CairoCompilationUnit, CompilationUnitAttributes, Compiler};
@@ -43,9 +40,7 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::Felt;
 use tracing::{debug, trace, trace_span};
 
-use crate::inline_macros::utils::{SYSTEM_READS, SYSTEM_WRITES};
-use crate::plugin::{ComputedValuesAuxData, DojoAuxData, Model};
-use crate::semantics::utils::find_module_rw;
+use crate::plugin::{DojoAuxData, Model};
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
 
@@ -151,7 +146,7 @@ impl Compiler for DojoCompiler {
                     invalid_libfunc,
                     allowed_libfuncs_list_name: _,
                 }) => {
-                    let diagnostic = formatdoc! {r#"
+                    let diagnostic = format! {r#"
                         Contract `{contract_name}` ({qualified_path}) includes `{invalid_libfunc}` function that is not allowed in the default libfuncs for public Starknet networks (mainnet, sepolia).
                         It will work on Katana, but don't forget to remove it before deploying on a public Starknet network.
                     "#};
@@ -264,8 +259,6 @@ fn update_files(
     compiled_artifacts: HashMap<String, (Felt, ContractClass)>,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
-    let namespace_config = get_namespace_config_from_ws(ws)?;
-
     let profile_name =
         ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
     let relative_manifest_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name);
@@ -315,7 +308,6 @@ fn update_files(
 
     let mut models = BTreeMap::new();
     let mut contracts = BTreeMap::new();
-    let mut computed = BTreeMap::new();
 
     if let Some(external_contracts) = external_contracts {
         let external_crate_ids = collect_external_crate_ids(db, external_contracts);
@@ -332,45 +324,41 @@ fn update_files(
                 .filter_map(|info| info.as_ref().map(|i| &i.aux_data))
                 .filter_map(|aux_data| aux_data.as_ref().map(|aux_data| aux_data.0.as_any()))
             {
-                if let Some(aux_data) = aux_data.downcast_ref::<ComputedValuesAuxData>() {
-                    get_dojo_computed_values(db, module_id, aux_data, &mut computed);
-                } else if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
-                    for system in &dojo_aux_data.systems {
+                if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
+                    // For the contracts, the `module_id` is the parent module of the actual
+                    // contract. Hence, the full path of the contract must be
+                    // reconstructed with the contract's name inside the
+                    // `get_dojo_contract_artifacts` function.
+                    for contract in &dojo_aux_data.contracts {
                         contracts.extend(get_dojo_contract_artifacts(
                             db,
                             module_id,
-                            &naming::get_tag(&system.namespace, &system.name),
+                            &naming::get_tag(&contract.namespace, &contract.name),
                             &compiled_artifacts,
+                            &contract.systems,
                         )?);
                     }
 
+                    // For the models, the `struct_id` is the full path including the struct's name
+                    // already. The `get_dojo_model_artifacts` function handles
+                    // the reconstruction of the full path by also using lower
+                    // case for the model's name to match the compiled artifacts of the generated
+                    // contract.
                     models.extend(get_dojo_model_artifacts(
                         db,
                         &dojo_aux_data.models,
                         *module_id,
                         &compiled_artifacts,
                     )?);
-                } else if let Some(aux_data) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
-                    contracts.extend(get_dojo_contract_artifacts(
-                        db,
-                        module_id,
-                        &naming::get_tag(&namespace_config.default, &aux_data.contract_name),
-                        &compiled_artifacts,
-                    )?);
                 }
+
+                // StarknetAuxData shouldn't be required. Every dojo contract and model are starknet
+                // contracts under the hood. But the dojo aux data are attached to
+                // the parent module of the actual contract, so StarknetAuxData will
+                // only contain the contract's name.
             }
         }
     }
-
-    // `get_dojo_computed_values()` uses the module name as contract name to build the `computed`
-    // variable. That means, the namespace of the contract is not taken into account,
-    // but should be retrieved from the dojo::contract attribute.
-    computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
-        let contract_data = contracts
-            .get_mut(&contract.to_string())
-            .expect("Error: Computed value contract doesn't exist.");
-        contract_data.0.inner.computed = computed_value_entrypoint;
-    });
 
     for model in &models {
         contracts.remove(model.0.as_str());
@@ -479,6 +467,7 @@ fn get_dojo_model_artifacts(
                                 abi: None,
                                 members: model.members.clone(),
                                 original_class_hash: class_hash,
+                                qualified_path,
                             },
                             naming::get_filename_from_tag(&tag),
                         ),
@@ -495,68 +484,41 @@ fn get_dojo_model_artifacts(
     Ok(models)
 }
 
-fn get_dojo_computed_values(
-    db: &RootDatabase,
-    module_id: &ModuleId,
-    aux_data: &ComputedValuesAuxData,
-    computed_values: &mut BTreeMap<SmolStr, Vec<ComputedValueEntrypoint>>,
-) {
-    if let ModuleId::Submodule(_) = module_id {
-        let module_name = module_id.full_path(db);
-        let module_name = SmolStr::from(module_name);
-
-        if !computed_values.contains_key(&module_name) {
-            computed_values.insert(module_name.clone(), vec![]);
-        }
-        let computed_vals = computed_values.get_mut(&module_name).unwrap();
-        computed_vals.push(ComputedValueEntrypoint {
-            contract: module_name,
-            entrypoint: aux_data.entrypoint.clone(),
-            tag: aux_data.tag.clone(),
-        })
-    }
-}
-
 #[allow(clippy::type_complexity)]
 fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
     tag: &str,
     compiled_classes: &HashMap<String, (Felt, ContractClass)>,
+    systems: &[String],
 ) -> anyhow::Result<HashMap<String, (Manifest<DojoContract>, ContractClass, ModuleId)>> {
     let mut result = HashMap::new();
 
     if !matches!(naming::get_name_from_tag(tag).as_str(), "world" | "resource_metadata" | "base") {
-        let qualified_path = module_id.full_path(db).to_string();
+        // For the contracts, the `module_id` is the parent module of the actual contract.
+        // Hence, the full path of the contract must be reconstructed with the contract's name.
+        let (_, contract_name) = naming::split_tag(tag)?;
+        let contract_qualified_path =
+            format!("{}{}{}", module_id.full_path(db), CAIRO_PATH_SEPARATOR, contract_name);
 
-        if let Some((class_hash, class)) = compiled_classes.get(&qualified_path) {
-            let reads = SYSTEM_READS
-                .lock()
-                .unwrap()
-                .get(&qualified_path as &str)   // should use tag instead of qualified_path
-                .map_or_else(Vec::new, |models| {
-                    models.clone().into_iter().collect::<BTreeSet<_>>().into_iter().collect()
-                });
-
-            let writes = SYSTEM_WRITES
-                .lock()
-                .unwrap()
-                .get(&qualified_path as &str)   // should use tag instead of qualified_path
-                .map_or_else(Vec::new, |write_ops| find_module_rw(db, module_id, write_ops));
-
+        if let Some((class_hash, class)) =
+            compiled_classes.get(&contract_qualified_path.to_string())
+        {
             let manifest = Manifest::new(
                 DojoContract {
                     tag: tag.to_string(),
-                    writes,
-                    reads,
+                    writes: vec![],
+                    reads: vec![],
                     class_hash: *class_hash,
                     original_class_hash: *class_hash,
+                    systems: systems.to_vec(),
                     ..Default::default()
                 },
                 naming::get_filename_from_tag(tag),
             );
 
-            result.insert(qualified_path.to_string(), (manifest, class.clone(), *module_id));
+            result
+                .insert(contract_qualified_path.to_string(), (manifest, class.clone(), *module_id));
         }
     }
 

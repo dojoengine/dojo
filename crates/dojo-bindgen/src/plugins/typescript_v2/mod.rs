@@ -454,7 +454,6 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
 
         for field in &token.inners {
             let mapped = TypeScriptV2Plugin::map_type(&field.token);
-            format!("{}: {};", field.name, mapped);
             native_fields.push(format!("{}: {};", field.name, mapped));
         }
 
@@ -658,7 +657,7 @@ mod tests {
             &config.manifest_path().to_path_buf(),
             "dojo_examples",
             "dev",
-            dojo_metadata.skip_migration,
+            dojo_metadata.migration.map(|m| m.skip_contracts),
         )
         .unwrap();
 

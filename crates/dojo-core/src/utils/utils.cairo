@@ -15,7 +15,7 @@ pub fn bytearray_hash(data: @ByteArray) -> felt252 {
 
 /// Computes the selector of a resource from the namespace and the name.
 pub fn selector_from_names(namespace: @ByteArray, name: @ByteArray) -> felt252 {
-    poseidon_hash_span(array![bytearray_hash(namespace), bytearray_hash(name)].span())
+    poseidon_hash_span([bytearray_hash(namespace), bytearray_hash(name)].span())
 }
 
 /// Computes the entity id from the keys.
@@ -107,5 +107,5 @@ pub fn sum<T, +Drop<T>, +Copy<T>, +AddAssign<T, T>, +Zero<T>>(arr: Array<Option<
 
 /// Combine parent and child keys to build one full key.
 pub fn combine_key(parent_key: felt252, child_key: felt252) -> felt252 {
-    poseidon_hash_span(array![parent_key, child_key].span())
+    poseidon_hash_span([parent_key, child_key].span())
 }

@@ -4,9 +4,10 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use base64::engine::general_purpose;
 use base64::Engine as _;
-use cainome::cairo_serde::{ByteArray, CairoSerde};
+use cainome::cairo_serde::{ByteArray, CairoSerde, Zeroable};
 use dojo_world::contracts::world::WorldContractReader;
-use dojo_world::metadata::{Uri, WorldMetadata};
+use dojo_world::metadata::WorldMetadata;
+use dojo_world::uri::Uri;
 use reqwest::Client;
 use starknet::core::types::{Event, Felt, TransactionReceiptWithBlockInfo};
 use starknet::providers::Provider;
@@ -68,9 +69,13 @@ where
 
         let db = db.clone();
         let resource = *resource;
-        tokio::spawn(async move {
-            try_retrieve(db, resource, uri_str).await;
-        });
+
+        // Only retrieve metadata for the World contract.
+        if resource.is_zero() {
+            tokio::spawn(async move {
+                try_retrieve(db, resource, uri_str).await;
+            });
+        }
 
         Ok(())
     }

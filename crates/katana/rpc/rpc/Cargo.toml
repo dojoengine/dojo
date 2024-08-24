@@ -13,6 +13,7 @@ futures.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
 katana-core.workspace = true
 katana-executor.workspace = true
+katana-pool.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 katana-rpc-api.workspace = true
@@ -29,6 +30,7 @@ alloy-primitives = { workspace = true, features = [ "serde" ] }
 assert_matches.workspace = true
 cainome.workspace = true
 dojo-test-utils.workspace = true
+dojo-utils.workspace = true
 dojo-world.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-cairo.workspace = true

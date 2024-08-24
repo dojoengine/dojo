@@ -1,8 +1,9 @@
 kind = "DojoModel"
-class_hash = "0x5cbece2ac875c6040300d7530bada7a3469a0e8e7584f29fcfaa2626ca1f6de"
-original_class_hash = "0x5cbece2ac875c6040300d7530bada7a3469a0e8e7584f29fcfaa2626ca1f6de"
+class_hash = "0x783cecd986c0f03f8ac70318f67d57ea8072db7d4d135d54585f4de33c879ad"
+original_class_hash = "0x783cecd986c0f03f8ac70318f67d57ea8072db7d4d135d54585f4de33c879ad"
 abi = "manifests/release/base/abis/models/dojo_examples_weapons-Flatbow-22f5bd16.json"
 tag = "dojo_examples_weapons-Flatbow"
+qualified_path = "armory::flatbow"
 manifest_name = "dojo_examples_weapons-Flatbow-22f5bd16"
 
 [[members]]

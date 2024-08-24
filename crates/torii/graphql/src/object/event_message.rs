@@ -3,23 +3,22 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
-use async_recursion::async_recursion;
-use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::EventMessage;
 
+use super::entity::model_data_recursive_query;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    EVENT_ID_COLUMN, EVENT_MESSAGE_NAMES, EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
+    DATETIME_FORMAT, EVENT_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, EVENT_MESSAGE_NAMES,
+    EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
-use crate::query::{type_mapping_query, value_mapping_from_row};
-use crate::types::TypeData;
-use crate::utils::extract;
+use crate::query::type_mapping_query;
+use crate::utils;
 
 #[derive(Debug)]
 pub struct EventMessageObject;
@@ -106,11 +105,15 @@ impl EventMessageObject {
             (Name::new("eventId"), Value::from(entity.event_id)),
             (
                 Name::new("createdAt"),
-                Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Value::from(entity.created_at.format(DATETIME_FORMAT).to_string()),
             ),
             (
                 Name::new("updatedAt"),
-                Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Value::from(entity.updated_at.format(DATETIME_FORMAT).to_string()),
+            ),
+            (
+                Name::new("executedAt"),
+                Value::from(entity.executed_at.format(DATETIME_FORMAT).to_string()),
             ),
         ])
     }
@@ -123,13 +126,13 @@ fn model_union_field() -> Field {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
 
-                    let entity_id = extract::<String>(indexmap, "id")?;
+                    let entity_id = utils::extract::<String>(indexmap, "id")?;
                     // fetch name from the models table
                     // using the model id (hashed model name)
-                    let model_ids: Vec<(String, String)> = sqlx::query_as(
-                        "SELECT id, name
+                    let model_ids: Vec<(String, String, String)> = sqlx::query_as(
+                        "SELECT id, namespace, name
                         FROM models
-                        WHERE id IN (
+                        WHERE id IN (    
                             SELECT model_id
                             FROM event_model
                             WHERE entity_id = ?
@@ -140,20 +143,30 @@ fn model_union_field() -> Field {
                     .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for (id, name) in model_ids {
-                        // the model id is used as the id for the model members
+                    for (id, namespace, name) in model_ids {
+                        // the model id in the model mmeebrs table is the hashed model name (id)
                         let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
-                        // but the model data tables use the unhashed model name as the table name
-                        let data = model_data_recursive_query(
+                        // but the table name for the model data is the unhashed model name
+                        let data: ValueMapping = match model_data_recursive_query(
                             &mut conn,
-                            vec![name.clone()],
+                            EVENT_MESSAGE_ID_COLUMN,
+                            vec![format!("{namespace}-{name}")],
                             &entity_id,
+                            &[],
                             &type_mapping,
+                            false,
                         )
-                        .await?;
+                        .await?
+                        {
+                            Value::Object(map) => map,
+                            _ => unreachable!(),
+                        };
 
-                        results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
+                        results.push(FieldValue::with_type(
+                            FieldValue::owned_any(data),
+                            utils::type_name_from_names(&namespace, &name),
+                        ))
                     }
 
                     Ok(Some(FieldValue::list(results)))
@@ -162,34 +175,4 @@ fn model_union_field() -> Field {
             }
         })
     })
-}
-
-// TODO: flatten query
-#[async_recursion]
-pub async fn model_data_recursive_query(
-    conn: &mut PoolConnection<Sqlite>,
-    path_array: Vec<String>,
-    entity_id: &str,
-    type_mapping: &TypeMapping,
-) -> sqlx::Result<ValueMapping> {
-    // For nested types, we need to remove prefix in path array
-    let namespace = format!("{}_", path_array[0]);
-    let table_name = &path_array.join("$").replace(&namespace, "");
-    let query = format!("SELECT * FROM {} WHERE event_message_id = '{}'", table_name, entity_id);
-    let row = sqlx::query(&query).fetch_one(conn.as_mut()).await?;
-    let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
-
-    for (field_name, type_data) in type_mapping {
-        if let TypeData::Nested((_, nested_mapping)) = type_data {
-            let mut nested_path = path_array.clone();
-            nested_path.push(field_name.to_string());
-
-            let nested_values =
-                model_data_recursive_query(conn, nested_path, entity_id, nested_mapping).await?;
-
-            value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
-        }
-    }
-
-    Ok(value_mapping)
 }

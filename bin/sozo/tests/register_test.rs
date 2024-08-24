@@ -1,13 +1,11 @@
 mod utils;
 
+use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::CompilerTestSetup;
-use dojo_test_utils::migration::prepare_migration;
-use dojo_world::metadata::{dojo_metadata_from_workspace, get_default_namespace_from_ws};
-use dojo_world::migration::TxnConfig;
-use katana_runner::KatanaRunner;
+use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb::compiler::Profile;
 use scarb::ops;
-use sozo_ops::migration::execute_strategy;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
 use utils::snapbox::get_snapbox;
@@ -19,36 +17,33 @@ async fn reregister_models() {
 
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let dojo_metadata =
-        dojo_metadata_from_workspace(&ws).expect("No current package with dojo metadata found.");
 
+    let manifest_path = Utf8PathBuf::from(config.manifest_path().parent().unwrap());
     let target_path =
         ws.target_dir().path_existent().unwrap().join(ws.config().profile().to_string());
 
-    let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
+    let seq_config = KatanaRunnerConfig::default().with_db_dir(copy_spawn_and_move_db().as_str());
+    let sequencer = KatanaRunner::new_with_config(seq_config).expect("Failed to start runner.");
 
-    let migration = prepare_migration(
-        config.manifest_path().parent().unwrap().into(),
+    let (strat, _) = prepare_migration_with_world_and_seed(
+        manifest_path,
         target_path,
-        dojo_metadata.skip_migration,
-        &default_namespace,
+        None,
+        "dojo_examples",
+        "dojo_examples",
     )
     .unwrap();
-
-    let sequencer = KatanaRunner::new().expect("Failed to start runner.");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, TxnConfig::init_wait()).await.unwrap();
-    let world_address = &format!("0x{:x}", &migration.world_address);
+    let world_address = &format!("0x{:x}", &strat.world_address);
     let account_address = &format!("0x{:x}", account.address());
     let private_key =
         &format!("0x{:x}", sequencer.account_data(0).private_key.as_ref().unwrap().secret_scalar());
     let rpc_url = &sequencer.url().to_string();
 
-    let moves_model =
-        migration.models.iter().find(|m| m.diff.tag == "dojo_examples-Moves").unwrap();
+    let moves_model = strat.models.iter().find(|m| m.diff.tag == "dojo_examples-Moves").unwrap();
     let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local_class_hash);
     let args_vec = [
         "register",

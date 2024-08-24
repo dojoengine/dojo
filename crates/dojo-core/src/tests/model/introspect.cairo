@@ -145,7 +145,7 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
 }
 
 fn arr(item_layout: Layout) -> Layout {
-    Layout::Array(array![item_layout].span())
+    Layout::Array([item_layout].span())
 }
 
 #[test]
@@ -267,7 +267,7 @@ fn test_layout_of_struct_with_option() {
 #[test]
 fn test_layout_of_packed_struct() {
     let layout = Introspect::<Vec3>::layout();
-    let expected = Layout::Fixed(array![32, 32, 32].span());
+    let expected = Layout::Fixed([32, 32, 32].span());
 
     assert!(layout == expected);
 }
@@ -275,7 +275,7 @@ fn test_layout_of_packed_struct() {
 #[test]
 fn test_layout_of_inner_packed_struct() {
     let layout = Introspect::<Translation>::layout();
-    let expected = Layout::Fixed(array![32, 32, 32, 32, 32, 32].span());
+    let expected = Layout::Fixed([32, 32, 32, 32, 32, 32].span());
 
     assert!(layout == expected);
 }
@@ -290,7 +290,7 @@ fn test_layout_of_not_packed_inner_struct() {
 #[test]
 fn test_layout_of_packed_enum() {
     let layout = Introspect::<EnumPacked>::layout();
-    let expected = Layout::Fixed(array![8, 32].span());
+    let expected = Layout::Fixed([8, 32].span());
 
     assert!(layout == expected);
 }
@@ -298,7 +298,7 @@ fn test_layout_of_packed_enum() {
 #[test]
 fn test_layout_of_inner_packed_enum() {
     let layout = Introspect::<EnumInnerPacked>::layout();
-    let expected = Layout::Fixed(array![8, 8, 32, 32, 32, 32].span());
+    let expected = Layout::Fixed([8, 8, 32, 32, 32, 32].span());
 
     assert!(layout == expected);
 }

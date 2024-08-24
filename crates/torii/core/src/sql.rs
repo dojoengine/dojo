@@ -1,20 +1,20 @@
 use std::convert::TryInto;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::abi::model::Layout;
-use dojo_world::contracts::naming::compute_selector_from_names;
+use dojo_world::contracts::naming::{compute_selector_from_names, compute_selector_from_tag};
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 
-use super::World;
-use crate::model::ModelSQLReader;
+use crate::cache::{Model, ModelCache};
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
@@ -22,6 +22,7 @@ use crate::types::{
     Model as ModelRegistered,
 };
 use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
+use crate::World;
 
 type IsEventMessage = bool;
 type IsStoreUpdateMember = bool;
@@ -37,14 +38,11 @@ pub struct Sql {
     world_address: Felt,
     pub pool: Pool<Sqlite>,
     query_queue: QueryQueue,
+    model_cache: Arc<ModelCache>,
 }
 
 impl Sql {
-    pub async fn new(
-        pool: Pool<Sqlite>,
-        world_address: Felt,
-        world_class_hash: Felt,
-    ) -> Result<Self> {
+    pub async fn new(pool: Pool<Sqlite>, world_address: Felt) -> Result<Self> {
         let mut query_queue = QueryQueue::new(pool.clone());
 
         query_queue.enqueue(
@@ -52,17 +50,18 @@ impl Sql {
             vec![Argument::FieldElement(world_address), Argument::Int(0)],
         );
         query_queue.enqueue(
-            "INSERT OR IGNORE INTO worlds (id, world_address, world_class_hash) VALUES (?, ?, ?)",
-            vec![
-                Argument::FieldElement(world_address),
-                Argument::FieldElement(world_address),
-                Argument::FieldElement(world_class_hash),
-            ],
+            "INSERT OR IGNORE INTO worlds (id, world_address) VALUES (?, ?)",
+            vec![Argument::FieldElement(world_address), Argument::FieldElement(world_address)],
         );
 
         query_queue.execute_all().await?;
 
-        Ok(Self { pool, world_address, query_queue })
+        Ok(Self {
+            pool: pool.clone(),
+            world_address,
+            query_queue,
+            model_cache: Arc::new(ModelCache::new(pool)),
+        })
     }
 
     pub async fn head(&self) -> Result<(u64, Option<Felt>)> {
@@ -127,7 +126,7 @@ impl Sql {
              executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             // this is temporary until the model hash is precomputed
-            .bind(&format!("{:#x}", selector))
+            .bind(format!("{:#x}", selector))
             .bind(namespace)
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
@@ -246,8 +245,8 @@ impl Sql {
         let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
                                VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               updated_at=CURRENT_TIMESTAMP, event_id=EXCLUDED.event_id RETURNING \
-                               *";
+                               updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
+                               event_id=EXCLUDED.event_id RETURNING *";
         let mut event_message_updated: EventMessageUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
@@ -300,24 +299,77 @@ impl Sql {
         );
         self.query_queue.execute_all().await?;
 
+        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
+            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
+             = ? RETURNING *",
+        )
+        .bind(utc_dt_string_from_timestamp(block_timestamp))
+        .bind(event_id)
+        .bind(entity_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        update_entity.updated_model = Some(wrapped_ty);
+
+        SimpleBroker::publish(update_entity);
+
         Ok(())
     }
 
-    pub async fn delete_entity(&mut self, entity_id: Felt, entity: Ty) -> Result<()> {
+    pub async fn delete_entity(
+        &mut self,
+        entity_id: Felt,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
         let path = vec![entity.name()];
         // delete entity models data
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
 
-        // delete entity
-        let entity_deleted =
-            sqlx::query_as::<_, EntityUpdated>("DELETE FROM entities WHERE id = ? RETURNING *")
-                .bind(entity_id)
+        let deleted_entity_model =
+            sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
+                .bind(&entity_id)
+                .bind(format!("{:#x}", compute_selector_from_tag(&entity.name())))
+                .execute(&self.pool)
+                .await?;
+        if deleted_entity_model.rows_affected() == 0 {
+            // fail silently. we have no entity-model relation to delete.
+            // this can happen if a entity model that doesnt exist
+            // got deleted
+            return Ok(());
+        }
+
+        let mut update_entity = sqlx::query_as::<_, EntityUpdated>(
+            "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? WHERE id \
+             = ? RETURNING *",
+        )
+        .bind(utc_dt_string_from_timestamp(block_timestamp))
+        .bind(event_id)
+        .bind(&entity_id)
+        .fetch_one(&self.pool)
+        .await?;
+        update_entity.updated_model = Some(entity.clone());
+
+        let models_count =
+            sqlx::query_scalar::<_, u32>("SELECT count(*) FROM entity_model WHERE entity_id = ?")
+                .bind(&entity_id)
                 .fetch_one(&self.pool)
                 .await?;
 
-        SimpleBroker::publish(entity_deleted);
+        if models_count == 0 {
+            // delete entity
+            sqlx::query("DELETE FROM entities WHERE id = ?")
+                .bind(&entity_id)
+                .execute(&self.pool)
+                .await?;
+
+            update_entity.deleted = true;
+        }
+
+        SimpleBroker::publish(update_entity);
         Ok(())
     }
 
@@ -366,13 +418,8 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn model(&self, selector: Felt) -> Result<ModelSQLReader> {
-        match ModelSQLReader::new(selector, self.pool.clone()).await {
-            Ok(reader) => Ok(reader),
-            Err(e) => {
-                Err(anyhow::anyhow!("Failed to get model from db for selector {selector:#x}: {e}"))
-            }
-        }
+    pub async fn model(&self, selector: Felt) -> Result<Model> {
+        self.model_cache.model(&selector).await.map_err(|e| e.into())
     }
 
     /// Retrieves the keys definition for a given model.

@@ -7,13 +7,16 @@ version.workspace = true
 
 [dependencies]
 katana-core.workspace = true
+katana-db.workspace = true
 katana-executor.workspace = true
+katana-pool.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 katana-rpc.workspace = true
 katana-rpc-api.workspace = true
 
 anyhow.workspace = true
+dojo-metrics.workspace = true
 hyper.workspace = true
 jsonrpsee.workspace = true
 num-traits.workspace = true

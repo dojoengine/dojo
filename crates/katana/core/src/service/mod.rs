@@ -8,13 +8,13 @@ use std::task::{Context, Poll};
 use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
 use katana_executor::ExecutorFactory;
+use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::FieldElement;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
 use self::metrics::{BlockProducerMetrics, ServiceMetrics};
-use crate::pool::TransactionPool;
 
 pub mod block_producer;
 #[cfg(feature = "messaging")]
@@ -34,7 +34,7 @@ pub(crate) const LOG_TARGET: &str = "node";
 #[allow(missing_debug_implementations)]
 pub struct NodeService<EF: ExecutorFactory> {
     /// the pool that holds all transactions
-    pub(crate) pool: Arc<TransactionPool>,
+    pub(crate) pool: TxPool,
     /// creates new blocks
     pub(crate) block_producer: Arc<BlockProducer<EF>>,
     /// the miner responsible to select transactions from the `pool´
@@ -48,7 +48,7 @@ pub struct NodeService<EF: ExecutorFactory> {
 
 impl<EF: ExecutorFactory> NodeService<EF> {
     pub fn new(
-        pool: Arc<TransactionPool>,
+        pool: TxPool,
         miner: TransactionMiner,
         block_producer: Arc<BlockProducer<EF>>,
         #[cfg(feature = "messaging")] messaging: Option<MessagingService<EF>>,
@@ -107,9 +107,9 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                 }
             }
 
-            if let Poll::Ready(transactions) = pin.miner.poll(&pin.pool, cx) {
+            if let Poll::Ready(pool_txs) = pin.miner.poll(&pin.pool, cx) {
                 // miner returned a set of transaction that we feed to the producer
-                pin.block_producer.queue(transactions);
+                pin.block_producer.queue(pool_txs);
             } else {
                 // no progress made
                 break;
@@ -134,11 +134,7 @@ impl TransactionMiner {
         Self { rx: rx.fuse(), has_pending_txs: None }
     }
 
-    fn poll(
-        &mut self,
-        pool: &Arc<TransactionPool>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Vec<ExecutableTxWithHash>> {
+    fn poll(&mut self, pool: &TxPool, cx: &mut Context<'_>) -> Poll<Vec<ExecutableTxWithHash>> {
         // drain the notification stream
         while let Poll::Ready(Some(_)) = Pin::new(&mut self.rx).poll_next(cx) {
             self.has_pending_txs = Some(true);
@@ -149,12 +145,14 @@ impl TransactionMiner {
         }
 
         // take all the transactions from the pool
-        let transactions = pool.get_transactions();
+        let transactions =
+            pool.take_transactions().map(|tx| tx.tx.as_ref().clone()).collect::<Vec<_>>();
 
         if transactions.is_empty() {
             return Poll::Pending;
         }
 
+        self.has_pending_txs = Some(false);
         Poll::Ready(transactions)
     }
 }

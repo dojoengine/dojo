@@ -15,10 +15,10 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, ids, Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::system::Dependency;
+use dojo_world::config::NamespaceConfig;
 use dojo_world::contracts::naming;
-use dojo_world::metadata::{is_name_valid, NamespaceConfig};
 
-use crate::plugin::{DojoAuxData, SystemAuxData, DOJO_CONTRACT_ATTR};
+use crate::plugin::{ContractAuxData, DojoAuxData, DOJO_CONTRACT_ATTR};
 use crate::syntax::world_param::{self, WorldParamInjectionKind};
 use crate::syntax::{self_param, utils as syntax_utils};
 
@@ -36,6 +36,7 @@ pub struct ContractParameters {
 pub struct DojoContract {
     diagnostics: Vec<PluginDiagnostic>,
     dependencies: HashMap<smol_str::SmolStr, Dependency>,
+    systems: Vec<String>,
 }
 
 impl DojoContract {
@@ -50,7 +51,8 @@ impl DojoContract {
         let mut diagnostics = vec![];
         let parameters = get_parameters(db, module_ast, &mut diagnostics);
 
-        let mut system = DojoContract { diagnostics, dependencies: HashMap::new() };
+        let mut contract =
+            DojoContract { diagnostics, dependencies: HashMap::new(), systems: vec![] };
 
         let mut has_event = false;
         let mut has_storage = false;
@@ -67,7 +69,7 @@ impl DojoContract {
         };
 
         for (id, value) in [("name", &name.to_string()), ("namespace", &contract_namespace)] {
-            if !is_name_valid(value) {
+            if !NamespaceConfig::is_name_valid(value) {
                 return PluginResult {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
@@ -96,19 +98,19 @@ impl DojoContract {
                     if let ast::ModuleItem::Enum(ref enum_ast) = el {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
                             has_event = true;
-                            return system.merge_event(db, enum_ast.clone());
+                            return contract.merge_event(db, enum_ast.clone());
                         }
                     } else if let ast::ModuleItem::Struct(ref struct_ast) = el {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
                             has_storage = true;
-                            return system.merge_storage(db, struct_ast.clone());
+                            return contract.merge_storage(db, struct_ast.clone());
                         }
                     } else if let ast::ModuleItem::Impl(ref impl_ast) = el {
                         // If an implementation is not targetting the ContractState,
                         // the auto injection of self and world is not applied.
                         let trait_path = impl_ast.trait_path(db).node.get_text(db);
                         if trait_path.contains("<ContractState>") {
-                            return system.rewrite_impl(db, impl_ast.clone(), metadata);
+                            return contract.rewrite_impl(db, impl_ast.clone(), metadata);
                         }
                     } else if let ast::ModuleItem::FreeFunction(ref fn_ast) = el {
                         let fn_decl = fn_ast.declaration(db);
@@ -116,7 +118,7 @@ impl DojoContract {
 
                         if fn_name == DOJO_INIT_FN {
                             has_init = true;
-                            return system.handle_init_fn(db, fn_ast);
+                            return contract.handle_init_fn(db, fn_ast);
                         }
                     }
 
@@ -137,6 +139,8 @@ impl DojoContract {
                         fn $init_name$(self: @ContractState) {
                             assert(starknet::get_caller_address() == \
                      self.world().contract_address, 'Only world can init');
+                            assert(self.world().is_owner(self.selector(), \
+                     starknet::get_tx_info().account_contract_address), 'Only owner can init');
                         }
                     }
                 ",
@@ -149,11 +153,11 @@ impl DojoContract {
             }
 
             if !has_event {
-                body_nodes.append(&mut system.create_event())
+                body_nodes.append(&mut contract.create_event())
             }
 
             if !has_storage {
-                body_nodes.append(&mut system.create_storage())
+                body_nodes.append(&mut contract.create_storage())
             }
 
             let mut builder = PatchBuilder::new(db, module_ast);
@@ -161,7 +165,7 @@ impl DojoContract {
                 node: Box::new(RewriteNode::interpolate_patched(
                     "
                 #[starknet::contract]
-                mod $name$ {
+                pub mod $name$ {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
@@ -249,16 +253,17 @@ impl DojoContract {
                     content: code,
                     aux_data: Some(DynGeneratedFileAuxData::new(DojoAuxData {
                         models: vec![],
-                        systems: vec![SystemAuxData {
+                        contracts: vec![ContractAuxData {
                             name,
                             namespace: contract_namespace.clone(),
-                            dependencies: system.dependencies.values().cloned().collect(),
+                            dependencies: contract.dependencies.values().cloned().collect(),
+                            systems: contract.systems.clone(),
                         }],
                         events: vec![],
                     })),
                     code_mappings,
                 }),
-                diagnostics: system.diagnostics,
+                diagnostics: contract.diagnostics,
                 remove_original_item: true,
             };
         }
@@ -516,6 +521,11 @@ impl DojoContract {
         let return_type =
             fn_ast.declaration(db).signature(db).ret_ty(db).as_syntax_node().get_text(db);
 
+        // Consider the function as a system if no return type is specified.
+        if return_type.is_empty() {
+            self.systems.push(fn_name.to_string());
+        }
+
         let (params_str, was_world_injected) = self.rewrite_parameters(
             db,
             fn_ast.declaration(db).signature(db).parameters(db),
@@ -646,7 +656,7 @@ fn get_contract_namespace(
 ///
 /// Returns:
 /// * A [`ContractParameters`] object containing all the dojo::contract parameters with their
-/// default values if not set in the code.
+///   default values if not set in the code.
 fn get_parameters(
     db: &dyn SyntaxGroup,
     module_ast: &ast::ItemModule,

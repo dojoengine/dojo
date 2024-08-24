@@ -57,7 +57,7 @@ async fn deploy_contract(runner: &KatanaRunner, manifest_and_script: (&str, &str
 
     let out = Command::new("bash")
         .arg(manifest_and_script.1)
-        .env("RPC_URL", &runner.endpoint())
+        .env("RPC_URL", runner.endpoint())
         .output()
         .await
         .context("failed to start script subprocess")?;

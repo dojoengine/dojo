@@ -29,9 +29,9 @@ mod test;
 mod types;
 
 pub use types::{
-    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, DeploymentManifest, DojoContract,
-    DojoModel, Manifest, ManifestMethods, Member, OverlayClass, OverlayContract,
-    OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldContract, WorldMetadata,
+    AbiFormat, BaseManifest, Class, DeploymentManifest, DojoContract, DojoModel, Manifest,
+    ManifestMethods, Member, OverlayClass, OverlayContract, OverlayDojoContract, OverlayDojoModel,
+    OverlayManifest, WorldContract, WorldMetadata,
 };
 
 pub const WORLD_CONTRACT_TAG: &str = "dojo-world";
@@ -708,13 +708,7 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
         let namespace = model_event.namespace.to_string().expect("ASCII encoded namespace");
         let model_tag = naming::get_tag(&namespace, &model_name);
 
-        if let Some(current_class_hash) = models.get_mut(&model_tag) {
-            if current_class_hash == &model_event.prev_class_hash.into() {
-                *current_class_hash = model_event.class_hash.into();
-            }
-        } else {
-            models.insert(model_tag, model_event.class_hash.into());
-        }
+        models.insert(model_tag, model_event.class_hash.into());
     }
 
     // TODO: include address of the model in the manifest.

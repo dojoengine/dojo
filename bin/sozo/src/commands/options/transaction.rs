@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use clap::Args;
-use dojo_world::migration::{TxnAction, TxnConfig};
+use dojo_utils::{TxnAction, TxnConfig};
 use starknet::core::types::Felt;
 use tracing::trace;
 

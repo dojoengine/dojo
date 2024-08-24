@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
+use dojo_utils::{TransactionExt, TxnConfig};
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::migration::TxnConfig;
-use dojo_world::utils::TransactionExt;
 use scarb_ui::Ui;
 use starknet::accounts::{Call, ConnectedAccount};
 use starknet::core::types::Felt;

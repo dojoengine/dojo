@@ -42,4 +42,7 @@ pub enum Error {
 
     #[error("Invalid message provided: {0}")]
     InvalidMessageError(String),
+
+    #[error("Invalid type provided: {0}")]
+    InvalidTypeError(String),
 }

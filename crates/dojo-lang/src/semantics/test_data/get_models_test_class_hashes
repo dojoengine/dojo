@@ -1,0 +1,89 @@
+//! > Test ok empty (expected to fail due to missing dojo_manifests_dir)
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+get_models_test_class_hashes!()
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Failed to load models and namespaces, ensure you have run `sozo build` first.
+ --> lib.cairo:2:1
+get_models_test_class_hashes!()
+^*****************************^
+
+//! > ==========================================================================
+
+//! > Test bad params
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+get_models_test_class_hashes!("ns1")
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: The list of namespaces should be a fixed size array of strings.
+ --> lib.cairo:2:31
+get_models_test_class_hashes!("ns1")
+                              ^***^
+
+//! > ==========================================================================
+
+//! > Test too much params
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+get_models_test_class_hashes!("ns1", ["ns2"])
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "get_models_test_class_hashes!(["ns1", "ns2")]" or "get_models_test_class_hashes!()".
+ --> lib.cairo:2:1
+get_models_test_class_hashes!("ns1", ["ns2"])
+^*******************************************^
+
+//! > ==========================================================================
+
+//! > Test ok array (expected to fail due to missing dojo_manifests_dir)
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+get_models_test_class_hashes!(["ns1", "ns2"])
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Failed to load models and namespaces, ensure you have run `sozo build` first.
+ --> lib.cairo:2:1
+get_models_test_class_hashes!(["ns1", "ns2"])
+^*******************************************^

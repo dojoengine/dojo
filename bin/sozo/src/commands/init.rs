@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
-use anyhow::{ensure, Result};
+use anyhow::{ensure, Context, Result};
 use clap::Args;
 use scarb::core::Config;
 use tracing::trace;
@@ -13,7 +13,11 @@ pub struct InitArgs {
     #[arg(help = "Target directory")]
     path: Option<PathBuf>,
 
-    #[arg(help = "Parse a full git url or a url path", default_value = "dojoengine/dojo-starter")]
+    #[arg(
+        long,
+        help = "Parse a full git url or a url path",
+        default_value = "dojoengine/dojo-starter"
+    )]
     template: String,
 
     #[arg(long, help = "Initialize a new Git repository")]
@@ -54,7 +58,12 @@ impl InitArgs {
             "https://github.com/".to_string() + &template
         };
 
-        clone_repo(&repo_url, &target_dir, config)?;
+        let sozo_version = match get_sozo_version() {
+            Ok(version) => version,
+            Err(e) => return Err(e.context("Failed to get Sozo version")),
+        };
+
+        clone_repo(&repo_url, &target_dir, &sozo_version, config)?;
 
         // Navigate to the newly cloned repo.
         let initial_dir = current_dir()?;
@@ -79,9 +88,58 @@ impl InitArgs {
     }
 }
 
-fn clone_repo(url: &str, path: &Path, config: &Config) -> Result<()> {
-    config.ui().print(format!("Cloning project template from {}...", url));
-    Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
+fn get_sozo_version() -> Result<String> {
+    let output = Command::new("sozo")
+        .arg("--version")
+        .output()
+        .context("Failed to execute `sozo --version` command")?;
+
+    let version_string = String::from_utf8(output.stdout)
+        .context("Failed to parse `sozo --version` output as UTF-8")?;
+
+    if let Some(first_line) = version_string.lines().next() {
+        if let Some(version) = first_line.split_whitespace().nth(1) {
+            return Ok(version.to_string());
+        }
+    }
+
+    Err(anyhow::anyhow!("Failed to parse sozo version"))
+}
+
+fn check_tag_exists(url: &str, version: &str) -> Result<bool> {
+    let output = Command::new("git").args(["ls-remote", "--tags", url]).output()?;
+
+    let output_str = String::from_utf8(output.stdout)?;
+    let tag_exists = output_str.contains(&format!("refs/tags/v{}", version));
+
+    Ok(tag_exists)
+}
+
+fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<()> {
+    // Check if the version tag exists in the repository
+    let tag_exists = check_tag_exists(url, version)?;
+
+    if tag_exists {
+        config.ui().print(format!("Cloning project template from {}...", url));
+        Command::new("git")
+            .args([
+                "clone",
+                "--branch",
+                &format!("v{}", version),
+                "--single-branch",
+                "--recursive",
+                url,
+                path.to_str().unwrap(),
+            ])
+            .output()?;
+    } else {
+        config.ui().warn(
+            "Couldn't find template for your current sozo version. Getting the latest version 
+            instead.",
+        );
+        Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
+    }
+
     trace!("Repository cloned successfully.");
     Ok(())
 }

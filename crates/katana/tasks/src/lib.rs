@@ -1,3 +1,8 @@
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
+mod manager;
+mod task;
+
 use std::any::Any;
 use std::future::Future;
 use std::panic::{self, AssertUnwindSafe};
@@ -6,7 +11,9 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use futures::channel::oneshot;
+pub use manager::*;
 use rayon::ThreadPoolBuilder;
+pub use task::*;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 

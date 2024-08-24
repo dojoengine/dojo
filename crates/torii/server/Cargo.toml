@@ -7,16 +7,16 @@ version.workspace = true
 
 [dependencies]
 base64.workspace = true
-http-body = "0.4.5"
 http.workspace = true
-hyper-reverse-proxy = { git = "https://github.com/tarrencev/hyper-reverse-proxy" }
+http-body = "0.4.5"
 hyper.workspace = true
+hyper-reverse-proxy = { git = "https://github.com/tarrencev/hyper-reverse-proxy" }
 indexmap.workspace = true
 lazy_static.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tokio-util = "0.7.7"
 tokio.workspace = true
-tower-http.workspace = true
+tokio-util = "0.7.7"
 tower.workspace = true
+tower-http.workspace = true
 tracing.workspace = true

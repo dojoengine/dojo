@@ -38,9 +38,12 @@ pub struct Entity {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    // if updated_model is None, then the entity has been deleted
+
+    // this should never be None
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
+    #[sqlx(skip)]
+    pub deleted: bool,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -53,7 +56,7 @@ pub struct EventMessage {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 
-    // this should never be None. as a EventMessage cannot be deleted
+    // this should never be None
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
 }

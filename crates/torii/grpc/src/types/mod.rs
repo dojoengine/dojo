@@ -59,7 +59,7 @@ pub struct MemberClause {
     pub model: String,
     pub member: String,
     pub operator: ComparisonOperator,
-    pub value: Value,
+    pub value: Primitive,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -166,7 +166,6 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
         Ok(dojo_types::WorldMetadata {
             models,
             world_address: Felt::from_str(&value.world_address)?,
-            world_class_hash: Felt::from_str(&value.world_class_hash)?,
         })
     }
 }

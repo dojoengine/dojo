@@ -7,6 +7,3 @@ description = "An armory of epic weapons."
 dojo.workspace = true
 
 [lib]
-
-[tool.dojo.world]
-namespace = { default = "armory" }

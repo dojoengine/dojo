@@ -1,0 +1,23 @@
+[world]
+description = "example world"
+name = "example"
+seed = "dojo_examples"
+
+[namespace]
+default = "dojo_examples"
+# remapping can be done at tag level, or for the whole namespace.
+# In this example, `armory-Flatbow` model will belong to `dojo_examples_weapons` namespace, and all `bestiary` models will belong to the `dojo_examples_foes` namespace when compiled into `spawn-and-move`.
+mappings = { "armory-Flatbow" = "dojo_examples_weapons", "bestiary" = "dojo_examples_foes" }
+
+[env]
+rpc_url = "http://localhost:5050/"
+# Default account for katana with seed = 0
+account_address = "0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"
+private_key = "0x1800000000300000180000000000030000000000003006001800006600"
+world_address = "0x577ff0295103774d1bedd597a1c5673670eea0bb2cdeba6b8205d79396825b3"
+
+[migration]
+skip_contracts = [
+    "dojo_examples::mock_token::mock_token",
+    "dojo_examples::models::mock_token",
+]

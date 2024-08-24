@@ -104,10 +104,9 @@ pub struct DojoContract {
     #[serde(default)]
     pub writes: Vec<String>,
     #[serde(default)]
-    pub computed: Vec<ComputedValueEntrypoint>,
-    #[serde(default)]
     pub init_calldata: Vec<String>,
     pub tag: String,
+    pub systems: Vec<String>,
 }
 
 /// Represents a declaration of a model.
@@ -123,6 +122,7 @@ pub struct DojoModel {
     pub original_class_hash: Felt,
     pub abi: Option<AbiFormat>,
     pub tag: String,
+    pub qualified_path: String,
 }
 
 #[serde_as]
@@ -203,17 +203,6 @@ pub struct Member {
     #[serde(rename = "type")]
     pub ty: String,
     pub key: bool,
-}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct ComputedValueEntrypoint {
-    // Name of the contract containing the entrypoint
-    pub contract: SmolStr,
-    // Name of entrypoint to get computed value
-    pub entrypoint: SmolStr,
-    // Component to compute for
-    pub tag: Option<String>,
 }
 
 impl From<dojo_types::schema::Member> for Member {

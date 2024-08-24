@@ -5,8 +5,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Result;
+use cainome::rs::abigen_legacy;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use katana_core::sequencer::SequencerConfig;
+use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_rpc_types::receipt::ReceiptBlock;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
@@ -15,6 +18,7 @@ use starknet::core::types::{
     TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
+use starknet::macros::felt;
 use starknet::providers::Provider;
 
 mod common;
@@ -174,4 +178,48 @@ async fn test_send_declare_and_deploy_legacy_contract() {
     );
 
     sequencer.stop().expect("failed to stop sequencer");
+}
+
+#[tokio::test]
+async fn estimate_fee() -> Result<()> {
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
+    let provider = sequencer.provider();
+    let account = sequencer.account();
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    abigen_legacy!(Erc20Token, "crates/katana/rpc/rpc/tests/test_data/erc20.json");
+    let contract = Erc20Token::new(DEFAULT_FEE_TOKEN_ADDRESS.into(), &account);
+
+    // setup contract function params
+    let recipient = felt!("0x1");
+    let amount = Uint256 { low: felt!("0x1"), high: Felt::ZERO };
+
+    // send a valid transaction first to increment the nonce (so that we can test nonce < current
+    // nonce later)
+    let result = contract.transfer(&recipient, &amount).send().await?;
+
+    // wait until the tx is included in a block
+    dojo_utils::TransactionWaiter::new(result.transaction_hash, &provider).await?;
+
+    // estimate fee with current nonce (the expected nonce)
+    let nonce = provider.get_nonce(BlockId::Tag(BlockTag::Pending), account.address()).await?;
+    let result = contract.transfer(&recipient, &amount).nonce(nonce).estimate_fee().await;
+    assert!(result.is_ok(), "estimate should succeed with nonce == current nonce");
+
+    // estimate fee with arbitrary nonce < current nonce
+    //
+    // here we're essentially estimating a transaction with a nonce that has already been
+    // used, so it should fail.
+    let nonce = nonce - 1;
+    let result = contract.transfer(&recipient, &amount).nonce(nonce).estimate_fee().await;
+    assert!(result.is_err(), "estimate should fail with nonce < current nonce");
+
+    // estimate fee with arbitrary nonce >= current nonce
+    let nonce = felt!("0x1337");
+    let result = contract.transfer(&recipient, &amount).nonce(nonce).estimate_fee().await;
+    assert!(result.is_ok(), "estimate should succeed with nonce >= current nonce");
+
+    Ok(())
 }

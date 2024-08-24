@@ -13,16 +13,17 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
-use clap::Parser;
-use common::parse::{parse_socket_address, parse_url};
+use clap::{ArgAction, Parser};
 use dojo_metrics::{metrics_process, prometheus_exporter};
+use dojo_utils::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
-use starknet::core::types::{BlockId, BlockTag, Felt};
+use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::JsonRpcClient;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -109,12 +110,16 @@ struct Args {
     explorer: bool,
 
     /// Chunk size of the events page when indexing using events
-    #[arg(long, default_value = "1000")]
+    #[arg(long, default_value = "1024")]
     events_chunk_size: u64,
 
     /// Enable indexing pending blocks
-    #[arg(long)]
+    #[arg(long, action = ArgAction::Set, default_value_t = true)]
     index_pending: bool,
+
+    /// Polling interval in ms
+    #[arg(long, default_value = "500")]
+    polling_interval: u64,
 }
 
 #[tokio::main]
@@ -162,9 +167,7 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
 
-    let class_hash =
-        provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), args.world_address).await?;
-    let db = Sql::new(pool.clone(), args.world_address, class_hash).await?;
+    let db = Sql::new(pool.clone(), args.world_address).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
@@ -190,7 +193,7 @@ async fn main() -> anyhow::Result<()> {
             start_block: args.start_block,
             events_chunk_size: args.events_chunk_size,
             index_pending: args.index_pending,
-            ..Default::default()
+            polling_interval: Duration::from_millis(args.polling_interval),
         },
         shutdown_tx.clone(),
         Some(block_tx),
@@ -249,6 +252,7 @@ async fn main() -> anyhow::Result<()> {
             listen_addr,
             prometheus_handle,
             metrics_process::Collector::default(),
+            Vec::new(),
         )
         .await?;
     }

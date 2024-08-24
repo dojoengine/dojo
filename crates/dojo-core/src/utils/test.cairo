@@ -37,27 +37,39 @@ pub fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> Contract
 /// # Returns
 /// * address of contract deployed
 pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> ContractAddress {
-    deploy_contract(class_hash, array![world.contract_address.into()].span())
+    deploy_contract(class_hash, [world.contract_address.into()].span())
 }
 
-pub fn spawn_test_world(namespace: ByteArray, models: Array<felt252>) -> IWorldDispatcher {
+/// Spawns a test world registering namespaces and models.
+///
+/// # Arguments
+///
+/// * `namespaces` - Namespaces to register.
+/// * `models` - Models to register.
+///
+/// # Returns
+///
+/// * World dispatcher
+pub fn spawn_test_world(namespaces: Span<ByteArray>, models: Span<felt252>) -> IWorldDispatcher {
     let salt = core::testing::get_available_gas();
 
-    // deploy world
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
         salt.into(),
-        array![base::TEST_CLASS_HASH].span(),
+        [base::TEST_CLASS_HASH].span(),
         false
     )
         .unwrap();
 
     let world = IWorldDispatcher { contract_address: world_address };
 
-    // register namespace
-    world.register_namespace(namespace);
+    // Register all namespaces to ensure correct registration of models.
+    let mut namespaces = namespaces;
+    while let Option::Some(namespace) = namespaces.pop_front() {
+        world.register_namespace(namespace.clone());
+    };
 
-    // register models
+    // Register all models.
     let mut index = 0;
     loop {
         if index == models.len() {
@@ -69,7 +81,6 @@ pub fn spawn_test_world(namespace: ByteArray, models: Array<felt252>) -> IWorldD
 
     world
 }
-
 
 #[derive(Drop)]
 pub struct GasCounter {

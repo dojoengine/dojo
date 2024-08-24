@@ -74,14 +74,20 @@ pub fn transact<S: StateReader>(
     ) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError> {
         let validate = !simulation_flags.skip_validate;
         let charge_fee = !simulation_flags.skip_fee_transfer;
+        // Blockifier doesn't provide a way to fully skip nonce check during the tx validation
+        // stage. The `nonce_check` flag in `tx.execute()` only 'relaxes' the check for
+        // nonce that is equal or higher than the current (expected) account nonce.
+        //
+        // Related commit on Blockifier: https://github.com/dojoengine/blockifier/commit/2410b6055453f247d48759f223c34b3fb5fa777
+        let nonce_check = !simulation_flags.skip_nonce_check;
 
         let fee_type = get_fee_type_from_tx(&tx);
         let info = match tx {
             Transaction::AccountTransaction(tx) => {
-                tx.execute(state, block_context, charge_fee, validate)
+                tx.execute(state, block_context, charge_fee, validate, nonce_check)
             }
             Transaction::L1HandlerTransaction(tx) => {
-                tx.execute(state, block_context, charge_fee, validate)
+                tx.execute(state, block_context, charge_fee, validate, nonce_check)
             }
         }?;
 
