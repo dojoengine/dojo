@@ -140,10 +140,6 @@
         "name": "dojo_init",
         "inputs": [
           {
-            "name": "init_caller",
-            "type": "core::starknet::contract_address::ContractAddress"
-          },
-          {
             "name": "actions_address",
             "type": "core::starknet::contract_address::ContractAddress"
           },
