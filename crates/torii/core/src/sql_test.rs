@@ -52,7 +52,8 @@ where
         HashMap::default(),
     );
 
-    let _ = engine.sync_to_head(0, None).await?;
+    let res = engine.fetch_events().await?;
+    engine.process_fetch_result(res).await?;
 
     Ok(engine)
 }

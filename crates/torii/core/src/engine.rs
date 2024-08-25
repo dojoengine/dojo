@@ -56,6 +56,7 @@ impl Default for EngineConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct FetchResult {
     blocks: BTreeMap<u64, u64>,
     transactions: LinkedHashSet<(u64, Felt)>,
@@ -193,7 +194,7 @@ impl<P: Provider + Sync> Engine<P> {
         Ok(FetchResult { blocks, transactions, latest_for_contract })
     }
 
-    async fn process_fetch_result(&mut self, fetch_result: FetchResult) -> Result<()> {
+    pub async fn process_fetch_result(&mut self, fetch_result: FetchResult) -> Result<()> {
         // Process all transactions
         for (block_number, transaction_hash) in fetch_result.transactions {
             // Process transaction

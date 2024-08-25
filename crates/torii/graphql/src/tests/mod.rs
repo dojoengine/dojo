@@ -366,7 +366,8 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         HashMap::default(),
     );
 
-    let _ = engine.sync_to_head(0, None).await?;
+    let res = engine.fetch_events().await.unwrap();
+    engine.process_fetch_result(res).await.unwrap();
 
     Ok(pool)
 }
