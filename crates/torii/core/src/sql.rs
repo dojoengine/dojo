@@ -1290,8 +1290,7 @@ impl Sql {
             );
         }
 
-        // Now proceed with the transfer handling
-        // Insert transfer event to erc20_transfers table
+        // Insert transfer event to erc_transfers table
         {
             let insert_query = "INSERT INTO erc_transfers (contract_address, from_address, \
                                 to_address, amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, \
@@ -1310,14 +1309,14 @@ impl Sql {
             );
         }
 
-        // Update balances in erc20_balance table
+        // Update balance in balances table
         {
             // NOTE: formatting here should match the format we use for Argument type in QueryQueue
             // TODO: abstract this so they cannot mismatch
 
             // Since balance are stored as TEXT in db, we cannot directly use INSERT OR UPDATE
-            // statements.
-            // Fetch balances for both `from` and `to` addresses, update them and write back to db
+            // statements. Fetch balances for both `from` and `to` addresses, update them and
+            // write back to db
             let query = sqlx::query_as::<_, (String, String)>(
                 "SELECT account_address, balance FROM balances WHERE contract_address = ? AND \
                  account_address IN (?, ?)",
@@ -1463,10 +1462,11 @@ impl Sql {
             );
         }
 
-        // Insert transfer event to erc721_transfers table
+        // Insert transfer event to erc_transfers table
         {
-            let insert_query = "INSERT INTO erc721_transfers (contract_address, from_address, \
-                                to_address, token_id, executed_at) VALUES (?, ?, ?, ?, ?)";
+            let insert_query = "INSERT INTO erc_transfers (contract_address, from_address, \
+                                to_address, amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, \
+                                ?)";
 
             self.query_queue.enqueue(
                 insert_query,
@@ -1474,13 +1474,14 @@ impl Sql {
                     Argument::FieldElement(contract_address),
                     Argument::FieldElement(from),
                     Argument::FieldElement(to),
+                    Argument::String(u256_to_sql_string(&U256::from(1u8))),
                     Argument::String(token_id.clone()),
                     Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 ],
             );
         }
 
-        // Update balances in erc721_balances table
+        // Update balance in balances table
         {
             let update_query = "
             INSERT INTO balances (id, balance, account_address, contract_address, token_id)
