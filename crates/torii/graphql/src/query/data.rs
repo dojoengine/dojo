@@ -25,8 +25,8 @@ pub async fn count_rows(
 }
 
 pub async fn fetch_world_address(conn: &mut SqliteConnection) -> Result<String> {
-    let query = "SELECT world_address FROM worlds".to_string();
-    let res: (String,) = sqlx::query_as(&query).fetch_one(conn).await?;
+    let query = "SELECT contract_address FROM contracts where contract_type = ?".to_string();
+    let res: (String,) = sqlx::query_as(&query).bind("WORLD").fetch_one(conn).await?;
     Ok(res.0)
 }
 
