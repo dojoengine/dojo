@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724554327994,
+  "lastUpdate": 1724554347647,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17089,6 +17089,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 3926024,
             "range": "± 64503",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "111903096+adrianvrj@users.noreply.github.com",
+            "name": "ADR!AN",
+            "username": "adrianvrj"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "194438922a028dac6bf40533ce139dd742809902",
+          "message": "fix(katana): ensure messages are ordered (#2326)\n\n* [fix] converted hash map to ordered vec in fetch events func\r\n\r\n* [fix] Orthographic error in comment\r\n\r\n* [fix] run fmt\r\n\r\n* [fix] returning a single Vec<EmittedEvent>\r\n\r\n* [fix] returning a Vec<Log> for ethereum.rs  fetch_logs\r\n\r\n* [fix] debugger\r\n\r\n* [fix] using compiler inference for Vecs\r\n\r\n* Update crates/katana/core/src/service/messaging/starknet.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-08-24T20:33:24-06:00",
+          "tree_id": "4bba66992fdddea1d287ddc40a6551bd3339cdcb",
+          "url": "https://github.com/dojoengine/dojo/commit/194438922a028dac6bf40533ce139dd742809902"
+        },
+        "date": 1724554346201,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17507065,
+            "range": "± 235488",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3764305,
+            "range": "± 120885",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3681458433,
+            "range": "± 746568104",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3990705,
+            "range": "± 114678",
             "unit": "ns/iter"
           }
         ]
