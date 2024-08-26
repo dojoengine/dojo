@@ -8,6 +8,14 @@ pub fn no_write_access_with_tags(
     format!("Caller `{}` has no write access on {} `{}`", contract_tag, on_type, on_tag)
 }
 
+pub fn not_owner_init(contract_tag: @ByteArray, caller: ContractAddress) -> ByteArray {
+    format!("Caller `{:?}` cannot initialize contract `{}` (not owner)", caller, contract_tag)
+}
+
+pub fn contract_already_initialized(contract_tag: @ByteArray) -> ByteArray {
+    format!("Contract `{}` has already been initialized", contract_tag)
+}
+
 pub fn namespace_already_registered(namespace: @ByteArray) -> ByteArray {
     format!("Namespace `{}` is already registered", namespace)
 }
@@ -54,4 +62,8 @@ pub fn resource_conflict(name: @ByteArray, expected_type: @ByteArray) -> ByteArr
 
 pub fn no_model_write_access(tag: @ByteArray, caller: ContractAddress) -> ByteArray {
     format!("Caller `{:?}` has no write access on model `{}`", caller, tag)
+}
+
+pub fn no_world_owner(caller: ContractAddress, target: @ByteArray) -> ByteArray {
+    format!("Caller `{:?}` can't {} (not world owner)", caller, target)
 }

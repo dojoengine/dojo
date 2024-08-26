@@ -11,7 +11,7 @@ use dojo::world::{
 };
 use dojo::tests::helpers::{
     IbarDispatcher, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, foo, bar,
-    Character, character, test_contract
+    Character, character, test_contract, test_contract_with_dojo_init_args
 };
 use dojo::utils::test::{spawn_test_world, deploy_with_world_address, GasCounterTrait};
 
@@ -331,19 +331,114 @@ fn test_facts_registry_event_emit() {
     );
 }
 
-#[starknet::interface]
-trait IDojoInit<ContractState> {
-    fn dojo_init(self: @ContractState) -> felt252;
-}
+use test_contract::IDojoInitDispatcherTrait;
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(expected: ('Only world can init', 'ENTRYPOINT_FAILED'))]
-fn test_can_call_init() {
+#[should_panic(
+    expected: (
+        "Only the world can init contract `dojo-test_contract`, but caller is `0`",
+        'ENTRYPOINT_FAILED'
+    )
+)]
+fn test_can_call_init_only_world() {
     let world = deploy_world();
     let address = world
         .deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
 
-    let dojo_init = IDojoInitDispatcher { contract_address: address };
-    dojo_init.dojo_init();
+    let d = test_contract::IDojoInitDispatcher { contract_address: address };
+    d.dojo_init();
+}
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(
+    expected: (
+        "Caller `4919` cannot initialize contract `dojo-test_contract` (not owner)",
+        'ENTRYPOINT_FAILED'
+    )
+)]
+fn test_can_call_init_only_owner() {
+    let world = deploy_world();
+    let _address = world
+        .deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
+
+    let bob = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(bob);
+
+    world.init_contract(selector_from_tag!("dojo-test_contract"), [].span());
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_can_call_init_default() {
+    let world = deploy_world();
+    let _address = world
+        .deploy_contract('salt1', test_contract::TEST_CLASS_HASH.try_into().unwrap());
+
+    world.init_contract(selector_from_tag!("dojo-test_contract"), [].span());
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_can_call_init_args() {
+    let world = deploy_world();
+    let _address = world
+        .deploy_contract(
+            'salt1', test_contract_with_dojo_init_args::TEST_CLASS_HASH.try_into().unwrap()
+        );
+
+    world.init_contract(selector_from_tag!("dojo-test_contract_with_dojo_init_args"), [1].span());
+}
+
+use test_contract_with_dojo_init_args::IDojoInitDispatcherTrait as IDojoInitArgs;
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(
+    expected: (
+        "Only the world can init contract `dojo-test_contract_with_dojo_init_args`, but caller is `0`",
+        'ENTRYPOINT_FAILED'
+    )
+)]
+fn test_can_call_init_only_world_args() {
+    let world = deploy_world();
+    let address = world
+        .deploy_contract(
+            'salt1', test_contract_with_dojo_init_args::TEST_CLASS_HASH.try_into().unwrap()
+        );
+
+    let d = test_contract_with_dojo_init_args::IDojoInitDispatcher { contract_address: address };
+    d.dojo_init(123);
+}
+
+use dojo::world::update::IUpgradeableStateDispatcherTrait;
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(
+    expected: ("Caller `4919` can't upgrade state (not world owner)", 'ENTRYPOINT_FAILED')
+)]
+fn test_upgrade_state_not_owner() {
+    let world = deploy_world();
+
+    let not_owner = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(not_owner);
+    starknet::testing::set_account_contract_address(not_owner);
+
+    let output = dojo::world::update::ProgramOutput {
+        prev_state_root: 0,
+        new_state_root: 0,
+        block_number: 0,
+        block_hash: 0,
+        config_hash: 0,
+        world_da_hash: 0,
+        message_to_starknet_segment: [].span(),
+        message_to_appchain_segment: [].span(),
+    };
+
+    let d = dojo::world::update::IUpgradeableStateDispatcher {
+        contract_address: world.contract_address
+    };
+    d.upgrade_state([].span(), output, 0);
 }
