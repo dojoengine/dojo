@@ -109,10 +109,10 @@ impl RelayClient {
             })
             .with_other_transport(|key| {
                 libp2p_websocket_websys::Transport::default()
-                 .upgrade(libp2p::core::upgrade::Version::V1)
-                 .authenticate(noise::Config::new(&local_key).unwrap())
-                 .multiplex(yamux::Config::default())
-                 .boxed()
+                    .upgrade(libp2p::core::upgrade::Version::V1)
+                    .authenticate(noise::Config::new(&local_key).unwrap())
+                    .multiplex(yamux::Config::default())
+                    .boxed()
             })
             .expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {

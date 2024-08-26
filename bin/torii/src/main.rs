@@ -78,7 +78,7 @@ struct Args {
     /// Port to serve Libp2p WebRTC transport
     #[arg(long, value_name = "PORT", default_value = "9091")]
     relay_webrtc_port: u16,
-    
+
     /// Port to serve Libp2p WebRTC transport
     #[arg(long, value_name = "PORT", default_value = "9092")]
     relay_websocket_port: u16,

@@ -18,7 +18,9 @@ use libp2p::core::upgrade::Version;
 use libp2p::core::Multiaddr;
 use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
-use libp2p::{dns, identify, identity, noise, ping, relay, tcp, websocket, yamux, PeerId, Swarm, Transport};
+use libp2p::{
+    dns, identify, identity, noise, ping, relay, tcp, websocket, yamux, PeerId, Swarm, Transport,
+};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
@@ -93,20 +95,25 @@ impl<P: Provider + Sync> Relay<P> {
             })
             .expect("Failed to create WebRTC transport")
             .with_other_transport(|key| {
-                let mut transport = websocket::WsConfig::new(dns::tokio::Transport::system(
-                    tcp::tokio::Transport::new(tcp::Config::default()),
-                ).unwrap());
-                
-                let rcgen_cert = rcgen::generate_simple_self_signed(vec!["localhost".to_string()]).unwrap();
+                let mut transport = websocket::WsConfig::new(
+                    dns::tokio::Transport::system(tcp::tokio::Transport::new(
+                        tcp::Config::default(),
+                    ))
+                    .unwrap(),
+                );
+
+                let rcgen_cert =
+                    rcgen::generate_simple_self_signed(vec!["localhost".to_string()]).unwrap();
                 let priv_key = websocket::tls::PrivateKey::new(rcgen_cert.key_pair.serialize_der());
                 let bytes: Result<Vec<_>, _> = rcgen_cert.cert.der().bytes().collect();
                 let cert = websocket::tls::Certificate::new(bytes.unwrap());
-                transport.set_tls_config(websocket::tls::Config::new(priv_key, vec![cert]).unwrap());
-                
                 transport
-                .upgrade(Version::V1)
-                .authenticate(noise::Config::new(key).unwrap())
-                .multiplex(yamux::Config::default())
+                    .set_tls_config(websocket::tls::Config::new(priv_key, vec![cert]).unwrap());
+
+                transport
+                    .upgrade(Version::V1)
+                    .authenticate(noise::Config::new(key).unwrap())
+                    .multiplex(yamux::Config::default())
             })
             .expect("Failed to create WebSocket transport")
             .with_behaviour(|key| {
