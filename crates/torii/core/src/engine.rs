@@ -58,9 +58,9 @@ impl Default for EngineConfig {
 
 #[derive(Debug)]
 pub struct FetchResult {
-    blocks: BTreeMap<u64, u64>,
-    transactions: LinkedHashSet<(u64, Felt)>,
-    latest_for_contract: HashMap<Felt, (u64, Option<Felt>)>,
+    pub blocks: BTreeMap<u64, u64>,
+    pub transactions: LinkedHashSet<(u64, Felt)>,
+    pub latest_for_contract: HashMap<Felt, (u64, Option<Felt>)>,
 }
 
 #[allow(missing_debug_implementations)]
@@ -256,6 +256,12 @@ impl<P: Provider + Sync> Engine<P> {
 
         if let Some(events) = events {
             for (event_idx, event) in events.iter().enumerate() {
+                if event.from_address != self.world.address
+                    && !self.tokens.contains_key(&event.from_address)
+                {
+                    continue;
+                }
+
                 let event_id =
                     format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
 
@@ -452,6 +458,8 @@ impl<P: Provider + Sync> Engine<P> {
                 warn!(target: LOG_TARGET, "Start block for contract {:#x} ignored, stored head exists and will be used instead.", contract.contract_address);
             }
         }
+
+        self.db.execute().await?;
 
         Ok(())
     }
