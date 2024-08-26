@@ -1,3 +1,4 @@
+use core::fmt;
 use std::sync::Arc;
 use std::vec::IntoIter;
 
@@ -8,8 +9,8 @@ use tracing::{error, info, warn};
 
 use crate::ordering::PoolOrd;
 use crate::tx::{PendingTx, PoolTransaction, TxId};
-use crate::validation::{ValidationOutcome, Validator};
-use crate::TransactionPool;
+use crate::validation::{InvalidTransactionError, ValidationOutcome, Validator};
+use crate::{PoolError, PoolResult, TransactionPool};
 
 #[derive(Debug)]
 pub struct Pool<T, V, O>
@@ -84,7 +85,7 @@ where
 
 impl<T, V, O> TransactionPool for Pool<T, V, O>
 where
-    T: PoolTransaction,
+    T: PoolTransaction + fmt::Debug,
     V: Validator<Transaction = T>,
     O: PoolOrd<Transaction = T>,
 {
@@ -92,34 +93,48 @@ where
     type Validator = V;
     type Ordering = O;
 
-    fn add_transaction(&self, tx: T) {
+    fn add_transaction(&self, tx: T) -> PoolResult<TxHash> {
+        let hash = tx.hash();
         let id = TxId::new(tx.sender(), tx.nonce());
+
+        info!(hash = format!("{hash:#x}"), "Transaction received.");
 
         match self.inner.validator.validate(tx) {
             Ok(outcome) => {
-                let hash = match outcome {
+                match outcome {
                     ValidationOutcome::Valid(tx) => {
                         // get the priority of the validated tx
                         let priority = self.inner.ordering.priority(&tx);
-
-                        let tx = PendingTx::new(id.clone(), tx, priority);
-                        let hash = tx.tx.hash();
+                        let tx = PendingTx::new(id, tx, priority);
 
                         // insert the tx in the pool
                         self.inner.transactions.write().push(tx);
                         self.notify_listener(hash);
-                        hash
+
+                        Ok(hash)
                     }
 
-                    // for now, this variant is a no-op
-                    ValidationOutcome::Invalid { tx, .. } => tx.hash(),
-                };
+                    ValidationOutcome::Invalid { tx, error } => {
+                        warn!(hash = format!("{:#x}", tx.hash()), "Invalid transaction.");
+                        Err(PoolError::InvalidTransaction(Box::new(error)))
+                    }
 
-                info!(hash = format!("{hash:#x}"), "Transaction received.");
+                    // return as error for now but ideally we should kept the tx in a separate
+                    // queue and revalidate it when the parent tx is added to the pool
+                    ValidationOutcome::Dependent { tx, tx_nonce, current_nonce } => {
+                        let err = InvalidTransactionError::InvalidNonce {
+                            address: tx.sender(),
+                            current_nonce,
+                            tx_nonce,
+                        };
+                        Err(PoolError::InvalidTransaction(Box::new(err)))
+                    }
+                }
             }
 
-            Err(error @ crate::validation::Error { hash, .. }) => {
-                error!(hash = format!("{hash:#x}"), %error, "Failed to validate transaction.");
+            Err(e @ crate::validation::Error { hash, .. }) => {
+                error!(hash = format!("{hash:#x}"), %e, "Failed to validate transaction.");
+                Err(PoolError::Internal(e.error))
             }
         }
     }
@@ -193,7 +208,6 @@ where
 #[cfg(test)]
 pub(crate) mod test_utils {
 
-    use katana_executor::ExecutionError;
     use katana_primitives::contract::{ContractAddress, Nonce};
     use katana_primitives::FieldElement;
     use rand::Rng;
@@ -288,8 +302,11 @@ pub(crate) mod test_utils {
         fn validate(&self, tx: Self::Transaction) -> ValidationResult<Self::Transaction> {
             if tx.tip() < self.threshold {
                 return ValidationResult::Ok(ValidationOutcome::Invalid {
+                    error: InvalidTransactionError::InsufficientFunds {
+                        balance: FieldElement::ONE,
+                        max_fee: tx.max_fee(),
+                    },
                     tx,
-                    error: ExecutionError::Other("tip too low".to_string()),
                 });
             }
 
@@ -341,7 +358,9 @@ mod tests {
         assert!(pool.inner.transactions.read().is_empty());
 
         // add all the txs to the pool
-        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // all the txs should be in the pool
         assert_eq!(pool.size(), txs.len());
@@ -389,7 +408,9 @@ mod tests {
         let mut listener = pool.add_listener();
 
         // start adding txs to the pool
-        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // the channel should contain all the added txs
         let mut counter = 0;
@@ -434,13 +455,20 @@ mod tests {
                     acc.1.push(tx);
                     acc
                 }
+
+                ValidationOutcome::Dependent { tx, .. } => {
+                    acc.0.push(tx);
+                    acc
+                }
             });
 
         assert_eq!(expected_valids.len(), 3);
         assert_eq!(expected_invalids.len(), 4);
 
         // Add all transactions to the pool
-        all.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        all.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // Check that all transactions should be in the pool regardless of validity
         assert!(all.iter().all(|tx| pool.get(tx.hash()).is_some()));
@@ -481,7 +509,9 @@ mod tests {
         let pool = Pool::new(NoopValidator::new(), ordering::Tip::new());
 
         // Add transactions to the pool
-        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // Get pending transactions
         let pending = pool.take_transactions().collect::<Vec<_>>();
@@ -509,7 +539,9 @@ mod tests {
             .collect();
 
         // Add all transactions to the pool
-        txs.iter().for_each(|tx| pool.add_transaction(tx.clone()));
+        txs.iter().for_each(|tx| {
+            let _ = pool.add_transaction(tx.clone());
+        });
 
         // Get pending transactions
         let pending = pool.take_transactions().collect::<Vec<_>>();

@@ -21,7 +21,7 @@ impl<EF: ExecutorFactory> DevApi<EF> {
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
     fn pending_executor(&self) -> Option<PendingExecutor> {
-        match &*self.block_producer.inner.read() {
+        match &*self.block_producer.producer.read() {
             BlockProducerMode::Instant(_) => None,
             BlockProducerMode::Interval(producer) => Some(producer.executor()),
         }

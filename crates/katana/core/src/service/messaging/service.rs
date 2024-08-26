@@ -91,7 +91,10 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
                 txs.into_iter().for_each(|tx| {
                     let hash = tx.calculate_hash();
                     trace_l1_handler_tx_exec(hash, &tx);
-                    pool.add_transaction(ExecutableTxWithHash { hash, transaction: tx.into() })
+
+                    // ignore result because L1Handler tx will always be valid
+                    let _ =
+                        pool.add_transaction(ExecutableTxWithHash { hash, transaction: tx.into() });
                 });
 
                 Ok((block_num, txs_count))
@@ -106,7 +109,10 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
                 txs.into_iter().for_each(|tx| {
                     let hash = tx.calculate_hash();
                     trace_l1_handler_tx_exec(hash, &tx);
-                    pool.add_transaction(ExecutableTxWithHash { hash, transaction: tx.into() })
+
+                    // ignore result because L1Handler tx will always be valid
+                    let tx = ExecutableTxWithHash { hash, transaction: tx.into() };
+                    let _ = pool.add_transaction(tx);
                 });
 
                 Ok((block_num, txs_count))

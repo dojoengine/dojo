@@ -9,6 +9,7 @@ use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
 use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFactory};
+use katana_pool::validation::stateful::TxValidator;
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
@@ -72,37 +73,36 @@ type BlockProductionWithTxnsFuture =
 #[allow(missing_debug_implementations)]
 pub struct BlockProducer<EF: ExecutorFactory> {
     /// The inner mode of mining.
-    pub inner: RwLock<BlockProducerMode<EF>>,
+    pub producer: RwLock<BlockProducerMode<EF>>,
+    /// validator used in the tx pool
+    // the validator needs to always be built against the state of the block producer, so
+    // im putting here for now until we find a better way to handle this.
+    validator: TxValidator,
 }
 
 impl<EF: ExecutorFactory> BlockProducer<EF> {
     /// Creates a block producer that mines a new block every `interval` milliseconds.
     pub fn interval(backend: Arc<Backend<EF>>, interval: u64) -> Self {
-        Self {
-            inner: RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new(
-                backend, interval,
-            ))),
-        }
+        let (prod, validator) = IntervalBlockProducer::new(backend, Some(interval));
+        Self { producer: BlockProducerMode::Interval(prod).into(), validator }
     }
 
     /// Creates a new block producer that will only be possible to mine by calling the
     /// `katana_generateBlock` RPC method.
     pub fn on_demand(backend: Arc<Backend<EF>>) -> Self {
-        Self {
-            inner: RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new_no_mining(
-                backend,
-            ))),
-        }
+        let (prod, validator) = IntervalBlockProducer::new(backend, None);
+        Self { producer: BlockProducerMode::Interval(prod).into(), validator }
     }
 
     /// Creates a block producer that mines a new block as soon as there are ready transactions in
     /// the transactions pool.
     pub fn instant(backend: Arc<Backend<EF>>) -> Self {
-        Self { inner: RwLock::new(BlockProducerMode::Instant(InstantBlockProducer::new(backend))) }
+        let (prod, validator) = InstantBlockProducer::new(backend);
+        Self { producer: BlockProducerMode::Instant(prod).into(), validator }
     }
 
     pub(super) fn queue(&self, transactions: Vec<ExecutableTxWithHash>) {
-        let mut mode = self.inner.write();
+        let mut mode = self.producer.write();
         match &mut *mode {
             BlockProducerMode::Instant(producer) => producer.queued.push_back(transactions),
             BlockProducerMode::Interval(producer) => producer.queued.push_back(transactions),
@@ -111,26 +111,57 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
 
     /// Returns `true` if the block producer is running in _interval_ mode. Otherwise, `fales`.
     pub fn is_interval_mining(&self) -> bool {
-        matches!(*self.inner.read(), BlockProducerMode::Interval(_))
+        matches!(*self.producer.read(), BlockProducerMode::Interval(_))
     }
 
     /// Returns `true` if the block producer is running in _instant_ mode. Otherwise, `fales`.
     pub fn is_instant_mining(&self) -> bool {
-        matches!(*self.inner.read(), BlockProducerMode::Instant(_))
+        matches!(*self.producer.read(), BlockProducerMode::Instant(_))
     }
 
     // Handler for the `katana_generateBlock` RPC method.
     pub fn force_mine(&self) {
         trace!(target: LOG_TARGET, "Scheduling force block mining.");
-        let mut mode = self.inner.write();
+        let mut mode = self.producer.write();
         match &mut *mode {
             BlockProducerMode::Instant(producer) => producer.force_mine(),
             BlockProducerMode::Interval(producer) => producer.force_mine(),
         }
     }
 
+    pub fn validator(&self) -> &TxValidator {
+        &self.validator
+    }
+
+    pub fn update_validator(&self) -> Result<(), ProviderError> {
+        let mut mode = self.producer.write();
+
+        match &mut *mode {
+            BlockProducerMode::Instant(pd) => {
+                let provider = pd.backend.blockchain.provider();
+                let state = provider.latest()?;
+
+                let latest_num = provider.latest_number()?;
+                let block_env = provider.block_env_at(latest_num.into())?.expect("latest");
+
+                self.validator.update(state, &block_env)
+            }
+
+            BlockProducerMode::Interval(pd) => {
+                let pending_state = pd.executor.0.read();
+
+                let state = pending_state.state();
+                let block_env = pending_state.block_env();
+
+                self.validator.update(state, &block_env)
+            }
+        };
+
+        Ok(())
+    }
+
     pub(super) fn poll_next(&self, cx: &mut Context<'_>) -> Poll<Option<BlockProductionResult>> {
-        let mut mode = self.inner.write();
+        let mut mode = self.producer.write();
         match &mut *mode {
             BlockProducerMode::Instant(producer) => producer.poll_next_unpin(cx),
             BlockProducerMode::Interval(producer) => producer.poll_next_unpin(cx),
@@ -184,13 +215,13 @@ pub struct IntervalBlockProducer<EF: ExecutorFactory> {
 }
 
 impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
-    pub fn new(backend: Arc<Backend<EF>>, interval: u64) -> Self {
-        let interval = {
-            let duration = Duration::from_millis(interval);
+    pub fn new(backend: Arc<Backend<EF>>, interval: Option<u64>) -> (Self, TxValidator) {
+        let interval = interval.map(|time| {
+            let duration = Duration::from_millis(time);
             let mut interval = interval_at(Instant::now() + duration, duration);
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             interval
-        };
+        });
 
         let provider = backend.blockchain.provider();
 
@@ -199,49 +230,33 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         backend.update_block_env(&mut block_env);
 
         let state = provider.latest().unwrap();
-        let executor = backend.executor_factory.with_state_and_block_env(state, block_env);
-        let executor = PendingExecutor::new(executor);
+        let executor = backend.executor_factory.with_state_and_block_env(state, block_env.clone());
 
-        let blocking_task_spawner = BlockingTaskPool::new().unwrap();
+        // -- build the validator using the same state and envs as the executor
+        let state = executor.state();
+        let cfg = backend.executor_factory.cfg();
+        let flags = backend.executor_factory.execution_flags();
+        let validator = TxValidator::new(state, flags.clone(), cfg.clone(), &block_env);
 
-        Self {
+        let producer = Self {
             backend,
-            executor,
+            interval,
             ongoing_mining: None,
-            blocking_task_spawner,
             ongoing_execution: None,
-            interval: Some(interval),
             queued: VecDeque::default(),
+            executor: PendingExecutor::new(executor),
             tx_execution_listeners: RwLock::new(vec![]),
-        }
+            blocking_task_spawner: BlockingTaskPool::new().unwrap(),
+        };
+
+        (producer, validator)
     }
 
     /// Creates a new [IntervalBlockProducer] with no `interval`. This mode will not produce blocks
     /// for every fixed interval, although it will still execute all queued transactions and
     /// keep hold of the pending state.
-    pub fn new_no_mining(backend: Arc<Backend<EF>>) -> Self {
-        let provider = backend.blockchain.provider();
-
-        let latest_num = provider.latest_number().unwrap();
-        let mut block_env = provider.block_env_at(latest_num.into()).unwrap().unwrap();
-        backend.update_block_env(&mut block_env);
-
-        let state = provider.latest().unwrap();
-        let executor = backend.executor_factory.with_state_and_block_env(state, block_env);
-        let executor = PendingExecutor::new(executor);
-
-        let blocking_task_spawner = BlockingTaskPool::new().unwrap();
-
-        Self {
-            backend,
-            executor,
-            interval: None,
-            ongoing_mining: None,
-            queued: VecDeque::default(),
-            blocking_task_spawner,
-            ongoing_execution: None,
-            tx_execution_listeners: RwLock::new(vec![]),
-        }
+    pub fn new_no_mining(backend: Arc<Backend<EF>>) -> (Self, TxValidator) {
+        Self::new(backend, None)
     }
 
     pub fn executor(&self) -> PendingExecutor {
@@ -463,14 +478,29 @@ pub struct InstantBlockProducer<EF: ExecutorFactory> {
 }
 
 impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
-    pub fn new(backend: Arc<Backend<EF>>) -> Self {
-        Self {
+    pub fn new(backend: Arc<Backend<EF>>) -> (Self, TxValidator) {
+        let provider = backend.blockchain.provider();
+
+        let latest_num = provider.latest_number().expect("latest block num");
+        let block_env = provider
+            .block_env_at(latest_num.into())
+            .expect("provider error")
+            .expect("latest block env");
+
+        let state = provider.latest().expect("latest state");
+        let cfg = backend.executor_factory.cfg();
+        let flags = backend.executor_factory.execution_flags();
+        let validator = TxValidator::new(state, flags.clone(), cfg.clone(), &block_env);
+
+        let producer = Self {
             backend,
             block_mining: None,
             queued: VecDeque::default(),
             blocking_task_pool: BlockingTaskPool::new().unwrap(),
             tx_execution_listeners: RwLock::new(vec![]),
-        }
+        };
+
+        (producer, validator)
     }
 
     pub fn force_mine(&mut self) {
@@ -527,6 +557,8 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
             .collect::<Vec<_>>();
 
         let outcome = backend.do_mine_block(&block_env, execution_output)?;
+
+        // update pool validator state here
 
         trace!(target: LOG_TARGET, block_number = %outcome.block_number, "Created new block.");
 

@@ -1,9 +1,12 @@
 use jsonrpsee::core::Error;
 use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
+use katana_pool::validation::InvalidTransactionError;
+use katana_pool::PoolError;
 use katana_primitives::event::ContinuationTokenError;
 use katana_provider::error::ProviderError;
 use serde::Serialize;
+use serde_json::Value;
 
 /// Possible list of errors that can be returned by the Starknet API according to the spec: <https://github.com/starkware-libs/starknet-specs>.
 #[derive(Debug, thiserror::Error, Clone, Serialize)]
@@ -52,7 +55,7 @@ pub enum StarknetApiError {
     #[error("Account balance is smaller than the transaction's max_fee")]
     InsufficientAccountBalance,
     #[error("Account validation failed")]
-    ValidationFailure,
+    ValidationFailure { reason: String },
     #[error("Compilation failed")]
     CompilationFailed,
     #[error("Contract class size is too large")]
@@ -100,7 +103,7 @@ impl StarknetApiError {
             StarknetApiError::InvalidTransactionNonce => 52,
             StarknetApiError::InsufficientMaxFee => 53,
             StarknetApiError::InsufficientAccountBalance => 54,
-            StarknetApiError::ValidationFailure => 55,
+            StarknetApiError::ValidationFailure { .. } => 55,
             StarknetApiError::CompilationFailed => 56,
             StarknetApiError::ContractClassSizeIsTooLarge => 57,
             StarknetApiError::NonAccount => 58,
@@ -122,6 +125,11 @@ impl StarknetApiError {
             StarknetApiError::ContractError { .. }
             | StarknetApiError::UnexpectedError { .. }
             | StarknetApiError::TransactionExecutionError { .. } => Some(serde_json::json!(self)),
+
+            StarknetApiError::ValidationFailure { reason } => {
+                Some(Value::String(reason.to_string()))
+            }
+
             _ => None,
         }
     }
@@ -155,6 +163,31 @@ impl From<anyhow::Error> for StarknetApiError {
     }
 }
 
+impl From<PoolError> for StarknetApiError {
+    fn from(error: PoolError) -> Self {
+        match error {
+            PoolError::InvalidTransaction(err) => err.into(),
+            PoolError::Internal(err) => {
+                StarknetApiError::UnexpectedError { reason: err.to_string() }
+            }
+        }
+    }
+}
+
+impl From<Box<InvalidTransactionError>> for StarknetApiError {
+    fn from(error: Box<InvalidTransactionError>) -> Self {
+        match error.as_ref() {
+            InvalidTransactionError::InsufficientFunds { .. } => Self::InsufficientAccountBalance,
+            InvalidTransactionError::InsufficientMaxFee { .. } => Self::InsufficientMaxFee,
+            InvalidTransactionError::InvalidNonce { .. } => Self::InvalidTransactionNonce,
+            InvalidTransactionError::NonAccount { .. } => Self::NonAccount,
+            InvalidTransactionError::ValidationFailure { error, .. } => {
+                Self::ValidationFailure { reason: error.to_string() }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
@@ -171,7 +204,6 @@ mod tests {
     #[case(StarknetApiError::CompilationFailed, 56, "Compilation failed")]
     #[case(StarknetApiError::ClassHashNotFound, 28, "Class hash not found")]
     #[case(StarknetApiError::TxnHashNotFound, 29, "Transaction hash not found")]
-    #[case(StarknetApiError::ValidationFailure, 55, "Account validation failed")]
     #[case(StarknetApiError::ClassAlreadyDeclared, 51, "Class already declared")]
     #[case(StarknetApiError::InvalidContractClass, 50, "Invalid contract class")]
     #[case(StarknetApiError::PageSizeTooBig, 31, "Requested page size is too big")]
@@ -239,6 +271,14 @@ mod tests {
         json!({
             "reason": "Unexpected error reason".to_string()
         }),
+    )]
+    #[case(
+    	StarknetApiError::ValidationFailure {
+     		reason: "Invalid signature".to_string()
+      	},
+     	55,
+      	"Account validation failed",
+       	Value::String("Invalid signature".to_string())
     )]
     fn test_starknet_api_error_to_error_conversion_data_some(
         #[case] starknet_error: StarknetApiError,

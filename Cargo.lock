@@ -1859,7 +1859,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.8.0-dev.2"
-source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7#031eef1b54766bc9799e97c43f63e36b63af30ee"
+source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7-new#42b2b5e28fd47bdfa0d807109360c41a92edafe4"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -7920,6 +7920,7 @@ dependencies = [
  "futures",
  "katana-executor",
  "katana-primitives",
+ "katana-provider",
  "parking_lot 0.12.3",
  "rand",
  "thiserror",
@@ -7990,6 +7991,7 @@ dependencies = [
  "dojo-utils",
  "dojo-world",
  "futures",
+ "indexmap 2.2.6",
  "jsonrpsee 0.16.3",
  "katana-cairo",
  "katana-core",
@@ -8006,6 +8008,7 @@ dependencies = [
  "metrics",
  "num-traits 0.2.19",
  "rand",
+ "rstest 0.18.2",
  "serde",
  "serde_json",
  "starknet 0.11.0",
@@ -8038,6 +8041,7 @@ dependencies = [
  "katana-cairo",
  "katana-core",
  "katana-executor",
+ "katana-pool",
  "katana-primitives",
  "katana-provider",
  "num-traits 0.2.19",

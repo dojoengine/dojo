@@ -1,3 +1,6 @@
+// Re-export the blockifier crate.
+pub use blockifier;
+
 mod error;
 mod state;
 pub mod utils;
@@ -63,6 +66,11 @@ impl ExecutorFactory for BlockifierFactory {
     fn cfg(&self) -> &CfgEnv {
         &self.cfg
     }
+
+    /// Returns the execution flags set by the factory.
+    fn execution_flags(&self) -> &SimulationFlag {
+        &self.flags
+    }
 }
 
 #[derive(Debug)]
@@ -83,7 +91,7 @@ impl<'a> StarknetVMProcessor<'a> {
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
-        let state = state::CachedState::new(StateProviderDb(state));
+        let state = state::CachedState::new(StateProviderDb::new(state));
         Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
     }
 
