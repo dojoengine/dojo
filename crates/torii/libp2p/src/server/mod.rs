@@ -60,7 +60,6 @@ impl<P: Provider + Sync> Relay<P> {
         pool: Sql,
         provider: P,
         port: u16,
-        port_webrtc: u16,
         local_key_path: Option<String>,
         cert_path: Option<String>,
     ) -> Result<Self, Error> {
@@ -137,7 +136,7 @@ impl<P: Provider + Sync> Relay<P> {
 
         // WebRTC
         let listen_addr_webrtc = Multiaddr::from(Ipv4Addr::UNSPECIFIED)
-            .with(Protocol::Udp(port_webrtc))
+            .with(Protocol::Tcp(port))
             .with(Protocol::WebRTCDirect);
         swarm.listen_on(listen_addr_webrtc.clone())?;
 
