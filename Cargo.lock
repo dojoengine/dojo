@@ -1859,7 +1859,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.8.0-dev.2"
-source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7#031eef1b54766bc9799e97c43f63e36b63af30ee"
+source = "git+https://github.com/dojoengine/blockifier?branch=cairo-2.7-new#eaebc7c46e09cf73029ad4755f35e1d43a9bec22"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -8008,6 +8008,7 @@ dependencies = [
  "metrics",
  "num-traits 0.2.19",
  "rand",
+ "rstest 0.18.2",
  "serde",
  "serde_json",
  "starknet 0.11.0",

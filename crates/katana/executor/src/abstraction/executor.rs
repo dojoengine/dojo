@@ -28,6 +28,9 @@ pub trait ExecutorFactory: Send + Sync + 'static + core::fmt::Debug {
 
     /// Returns the configuration environment of the factory.
     fn cfg(&self) -> &CfgEnv;
+
+    /// Returns the execution flags set by the factory.
+    fn execution_flags(&self) -> &SimulationFlag;
 }
 
 /// An executor that can execute a block of transactions.

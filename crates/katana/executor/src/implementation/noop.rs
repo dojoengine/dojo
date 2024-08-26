@@ -19,6 +19,7 @@ use crate::ExecutionError;
 #[derive(Debug, Default)]
 pub struct NoopExecutorFactory {
     cfg: CfgEnv,
+    execution_flags: SimulationFlag,
 }
 
 impl NoopExecutorFactory {
@@ -52,6 +53,10 @@ impl ExecutorFactory for NoopExecutorFactory {
 
     fn cfg(&self) -> &CfgEnv {
         &self.cfg
+    }
+
+    fn execution_flags(&self) -> &SimulationFlag {
+        &self.execution_flags
     }
 }
 

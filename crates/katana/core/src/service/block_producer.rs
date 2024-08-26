@@ -145,7 +145,7 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
                 let block_env = provider.block_env_at(latest_num.into())?.expect("latest");
                 let cfg = pd.backend.executor_factory.cfg();
 
-                self.validator.reset(state, &block_env, cfg)
+                self.validator.update(state, &block_env)
             }
 
             BlockProducerMode::Interval(pd) => {
@@ -155,7 +155,7 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
                 let block_env = pending_state.block_env();
                 let cfg = pd.backend.executor_factory.cfg();
 
-                self.validator.reset(state, &block_env, cfg)
+                self.validator.update(state, &block_env)
             }
         };
 
@@ -237,7 +237,8 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         // -- build the validator using the same state and envs as the executor
         let state = executor.state();
         let cfg = backend.executor_factory.cfg();
-        let validator = TxValidator::new(state, &block_env, cfg);
+        let flags = backend.executor_factory.execution_flags();
+        let validator = TxValidator::new(state, flags.clone(), cfg.clone(), &block_env);
 
         let producer = Self {
             backend,
@@ -490,8 +491,8 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
 
         let state = provider.latest().expect("latest state");
         let cfg = backend.executor_factory.cfg();
-
-        let validator = TxValidator::new(state, &block_env, cfg);
+        let flags = backend.executor_factory.execution_flags();
+        let validator = TxValidator::new(state, flags.clone(), cfg.clone(), &block_env);
 
         let producer = Self {
             backend,

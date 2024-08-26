@@ -66,6 +66,11 @@ impl ExecutorFactory for BlockifierFactory {
     fn cfg(&self) -> &CfgEnv {
         &self.cfg
     }
+
+    /// Returns the execution flags set by the factory.
+    fn execution_flags(&self) -> &SimulationFlag {
+        &self.flags
+    }
 }
 
 #[derive(Debug)]
