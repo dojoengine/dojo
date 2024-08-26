@@ -78,6 +78,10 @@ struct Args {
     /// Port to serve Libp2p WebRTC transport
     #[arg(long, value_name = "PORT", default_value = "9091")]
     relay_webrtc_port: u16,
+    
+    /// Port to serve Libp2p WebRTC transport
+    #[arg(long, value_name = "PORT", default_value = "9092")]
+    relay_websocket_port: u16,
 
     /// Path to a local identity key file. If not specified, a new identity will be generated
     #[arg(long, value_name = "PATH")]
@@ -214,6 +218,7 @@ async fn main() -> anyhow::Result<()> {
         provider.clone(),
         args.relay_port,
         args.relay_webrtc_port,
+        args.relay_websocket_port,
         args.relay_local_key_path,
         args.relay_cert_path,
     )

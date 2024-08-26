@@ -63,6 +63,7 @@ impl<P: Provider + Sync> Relay<P> {
         provider: P,
         port: u16,
         port_webrtc: u16,
+        port_websocket: u16,
         local_key_path: Option<String>,
         cert_path: Option<String>,
     ) -> Result<Self, Error> {
@@ -162,7 +163,7 @@ impl<P: Provider + Sync> Relay<P> {
 
         // WSS
         let listen_addr_wss = Multiaddr::from(Ipv4Addr::UNSPECIFIED)
-            .with(Protocol::Tcp(port))
+            .with(Protocol::Tcp(port_websocket))
             .with(Protocol::Wss("/".to_string().into()));
         swarm.listen_on(listen_addr_wss.clone())?;
 
