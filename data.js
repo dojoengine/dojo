@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1724697250204,
+  "lastUpdate": 1724700205044,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -17233,6 +17233,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 4663748,
             "range": "± 465180",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "distinct": true,
+          "id": "b2ce5efc5dfe5911faf2a1a5410c24f8ae527fee",
+          "message": "hotfix(katana): include invalid nonce message in rpc error data",
+          "timestamp": "2024-08-26T15:04:16-04:00",
+          "tree_id": "4dfb5684419aece564b24d7a378b7e0b3cf655d4",
+          "url": "https://github.com/dojoengine/dojo/commit/b2ce5efc5dfe5911faf2a1a5410c24f8ae527fee"
+        },
+        "date": 1724700204158,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17599926,
+            "range": "± 439639",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 3741163,
+            "range": "± 55793",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3865521192,
+            "range": "± 847250525",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 3951707,
+            "range": "± 38665",
             "unit": "ns/iter"
           }
         ]
